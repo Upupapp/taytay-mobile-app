@@ -604,6 +604,119 @@ Binding `onColor` to the gradient means the colour that was proved is the colour
 
 ---
 
+## D-22 — Illustrations are painted in Flutter, not shipped as image files
+
+**Status: settled.** Category: product / performance / licensing.
+
+**Options**
+
+1. Commission or generate raster illustrations and ship them with 1x/2x/3x
+   variants.
+2. Ship SVG files and add `flutter_svg`.
+3. **Paint them with `CustomPainter`.**
+
+**Chosen: 3**, with the file pipeline built and tested for the day a file is
+genuinely warranted.
+
+**Why.** For flat geometric artwork, painting wins on every axis that matters
+here: zero install bytes, no density variants to keep in sync, colours taken from
+the live `ColorScheme` so dark mode is correct without a second set of artwork,
+any size and aspect ratio without resampling, and no licence surface at all.
+Option 2 also adds a dependency and still needs one file per scene.
+
+Install bytes are paid for by residents, frequently on prepaid data metered by
+the megabyte. An asset that could have been 0 KB and is instead 3 × 120 KB is not
+a quality decision; it is a decision to spend somebody else's money.
+
+**Where a file still wins:** a photographic or hand-painted texture that cannot
+be expressed as geometry. Nothing in the app qualifies today, which is why
+`assets/` ships no artwork — but the manifest, budgets, density rules and
+validators exist so that such a file is checked rather than merely dropped in.
+
+---
+
+## D-23 — Every drawn scene is announced as an illustration
+
+**Status: settled.** Category: accessibility / honesty.
+
+**Options**
+
+1. Describe the scene's content plainly ("a municipal building").
+2. Leave illustrations unlabelled.
+3. **Prefix every accessible name with `Illustration:`, and forbid photographic
+   claims.**
+
+**Chosen: 3.**
+
+**Why.** A sighted resident can see instantly that a scene is drawn. A resident
+using a screen reader cannot, and option 1 leaves them to infer that "a municipal
+building" is a photograph of the actual Taytay municipal hall. That is a factual
+claim the app cannot support, made to precisely the people least able to check
+it. Option 2 is worse: it removes the content entirely for those users.
+
+Purely decorative scenery is the exception and is wrapped in `ExcludeSemantics` —
+naming a backdrop makes a screen reader read out landscape before the content.
+
+**Enforced by** an assertion inside `Illustration`, the manifest validator for
+file assets, and a test that walks every scene in the app checking both the prefix
+and a forbidden-claims list (`photo`, `photograph`, `picture of`, `actual`, `real
+footage`).
+
+---
+
+## D-24 — Exactly one animated illustration, and it must carry meaning
+
+**Status: settled.** Category: accessibility / performance.
+
+**Options**
+
+1. Animate onboarding scenes and empty states for liveliness.
+2. Ship a Lottie/Rive runtime for richer motion.
+3. **Animate only where the motion itself carries information.**
+
+**Chosen: 3.** The sole animation is the success tick, drawn once over 420 ms at
+the moment a submission is confirmed.
+
+**Why.** Motion that marks a state transition tells a resident something; a
+looping decorative animation tells them nothing and costs battery, CPU and — for
+residents with vestibular conditions — comfort. Option 2 adds a runtime whose
+native libraries have previously blocked store uploads (recorded in the TAB 02
+Servana audit), for artwork this app does not need.
+
+**Constraints, all tested:** never loops; never replays on rebuild; draws
+instantly with no travel under reduced motion via *either* switch; every other
+scene declares `willChange: false`; every scene sits in a `RepaintBoundary`.
+
+Depth uses two stacked translucent shapes rather than a `MaskFilter` blur, which
+is expensive on the low-end hardware much of this audience carries.
+
+---
+
+## D-25 — An undeclared file in `assets/` fails the build
+
+**Status: settled.** Category: licensing / supply chain.
+
+**Options**
+
+1. Declare assets in `pubspec.yaml` only, as Flutter requires.
+2. Keep a manifest, but let undeclared files pass.
+3. **Keep a manifest and fail when a file exists that is not declared in it.**
+
+**Chosen: 3.**
+
+**Why.** `pubspec.yaml` records only that a directory ships. It cannot record
+where a file came from, whether the project may use it, what it may weigh, or
+whether its bytes are still the bytes someone approved. An undeclared file in a
+government repository is artwork with no licence basis and no review trail, and
+the usual way one appears is that somebody dropped it in to try something and it
+was never removed.
+
+Making the manifest authoritative — hash, licence, provenance, budget, accessible
+name — turns "where did this come from?" from an unanswerable question into a
+failing test.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -629,5 +742,9 @@ Binding `onColor` to the gradient means the colour that was proved is the colour
 | D-19 | No Pantone/CMYK specification asserted | brand | settled |
 | D-20 | Reduced motion: OS floor OR in-app preference | accessibility | settled |
 | D-21 | Gradients declare their foreground, proved across the ramp | accessibility | settled |
+| D-22 | Illustrations painted in Flutter, not shipped as files | product / performance | settled |
+| D-23 | Every drawn scene announced as an illustration | accessibility | settled |
+| D-24 | One animated illustration, and only where motion means something | accessibility | settled |
+| D-25 | An undeclared file in `assets/` fails the build | licensing | settled |
 
-**21 decisions — 17 settled, 4 provisional pending named backend gaps.**
+**25 decisions — 21 settled, 4 provisional pending named backend gaps.**

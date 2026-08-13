@@ -31,6 +31,7 @@ class StatusView extends StatelessWidget {
     required this.kind,
     this.message,
     this.icon,
+    this.illustration,
     this.primaryAction,
     this.secondaryAction,
     super.key,
@@ -42,6 +43,14 @@ class StatusView extends StatelessWidget {
 
   /// Overrides the default icon for the kind.
   final IconData? icon;
+
+  /// A drawn scene shown instead of the icon.
+  ///
+  /// Preferred for the states a resident lands on and reads — an empty list, a
+  /// failed load, a completed submission — because a scene carries the tone of
+  /// the message where a 56dp glyph cannot. The icon remains the default for
+  /// dense or repeated states, where a full illustration would be noise.
+  final Widget? illustration;
 
   final Widget? primaryAction;
   final Widget? secondaryAction;
@@ -73,7 +82,12 @@ class StatusView extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                Icon(icon ?? defaultIcon, size: IconSizes.xxl, color: iconColor),
+                illustration ??
+                    Icon(
+                      icon ?? defaultIcon,
+                      size: IconSizes.xxl,
+                      color: iconColor,
+                    ),
                 const SizedBox(height: Spacing.lg),
                 Text(
                   title,

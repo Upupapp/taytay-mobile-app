@@ -7,6 +7,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/illustrations/taytay_scenes.dart';
 
 /// First-run introduction.
 ///
@@ -21,23 +22,23 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  static const List<_OnboardingPage> _pages = <_OnboardingPage>[
+  static final List<_OnboardingPage> _pages = <_OnboardingPage>[
     _OnboardingPage(
-      icon: Icons.badge_outlined,
+      scene: TaytayScenes.digitalId(),
       title: 'Your Taytay ID, on your phone',
       body:
           'Apply for and carry your Municipality of Taytay digital ID without '
           'queueing at the municipal hall.',
     ),
     _OnboardingPage(
-      icon: Icons.description_outlined,
+      scene: TaytayScenes.services(),
       title: 'Municipal services in one place',
       body:
           'Documents, real property tax, health programmes and job services — '
           'track every request from one app.',
     ),
     _OnboardingPage(
-      icon: Icons.privacy_tip_outlined,
+      scene: TaytayScenes.privacy(),
       title: 'You choose what you share',
       body:
           'Taytay LGU asks only for what a service needs, and tells you why. '
@@ -135,12 +136,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
 class _OnboardingPage extends StatelessWidget {
   const _OnboardingPage({
-    required this.icon,
+    required this.scene,
     required this.title,
     required this.body,
   });
 
-  final IconData icon;
+  /// A painted scene rather than a glyph: onboarding is the one place worth
+  /// spending vertical space on artwork, because it is what tells a resident
+  /// what kind of app this is before any text is read.
+  final Widget scene;
+
   final String title;
   final String body;
 
@@ -157,7 +162,7 @@ class _OnboardingPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(icon, size: 56, color: theme.colorScheme.primary),
+          scene,
           const SizedBox(height: Spacing.xl),
           Text(title, style: theme.textTheme.headlineSmall),
           const SizedBox(height: Spacing.md),
