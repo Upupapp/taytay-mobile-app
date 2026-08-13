@@ -1,0 +1,70 @@
+# Static analysis configuration for the Taytay LGU IDS resident app.
+#
+# Constitution: CLAUDE.md Article 8 (Definition of done). `flutter analyze` must be
+# clean — warnings are not tolerated, because a warning that is normal is a warning
+# nobody reads.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # An unused element or import is a defect, not a style preference.
+    unused_element: error
+    unused_import: error
+    unused_local_variable: error
+    # Missing a case in a sealed switch is how a new session/failure state
+    # silently gets treated as the old one. Never a warning.
+    non_exhaustive_switch_statement: error
+    non_exhaustive_switch_expression: error
+    # Deprecated Flutter APIs must be migrated, not accumulated.
+    deprecated_member_use: warning
+  exclude:
+    - build/**
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # ── Correctness ──────────────────────────────────────────────────────────
+    always_declare_return_types: true
+    avoid_dynamic_calls: true
+    avoid_slow_async_io: true
+    cancel_subscriptions: true
+    close_sinks: true
+    comment_references: true
+    unawaited_futures: true
+    only_throw_errors: true
+    throw_in_finally: true
+
+    # ── Privacy / safety (CLAUDE.md Article 5) ───────────────────────────────
+    # `print` writes personal data to device logs that any app-adjacent tool can
+    # read. Use the redacting logger seam instead.
+    avoid_print: true
+
+    # ── Immutability and architecture hygiene ────────────────────────────────
+    prefer_final_locals: true
+    prefer_final_in_for_each: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    avoid_equals_and_hash_code_on_mutable_classes: true
+    prefer_relative_imports: true
+    directives_ordering: true
+
+    # Off: Dart forbids private *named* parameters, so a class with private
+    # fields and a named constructor (the shape used throughout `core/`) cannot
+    # satisfy this rule. Keeping it on would push those fields public purely to
+    # silence a lint.
+    prefer_initializing_formals: false
+
+    # ── Readability ──────────────────────────────────────────────────────────
+    prefer_single_quotes: true
+    require_trailing_commas: true
+    sort_constructors_first: true
+    unnecessary_lambdas: true
+    use_enums: true
+    use_super_parameters: true
