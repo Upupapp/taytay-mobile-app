@@ -10,6 +10,7 @@ import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../design/design_tokens.dart';
 import '../session/session_controller.dart';
+import '../startup/launch_controller.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
@@ -28,14 +29,21 @@ import 'route_guard.dart';
 /// knowing about session handling.
 GoRouter buildAppRouter({
   required SessionController session,
+  required LaunchController launch,
   String? initialLocation,
 }) {
   return GoRouter(
     initialLocation: initialLocation ?? AppRoute.splash.path,
-    refreshListenable: session,
+    // Both are navigation inputs: the session decides what is reachable, and
+    // first-launch decides where a cold start begins. Merged so a change to
+    // either re-evaluates the guard.
+    refreshListenable: Listenable.merge(<Listenable>[session, launch]),
     debugLogDiagnostics: false,
-    redirect: (context, state) =>
-        resolveRedirect(session: session.state, location: state.uri.toString()),
+    redirect: (context, state) => resolveRedirect(
+      session: session.state,
+      location: state.uri.toString(),
+      launch: launch.state,
+    ),
     errorBuilder: (context, state) => const _RouteNotFoundScreen(),
     routes: <RouteBase>[
       GoRoute(

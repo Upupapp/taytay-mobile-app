@@ -24,6 +24,7 @@ class TaytayResidentApp extends StatefulWidget {
 class _TaytayResidentAppState extends State<TaytayResidentApp> {
   late final GoRouter _router = buildAppRouter(
     session: widget.dependencies.session,
+    launch: widget.dependencies.launch,
   );
 
   @override

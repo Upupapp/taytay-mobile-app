@@ -717,6 +717,106 @@ failing test.
 
 ---
 
+## D-26 — Preserved intents are a closed enum holding no personal data
+
+**Status: settled.** Category: privacy / authorization.
+
+**Options**
+
+1. Store a callback or a closure to re-run after the gate.
+2. Store the action plus its payload — the draft comment, the form contents.
+3. **Store a closed-set enum plus at most one validated opaque identifier.**
+
+**Chosen: 3.**
+
+**Why.** An intent outlives the screen that created it and can be created by a
+guest, so anything held may outlive the account it belonged to. Option 1 stores
+arbitrary behaviour and replays it later against whatever session exists at that
+moment — the worst version of this is a closure that captures a repository and
+fires after a *different* resident signs in. Option 2 puts the resident's own
+words into a global holding area keyed to nobody.
+
+The trade accepted: a half-typed comment is lost when a gate interrupts it. That
+is a small cost, and losing it is much better than leaking it.
+
+`targetId` is validated against `^[A-Za-z0-9_-]{1,64}$`, so a sentence, a URL or
+a phone number fails an assertion rather than being stored.
+
+**Bounds:** one intent at a time, 10-minute TTL, in memory only, cleared on any
+session change.
+
+---
+
+## D-27 — Resuming an intent is a navigation, never an action
+
+**Status: settled.** Category: product / authorization.
+
+**Options**
+
+1. Perform the action automatically once the gate is passed.
+2. **Navigate to the screen where the resident can do it.**
+
+**Chosen: 2.**
+
+**Why.** Option 1 means an app completing something on a resident's behalf
+minutes later, on the far side of a sign-in flow they may have entered for a
+different reason. If it were a service application, it would file a request
+against their civil record without a fresh confirmation.
+
+`takeIfSatisfied` also asks `AccessPolicy` — the same evaluation the router uses
+— so an intent cannot resume early. Passing a gate does not authorise the
+action: the server decides on the request that follows (ADR 0002).
+
+---
+
+## D-28 — First-launch state lives in the keystore, not in plain preferences
+
+**Status: settled.** Category: architecture / privacy.
+
+**Options**
+
+1. Add `shared_preferences` for the "welcome seen" boolean.
+2. Write a small unencrypted file.
+3. **Store it through the existing `SecretStore`, under its own key namespace.**
+
+**Chosen: 3.**
+
+**Why.** The flag is not sensitive, but options 1 and 2 each add a *second*
+persistence mechanism to hold one boolean. That means a new dependency —
+`shared_preferences` is banned by CLAUDE.md Article 5.3 and by a test — a second
+thing to clear correctly, and a second place a future contributor might put
+something that *is* sensitive, next to a precedent saying this store is for
+unimportant things. Encrypting a boolean costs nothing measurable.
+
+It is deliberately **not** cleared on sign-out: the flag belongs to the install,
+not the account. A read failure degrades to "show the welcome", because showing
+it twice is an annoyance while skipping it for a real first-time resident means
+they never learn what the app will ask for.
+
+---
+
+## D-29 — Skipping the welcome counts as completing it
+
+**Status: settled.** Category: product.
+
+**Options**
+
+1. Only a full read-through sets the flag; a skip shows the scenes again.
+2. **Skip and finish both set the flag.**
+
+**Chosen: 2.**
+
+**Why.** Re-asking overrides a decision the resident already made, and doing it
+every launch is precisely what makes onboarding feel like a trap. A resident who
+skipped has told the app something; ignoring it to raise the completion rate is
+optimising the metric against the person.
+
+Together with a skip control on every scene, an equal-weight "Continue as guest"
+action, and a public, escapable route, this is what keeps the welcome a starting
+point rather than a funnel.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -746,5 +846,9 @@ failing test.
 | D-23 | Every drawn scene announced as an illustration | accessibility | settled |
 | D-24 | One animated illustration, and only where motion means something | accessibility | settled |
 | D-25 | An undeclared file in `assets/` fails the build | licensing | settled |
+| D-26 | Preserved intents are a closed enum with no personal data | privacy / authorization | settled |
+| D-27 | Resuming an intent navigates, never acts | product / authorization | settled |
+| D-28 | First-launch state lives in the keystore | architecture / privacy | settled |
+| D-29 | Skipping the welcome counts as completing it | product | settled |
 
-**25 decisions — 21 settled, 4 provisional pending named backend gaps.**
+**29 decisions — 25 settled, 4 provisional pending named backend gaps.**

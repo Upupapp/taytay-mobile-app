@@ -6,6 +6,8 @@ import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
+import 'package:taytay_resident/core/startup/launch_controller.dart';
+import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 
 AppConfig _config({String environment = 'dev', String baseUrl = ''}) =>
     AppConfig.from(
@@ -14,19 +16,37 @@ AppConfig _config({String environment = 'dev', String baseUrl = ''}) =>
       isReleaseBuild: false,
     );
 
-/// Boots the app with an injected store so the test controls the session that
-/// gets restored, exactly as a real cold start would find it.
+/// Boots the app with injected storage so the test controls both the session
+/// and the launch state a real cold start would find.
+///
+/// [welcomeSeen] defaults to true: these tests are about a *returning*
+/// resident's startup and access behaviour. First-launch routing is covered in
+/// `test/features/welcome_and_gates_test.dart`.
 Future<AppDependencies> _pumpApp(
   WidgetTester tester, {
   StoredSession? stored,
   AppConfig? config,
+  bool welcomeSeen = true,
 }) async {
+  // A phone-shaped surface: the 800x600 default is shorter than any device, and
+  // a ListView only builds what fits, so content below the fold is genuinely
+  // absent from the tree.
+  tester.view.physicalSize = const Size(400, 900);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+
   final store = InMemorySessionStore();
   if (stored != null) await store.write(stored);
+
+  final secrets = InMemorySecretStore();
+  if (welcomeSeen) {
+    await secrets.write(LaunchController.welcomeCompletedKey, 'true');
+  }
 
   final dependencies = AppDependencies.build(
     config: config ?? _config(),
     sessionStore: store,
+    secrets: secrets,
   );
   addTearDown(dependencies.dispose);
 
@@ -93,6 +113,18 @@ void main() {
       await tester.tap(find.text('My Taytay digital ID'));
       await tester.pumpAndSettle();
 
+      // TAB 06: the tile now explains the gate and holds the intent before
+      // sending the resident on.
+      expect(find.text('Sign in to continue'), findsOneWidget);
+      // Scoped to the sheet: the home card behind it also offers "Sign in".
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Sign in'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
       expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
       expect(find.text('Mobile number'), findsOneWidget);
     });
@@ -113,6 +145,17 @@ void main() {
       await _settle(tester);
 
       await tester.tap(find.text('My Taytay digital ID'));
+      await tester.pumpAndSettle();
+
+      // TAB 06: the verification gate explains, then takes them there.
+      expect(find.text('Verify your identity'), findsOneWidget);
+      // Scoped to the sheet: the home card behind it also offers this action.
+      await tester.tap(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Start verification'),
+        ),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Verify your identity with Taytay LGU'), findsOneWidget);

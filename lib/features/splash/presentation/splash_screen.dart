@@ -34,15 +34,21 @@ class _SplashScreenState extends State<SplashScreen> {
     final dependencies = AppDependencies.of(context);
     final reduced = Motion.reducedFromPlatform;
 
-    // The read and the minimum display time run together: the resident waits for
-    // whichever is slower, not for both in sequence. Reduced motion shortens the
-    // hold — a splash is decoration, and decoration is what reduced motion is
-    // allowed to take away.
-    await dependencies.session.restore(
-      notBefore: Future<void>.delayed(
-        reduced ? MotionTokens.splashReduced : MotionTokens.splashMinimum,
-      ),
+    // Both reads and the minimum display time run together: the resident waits
+    // for whichever is slowest, not for all three in sequence. Reduced motion
+    // shortens the hold — a splash is decoration, and decoration is what
+    // reduced motion is allowed to take away.
+    final minimumVisible = Future<void>.delayed(
+      reduced ? MotionTokens.splashReduced : MotionTokens.splashMinimum,
     );
+
+    await Future.wait<void>(<Future<void>>[
+      // Publishing is held until the minimum, because publishing is what moves
+      // the router.
+      dependencies.session.restore(notBefore: minimumVisible),
+      dependencies.launch.restore(),
+      minimumVisible,
+    ]);
   }
 
   @override

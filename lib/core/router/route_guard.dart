@@ -1,5 +1,6 @@
 import '../session/access_policy.dart';
 import '../session/session_state.dart';
+import '../startup/launch_controller.dart';
 import 'app_routes.dart';
 
 /// Decides where a navigation attempt should actually land.
@@ -11,9 +12,13 @@ import 'app_routes.dart';
 /// This is *navigation*, not authorization — see `AccessPolicy`. Its job is to
 /// make a deep link into a protected screen land somewhere useful instead of on
 /// a screen that will immediately fail an API call.
+/// [launch] decides only whether a first-time resident sees the welcome scenes
+/// before the app. It is presentation state and confers nothing: every access
+/// decision below still comes from [AccessPolicy].
 String? resolveRedirect({
   required SessionState session,
   required String location,
+  LaunchState launch = LaunchState.returning,
 }) {
   final target = AppRoute.forPath(_pathOf(location));
   if (target == null) {
@@ -25,12 +30,22 @@ String? resolveRedirect({
   // Until the stored session has been read, the only honest answer is "wait".
   // Deciding early is what sends a signed-in resident to sign-in on every cold
   // start.
-  if (!session.isResolved) {
+  if (!session.isResolved || launch == LaunchState.restoring) {
     return target == AppRoute.splash ? null : AppRoute.splash.path;
   }
 
-  // Session known and we are still on the splash: move on.
-  if (target == AppRoute.splash) return AppRoute.home.path;
+  // Session known and we are still on the splash: move on. A first-time
+  // resident meets the welcome scenes; everyone else goes straight to the app.
+  //
+  // Note what does *not* happen here: a returning resident is never sent back
+  // through onboarding, and a first-time resident is never held there — the
+  // welcome route stays public and escapable, so this is a starting point, not
+  // a gate.
+  if (target == AppRoute.splash) {
+    return launch == LaunchState.firstLaunch
+        ? AppRoute.onboarding.path
+        : AppRoute.home.path;
+  }
 
   // A signed-in resident has no business on the sign-in screen. Resume the
   // destination they were originally heading for, if it is now reachable.

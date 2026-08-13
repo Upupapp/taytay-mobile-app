@@ -5,8 +5,10 @@ import '../core/api/api_transport.dart';
 import '../core/api/auth_coordinator.dart';
 import '../core/api/http_api_transport.dart';
 import '../core/config/app_config.dart';
+import '../core/intent/intent_controller.dart';
 import '../core/session/session_controller.dart';
 import '../core/session/session_store.dart';
+import '../core/startup/launch_controller.dart';
 import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
@@ -37,6 +39,8 @@ class AppDependencies {
   AppDependencies({
     required this.config,
     required this.session,
+    required this.launch,
+    required this.intents,
     required this.apiClient,
     required this.cache,
     required this.authRepository,
@@ -66,6 +70,8 @@ class AppDependencies {
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
     final publicCache = cache ?? PublicCache();
     final session = SessionController(store: store);
+    final launch = LaunchController(secrets: secretStore);
+    final intents = IntentController();
 
     // Fail closed: with no refresher registered — and the committed backend
     // publishes no refresh endpoint — a 401 ends the session rather than being
@@ -73,6 +79,9 @@ class AppDependencies {
     final authCoordinator = AuthCoordinator(
       onSessionInvalidated: () async {
         await session.handleUnauthenticated();
+        // A held intent must never survive a session boundary: resuming an
+        // action for a different account is the failure this prevents.
+        intents.onSessionChanged();
         // Nothing personal is in the public cache by construction, but a
         // resident handing the phone back should not see the previous session's
         // screens repopulate from memory.
@@ -94,6 +103,8 @@ class AppDependencies {
     return AppDependencies(
       config: config,
       session: session,
+      launch: launch,
+      intents: intents,
       apiClient: apiClient,
       cache: publicCache,
       authRepository: const PendingBackendAuthRepository(),
@@ -114,6 +125,12 @@ class AppDependencies {
 
   final AppConfig config;
   final SessionController session;
+
+  /// First-launch state. Presentation only — it grants nothing.
+  final LaunchController launch;
+
+  /// The one action a resident was part-way through when a gate stopped them.
+  final IntentController intents;
   final ApiClient apiClient;
   final PublicCache cache;
 
@@ -131,6 +148,8 @@ class AppDependencies {
 
   void dispose() {
     session.dispose();
+    launch.dispose();
+    intents.dispose();
     cache.clear();
     onDispose?.call();
   }
