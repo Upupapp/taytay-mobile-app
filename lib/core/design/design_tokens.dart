@@ -10,14 +10,29 @@ import 'dart:ui';
 /// These are *brand* colours. Screens read semantic roles from
 /// `Theme.of(context).colorScheme`, which is derived from these; a widget that
 /// hard-codes a value from here bypasses dark mode and high-contrast handling.
+/// **A note on what these values are, and are not.**
+///
+/// These are *application interface* colours chosen for this app. They are **not**
+/// a claimed reproduction of an official Municipality of Taytay colour
+/// specification, and no Pantone, CMYK or ink reference is asserted anywhere in
+/// this repository — no such specification has been supplied to this project, and
+/// inventing one would put a fabricated standard into a government product where
+/// later readers would treat it as authoritative.
+///
+/// If the LGU issues a brand manual, these values are reconciled against it in a
+/// deliberate change, and the source is cited at that point.
 abstract final class BrandColors {
-  /// Official deep blue — the primary brand colour and the Material 3 seed.
+  /// Deep blue — the app's primary colour and the Material 3 seed.
+  ///
+  /// Chosen as a conventional Philippine civic blue that meets 4.5:1 against
+  /// white (see `brand_test.dart`). Continuous with the earlier Taytay prototype
+  /// so residents who saw it recognise this app.
   static const Color taytayBlue = Color(0xFF0B3D91);
   static const Color taytayBlueDark = Color(0xFF062358);
   static const Color taytayBlueLight = Color(0xFF1E5BC6);
 
-  /// Municipal seal gold. Accent only — never a text colour on light surfaces,
-  /// where it cannot reach 4.5:1 contrast.
+  /// Gold accent, in the family of the gold in the municipal seal. Accent only —
+  /// never a text colour on light surfaces, where it cannot reach 4.5:1.
   static const Color sealGold = Color(0xFFFCD116);
 
   /// Philippine flag red. Reserved for the national/emergency context; not a
@@ -57,6 +72,75 @@ abstract final class Radii {
   static const double lg = 16;
   static const double xl = 24;
   static const double pill = 999;
+}
+
+/// Elevation steps, in Material 3 terms.
+///
+/// Material 3 expresses depth primarily through *surface tone*, not shadow, which
+/// is why these are levels rather than shadow definitions: `surfaceContainerLow`
+/// through `surfaceContainerHighest` already encode depth and stay legible in
+/// dark mode and high-contrast, where a hand-rolled shadow disappears.
+///
+/// A shadow is used only where a surface genuinely floats above scrolling
+/// content — a menu, a sheet, a dialog scrim edge.
+abstract final class Elevation {
+  /// Flat against the background. Cards, list rows.
+  static const double none = 0;
+
+  /// Raised just enough to separate from content that scrolls under it.
+  static const double raised = 1;
+
+  /// App bar once content has scrolled beneath it.
+  static const double scrolledUnder = 3;
+
+  /// Menus, bottom sheets.
+  static const double floating = 6;
+
+  /// Dialogs — the only thing above everything else.
+  static const double dialog = 8;
+}
+
+/// Opacity steps.
+///
+/// Deliberately few, and none of them are used to express *disabled text*:
+/// Material 3 uses `onSurface` at 38% for disabled, which is below 4.5:1 by
+/// design because disabled controls are exempt from WCAG 1.4.3. Anything a
+/// resident must actually read uses a full-opacity colour role instead — dimming
+/// live text is the most common way an app quietly fails contrast.
+abstract final class Opacities {
+  /// Scrim behind a modal surface.
+  static const double scrim = 0.32;
+
+  /// Pressed / hovered state layer over a coloured surface.
+  static const double stateLayer = 0.12;
+
+  /// Decorative dividers and hairlines drawn over a brand colour.
+  static const double hairline = 0.24;
+
+  /// Disabled control — Material 3's own value. Never applied to text a
+  /// resident is expected to read.
+  static const double disabled = 0.38;
+}
+
+/// Icon sizes.
+///
+/// The size is the *glyph*; the tap target is separate and always at least
+/// [A11y.minTapTarget]. Conflating the two produces 24 dp buttons.
+abstract final class IconSizes {
+  /// Inline with body text — status dots, chevrons in dense rows.
+  static const double sm = 18;
+
+  /// Default: list leading icons, button icons, app bar actions.
+  static const double md = 24;
+
+  /// Section headers and card leading marks.
+  static const double lg = 32;
+
+  /// Empty/error/success illustrations.
+  static const double xl = 48;
+
+  /// Full-screen state illustrations.
+  static const double xxl = 56;
 }
 
 /// Accessibility constants applied across the app.

@@ -1,5 +1,7 @@
 import 'package:flutter/services.dart';
 
+import '../motion/motion_tokens.dart';
+
 /// Intent behind a haptic, so call sites describe *why* they buzz rather than
 /// how strong the buzz is. The mapping to platform feedback lives here and can
 /// change without touching a single screen.
@@ -50,11 +52,18 @@ abstract final class AppHaptics {
 
   /// Fires the feedback for [intent]. Fire-and-forget; failures are swallowed.
   ///
-  /// Pass `suppressed: true` from a widget that knows reduced motion is active
-  /// (`Motion.reduced(context)`), so the decision stays testable and this class
-  /// stays free of a `BuildContext`.
+  /// Suppressed automatically when the resident's haptic preference is off, or
+  /// when motion is being reduced — by the platform or by the in-app
+  /// [MotionPreference]. The accessibility settings that reduce animation are
+  /// frequently set by people who find repeated physical feedback unpleasant
+  /// too, so the reduction is global rather than something each call site must
+  /// remember.
+  ///
+  /// [suppressed] additionally lets a widget that already has a `BuildContext`
+  /// pass `Motion.reduced(context)`, which also picks up a `MediaQuery` override
+  /// in the widget tree. This class stays free of a `BuildContext` itself.
   static Future<void> fire(HapticIntent intent, {bool suppressed = false}) async {
-    if (!_enabled || suppressed) return;
+    if (!_enabled || suppressed || Motion.reducedFromPlatform) return;
     try {
       switch (intent) {
         case HapticIntent.selection:

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../shared/widgets/brand_mark.dart';
 
 /// Cold-start screen. Restores the session, then gets out of the way.
 ///
@@ -49,41 +50,13 @@ class _SplashScreenState extends State<SplashScreen> {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      body: Center(
+      body: const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Semantics(
-              label: 'Municipality of Taytay, Rizal',
-              child: Container(
-                width: 96,
-                height: 96,
-                decoration: BoxDecoration(
-                  color: BrandColors.taytayBlue,
-                  borderRadius: BorderRadius.circular(Radii.xl),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'T',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 44,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: Spacing.xl),
-            Text('Taytay LGU IDS', style: theme.textTheme.titleLarge),
-            const SizedBox(height: Spacing.xs),
-            Text(
-              'Municipality of Taytay, Rizal',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: Spacing.xxl),
-            const SizedBox(
+            BrandMark(size: 96, showWordmark: true),
+            SizedBox(height: Spacing.xxl),
+            SizedBox(
               width: A11y.minTapTarget,
               child: LinearProgressIndicator(minHeight: 3),
             ),

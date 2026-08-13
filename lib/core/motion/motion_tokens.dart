@@ -50,25 +50,59 @@ abstract final class MotionTokens {
   static const Curve emphasisedEase = Cubic(0.2, 0.0, 0.0, 1.0);
 }
 
+/// The resident's in-app motion preference, layered over the OS setting.
+///
+/// The OS setting is the floor: if the platform asks for reduced motion, the app
+/// reduces motion, and no in-app choice can override that. What this adds is the
+/// ability for a resident to reduce motion *without* changing a system-wide
+/// setting — which matters because "Remove animations" on Android also affects
+/// every other app, and some residents want the calmer government app without
+/// flattening their whole phone.
+///
+/// [system] is therefore the default, and [reduced] can only ever remove motion.
+enum MotionPreference {
+  /// Follow the platform accessibility setting.
+  system,
+
+  /// Always reduce, regardless of the platform setting.
+  reduced;
+
+  static MotionPreference _current = MotionPreference.system;
+
+  /// The active preference. Set from the accessibility settings screen.
+  static MotionPreference get current => _current;
+
+  static void set(MotionPreference preference) => _current = preference;
+
+  /// Restores the default. Used by tests so one test cannot leak into the next.
+  @visibleForTesting
+  static void reset() => _current = MotionPreference.system;
+}
+
 /// Reduced-motion helpers.
 ///
-/// The signal is `MediaQuery.disableAnimations`, which Flutter derives from
-/// "Remove animations" on Android and "Reduce Motion" on iOS.
+/// The platform signal is `MediaQuery.disableAnimations`, which Flutter derives
+/// from "Remove animations" on Android and "Reduce Motion" on iOS. The in-app
+/// [MotionPreference] is OR-ed with it, never AND-ed: motion is reduced if
+/// *either* asks for it.
 abstract final class Motion {
-  /// True when the platform asks for less motion.
+  /// True when motion should be reduced — by the platform or by the resident.
   ///
-  /// Prefer this over the binding-level check inside `build`, so a change to the
-  /// setting rebuilds the widget.
+  /// Prefer this over the binding-level check inside `build`, so a change to
+  /// either setting rebuilds the widget.
   static bool reduced(BuildContext context) =>
-      MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+      MotionPreference.current == MotionPreference.reduced ||
+      (MediaQuery.maybeDisableAnimationsOf(context) ?? false);
 
   /// Binding-level check for code with no [BuildContext] (`initState`, a
   /// controller). Does not rebuild on change.
-  static bool get reducedFromPlatform => WidgetsBinding
-      .instance
-      .platformDispatcher
-      .accessibilityFeatures
-      .disableAnimations;
+  static bool get reducedFromPlatform =>
+      MotionPreference.current == MotionPreference.reduced ||
+      WidgetsBinding
+          .instance
+          .platformDispatcher
+          .accessibilityFeatures
+          .disableAnimations;
 
   /// Shortens [full] to [MotionTokens.fast] under reduced motion.
   ///

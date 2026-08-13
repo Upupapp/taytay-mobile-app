@@ -489,6 +489,121 @@ workaround.
 
 ---
 
+## D-18 — The municipal seal is not shipped until a verified asset exists
+
+**Status: settled.** Category: brand / licensing / privacy-of-trust.
+
+**Options**
+
+1. Use `lgu_ids_taytay/assets/logos/taytay_logo.png`, the seal already present in
+   the workspace.
+2. Recreate the seal as vector artwork from that raster.
+3. **Ship no seal. Render a plainly non-official wordmark, and gate the real asset
+   behind a checksum-verified registry.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 was inspected byte-by-byte and fails: the file is **JPEG**
+(`FF D8 FF E0 … JFIF`) despite its `.png` extension, so it is lossily
+re-encoded; it has **no alpha channel** and is flattened onto opaque black, so it
+renders as a black square on any surface; and its provenance is a prototype app,
+not the LGU. A lossily-recompressed seal on a black box is an altered seal.
+
+Option 2 is worse. Redrawing a government symbol produces something that looks
+official and is not, and the resident looking at it has no way to tell — the seal
+is exactly the element they would use to decide whether to trust the screen.
+
+Shipping nothing costs a little polish. Shipping a degraded or invented seal
+costs the ability to ever answer "is this the official mark?".
+
+**What enforces it.** `BrandAssets` is empty; `BrandMark` has no `color`, `fit`,
+`shape` or `transform` parameter, so it cannot express a violation of
+`SealIntegrityRules`; and `brand_test.dart` checks format by magic bytes (not
+extension), alpha presence, SHA-256 against the approved bytes, and the presence
+of a licence reference. One test asserts no seal is registered, so adding one
+forces a deliberate edit.
+
+**Sources.** Byte inspection of
+`Desktop/lgu_ids_taytay/assets/logos/taytay_logo.png` (sha256
+`a1c116dd…e614`, 322,361 bytes, JFIF header).
+
+---
+
+## D-19 — No Pantone, CMYK or ink specification is asserted
+
+**Status: settled.** Category: brand.
+
+**Options**
+
+1. Publish Pantone/CMYK values alongside the hex tokens, as brand docs usually do.
+2. Sample values from the seal artwork and present them as the official palette.
+3. **State hex tokens as application interface colours, and assert no official
+   specification.**
+
+**Chosen: 3.**
+
+**Why.** No LGU brand manual has been supplied. Option 1 would invent a standard;
+option 2 would derive one from a JPEG that is already colour-shifted by lossy
+compression, then present the artifact as authoritative. Either way a later reader
+finds numbers in a government repository and reasonably treats them as official.
+
+The earlier wording "Official deep blue" in `design_tokens.dart` was corrected as
+part of this decision — it made exactly the claim this entry forbids.
+
+**Enforced by** a test that scans `lib/` for `pantone`, `pms <digits>` and `cmyk`
+with comments stripped, so the disclaimer explaining the rule does not trip it.
+
+---
+
+## D-20 — Reduced motion has two independent switches, OR-ed
+
+**Status: settled.** Category: accessibility.
+
+**Options**
+
+1. Follow the OS setting only.
+2. Offer an in-app setting that can also *enable* motion the OS suppressed.
+3. **OS setting as a floor, plus an in-app preference that can only reduce.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 forces an all-or-nothing choice on the resident: Android's
+"Remove animations" is system-wide, and someone who wants the calmer government
+app should not have to flatten every other app to get it. Option 2 is unsafe — it
+would let an in-app default override an accessibility setting the person
+deliberately turned on, which is the one direction that must never be possible.
+
+`Motion.reduced` is therefore an OR, and `MotionPreference` has no value meaning
+"more motion than the system asked for".
+
+**Scope.** The same switch suppresses haptics, centrally rather than per call
+site.
+
+---
+
+## D-21 — Gradients declare their foreground and are proved across the ramp
+
+**Status: settled.** Category: accessibility.
+
+**Options**
+
+1. Check contrast against the gradient's darkest stop.
+2. Check both endpoints.
+3. **Bind the foreground to the gradient and sample interpolated midpoints.**
+
+**Chosen: 3.**
+
+**Why.** Text on a gradient reaches worst contrast wherever the background is
+closest in luminance to the text, and on a multi-stop ramp that point can lie
+between two stops that both pass. A black → white → black gradient passes at both
+endpoints and fails badly in the middle; `brand_test.dart` includes exactly that
+case to prove the sampler is not decorative.
+
+Binding `onColor` to the gradient means the colour that was proved is the colour
+`BrandGradientSurface` actually supplies to its subtree.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -510,5 +625,9 @@ workaround.
 | D-15 | Idempotency keys on retryable writes | lifecycle | settled (unimplemented) |
 | D-16 | No invented client-side schema | schema | settled |
 | D-17 | Bearer tokens, server-side revocation, refresh | authorization | provisional (upstream ADR 0005 uncommitted) |
+| D-18 | No municipal seal until a verified asset exists | brand / licensing | settled |
+| D-19 | No Pantone/CMYK specification asserted | brand | settled |
+| D-20 | Reduced motion: OS floor OR in-app preference | accessibility | settled |
+| D-21 | Gradients declare their foreground, proved across the ramp | accessibility | settled |
 
-**17 decisions — 13 settled, 4 provisional pending named backend gaps.**
+**21 decisions — 17 settled, 4 provisional pending named backend gaps.**

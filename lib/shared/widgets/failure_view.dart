@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/result/result.dart';
+import 'app_button.dart';
+import 'status_view.dart';
 
 /// The one way a failure is shown to a resident.
 ///
@@ -14,6 +16,9 @@ import '../../core/result/result.dart';
 /// In production the id is presented quietly as a reference; in non-production
 /// builds the developer-facing detail is shown too, because the alternative is
 /// developers reading it out of logs and, eventually, printing it in release.
+///
+/// Built on [StatusView] so a failure looks like every other full-surface state
+/// in the app rather than like a special case.
 class FailureView extends StatelessWidget {
   const FailureView({
     required this.failure,
@@ -31,57 +36,41 @@ class FailureView extends StatelessWidget {
     final theme = Theme.of(context);
     final requestId = failure.requestId;
 
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      child: Padding(
-        padding: const EdgeInsets.all(Spacing.xl),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Icon(
-              _iconFor(failure),
-              size: 40,
-              color: theme.colorScheme.onSurfaceVariant,
+    final details = <String>[
+      if (requestId != null) 'Reference: $requestId',
+      if (environment.allowsDiagnosticsUi && failure.debugMessage != null)
+        '[${environment.badgeLabel}] ${failure.kind}: ${failure.debugMessage}',
+    ];
+
+    return StatusView(
+      kind: StatusKind.error,
+      icon: _iconFor(failure),
+      title: failure.residentMessage,
+      primaryAction: onRetry != null && failure.isRetryable
+          ? AppButton(
+              label: 'Try again',
+              variant: AppButtonVariant.secondary,
+              fullWidth: false,
+              onPressed: onRetry,
+            )
+          : null,
+      secondaryAction: details.isEmpty
+          ? null
+          : Column(
+              children: <Widget>[
+                for (final detail in details)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Spacing.xs),
+                    child: Text(
+                      detail,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+              ],
             ),
-            const SizedBox(height: Spacing.lg),
-            Text(
-              failure.residentMessage,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge,
-            ),
-            if (requestId != null) ...<Widget>[
-              const SizedBox(height: Spacing.sm),
-              Text(
-                'Reference: $requestId',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-            if (environment.allowsDiagnosticsUi &&
-                failure.debugMessage != null) ...<Widget>[
-              const SizedBox(height: Spacing.sm),
-              Text(
-                '[${environment.badgeLabel}] ${failure.kind}: ${failure.debugMessage}',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                ),
-              ),
-            ],
-            if (onRetry != null && failure.isRetryable) ...<Widget>[
-              const SizedBox(height: Spacing.xl),
-              FilledButton.tonal(
-                onPressed: onRetry,
-                child: const Text('Try again'),
-              ),
-            ],
-          ],
-        ),
-      ),
     );
   }
 

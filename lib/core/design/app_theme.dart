@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../motion/motion_tokens.dart';
 import 'design_tokens.dart';
+import 'typography.dart';
 
 /// Builds the app's Material 3 themes from [BrandColors].
 ///
@@ -32,8 +33,8 @@ abstract final class AppTheme {
           seedColor: BrandColors.taytayBlue,
           brightness: brightness,
         ).copyWith(
-          // Keep the official blue exact in light mode: it is a brand asset, not
-          // a colour the tonal algorithm may reinterpret. In dark mode the
+          // Keep the chosen blue exact in light mode rather than letting the
+          // tonal algorithm reinterpret it. In dark mode the
           // generated tone is kept, because the literal blue cannot reach 4.5:1
           // against a dark surface.
           primary: brightness == Brightness.light
@@ -46,6 +47,7 @@ abstract final class AppTheme {
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
 
     return base.copyWith(
+      textTheme: AppTypography.apply(base.textTheme),
       scaffoldBackgroundColor: scheme.surface,
       visualDensity: VisualDensity.standard,
       // Ensures every Material tap target reserves at least 48x48 dp, including
@@ -60,8 +62,8 @@ abstract final class AppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: scheme.surface,
         foregroundColor: scheme.onSurface,
-        elevation: 0,
-        scrolledUnderElevation: 3,
+        elevation: Elevation.none,
+        scrolledUnderElevation: Elevation.scrolledUnder,
         centerTitle: false,
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           color: scheme.onSurface,
@@ -70,7 +72,7 @@ abstract final class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: scheme.surfaceContainerLow,
-        elevation: 0,
+        elevation: Elevation.none,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(Radii.lg),
@@ -124,6 +126,20 @@ abstract final class AppTheme {
         contentPadding: EdgeInsets.symmetric(horizontal: Spacing.lg),
       ),
       dividerTheme: DividerThemeData(space: 1, color: scheme.outlineVariant),
+      dialogTheme: DialogThemeData(
+        elevation: Elevation.dialog,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        elevation: Elevation.floating,
+        showDragHandle: true,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
+        ),
+      ),
+      iconTheme: IconThemeData(size: IconSizes.md, color: scheme.onSurfaceVariant),
       splashFactory: InkSparkle.splashFactory,
     );
   }

@@ -47,6 +47,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+  # Test-only. Computes the SHA-256 that `test/core/brand_test.dart` checks
+  # official artwork against, so a re-exported or swapped seal fails a test
+  # instead of shipping unnoticed. Dart-team maintained, pure Dart, no platform
+  # channels and no network access. Deliberately a dev dependency: it is never
+  # linked into the shipped app.
+  crypto: ^3.0.7
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
