@@ -36,6 +36,20 @@ dependencies:
   cupertino_icons: ^1.0.8
   go_router: ^17.5.0
 
+  # HTTP transport. Dart-team maintained, minimal surface, no code generation and
+  # no interceptor framework of its own — retry, auth and correlation are this
+  # app's own policy in `core/api/`, where they are unit-testable, rather than
+  # configuration inside a third-party client. Chosen over dio for the same
+  # reason: fewer moving parts in the layer that carries resident credentials.
+  http: ^1.6.0
+
+  # Platform keystore for credential material: Android Keystore via
+  # EncryptedSharedPreferences, iOS Keychain. Required by CLAUDE.md Article 5.3,
+  # which forbids tokens in plain `SharedPreferences` or a plain file. Configured
+  # in `core/storage/secure_secret_store.dart` with device-only accessibility so
+  # a token cannot travel to another device in a cloud backup.
+  flutter_secure_storage: ^11.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

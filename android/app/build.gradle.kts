@@ -6,7 +6,17 @@ plugins {
 
 android {
     namespace = "ph.gov.taytay.lguids.taytay_resident"
-    compileSdk = flutter.compileSdkVersion
+    // Pinned above Flutter's default because `flutter_secure_storage` 11 declares
+    // that dependants must compile against API 37 or later. compileSdk controls
+    // only which APIs are available at compile time; `targetSdk` (runtime
+    // behaviour) and `minSdk` (device support) stay on Flutter's defaults, so no
+    // device loses support and no new runtime behaviour is opted into.
+    //
+    // AGP 9.0.1 reports 36 as its "maximum recommended" compileSdk and emits a
+    // warning at 37. Accepted deliberately: the alternative is downgrading the
+    // credential-storage plugin, and the keystore layer is the last place to run
+    // an older version. Revisit when AGP officially supports 37.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

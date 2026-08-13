@@ -1,7 +1,9 @@
 import '../config/app_config.dart';
 import '../result/result.dart';
+import '../storage/public_cache.dart';
 import 'api_envelope.dart';
 import 'api_transport.dart';
+import 'auth_coordinator.dart';
 import 'request_context.dart';
 
 /// Supplies the current access token to the API layer.
@@ -30,15 +32,26 @@ class ApiClient {
     required ApiTransport transport,
     AccessTokenProvider? accessTokenProvider,
     UnauthenticatedHandler? onUnauthenticated,
+    AuthCoordinator? authCoordinator,
+    PublicCache? cache,
   }) : _config = config,
        _transport = transport,
        _accessTokenProvider = accessTokenProvider,
-       _onUnauthenticated = onUnauthenticated;
+       _onUnauthenticated = onUnauthenticated,
+       _authCoordinator = authCoordinator,
+       _cache = cache;
 
   final AppConfig _config;
   final ApiTransport _transport;
   final AccessTokenProvider? _accessTokenProvider;
   final UnauthenticatedHandler? _onUnauthenticated;
+
+  /// Serialises recovery from `401`. When absent, a `401` ends the session
+  /// directly through [_onUnauthenticated] — the same fail-closed outcome.
+  final AuthCoordinator? _authCoordinator;
+
+  /// Public, non-personal responses only. See [PublicCache].
+  final PublicCache? _cache;
 
   /// Sends [method] [path] and decodes `data` with [decode].
   ///
@@ -67,6 +80,76 @@ class ApiClient {
       );
     }
 
+    var decoded = await _sendOnce<T>(
+      method: method,
+      path: path,
+      query: query,
+      body: body,
+      idempotencyKey: idempotencyKey,
+      timeout: timeout,
+      token: token,
+      decode: decode,
+    );
+
+    // `401` is the single signal that ends a session, handled once here rather
+    // than at each call site. Recovery is serialised by the coordinator so that
+    // several requests failing together cause at most one refresh.
+    final failure = decoded.failureOrNull;
+    if (failure != null && failure.requiresReauthentication) {
+      final coordinator = _authCoordinator;
+      if (coordinator == null) {
+        await _onUnauthenticated?.call();
+        return decoded;
+      }
+
+      final recovery = await coordinator.handleUnauthenticated();
+      if (recovery == AuthRecovery.failed) return decoded;
+
+      // Refreshed: replay exactly once, with the new token. Never twice — a
+      // second `401` after a successful refresh means something is wrong that
+      // retrying cannot fix.
+      final refreshedToken = await _accessTokenProvider?.call();
+      if (refreshedToken == null || refreshedToken.isEmpty) return decoded;
+
+      decoded = await _sendOnce<T>(
+        method: method,
+        path: path,
+        query: query,
+        body: body,
+        idempotencyKey: idempotencyKey,
+        timeout: timeout,
+        token: refreshedToken,
+        decode: decode,
+      );
+      if (decoded.failureOrNull?.requiresReauthentication ?? false) {
+        await _onUnauthenticated?.call();
+      }
+    }
+
+    if (decoded.isOk && !authenticated) {
+      _cache?.store<ApiEnvelope<T>>(
+        key: path,
+        value: decoded.valueOrNull!,
+        authenticated: false,
+      );
+    }
+
+    return decoded;
+  }
+
+  /// One attempt: build the request context, send, decode. No auth recovery.
+  Future<Result<ApiEnvelope<T>>> _sendOnce<T>({
+    required HttpMethod method,
+    required String path,
+    required Map<String, String> query,
+    required Object? body,
+    required String? idempotencyKey,
+    required Duration? timeout,
+    required String? token,
+    required T Function(Object? data) decode,
+  }) async {
+    // A fresh correlation id per attempt: a replay is a different request and
+    // must be traceable as one in the server's logs.
     final context = RequestContext(
       requestId: generateRequestId(),
       bearerToken: token,
@@ -86,18 +169,17 @@ class ApiClient {
       ),
     );
 
-    switch (response) {
-      case Err<ApiHttpResponse>(:final failure):
-        return Err<ApiEnvelope<T>>(failure);
-      case Ok<ApiHttpResponse>(value: final httpResponse):
-        final decoded = ApiEnvelopeDecoder.decode<T>(httpResponse, decode);
-        final failure = decoded.failureOrNull;
-        if (failure != null && failure.requiresReauthentication) {
-          await _onUnauthenticated?.call();
-        }
-        return decoded;
-    }
+    return switch (response) {
+      Err<ApiHttpResponse>(:final failure) => Err<ApiEnvelope<T>>(failure),
+      Ok<ApiHttpResponse>(value: final httpResponse) =>
+        ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
+    };
   }
+
+  /// A cached public envelope for [path], when one is fresh.
+  ///
+  /// Callers opt in explicitly; nothing is served from cache behind their back.
+  ApiEnvelope<T>? cached<T>(String path) => _cache?.read<ApiEnvelope<T>>(path);
 
   /// Absolute URI for [path], honouring the configured base path.
   ///
