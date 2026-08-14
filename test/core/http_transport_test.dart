@@ -31,7 +31,10 @@ void main() {
         config: config(),
         client: MockClient((request) async {
           seen = request.url;
-          return http.Response(jsonEncode(<String, Object?>{'data': null}), 200);
+          return http.Response(
+            jsonEncode(<String, Object?>{'data': null}),
+            200,
+          );
         }),
       );
 
@@ -95,37 +98,45 @@ void main() {
   });
 
   group('failure translation', () {
-    test('a socket error becomes a NetworkFailure, never an exception', () async {
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async => throw const SocketException('no route')),
-        retryPolicy: const RetryPolicy(maxAttempts: 1),
-      );
+    test(
+      'a socket error becomes a NetworkFailure, never an exception',
+      () async {
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient(
+            (_) async => throw const SocketException('no route'),
+          ),
+          retryPolicy: const RetryPolicy(maxAttempts: 1),
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'health'),
-      );
-      expect(result.failureOrNull, isA<NetworkFailure>());
-    });
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'health'),
+        );
+        expect(result.failureOrNull, isA<NetworkFailure>());
+      },
+    );
 
-    test('a TLS handshake failure is reported distinctly in debug detail', () async {
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient(
-          (_) async => throw const HandshakeException('bad certificate'),
-        ),
-        retryPolicy: const RetryPolicy(maxAttempts: 1),
-      );
+    test(
+      'a TLS handshake failure is reported distinctly in debug detail',
+      () async {
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient(
+            (_) async => throw const HandshakeException('bad certificate'),
+          ),
+          retryPolicy: const RetryPolicy(maxAttempts: 1),
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'health'),
-      );
-      final failure = result.failureOrNull!;
-      expect(failure, isA<NetworkFailure>());
-      expect(failure.debugMessage, contains('TLS handshake'));
-      // The resident still sees plain connectivity copy, never TLS internals.
-      expect(failure.residentMessage, isNot(contains('TLS')));
-    });
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'health'),
+        );
+        final failure = result.failureOrNull!;
+        expect(failure, isA<NetworkFailure>());
+        expect(failure.debugMessage, contains('TLS handshake'));
+        // The resident still sees plain connectivity copy, never TLS internals.
+        expect(failure.residentMessage, isNot(contains('TLS')));
+      },
+    );
 
     test('a timeout becomes a TimeoutFailure', () async {
       final transport = HttpApiTransport(
@@ -147,85 +158,99 @@ void main() {
       expect(result.failureOrNull, isA<TimeoutFailure>());
     });
 
-    test('an unexpected error is contained, not thrown at the caller', () async {
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async => throw StateError('boom')),
-        retryPolicy: const RetryPolicy(maxAttempts: 1),
-      );
+    test(
+      'an unexpected error is contained, not thrown at the caller',
+      () async {
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async => throw StateError('boom')),
+          retryPolicy: const RetryPolicy(maxAttempts: 1),
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'health'),
-      );
-      expect(result.failureOrNull, isA<UnexpectedFailure>());
-    });
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'health'),
+        );
+        expect(result.failureOrNull, isA<UnexpectedFailure>());
+      },
+    );
   });
 
   group('retry behaviour', () {
-    test('a GET is retried up to the attempt limit and then gives up', () async {
-      var calls = 0;
-      final clock = _Clock();
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async {
-          calls++;
-          throw const SocketException('flaky');
-        }),
-        sleep: clock.sleep,
-      );
+    test(
+      'a GET is retried up to the attempt limit and then gives up',
+      () async {
+        var calls = 0;
+        final clock = _Clock();
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            throw const SocketException('flaky');
+          }),
+          sleep: clock.sleep,
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'services'),
-      );
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'services'),
+        );
 
-      expect(calls, 3, reason: 'default maxAttempts');
-      expect(clock.slept, hasLength(2), reason: 'one sleep between attempts');
-      expect(result.failureOrNull, isA<NetworkFailure>());
-    });
+        expect(calls, 3, reason: 'default maxAttempts');
+        expect(clock.slept, hasLength(2), reason: 'one sleep between attempts');
+        expect(result.failureOrNull, isA<NetworkFailure>());
+      },
+    );
 
-    test('a transient failure followed by success returns the success', () async {
-      var calls = 0;
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async {
-          calls++;
-          if (calls == 1) throw const SocketException('flaky');
-          return http.Response(
-            jsonEncode(<String, Object?>{'data': <String, Object?>{'ok': true}}),
-            200,
-          );
-        }),
-        sleep: (_) async {},
-      );
+    test(
+      'a transient failure followed by success returns the success',
+      () async {
+        var calls = 0;
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            if (calls == 1) throw const SocketException('flaky');
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'data': <String, Object?>{'ok': true},
+              }),
+              200,
+            );
+          }),
+          sleep: (_) async {},
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'services'),
-      );
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'services'),
+        );
 
-      expect(calls, 2);
-      expect(result.valueOrNull?.statusCode, 200);
-    });
+        expect(calls, 2);
+        expect(result.valueOrNull?.statusCode, 200);
+      },
+    );
 
-    test('an unkeyed POST is never retried, however transient the failure', () async {
-      // The whole point of the idempotency rule: a dropped connection after the
-      // server committed is indistinguishable from one before.
-      var calls = 0;
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async {
-          calls++;
-          throw const SocketException('dropped mid-flight');
-        }),
-        sleep: (_) async {},
-      );
+    test(
+      'an unkeyed POST is never retried, however transient the failure',
+      () async {
+        // The whole point of the idempotency rule: a dropped connection after the
+        // server committed is indistinguishable from one before.
+        var calls = 0;
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            throw const SocketException('dropped mid-flight');
+          }),
+          sleep: (_) async {},
+        );
 
-      final result = await transport.send(
-        const ApiRequest(method: HttpMethod.post, path: 'requests'),
-      );
+        final result = await transport.send(
+          const ApiRequest(method: HttpMethod.post, path: 'requests'),
+        );
 
-      expect(calls, 1, reason: 'a second application must never be created');
-      expect(result.failureOrNull, isA<NetworkFailure>());
-    });
+        expect(calls, 1, reason: 'a second application must never be created');
+        expect(result.failureOrNull, isA<NetworkFailure>());
+      },
+    );
 
     test('a POST carrying an Idempotency-Key is retried', () async {
       var calls = 0;
@@ -278,29 +303,32 @@ void main() {
       expect(await attemptsFor(401), 1, reason: '401 is the auth layer\'s job');
     });
 
-    test('a 429 honours Retry-After rather than the computed backoff', () async {
-      final clock = _Clock();
-      var calls = 0;
-      final transport = HttpApiTransport(
-        config: config(),
-        client: MockClient((_) async {
-          calls++;
-          return http.Response(
-            '{"error":{"code":"RATE_LIMITED"}}',
-            429,
-            headers: <String, String>{'retry-after': '4'},
-          );
-        }),
-        sleep: clock.sleep,
-      );
+    test(
+      'a 429 honours Retry-After rather than the computed backoff',
+      () async {
+        final clock = _Clock();
+        var calls = 0;
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            return http.Response(
+              '{"error":{"code":"RATE_LIMITED"}}',
+              429,
+              headers: <String, String>{'retry-after': '4'},
+            );
+          }),
+          sleep: clock.sleep,
+        );
 
-      await transport.send(
-        const ApiRequest(method: HttpMethod.get, path: 'services'),
-      );
+        await transport.send(
+          const ApiRequest(method: HttpMethod.get, path: 'services'),
+        );
 
-      expect(calls, 3);
-      expect(clock.slept, everyElement(const Duration(seconds: 4)));
-    });
+        expect(calls, 3);
+        expect(clock.slept, everyElement(const Duration(seconds: 4)));
+      },
+    );
 
     test('the final retryable response is returned, not swallowed', () async {
       final transport = HttpApiTransport(
@@ -315,7 +343,11 @@ void main() {
         const ApiRequest(method: HttpMethod.get, path: 'services'),
       );
 
-      expect(result.isOk, isTrue, reason: 'a delivered 503 is still a response');
+      expect(
+        result.isOk,
+        isTrue,
+        reason: 'a delivered 503 is still a response',
+      );
       expect(result.valueOrNull?.statusCode, 503);
     });
   });

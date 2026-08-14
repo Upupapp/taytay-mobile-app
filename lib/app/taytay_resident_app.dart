@@ -60,7 +60,10 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
             child: child ?? const SizedBox.shrink(),
           );
           return config.environment.allowsDiagnosticsUi
-              ? _EnvironmentBanner(label: config.environment.badgeLabel, child: app)
+              ? _EnvironmentBanner(
+                  label: config.environment.badgeLabel,
+                  child: app,
+                )
               : app;
         },
       ),

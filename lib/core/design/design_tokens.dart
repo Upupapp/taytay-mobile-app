@@ -193,4 +193,5 @@ double contrastRatio(Color a, Color b) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-double _pow(double base, double exponent) => math.pow(base, exponent).toDouble();
+double _pow(double base, double exponent) =>
+    math.pow(base, exponent).toDouble();

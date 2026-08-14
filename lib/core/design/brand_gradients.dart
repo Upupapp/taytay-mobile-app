@@ -44,12 +44,8 @@ class BrandGradient {
   final List<double>? stops;
 
   /// The gradient as Flutter draws it.
-  LinearGradient toLinearGradient() => LinearGradient(
-    colors: colors,
-    begin: begin,
-    end: end,
-    stops: stops,
-  );
+  LinearGradient toLinearGradient() =>
+      LinearGradient(colors: colors, begin: begin, end: end, stops: stops);
 
   /// Contrast of [onColor] against the least favourable stop.
   ///

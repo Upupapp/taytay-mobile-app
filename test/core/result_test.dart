@@ -7,26 +7,31 @@ void main() {
       expect(const Ok<int>(2).map((v) => v * 3), const Ok<int>(6));
 
       const failure = NetworkFailure();
-      expect(const Err<int>(failure).map((v) => v * 3), const Err<int>(failure));
+      expect(
+        const Err<int>(failure).map((v) => v * 3),
+        const Err<int>(failure),
+      );
     });
 
     test('flatMap chains only on success', () {
       final chained = const Ok<int>(2).flatMap((v) => Ok<String>('$v'));
       expect(chained, const Ok<String>('2'));
 
-      final short = const Err<int>(TimeoutFailure()).flatMap(
-        (v) => Ok<String>('$v'),
-      );
+      final short = const Err<int>(
+        TimeoutFailure(),
+      ).flatMap((v) => Ok<String>('$v'));
       expect(short.isErr, isTrue);
     });
 
     test('fold collapses both branches', () {
-      expect(const Ok<int>(1).fold(onOk: (v) => 'ok', onErr: (f) => 'err'), 'ok');
       expect(
-        const Err<int>(NetworkFailure()).fold(
-          onOk: (v) => 'ok',
-          onErr: (f) => 'err',
-        ),
+        const Ok<int>(1).fold(onOk: (v) => 'ok', onErr: (f) => 'err'),
+        'ok',
+      );
+      expect(
+        const Err<int>(
+          NetworkFailure(),
+        ).fold(onOk: (v) => 'ok', onErr: (f) => 'err'),
         'err',
       );
     });
@@ -37,10 +42,7 @@ void main() {
         context: 'test',
       );
       expect(result.failureOrNull, isA<UnexpectedFailure>());
-      expect(
-        (result.failureOrNull! as UnexpectedFailure).debugContext,
-        'test',
-      );
+      expect((result.failureOrNull! as UnexpectedFailure).debugContext, 'test');
     });
   });
 
@@ -64,11 +66,14 @@ void main() {
       });
     });
 
-    test('an unrecognised or absent code degrades to unknown, never throws', () {
-      // The server may add codes without a version bump (conventions §1).
-      expect(ApiErrorCode.parse('SOMETHING_NEW'), ApiErrorCode.unknown);
-      expect(ApiErrorCode.parse(null), ApiErrorCode.unknown);
-    });
+    test(
+      'an unrecognised or absent code degrades to unknown, never throws',
+      () {
+        // The server may add codes without a version bump (conventions §1).
+        expect(ApiErrorCode.parse('SOMETHING_NEW'), ApiErrorCode.unknown);
+        expect(ApiErrorCode.parse(null), ApiErrorCode.unknown);
+      },
+    );
   });
 
   group('failureFromApiError', () {

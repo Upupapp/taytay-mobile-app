@@ -104,7 +104,11 @@ class _AppSkeletonState extends State<AppSkeleton>
 /// Used for actions rather than content — a button submitting, a sheet
 /// confirming. Content uses [AppSkeleton].
 class AppSpinner extends StatelessWidget {
-  const AppSpinner({this.size = IconSizes.lg, this.label = 'Loading', super.key});
+  const AppSpinner({
+    this.size = IconSizes.lg,
+    this.label = 'Loading',
+    super.key,
+  });
 
   final double size;
 

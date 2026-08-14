@@ -20,8 +20,10 @@ class PlannedNotificationRepository implements NotificationRepository {
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int perPage = 25,
-  }) async =>
-      plannedBackendFailure<Paginated<ResidentNotification>>(_module, 'listOwn');
+  }) async => plannedBackendFailure<Paginated<ResidentNotification>>(
+    _module,
+    'listOwn',
+  );
 
   @override
   Future<Result<void>> markRead(String id) async =>
@@ -29,7 +31,10 @@ class PlannedNotificationRepository implements NotificationRepository {
 
   @override
   Future<Result<NotificationPreferences>> loadPreferences() async =>
-      plannedBackendFailure<NotificationPreferences>(_module, 'loadPreferences');
+      plannedBackendFailure<NotificationPreferences>(
+        _module,
+        'loadPreferences',
+      );
 
   @override
   Future<Result<void>> updatePreferences(

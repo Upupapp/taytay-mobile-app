@@ -43,7 +43,10 @@ class AppCard extends StatelessWidget {
     final radius = BorderRadius.circular(Radii.lg);
 
     final (Color background, Color border) = switch (emphasis) {
-      CardEmphasis.normal => (scheme.surfaceContainerLow, scheme.outlineVariant),
+      CardEmphasis.normal => (
+        scheme.surfaceContainerLow,
+        scheme.outlineVariant,
+      ),
       CardEmphasis.raised => (scheme.surfaceContainer, scheme.outlineVariant),
       CardEmphasis.selected => (scheme.secondaryContainer, scheme.primary),
     };

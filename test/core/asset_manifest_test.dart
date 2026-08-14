@@ -30,7 +30,16 @@ Uint8List _fakePng({int colourType = 6, int padding = 0}) {
 }
 
 Uint8List _fakeJpeg() => Uint8List.fromList(<int>[
-  0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46,
+  0xFF,
+  0xD8,
+  0xFF,
+  0xE0,
+  0x00,
+  0x10,
+  0x4A,
+  0x46,
+  0x49,
+  0x46,
   ...List<int>.filled(40, 0),
 ]);
 
@@ -106,7 +115,8 @@ void main() {
       for (final kind in AssetKind.values) {
         final directory = Directory(kind.directory);
         if (!directory.existsSync()) continue;
-        for (final file in directory.listSync(recursive: true).whereType<File>()) {
+        for (final file
+            in directory.listSync(recursive: true).whereType<File>()) {
           final path = file.path.replaceAll(r'\', '/');
           final name = path.split('/').last;
           if (name == '.gitkeep' || name == 'README.md') continue;

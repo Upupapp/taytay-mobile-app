@@ -59,10 +59,7 @@ abstract final class LguServiceDto {
   /// Decodes the `data` array of a paginated catalogue response.
   static List<LguService> listFromJson(Object? raw) {
     if (raw is! List) return const <LguService>[];
-    return raw
-        .map(fromJson)
-        .whereType<LguService>()
-        .toList(growable: false);
+    return raw.map(fromJson).whereType<LguService>().toList(growable: false);
   }
 
   static List<ServerValue<ServiceChannel>> _channels(Object? raw) {

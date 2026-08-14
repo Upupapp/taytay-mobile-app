@@ -161,13 +161,7 @@ abstract final class IllustrationPainting {
     Color color, {
     double offset = 6,
   }) {
-    fillRRect(
-      canvas,
-      rect.translate(0, offset),
-      radius,
-      color,
-      opacity: 0.18,
-    );
+    fillRRect(canvas, rect.translate(0, offset), radius, color, opacity: 0.18);
     fillRRect(
       canvas,
       rect.translate(0, offset / 2),

@@ -117,10 +117,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         actions: <Widget>[
-          TextButton(
-            onPressed: _finish,
-            child: const Text('Skip'),
-          ),
+          TextButton(onPressed: _finish, child: const Text('Skip')),
         ],
       ),
       body: SafeArea(
@@ -207,9 +204,7 @@ class _SceneProgress extends StatelessWidget {
                   // Decorative: the width change carries no information the
                   // colour and the label do not already carry, so it goes to
                   // zero under reduced motion rather than merely shortening.
-                  duration: reduced
-                      ? MotionTokens.instant
-                      : MotionTokens.fast,
+                  duration: reduced ? MotionTokens.instant : MotionTokens.fast,
                   width: i == current ? Spacing.xl : Spacing.sm,
                   height: Spacing.sm,
                   decoration: BoxDecoration(

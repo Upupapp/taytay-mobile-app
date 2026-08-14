@@ -73,13 +73,15 @@ final Random _requestIdRandom = Random();
 /// resident identifier — a correlation id that follows a person around is a
 /// tracking identifier, not a debugging aid.
 String generateRequestId() {
-  final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch
-      .toRadixString(36);
+  final timestamp = DateTime.now().toUtc().millisecondsSinceEpoch.toRadixString(
+    36,
+  );
   final suffix = String.fromCharCodes(
     Iterable<int>.generate(
       12,
-      (_) => _requestIdAlphabet
-          .codeUnitAt(_requestIdRandom.nextInt(_requestIdAlphabet.length)),
+      (_) => _requestIdAlphabet.codeUnitAt(
+        _requestIdRandom.nextInt(_requestIdAlphabet.length),
+      ),
     ),
   );
   return 'tay-$timestamp-$suffix';

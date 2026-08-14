@@ -95,14 +95,11 @@ enum ResidentIntentKind {
 /// not.
 @immutable
 class ResidentIntent {
-  ResidentIntent({
-    required this.kind,
-    required this.createdAt,
-    this.targetId,
-  }) : assert(
-         targetId == null || _safeTargetId.hasMatch(targetId),
-         'A target id must be an opaque server identifier, not free text.',
-       );
+  ResidentIntent({required this.kind, required this.createdAt, this.targetId})
+    : assert(
+        targetId == null || _safeTargetId.hasMatch(targetId),
+        'A target id must be an opaque server identifier, not free text.',
+      );
 
   final ResidentIntentKind kind;
 

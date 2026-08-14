@@ -278,10 +278,7 @@ void main() {
       await tester.tap(find.text('Send one-time code'));
       await tester.pumpAndSettle();
 
-      expect(
-        find.textContaining('temporarily unavailable'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
       // The operator-facing detail only appears because this is a dev build.
       expect(find.textContaining('Identity endpoints'), findsOneWidget);
     });

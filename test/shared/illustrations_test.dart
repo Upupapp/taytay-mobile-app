@@ -20,10 +20,9 @@ Widget host(
     theme: brightness == Brightness.light ? AppTheme.light() : AppTheme.dark(),
     home: Builder(
       builder: (context) => MediaQuery(
-        data: MediaQuery.of(context).copyWith(
-          disableAnimations: disableAnimations,
-          size: size,
-        ),
+        data: MediaQuery.of(
+          context,
+        ).copyWith(disableAnimations: disableAnimations, size: size),
         child: Scaffold(body: Center(child: child)),
       ),
     ),
@@ -49,7 +48,11 @@ Map<String, Widget> allScenes() => <String, Widget>{
 /// upward and would report the label of an ancestor instead of the scene's own.
 List<String> declaredLabels(WidgetTester tester, Finder subtree) => tester
     .widgetList<Semantics>(
-      find.descendant(of: subtree, matching: find.byType(Semantics), matchRoot: true),
+      find.descendant(
+        of: subtree,
+        matching: find.byType(Semantics),
+        matchRoot: true,
+      ),
     )
     .map((s) => s.properties.label ?? '')
     .where((label) => label.isNotEmpty)
@@ -66,7 +69,11 @@ void main() {
         await tester.pumpAndSettle();
 
         final labels = declaredLabels(tester, find.byWidget(entry.value));
-        expect(labels, isNotEmpty, reason: '${entry.key} has no accessible name');
+        expect(
+          labels,
+          isNotEmpty,
+          reason: '${entry.key} has no accessible name',
+        );
         expect(
           labels.every(
             (label) => label.startsWith(AssetPolicy.illustrationLabelPrefix),
@@ -79,12 +86,17 @@ void main() {
       }
     });
 
-    testWidgets('no scene claims to be documentary photography', (tester) async {
+    testWidgets('no scene claims to be documentary photography', (
+      tester,
+    ) async {
       for (final entry in allScenes().entries) {
         await tester.pumpWidget(host(entry.value));
         await tester.pumpAndSettle();
 
-        for (final label in declaredLabels(tester, find.byWidget(entry.value))) {
+        for (final label in declaredLabels(
+          tester,
+          find.byWidget(entry.value),
+        )) {
           for (final claim in AssetPolicy.forbiddenLabelClaims) {
             expect(
               label.toLowerCase(),
@@ -207,7 +219,8 @@ void main() {
         expect(
           painters.any((p) => p.willChange),
           isFalse,
-          reason: '${entry.key} declares changing paint but is meant to be '
+          reason:
+              '${entry.key} declares changing paint but is meant to be '
               'static',
         );
       }

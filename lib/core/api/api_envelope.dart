@@ -124,15 +124,17 @@ abstract final class ApiEnvelopeDecoder {
   }
 
   /// Turns a non-2xx response into the matching [AppFailure].
-  static AppFailure _decodeError(ApiHttpResponse response, Object? decodedBody) {
+  static AppFailure _decodeError(
+    ApiHttpResponse response,
+    Object? decodedBody,
+  ) {
     final Object? errorField = decodedBody is Map<String, dynamic>
         ? decodedBody['error']
         : null;
     final errorMap = errorField is Map<String, dynamic> ? errorField : null;
 
     final code = ApiErrorCode.parse(_asString(errorMap?['code']));
-    final requestId =
-        _asString(errorMap?['request_id']) ?? response.requestId;
+    final requestId = _asString(errorMap?['request_id']) ?? response.requestId;
 
     return failureFromApiError(
       statusCode: response.statusCode,
@@ -168,6 +170,5 @@ int? _asInt(Object? value) => switch (value) {
   _ => null,
 };
 
-String? _asString(Object? value) => value is String && value.isNotEmpty
-    ? value
-    : null;
+String? _asString(Object? value) =>
+    value is String && value.isNotEmpty ? value : null;

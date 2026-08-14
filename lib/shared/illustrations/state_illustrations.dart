@@ -16,7 +16,8 @@ abstract final class StateIllustrations {
   static Widget empty({double size = 120, Key? key}) => Illustration(
     key: key,
     size: Size.square(size),
-    semanticLabel: 'Illustration: an empty tray, meaning there is nothing here '
+    semanticLabel:
+        'Illustration: an empty tray, meaning there is nothing here '
         'yet.',
     painterBuilder: _EmptyPainter.new,
   );
@@ -175,9 +176,7 @@ class _EmptyPainter extends CustomPainter {
     IllustrationPainting.stroke(
       canvas,
       Path()
-        ..addRRect(
-          RRect.fromRectAndRadius(tray, Radius.circular(unit * 0.6)),
-        ),
+        ..addRRect(RRect.fromRectAndRadius(tray, Radius.circular(unit * 0.6))),
       palette.ink,
       unit * 0.14,
       opacity: 0.35,

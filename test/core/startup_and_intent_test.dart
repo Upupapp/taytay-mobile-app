@@ -120,10 +120,7 @@ void main() {
         AppRoute.splash.path,
       );
       expect(
-        resolveRedirect(
-          session: restoring,
-          location: AppRoute.home.path,
-        ),
+        resolveRedirect(session: restoring, location: AppRoute.home.path),
         AppRoute.splash.path,
       );
       expect(
@@ -175,10 +172,7 @@ void main() {
       // The reason travels on the session, so the sign-in screen can say the
       // session ended rather than appearing without explanation.
       expect(
-        resolveRedirect(
-          session: expired,
-          location: AppRoute.splash.path,
-        ),
+        resolveRedirect(session: expired, location: AppRoute.splash.path),
         AppRoute.home.path,
       );
       expect(
@@ -285,20 +279,23 @@ void main() {
       }
     });
 
-    test('the credential intent requires verification, not merely an account', () {
-      expect(
-        ResidentIntentKind.viewDigitalId.requirement,
-        AccessRequirement.verified,
-      );
-      expect(
-        ResidentIntentKind.applyForService.requirement,
-        AccessRequirement.verified,
-      );
-      expect(
-        ResidentIntentKind.likePost.requirement,
-        AccessRequirement.authenticated,
-      );
-    });
+    test(
+      'the credential intent requires verification, not merely an account',
+      () {
+        expect(
+          ResidentIntentKind.viewDigitalId.requirement,
+          AccessRequirement.verified,
+        );
+        expect(
+          ResidentIntentKind.applyForService.requirement,
+          AccessRequirement.verified,
+        );
+        expect(
+          ResidentIntentKind.likePost.requirement,
+          AccessRequirement.authenticated,
+        );
+      },
+    );
 
     test('expires after a bounded lifetime', () {
       final created = DateTime(2026, 8, 14, 12);
@@ -307,9 +304,15 @@ void main() {
         createdAt: created,
       );
 
-      expect(intent.isExpired(created.add(const Duration(minutes: 9))), isFalse);
+      expect(
+        intent.isExpired(created.add(const Duration(minutes: 9))),
+        isFalse,
+      );
       expect(intent.isExpired(created.add(ResidentIntent.ttl)), isTrue);
-      expect(ResidentIntent.ttl, lessThanOrEqualTo(const Duration(minutes: 15)));
+      expect(
+        ResidentIntent.ttl,
+        lessThanOrEqualTo(const Duration(minutes: 15)),
+      );
     });
   });
 
@@ -384,8 +387,10 @@ void main() {
 
     test('an authenticated-only intent resumes for an unverified resident', () {
       controller.remember(ResidentIntentKind.likePost);
-      expect(controller.takeIfSatisfied(unverified)?.kind,
-          ResidentIntentKind.likePost);
+      expect(
+        controller.takeIfSatisfied(unverified)?.kind,
+        ResidentIntentKind.likePost,
+      );
     });
 
     test('notifies listeners on remember, resume and clear', () {

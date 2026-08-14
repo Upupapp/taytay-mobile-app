@@ -78,7 +78,9 @@ void main() {
       expect(hapticCalls, hasLength(1));
     });
 
-    testWidgets('meets the minimum tap target in every variant', (tester) async {
+    testWidgets('meets the minimum tap target in every variant', (
+      tester,
+    ) async {
       for (final variant in AppButtonVariant.values) {
         await tester.pumpWidget(
           host(
@@ -203,10 +205,7 @@ void main() {
       // well as a tinted fill.
       await tester.pumpWidget(
         host(
-          const AppCard(
-            emphasis: CardEmphasis.selected,
-            child: Text('Chosen'),
-          ),
+          const AppCard(emphasis: CardEmphasis.selected, child: Text('Chosen')),
         ),
       );
 
@@ -232,7 +231,10 @@ void main() {
         );
         final icon = tester.widget<Icon>(
           find
-              .descendant(of: find.byType(AppBanner), matching: find.byType(Icon))
+              .descendant(
+                of: find.byType(AppBanner),
+                matching: find.byType(Icon),
+              )
               .first,
         );
         icons.add(icon.icon!);
@@ -364,10 +366,14 @@ void main() {
     testWidgets('confirm resolves true, cancel resolves false', (tester) async {
       late BuildContext context;
       await tester.pumpWidget(
-        host(Builder(builder: (c) {
-          context = c;
-          return const SizedBox.shrink();
-        })),
+        host(
+          Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       );
 
       final future = AppDialog.confirm(
@@ -386,10 +392,14 @@ void main() {
     ) async {
       late BuildContext context;
       await tester.pumpWidget(
-        host(Builder(builder: (c) {
-          context = c;
-          return const SizedBox.shrink();
-        })),
+        host(
+          Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       );
 
       final future = AppDialog.confirm(
@@ -412,13 +422,19 @@ void main() {
   });
 
   group('AppSheet', () {
-    testWidgets('shows a titled sheet that scrolls its content', (tester) async {
+    testWidgets('shows a titled sheet that scrolls its content', (
+      tester,
+    ) async {
       late BuildContext context;
       await tester.pumpWidget(
-        host(Builder(builder: (c) {
-          context = c;
-          return const SizedBox.shrink();
-        })),
+        host(
+          Builder(
+            builder: (c) {
+              context = c;
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
       );
 
       unawaited(
@@ -456,7 +472,9 @@ void main() {
       expect(semantics.label, contains('Taytay'));
     });
 
-    testWidgets('the mark does not grow with the OS text scale', (tester) async {
+    testWidgets('the mark does not grow with the OS text scale', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const BrandMark(size: 96)));
       final normal = tester.getSize(find.byType(BrandMark));
 

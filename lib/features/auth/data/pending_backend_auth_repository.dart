@@ -22,7 +22,9 @@ class PendingBackendAuthRepository implements AuthRepository {
       'Identity endpoints are not available in this build.';
 
   @override
-  Future<Result<void>> requestOneTimeCode({required String mobileNumber}) async =>
+  Future<Result<void>> requestOneTimeCode({
+    required String mobileNumber,
+  }) async =>
       const Err<void>(ServerFailure(isTemporary: true, debugMessage: _reason));
 
   @override

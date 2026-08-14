@@ -56,9 +56,7 @@ class _SheetFrame extends StatelessWidget {
     final theme = Theme.of(context);
     return Padding(
       // Lifts the sheet above the keyboard when a field inside it has focus.
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

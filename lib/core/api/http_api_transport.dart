@@ -89,7 +89,9 @@ class HttpApiTransport implements ApiTransport {
       }
 
       final streamed = await _client.send(outgoing).timeout(timeout);
-      final response = await http.Response.fromStream(streamed).timeout(timeout);
+      final response = await http.Response.fromStream(
+        streamed,
+      ).timeout(timeout);
 
       return Ok<ApiHttpResponse>(
         ApiHttpResponse(

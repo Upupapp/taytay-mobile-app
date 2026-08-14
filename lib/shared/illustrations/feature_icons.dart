@@ -78,9 +78,7 @@ class FeatureIcon extends StatelessWidget {
     this.size = IconSizes.lg,
     this.tone,
     super.key,
-  }) : icon =
-           ServiceCategoryIcon.fromCode(code)?.icon ??
-           Icons.apps_outlined,
+  }) : icon = ServiceCategoryIcon.fromCode(code)?.icon ?? Icons.apps_outlined,
        semanticLabel = ServiceCategoryIcon.fromCode(code)?.label;
 
   final IconData icon;

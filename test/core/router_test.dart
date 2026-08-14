@@ -106,15 +106,15 @@ void main() {
 
       expect(redirect, startsWith(AppRoute.signIn.path));
       final query = Uri.parse(redirect!).queryParameters;
-      expect(
-        query[AppRoute.redirectQueryParam],
-        AppRoute.account.path,
-      );
+      expect(query[AppRoute.redirectQueryParam], AppRoute.account.path);
     });
 
     test('an unverified resident asking for the ID lands on verification', () {
       expect(
-        resolveRedirect(session: _unverified, location: AppRoute.digitalId.path),
+        resolveRedirect(
+          session: _unverified,
+          location: AppRoute.digitalId.path,
+        ),
         AppRoute.verification.path,
       );
     });
@@ -149,16 +149,19 @@ void main() {
       );
     });
 
-    test('a resumed destination the resident still cannot reach is dropped', () {
-      final signInLocation =
-          '${AppRoute.signIn.path}?${AppRoute.redirectQueryParam}='
-          '${Uri.encodeQueryComponent(AppRoute.digitalId.path)}';
+    test(
+      'a resumed destination the resident still cannot reach is dropped',
+      () {
+        final signInLocation =
+            '${AppRoute.signIn.path}?${AppRoute.redirectQueryParam}='
+            '${Uri.encodeQueryComponent(AppRoute.digitalId.path)}';
 
-      expect(
-        resolveRedirect(session: _unverified, location: signInLocation),
-        AppRoute.home.path,
-      );
-    });
+        expect(
+          resolveRedirect(session: _unverified, location: signInLocation),
+          AppRoute.home.path,
+        );
+      },
+    );
 
     test('an external `from` target is never honoured', () {
       // Deep links reach this app from SMS, email and printed QR codes. A

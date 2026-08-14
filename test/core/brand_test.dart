@@ -49,7 +49,8 @@ bool _pngHasAlpha(Uint8List bytes) {
   final colourType = bytes[25];
   if (colourType == 4 || colourType == 6) return true;
   if (colourType == 3) {
-    return utf8.decode(bytes.sublist(0, 2048), allowMalformed: true)
+    return utf8
+        .decode(bytes.sublist(0, 2048), allowMalformed: true)
         .contains('tRNS');
   }
   return false;
@@ -175,8 +176,11 @@ void main() {
   group('brand gradients', () {
     test('every gradient has at least two stops', () {
       for (final gradient in BrandGradients.all) {
-        expect(gradient.colors.length, greaterThanOrEqualTo(2),
-            reason: gradient.name);
+        expect(
+          gradient.colors.length,
+          greaterThanOrEqualTo(2),
+          reason: gradient.name,
+        );
       }
     });
 

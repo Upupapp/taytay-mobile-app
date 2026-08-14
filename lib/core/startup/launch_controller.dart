@@ -75,7 +75,9 @@ class LaunchController extends ChangeNotifier {
       stored = null;
     }
     _set(
-      stored == _completedValue ? LaunchState.returning : LaunchState.firstLaunch,
+      stored == _completedValue
+          ? LaunchState.returning
+          : LaunchState.firstLaunch,
     );
   }
 

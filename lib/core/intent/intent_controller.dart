@@ -25,7 +25,8 @@ import 'resident_intent.dart';
 ///   the *current* session meets the gate. It cannot make a session meet it, and
 ///   the server still authorises the request that follows.
 class IntentController extends ChangeNotifier {
-  IntentController({DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
+  IntentController({DateTime Function()? clock})
+    : _clock = clock ?? DateTime.now;
 
   final DateTime Function() _clock;
 

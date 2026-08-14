@@ -41,9 +41,9 @@ class _AccountScreenState extends State<AccountScreen> {
     setState(() {
       _checkingHealth = false;
       result.fold(
-        onOk: (health) =>
-            _healthSummary = '${health.service} · ${health.status} '
-                '· ${health.apiVersion}',
+        onOk: (health) => _healthSummary =
+            '${health.service} · ${health.status} '
+            '· ${health.apiVersion}',
         onErr: (failure) => _healthFailure = failure,
       );
     });
@@ -130,10 +130,7 @@ class _AccountScreenState extends State<AccountScreen> {
           if (_healthSummary != null)
             Padding(
               padding: const EdgeInsets.only(top: Spacing.md),
-              child: Text(
-                _healthSummary!,
-                style: theme.textTheme.bodyMedium,
-              ),
+              child: Text(_healthSummary!, style: theme.textTheme.bodyMedium),
             ),
           if (healthFailure != null)
             FailureView(

@@ -20,8 +20,10 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
     int page = 1,
     int perPage = 25,
-  }) async =>
-      plannedBackendFailure<Paginated<ServiceRequest>>(_module, 'listOwnRequests');
+  }) async => plannedBackendFailure<Paginated<ServiceRequest>>(
+    _module,
+    'listOwnRequests',
+  );
 
   @override
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>

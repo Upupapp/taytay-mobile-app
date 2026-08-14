@@ -120,8 +120,11 @@ class _Wordmark extends StatelessWidget {
         Text(
           'Taytay LGU IDS',
           textAlign: TextAlign.center,
-          style: (compact ? theme.textTheme.titleSmall : theme.textTheme.titleLarge)
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style:
+              (compact
+                      ? theme.textTheme.titleSmall
+                      : theme.textTheme.titleLarge)
+                  ?.copyWith(fontWeight: FontWeight.w700),
         ),
         if (!compact) ...<Widget>[
           const SizedBox(height: Spacing.xxs),

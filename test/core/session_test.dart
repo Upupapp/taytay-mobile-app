@@ -172,8 +172,10 @@ void main() {
   });
 
   group('AccessPolicy', () {
-    AccessDecision decide(SessionState session, AccessRequirement requirement) =>
-        AccessPolicy.evaluate(session: session, requirement: requirement);
+    AccessDecision decide(
+      SessionState session,
+      AccessRequirement requirement,
+    ) => AccessPolicy.evaluate(session: session, requirement: requirement);
 
     test('public routes are open to everyone, even while restoring', () {
       for (final session in <SessionState>[

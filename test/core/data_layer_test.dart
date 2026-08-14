@@ -40,9 +40,10 @@ ApiHttpResponse json(
   headers: headers,
 );
 
-ApiHttpResponse errorBody(int status, String code) => json(status, <String, dynamic>{
-  'error': <String, dynamic>{'code': code, 'request_id': 'r'},
-});
+ApiHttpResponse errorBody(int status, String code) =>
+    json(status, <String, dynamic>{
+      'error': <String, dynamic>{'code': code, 'request_id': 'r'},
+    });
 
 /// Replays a scripted sequence of responses and records every request.
 class ScriptedTransport implements ApiTransport {
@@ -212,59 +213,68 @@ void main() {
   });
 
   group('ApiClient — auth recovery fails closed', () {
-    test('a 401 with no refresher ends the session and does not replay', () async {
-      var invalidated = 0;
-      final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
-        Ok<ApiHttpResponse>(errorBody(401, 'UNAUTHENTICATED')),
-      ]);
-      final coordinator = AuthCoordinator(
-        onSessionInvalidated: () async => invalidated++,
-      );
-      final client = ApiClient(
-        config: config(),
-        transport: transport,
-        accessTokenProvider: () async => 'token',
-        authCoordinator: coordinator,
-      );
+    test(
+      'a 401 with no refresher ends the session and does not replay',
+      () async {
+        var invalidated = 0;
+        final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
+          Ok<ApiHttpResponse>(errorBody(401, 'UNAUTHENTICATED')),
+        ]);
+        final coordinator = AuthCoordinator(
+          onSessionInvalidated: () async => invalidated++,
+        );
+        final client = ApiClient(
+          config: config(),
+          transport: transport,
+          accessTokenProvider: () async => 'token',
+          authCoordinator: coordinator,
+        );
 
-      final result = await client.send<Object?>(
-        method: HttpMethod.get,
-        path: 'residents/me',
-        authenticated: true,
-        decode: (data) => data,
-      );
+        final result = await client.send<Object?>(
+          method: HttpMethod.get,
+          path: 'residents/me',
+          authenticated: true,
+          decode: (data) => data,
+        );
 
-      expect(result.failureOrNull, isA<UnauthenticatedFailure>());
-      expect(invalidated, 1);
-      expect(transport.sent, hasLength(1), reason: 'must not replay');
-      expect(coordinator.canRefresh, isFalse);
-    });
+        expect(result.failureOrNull, isA<UnauthenticatedFailure>());
+        expect(invalidated, 1);
+        expect(transport.sent, hasLength(1), reason: 'must not replay');
+        expect(coordinator.canRefresh, isFalse);
+      },
+    );
 
-    test('a refresher that returns null invalidates rather than continuing', () async {
-      var invalidated = 0;
-      final refresher = _CountingRefresher(null);
-      final coordinator = AuthCoordinator(
-        refresher: refresher,
-        onSessionInvalidated: () async => invalidated++,
-      );
+    test(
+      'a refresher that returns null invalidates rather than continuing',
+      () async {
+        var invalidated = 0;
+        final refresher = _CountingRefresher(null);
+        final coordinator = AuthCoordinator(
+          refresher: refresher,
+          onSessionInvalidated: () async => invalidated++,
+        );
 
-      expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
-      expect(refresher.calls, 1);
-      expect(invalidated, 1);
-    });
+        expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
+        expect(refresher.calls, 1);
+        expect(invalidated, 1);
+      },
+    );
 
-    test('a refresher that throws is a failure, never "probably fine"', () async {
-      var invalidated = 0;
-      final refresher = _ThrowingRefresher();
-      final coordinator = AuthCoordinator(
-        refresher: refresher,
-        onSessionInvalidated: () async => invalidated++,
-      );
+    test(
+      'a refresher that throws is a failure, never "probably fine"',
+      () async {
+        var invalidated = 0;
+        final refresher = _ThrowingRefresher();
+        final coordinator = AuthCoordinator(
+          refresher: refresher,
+          onSessionInvalidated: () async => invalidated++,
+        );
 
-      expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
-      expect(refresher.calls, 1);
-      expect(invalidated, 1);
-    });
+        expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
+        expect(refresher.calls, 1);
+        expect(invalidated, 1);
+      },
+    );
 
     test('concurrent 401s cause exactly one refresh (single flight)', () async {
       final refresher = _CountingRefresher(
@@ -285,21 +295,26 @@ void main() {
       expect(coordinator.isRefreshing, isFalse, reason: 'must not stay wedged');
     });
 
-    test('a later 401 can refresh again after the first flight completes', () async {
-      final refresher = _CountingRefresher('new-token');
-      final coordinator = AuthCoordinator(refresher: refresher);
+    test(
+      'a later 401 can refresh again after the first flight completes',
+      () async {
+        final refresher = _CountingRefresher('new-token');
+        final coordinator = AuthCoordinator(refresher: refresher);
 
-      await coordinator.handleUnauthenticated();
-      await coordinator.handleUnauthenticated();
+        await coordinator.handleUnauthenticated();
+        await coordinator.handleUnauthenticated();
 
-      expect(refresher.calls, 2);
-    });
+        expect(refresher.calls, 2);
+      },
+    );
 
     test('a successful refresh replays the request exactly once', () async {
       final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
         Ok<ApiHttpResponse>(errorBody(401, 'UNAUTHENTICATED')),
         Ok<ApiHttpResponse>(
-          json(200, <String, dynamic>{'data': <String, dynamic>{'ok': true}}),
+          json(200, <String, dynamic>{
+            'data': <String, dynamic>{'ok': true},
+          }),
         ),
       ]);
       var token = 'stale';
@@ -360,26 +375,29 @@ void main() {
       expect(invalidated, 1);
     });
 
-    test('an authenticated call with no token never reaches the wire', () async {
-      final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
-        Ok<ApiHttpResponse>(json(200, <String, dynamic>{'data': null})),
-      ]);
-      final client = ApiClient(
-        config: config(),
-        transport: transport,
-        accessTokenProvider: () async => null,
-      );
+    test(
+      'an authenticated call with no token never reaches the wire',
+      () async {
+        final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
+          Ok<ApiHttpResponse>(json(200, <String, dynamic>{'data': null})),
+        ]);
+        final client = ApiClient(
+          config: config(),
+          transport: transport,
+          accessTokenProvider: () async => null,
+        );
 
-      final result = await client.send<Object?>(
-        method: HttpMethod.get,
-        path: 'residents/me',
-        authenticated: true,
-        decode: (data) => data,
-      );
+        final result = await client.send<Object?>(
+          method: HttpMethod.get,
+          path: 'residents/me',
+          authenticated: true,
+          decode: (data) => data,
+        );
 
-      expect(result.failureOrNull, isA<UnauthenticatedFailure>());
-      expect(transport.sent, isEmpty);
-    });
+        expect(result.failureOrNull, isA<UnauthenticatedFailure>());
+        expect(transport.sent, isEmpty);
+      },
+    );
   });
 
   group('PublicCache — refuses anything personal', () {
@@ -508,14 +526,17 @@ void main() {
       );
     });
 
-    test('persists the tier as the server vocabulary, not an enum index', () async {
-      // An app update that reorders AccessLevel must not promote a session.
-      await store.write(
-        const StoredSession(resident: resident, accessToken: 'token'),
-      );
-      final raw = await secrets.read(SecretKeys.residentSummary);
-      expect(raw, contains('"verification_tier":"verified"'));
-    });
+    test(
+      'persists the tier as the server vocabulary, not an enum index',
+      () async {
+        // An app update that reorders AccessLevel must not promote a session.
+        await store.write(
+          const StoredSession(resident: resident, accessToken: 'token'),
+        );
+        final raw = await secrets.read(SecretKeys.residentSummary);
+        expect(raw, contains('"verification_tier":"verified"'));
+      },
+    );
 
     test('a token with no summary reads as no session, and clears', () async {
       await secrets.write(SecretKeys.accessToken, 'orphan-token');
@@ -536,19 +557,22 @@ void main() {
       expect(await secrets.read(SecretKeys.accessToken), isNull);
     });
 
-    test('an unrecognised tier restores as unverified, never verified', () async {
-      await secrets.write(SecretKeys.accessToken, 'token');
-      await secrets.write(
-        SecretKeys.residentSummary,
-        jsonEncode(<String, Object?>{
-          'account_id': 'a',
-          'verification_tier': 'super_verified',
-        }),
-      );
+    test(
+      'an unrecognised tier restores as unverified, never verified',
+      () async {
+        await secrets.write(SecretKeys.accessToken, 'token');
+        await secrets.write(
+          SecretKeys.residentSummary,
+          jsonEncode(<String, Object?>{
+            'account_id': 'a',
+            'verification_tier': 'super_verified',
+          }),
+        );
 
-      final read = await store.read();
-      expect(read!.resident.accessLevel, AccessLevel.unverified);
-    });
+        final read = await store.read();
+        expect(read!.resident.accessLevel, AccessLevel.unverified);
+      },
+    );
 
     test('clear removes both entries', () async {
       await store.write(
@@ -577,10 +601,15 @@ void main() {
       'id': '018f2c8a-0a01-7000-8000-00000000c001',
       'code': 'CEDULA',
       'name': 'Community Tax Certificate (Cedula)',
-      'description': 'Application and issuance of the community tax certificate.',
+      'description':
+          'Application and issuance of the community tax certificate.',
       'category': 'dokumento',
       'status': 'published',
-      'available_channels': <String>['citizen-web', 'citizen-mobile', 'admin-console'],
+      'available_channels': <String>[
+        'citizen-web',
+        'citizen-mobile',
+        'admin-console',
+      ],
     };
 
     test('maps every field of the committed resource', () {
@@ -656,46 +685,53 @@ void main() {
   });
 
   group('ServiceCatalogApiRepository', () {
-    test('requests the public route unauthenticated, with clamped paging', () async {
-      final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
-        Ok<ApiHttpResponse>(
-          json(200, <String, dynamic>{
-            'data': <Object?>[],
-            'meta': <String, dynamic>{
-              'request_id': 'r',
-              'pagination': <String, dynamic>{
-                'page': 1,
-                'per_page': 100,
-                'total': 0,
-                'total_pages': 1,
-                'has_more': false,
+    test(
+      'requests the public route unauthenticated, with clamped paging',
+      () async {
+        final transport = ScriptedTransport(<Result<ApiHttpResponse>>[
+          Ok<ApiHttpResponse>(
+            json(200, <String, dynamic>{
+              'data': <Object?>[],
+              'meta': <String, dynamic>{
+                'request_id': 'r',
+                'pagination': <String, dynamic>{
+                  'page': 1,
+                  'per_page': 100,
+                  'total': 0,
+                  'total_pages': 1,
+                  'has_more': false,
+                },
               },
-            },
-          }),
-        ),
-      ]);
-      final repository = ServiceCatalogApiRepository(
-        apiClient: ApiClient(
-          config: config(),
-          transport: transport,
-          accessTokenProvider: () async => 'token-that-must-not-be-sent',
-        ),
-      );
+            }),
+          ),
+        ]);
+        final repository = ServiceCatalogApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: transport,
+            accessTokenProvider: () async => 'token-that-must-not-be-sent',
+          ),
+        );
 
-      final result = await repository.listServices(
-        channel: ServiceChannel.citizenMobile,
-        page: 0,
-        perPage: 5000,
-      );
+        final result = await repository.listServices(
+          channel: ServiceChannel.citizenMobile,
+          page: 0,
+          perPage: 5000,
+        );
 
-      expect(result.isOk, isTrue);
-      final request = transport.sent.single;
-      expect(request.query['channel'], 'citizen-mobile');
-      expect(request.query['per_page'], '100', reason: 'clamped to the maximum');
-      expect(request.query['page'], '1', reason: 'clamped to the first page');
-      expect(request.headers.containsKey('Authorization'), isFalse);
-      expect(request.headers['X-Client-Channel'], 'citizen-mobile');
-    });
+        expect(result.isOk, isTrue);
+        final request = transport.sent.single;
+        expect(request.query['channel'], 'citizen-mobile');
+        expect(
+          request.query['per_page'],
+          '100',
+          reason: 'clamped to the maximum',
+        );
+        expect(request.query['page'], '1', reason: 'clamped to the first page');
+        expect(request.headers.containsKey('Authorization'), isFalse);
+        expect(request.headers['X-Client-Channel'], 'citizen-mobile');
+      },
+    );
 
     test('maps pagination from meta', () async {
       final transport = ScriptedTransport(<Result<ApiHttpResponse>>[

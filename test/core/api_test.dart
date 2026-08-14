@@ -51,9 +51,9 @@ void main() {
 
     test('omits Authorization for a guest and sets it for a resident', () {
       expect(
-        const RequestContext(requestId: 'r').headers().containsKey(
-          'Authorization',
-        ),
+        const RequestContext(
+          requestId: 'r',
+        ).headers().containsKey('Authorization'),
         isFalse,
       );
       expect(
@@ -76,7 +76,9 @@ void main() {
       for (final key in headers.keys.map((k) => k.toLowerCase())) {
         expect(
           key,
-          isNot(anyOf(contains('role'), contains('admin'), contains('permission'))),
+          isNot(
+            anyOf(contains('role'), contains('admin'), contains('permission')),
+          ),
         );
       }
       expect(headers['Idempotency-Key'], 'idem-1');
@@ -214,7 +216,10 @@ void main() {
         _json(
           429,
           <String, dynamic>{
-            'error': <String, dynamic>{'code': 'RATE_LIMITED', 'request_id': 'r'},
+            'error': <String, dynamic>{
+              'code': 'RATE_LIMITED',
+              'request_id': 'r',
+            },
           },
           headers: <String, String>{'retry-after': '45'},
         ),
@@ -311,7 +316,10 @@ void main() {
         transport: _RecordingTransport(
           Ok<ApiHttpResponse>(
             _json(403, <String, dynamic>{
-              'error': <String, dynamic>{'code': 'FORBIDDEN', 'request_id': 'r'},
+              'error': <String, dynamic>{
+                'code': 'FORBIDDEN',
+                'request_id': 'r',
+              },
             }),
           ),
         ),
@@ -350,7 +358,10 @@ void main() {
         decode: (data) => data,
       );
 
-      expect(transport.sent.single.headers.containsKey('Authorization'), isFalse);
+      expect(
+        transport.sent.single.headers.containsKey('Authorization'),
+        isFalse,
+      );
     });
 
     test('propagates a transport failure untouched', () async {

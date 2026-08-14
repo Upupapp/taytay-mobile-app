@@ -135,14 +135,15 @@ class AppConfig {
 
   bool get isUsable => issues.isEmpty;
 
-  static String _defaultApiBaseUrl(AppEnvironment environment) =>
-      switch (environment) {
-        // 10.0.2.2 is the Android emulator's route to the host machine, which is
-        // where the Laravel backend runs during development.
-        AppEnvironment.dev => 'http://10.0.2.2:8000/api/v1',
-        AppEnvironment.staging => 'https://staging-api.taytay.gov.ph/api/v1',
-        AppEnvironment.prod => 'https://api.taytay.gov.ph/api/v1',
-      };
+  static String _defaultApiBaseUrl(
+    AppEnvironment environment,
+  ) => switch (environment) {
+    // 10.0.2.2 is the Android emulator's route to the host machine, which is
+    // where the Laravel backend runs during development.
+    AppEnvironment.dev => 'http://10.0.2.2:8000/api/v1',
+    AppEnvironment.staging => 'https://staging-api.taytay.gov.ph/api/v1',
+    AppEnvironment.prod => 'https://api.taytay.gov.ph/api/v1',
+  };
 
   @override
   String toString() =>

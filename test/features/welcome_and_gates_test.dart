@@ -56,10 +56,9 @@ Future<AppDependencies> boot(
   // and the failure looks like a logic bug.
   await tester.pumpWidget(
     MediaQuery(
-      data: MediaQueryData.fromView(tester.view).copyWith(
-        disableAnimations: disableAnimations,
-        textScaler: textScaler,
-      ),
+      data: MediaQueryData.fromView(
+        tester.view,
+      ).copyWith(disableAnimations: disableAnimations, textScaler: textScaler),
       child: TaytayResidentApp(dependencies: dependencies),
     ),
   );

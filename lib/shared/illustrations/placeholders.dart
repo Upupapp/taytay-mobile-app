@@ -100,10 +100,7 @@ class _PlaceholderPainter extends CustomPainter {
     final h = size.height;
     final unit = size.shortestSide / 10;
 
-    canvas.drawRect(
-      Offset.zero & size,
-      Paint()..color = palette.surfaceSoft,
-    );
+    canvas.drawRect(Offset.zero & size, Paint()..color = palette.surfaceSoft);
 
     switch (motif) {
       case _PlaceholderMotif.poster:

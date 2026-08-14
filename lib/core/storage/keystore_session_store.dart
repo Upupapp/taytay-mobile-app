@@ -70,18 +70,17 @@ class KeystoreSessionStore implements SessionStore {
     await _secrets.delete(SecretKeys.residentSummary);
   }
 
-  static String _encodeResident(ResidentSession resident) => jsonEncode(
-    <String, Object?>{
-      'account_id': resident.accountId,
-      // Persisted as the server's own tier vocabulary rather than as this
-      // build's enum index, so an app update that reorders the enum cannot
-      // silently promote a stored session.
-      'verification_tier': resident.accessLevel == AccessLevel.verified
-          ? 'verified'
-          : 'unverified',
-      'display_name': resident.displayName,
-    },
-  );
+  static String _encodeResident(ResidentSession resident) =>
+      jsonEncode(<String, Object?>{
+        'account_id': resident.accountId,
+        // Persisted as the server's own tier vocabulary rather than as this
+        // build's enum index, so an app update that reorders the enum cannot
+        // silently promote a stored session.
+        'verification_tier': resident.accessLevel == AccessLevel.verified
+            ? 'verified'
+            : 'unverified',
+        'display_name': resident.displayName,
+      });
 
   static ResidentSession? _decodeResident(String raw) {
     try {

@@ -168,7 +168,10 @@ abstract final class AssetPolicy {
   /// screen. 1x is the declared path itself. 4x is not shipped: no meaningful
   /// Android or iOS device needs it, and it doubles the bytes for pixels nobody
   /// resolves.
-  static const List<String> requiredDensityDirectories = <String>['2.0x', '3.0x'];
+  static const List<String> requiredDensityDirectories = <String>[
+    '2.0x',
+    '3.0x',
+  ];
 
   /// Total bytes the startup precache allowlist may occupy.
   ///

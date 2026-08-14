@@ -125,7 +125,9 @@ class AppButton extends StatelessWidget {
       hint: loading ? 'Loading' : null,
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-        child: fullWidth ? SizedBox(width: double.infinity, child: button) : button,
+        child: fullWidth
+            ? SizedBox(width: double.infinity, child: button)
+            : button,
       ),
     );
   }
@@ -162,9 +164,7 @@ class _AppButtonContent extends StatelessWidget {
       );
     }
 
-    final iconWidget = icon == null
-        ? null
-        : Icon(icon, size: IconSizes.md);
+    final iconWidget = icon == null ? null : Icon(icon, size: IconSizes.md);
 
     if (iconWidget == null) return _label(context);
 

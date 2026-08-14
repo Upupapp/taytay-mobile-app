@@ -51,13 +51,14 @@ abstract final class TaytayScenes {
   ///
   /// Hidden from assistive technology: it is scenery, and naming it would make a
   /// screen reader announce landscape before the content on top of it.
-  static Widget horizonBackdrop({double height = 160, Key? key}) => Illustration(
-    key: key,
-    size: Size.infinite,
-    decorative: true,
-    semanticLabel: '',
-    painterBuilder: _HorizonPainter.new,
-  ).sized(height);
+  static Widget horizonBackdrop({double height = 160, Key? key}) =>
+      Illustration(
+        key: key,
+        size: Size.infinite,
+        decorative: true,
+        semanticLabel: '',
+        painterBuilder: _HorizonPainter.new,
+      ).sized(height);
 }
 
 extension on Illustration {

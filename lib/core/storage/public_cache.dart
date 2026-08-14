@@ -61,13 +61,11 @@ class PublicCache {
   final Duration defaultTtl;
   final DateTime Function() _clock;
 
-  final Map<String, CacheEntry<Object?>> _entries = <String, CacheEntry<Object?>>{};
+  final Map<String, CacheEntry<Object?>> _entries =
+      <String, CacheEntry<Object?>>{};
 
   /// The public endpoints of the committed backend contract.
-  static const Set<String> defaultAllowedKeys = <String>{
-    'services',
-    'health',
-  };
+  static const Set<String> defaultAllowedKeys = <String>{'services', 'health'};
 
   /// Number of live entries. For tests and diagnostics.
   @visibleForTesting

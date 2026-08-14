@@ -82,7 +82,8 @@ class FailureView extends StatelessWidget {
     ValidationFailure() => Icons.edit_note_outlined,
     ConflictFailure() => Icons.sync_problem_outlined,
     RateLimitedFailure() => Icons.hourglass_top_outlined,
-    ServerFailure() || ContractFailure() || UnexpectedFailure() =>
-      Icons.error_outline,
+    ServerFailure() ||
+    ContractFailure() ||
+    UnexpectedFailure() => Icons.error_outline,
   };
 }

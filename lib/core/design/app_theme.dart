@@ -139,7 +139,10 @@ abstract final class AppTheme {
           borderRadius: BorderRadius.vertical(top: Radius.circular(Radii.xl)),
         ),
       ),
-      iconTheme: IconThemeData(size: IconSizes.md, color: scheme.onSurfaceVariant),
+      iconTheme: IconThemeData(
+        size: IconSizes.md,
+        color: scheme.onSurfaceVariant,
+      ),
       splashFactory: InkSparkle.splashFactory,
     );
   }

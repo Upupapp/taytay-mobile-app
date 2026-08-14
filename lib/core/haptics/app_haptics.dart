@@ -62,7 +62,10 @@ abstract final class AppHaptics {
   /// [suppressed] additionally lets a widget that already has a `BuildContext`
   /// pass `Motion.reduced(context)`, which also picks up a `MediaQuery` override
   /// in the widget tree. This class stays free of a `BuildContext` itself.
-  static Future<void> fire(HapticIntent intent, {bool suppressed = false}) async {
+  static Future<void> fire(
+    HapticIntent intent, {
+    bool suppressed = false,
+  }) async {
     if (!_enabled || suppressed || Motion.reducedFromPlatform) return;
     try {
       switch (intent) {

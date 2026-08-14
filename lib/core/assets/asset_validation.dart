@@ -87,8 +87,11 @@ abstract final class AssetValidator {
 
     // ── Accessible name ────────────────────────────────────────────────────
     if (entry.semanticLabel.trim().isEmpty) {
-      fail('semantics', 'an asset with no accessible name is invisible to some '
-          'residents');
+      fail(
+        'semantics',
+        'an asset with no accessible name is invisible to some '
+            'residents',
+      );
     }
     if (entry.kind == AssetKind.illustration &&
         !entry.semanticLabel.startsWith(AssetPolicy.illustrationLabelPrefix)) {
