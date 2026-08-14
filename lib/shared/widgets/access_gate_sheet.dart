@@ -6,6 +6,7 @@ import '../../core/design/design_tokens.dart';
 import '../../core/intent/resident_intent.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/access_policy.dart';
+import '../../core/session/resident_capability.dart';
 import '../../shared/illustrations/state_illustrations.dart';
 import 'app_button.dart';
 import 'app_sheet.dart';
@@ -43,6 +44,53 @@ enum GateOutcome {
 /// resident returns to what they were reading. A gate that cannot be dismissed
 /// is a wall.
 abstract final class AccessGateSheet {
+  /// Shows the gate appropriate to a [CapabilityVerdict].
+  ///
+  /// The preferred entry point since TAB 10: callers evaluate once, through
+  /// [CapabilityService], and this renders whatever came back — including the
+  /// "not switched on yet" case, which is not an access refusal at all and must
+  /// not be dressed up as one. Keeping the mapping here rather than at each call
+  /// site is what stops a screen inventing its own vocabulary for "no".
+  static Future<GateOutcome?> showForCapability({
+    required BuildContext context,
+    required CapabilityVerdict verdict,
+    required ResidentIntentKind intent,
+    String? targetId,
+  }) async {
+    if (verdict is CapabilityNotYetAvailable) {
+      // No intent is held: there is nothing to resume, and holding one would
+      // arm a resumption that could never fire.
+      await AppSheet.show<void>(
+        context: context,
+        title: 'Not available yet',
+        builder: (sheetContext) => _GateBody(
+          illustration: StateIllustrations.empty(size: 96),
+          message: CapabilityService.explain(verdict),
+          privacyNote:
+              'Nothing has been sent, and nothing is wrong with your account.',
+          primary: AppButton(
+            label: 'Close',
+            onPressed: () => Navigator.of(sheetContext).pop(),
+          ),
+          secondary: const SizedBox.shrink(),
+        ),
+      );
+      return GateOutcome.dismissed;
+    }
+
+    return show(
+      context: context,
+      decision: switch (verdict) {
+        CapabilityNeedsSignIn() => const AccessNeedsAuthentication(),
+        CapabilityNeedsVerification() => const AccessNeedsVerification(),
+        CapabilityPending() => const AccessPending(),
+        _ => const AccessAllowed(),
+      },
+      intent: intent,
+      targetId: targetId,
+    );
+  }
+
   /// Shows the gate appropriate to [decision], remembering [intent] so the
   /// resident resumes after they pass it.
   ///

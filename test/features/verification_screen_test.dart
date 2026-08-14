@@ -86,6 +86,8 @@ Future<AppDependencies> bootVerification(
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
+    announcementRepository: base.announcementRepository,
+    eventRepository: base.eventRepository,
     residentProfileRepository: base.residentProfileRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: StubVerificationRepository(detail),

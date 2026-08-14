@@ -6,9 +6,17 @@ import '../../features/account/presentation/security_screen.dart';
 import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
+import '../../features/events/presentation/event_detail_screen.dart';
+import '../../features/events/presentation/events_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/news/presentation/news_post_screen.dart';
+import '../../features/news/presentation/news_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/registration/presentation/registration_screen.dart';
+import '../../features/services/presentation/assistance_requests_screen.dart';
+import '../../features/services/presentation/services_screen.dart';
+import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../design/design_tokens.dart';
@@ -30,6 +38,24 @@ import 'route_guard.dart';
 /// the resident signed out, or because the server answered 401 — every protected
 /// route re-evaluates and the resident is moved off it without a single screen
 /// knowing about session handling.
+///
+/// ---
+///
+/// ## The shell
+///
+/// The five primary destinations live in a [StatefulShellRoute.indexedStack],
+/// one branch each. Two consequences that matter:
+///
+/// * **Each branch keeps its own stack.** A resident deep-linked into
+///   `/news/abc` who taps Services and comes back is still on the announcement.
+/// * **The guard still runs on every branch route.** Putting routes inside a
+///   shell changes where they are *rendered*, never whether they are *reachable*
+///   — `redirect` is declared once on the router and applies to all of them,
+///   including a cold-start deep link that arrives before any shell exists.
+///
+/// Routes outside the shell — splash, onboarding, sign-in, the digital ID —
+/// are full-screen by intent: they are either pre-app or a single focused task
+/// where a navigation bar would invite a resident to wander off mid-flow.
 GoRouter buildAppRouter({
   required SessionController session,
   required LaunchController launch,
@@ -78,11 +104,79 @@ GoRouter buildAppRouter({
         name: AppRoute.register.routeName,
         builder: (context, state) => const RegistrationScreen(),
       ),
-      GoRoute(
-        path: AppRoute.home.path,
-        name: AppRoute.home.routeName,
-        builder: (context, state) => const HomeScreen(),
+
+      // --- The shell: five branches, in the order they appear. ---------------
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            RootShell(navigationShell: navigationShell),
+        branches: <StatefulShellBranch>[
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoute.home.path,
+                name: AppRoute.home.routeName,
+                builder: (context, state) => const HomeScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoute.services.path,
+                name: AppRoute.services.routeName,
+                builder: (context, state) => const ServicesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoute.news.path,
+                name: AppRoute.news.routeName,
+                builder: (context, state) => const NewsScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: ':postId',
+                    name: AppRoute.newsPost.routeName,
+                    builder: (context, state) => NewsPostScreen(
+                      postId: state.pathParameters['postId'] ?? '',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoute.events.path,
+                name: AppRoute.events.routeName,
+                builder: (context, state) => const EventsScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: ':eventId',
+                    name: AppRoute.eventDetail.routeName,
+                    builder: (context, state) => EventDetailScreen(
+                      eventId: state.pathParameters['eventId'] ?? '',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: <RouteBase>[
+              GoRoute(
+                path: AppRoute.profile.path,
+                name: AppRoute.profile.routeName,
+                builder: (context, state) => const ProfileScreen(),
+              ),
+            ],
+          ),
+        ],
       ),
+
+      // --- Reached from inside the shell, rendered full-screen. --------------
       GoRoute(
         path: AppRoute.account.path,
         name: AppRoute.account.routeName,
@@ -97,6 +191,30 @@ GoRouter buildAppRouter({
         path: AppRoute.verification.path,
         name: AppRoute.verification.routeName,
         builder: (context, state) => const VerificationScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.requests.path,
+        name: AppRoute.requests.routeName,
+        builder: (context, state) => const AssistanceRequestsScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: ':requestId',
+            name: AppRoute.requestDetail.routeName,
+            builder: (context, state) => AssistanceRequestScreen(
+              requestId: state.pathParameters['requestId'] ?? '',
+            ),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'requirements',
+                name: AppRoute.requestRequirements.routeName,
+                builder: (context, state) => AssistanceRequestScreen(
+                  requestId: state.pathParameters['requestId'] ?? '',
+                  showRequirements: true,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoute.digitalId.path,

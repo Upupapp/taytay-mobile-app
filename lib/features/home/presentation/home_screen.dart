@@ -6,10 +6,9 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
-import '../../../core/session/access_policy.dart';
+import '../../../core/session/resident_capability.dart';
 import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
-import '../../../shared/widgets/intent_resumer.dart';
 
 /// Resident dashboard, and the app's landing screen for everyone.
 ///
@@ -32,19 +31,12 @@ class HomeScreen extends StatelessWidget {
         final level = session.accessLevel;
         final name = session.residentOrNull?.displayName;
 
-        return IntentResumer(
-          child: Scaffold(
-            appBar: AppBar(
-              title: const Text('Taytay LGU IDS'),
-              actions: <Widget>[
-                IconButton(
-                  onPressed: () => context.goNamed(AppRoute.account.routeName),
-                  icon: const Icon(Icons.account_circle_outlined),
-                  tooltip: 'Account',
-                ),
-              ],
-            ),
-            body: ListView(
+        // No `IntentResumer` here: the shell owns exactly one for all five
+        // branches, so a held intent cannot be resumed once per live branch.
+        return Scaffold(
+          appBar: AppBar(title: const Text('Taytay LGU IDS')),
+          body: SafeArea(
+            child: ListView(
               padding: const EdgeInsets.all(Spacing.lg),
               children: <Widget>[
                 Text(
@@ -67,69 +59,30 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.badge_outlined,
                   title: 'My Taytay digital ID',
                   subtitle: 'Carry and present your municipal ID',
-                  requirement: AccessLevel.verified,
-                  currentLevel: level,
-                  onTap: () => _openGated(
-                    context: context,
-                    session: session,
-                    intent: ResidentIntentKind.viewDigitalId,
-                    destination: AppRoute.digitalId,
-                  ),
+                  capability: ResidentCapability.holdDigitalId,
+                  session: session,
+                  intent: ResidentIntentKind.viewDigitalId,
                 ),
                 _ServiceTile(
                   icon: Icons.verified_user_outlined,
                   title: 'Identity verification',
                   subtitle: 'Confirm who you are with the LGU',
-                  requirement: AccessLevel.unverified,
-                  currentLevel: level,
-                  onTap: () => context.goNamed(AppRoute.verification.routeName),
+                  capability: ResidentCapability.completeVerification,
+                  session: session,
                 ),
                 _ServiceTile(
                   icon: Icons.manage_accounts_outlined,
                   title: 'Account and preferences',
                   subtitle: 'Contact details, notifications, privacy',
-                  requirement: AccessLevel.unverified,
-                  currentLevel: level,
-                  onTap: () => _openGated(
-                    context: context,
-                    session: session,
-                    intent: ResidentIntentKind.manageNotifications,
-                    destination: AppRoute.account,
-                  ),
+                  capability: ResidentCapability.manageAccount,
+                  session: session,
+                  intent: ResidentIntentKind.manageNotifications,
                 ),
               ],
             ),
           ),
         );
       },
-    );
-  }
-
-  /// Opens [destination], or explains the gate and remembers the intent.
-  ///
-  /// The evaluation is `AccessPolicy`'s — the same one the router uses — so a
-  /// tap and a deep link to the same screen reach the same conclusion. The sheet
-  /// grants nothing; it navigates, and the server authorises what follows.
-  static Future<void> _openGated({
-    required BuildContext context,
-    required SessionState session,
-    required ResidentIntentKind intent,
-    required AppRoute destination,
-  }) async {
-    final decision = AccessPolicy.evaluate(
-      session: session,
-      requirement: destination.requirement,
-    );
-
-    if (decision is AccessAllowed) {
-      context.goNamed(destination.routeName);
-      return;
-    }
-
-    await AccessGateSheet.show(
-      context: context,
-      decision: decision,
-      intent: intent,
     );
   }
 
@@ -224,32 +177,67 @@ class _AccessStateCard extends StatelessWidget {
 /// verification" tells them what to do next. It also reflects reality — the
 /// service exists whether or not this person can use it yet — and it gives away
 /// nothing, because the server, not this tile, decides access.
+///
+/// **The tile takes no decision of its own.** Since TAB 10 it asks
+/// [CapabilityService] and renders the verdict. A tile that compared access
+/// levels itself was how the home screen and the profile screen came to
+/// disagree about what "locked" meant.
 class _ServiceTile extends StatelessWidget {
   const _ServiceTile({
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.requirement,
-    required this.currentLevel,
-    required this.onTap,
+    required this.capability,
+    required this.session,
+    this.intent,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final AccessLevel requirement;
-  final AccessLevel currentLevel;
-  final VoidCallback onTap;
+  final ResidentCapability capability;
+  final SessionState session;
+
+  /// Held through the gate when there is something to come back to.
+  final ResidentIntentKind? intent;
+
+  Future<void> _open(BuildContext context, CapabilityVerdict verdict) async {
+    final route = capability.route;
+    final session = AppDependencies.of(context).session.state;
+
+    // Access decides whether it opens; availability only decides what the
+    // screen then says. See `CapabilityService.canOpen`.
+    if (route != null &&
+        CapabilityService.canOpen(session: session, capability: capability)) {
+      context.goNamed(route.routeName);
+      return;
+    }
+
+    final held = intent;
+    if (held != null) {
+      await AccessGateSheet.showForCapability(
+        context: context,
+        verdict: verdict,
+        intent: held,
+      );
+      return;
+    }
+
+    // Guaranteed non-null for every refusal — acceptance 2.
+    final recovery = CapabilityService.recoveryRoute(verdict);
+    if (recovery != null && context.mounted) {
+      context.goNamed(recovery.routeName);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final meets = currentLevel.satisfies(requirement);
-    final requirementLabel = switch (requirement) {
-      AccessLevel.guest => null,
-      AccessLevel.unverified => 'Sign-in required',
-      AccessLevel.verified => 'Verification required',
-    };
+    final verdict = CapabilityService.evaluate(
+      session: session,
+      capability: capability,
+    );
+    final requirementLabel = CapabilityService.requirementLabel(verdict);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.sm),
@@ -258,12 +246,12 @@ class _ServiceTile extends StatelessWidget {
           leading: Icon(icon, color: theme.colorScheme.primary),
           title: Text(title),
           subtitle: Text(
-            meets || requirementLabel == null
+            requirementLabel == null
                 ? subtitle
                 : '$subtitle · $requirementLabel',
           ),
           trailing: const Icon(Icons.chevron_right),
-          onTap: onTap,
+          onTap: () => _open(context, verdict),
         ),
       ),
     );

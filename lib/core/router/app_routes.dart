@@ -6,6 +6,15 @@ import '../session/access_policy.dart';
 /// inside the screen, so that adding a route forces the author to answer "who
 /// may see this?" in the same edit. `AppRouter` reads only from here; a route
 /// that is not in this enum cannot be registered.
+///
+/// ---
+///
+/// **Path parameters.** Some routes carry one opaque server identifier —
+/// `/news/:postId`, `/requests/:requestId`. That identifier arrives from a push
+/// notification, an SMS or a printed QR code, so it is attacker-writable and is
+/// validated on the way in (`DeepLink`), never trusted on the way out. A route
+/// declares its parameters here so the matcher, the guard and the link builder
+/// all read one definition.
 enum AppRoute {
   /// Cold-start screen. Holds until the session is restored.
   splash('splash', '/', AccessRequirement.public),
@@ -26,6 +35,9 @@ enum AppRoute {
   /// needs it, and the flow itself is what creates the account.
   register('register', '/register', AccessRequirement.public),
 
+  // ---------------------------------------------------------------------------
+  // The five shell destinations. Fixed, in this order, for every access level.
+  // ---------------------------------------------------------------------------
   /// Resident dashboard.
   ///
   /// Public on purpose. A guest can browse LGU services, announcements and
@@ -34,6 +46,42 @@ enum AppRoute {
   /// register, and would collect personal data with no purpose behind it.
   home('home', '/home', AccessRequirement.public),
 
+  /// The municipal service catalogue. Public — the backend says so explicitly:
+  /// `GET /api/v1/services` is unauthenticated because "citizens must be able to
+  /// browse it before registering".
+  services('services', '/services', AccessRequirement.public),
+
+  /// Announcements (`balita`). Public: `GET /api/v1/announcements`.
+  news('news', '/news', AccessRequirement.public),
+
+  /// One announcement, by opaque id. The target of a push notification.
+  newsPost(
+    'news-post',
+    '/news/:postId',
+    AccessRequirement.public,
+    parameters: <String>['postId'],
+  ),
+
+  /// LGU events. Public: `GET /api/v1/events`.
+  events('events', '/events', AccessRequirement.public),
+
+  /// One event, by opaque id.
+  eventDetail(
+    'event-detail',
+    '/events/:eventId',
+    AccessRequirement.public,
+    parameters: <String>['eventId'],
+  ),
+
+  /// The resident's own area. **Public**, and deliberately so: it is the fifth
+  /// tab, it must exist for a guest, and for a guest it shows the way in rather
+  /// than a locked door. Everything inside it that needs an account declares
+  /// its own requirement.
+  profile('profile', '/profile', AccessRequirement.public),
+
+  // ---------------------------------------------------------------------------
+  // Destinations reached from inside the shell.
+  // ---------------------------------------------------------------------------
   /// Account and preferences — needs an account, verified or not.
   account('account', '/account', AccessRequirement.authenticated),
 
@@ -51,29 +99,125 @@ enum AppRoute {
     AccessRequirement.authenticated,
   ),
 
+  /// The resident's own assistance requests. Verified only: an assistance
+  /// request is an act on the resident's civil record.
+  requests('requests', '/requests', AccessRequirement.verified),
+
+  /// One assistance request, by opaque id.
+  requestDetail(
+    'request-detail',
+    '/requests/:requestId',
+    AccessRequirement.verified,
+    parameters: <String>['requestId'],
+  ),
+
+  /// The documents outstanding on one assistance request.
+  requestRequirements(
+    'request-requirements',
+    '/requests/:requestId/requirements',
+    AccessRequirement.verified,
+    parameters: <String>['requestId'],
+  ),
+
   /// The resident's LGU digital ID. Verified residents only: a credential is a
   /// statement by the LGU about a person whose identity it has confirmed.
   digitalId('digital-id', '/digital-id', AccessRequirement.verified);
 
-  const AppRoute(this.routeName, this.path, this.requirement);
+  const AppRoute(
+    this.routeName,
+    this.path,
+    this.requirement, {
+    this.parameters = const <String>[],
+  });
 
   /// Name used for `goNamed` navigation. Stable; screens never hard-code paths.
   final String routeName;
 
-  /// URL path, also the deep-link target.
+  /// `go_router` path pattern, and the deep-link target.
   final String path;
 
   /// Who may see it. See `AccessPolicy` — this gates navigation, not authority.
   final AccessRequirement requirement;
 
+  /// Names of the `:segments` in [path], in order.
+  final List<String> parameters;
+
+  bool get isParameterised => parameters.isNotEmpty;
+
   /// Query parameter carrying the destination a resident was pushed off, so
   /// sign-in can return them to it.
   static const String redirectQueryParam = 'from';
 
+  /// The five primary destinations, in their fixed order.
+  ///
+  /// **The same five for a guest, an unverified resident and a verified
+  /// resident.** Navigation that rearranges itself as a person's status changes
+  /// makes the app unlearnable: the tab someone reached for yesterday is
+  /// somewhere else today, and the change happens at the exact moment they are
+  /// least sure of themselves. See `ShellDestination`.
+  static const List<AppRoute> shellDestinations = <AppRoute>[
+    home,
+    services,
+    news,
+    events,
+    profile,
+  ];
+
+  /// Builds a concrete location from this route's pattern.
+  ///
+  /// Throws in debug if a required parameter is missing — a wiring bug, not a
+  /// runtime condition. Values are percent-encoded: they are opaque server ids,
+  /// but encoding them means a malformed one produces a 404 rather than a path
+  /// that traverses somewhere else.
+  String location([Map<String, String> arguments = const <String, String>{}]) {
+    var result = path;
+    for (final name in parameters) {
+      final value = arguments[name];
+      assert(value != null, 'Route $routeName needs a "$name" parameter.');
+      result = result.replaceAll(':$name', Uri.encodeComponent(value ?? ''));
+    }
+    return result;
+  }
+
+  /// Finds the route a concrete path belongs to.
+  ///
+  /// Exact matches win over parameterised ones, so `/news` resolves to the list
+  /// rather than being read as a post whose id is empty.
   static AppRoute? forPath(String path) {
     for (final route in AppRoute.values) {
-      if (route.path == path) return route;
+      if (!route.isParameterised && route.path == path) return route;
+    }
+    for (final route in AppRoute.values) {
+      if (route.isParameterised && route._matcher.hasMatch(path)) return route;
     }
     return null;
+  }
+
+  /// Extracts this route's parameters from a concrete path, or `null` when the
+  /// path does not belong to it.
+  Map<String, String>? parametersOf(String concretePath) {
+    final match = _matcher.firstMatch(concretePath);
+    if (match == null) return null;
+    return <String, String>{
+      for (var i = 0; i < parameters.length; i++)
+        parameters[i]: Uri.decodeComponent(match.group(i + 1) ?? ''),
+    };
+  }
+
+  /// A pattern that matches this route's concrete paths.
+  ///
+  /// Each `:segment` becomes `([^/]+)` — one non-empty segment that **cannot
+  /// contain a slash**. That single restriction is what stops `/news/../../x`
+  /// or an id carrying its own path from resolving to a different route than
+  /// the one the guard evaluated.
+  RegExp get _matcher {
+    final escaped = path
+        .split('/')
+        .map(
+          (segment) =>
+              segment.startsWith(':') ? '([^/]+)' : RegExp.escape(segment),
+        )
+        .join('/');
+    return RegExp('^$escaped\$');
   }
 }

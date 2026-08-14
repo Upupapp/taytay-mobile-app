@@ -322,6 +322,85 @@ void main() {
     });
   });
 
+  group('navigation and deep links', () {
+    test('access is decided in one place, not by scattered level checks', () {
+      // TAB 10 centralised this. A screen comparing access levels itself is how
+      // two parts of the app come to disagree about who may see what — and the
+      // one that is wrong is always the one nobody tested.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        // The centralised deciders, and the session model itself.
+        if (path.contains('core/session/')) continue;
+        // Serialisation, not a decision: the keystore writes the server's tier
+        // vocabulary rather than this build's enum index, so that an app update
+        // reordering the enum cannot promote a stored session.
+        if (path.endsWith('core/storage/keystore_session_store.dart')) continue;
+        // The gate sheet and the tiles that render a verdict may name levels in
+        // their copy switch; they take no access decision of their own.
+        if (path.endsWith('shared/widgets/access_gate_sheet.dart')) continue;
+
+        final source = stripComments(file.readAsStringSync());
+        for (final pattern in <RegExp>[
+          // `if (level == AccessLevel.verified)` and friends.
+          RegExp(r'(if|while)\s*\([^)]*AccessLevel\.\w+\s*[!=]='),
+          RegExp(r'\.accessLevel\s*[!=]=\s*AccessLevel\.'),
+          RegExp(r'\.isAuthenticated\s*\?'),
+        ]) {
+          if (pattern.hasMatch(source)) {
+            offenders.add('$path: ${pattern.pattern}');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no screen builds a route path by string concatenation', () {
+      // Routes are named or built through `AppRoute.location`, which encodes its
+      // parameters. A concatenated path is how an identifier ends up carrying a
+      // segment of its own.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        if (path.contains('core/router/')) continue;
+        final source = stripComments(file.readAsStringSync());
+        if (RegExp(r"""go\(\s*['"]/[^'"]*\$""").hasMatch(source)) {
+          offenders.add(path);
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no personal data is put into a link or a route parameter', () {
+      // A notification is stored by the OS, shown on a lock screen and often
+      // mirrored to a watch. Anything readable there has been disclosed to
+      // whoever is standing nearby.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        final source = stripComments(file.readAsStringSync());
+        if (!source.contains('pathParameters') &&
+            !source.contains('queryParameters')) {
+          continue;
+        }
+        for (final field in <String>[
+          'displayName',
+          'mobileNumber',
+          'birthDate',
+          'accountId',
+          'philsys',
+          'address',
+        ]) {
+          if (RegExp('pathParameters[^;]*$field').hasMatch(source) ||
+              RegExp('queryParameters[^;]*$field').hasMatch(source)) {
+            offenders.add('$path: $field');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+  });
+
   group('transport safety', () {
     test('no absolute API URL is hard-coded outside configuration', () {
       // Every call goes through AppConfig.apiBaseUri, so an environment is

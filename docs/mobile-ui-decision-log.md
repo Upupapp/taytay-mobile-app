@@ -1177,6 +1177,139 @@ otherwise.
 
 ---
 
+## D-42 — Five destinations, identical at every access level
+
+**Status: settled.** Category: navigation / product.
+
+**Options**
+
+1. Show only what the current level can use — four tabs for a guest, six for a
+   verified resident.
+2. Five fixed tabs, with locked ones visibly disabled.
+3. **Five fixed tabs, all public, with gating inside the content.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 makes the app unlearnable. Municipal software is used rarely
+and under pressure, and navigation that rearranges itself between visits has to
+be relearned every visit — by exactly the people with the least practice. It also
+changes shape at the moment a person's status changes, which is a status
+disclosure visible to anyone glancing at their phone.
+
+Option 2 keeps the shape but adds a control that cannot be pressed, which reads
+as a fault rather than as a step.
+
+Under option 3 every destination route is `public`, so no tab can bounce, and the
+gate lives on the content — which is where the explanation belongs anyway. Profile
+is public for the same reason: it must open for a guest, and for them it is the
+explanation of what an account is for.
+
+The property is testable once and holds forever: five, in this order, at every
+level. "The right subset for each of three states" is nine assertions that drift.
+
+---
+
+## D-43 — Access and availability are separate questions
+
+**Status: settled.** Category: authorization / product.
+
+**Options**
+
+1. One verdict: usable or not.
+2. **Two axes — may this resident see it, and has the LGU switched it on —
+   evaluated in that order, with navigation decided by access alone.**
+
+**Chosen: 2**, and the ordering and the split were both bugs first.
+
+**Why the order.** Availability first would answer "not available yet" to a guest
+asking for a verified-only feature. That is a different answer than a verified
+resident gets, which leaks that the feature exists and is gated; and it sends
+away someone who should have been sent to sign in.
+
+**Why navigation ignores availability.** Every screen in this app already handles
+an absent backend by rendering an honest state that names what the LGU *does*
+offer. Treating "planned" as a reason to refuse navigation replaced each screen's
+specific explanation with a generic one, and hid working screens — the digital
+ID, verification, the account — behind a flag describing something the resident
+cannot see and did not cause. So availability decides what a screen *says*;
+access decides whether it *opens*. The tile still reads "Not available yet", so
+nobody taps in expecting data that is not there.
+
+---
+
+## D-44 — The household summary is withheld, not built
+
+**Status: settled.** Category: privacy / schema.
+
+**Options**
+
+1. Build it against `GET /api/v1/households/{household_id}`.
+2. Assume a `/me/household` route and build against that.
+3. **Declare the capability, report it unavailable, ship no screen.**
+
+**Chosen: 3.**
+
+**Why.** The committed contract has exactly one household row, and it is a
+**staff** route requiring `resident.view` under a role scope, with the
+sensitivity note *"member list is other people's data — audited read"*. There is
+no citizen equivalent.
+
+Option 1 would mean this resident app asking for a permission it must never hold
+— the precise boundary CLAUDE.md Article 0 exists to defend. Option 2 would mean
+shipping a screen whose contract nobody has agreed, for the most sensitive
+collection in the system, and a household member list is other people's personal
+data before it is this resident's convenience.
+
+Declaring the capability and reporting it unavailable is the honest state, keeps
+the Master Command's requirement visible rather than silently dropped, and is one
+line to flip when the backend publishes a citizen route.
+
+**Sources.** REPO backend `docs/contracts/frontend-endpoint-matrix.md` §4 and §12.
+
+---
+
+## D-45 — A notification names a target, never a path, and never an action
+
+**Status: settled.** Category: deep-link / security.
+
+**Options**
+
+1. The payload carries a path; the app opens it.
+2. The payload carries a path, validated against the route table.
+3. **The payload names a target from an allow-list, plus at most one bounded
+   opaque identifier. Actions are refused by name.**
+
+**Chosen: 3.**
+
+**Why not a path.** A push payload is attacker-writable: anyone who can message a
+resident can put a string in front of the resolver. Option 1 lets the sender
+choose any screen, including ones added in later versions that were never meant
+to be linkable. Option 2 is better but still couples the link format to the route
+table, so adding a route silently adds a link target.
+
+**Why the identifier is bounded to `[A-Za-z0-9_-]{1,64}`.** That excludes `/`,
+`.`, `%`, `?` and `#`, so an id cannot carry a path segment, traverse upward,
+smuggle a query string, or resolve to a route other than the one whose access the
+guard evaluated.
+
+**Why PII keys are rejected rather than stripped.** A notification is stored by
+the OS, shown on a lock screen and often mirrored to a watch — anything readable
+there has been disclosed to whoever is nearby. A payload carrying a resident's
+name has already been mishandled server-side, and quietly dropping the field
+would hide a contract breach that needs fixing at the source.
+
+**Why actions are named and refused.** A link that can act can be forged into
+acting, and the resident would never see the request made in their name. Listing
+the seven action targets makes the refusal explicit and testable rather than
+incidental.
+
+The resolver decides *where*, never *whether*: `resolveRedirect` re-runs
+authorization on the resolved route against the live session, including on a cold
+start. Unknown target, bad identifier and wrong arity share one message, because
+distinguishing them would tell the sender whether their guess landed.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1222,5 +1355,9 @@ otherwise.
 | D-39 | Recovery is the LGU counter, not a form | product / privacy | settled |
 | D-40 | Biometrics unlock the app, never the account | biometric / authorization | settled |
 | D-41 | One message for every account-identifying refusal | privacy / security | settled |
+| D-42 | Five destinations, identical at every access level | navigation / product | settled |
+| D-43 | Access and availability are separate questions | authorization / product | settled |
+| D-44 | The household summary is withheld, not built | privacy / schema | settled |
+| D-45 | A notification names a target, never a path or an action | deep-link / security | settled |
 
-**41 decisions — 37 settled, 4 provisional pending named backend gaps.**
+**45 decisions — 41 settled, 4 provisional pending named backend gaps.**

@@ -20,6 +20,10 @@ import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
 import '../features/credential/data/planned_credential_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
+import '../features/events/data/planned_event_repository.dart';
+import '../features/events/domain/event_repository.dart';
+import '../features/news/data/planned_announcement_repository.dart';
+import '../features/news/domain/announcement_repository.dart';
 import '../features/notifications/data/planned_notification_repository.dart';
 import '../features/notifications/domain/notification_repository.dart';
 import '../features/platform/data/platform_api_repository.dart';
@@ -54,6 +58,8 @@ class AppDependencies {
     required this.deviceSessionRepository,
     required this.platformRepository,
     required this.serviceCatalogRepository,
+    required this.announcementRepository,
+    required this.eventRepository,
     required this.residentProfileRepository,
     required this.registrationRepository,
     required this.credentialRepository,
@@ -132,6 +138,8 @@ class AppDependencies {
       serviceCatalogRepository: ServiceCatalogApiRepository(
         apiClient: apiClient,
       ),
+      announcementRepository: const PlannedAnnouncementRepository(),
+      eventRepository: const PlannedEventRepository(),
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
       residentProfileRepository: const PlannedResidentProfileRepository(),
@@ -166,6 +174,12 @@ class AppDependencies {
   final DeviceSessionRepository deviceSessionRepository;
   final PlatformRepository platformRepository;
   final ServiceCatalogRepository serviceCatalogRepository;
+
+  /// Public municipal content. Both endpoints are committed and `planned`, so
+  /// both shipped implementations decline rather than inventing announcements
+  /// or event dates in the LGU's name.
+  final AnnouncementRepository announcementRepository;
+  final EventRepository eventRepository;
   final ResidentProfileRepository residentProfileRepository;
 
   /// Citizen registration and identity verification submission.

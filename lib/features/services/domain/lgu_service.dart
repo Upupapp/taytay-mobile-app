@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 
+// `Paginated` moved to `core/api/` when a second feature needed it. Re-exported
+// so existing importers keep working, and there is still one definition.
+export '../../../core/api/paginated.dart';
+
 /// A value the server sent that this build may or may not recognise.
 ///
 /// ---
@@ -169,31 +173,4 @@ class LguService {
   /// short so it is useful in a log.
   @override
   String toString() => 'LguService($code, ${category.raw})';
-}
-
-/// One page of a paginated collection (conventions §5).
-@immutable
-class Paginated<T> {
-  const Paginated({
-    required this.items,
-    required this.page,
-    required this.perPage,
-    required this.total,
-    required this.totalPages,
-    required this.hasMore,
-  });
-
-  const Paginated.single(this.items)
-    : page = 1,
-      perPage = 0,
-      total = 0,
-      totalPages = 1,
-      hasMore = false;
-
-  final List<T> items;
-  final int page;
-  final int perPage;
-  final int total;
-  final int totalPages;
-  final bool hasMore;
 }
