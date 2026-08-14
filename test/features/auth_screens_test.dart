@@ -288,7 +288,7 @@ void main() {
       // The point of the acceptance: public services are still reachable.
       await goTo(tester, 'home');
       expect(find.text('Kumusta!'), findsOneWidget);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
     testWidgets('cancelling keeps the resident signed in', (tester) async {

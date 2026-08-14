@@ -78,6 +78,26 @@ Future<void> tapVisible(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens the digital-ID entry point.
+///
+/// TAB 11 replaced the Home tile list with a dashboard, so the per-capability
+/// entries now live on the Profile destination. The gate behaviour under test is
+/// unchanged; only the path a resident takes to reach it moved.
+Future<void> openDigitalIdEntry(WidgetTester tester) async {
+  await tester.tap(find.text('Profile').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hold your Taytay digital ID'));
+  await tester.pumpAndSettle();
+}
+
+/// Opens the account entry point, for the same reason.
+Future<void> openAccountEntry(WidgetTester tester) async {
+  await tester.tap(find.text('Profile').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Manage your account'));
+  await tester.pumpAndSettle();
+}
+
 const StoredSession verifiedSession = StoredSession(
   resident: ResidentSession(
     accountId: 'acct-1',
@@ -113,7 +133,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('Municipal services in one place'), findsNothing);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
     testWidgets('a returning verified resident lands on home', (tester) async {
@@ -125,7 +145,7 @@ void main() {
       await settle(tester);
 
       expect(dependencies.session.accessLevel, AccessLevel.verified);
-      expect(find.text('Verified resident'), findsOneWidget);
+      expect(find.textContaining('verified Taytay resident'), findsOneWidget);
     });
 
     testWidgets('an unverified resident lands on home with the next step', (
@@ -152,7 +172,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.session.accessLevel, AccessLevel.guest);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
 
       // The reason survives, so sign-in can say the session ended.
       final session = dependencies.session.state as GuestSession;
@@ -188,7 +208,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.launch.state, LaunchState.returning);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
     testWidgets('a skipped welcome is not shown again on the next launch', (
@@ -227,7 +247,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.launch.state, LaunchState.returning);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
     testWidgets('progress is announced as text, not only as dots', (
@@ -294,8 +314,7 @@ void main() {
       final dependencies = await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       expect(find.text('Sign in to continue'), findsOneWidget);
       expect(find.textContaining('open your digital ID'), findsOneWidget);
@@ -312,10 +331,15 @@ void main() {
       await boot(tester, welcomeSeen: true, stored: unverifiedSession);
       await settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
-      expect(find.text('Verify your identity'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Verify your identity'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Start verification'), findsWidgets);
     });
 
@@ -323,11 +347,13 @@ void main() {
       final dependencies = await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      await tapVisible(tester, find.text('My Taytay digital ID'));
+      await openDigitalIdEntry(tester);
       await tapVisible(tester, find.text('Keep browsing'));
 
       expect(dependencies.intents.hasPending, isFalse);
-      // And they are back where they were, not stranded.
+      // And they are back where they were — the Profile screen the gate was
+      // opened from — not stranded on a sheet or bounced to sign-in.
+      expect(find.byType(BottomSheet), findsNothing);
       expect(find.text('You are browsing as a guest'), findsOneWidget);
     });
 
@@ -335,8 +361,7 @@ void main() {
       final dependencies = await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       // Showing the sheet changed nothing about what the resident may do.
       expect(dependencies.session.accessLevel, AccessLevel.guest);
@@ -351,8 +376,7 @@ void main() {
       );
       await settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       expect(find.text('Sign in to continue'), findsNothing);
       expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
@@ -408,7 +432,7 @@ void main() {
       await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      await tester.tap(find.text('Sign in'));
+      await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), '09171234567');
@@ -424,7 +448,11 @@ void main() {
       await boot(tester, welcomeSeen: true, stored: unverifiedSession);
       await settle(tester);
 
-      await tapVisible(tester, find.text('Identity verification'));
+      // TAB 11: Home's next-action card is the route to verification for an
+      // unverified resident. With no status loaded it says what is true from
+      // the session alone and offers to check.
+      expect(find.text('One step to go'), findsOneWidget);
+      await tapVisible(tester, find.text('Check my status'));
 
       // TAB 08: the status screen declines honestly because the Verification
       // module is unbuilt, rather than showing an invented status or

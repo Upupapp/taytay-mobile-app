@@ -114,8 +114,14 @@ Future<AppDependencies> bootVerification(
   // `ListView` only builds what fits — so the widget is genuinely absent from
   // the tree and `ensureVisible` cannot find it. `scrollUntilVisible` scrolls
   // until it is built.
-  await scrollToTile(tester, find.text('Identity verification'));
-  await tester.tap(find.text('Identity verification'));
+  // TAB 11: Home's next-action card is how a signed-in resident reaches
+  // verification. Its button label comes from the stage when one has loaded,
+  // and falls back to "Check my status" when it has not.
+  final action = find.text('Check my status').evaluate().isNotEmpty
+      ? find.text('Check my status')
+      : find.byType(FilledButton).first;
+  await scrollToTile(tester, action);
+  await tester.tap(action);
   await tester.pumpAndSettle();
 
   return dependencies;
@@ -332,11 +338,11 @@ void main() {
         // Acceptance 2: centralized state, same session, no restart.
         expect(dependencies.session.accessLevel, AccessLevel.verified);
 
-        // The gate is gone: the tile now opens the credential directly, in the
-        // same session, with no restart.
+        // The gate is gone: TAB 11's Home offers the credential as the next
+        // action, and it opens directly — same session, no restart.
         await goHome(tester);
-        await scrollToTile(tester, find.text('My Taytay digital ID'));
-        await tester.tap(find.text('My Taytay digital ID'));
+        await scrollToTile(tester, find.text('Open my digital ID'));
+        await tester.tap(find.text('Open my digital ID'));
         await tester.pumpAndSettle();
 
         expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);

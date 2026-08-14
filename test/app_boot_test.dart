@@ -54,6 +54,26 @@ Future<AppDependencies> _pumpApp(
   return dependencies;
 }
 
+/// Opens the digital-ID entry point.
+///
+/// TAB 11 replaced the Home tile list with a dashboard, so the per-capability
+/// entries now live on the Profile destination. The gate behaviour under test is
+/// unchanged; only the path a resident takes to reach it moved.
+Future<void> openDigitalIdEntry(WidgetTester tester) async {
+  await tester.tap(find.text('Profile').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Hold your Taytay digital ID'));
+  await tester.pumpAndSettle();
+}
+
+/// Opens the account entry point, for the same reason.
+Future<void> openAccountEntry(WidgetTester tester) async {
+  await tester.tap(find.text('Profile').last);
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('Manage your account'));
+  await tester.pumpAndSettle();
+}
+
 /// Lets the splash's minimum-display delay and the restore future settle.
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
@@ -76,7 +96,7 @@ void main() {
 
       expect(dependencies.session.state, const GuestSession());
       expect(find.text('Kumusta!'), findsOneWidget);
-      expect(find.text('You are browsing as a guest'), findsOneWidget);
+      expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
     testWidgets('resumes a stored session without asking to sign in again', (
@@ -98,7 +118,7 @@ void main() {
 
       expect(dependencies.session.accessLevel, AccessLevel.verified);
       expect(find.text('Kumusta, Ana!'), findsOneWidget);
-      expect(find.text('Verified resident'), findsOneWidget);
+      expect(find.textContaining('verified Taytay resident'), findsOneWidget);
       expect(find.text('Sign in'), findsNothing);
     });
   });
@@ -110,8 +130,7 @@ void main() {
       await _pumpApp(tester);
       await _settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       // TAB 06: the tile now explains the gate and holds the intent before
       // sending the resident on.
@@ -144,11 +163,16 @@ void main() {
       );
       await _settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       // TAB 06: the verification gate explains, then takes them there.
-      expect(find.text('Verify your identity'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(BottomSheet),
+          matching: find.text('Verify your identity'),
+        ),
+        findsOneWidget,
+      );
       // Scoped to the sheet: the home card behind it also offers this action.
       await tester.tap(
         find.descendant(
@@ -175,8 +199,7 @@ void main() {
       );
       await _settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
 
       expect(find.text('My Taytay ID'), findsOneWidget);
       expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
@@ -197,8 +220,7 @@ void main() {
       );
       await _settle(tester);
 
-      await tester.tap(find.text('Account and preferences'));
-      await tester.pumpAndSettle();
+      await openAccountEntry(tester);
       expect(find.text('Account'), findsWidgets);
 
       await tester.tap(find.text('Sign out'));
@@ -239,8 +261,7 @@ void main() {
       );
       await _settle(tester);
 
-      await tester.tap(find.text('My Taytay digital ID'));
-      await tester.pumpAndSettle();
+      await openDigitalIdEntry(tester);
       expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
 
       // Simulates a 401 arriving from any in-flight request.
@@ -263,7 +284,7 @@ void main() {
       await _pumpApp(tester);
       await _settle(tester);
 
-      await tester.tap(find.text('Sign in'));
+      await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Send one-time code'));
@@ -285,7 +306,7 @@ void main() {
       await _pumpApp(tester);
       await _settle(tester);
 
-      await tester.tap(find.text('Sign in'));
+      await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextFormField), '09171234567');

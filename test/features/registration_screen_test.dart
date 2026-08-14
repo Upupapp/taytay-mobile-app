@@ -44,8 +44,9 @@ Future<AppDependencies> bootRegistration(
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 
-  // Home → Sign in → Create an account.
-  await tapAfterScrolling(tester, find.text('Sign in'));
+  // Home → Sign in → Create an account. TAB 11's Home offers "Sign in" in both
+  // the hero and the next-action card; either reaches the same screen.
+  await tapAfterScrolling(tester, find.text('Sign in').first);
   await tapAfterScrolling(tester, find.text('Create an account'));
 
   return dependencies;
@@ -96,7 +97,10 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('My Taytay digital ID'));
+      // TAB 11 moved the per-capability entries to the Profile destination.
+      await tester.tap(find.text('Profile').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Hold your Taytay digital ID'));
       await tester.pumpAndSettle();
 
       expect(find.text('Sign in to continue'), findsOneWidget);

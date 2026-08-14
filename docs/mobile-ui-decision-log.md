@@ -1310,6 +1310,123 @@ distinguishing them would tell the sender whether their guess landed.
 
 ---
 
+## D-46 — Home describes states and steps, never counts
+
+**Status: settled.** Category: product / copy.
+
+**Options**
+
+1. A dashboard: pending requests, unread notifications, verification progress.
+2. Counts where a total is available, prose elsewhere.
+3. **No counts, percentages or progress anywhere. Every card is a state and a
+   step.**
+
+**Chosen: 3.**
+
+**Why.** There is no authoritative source for any of the numbers option 1 wants.
+A "pending" count would have to be derived from a page of results, which is a
+page and not a total; a completion percentage would have to be derived from a
+draft the app deliberately does not persist. Option 2 is worse than either
+extreme, because a resident cannot tell which figures are real.
+
+A fabricated figure on a government service is not a cosmetic problem: a resident
+who reads "2 pending" plans around two. And a KPI dashboard answers a question
+nobody standing in a municipal queue is asking. "What can I do now?" is answered
+by a sentence and a button, not by a tile of digits.
+
+Enforced by tests scanning Home's rendered text for `N pending/new/unread`, `%`
+and turnaround phrasing, plus a source scan asserting no Home file constructs an
+`Announcement`, an `LguEvent` or a `ServiceRequest` — sample content on a
+municipal app is a fabricated statement by a local government.
+
+---
+
+## D-47 — On Home an unavailable section disappears; on a destination it explains
+
+**Status: settled.** Category: product / lifecycle.
+
+**Options**
+
+1. One rule everywhere: always explain why a section is empty.
+2. One rule everywhere: always hide what cannot load.
+3. **Explain on a destination screen, hide on Home.**
+
+**Chosen: 3.**
+
+**Why.** The two situations differ in what the resident asked for. Someone who
+opens the News tab chose News, and an empty screen with no explanation reads as a
+broken app; they get the honest "not published yet" state, naming what the LGU
+does offer instead.
+
+Someone opening Home asked "what can I do now?". With five planned modules, rule
+1 answers that with a column of apologies — technically honest, practically a
+shrug, and it buries the two things that *do* work. Rule 2 applied everywhere
+would leave the News tab silently blank.
+
+The safety property that makes hiding acceptable on Home is that three sections
+**never** hide: the hero, the service catalogue and the municipal hall. Home is
+therefore always worth opening, even with every planned module absent — which is
+exactly today's build. The catalogue keeps a card pointing at Services even when
+its list is empty, for the same reason.
+
+---
+
+## D-48 — Nothing personal is fetched for a guest, not merely nothing shown
+
+**Status: settled.** Category: privacy.
+
+**Options**
+
+1. Fetch what Home might need and render only what the level permits.
+2. Guard each personal widget so it does not render for a guest.
+3. **Choose the sections from access level, and gate every `/me/` read on
+   `CapabilityService` as well.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 is the common shape and the wrong one: the data arrives, sits
+in memory, and reaches a crash report, a cache and the OS task-switcher snapshot
+regardless of whether a widget drew it. "It was not displayed" is not a privacy
+guarantee.
+
+Option 2 depends on every future widget remembering. The read is the disclosure,
+so the read is what must be gated — and gated by the same service the router
+uses, so a section cannot be more permissive than the route it sits on.
+
+The tests assert the strong form: counting repositories, `listCalls == 0` and
+`statusCalls == 0` for a guest. Not "nothing was shown" but "nothing was ever
+fetched".
+
+---
+
+## D-49 — No progress card, because the draft is deliberately unpersisted
+
+**Status: settled.** Category: privacy / schema.
+
+**Options**
+
+1. Persist the registration draft and show "continue where you left off".
+2. Summarise whatever draft happens to be in memory.
+3. **No progress card at all.**
+
+**Chosen: 3.**
+
+**Why.** TAB 07 decided the registration draft is held in memory only and dies
+with the process, because a draft is the most sensitive object this app ever
+holds — names, birth dates, addresses, identity images — and a persisted one
+outlives the moment on a device that may be shared. Option 1 reverses a privacy
+decision to gain a convenience.
+
+Option 2 produces a card that appears and vanishes depending on whether the app
+was killed, which is worse than no card: a resident who saw "continue your
+application" yesterday and does not see it today reasonably concludes their
+application was lost.
+
+The Master Command asked for this "only if an authoritative, privacy-safe source
+actually exists". It does not, so the card does not.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1359,5 +1476,9 @@ distinguishing them would tell the sender whether their guess landed.
 | D-43 | Access and availability are separate questions | authorization / product | settled |
 | D-44 | The household summary is withheld, not built | privacy / schema | settled |
 | D-45 | A notification names a target, never a path or an action | deep-link / security | settled |
+| D-46 | Home describes states and steps, never counts | product / copy | settled |
+| D-47 | Hide on Home, explain on a destination | product / lifecycle | settled |
+| D-48 | Nothing personal is fetched for a guest | privacy | settled |
+| D-49 | No progress card, because the draft is unpersisted | privacy / schema | settled |
 
-**45 decisions — 41 settled, 4 provisional pending named backend gaps.**
+**49 decisions — 45 settled, 4 provisional pending named backend gaps.**
