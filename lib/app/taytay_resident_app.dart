@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -5,6 +7,8 @@ import '../core/config/app_config.dart';
 import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
 import '../core/router/app_router.dart';
+import '../features/auth/presentation/app_lock_screen.dart';
+import '../shared/widgets/session_expired_sheet.dart';
 import 'app_dependencies.dart';
 
 /// Application root.
@@ -22,13 +26,40 @@ class TaytayResidentApp extends StatefulWidget {
 }
 
 class _TaytayResidentAppState extends State<TaytayResidentApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
   late final GoRouter _router = buildAppRouter(
     session: widget.dependencies.session,
     launch: widget.dependencies.launch,
+    navigatorKey: _navigatorKey,
   );
+
+  AppLifecycleListener? _lifecycle;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Reads the app-lock preference and asks the platform what it can do. Until
+    // it completes the lock reports "off", which is the right default: a lock
+    // that has not been confirmed to exist must not hide the app.
+    unawaited(widget.dependencies.appLock.load());
+
+    _lifecycle = AppLifecycleListener(
+      // Leaving the foreground is the moment the phone might change hands.
+      onHide: widget.dependencies.appLock.markBackgrounded,
+      onPause: widget.dependencies.appLock.markBackgrounded,
+      // Coming back is the moment to notice a token whose own `expires_at` has
+      // passed, rather than letting the resident open a screen that can only
+      // fail. Fails safe: it can end a session, never extend one.
+      onResume: () =>
+          unawaited(widget.dependencies.session.endSessionIfTokenExpired()),
+    );
+  }
 
   @override
   void dispose() {
+    _lifecycle?.dispose();
     _router.dispose();
     super.dispose();
   }
@@ -55,9 +86,20 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
         themeMode: ThemeMode.system,
         routerConfig: _router,
         builder: (context, child) {
+          // Order matters. The lock is innermost so it covers the router's
+          // output on every route including a cold-start deep link; the expiry
+          // watcher is outside it so it survives route changes, and shows its
+          // sheet against the router's own navigator.
           final app = AppTheme.applyAccessibilityMediaQuery(
             context: context,
-            child: child ?? const SizedBox.shrink(),
+            child: SessionExpiryWatcher(
+              session: widget.dependencies.session,
+              navigatorKey: _navigatorKey,
+              child: _AppLockGate(
+                dependencies: widget.dependencies,
+                child: child ?? const SizedBox.shrink(),
+              ),
+            ),
           );
           return config.environment.allowsDiagnosticsUi
               ? _EnvironmentBanner(
@@ -67,6 +109,41 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
               : app;
         },
       ),
+    );
+  }
+}
+
+/// Replaces the app's content with the lock screen while the local lock is
+/// unsatisfied.
+///
+/// It *replaces* rather than overlays, so the content underneath is not built
+/// and cannot appear in the OS task switcher's screenshot, which is the very
+/// place a locked app most often leaks what it was showing.
+class _AppLockGate extends StatelessWidget {
+  const _AppLockGate({required this.dependencies, required this.child});
+
+  final AppDependencies dependencies;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final lock = dependencies.appLock;
+    return ListenableBuilder(
+      listenable: lock,
+      builder: (context, _) {
+        if (!lock.isLocked) return child;
+        return AppLockScreen(
+          lock: lock,
+          onUnlock: lock.unlock,
+          onSignOut: () async {
+            // Sign-out is the escape hatch, so it must not depend on the
+            // network: the local session is cleared regardless of what the
+            // server-side revocation returns.
+            await dependencies.authRepository.signOut();
+            await dependencies.session.signOut();
+          },
+        );
+      },
     );
   }
 }

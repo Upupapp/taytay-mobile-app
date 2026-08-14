@@ -509,21 +509,83 @@ void main() {
       expect(read.resident.displayName, 'Ana');
     });
 
-    test('stores only the three minimised fields', () async {
+    test('stores only the minimised fields', () async {
       await store.write(
         const StoredSession(resident: resident, accessToken: 'token'),
       );
       final raw = await secrets.read(SecretKeys.residentSummary);
       final decoded = jsonDecode(raw!) as Map<String, dynamic>;
 
+      // TAB 09 added `expires_at`: the server's own token deadline. It names no
+      // person and describes the credential, not the resident, so it does not
+      // widen what this app persists about anybody.
       expect(
         decoded.keys,
         unorderedEquals(<String>[
           'account_id',
           'verification_tier',
           'display_name',
+          'expires_at',
         ]),
       );
+    });
+
+    test('an older summary with no expiry reads as lifetime unknown', () async {
+      // Additive schema evolution: a session written before TAB 09 must resume,
+      // deferring to the server, rather than being read as already expired.
+      await secrets.write(
+        SecretKeys.residentSummary,
+        jsonEncode(<String, Object?>{
+          'account_id': 'acct-1',
+          'verification_tier': 'verified',
+          'display_name': 'Ana',
+        }),
+      );
+      await secrets.write(SecretKeys.accessToken, 'token');
+
+      final read = await store.read();
+      expect(read, isNotNull);
+      expect(read!.expiresAt, isNull);
+      expect(read.isExpiredAt(DateTime.utc(2030)), isFalse);
+    });
+
+    test('round-trips the token deadline in UTC', () async {
+      final deadline = DateTime.utc(2026, 8, 14, 10);
+      await store.write(
+        StoredSession(
+          resident: resident,
+          accessToken: 'token',
+          expiresAt: deadline,
+        ),
+      );
+
+      final read = await store.read();
+      expect(read!.expiresAt, deadline);
+      expect(
+        read.isExpiredAt(deadline.subtract(const Duration(minutes: 1))),
+        isFalse,
+      );
+      expect(
+        read.isExpiredAt(deadline.add(const Duration(minutes: 1))),
+        isTrue,
+      );
+    });
+
+    test('an unreadable expiry is unknown, never already expired', () async {
+      await secrets.write(
+        SecretKeys.residentSummary,
+        jsonEncode(<String, Object?>{
+          'account_id': 'acct-1',
+          'verification_tier': 'unverified',
+          'expires_at': 'not-a-date',
+        }),
+      );
+      await secrets.write(SecretKeys.accessToken, 'token');
+
+      final read = await store.read();
+      // A storage bug must not sign a resident out.
+      expect(read!.expiresAt, isNull);
+      expect(read.isExpiredAt(DateTime.utc(2030)), isFalse);
     });
 
     test(
@@ -587,12 +649,16 @@ void main() {
 
     test('the secret key list is exactly what the store writes', () {
       expect(
-        SecretKeys.all,
+        SecretKeys.session,
         unorderedEquals(<String>[
           SecretKeys.accessToken,
           SecretKeys.residentSummary,
         ]),
       );
+      // TAB 09 added a device preference. It must stay outside the session set,
+      // or signing out would silently switch a resident's app lock off.
+      expect(SecretKeys.all, containsAll(SecretKeys.session));
+      expect(SecretKeys.session, isNot(contains(SecretKeys.appLockEnabled)));
     });
   });
 

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
+import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/failure_view.dart';
 
 /// Account and preferences for a signed-in resident.
@@ -52,6 +55,18 @@ class _AccountScreenState extends State<AccountScreen> {
   Future<void> _signOut() async {
     final dependencies = AppDependencies.of(context);
     final reducedMotion = Motion.reduced(context);
+
+    // Confirmed, because it is not undoable without a new one-time code — and
+    // the confirmation is where the resident is told what they keep.
+    final confirmed = await AppDialog.confirm(
+      context: context,
+      title: 'Sign out of this device?',
+      message:
+          'You will need a new one-time code to sign in again. You can still '
+          'browse Taytay services, offices and announcements as a guest.',
+      confirmLabel: 'Sign out',
+    );
+    if (confirmed != true) return;
 
     // Revoke server-side first, then clear locally regardless of the outcome:
     // a resident on a borrowed phone must always be able to sign out.
@@ -110,6 +125,19 @@ class _AccountScreenState extends State<AccountScreen> {
             subtitle: const Text(
               'Short vibrations when an action succeeds or fails.',
             ),
+          ),
+          const Divider(),
+          const SizedBox(height: Spacing.lg),
+          Text('Security', style: theme.textTheme.titleMedium),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.shield_outlined),
+            title: const Text('Sign-in and security'),
+            subtitle: const Text(
+              'App lock, signing out, and where you are signed in.',
+            ),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => context.goNamed(AppRoute.security.routeName),
           ),
           const Divider(),
           const SizedBox(height: Spacing.lg),

@@ -6,6 +6,8 @@ import '../core/api/auth_coordinator.dart';
 import '../core/api/http_api_transport.dart';
 import '../core/config/app_config.dart';
 import '../core/intent/intent_controller.dart';
+import '../core/session/app_lock_controller.dart';
+import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
 import '../core/session/session_store.dart';
 import '../core/startup/launch_controller.dart';
@@ -13,7 +15,9 @@ import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
 import '../features/auth/data/pending_backend_auth_repository.dart';
+import '../features/auth/data/planned_device_session_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
+import '../features/auth/domain/device_session_repository.dart';
 import '../features/credential/data/planned_credential_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
 import '../features/notifications/data/planned_notification_repository.dart';
@@ -43,9 +47,11 @@ class AppDependencies {
     required this.session,
     required this.launch,
     required this.intents,
+    required this.appLock,
     required this.apiClient,
     required this.cache,
     required this.authRepository,
+    required this.deviceSessionRepository,
     required this.platformRepository,
     required this.serviceCatalogRepository,
     required this.residentProfileRepository,
@@ -68,6 +74,7 @@ class AppDependencies {
     SecretStore? secrets,
     SessionStore? sessionStore,
     PublicCache? cache,
+    LocalAuthenticator? localAuthenticator,
   }) {
     final secretStore = secrets ?? KeystoreSecretStore();
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
@@ -75,6 +82,14 @@ class AppDependencies {
     final session = SessionController(store: store);
     final launch = LaunchController(secrets: secretStore);
     final intents = IntentController();
+    // Defaults to the real platform prompt. Tests inject
+    // `UnavailableLocalAuthenticator`, which reports the feature as absent
+    // rather than pretending it succeeded.
+    final appLock = AppLockController(
+      session: session,
+      authenticator: localAuthenticator ?? PlatformLocalAuthenticator(),
+      secrets: secretStore,
+    );
 
     // Fail closed: with no refresher registered — and the committed backend
     // publishes no refresh endpoint — a 401 ends the session rather than being
@@ -108,9 +123,11 @@ class AppDependencies {
       session: session,
       launch: launch,
       intents: intents,
+      appLock: appLock,
       apiClient: apiClient,
       cache: publicCache,
       authRepository: const PendingBackendAuthRepository(),
+      deviceSessionRepository: const PlannedDeviceSessionRepository(),
       platformRepository: PlatformApiRepository(apiClient: apiClient),
       serviceCatalogRepository: ServiceCatalogApiRepository(
         apiClient: apiClient,
@@ -135,10 +152,18 @@ class AppDependencies {
 
   /// The one action a resident was part-way through when a gate stopped them.
   final IntentController intents;
+
+  /// Optional local unlock over an already-signed-in app. Device convenience
+  /// only — it grants nothing and proves nothing to the server.
+  final AppLockController appLock;
   final ApiClient apiClient;
   final PublicCache cache;
 
   final AuthRepository authRepository;
+
+  /// Listing and revoking other sessions. No endpoint exists yet; the shipped
+  /// implementation declines rather than showing a fabricated device list.
+  final DeviceSessionRepository deviceSessionRepository;
   final PlatformRepository platformRepository;
   final ServiceCatalogRepository serviceCatalogRepository;
   final ResidentProfileRepository residentProfileRepository;
@@ -154,6 +179,7 @@ class AppDependencies {
   final void Function()? onDispose;
 
   void dispose() {
+    appLock.dispose();
     session.dispose();
     launch.dispose();
     intents.dispose();

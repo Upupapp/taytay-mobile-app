@@ -92,6 +92,60 @@ void main() {
       expect(offenders, isEmpty, reason: offenders.join('\n'));
     });
 
+    test('only one file talks to the biometric plugin', () {
+      // Same rule as the keystore: the surface that can raise a platform
+      // identity prompt stays in one reviewable file, so nobody can quietly
+      // start using a local unlock as though it authenticated somebody.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final source = stripComments(file.readAsStringSync());
+        if (!source.contains('package:local_auth/')) continue;
+        final path = file.path.replaceAll(r'\', '/');
+        if (!path.endsWith('core/session/local_authenticator.dart')) {
+          offenders.add(path);
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no local unlock result is ever sent to the server', () {
+      // A local unlock is a statement a device makes to itself. Putting it in a
+      // request would invite the server — or a future reader — to treat it as
+      // proof of identity, which it is not.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        if (!path.contains('/data/') && !path.contains('core/api/')) continue;
+        final source = stripComments(file.readAsStringSync());
+        for (final token in <String>[
+          'LocalUnlockOutcome',
+          'biometric',
+          'appLockEnabled',
+        ]) {
+          if (source.contains(token)) offenders.add('$path: $token');
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no source file invents a token refresh endpoint', () {
+      // The committed contract publishes none. A path here would be a contract
+      // the server never agreed to. See `core/api/auth_coordinator.dart`.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final source = stripComments(file.readAsStringSync());
+        for (final pattern in <RegExp>[
+          RegExp(r'''['"][^'"]*auth/refresh[^'"]*['"]'''),
+          RegExp(r"""['"]refresh_token['"]"""),
+        ]) {
+          if (pattern.hasMatch(source)) {
+            offenders.add('${file.path}: ${pattern.pattern}');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
     test('no .env file is present or referenced', () {
       expect(
         File('.env').existsSync(),
@@ -128,6 +182,20 @@ void main() {
         ],
         'lib/core/session/session_store.dart': <String>['accessToken'],
         'lib/core/api/request_context.dart': <String>['bearerToken'],
+        // TAB 09: the two objects that now hold a token or a mobile number.
+        'lib/features/auth/domain/auth_repository.dart': <String>[
+          'accessToken',
+          'accountId',
+        ],
+        'lib/features/auth/presentation/sign_in_controller.dart': <String>[
+          'mobileNumber',
+          '_mobileNumber',
+          'code',
+        ],
+        'lib/features/auth/domain/device_session_repository.dart': <String>[
+          'label',
+          'id',
+        ],
       };
 
       checks.forEach((path, forbidden) {

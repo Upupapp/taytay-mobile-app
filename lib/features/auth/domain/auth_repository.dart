@@ -7,10 +7,26 @@ import '../../../core/session/session_state.dart';
 /// access level — the app never derives it. The [accessToken] goes straight into
 /// the session store and is never held anywhere else.
 class AuthOutcome {
-  const AuthOutcome({required this.resident, required this.accessToken});
+  const AuthOutcome({
+    required this.resident,
+    required this.accessToken,
+    this.expiresAt,
+  });
 
   final ResidentSession resident;
   final String accessToken;
+
+  /// The server's own `expires_at`, which `POST /api/v1/auth/otp/verify`
+  /// returns alongside the token. Null when the server did not say.
+  ///
+  /// Carried so the app can stop presenting a token it can already see is dead.
+  /// It is never treated as permission to *keep* using one: revocation is
+  /// server-side and can happen at any moment before this time.
+  final DateTime? expiresAt;
+
+  /// Redacted: this object holds bearer credential material.
+  @override
+  String toString() => 'AuthOutcome(${resident.accessLevel.name})';
 }
 
 /// Authentication, expressed in domain terms.

@@ -18,11 +18,17 @@ import 'session_store.dart';
 ///   AuthenticatedSession ──signOut()───────> GuestSession(signedOut)
 ///   AuthenticatedSession ──handleUnauthenticated()──> GuestSession(expired)
 ///   AuthenticatedSession ──applyVerificationTier()──> AuthenticatedSession
+///   AuthenticatedSession ──endSessionIfTokenExpired()──> GuestSession(expired)
 /// ```
 class SessionController extends ChangeNotifier {
-  SessionController({required SessionStore store}) : _store = store;
+  SessionController({required SessionStore store, DateTime Function()? clock})
+    : _store = store,
+      _now = clock ?? DateTime.now;
 
   final SessionStore _store;
+
+  /// Injectable so expiry can be tested without waiting for real time to pass.
+  final DateTime Function() _now;
 
   SessionState _state = const SessionRestoring();
 
@@ -45,26 +51,44 @@ class SessionController extends ChangeNotifier {
   /// the state is the only thing that actually holds the screen — awaiting a
   /// delay in the widget would not, because the state would already have changed
   /// underneath it.
+  ///
+  /// A token the app already knows is dead is *not* resumed: it is cleared and
+  /// the resident is told their session ended, which is both true and quicker
+  /// than a round trip that can only return `401`.
   Future<void> restore({Future<void>? notBefore}) async {
     final stored = await _store.read();
     if (notBefore != null) await notBefore;
-    _set(
-      stored == null
-          ? const GuestSession()
-          : AuthenticatedSession(stored.resident),
-    );
+
+    if (stored == null) {
+      _set(const GuestSession());
+      return;
+    }
+    if (stored.isExpiredAt(_now())) {
+      await _store.clear();
+      _set(const GuestSession(endedReason: SessionEndedReason.expired));
+      return;
+    }
+    _set(AuthenticatedSession(stored.resident));
   }
 
   /// Records a successful authentication.
   ///
   /// [resident] must be built from the server's response. The access level comes
   /// from the server's verification tier; the app never decides it.
+  ///
+  /// [expiresAt] is the server's own `expires_at`. Passing it lets the app stop
+  /// using a token it can see is dead; omitting it simply defers to the server.
   Future<void> signIn({
     required ResidentSession resident,
     required String accessToken,
+    DateTime? expiresAt,
   }) async {
     await _store.write(
-      StoredSession(resident: resident, accessToken: accessToken),
+      StoredSession(
+        resident: resident,
+        accessToken: accessToken,
+        expiresAt: expiresAt,
+      ),
     );
     _set(AuthenticatedSession(resident));
   }
@@ -100,8 +124,33 @@ class SessionController extends ChangeNotifier {
   }
 
   /// The access token for the API layer, or `null` for a guest.
-  Future<String?> currentAccessToken() async =>
-      (await _store.read())?.accessToken;
+  ///
+  /// A token past its own `expires_at` is withheld rather than sent. Presenting
+  /// a credential the app knows is dead cannot succeed, and it puts an expired
+  /// bearer token on the wire for no reason.
+  Future<String?> currentAccessToken() async {
+    final stored = await _store.read();
+    if (stored == null || stored.isExpiredAt(_now())) return null;
+    return stored.accessToken;
+  }
+
+  /// Ends the session if the stored token's own deadline has passed.
+  ///
+  /// Called at the moments a resident would otherwise meet a screen that is
+  /// about to fail: app resume, and before an action that needs authority.
+  /// Returns true when it ended a session.
+  ///
+  /// This is the *only* locally-decided way a session ends besides deliberate
+  /// sign-out, and it is safe precisely because it can only ever take access
+  /// away. Nothing here can extend a session or raise a level — that remains a
+  /// server verdict (CLAUDE.md Article 3.5).
+  Future<bool> endSessionIfTokenExpired() async {
+    if (_state is! AuthenticatedSession) return false;
+    final stored = await _store.read();
+    if (stored != null && !stored.isExpiredAt(_now())) return false;
+    await handleUnauthenticated();
+    return true;
+  }
 
   void _set(SessionState next) {
     if (_state == next) return;

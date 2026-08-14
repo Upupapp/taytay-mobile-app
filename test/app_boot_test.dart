@@ -204,6 +204,19 @@ void main() {
       await tester.tap(find.text('Sign out'));
       await tester.pumpAndSettle();
 
+      // TAB 09: signing out is confirmed first, because it cannot be undone
+      // without a new one-time code. The dialog is where the resident is told
+      // what they keep.
+      expect(find.text('Sign out of this device?'), findsOneWidget);
+      expect(find.textContaining('as a guest'), findsOneWidget);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Sign out'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
       // The router reacts to the session, not to the button: the account screen
       // requires authentication, so signing out cannot leave the resident on it.
       expect(dependencies.session.accessLevel, AccessLevel.guest);
@@ -279,9 +292,15 @@ void main() {
       await tester.tap(find.text('Send one-time code'));
       await tester.pumpAndSettle();
 
+      // TAB 09: sign-in renders only a `SignInMessage`, never a failure view.
+      // The operator-facing debug text is no longer surfaced here even in a dev
+      // build, because on this screen it would name the endpoint that refused —
+      // and that is one step from naming *why* it refused.
       expect(find.textContaining('temporarily unavailable'), findsOneWidget);
-      // The operator-facing detail only appears because this is a dev build.
-      expect(find.textContaining('Identity endpoints'), findsOneWidget);
+      expect(find.textContaining('Identity endpoints'), findsNothing);
+      // Nothing distinguishes an unknown number from any other refusal.
+      expect(find.textContaining('not registered'), findsNothing);
+      expect(find.textContaining('no account'), findsNothing);
     });
   });
 

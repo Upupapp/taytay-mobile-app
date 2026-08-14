@@ -17,6 +17,11 @@ enum AppRoute {
   /// Sign-in. Public by definition.
   signIn('sign-in', '/sign-in', AccessRequirement.public),
 
+  /// Help for a resident who cannot sign in. Public: the people who need it are
+  /// by definition the people who could not authenticate, and it collects
+  /// nothing and looks nothing up.
+  signInHelp('sign-in-help', '/sign-in-help', AccessRequirement.public),
+
   /// Citizen registration. Public: a person without an account is exactly who
   /// needs it, and the flow itself is what creates the account.
   register('register', '/register', AccessRequirement.public),
@@ -31,6 +36,11 @@ enum AppRoute {
 
   /// Account and preferences — needs an account, verified or not.
   account('account', '/account', AccessRequirement.authenticated),
+
+  /// Sign-in and security: app lock, device sign-out, other sessions.
+  /// Authenticated, because every control on it acts on a session that must
+  /// exist for the screen to mean anything.
+  security('security', '/security', AccessRequirement.authenticated),
 
   /// Identity verification: status, next step, and the submission flow.
   /// Authenticated but explicitly *not* verified — this is how a resident

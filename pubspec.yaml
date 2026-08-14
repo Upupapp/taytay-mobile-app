@@ -50,6 +50,22 @@ dependencies:
   # a token cannot travel to another device in a cloud backup.
   flutter_secure_storage: ^11.0.0
 
+  # Local device unlock (fingerprint, face, or the device PIN/pattern) used for
+  # ONE purpose: re-showing an app that is already signed in, after it has been
+  # backgrounded. Reviewed against CLAUDE.md Article 1 before adding.
+  #
+  # * Maintenance — part of flutter/packages, maintained by the Flutter team
+  #   alongside the SDK, so it tracks platform API deprecations.
+  # * Permissions — Android `USE_BIOMETRIC` only; no camera, no storage, no
+  #   contacts. iOS needs `NSFaceIDUsageDescription`.
+  # * Data egress — none. The plugin returns a boolean from the platform's own
+  #   prompt. No biometric template ever reaches Dart, this app, or the network;
+  #   templates stay in the Secure Enclave / TEE and are not readable by apps.
+  # * Authority — a local unlock proves possession of *this device*, not
+  #   identity. It is never sent to the server, never stored, and never changes
+  #   an access level. See `core/session/app_lock_controller.dart`.
+  local_auth: ^3.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

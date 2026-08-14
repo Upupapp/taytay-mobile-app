@@ -1035,6 +1035,148 @@ Enforced by a test that scans both the stage copy and the rendered screen for
 
 ---
 
+## D-38 — No refresh, because the contract publishes none
+
+**Status: settled.** Category: schema / lifecycle.
+
+**Options**
+
+1. Implement a refresh endpoint the app expects the server to provide.
+2. Keep a long-lived token so a session rarely ends.
+3. **No refresh. Use the `expires_at` the contract already returns, and let a
+   session end.**
+
+**Chosen: 3.**
+
+**Why.** ADR 0005 names *"short token lifetimes with refresh"* as a required
+mitigation, but the endpoint matrix publishes no refresh route — the citizen
+rows are `POST /auth/otp`, `POST /auth/otp/verify`, `GET /me` and
+`DELETE /auth/tokens/current`, and nothing else. Option 1 would invent a path,
+request shape and response shape the server has never agreed to, and it would be
+discovered wrong only once both sides were written. Option 2 trades the
+resident's exposure for their convenience, in an app that holds a government
+credential.
+
+`AuthCoordinator` was built in TAB 05 with the mechanism present and the
+refresher deliberately unregistered, so a `401` fails closed. TAB 09 left it that
+way and added a source scan that fails the build if anyone writes an
+`auth/refresh` path or a `refresh_token` field.
+
+What the contract *does* return is `expires_at`, and using it is always safe in
+one direction: the app can stop presenting a token it can already see is dead. It
+can never extend a session or raise a level, and an unreadable timestamp reads as
+"unknown", never as "expired".
+
+**Sources.** REPO backend `docs/contracts/frontend-endpoint-matrix.md` §2;
+ADR 0005.
+
+---
+
+## D-39 — Recovery is the LGU counter, not a form
+
+**Status: settled.** Category: product / privacy.
+
+**Options**
+
+1. A "forgot password" flow.
+2. An in-app account-recovery form — security questions, alternate email, a
+   support ticket.
+3. **Explain that there is no password, and route a lost number to the municipal
+   hall.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 cannot exist: the citizen contract has no password. Option 2 is
+worse than nothing on two counts. Changing the mobile number on an account is an
+identity decision, and an app cannot make it — so the form would end in a queue
+nobody has staffed, having first collected personal data for a purpose it cannot
+fulfil. And a recovery form is the softest place in a product to leak an account
+oracle: the copy is helpful, the flow feels low-stakes, and "we couldn't find
+that number" reads like kindness.
+
+So the help screen has **no input field at all**. It cannot be used to test
+whether a number belongs to a Taytay resident, because it collects nothing and
+looks nothing up. Every answer on it is true regardless of who is reading it.
+
+It also carries the one warning that prevents the most common real-world attack
+on a code-based sign-in: Taytay LGU will never ask for your one-time code.
+
+---
+
+## D-40 — Biometrics unlock the app, never the account
+
+**Status: settled.** Category: biometric / authorization.
+
+**Options**
+
+1. No biometrics at all.
+2. Biometric unlock treated as re-authentication, extending or restoring a
+   session.
+3. **A local lock over an already-signed-in app, which grants nothing.**
+
+**Chosen: 3.**
+
+**Why.** Option 2 is the mistake worth naming. A local unlock proves possession
+of a device, unlocked by whoever the device trusts. It is not a statement about
+who a person is, and the server has neither seen it nor agreed to it. Treating it
+as authentication would put an authority decision on the client — the exact
+inversion ADR 0002 and Article 3 exist to prevent — and would let a phone's
+owner's fingerprint stand in for a resident's identity.
+
+So the lock hides pixels. The session behind it is exactly as authorised while
+locked as while unlocked; the same token would be accepted either way.
+
+Option 1 was rejected because the threat it addresses is ordinary and physical:
+phones are shared, borrowed and left on counters, and a digital ID is exactly
+what an onlooker would open.
+
+The three rules that make it shippable are in the controller's own doc: it never
+blocks a guest, there is always a way out that does not need the sensor, and it
+cannot be switched on without being passed once. The way out is the important
+one — a lock a resident cannot pass and cannot leave is a bricked government
+service.
+
+**Dependency.** `local_auth`, reviewed before adding: Flutter-team maintained,
+`USE_BIOMETRIC` only, and no data egress — the platform returns a boolean and no
+template ever reaches this app.
+
+---
+
+## D-41 — One message for every refusal that could identify an account
+
+**Status: settled.** Category: privacy / security.
+
+**Options**
+
+1. Specific errors: "no account with that number", "incorrect code",
+   "account locked".
+2. Specific errors for some, generic for the sensitive ones.
+3. **One message for every refusal that could distinguish a known number from an
+   unknown one.**
+
+**Chosen: 3.**
+
+**Why.** Option 2 is the trap: the moment one refusal is distinguishable, the
+*absence* of it is informative, and the oracle is rebuilt from the difference.
+
+`SignInMessage` therefore has no value that names an account state. The mapping
+collapses `NOT_FOUND`, `FORBIDDEN`, `VALIDATION_FAILED`, `CONFLICT` and
+`UNAUTHENTICATED` into one — precisely the codes a server might use to tell those
+cases apart. Rate limiting is the single exception, and it is safe because it says
+"not now" regardless of whether the number exists.
+
+The success message is conditional for the same reason: "we sent you a code"
+confirms registration; "if that number is registered" does not.
+
+The backend already requires this of itself. The client keeps the same promise so
+that a future server change cannot leak through a client that had been assuming
+otherwise.
+
+**Sources.** REPO backend `docs/contracts/frontend-endpoint-matrix.md` §2
+("must not reveal whether the number is registered").
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1076,5 +1218,9 @@ Enforced by a test that scans both the stage copy and the rendered screen for
 | D-35 | The status decoder is an allow-list | privacy | settled |
 | D-36 | Verified unlocks through the session controller | authorization / product | settled |
 | D-37 | No turnaround promises in verification copy | copy / trust | settled |
+| D-38 | No token refresh, because none is published | schema / lifecycle | settled |
+| D-39 | Recovery is the LGU counter, not a form | product / privacy | settled |
+| D-40 | Biometrics unlock the app, never the account | biometric / authorization | settled |
+| D-41 | One message for every account-identifying refusal | privacy / security | settled |
 
-**37 decisions — 33 settled, 4 provisional pending named backend gaps.**
+**41 decisions — 37 settled, 4 provisional pending named backend gaps.**

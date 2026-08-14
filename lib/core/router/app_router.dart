@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/account/presentation/account_screen.dart';
+import '../../features/account/presentation/security_screen.dart';
+import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
@@ -32,8 +34,10 @@ GoRouter buildAppRouter({
   required SessionController session,
   required LaunchController launch,
   String? initialLocation,
+  GlobalKey<NavigatorState>? navigatorKey,
 }) {
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: initialLocation ?? AppRoute.splash.path,
     // Both are navigation inputs: the session decides what is reachable, and
     // first-launch decides where a cold start begins. Merged so a change to
@@ -65,6 +69,11 @@ GoRouter buildAppRouter({
         ),
       ),
       GoRoute(
+        path: AppRoute.signInHelp.path,
+        name: AppRoute.signInHelp.routeName,
+        builder: (context, state) => const SignInHelpScreen(),
+      ),
+      GoRoute(
         path: AppRoute.register.path,
         name: AppRoute.register.routeName,
         builder: (context, state) => const RegistrationScreen(),
@@ -78,6 +87,11 @@ GoRouter buildAppRouter({
         path: AppRoute.account.path,
         name: AppRoute.account.routeName,
         builder: (context, state) => const AccountScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.security.path,
+        name: AppRoute.security.routeName,
+        builder: (context, state) => const SecurityScreen(),
       ),
       GoRoute(
         path: AppRoute.verification.path,

@@ -116,5 +116,24 @@ abstract final class SecretKeys {
   static const String accessToken = 'taytay.session.access_token';
   static const String residentSummary = 'taytay.session.resident';
 
-  static const List<String> all = <String>[accessToken, residentSummary];
+  /// Whether the resident switched on the local app lock. Not a secret, but
+  /// kept here rather than in preferences because `shared_preferences` is
+  /// banned from this app entirely (Article 5.3) and adding a second storage
+  /// plugin for one flag would be more surface, not less.
+  static const String appLockEnabled = 'taytay.security.app_lock';
+
+  /// The keys that belong to one signed-in session, and are therefore cleared
+  /// together on sign-out and on fail-closed invalidation.
+  ///
+  /// [appLockEnabled] is deliberately **not** here. It describes this device,
+  /// not this resident: it names no person, and clearing it on sign-out would
+  /// quietly switch a resident's app lock off every time their session ended.
+  static const List<String> session = <String>[accessToken, residentSummary];
+
+  /// Every key this app is allowed to write.
+  static const List<String> all = <String>[
+    accessToken,
+    residentSummary,
+    appLockEnabled,
+  ];
 }

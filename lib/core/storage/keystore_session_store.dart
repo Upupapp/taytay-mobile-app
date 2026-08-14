@@ -46,7 +46,11 @@ class KeystoreSessionStore implements SessionStore {
       return null;
     }
 
-    return StoredSession(resident: resident, accessToken: token);
+    return StoredSession(
+      resident: resident,
+      accessToken: token,
+      expiresAt: _decodeExpiry(rawResident),
+    );
   }
 
   @override
@@ -56,7 +60,7 @@ class KeystoreSessionStore implements SessionStore {
     // order would leave a live token with no idea whose it is.
     await _secrets.write(
       SecretKeys.residentSummary,
-      _encodeResident(session.resident),
+      _encodeResident(session.resident, session.expiresAt),
     );
     await _secrets.write(SecretKeys.accessToken, session.accessToken);
   }
@@ -70,17 +74,40 @@ class KeystoreSessionStore implements SessionStore {
     await _secrets.delete(SecretKeys.residentSummary);
   }
 
-  static String _encodeResident(ResidentSession resident) =>
-      jsonEncode(<String, Object?>{
-        'account_id': resident.accountId,
-        // Persisted as the server's own tier vocabulary rather than as this
-        // build's enum index, so an app update that reorders the enum cannot
-        // silently promote a stored session.
-        'verification_tier': resident.accessLevel == AccessLevel.verified
-            ? 'verified'
-            : 'unverified',
-        'display_name': resident.displayName,
-      });
+  static String _encodeResident(
+    ResidentSession resident,
+    DateTime? expiresAt,
+  ) => jsonEncode(<String, Object?>{
+    'account_id': resident.accountId,
+    // Persisted as the server's own tier vocabulary rather than as this
+    // build's enum index, so an app update that reorders the enum cannot
+    // silently promote a stored session.
+    'verification_tier': resident.accessLevel == AccessLevel.verified
+        ? 'verified'
+        : 'unverified',
+    'display_name': resident.displayName,
+    // Additive: a summary written by an older build simply has no
+    // `expires_at`, which reads back as "lifetime unknown" and defers to the
+    // server, rather than as "expired".
+    'expires_at': expiresAt?.toUtc().toIso8601String(),
+  });
+
+  /// Reads the token deadline back, if this build wrote one.
+  ///
+  /// An unparseable or absent value is `null` — lifetime unknown — never a date
+  /// in the past. Treating a decode failure as expiry would sign a resident out
+  /// because of a storage bug.
+  static DateTime? _decodeExpiry(String raw) {
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final value = decoded['expires_at'];
+      if (value is! String || value.isEmpty) return null;
+      return DateTime.tryParse(value)?.toUtc();
+    } on FormatException {
+      return null;
+    }
+  }
 
   static ResidentSession? _decodeResident(String raw) {
     try {

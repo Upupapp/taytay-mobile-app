@@ -31,13 +31,45 @@ abstract interface class SessionStore {
 /// What is persisted between launches: the resident's identity summary plus the
 /// credential material needed to resume.
 class StoredSession {
-  const StoredSession({required this.resident, required this.accessToken});
+  const StoredSession({
+    required this.resident,
+    required this.accessToken,
+    this.expiresAt,
+  });
 
   final ResidentSession resident;
 
   /// Bearer token. Never logged, never rendered, never sent anywhere except the
   /// `Authorization` header of the Taytay API.
   final String accessToken;
+
+  /// When the server said this token stops working, in UTC.
+  ///
+  /// Taken verbatim from the `expires_at` the committed contract returns
+  /// alongside the token (`POST /api/v1/auth/otp/verify`). Null when the server
+  /// did not say — an older response, or a build talking to a service that has
+  /// not started sending it.
+  ///
+  /// **This is a courtesy, not an authorization decision.** A token is valid
+  /// because the server accepts it, not because this timestamp has not passed;
+  /// the server may revoke it at any moment, and a `401` is still the only
+  /// verdict that ends a session for certain. What this buys is the *opposite*
+  /// direction, which is always safe: when the app can already see the token is
+  /// dead, it stops presenting it and asks the resident to sign in, instead of
+  /// firing a doomed request and rendering a screen that is about to fail.
+  final DateTime? expiresAt;
+
+  /// Whether the token is known to have expired at [now].
+  ///
+  /// Fails **open toward the server**: an absent [expiresAt] returns false, so
+  /// the app keeps using a token whose lifetime it does not know and lets the
+  /// server decide. Guessing "probably expired" would sign residents out for a
+  /// field the backend has not shipped yet.
+  bool isExpiredAt(DateTime now) {
+    final deadline = expiresAt;
+    if (deadline == null) return false;
+    return !now.toUtc().isBefore(deadline.toUtc());
+  }
 
   /// Redacted deliberately — see the class doc.
   @override
