@@ -6,6 +6,7 @@ import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/registration/presentation/registration_screen.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../design/design_tokens.dart';
@@ -62,6 +63,11 @@ GoRouter buildAppRouter({
         builder: (context, state) => SignInScreen(
           returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
         ),
+      ),
+      GoRoute(
+        path: AppRoute.register.path,
+        name: AppRoute.register.routeName,
+        builder: (context, state) => const RegistrationScreen(),
       ),
       GoRoute(
         path: AppRoute.home.path,

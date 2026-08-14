@@ -156,6 +156,11 @@ class _SignInScreenState extends State<SignInScreen> {
                     onRetry: _submit,
                   ),
                 const SizedBox(height: Spacing.xl),
+                OutlinedButton(
+                  onPressed: () => context.goNamed(AppRoute.register.routeName),
+                  child: const Text('Create an account'),
+                ),
+                const SizedBox(height: Spacing.sm),
                 TextButton(
                   onPressed: () => context.goNamed(AppRoute.home.routeName),
                   child: const Text('Continue as guest'),
@@ -185,7 +190,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
 class _Notice extends StatelessWidget {
   const _Notice({required this.icon, required this.text});
-
 
   final IconData icon;
   final String text;

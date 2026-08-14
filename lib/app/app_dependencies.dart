@@ -22,6 +22,8 @@ import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
 import '../features/profile/data/planned_resident_profile_repository.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
+import '../features/registration/data/planned_registration_repository.dart';
+import '../features/registration/domain/registration_domain.dart';
 import '../features/services/data/planned_service_request_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
@@ -47,6 +49,7 @@ class AppDependencies {
     required this.platformRepository,
     required this.serviceCatalogRepository,
     required this.residentProfileRepository,
+    required this.registrationRepository,
     required this.credentialRepository,
     required this.verificationRepository,
     required this.serviceRequestRepository,
@@ -115,6 +118,7 @@ class AppDependencies {
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
       residentProfileRepository: const PlannedResidentProfileRepository(),
+      registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: const PlannedCredentialRepository(),
       verificationRepository: const PlannedVerificationRepository(),
       serviceRequestRepository: const PlannedServiceRequestRepository(),
@@ -138,6 +142,9 @@ class AppDependencies {
   final PlatformRepository platformRepository;
   final ServiceCatalogRepository serviceCatalogRepository;
   final ResidentProfileRepository residentProfileRepository;
+
+  /// Citizen registration and identity verification submission.
+  final RegistrationRepository registrationRepository;
   final CredentialRepository credentialRepository;
   final VerificationRepository verificationRepository;
   final ServiceRequestRepository serviceRequestRepository;

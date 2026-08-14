@@ -17,6 +17,10 @@ enum AppRoute {
   /// Sign-in. Public by definition.
   signIn('sign-in', '/sign-in', AccessRequirement.public),
 
+  /// Citizen registration. Public: a person without an account is exactly who
+  /// needs it, and the flow itself is what creates the account.
+  register('register', '/register', AccessRequirement.public),
+
   /// Resident dashboard.
   ///
   /// Public on purpose. A guest can browse LGU services, announcements and
@@ -31,7 +35,11 @@ enum AppRoute {
   /// Identity verification: status, next step, and the submission flow.
   /// Authenticated but explicitly *not* verified — this is how a resident
   /// becomes verified.
-  verification('verification', '/verification', AccessRequirement.authenticated),
+  verification(
+    'verification',
+    '/verification',
+    AccessRequirement.authenticated,
+  ),
 
   /// The resident's LGU digital ID. Verified residents only: a credential is a
   /// statement by the LGU about a person whose identity it has confirmed.

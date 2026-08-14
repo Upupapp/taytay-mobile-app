@@ -817,6 +817,114 @@ point rather than a funnel.
 
 ---
 
+## D-30 — Registration is verification, not account creation
+
+**Status: settled.** Category: schema / product.
+
+**Options**
+
+1. `POST /api/v1/register` carrying name, birth date and address.
+2. Create the account with `PATCH /me/profile` after signing in.
+3. **OTP creates the account; identity details travel as a verification
+   submission.**
+
+**Chosen: 3**, because the committed contract leaves no alternative.
+
+**Why.** `Taytay_Rizal_LGUIDS_Backend@896cec9` publishes a full citizen endpoint
+matrix and it contains **no account-creation row**. It also states that
+`PATCH /api/v1/me/profile` is *contact fields only* and that a citizen *may not
+edit their own eligibility-bearing fields*. Option 1 would be an invented
+endpoint; option 2 would push demographics through a route the contract
+explicitly narrows.
+
+So `RegistrationRepository` has no `createAccount`, and the wizard's shape —
+contact, code, details, address, consent, review, submit — follows the contract
+rather than a form design.
+
+**Sources.** REPO backend `docs/contracts/frontend-endpoint-matrix.md` §2 and §12.
+
+---
+
+## D-31 — The wizard collects less than the staff console holds
+
+**Status: settled.** Category: privacy.
+
+**Options**
+
+1. Mirror the staff `Resident` model so the record is complete on arrival.
+2. Collect the common subset a clerk usually needs.
+3. **Collect only what matches a person to an existing resident record.**
+
+**Chosen: 3** — name, birth date, barangay, street, mobile number.
+
+**Why.** `sex`, `civilStatus`, `sectors`, `monthlyIncome`, `philsysLastFour` and
+`householdId` do not narrow a name-and-birth-date match. Several are sensitive
+personal information under RA 10173 §13 — `sectors` includes VAWC-survivor and
+child-in-conflict-with-the-law status — and this client has no endpoint that
+accepts any of them. Collecting data with no purpose and no destination is the
+clearest possible failure of minimisation.
+
+A test asserts the absent fields stay absent.
+
+---
+
+## D-32 — Optional identity steps are server-gated and deny by default
+
+**Status: settled.** Category: privacy / authorization.
+
+**Options**
+
+1. Always collect an ID and a selfie — the LGU will want them.
+2. A build-time flag.
+3. **A server capability, defaulting to denied, plus explicit consent for
+   biometrics.**
+
+**Chosen: 3.**
+
+**Why.** Whether a resident needs a document is a *matching* decision only the
+server can make — someone already in the register may need nothing. And a client
+that decides on its own to capture a face photo is collecting the most sensitive
+artifact in the system without the LGU asking; backend gap **G-18** records that
+there is not even an agreed upload mechanism yet.
+
+`RegistrationCapabilities` therefore starts all-false and only
+`GET /api/v1/me/verification` may widen it. Since that row is `planned`, this
+build shows neither step and opens no picker — the fail-closed outcome, and a
+tested one.
+
+The selfie step additionally requires biometric consent, which is the one
+**optional** consent: consent that cannot be refused is not consent.
+
+---
+
+## D-33 — Duplicate and match errors never enumerate
+
+**Status: settled.** Category: privacy / security.
+
+**Options**
+
+1. "This mobile number is already registered — sign in instead."
+2. "A resident with this name and birth date already exists."
+3. **The same answer whether or not a record exists.**
+
+**Chosen: 3.**
+
+**Why.** Options 1 and 2 turn a public registration form into an oracle: anyone
+could test numbers, or names and birth dates, and learn who is a Taytay resident.
+That is a disclosure about a third party made to a stranger, and it is exactly
+what the committed contract forbids on the OTP row — *"must not reveal whether
+the number is registered"*. A client that renders a `409` distinguishably undoes
+a server-side protection.
+
+A conflict on the contact step therefore reads "If this mobile number can be
+used, we have sent a code to it", and a conflict later reads "please visit the
+municipal hall" — helpful, and silent about what exists.
+
+**Cost accepted:** a resident who genuinely already has an account gets a
+slightly vaguer message. Being sent to the code screen still works for them.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -850,5 +958,9 @@ point rather than a funnel.
 | D-27 | Resuming an intent navigates, never acts | product / authorization | settled |
 | D-28 | First-launch state lives in the keystore | architecture / privacy | settled |
 | D-29 | Skipping the welcome counts as completing it | product | settled |
+| D-30 | Registration is verification, not account creation | schema / product | settled |
+| D-31 | Collect less than the staff console holds | privacy | settled |
+| D-32 | Optional identity steps are server-gated, deny by default | privacy / authorization | settled |
+| D-33 | Duplicate and match errors never enumerate | privacy / security | settled |
 
-**29 decisions — 25 settled, 4 provisional pending named backend gaps.**
+**33 decisions — 29 settled, 4 provisional pending named backend gaps.**

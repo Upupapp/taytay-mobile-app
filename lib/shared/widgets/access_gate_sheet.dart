@@ -74,9 +74,8 @@ abstract final class AccessGateSheet {
       ),
       // Nothing to gate. Callers should not reach here, but returning a
       // dismissal is safer than asserting in a resident's face.
-      AccessAllowed() || AccessPending() => Future<GateOutcome?>.value(
-        GateOutcome.dismissed,
-      ),
+      AccessAllowed() ||
+      AccessPending() => Future<GateOutcome?>.value(GateOutcome.dismissed),
     };
 
     if (outcome == null || outcome == GateOutcome.dismissed) {
@@ -111,6 +110,14 @@ abstract final class AccessGateSheet {
           },
         ),
         secondary: AppButton(
+          label: 'Create an account',
+          variant: AppButtonVariant.secondary,
+          onPressed: () {
+            Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
+            router.goNamed(AppRoute.register.routeName);
+          },
+        ),
+        tertiary: AppButton(
           label: 'Keep browsing',
           variant: AppButtonVariant.text,
           onPressed: () =>
@@ -163,6 +170,7 @@ class _GateBody extends StatelessWidget {
     required this.privacyNote,
     required this.primary,
     required this.secondary,
+    this.tertiary,
   });
 
   final Widget illustration;
@@ -170,6 +178,10 @@ class _GateBody extends StatelessWidget {
   final String privacyNote;
   final Widget primary;
   final Widget secondary;
+
+  /// Optional third action. Used by the sign-in gate, where a resident may
+  /// have no account yet — offering only "Sign in" would strand them.
+  final Widget? tertiary;
 
   @override
   Widget build(BuildContext context) {
@@ -192,6 +204,10 @@ class _GateBody extends StatelessWidget {
         primary,
         const SizedBox(height: Spacing.sm),
         secondary,
+        if (tertiary != null) ...<Widget>[
+          const SizedBox(height: Spacing.sm),
+          tertiary!,
+        ],
       ],
     );
   }

@@ -72,7 +72,10 @@ void main() {
 
     test('no hard-coded credential literals in lib/', () {
       final patterns = <RegExp>[
-        RegExp(r'''(?:password|passwd|secret|api[_-]?key|apikey)\s*[:=]\s*['"][^'"]{6,}['"]''', caseSensitive: false),
+        RegExp(
+          r'''(?:password|passwd|secret|api[_-]?key|apikey)\s*[:=]\s*['"][^'"]{6,}['"]''',
+          caseSensitive: false,
+        ),
         RegExp(r'''Bearer\s+[A-Za-z0-9\-._~+/]{20,}'''),
         RegExp(r'-----BEGIN [A-Z ]*PRIVATE KEY-----'),
       ];
@@ -119,7 +122,10 @@ void main() {
       // A type that ends up in a log line must not carry the token, the account
       // id or the resident's name.
       final checks = <String, List<String>>{
-        'lib/core/session/session_state.dart': <String>['accountId', 'displayName'],
+        'lib/core/session/session_state.dart': <String>[
+          'accountId',
+          'displayName',
+        ],
         'lib/core/session/session_store.dart': <String>['accessToken'],
         'lib/core/api/request_context.dart': <String>['bearerToken'],
       };
@@ -144,6 +150,55 @@ void main() {
       });
     });
 
+    test('registration types never render their contents', () {
+      // A draft and an upload descriptor are the two objects in this app most
+      // likely to reach a crash report while holding identity data.
+      for (final path in <String>[
+        'lib/features/registration/domain/registration_domain.dart',
+      ]) {
+        final source = File(path).readAsStringSync();
+        for (final match in RegExp(
+          r'String toString\(\) =>(.*?);',
+          dotAll: true,
+        ).allMatches(source)) {
+          final body = match.group(1)!;
+          for (final field in <String>[
+            'givenName',
+            'familyName',
+            'middleName',
+            'birthDate',
+            'mobileNumber',
+            'streetAddress',
+            'localReference',
+          ]) {
+            expect(
+              body,
+              isNot(contains('\$$field')),
+              reason: '$path interpolates $field into toString',
+            );
+          }
+        }
+      }
+    });
+
+    test('no identity image bytes are held or logged anywhere', () {
+      // The upload seam carries a reference, a size and a MIME type — never the
+      // image itself. Backend gap G-18 leaves the upload contract unspecified,
+      // so this build must not be holding pixels it cannot send.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'', '/');
+        if (!path.contains('/registration/')) continue;
+        final source = stripComments(file.readAsStringSync());
+        if (source.contains('Uint8List') ||
+            source.contains('dart:io') ||
+            source.contains('File(')) {
+          offenders.add(path);
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
     test('no domain type outside data/ parses raw JSON maps', () {
       // CLAUDE.md Article 2.4: the wire format stops at the data layer.
       final offenders = <String>[];
@@ -160,27 +215,30 @@ void main() {
   });
 
   group('authority-shaped values', () {
-    test('no request header or body claims a role, permission or admin flag', () {
-      // ADR 0002 §4: such values are ignored server-side, and sending them
-      // invites a future reader to believe they matter.
-      final forbidden = <RegExp>[
-        RegExp(r"""['"]X-Client-Role['"]""", caseSensitive: false),
-        RegExp(r"""['"]X-.*-Permissions?['"]""", caseSensitive: false),
-        RegExp(r"""['"]is_admin['"]"""),
-        RegExp(r"""['"]role['"]\s*:"""),
-      ];
+    test(
+      'no request header or body claims a role, permission or admin flag',
+      () {
+        // ADR 0002 §4: such values are ignored server-side, and sending them
+        // invites a future reader to believe they matter.
+        final forbidden = <RegExp>[
+          RegExp(r"""['"]X-Client-Role['"]""", caseSensitive: false),
+          RegExp(r"""['"]X-.*-Permissions?['"]""", caseSensitive: false),
+          RegExp(r"""['"]is_admin['"]"""),
+          RegExp(r"""['"]role['"]\s*:"""),
+        ];
 
-      final offenders = <String>[];
-      for (final file in dartFiles('lib')) {
-        final source = stripComments(file.readAsStringSync());
-        for (final pattern in forbidden) {
-          if (pattern.hasMatch(source)) {
-            offenders.add('${file.path}: ${pattern.pattern}');
+        final offenders = <String>[];
+        for (final file in dartFiles('lib')) {
+          final source = stripComments(file.readAsStringSync());
+          for (final pattern in forbidden) {
+            if (pattern.hasMatch(source)) {
+              offenders.add('${file.path}: ${pattern.pattern}');
+            }
           }
         }
-      }
-      expect(offenders, isEmpty, reason: offenders.join('\n'));
-    });
+        expect(offenders, isEmpty, reason: offenders.join('\n'));
+      },
+    );
 
     test('the client channel is sent exactly once, from one place', () {
       final offenders = <String>[];
