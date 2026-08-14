@@ -426,14 +426,12 @@ void main() {
 
       await tapVisible(tester, find.text('Identity verification'));
 
-      expect(
-        find.text('Verification opens once Taytay LGU enables it in this app.'),
-        findsOneWidget,
-      );
-      final button = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Start verification'),
-      );
-      expect(button.onPressed, isNull, reason: 'nothing is collected yet');
+      // TAB 08: the status screen declines honestly because the Verification
+      // module is unbuilt, rather than showing an invented status or
+      // collecting documents it cannot send.
+      expect(find.text('Could not check your status'), findsOneWidget);
+      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
+      expect(find.byType(TextFormField), findsNothing);
     });
   });
 }

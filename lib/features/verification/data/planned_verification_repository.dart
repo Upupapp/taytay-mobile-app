@@ -1,6 +1,7 @@
 import '../../../core/api/planned_backend.dart';
 import '../../../core/result/result.dart';
 import '../domain/verification_repository.dart';
+import '../domain/verification_status_detail.dart';
 
 /// Verification repository for a backend module that does not exist yet.
 ///
@@ -18,6 +19,19 @@ class PlannedVerificationRepository implements VerificationRepository {
   @override
   Future<Result<VerificationStatus>> loadOwnStatus() async =>
       plannedBackendFailure<VerificationStatus>(_module, 'loadOwnStatus');
+
+  @override
+  Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async =>
+      plannedBackendFailure<VerificationStatusDetail>(
+        _module,
+        'loadOwnStatusDetail',
+      );
+
+  @override
+  Future<Result<void>> submitCorrections({
+    required Map<VerificationItemCategory, String> corrections,
+    required String idempotencyKey,
+  }) async => plannedBackendFailure<void>(_module, 'submitCorrections');
 
   @override
   Future<Result<void>> submitForReview({

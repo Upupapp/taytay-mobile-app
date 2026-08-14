@@ -158,7 +158,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Verify your identity with Taytay LGU'), findsOneWidget);
+      // TAB 08 replaced the placeholder with the real status screen.
+      expect(find.text('Identity verification'), findsWidgets);
     });
 
     testWidgets('a verified resident reaches the digital ID', (tester) async {

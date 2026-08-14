@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'verification_status_detail.dart';
 
 /// Where a resident's verification attempt has reached, as the server reports it.
 ///
@@ -58,6 +59,32 @@ class VerificationStatus {
 abstract interface class VerificationRepository {
   /// The signed-in resident's own verification status.
   Future<Result<VerificationStatus>> loadOwnStatus();
+
+  /// The full resident-facing picture: stage, submitted categories, anything
+  /// needing correction, and whether an in-person route is offered.
+  ///
+  /// Added in TAB 08 alongside [loadOwnStatus] rather than replacing it —
+  /// additive evolution, so nothing that already reads the simple status
+  /// breaks. Both map the same server state; this one carries what the status
+  /// screen needs.
+  Future<Result<VerificationStatusDetail>> loadOwnStatusDetail();
+
+  /// Resends only the items the office asked to have corrected.
+  ///
+  /// Deliberately narrower than [submitForReview]: a resident answering a
+  /// "needs more information" request should not have to redo the whole
+  /// submission, and re-sending everything would mean re-uploading an identity
+  /// document the office already holds and has not questioned.
+  ///
+  /// [corrections] is keyed by the category the office flagged, so a caller
+  /// cannot send a correction for something that was never in question.
+  ///
+  /// [idempotencyKey] is required: a resend that arrives twice is a second item
+  /// in a municipal review queue.
+  Future<Result<void>> submitCorrections({
+    required Map<VerificationItemCategory, String> corrections,
+    required String idempotencyKey,
+  });
 
   /// Submits captured evidence for review.
   ///

@@ -925,6 +925,116 @@ slightly vaguer message. Being sent to the code screen still works for them.
 
 ---
 
+## D-34 — Two verification vocabularies, mapped one way, degrading downward
+
+**Status: settled.** Category: schema / authorization.
+
+**Options**
+
+1. Render the server's state string directly.
+2. Map server states to resident copy, treating anything unknown as a failure.
+3. **Map server states to a resident stage, degrading anything unknown to the
+   stage that always has a safe next step.**
+
+**Chosen: 3.**
+
+**Why.** The backend "owns a canonical `VerificationState` enumeration"
+exposed as `verification_tier` (gap **G-08**) and does not publish its values,
+so a released app *will* meet states it has never seen. Option 1 shows a
+resident `awaiting_barangay_endorsement` and leaves them to guess. Option 2
+tells someone they failed when nobody said so.
+
+Unknown therefore maps to `manualReview` — "needs a person to check", with the
+municipal hall as the route. Never to `verified`, which would grant capabilities
+the server never granted; never to `unsuccessful`, which would be a false
+statement about a real person's application.
+
+**Sources.** REPO backend `docs/contracts/frontend-backend-gap-list.md` G-08;
+`docs/contracts/frontend-endpoint-matrix.md` §12.
+
+---
+
+## D-35 — The status decoder is an allow-list, not a deny-list
+
+**Status: settled.** Category: privacy.
+
+**Options**
+
+1. Decode the whole payload and choose what to render.
+2. Decode everything, then strip known-sensitive fields.
+3. **Read only an enumerated set of keys; ignore everything else.**
+
+**Chosen: 3.**
+
+**Why.** The fields at stake are reviewer identity, risk and fraud scores,
+caseworker notes, audit trails, matching candidates and rejection heuristics.
+The committed client-visibility matrix says such fields "never appear in any
+citizen or verifier response, in any endpoint, ever", and that a citizen
+projection is built "by naming the fields to include, never by taking the staff
+projection and removing some".
+
+Option 2 is one forgotten key away from rendering a caseworker's note — and the
+key that gets forgotten is the one added after the code review. An allow-list
+cannot leak a field nobody wrote a line for.
+
+`VerificationStatusDetail` additionally has no field any of it could occupy, so
+the shape is the first control and the decoder is the second. A test decodes a
+payload carrying all of the above, plus another resident's name, and asserts
+none of it survives.
+
+---
+
+## D-36 — Verified unlocks through the session controller, not the screen
+
+**Status: settled.** Category: authorization / product.
+
+**Options**
+
+1. The verification screen navigates to the credential on success.
+2. The screen sets a local "verified" flag and shows the ID.
+3. **Push the server's tier into `SessionController`, and let the router react.**
+
+**Chosen: 3.**
+
+**Why.** Options 1 and 2 create a second source of truth about what a resident
+may do — exactly what `AccessPolicy` and the route guard exist to prevent — and
+option 2 lets a screen grant itself access.
+
+Routing the answer through `applyVerificationTier` means one place changes access
+level, the router re-evaluates every gated route in the same frame, and the
+guarantee holds for screens nobody has written yet. It also makes the reverse
+work for free: a status that stops saying verified lowers the level again, so a
+revoked verification takes the capability with it.
+
+The app decides nothing — the tier is the server's, and
+`AccessLevel.fromVerificationTier` fails closed on anything that is not exactly
+`verified`.
+
+---
+
+## D-37 — No turnaround promises anywhere in verification copy
+
+**Status: settled.** Category: copy / trust.
+
+**Options**
+
+1. "Usually reviewed within three working days."
+2. Show an estimate supplied by the server.
+3. **State what is happening and what the resident can do. No duration.**
+
+**Chosen: 3**, with 2 available later if the LGU publishes a figure it stands
+behind.
+
+**Why.** The app has no basis for a number, a municipal review queue does not
+honour one, and a missed promise from a government service costs more trust than
+never having made it. The resident's real question — "is there anything I need to
+do?" — is answered directly on every stage instead.
+
+Enforced by a test that scans both the stage copy and the rendered screen for
+`N days/weeks`, "within" and "guarantee".
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -962,5 +1072,9 @@ slightly vaguer message. Being sent to the code screen still works for them.
 | D-31 | Collect less than the staff console holds | privacy | settled |
 | D-32 | Optional identity steps are server-gated, deny by default | privacy / authorization | settled |
 | D-33 | Duplicate and match errors never enumerate | privacy / security | settled |
+| D-34 | Verification states mapped one way, degrading downward | schema / authorization | settled |
+| D-35 | The status decoder is an allow-list | privacy | settled |
+| D-36 | Verified unlocks through the session controller | authorization / product | settled |
+| D-37 | No turnaround promises in verification copy | copy / trust | settled |
 
-**33 decisions — 29 settled, 4 provisional pending named backend gaps.**
+**37 decisions — 33 settled, 4 provisional pending named backend gaps.**

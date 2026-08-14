@@ -1,0 +1,156 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+
+import '../../../core/api/request_context.dart';
+import '../../../core/result/result.dart';
+import '../../../core/session/session_controller.dart';
+import '../domain/verification_repository.dart';
+import '../domain/verification_status_detail.dart';
+
+/// Drives the verification status screen and the correction flow.
+///
+/// ---
+///
+/// ## The one thing this class exists to get right
+///
+/// **When the server says verified, the session must reflect it immediately.**
+///
+/// A resident who has just been verified and is looking at a "Verified" screen,
+/// but still cannot open their digital ID until they restart the app, has been
+/// told two contradictory things by the same product. So [refresh] pushes the
+/// server's tier straight into [SessionController.applyVerificationTier], which
+/// is the single place access level changes. The router listens to that
+/// controller, so every gated route re-evaluates in the same frame — no
+/// restart, no manual navigation, and no second source of truth.
+///
+/// The app still decides nothing: the tier is the server's answer, and
+/// `AccessLevel.fromVerificationTier` fails closed on anything it does not
+/// recognise. This class only makes sure the answer arrives somewhere central.
+class VerificationController extends ChangeNotifier {
+  VerificationController({
+    required VerificationRepository repository,
+    required SessionController session,
+  }) : _repository = repository,
+       _session = session;
+
+  final VerificationRepository _repository;
+  final SessionController _session;
+
+  VerificationStatusDetail? _status;
+  AppFailure? _failure;
+  bool _loading = false;
+  bool _submitting = false;
+  String? _correctionKey;
+
+  /// Corrections the resident has typed, keyed by the category the office
+  /// flagged. Nothing can be entered for a category that was not flagged.
+  final Map<VerificationItemCategory, String> _corrections =
+      <VerificationItemCategory, String>{};
+
+  VerificationStatusDetail? get status => _status;
+  AppFailure? get failure => _failure;
+  bool get loading => _loading;
+  bool get submitting => _submitting;
+
+  Map<VerificationItemCategory, String> get corrections =>
+      Map<VerificationItemCategory, String>.unmodifiable(_corrections);
+
+  /// Whether every flagged item has something typed against it.
+  bool get correctionsComplete {
+    final issues = _status?.issues ?? const <VerificationItemIssue>[];
+    if (issues.isEmpty) return false;
+    return issues.every(
+      (issue) => (_corrections[issue.category] ?? '').trim().isNotEmpty,
+    );
+  }
+
+  /// Loads the status and, if it says verified, unlocks access centrally.
+  Future<void> refresh() async {
+    _loading = true;
+    _failure = null;
+    notifyListeners();
+
+    final outcome = await _repository.loadOwnStatusDetail();
+    _loading = false;
+
+    outcome.fold(
+      onOk: (detail) {
+        _status = detail;
+        _syncSessionTier(detail);
+      },
+      onErr: (failure) {
+        _failure = failure;
+        // Deliberately does **not** clear a previously loaded status: a resident
+        // on a weak connection should keep seeing what the LGU last said rather
+        // than watch their verification state vanish because a refresh failed.
+      },
+    );
+    notifyListeners();
+  }
+
+  /// Pushes the server's verdict into the one place that owns access level.
+  ///
+  /// Only ever called with what the server sent. The app never promotes a
+  /// session on its own — and `applyVerificationTier` ignores the call entirely
+  /// when nobody is signed in, so this cannot manufacture a session either.
+  void _syncSessionTier(VerificationStatusDetail detail) {
+    if (detail.isVerified) {
+      _session.applyVerificationTier('verified');
+      return;
+    }
+    // Any non-verified stage means the session must not be holding a verified
+    // level. Passing the raw state lets `AccessLevel.fromVerificationTier` fail
+    // closed on anything that is not exactly 'verified' — including a state this
+    // build has never seen.
+    _session.applyVerificationTier(detail.rawState);
+  }
+
+  /// Records a correction for a flagged category.
+  ///
+  /// Ignores categories the office did not flag: the correction flow is a reply
+  /// to a specific request, not an opportunity to resubmit anything.
+  void updateCorrection(VerificationItemCategory category, String value) {
+    final flagged = _status?.issues.any((i) => i.category == category) ?? false;
+    if (!flagged) return;
+    _corrections[category] = value;
+    _failure = null;
+    notifyListeners();
+  }
+
+  /// Sends the corrections the office asked for.
+  ///
+  /// One idempotency key per attempt, reused on retry, so a dropped connection
+  /// cannot put two replies in a municipal review queue.
+  Future<bool> submitCorrections() async {
+    if (!correctionsComplete || _submitting) return false;
+
+    _correctionKey ??= generateRequestId();
+    _submitting = true;
+    _failure = null;
+    notifyListeners();
+
+    final outcome = await _repository.submitCorrections(
+      corrections: Map<VerificationItemCategory, String>.from(_corrections),
+      idempotencyKey: _correctionKey!,
+    );
+    _submitting = false;
+
+    return outcome.fold(
+      onOk: (_) {
+        // Sent: forget the typed values and re-read the status rather than
+        // assuming what the server now thinks.
+        _corrections.clear();
+        _correctionKey = null;
+        notifyListeners();
+        unawaited(refresh());
+        return true;
+      },
+      onErr: (failure) {
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+}
