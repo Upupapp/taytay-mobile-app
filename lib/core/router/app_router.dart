@@ -9,6 +9,8 @@ import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/events/presentation/event_detail_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/household/presentation/household_correction_screen.dart';
+import '../../features/household/presentation/household_screen.dart';
 import '../../features/news/presentation/news_post_screen.dart';
 import '../../features/news/presentation/news_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
@@ -227,6 +229,18 @@ GoRouter buildAppRouter({
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoute.household.path,
+        name: AppRoute.household.routeName,
+        builder: (context, state) => const HouseholdScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'correction',
+            name: AppRoute.householdCorrection.routeName,
+            builder: (context, state) => const HouseholdCorrectionScreen(),
           ),
         ],
       ),

@@ -385,8 +385,23 @@ void main() {
       );
     });
 
-    test('a capability with no screen can never be opened', () {
-      expect(ResidentCapability.viewHouseholdSummary.route, isNull);
+    test('a capability never points at a route with weaker access', () {
+      // TAB 13 gave the household capability a screen, so every capability now
+      // has a route. The invariant that replaces "no screen" is the one that
+      // actually matters: a capability must not open a destination the guard
+      // would let a less-privileged session reach. A verified-only capability
+      // pointing at a public route would be a leak with a green test.
+      for (final capability in ResidentCapability.values) {
+        final route = capability.route;
+        if (route == null) continue;
+        expect(
+          route.requirement.minimumLevel.satisfies(
+            capability.requirement.minimumLevel,
+          ),
+          isTrue,
+          reason: '${capability.name} -> ${route.routeName}',
+        );
+      }
     });
 
     test('the household summary is withheld, not faked', () {

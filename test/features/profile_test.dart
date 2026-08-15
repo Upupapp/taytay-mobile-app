@@ -123,6 +123,7 @@ Future<BootedProfile> bootProfile(
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
     residentProfileRepository: profile,
+    householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
     serviceRequestRepository: base.serviceRequestRepository,

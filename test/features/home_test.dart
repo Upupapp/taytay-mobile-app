@@ -189,6 +189,7 @@ Future<Booted> bootHome(
     announcementRepository: StubAnnouncementRepository(announcements),
     eventRepository: StubEventRepository(events),
     residentProfileRepository: base.residentProfileRepository,
+    householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: verification,
     serviceRequestRepository: requests,

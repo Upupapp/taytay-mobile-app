@@ -61,6 +61,7 @@ Future<AppDependencies> boot(
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
     residentProfileRepository: base.residentProfileRepository,
+    householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
     serviceRequestRepository: base.serviceRequestRepository,

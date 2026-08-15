@@ -1550,6 +1550,110 @@ renders identically for everyone and discloses nothing by being opened.
 
 ---
 
+## D-54 — A resident sees their household, never its members
+
+**Status: settled.** Category: privacy / household membership.
+
+**Options**
+
+1. Show the member list — names and relationships — as the Master Command's
+   wording allows "when authorized".
+2. Show names but hide anything sensitive about each person.
+3. **Show the household and an aggregate count. No names, and no type that
+   could hold one.**
+
+**Chosen: 3.**
+
+**Why.** The committed client-visibility matrix settles it in two lines. A
+citizen gets `household` membership *"own household only"*; and
+`Household.members` is listed among the things a citizen never receives, with
+cross-resident access called *"a critical defect"*. So names are not authorized,
+and the Master Command's condition is simply not met.
+
+Option 2 is the tempting middle and the wrong one. The people in a household are
+separate data subjects: their names are their data regardless of what is shown
+alongside, and one household member is not the others' data controller. In
+practice this matters most in exactly the households the LGU most needs to
+protect — a VAWC survivor who has moved, an adult child estranged from a parent
+who still holds the phone.
+
+What replaces it is a **count**. It is an aggregate, it names nobody, and it does
+the one job a resident needs from this screen: noticing that the office believes
+it is serving four people when it is serving six.
+
+The guarantee is structural rather than editorial. There is no `HouseholdMember`
+class in this app, so no screen can render one; a source scan asserts it stays
+that way.
+
+**Sources.** REPO backend `docs/contracts/client-visibility-matrix.md` §1 and §2.
+
+---
+
+## D-55 — Head of household fails closed
+
+**Status: settled.** Category: authorization / lifecycle.
+
+**Options**
+
+1. Render the server's role string as sent.
+2. Map known roles, and show an unrecognised one verbatim.
+3. **Map `head` and `household_head`; everything else reads as member.**
+
+**Chosen: 3.**
+
+**Why.** "Head of household" is not a label, it is a standing. It is who the
+municipal office speaks to, and in some programmes who receives on behalf of
+everyone in the home. A resident shown that title reasonably acts on it — at a
+counter, in front of family.
+
+Options 1 and 2 both let an unreviewed or unrecognised string confer it. The
+failure is asymmetric: mistakenly showing "member" to a head costs one confused
+conversation, and mistakenly showing "head" to a member can cost a household its
+claim while somebody is turned away.
+
+The same reasoning as `AccessLevel.fromVerificationTier`, applied to a different
+kind of standing, and for the same reason: an unrecognised value must degrade to
+the least authority, never toward it.
+
+---
+
+## D-56 — A household correction is a category, not a form
+
+**Status: settled.** Category: correction / privacy.
+
+**Options**
+
+1. A free-text description with optional document upload.
+2. A structured form naming the field and its correct value.
+3. **A single choice from five categories, and nothing else.**
+
+**Chosen: 3.**
+
+**Why not free text.** A box on a household screen invites a resident to type
+the things this app must never hold: a relative's medical condition, why somebody
+left, an allegation about another household. That text would then sit in memory,
+in a crash report and in the OS task-switcher snapshot — for a submission that
+today has nowhere to go at all. The Master Command's instruction not to accept
+evidence the app cannot send points the same way.
+
+**Why not a structured value.** Option 2 is a rewrite wearing a request's
+clothes: "set barangay to X" is one server change away from being applied, and
+acceptance 3 requires that a correction never rewrite canonical relationships.
+`HouseholdCorrectionRequest` therefore has one field — the category — so it is
+*structurally* incapable of expressing a target value.
+
+**And no category can move a person between households.** Household composition
+is a registry decision with eligibility consequences for two households at once,
+and it is not something one member of one of them should start from a phone. No
+value can express it; a test scans every label for "move", "transfer",
+"reassign", "merge" and "split".
+
+A category is enough to route the resident to the right counter, which is what a
+correction actually needs. The detail belongs to the conversation with the person
+who can act on it — and the screen says so, and gives them no way to type it.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1607,5 +1711,8 @@ renders identically for everyone and discloses nothing by being opened.
 | D-51 | The correction path is a sentence, not a form | correction / product | settled |
 | D-52 | Profile completeness is removed, not hidden | schema / privacy | settled |
 | D-53 | Privacy is explained, not toggled | consent / privacy | settled |
+| D-54 | A resident sees their household, never its members | privacy / household | settled |
+| D-55 | Head of household fails closed | authorization / lifecycle | settled |
+| D-56 | A household correction is a category, not a form | correction / privacy | settled |
 
-**53 decisions — 49 settled, 4 provisional pending named backend gaps.**
+**56 decisions — 52 settled, 4 provisional pending named backend gaps.**

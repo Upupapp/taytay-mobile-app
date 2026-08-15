@@ -137,6 +137,21 @@ enum AppRoute {
     parameters: <String>['requestId'],
   ),
 
+  /// The resident's own household and family summary. Verified only: it is a
+  /// statement about a home and the people the LGU serves there.
+  ///
+  /// **No identifier in the path, ever.** The read is `/me`-scoped, so there is
+  /// nothing to put in one — and a household id in a URL is the shape that
+  /// invites registry browsing.
+  household('household', '/household', AccessRequirement.verified),
+
+  /// Reporting an error in that record. Raises a question; changes nothing.
+  householdCorrection(
+    'household-correction',
+    '/household/correction',
+    AccessRequirement.verified,
+  ),
+
   /// The resident's LGU digital ID. Verified residents only: a credential is a
   /// statement by the LGU about a person whose identity it has confirmed.
   digitalId('digital-id', '/digital-id', AccessRequirement.verified);

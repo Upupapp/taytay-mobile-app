@@ -22,6 +22,8 @@ import '../features/credential/data/planned_credential_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
 import '../features/events/data/planned_event_repository.dart';
 import '../features/events/domain/event_repository.dart';
+import '../features/household/data/planned_household_repository.dart';
+import '../features/household/domain/household_repository.dart';
 import '../features/news/data/planned_announcement_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
 import '../features/notifications/data/planned_notification_repository.dart';
@@ -61,6 +63,7 @@ class AppDependencies {
     required this.announcementRepository,
     required this.eventRepository,
     required this.residentProfileRepository,
+    required this.householdRepository,
     required this.registrationRepository,
     required this.credentialRepository,
     required this.verificationRepository,
@@ -143,6 +146,7 @@ class AppDependencies {
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
       residentProfileRepository: const PlannedResidentProfileRepository(),
+      householdRepository: const PlannedHouseholdRepository(),
       registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: const PlannedCredentialRepository(),
       verificationRepository: const PlannedVerificationRepository(),
@@ -181,6 +185,11 @@ class AppDependencies {
   final AnnouncementRepository announcementRepository;
   final EventRepository eventRepository;
   final ResidentProfileRepository residentProfileRepository;
+
+  /// The resident's own household. `/me`-scoped and identifier-free: the only
+  /// household route in the committed contract is staff-scoped, so this
+  /// declines rather than reaching for it.
+  final HouseholdRepository householdRepository;
 
   /// Citizen registration and identity verification submission.
   final RegistrationRepository registrationRepository;

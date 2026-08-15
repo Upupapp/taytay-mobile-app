@@ -89,6 +89,7 @@ Future<AppDependencies> bootVerification(
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
     residentProfileRepository: base.residentProfileRepository,
+    householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: StubVerificationRepository(detail),
     serviceRequestRepository: base.serviceRequestRepository,

@@ -21,6 +21,20 @@ String stripComments(String source) {
       .join('\n');
 }
 
+/// Removes `forbiddenKeys` declarations before scanning.
+///
+/// A decoder that rejects `household_members` has to name it, so the deny-list
+/// itself trips the scan that exists to enforce it. Prose describing a rule is
+/// already stripped by [stripComments]; this does the same for the one code
+/// construct whose whole purpose is to enumerate what must never appear.
+String stripForbiddenKeySets(String source) => source.replaceAll(
+  RegExp(
+    r'static const Set<String> forbiddenKeys\s*=\s*<String>\{.*?\};',
+    dotAll: true,
+  ),
+  '',
+);
+
 List<File> dartFiles(String directory) => Directory(directory)
     .listSync(recursive: true)
     .whereType<File>()
@@ -393,6 +407,62 @@ void main() {
         ]) {
           if (RegExp('pathParameters[^;]*$field').hasMatch(source) ||
               RegExp('queryParameters[^;]*$field').hasMatch(source)) {
+            offenders.add('$path: $field');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+  });
+
+  group('cross-resident data', () {
+    test('no source file names another resident on the wire', () {
+      // The committed client-visibility matrix calls cross-resident access "a
+      // critical defect" and names `Household.members` specifically. These
+      // shapes are how it would arrive: a member list, a relative list, or a
+      // request that takes somebody else's identifier.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        final source = stripForbiddenKeySets(
+          stripComments(file.readAsStringSync()),
+        ).split('\n').where((l) => !l.trimLeft().startsWith('///')).join('\n');
+
+        for (final pattern in <RegExp>[
+          RegExp(r'class\s+HouseholdMember'),
+          RegExp(r"""['"]household_members['"]"""),
+          RegExp(r"""['"]members['"]\s*:"""),
+          RegExp(r'\bresidentId\b'),
+          RegExp(r'\bhouseholdId\b'),
+        ]) {
+          if (pattern.hasMatch(source)) {
+            offenders.add('$path: ${pattern.pattern}');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no vulnerability or casework field is modelled anywhere', () {
+      // `sectors` is where `vawc-survivor` and `cicl` live; the backend omits
+      // those values server-side rather than masking them, and a field this app
+      // does not model is a field it cannot render.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final path = file.path.replaceAll(r'\', '/');
+        final source = stripForbiddenKeySets(
+          stripComments(file.readAsStringSync()),
+        ).split('\n').where((l) => !l.trimLeft().startsWith('///')).join('\n');
+
+        for (final field in <String>[
+          'vulnerabilityScore',
+          'riskScore',
+          'isIndigent',
+          'monthlyIncome',
+          'caseworkerNotes',
+          'sensitiveSectors',
+        ]) {
+          if (RegExp('\\b$field\\b').hasMatch(source)) {
             offenders.add('$path: $field');
           }
         }

@@ -111,6 +111,10 @@ enum ResidentCapability {
     AccessRequirement.verified,
     'See your household summary',
     BackendAvailability.planned,
+    // TAB 13 gave it a screen. The capability stays `planned` because no
+    // citizen endpoint exists — the screen explains that honestly rather than
+    // showing an invented family — but access alone decides whether it opens.
+    route: AppRoute.household,
   );
 
   const ResidentCapability(
