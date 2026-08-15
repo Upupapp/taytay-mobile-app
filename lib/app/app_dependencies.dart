@@ -5,6 +5,8 @@ import '../core/api/api_transport.dart';
 import '../core/api/auth_coordinator.dart';
 import '../core/api/http_api_transport.dart';
 import '../core/config/app_config.dart';
+import '../core/documents/document_capture.dart';
+import '../core/documents/platform_document_picker.dart';
 import '../core/intent/intent_controller.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
@@ -36,6 +38,8 @@ import '../features/programs/data/planned_program_repository.dart';
 import '../features/programs/domain/program_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
+import '../features/requirements/data/planned_requirement_repository.dart';
+import '../features/requirements/domain/resident_requirement.dart';
 import '../features/services/data/planned_service_request_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
@@ -71,7 +75,9 @@ class AppDependencies {
     required this.credentialRepository,
     required this.verificationRepository,
     required this.serviceRequestRepository,
+    required this.requirementRepository,
     required this.notificationRepository,
+    required this.documentPicker,
     this.onDispose,
   });
 
@@ -87,6 +93,7 @@ class AppDependencies {
     SessionStore? sessionStore,
     PublicCache? cache,
     LocalAuthenticator? localAuthenticator,
+    DocumentPicker? documentPicker,
   }) {
     final secretStore = secrets ?? KeystoreSecretStore();
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
@@ -155,7 +162,12 @@ class AppDependencies {
       credentialRepository: const PlannedCredentialRepository(),
       verificationRepository: const PlannedVerificationRepository(),
       serviceRequestRepository: const PlannedServiceRequestRepository(),
+      requirementRepository: const PlannedRequirementRepository(),
       notificationRepository: const PlannedNotificationRepository(),
+      // Defaults to the real system pickers. Tests inject
+      // `UnavailableDocumentPicker`, which reports every source as absent
+      // rather than pretending a camera opened.
+      documentPicker: documentPicker ?? PlatformDocumentPicker(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -205,7 +217,19 @@ class AppDependencies {
   final CredentialRepository credentialRepository;
   final VerificationRepository verificationRepository;
   final ServiceRequestRepository serviceRequestRepository;
+
+  /// The documents one request is waiting on, and their uploads. Same
+  /// `ServiceDelivery` module as the requests themselves, and equally `planned`,
+  /// so the shipped implementation declines rather than reporting that a
+  /// barangay clearance reached the LGU when nothing left the phone.
+  final RequirementRepository requirementRepository;
+
   final NotificationRepository notificationRepository;
+
+  /// The device seam for choosing a document — camera, photo library, or the
+  /// system file picker. An interface so the whole upload flow is testable
+  /// without a platform channel.
+  final DocumentPicker documentPicker;
 
   /// Releases the transport's connection pool, when it owns one.
   final void Function()? onDispose;

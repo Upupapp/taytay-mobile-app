@@ -202,6 +202,8 @@ Future<Booted> bootHome(
     credentialRepository: base.credentialRepository,
     verificationRepository: verification,
     serviceRequestRepository: requests,
+    requirementRepository: base.requirementRepository,
+    documentPicker: base.documentPicker,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

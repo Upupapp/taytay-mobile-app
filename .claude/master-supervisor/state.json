@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 16 — Requirements & Secure Document Upload",
-  "currentTabIndex": 16,
+  "currentTab": "TAB 17 — Assistance Status, Case Timeline & Next Steps",
+  "currentTabIndex": 17,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -19,15 +19,16 @@
     "TAB 12 — Resident Profile & Account Center",
     "TAB 13 — Household & Family Resident-Safe Summary",
     "TAB 14 — Social Welfare Programs & Services Directory",
-    "TAB 15 — Assistance Request / Intake Flow"
+    "TAB 15 — Assistance Request / Intake Flow",
+    "TAB 16 — Requirements & Secure Document Upload"
   ],
-  "currentObjective": "Build resident requirements and secure document upload (TAB 16), owning capture/compression/progress/retry for both a new application and an existing request.",
+  "currentObjective": "Expose the resident-safe portion of the admin case workflow as a clear timeline and actionable next step (TAB 17).",
   "status": "RUNNING",
-  "supervisorCycleCount": 1,
+  "supervisorCycleCount": 2,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "pending — TAB 15 commit created at end of this cycle",
-  "workingTreeState": "TAB 15 changes staged and committed locally; no pre-existing dirty work was present at session start (clean at 9fb9a57)",
+  "lastLocalCommit": "TAB 16 commit created at end of this cycle",
+  "workingTreeState": "TAB 16 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -39,17 +40,27 @@
     "D-65 requirements listed at intake, upload owned by TAB 16",
     "D-66 /apply/:serviceCode is top-level, not nested under the public catalogue",
     "D-67 FieldError moved to core/forms and re-exported",
-    "D-68 autosave off unless the server declares draft support"
+    "D-68 autosave off unless the server declares draft support",
+    "D-69 captured document is bytes with one lifetime, never a path",
+    "D-70 readability floor derived from A4 DPI; PDFs never re-encoded",
+    "D-71 declared MIME verified against the file's own signature",
+    "D-72 no Android CAMERA and no READ_MEDIA_IMAGES declared",
+    "D-73 submitted != verified; no completion meter",
+    "D-74 a cancelled upload never reports success",
+    "D-75 acceptance comes from an Ok, not from a full progress bar",
+    "D-76 an unrecognised requirement status fails closed",
+    "D-77 an undecodable preview falls back but still allows sending"
   ],
   "environmentGaps": [
-    "Backend ServiceDelivery module is `planned` — no intake or submission endpoint exists, so the shipped repository declines honestly",
-    "No Android/iOS device build was run in this session"
+    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement-list or upload endpoint; shipped repositories decline honestly",
+    "The platform document picker cannot be exercised in a widget test; it is thin glue and the decidable parts are unit-tested",
+    "No Android/iOS device build run this session, so image_picker and file_selector are configured but not device-verified"
   ],
   "verification": {
-    "analyze": "PASS — no issues found",
-    "test": "PASS — 740 tests",
-    "format": "PASS — dart format clean",
-    "build": "NOT_RUN — no platform build requested this session"
+    "analyze": "PASS - no issues found",
+    "test": "PASS - 771 tests",
+    "format": "PASS - dart format clean",
+    "build": "NOT_RUN - no platform build requested this session"
   },
   "contextPressure": "NORMAL"
 }

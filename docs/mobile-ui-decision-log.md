@@ -1829,5 +1829,14 @@ result they cannot explain.
 | D-66 | `/apply/:serviceCode` is top-level, not nested under the public catalogue | navigation / authorization | settled |
 | D-67 | `FieldError` moved to `core/forms/`, re-exported | architecture | settled |
 | D-68 | Autosave is off unless the server declares draft support | privacy / storage | settled |
+| D-69 | A captured document is bytes with one lifetime, never a path | privacy / storage | settled |
+| D-70 | The readability floor is derived from A4 DPI; PDFs are never re-encoded | accessibility / product | settled |
+| D-71 | The declared MIME type is verified against the file's own signature | security / product | settled |
+| D-72 | No Android `CAMERA` and no `READ_MEDIA_IMAGES` are declared | privacy / permissions | settled |
+| D-73 | Submitted and verified are never collapsed, and there is no completion meter | copy / trust | settled |
+| D-74 | A cancelled upload never reports success | lifecycle / trust | settled |
+| D-75 | Acceptance comes from an `Ok`; a full progress bar is not acceptance | lifecycle / trust | settled |
+| D-76 | An unrecognised requirement status offers no upload — fails closed | schema / lifecycle | settled |
+| D-77 | An undecodable preview falls back but still allows sending | product / resilience | settled |
 
-**68 decisions — 64 settled, 4 provisional pending named backend gaps.**
+**77 decisions — 73 settled, 4 provisional pending named backend gaps.**

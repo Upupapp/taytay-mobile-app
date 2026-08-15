@@ -128,6 +128,8 @@ Future<BootedProfile> bootProfile(
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
     serviceRequestRepository: base.serviceRequestRepository,
+    requirementRepository: base.requirementRepository,
+    documentPicker: base.documentPicker,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

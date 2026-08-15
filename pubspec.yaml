@@ -66,6 +66,34 @@ dependencies:
   #   an access level. See `core/session/app_lock_controller.dart`.
   local_auth: ^3.0.2
 
+  # Camera capture and gallery selection for the documents a municipal office
+  # asks for. Reviewed against CLAUDE.md Article 1 before adding.
+  #
+  # * Maintenance — part of flutter/packages, maintained by the Flutter team
+  #   alongside the SDK.
+  # * Permissions — Android needs `CAMERA` only for the camera path; gallery
+  #   selection goes through the system photo picker, which grants access to the
+  #   single chosen item rather than the whole library, so no broad media
+  #   permission is declared. iOS needs `NSCameraUsageDescription` and
+  #   `NSPhotoLibraryUsageDescription`.
+  # * Data egress — none by the plugin. It returns a file the app then uploads
+  #   deliberately, through this app's own client.
+  # * Why it, and not a camera package — the platform pickers are the surface a
+  #   resident already knows, they handle permission prompts and the photo-picker
+  #   flow correctly per OS version, and re-encoding happens natively, which is
+  #   what makes the readability floor in `core/documents/` affordable on the
+  #   mid-range phones most residents carry.
+  image_picker: ^1.2.0
+
+  # Choosing an existing document — most often a PDF the barangay issued — which
+  # the image pickers above cannot see.
+  #
+  # * Maintenance — part of flutter/packages.
+  # * Permissions — none. It uses the OS document provider, which hands back one
+  #   user-chosen file and no directory access.
+  # * Data egress — none.
+  file_selector: ^1.0.3
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

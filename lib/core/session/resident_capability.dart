@@ -119,6 +119,19 @@ enum ResidentCapability {
     route: AppRoute.applyForService,
   ),
 
+  /// Sending the documents an office asked for on an existing request.
+  ///
+  /// Distinct from applying, because the two open at different times: an LGU
+  /// that has switched on applications still has to switch on attachment
+  /// storage, and a resident who can apply but cannot yet upload should be told
+  /// exactly that rather than meeting a generic refusal.
+  submitRequirements(
+    AccessRequirement.verified,
+    'Send the documents Taytay LGU asked for',
+    BackendAvailability.planned,
+    route: AppRoute.requestRequirements,
+  ),
+
   /// The household or family summary the Master Command asks for, **withheld**.
   ///
   /// The committed contract has exactly one household row —

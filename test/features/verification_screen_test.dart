@@ -94,6 +94,8 @@ Future<AppDependencies> bootVerification(
     credentialRepository: base.credentialRepository,
     verificationRepository: StubVerificationRepository(detail),
     serviceRequestRepository: base.serviceRequestRepository,
+    requirementRepository: base.requirementRepository,
+    documentPicker: base.documentPicker,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

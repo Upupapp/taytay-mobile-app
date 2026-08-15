@@ -10,6 +10,21 @@
          sent to the server. See `lib/core/session/app_lock_controller.dart`. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 
+    <!-- Deliberately NO `android.permission.CAMERA`, and no media permission.
+         Both omissions are load-bearing rather than oversights:
+
+         * Camera — `image_picker` uses `ACTION_IMAGE_CAPTURE`, which hands the
+           work to the system camera app. Declaring `CAMERA` would *add* a
+           runtime grant this app does not otherwise need: once the permission is
+           in the manifest, Android requires it to be granted before that intent
+           will return a photo. Leaving it out means one fewer permission prompt
+           for the resident and one fewer capability in the APK.
+         * Photos — gallery selection goes through the Android photo picker,
+           which returns the single item the resident chose. `READ_MEDIA_IMAGES`
+           would grant this app the entire photo library to read one document,
+           which is the opposite of the minimisation CLAUDE.md Article 5 asks for.
+    -->
+
     <application
         android:label="Taytay LGU IDS"
         android:name="${applicationName}"

@@ -26,6 +26,18 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<!-- iOS terminates the app rather than showing a prompt when one of these is
+	     missing, so an absent string is a crash on the first document a resident
+	     tries to send, not a degraded feature. Each says what the data is used
+	     for, which is what App Review and the resident both need. -->
+	<key>NSCameraUsageDescription</key>
+	<string>Taytay LGU IDS uses the camera so you can photograph a document an office has asked you for. Photos are sent only when you choose to send them.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Taytay LGU IDS opens your photos so you can choose a document an office has asked you for. Only the photo you pick is used.</string>
+	<!-- Required by `local_auth`, which has shipped since TAB 09. Without it the
+	     app is terminated the first time it offers a biometric unlock. -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Taytay LGU IDS can use Face ID to unlock the app on this device. It never replaces signing in, and no biometric data leaves your phone.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

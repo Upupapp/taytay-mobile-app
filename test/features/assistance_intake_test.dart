@@ -228,6 +228,8 @@ Future<BootedIntake> bootIntake(
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
     serviceRequestRepository: repositoryOverride ?? requests,
+    requirementRepository: base.requirementRepository,
+    documentPicker: base.documentPicker,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,
