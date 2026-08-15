@@ -1427,6 +1427,129 @@ actually exists". It does not, so the card does not.
 
 ---
 
+## D-50 — Field ownership is declared, and the UI shows it before the refusal
+
+**Status: settled.** Category: schema / product.
+
+**Options**
+
+1. One flat list of fields; the server rejects what a resident may not change.
+2. Grey out the canonical fields.
+3. **Two labelled sections with different affordances, driven by a declared
+   ownership on every field.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 is the common shape and the cruel one: a resident edits their
+birth date, submits, and is refused — having been given no way to know in advance
+that the field was not theirs. Option 2 shows the difference but not the reason,
+and a greyed row reads as "broken" rather than "belongs to the LGU".
+
+The split is not this app's invention. The committed matrix gives
+`PATCH /api/v1/me/profile` the request column *"contact fields only"* and the
+note *"a citizen may not edit their own eligibility-bearing fields"*. Making it
+visible is the client's job.
+
+`FieldOwnership.isEditableInApp` is the single gate — no screen decides for
+itself — and a test asserts every eligibility-bearing field answers false. That
+matters concretely: a resident who could edit their own date of birth could grant
+themselves a senior citizen benefit, and one who could edit their own barangay
+could move into a different office's caseload.
+
+**Sources.** REPO backend `docs/contracts/frontend-endpoint-matrix.md` §12.
+
+---
+
+## D-51 — The correction path is a sentence, because no correction endpoint exists
+
+**Status: settled.** Category: correction / product.
+
+**Options**
+
+1. A correction-request form that uploads evidence.
+2. Reuse the verification correction flow (TAB 08) for profile fields.
+3. **Explain, and name the municipal hall.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 has nowhere to send anything: the contract has no
+resident-initiated correction route, and the staff route that could change a
+canonical field needs a permission this app must never hold. A form whose
+submission silently goes nowhere is worse than an instruction, because the
+resident who followed the instruction gets their record fixed and the one who
+filled in the form waits.
+
+Option 2 misreads what TAB 08 built. That flow answers a correction *the LGU
+asked for* on a specific verification attempt; it is not a general channel for a
+resident to dispute their record, and using it as one would put unrelated claims
+into a review queue that has no state for them.
+
+What is offered instead: the counter, what to bring, and the note that the app
+and the phone are not needed to use it. Residents mid-verification get the one
+real shortcut — answering what the LGU already asked.
+
+---
+
+## D-52 — Profile completeness is removed, not hidden
+
+**Status: settled.** Category: schema / privacy.
+
+**Options**
+
+1. Compute a percentage from the fields this build knows.
+2. Keep the field and render it when the server sends one.
+3. **Remove it from the domain type entirely.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 counts the wrong denominator: the fields *this build* knows,
+which drifts from what the LGU requires the moment either changes, and which
+would include staff-only fields a resident will never be shown.
+
+Option 2 sounds safer but leaves a loaded gun on the table — a nullable
+`completionPercent` on a widely-used type is an invitation for the next screen to
+render it, and the module that would populate it does not exist.
+
+There is a product reason as well as a schema one. "Your profile is 60%
+complete" reads as an instruction on a government service, and a resident who
+chases it to 100% may hand over data the LGU never asked them for — the opposite
+of minimisation. What the screen shows instead is which details are on file and
+which are not, which is the same information without the false precision.
+
+---
+
+## D-53 — Privacy is explained, not toggled
+
+**Status: settled.** Category: consent / privacy.
+
+**Options**
+
+1. Consent switches that persist locally.
+2. Consent switches that call an endpoint.
+3. **Fixed informational copy, naming where consent actually lives.**
+
+**Chosen: 3.**
+
+**Why.** Option 2 has no endpoint to call. Option 1 is actively harmful: under
+the Data Privacy Act a consent record must be **demonstrable by the controller**,
+and a toggle whose state lives on one phone proves nothing to the LGU while
+telling the resident they have withdrawn something. The gap between what the
+resident believes and what the LGU holds is the whole harm.
+
+The consents the LGU does hold were given during registration (TAB 07) —
+explicit, itemised and recorded with the submission. This screen says where they
+live and how to change them rather than presenting a second, unrecorded copy.
+
+Retention is stated in the same spirit: the matrix marks deactivation "never a
+hard delete — retention is statutory", so the screen says a municipal record is
+kept as long as the law requires instead of offering a delete button that would
+be refused.
+
+The screen reaches for no dependency at all — asserted by a source test — so it
+renders identically for everyone and discloses nothing by being opened.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1480,5 +1603,9 @@ actually exists". It does not, so the card does not.
 | D-47 | Hide on Home, explain on a destination | product / lifecycle | settled |
 | D-48 | Nothing personal is fetched for a guest | privacy | settled |
 | D-49 | No progress card, because the draft is unpersisted | privacy / schema | settled |
+| D-50 | Field ownership is declared and shown before the refusal | schema / product | settled |
+| D-51 | The correction path is a sentence, not a form | correction / product | settled |
+| D-52 | Profile completeness is removed, not hidden | schema / privacy | settled |
+| D-53 | Privacy is explained, not toggled | consent / privacy | settled |
 
-**49 decisions — 45 settled, 4 provisional pending named backend gaps.**
+**53 decisions — 49 settled, 4 provisional pending named backend gaps.**

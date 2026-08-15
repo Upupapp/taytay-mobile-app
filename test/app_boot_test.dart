@@ -60,17 +60,59 @@ Future<AppDependencies> _pumpApp(
 /// entries now live on the Profile destination. The gate behaviour under test is
 /// unchanged; only the path a resident takes to reach it moved.
 Future<void> openDigitalIdEntry(WidgetTester tester) async {
-  await tester.tap(find.text('Profile').last);
-  await tester.pumpAndSettle();
-  await tester.tap(find.text('Hold your Taytay digital ID'));
-  await tester.pumpAndSettle();
+  await openProfileShortcut(tester, 'Hold your Taytay digital ID');
 }
 
 /// Opens the account entry point, for the same reason.
 Future<void> openAccountEntry(WidgetTester tester) async {
+  await openProfileShortcut(tester, 'Manage your account');
+}
+
+/// Taps a shortcut on the Profile screen, scrolling to it first.
+///
+/// TAB 12 put the account and LGU-verified field sections above the shortcut
+/// list, so on a phone-sized surface the shortcuts start below the fold — and a
+/// `ListView` only builds what fits, so an un-scrolled tap misses a widget that
+/// is genuinely absent from the tree.
+Future<void> openProfileShortcut(WidgetTester tester, String label) async {
   await tester.tap(find.text('Profile').last);
   await tester.pumpAndSettle();
-  await tester.tap(find.text('Manage your account'));
+  await revealInProfile(tester, find.text(label));
+  await tester.tap(find.text(label));
+  await tester.pumpAndSettle();
+}
+
+/// The Profile screen's own scrollable.
+///
+/// `find.byType(Scrollable).first` is wrong inside the shell: an
+/// `IndexedStack` keeps all five branches alive, so Home's list is in the tree
+/// too and scrolling it never reveals anything on Profile. Anchoring on the
+/// Profile app bar picks the right one.
+Finder profileScrollable() => find
+    .descendant(
+      of: find
+          .ancestor(
+            of: find.widgetWithText(AppBar, 'Profile'),
+            matching: find.byType(Scaffold),
+          )
+          .first,
+      matching: find.byType(Scrollable),
+    )
+    .first;
+
+/// Scrolls [finder] into view within the Profile list.
+///
+/// A bounded drag loop rather than `scrollUntilVisible`, for two reasons that
+/// both bite here: the target may match several tiles once built (which that
+/// helper rejects), and `.first` on a not-yet-built finder throws rather than
+/// resolving to empty.
+Future<void> revealInProfile(WidgetTester tester, Finder finder) async {
+  final scrollable = profileScrollable();
+  for (var attempt = 0; attempt < 15 && finder.evaluate().isEmpty; attempt++) {
+    await tester.drag(scrollable, const Offset(0, -220));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(finder.first);
   await tester.pumpAndSettle();
 }
 

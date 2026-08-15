@@ -12,6 +12,8 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/news/presentation/news_post_screen.dart';
 import '../../features/news/presentation/news_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/profile/presentation/contact_details_screen.dart';
+import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/registration/presentation/registration_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
@@ -170,6 +172,18 @@ GoRouter buildAppRouter({
                 path: AppRoute.profile.path,
                 name: AppRoute.profile.routeName,
                 builder: (context, state) => const ProfileScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'contact',
+                    name: AppRoute.profileContact.routeName,
+                    builder: (context, state) => const ContactDetailsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'privacy',
+                    name: AppRoute.profilePrivacy.routeName,
+                    builder: (context, state) => const PrivacyScreen(),
+                  ),
+                ],
               ),
             ],
           ),

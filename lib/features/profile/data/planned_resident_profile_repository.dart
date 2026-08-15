@@ -1,5 +1,6 @@
 import '../../../core/api/planned_backend.dart';
 import '../../../core/result/result.dart';
+import '../domain/resident_profile_detail.dart';
 import '../domain/resident_profile_repository.dart';
 
 /// Resident profile repository for a backend module that does not exist yet.
@@ -18,6 +19,16 @@ class PlannedResidentProfileRepository implements ResidentProfileRepository {
   @override
   Future<Result<ResidentProfileSummary>> loadOwnSummary() async =>
       plannedBackendFailure<ResidentProfileSummary>(_module, 'loadOwnSummary');
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async =>
+      plannedBackendFailure<ResidentProfileDetail>(_module, 'loadOwnDetail');
+
+  @override
+  Future<Result<void>> updateContactDetails({
+    required ContactDetailsUpdate update,
+    required String idempotencyKey,
+  }) async => plannedBackendFailure<void>(_module, 'updateContactDetails');
 
   @override
   Future<Result<void>> submitOwnUpdate({

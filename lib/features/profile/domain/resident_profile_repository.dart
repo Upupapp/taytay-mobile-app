@@ -1,23 +1,35 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'resident_profile_detail.dart';
 
-/// How complete the resident's master record is, as the **server** reports it.
+/// What the server says about the resident's own record, in summary.
 ///
-/// Deliberately not computed on the device. A completeness figure derived
-/// client-side counts the fields this build knows about, which drifts from the
-/// fields the LGU actually requires the moment either changes — and it would
-/// count staff-only fields a resident will never be shown.
+/// ---
+///
+/// **There is no completion percentage here, and adding one needs a contract.**
+/// TAB 12 removed the field it used to carry. Two reasons, in order:
+///
+/// 1. **No authoritative definition exists.** The `ResidentProfile` module
+///    publishes no endpoint and no notion of "complete", so any figure would be
+///    computed from the fields *this build* happens to know — which drifts from
+///    what the LGU actually requires the moment either changes, and would count
+///    staff-only fields a resident will never be shown.
+/// 2. **A number invites the wrong behaviour.** "Your profile is 60% complete"
+///    reads as an instruction on a government service, and a resident who
+///    chases it to 100% may be handing over data the LGU never asked them for —
+///    the opposite of minimisation.
+///
+/// If the backend ever defines completeness, it arrives as a server-supplied
+/// field here and the app renders what it is told. Until then the screen shows
+/// what is on file and what is not, which is the same information without the
+/// false precision.
 @immutable
 class ResidentProfileSummary {
   const ResidentProfileSummary({
-    required this.completionPercent,
     required this.verificationTier,
     this.outstandingSections = const <String>[],
   });
-
-  /// 0–100, as supplied by the server.
-  final int completionPercent;
 
   /// The server's verification tier string, unmapped. `AccessLevel
   /// .fromVerificationTier` is the only thing that interprets it, and it fails
@@ -49,6 +61,29 @@ class ResidentProfileSummary {
 abstract interface class ResidentProfileRepository {
   /// The signed-in resident's own profile summary.
   Future<Result<ResidentProfileSummary>> loadOwnSummary();
+
+  /// The signed-in resident's own record, field by field.
+  ///
+  /// Takes no identifier, and cannot: the endpoint is `/me/profile` and
+  /// ownership is structural rather than a filter someone could forget to
+  /// apply. There is no overload that fetches somebody else, so no caller can
+  /// be talked into one (acceptance 3).
+  Future<Result<ResidentProfileDetail>> loadOwnDetail();
+
+  /// Changes the contact details the resident owns.
+  ///
+  /// Maps to `PATCH /api/v1/me/profile`, which the committed matrix restricts
+  /// to **contact fields only** with the note *"a citizen may not edit their own
+  /// eligibility-bearing fields"*. [ContactDetailsUpdate] can express nothing
+  /// else, so this method cannot be used to attempt a canonical change even by
+  /// mistake — the restriction is in the type, not only in the server.
+  ///
+  /// [idempotencyKey] is required: a contact change is a state change a mobile
+  /// client will retry on a dropped connection.
+  Future<Result<void>> updateContactDetails({
+    required ContactDetailsUpdate update,
+    required String idempotencyKey,
+  });
 
   /// Submits a correction or completion to the resident's own record.
   ///

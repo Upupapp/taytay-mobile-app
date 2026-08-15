@@ -77,6 +77,33 @@ Future<void> tapDestination(WidgetTester tester, String label) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls a finder into view on the Profile list, which grew in TAB 12.
+///
+/// Anchored on the Profile app bar: an `IndexedStack` keeps all five branches
+/// alive, so `find.byType(Scrollable).first` would scroll Home instead. A
+/// bounded drag loop rather than `scrollUntilVisible`, because a requirement
+/// label can match several tiles once built.
+Future<void> scrollProfile(WidgetTester tester, Finder finder) async {
+  final scrollable = find
+      .descendant(
+        of: find
+            .ancestor(
+              of: find.widgetWithText(AppBar, 'Profile'),
+              matching: find.byType(Scaffold),
+            )
+            .first,
+        matching: find.byType(Scrollable),
+      )
+      .first;
+
+  for (var attempt = 0; attempt < 15 && finder.evaluate().isEmpty; attempt++) {
+    await tester.drag(scrollable, const Offset(0, -220));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(finder.first);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('the bottom navigation is simple and stable — acceptance 3', () {
     for (final level in AccessLevel.values) {
@@ -235,8 +262,13 @@ void main() {
       await boot(tester, level: AccessLevel.unverified);
       await tapDestination(tester, 'Profile');
 
-      expect(find.text('Verification required'), findsWidgets);
+      // TAB 12 put the field sections above the shortcuts, so the requirement
+      // labels start below the fold on a phone.
+      // Checked before scrolling: the identity card sits at the top, and a
+      // `ListView` may dispose it once the list has moved.
       expect(find.text('Verify my identity'), findsWidgets);
+      await scrollProfile(tester, find.text('Verification required'));
+      expect(find.text('Verification required'), findsWidgets);
     });
 
     testWidgets('a verified resident sees the honest availability answer', (
@@ -246,6 +278,7 @@ void main() {
       await tapDestination(tester, 'Profile');
 
       // Access is fine; the LGU has not switched these on. Different sentence.
+      await scrollProfile(tester, find.text('Not available yet'));
       expect(find.text('Not available yet'), findsWidgets);
       expect(find.text('Verification required'), findsNothing);
     });

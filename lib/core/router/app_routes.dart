@@ -79,6 +79,24 @@ enum AppRoute {
   /// its own requirement.
   profile('profile', '/profile', AccessRequirement.public),
 
+  /// The contact details a resident owns and may change. Authenticated: there
+  /// is nothing to edit without an account.
+  profileContact(
+    'profile-contact',
+    '/profile/contact',
+    AccessRequirement.authenticated,
+  ),
+
+  /// Privacy, rights and retention. **Public**, and deliberately so: someone
+  /// deciding whether to register should be able to read what they would be
+  /// agreeing to first, and the screen is fixed copy that discloses nothing by
+  /// being opened.
+  profilePrivacy(
+    'profile-privacy',
+    '/profile/privacy',
+    AccessRequirement.public,
+  ),
+
   // ---------------------------------------------------------------------------
   // Destinations reached from inside the shell.
   // ---------------------------------------------------------------------------
