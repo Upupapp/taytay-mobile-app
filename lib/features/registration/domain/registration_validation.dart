@@ -1,29 +1,10 @@
-import 'package:flutter/foundation.dart';
-
+import '../../../core/forms/field_error.dart';
 import 'registration_domain.dart';
 
-/// One field that needs fixing, named so an error summary can link to it.
-@immutable
-class FieldError {
-  const FieldError({required this.field, required this.message});
-
-  /// Stable key matching the field's own identifier, e.g. `family_name`.
-  final String field;
-
-  /// Resident-facing. Says what to do, not what went wrong internally.
-  final String message;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is FieldError && other.field == field && other.message == message);
-
-  @override
-  int get hashCode => Object.hash(field, message);
-
-  @override
-  String toString() => 'FieldError($field)';
-}
+// `FieldError` moved to `core/forms/` when a second wizard and a shared widget
+// both needed it. Re-exported so every existing importer keeps working, and
+// there is still exactly one definition.
+export '../../../core/forms/field_error.dart';
 
 /// Validation for the registration wizard.
 ///

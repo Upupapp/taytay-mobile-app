@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'assistance_intake.dart';
 import 'lgu_service.dart';
 
 /// Lifecycle of an application a resident submits against a catalogue entry.
@@ -73,15 +74,32 @@ abstract interface class ServiceRequestRepository {
 
   Future<Result<ServiceRequest>> loadOwnRequest(String id);
 
+  /// What this service's application asks for, as the server describes it.
+  ///
+  /// The app holds no per-service question list of its own — see
+  /// `assistance_intake.dart` for why. The response also carries the server's
+  /// statement about an application already in progress
+  /// ([AssistanceIntakeForm.activeRequest]), which is the only source for the
+  /// duplicate warning: the client never infers one.
+  Future<Result<AssistanceIntakeForm>> loadIntakeForm(String serviceCode);
+
   /// Files an application against a catalogue entry.
   ///
   /// [idempotencyKey] is required. This is the operation the idempotency rule
   /// exists for: a duplicate document application is a real cost to the resident
   /// and to the office that processes it, and a dropped connection after the
   /// server committed is indistinguishable from one before.
+  ///
+  /// [consentKeys] are the acknowledgements the resident gave, by the key the
+  /// server declared them under. They travel as their own argument rather than
+  /// inside [answers] because a consent is a legal record of what a person
+  /// agreed to under RA 10173, not an answer to a question, and it must be
+  /// impossible to lose it in a map merge.
   Future<Result<ServiceRequest>> submitRequest({
     required String serviceCode,
+    required String narrative,
     required Map<String, Object?> answers,
+    required List<String> consentKeys,
     required List<String> attachmentIds,
     required String idempotencyKey,
   });

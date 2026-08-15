@@ -1820,5 +1820,14 @@ result they cannot explain.
 | D-57 | Eligibility is text the app renders, never a rule it runs | eligibility / product | settled |
 | D-58 | Dates are quoted, never turned into open or closed | lifecycle / copy | settled |
 | D-59 | Search runs on the device | privacy / schema | settled |
+| D-60 | The intake form is fetched, never authored in the client | schema / product | settled |
+| D-61 | An unrenderable question blocks the application, never skipped | schema / trust | settled |
+| D-62 | Consent keys travel as their own field, not inside answers | consent / privacy | settled |
+| D-63 | The duplicate warning is the server's statement, never inferred | privacy / product | settled |
+| D-64 | One idempotency key per attempt, retired on any server answer | lifecycle / idempotency | settled |
+| D-65 | Requirements are listed at intake; uploading belongs to TAB 16 | product / scope | settled |
+| D-66 | `/apply/:serviceCode` is top-level, not nested under the public catalogue | navigation / authorization | settled |
+| D-67 | `FieldError` moved to `core/forms/`, re-exported | architecture | settled |
+| D-68 | Autosave is off unless the server declares draft support | privacy / storage | settled |
 
-**59 decisions — 55 settled, 4 provisional pending named backend gaps.**
+**68 decisions — 64 settled, 4 provisional pending named backend gaps.**

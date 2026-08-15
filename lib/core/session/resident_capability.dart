@@ -103,6 +103,22 @@ enum ResidentCapability {
     route: AppRoute.requests,
   ),
 
+  /// Filing an application for a municipal service.
+  ///
+  /// **Separate from [trackAssistanceRequests] on purpose**, even though both
+  /// are verified-only and both belong to `ServiceDelivery`. Reading the status
+  /// of something already filed and creating a new obligation on the resident's
+  /// civil record are different acts, and an LGU that later opens one before the
+  /// other — status first, applications when the office has capacity — can do it
+  /// by changing one line here rather than by splitting a capability under
+  /// pressure.
+  applyForAssistance(
+    AccessRequirement.verified,
+    'Apply for a municipal service',
+    BackendAvailability.planned,
+    route: AppRoute.applyForService,
+  ),
+
   /// The household or family summary the Master Command asks for, **withheld**.
   ///
   /// The committed contract has exactly one household row —

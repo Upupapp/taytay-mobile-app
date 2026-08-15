@@ -20,6 +20,7 @@ import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/programs/presentation/program_detail_screen.dart';
 import '../../features/programs/presentation/programs_screen.dart';
 import '../../features/registration/presentation/registration_screen.dart';
+import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/services/presentation/service_detail_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
@@ -243,6 +244,16 @@ GoRouter buildAppRouter({
             ],
           ),
         ],
+      ),
+      // Full-screen by intent: a resident part-way through an application
+      // should not have a navigation bar under their thumb inviting them out
+      // of it.
+      GoRoute(
+        path: AppRoute.applyForService.path,
+        name: AppRoute.applyForService.routeName,
+        builder: (context, state) => AssistanceIntakeScreen(
+          serviceCode: state.pathParameters['serviceCode'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoute.programs.path,

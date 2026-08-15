@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
-import '../../features/registration/domain/registration_validation.dart';
+import '../../core/forms/field_error.dart';
 import 'app_banner.dart';
 
 /// Lists everything wrong on the current step, above the fields.

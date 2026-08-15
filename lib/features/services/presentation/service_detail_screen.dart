@@ -76,42 +76,42 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     super.dispose();
   }
 
-  /// Explains what applying involves, after the central gate allows it.
+  /// Opens the application, after the central gate allows it.
   ///
-  /// Deliberately not a submission. The endpoint matrix has
-  /// `POST /api/v1/me/assistance-requests` marked `planned`, so there is nothing
-  /// to send; and even once there is, a resident arriving here straight from a
-  /// sign-in gate must be shown what they are about to do rather than have it
-  /// done for them.
+  /// ---
+  ///
+  /// **Opening is not submitting.** A resident who arrives here straight from a
+  /// sign-in gate lands on the first step of a wizard, and every step is
+  /// reversible until they press send on the review. A link, a notification or
+  /// a gate must never complete a sensitive action on somebody's behalf.
+  ///
+  /// **Access is checked, availability is not** — `canOpen`, not `evaluate`.
+  /// The wizard already tells the truth when `ServiceDelivery` is unpublished,
+  /// and its wording names the municipal hall; refusing to open it would
+  /// replace that with a generic "not available" and hide a screen that works.
   Future<void> _apply(LguService service) async {
     final dependencies = AppDependencies.of(context);
-    final verdict = CapabilityService.evaluate(
-      session: dependencies.session.state,
-      capability: ResidentCapability.trackAssistanceRequests,
-    );
+    final session = dependencies.session.state;
 
-    if (verdict is CapabilityUsable || verdict is CapabilityNotYetAvailable) {
-      // Access is satisfied. Remember what they were reaching for, and tell
-      // them the truth about how to apply today.
-      dependencies.intents.remember(
-        ResidentIntentKind.applyForService,
-        targetId: service.code,
-      );
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Applying in this app is not switched on yet. Visit the Taytay '
-            'municipal hall with the documents listed here.',
-          ),
-        ),
+    if (CapabilityService.canOpen(
+      session: session,
+      capability: ResidentCapability.applyForAssistance,
+    )) {
+      context.goNamed(
+        AppRoute.applyForService.routeName,
+        pathParameters: <String, String>{'serviceCode': service.code},
       );
       return;
     }
 
+    // Held so the resident returns to this service after the gate, rather than
+    // to wherever sign-in happens to finish. Remembering grants nothing.
     await AccessGateSheet.showForCapability(
       context: context,
-      verdict: verdict,
+      verdict: CapabilityService.evaluate(
+        session: session,
+        capability: ResidentCapability.applyForAssistance,
+      ),
       intent: ResidentIntentKind.applyForService,
       targetId: service.code,
     );
@@ -215,7 +215,7 @@ class _Detail extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.xl),
 
-        AppButton(label: 'How to apply', onPressed: onApply),
+        AppButton(label: 'Apply for this service', onPressed: onApply),
         const SizedBox(height: Spacing.sm),
         Text(
           'Nothing is submitted by tapping this.',

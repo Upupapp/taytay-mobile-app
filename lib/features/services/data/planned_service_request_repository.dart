@@ -1,5 +1,6 @@
 import '../../../core/api/planned_backend.dart';
 import '../../../core/result/result.dart';
+import '../domain/assistance_intake.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_request_repository.dart';
 
@@ -29,10 +30,24 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
       plannedBackendFailure<ServiceRequest>(_module, 'loadOwnRequest');
 
+  /// Declines rather than returning a question set of the app's own invention.
+  ///
+  /// This is the operation where mocking would have done the most damage: a
+  /// fabricated intake form is the app asking a resident for personal data that
+  /// no municipal office requested, under a consent statement nobody with
+  /// authority wrote.
+  @override
+  Future<Result<AssistanceIntakeForm>> loadIntakeForm(
+    String serviceCode,
+  ) async =>
+      plannedBackendFailure<AssistanceIntakeForm>(_module, 'loadIntakeForm');
+
   @override
   Future<Result<ServiceRequest>> submitRequest({
     required String serviceCode,
+    required String narrative,
     required Map<String, Object?> answers,
+    required List<String> consentKeys,
     required List<String> attachmentIds,
     required String idempotencyKey,
   }) async => plannedBackendFailure<ServiceRequest>(_module, 'submitRequest');

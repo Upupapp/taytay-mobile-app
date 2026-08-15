@@ -148,6 +148,24 @@ enum AppRoute {
     parameters: <String>['requestId'],
   ),
 
+  /// Applying for one service. Verified only, like the requests it produces.
+  ///
+  /// **A top-level path, not a child of `/services/:serviceCode`.** The
+  /// catalogue is public and this is not, so nesting would put a verified-only
+  /// route inside a public branch — reachable, but only because the guard says
+  /// no on the way in. Keeping the boundary visible in the path means a reader
+  /// can see which parts of the app are open by looking at the table.
+  ///
+  /// It is also full-screen rather than a shell destination: a resident
+  /// part-way through an application should not be invited to wander into
+  /// another tab by a navigation bar under their thumb.
+  applyForService(
+    'apply-for-service',
+    '/apply/:serviceCode',
+    AccessRequirement.verified,
+    parameters: <String>['serviceCode'],
+  ),
+
   /// Assistance programmes. **Authenticated**, because the committed citizen
   /// row is `GET /api/v1/programs?status=active` with bearer auth — unlike the
   /// service catalogue, which is public. The line is the server's.
