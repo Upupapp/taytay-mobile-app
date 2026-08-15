@@ -1,5 +1,6 @@
 import '../../../core/api/planned_backend.dart';
 import '../../../core/result/result.dart';
+import '../domain/assistance_case.dart';
 import '../domain/assistance_intake.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_request_repository.dart';
@@ -29,6 +30,15 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   @override
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
       plannedBackendFailure<ServiceRequest>(_module, 'loadOwnRequest');
+
+  /// Declines rather than composing a plausible history.
+  ///
+  /// A fabricated timeline is the most convincing lie this app could tell: it
+  /// looks exactly like progress, and a resident reading "Under verification —
+  /// 12 August" would stop chasing an application that does not exist.
+  @override
+  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async =>
+      plannedBackendFailure<AssistanceCaseDetail>(_module, 'loadOwnCase');
 
   /// Declines rather than returning a question set of the app's own invention.
   ///

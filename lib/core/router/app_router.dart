@@ -21,6 +21,7 @@ import '../../features/programs/presentation/program_detail_screen.dart';
 import '../../features/programs/presentation/programs_screen.dart';
 import '../../features/registration/presentation/registration_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
+import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/services/presentation/service_detail_screen.dart';
@@ -230,7 +231,7 @@ GoRouter buildAppRouter({
           GoRoute(
             path: ':requestId',
             name: AppRoute.requestDetail.routeName,
-            builder: (context, state) => AssistanceRequestScreen(
+            builder: (context, state) => AssistanceCaseScreen(
               requestId: state.pathParameters['requestId'] ?? '',
             ),
             routes: <RouteBase>[

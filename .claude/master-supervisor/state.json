@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 17 — Assistance Status, Case Timeline & Next Steps",
-  "currentTabIndex": 17,
+  "currentTab": "TAB 18 — Assistance History, Referral & Release Resident View",
+  "currentTabIndex": 18,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -20,15 +20,16 @@
     "TAB 13 — Household & Family Resident-Safe Summary",
     "TAB 14 — Social Welfare Programs & Services Directory",
     "TAB 15 — Assistance Request / Intake Flow",
-    "TAB 16 — Requirements & Secure Document Upload"
+    "TAB 16 — Requirements & Secure Document Upload",
+    "TAB 17 — Assistance Status, Case Timeline & Next Steps"
   ],
-  "currentObjective": "Expose the resident-safe portion of the admin case workflow as a clear timeline and actionable next step (TAB 17).",
+  "currentObjective": "Give residents a longitudinal record of their own assistance outcomes without exposing internal operations (TAB 18).",
   "status": "RUNNING",
-  "supervisorCycleCount": 2,
+  "supervisorCycleCount": 3,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 16 commit created at end of this cycle",
-  "workingTreeState": "TAB 16 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 17 commit created at end of this cycle",
+  "workingTreeState": "TAB 17 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -49,18 +50,25 @@
     "D-74 a cancelled upload never reports success",
     "D-75 acceptance comes from an Ok, not from a full progress bar",
     "D-76 an unrecognised requirement status fails closed",
-    "D-77 an undecodable preview falls back but still allows sending"
+    "D-77 an undecodable preview falls back but still allows sending",
+    "D-78 canonical status shown alongside friendly copy, labelled",
+    "D-79 one status-copy switch, in domain/, for every screen",
+    "D-80 next steps only when the backend offers them; unknown kinds described not linked",
+    "D-81 a rejection reason appears only when the office published one",
+    "D-82 the case model has no field for staff data - structural, not filtered",
+    "D-83 assigned never names a staff member",
+    "D-84 the superseded single-request screen is deleted, not left behind"
   ],
   "environmentGaps": [
-    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement-list or upload endpoint; shipped repositories decline honestly",
-    "The platform document picker cannot be exercised in a widget test; it is thin glue and the decidable parts are unit-tested",
-    "No Android/iOS device build run this session, so image_picker and file_selector are configured but not device-verified"
+    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement, upload or case endpoint; shipped repositories decline honestly",
+    "The platform document picker cannot be exercised in a widget test; the decidable parts are unit-tested",
+    "The debug APK builds but was not installed or run on a device, so the pickers are compiled but not exercised against a real camera"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 771 tests",
+    "test": "PASS - 794 tests",
     "format": "PASS - dart format clean",
-    "build": "NOT_RUN - no platform build requested this session"
+    "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },
   "contextPressure": "NORMAL"
 }

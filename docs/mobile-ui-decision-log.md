@@ -1838,5 +1838,12 @@ result they cannot explain.
 | D-75 | Acceptance comes from an `Ok`; a full progress bar is not acceptance | lifecycle / trust | settled |
 | D-76 | An unrecognised requirement status offers no upload — fails closed | schema / lifecycle | settled |
 | D-77 | An undecodable preview falls back but still allows sending | product / resilience | settled |
+| D-78 | The canonical status is shown alongside the friendly copy, labelled | schema / support | settled |
+| D-79 | One status-copy switch, in `domain/`, for every screen | architecture / copy | settled |
+| D-80 | Next steps appear only when the backend offers them; unknown kinds are described, not linked | product / trust | settled |
+| D-81 | A rejection reason appears only when the office published one | privacy / copy | settled |
+| D-82 | The case model has no field for staff data — structural, not filtered | privacy / schema | settled |
+| D-83 | `assigned` never names a staff member | privacy / product | settled |
+| D-84 | The superseded single-request screen is deleted, not left behind | architecture | settled |
 
-**77 decisions — 73 settled, 4 provisional pending named backend gaps.**
+**84 decisions — 80 settled, 4 provisional pending named backend gaps.**

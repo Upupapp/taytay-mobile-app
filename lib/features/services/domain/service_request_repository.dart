@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'assistance_case.dart';
 import 'assistance_intake.dart';
 import 'lgu_service.dart';
 
@@ -10,21 +11,54 @@ import 'lgu_service.dart';
 /// catalog entries … their state machines and attachments" per the committed
 /// boundary map. The states below are the shape that map describes; wire values
 /// are not published and none are assigned.
+/// ---
+///
+/// **The canonical value is never replaced by the app's reading of it.** Each
+/// case carries a `wireValue`, and `ServiceRequest` keeps `rawState` alongside
+/// the parsed enum, so the office's own vocabulary survives all the way to a
+/// support conversation. That is TAB 17's first acceptance criterion: resident
+/// copy is a *rendering* of the status, never a substitute for it.
+///
+/// The set below mirrors the admin lifecycle the Master Command lists. Two
+/// states that look similar are kept apart because they mean different things
+/// to the person waiting: `pendingReview` is "in the queue", `underVerification`
+/// is "someone has it open".
 enum ServiceRequestState {
-  draft,
-  submitted,
-  underReview,
-  needsMoreInformation,
-  approved,
-  readyForRelease,
-  completed,
-  rejected,
-  cancelled;
+  draft('draft'),
+  submitted('submitted'),
+  pendingReview('pending_review'),
+  underVerification('under_verification'),
+
+  /// A desk owns it. **The staff member is never named** — the Master Command
+  /// says not to expose staff identity, and there is no field here for one.
+  assigned('assigned'),
+
+  processing('processing'),
+
+  /// The office is waiting on the resident for a document.
+  waitingRequirements('waiting_requirements'),
+
+  approved('approved'),
+  rejected('rejected'),
+  readyForRelease('ready_for_release'),
+  released('released'),
+  completed('completed'),
+  cancelled('cancelled');
+
+  const ServiceRequestState(this.wireValue);
+
+  final String wireValue;
 
   bool get isTerminal =>
       this == ServiceRequestState.completed ||
       this == ServiceRequestState.rejected ||
       this == ServiceRequestState.cancelled;
+
+  /// Whether the office is waiting on the resident rather than the other way
+  /// round. Drives the emphasis on the status card.
+  bool get needsResident =>
+      this == ServiceRequestState.waitingRequirements ||
+      this == ServiceRequestState.readyForRelease;
 }
 
 /// One application the resident has made.
@@ -73,6 +107,14 @@ abstract interface class ServiceRequestRepository {
   });
 
   Future<Result<ServiceRequest>> loadOwnRequest(String id);
+
+  /// One request with its resident-safe history and offered next steps.
+  ///
+  /// Separate from [loadOwnRequest] because the list does not need a timeline,
+  /// and a case history is the more sensitive read of the two: it is the
+  /// projection of an internal case file, and it should be fetched only by the
+  /// screen that displays it.
+  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id);
 
   /// What this service's application asks for, as the server describes it.
   ///

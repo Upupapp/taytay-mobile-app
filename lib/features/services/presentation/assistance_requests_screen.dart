@@ -6,12 +6,12 @@ import '../../../core/api/paginated.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../domain/request_status_copy.dart';
 import '../domain/service_request_repository.dart';
 
 /// The resident's own assistance requests, and the status of each.
@@ -128,7 +128,7 @@ class _AssistanceRequestsScreenState extends State<AssistanceRequestsScreen> {
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         const SizedBox(height: Spacing.xs),
-                        Text(_stateLabel(request.state)),
+                        Text(requestStatusLabel(request.state)),
                       ],
                     ),
                   ),
@@ -145,147 +145,17 @@ class _AssistanceRequestsScreenState extends State<AssistanceRequestsScreen> {
   }
 }
 
-/// One request, and its outstanding requirements.
-///
-/// The identifier is re-validated here: this is the most sensitive deep-link
-/// target in the app, and it is reached from a push notification.
-class AssistanceRequestScreen extends StatefulWidget {
-  const AssistanceRequestScreen({
-    required this.requestId,
-    this.showRequirements = false,
-    super.key,
-  });
+// The single-request screen that used to live here has been replaced twice
+// over, and is deleted rather than left behind:
+//
+// * `/requests/:id` is now `AssistanceCaseScreen` (TAB 17), which shows the
+//   resident-safe timeline and next steps instead of one status line.
+// * `/requests/:id/requirements` is now `RequirementsScreen` (TAB 16), which
+//   actually sends documents instead of telling a resident to walk them in.
+//
+// Keeping the old widget around would have left a screen nothing routes to but
+// anything could route to by mistake — and it still carried the copy saying
+// uploads were unavailable, which stopped being true in TAB 16.
 
-  final String requestId;
-
-  /// True for `/requests/:id/requirements` — the same record, opened at the
-  /// list of documents the office is waiting for.
-  final bool showRequirements;
-
-  @override
-  State<AssistanceRequestScreen> createState() =>
-      _AssistanceRequestScreenState();
-}
-
-class _AssistanceRequestScreenState extends State<AssistanceRequestScreen> {
-  bool _loading = true;
-  AppFailure? _failure;
-  ServiceRequest? _request;
-
-  bool get _idIsValid => DeepLink.isValidIdentifier(widget.requestId);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_request == null && _failure == null && _idIsValid) _load();
-  }
-
-  Future<void> _load() async {
-    final repository = AppDependencies.of(context).serviceRequestRepository;
-    setState(() => _loading = true);
-
-    final result = await repository.loadOwnRequest(widget.requestId);
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      result.fold(
-        onOk: (request) => _request = request,
-        onErr: (failure) => _failure = failure,
-      );
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final request = _request;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.showRequirements ? 'Documents needed' : 'Request status',
-        ),
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.trackAssistanceRequests,
-          child: switch ((_idIsValid, _loading, request)) {
-            (false, _, _) => _NotAvailable(
-              message: DeepLinkRejection.invalidIdentifier.residentMessage,
-            ),
-            (_, true, null) => const AppLoadingView(
-              message: 'Opening your request…',
-            ),
-            (_, _, null) => _NotAvailable(
-              message: DeepLinkRejection.unknownTarget.residentMessage,
-            ),
-            (_, _, final ServiceRequest loaded) => ListView(
-              padding: const EdgeInsets.all(Spacing.lg),
-              children: <Widget>[
-                Text(
-                  loaded.serviceCode,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: Spacing.sm),
-                Text(_stateLabel(loaded.state)),
-                if (loaded.referenceNumber != null) ...<Widget>[
-                  const SizedBox(height: Spacing.md),
-                  Text('Reference: ${loaded.referenceNumber}'),
-                ],
-                const SizedBox(height: Spacing.xl),
-                // Deliberately not an action. A notification may bring a
-                // resident here, and a link must never submit, cancel or
-                // confirm anything on their behalf.
-                Text(
-                  widget.showRequirements
-                      ? 'Bring the documents Taytay LGU asked for to the '
-                            'municipal hall. Uploading them in this app is not '
-                            'available yet.'
-                      : 'Taytay LGU will contact you about this request.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-              ],
-            ),
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _NotAvailable extends StatelessWidget {
-  const _NotAvailable({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return StatusView(
-      title: 'This request is not available',
-      kind: StatusKind.empty,
-      icon: Icons.link_off_outlined,
-      message: message,
-      primaryAction: FilledButton(
-        onPressed: () => context.goNamed(AppRoute.requests.routeName),
-        child: const Text('See my requests'),
-      ),
-    );
-  }
-}
-
-/// Resident-facing status wording.
-///
-/// Derived from the app's own state enum, never printed from the server's raw
-/// string: a raw lifecycle value is internal vocabulary, and an unrecognised one
-/// must read as "being processed" rather than as something alarming.
-String _stateLabel(ServiceRequestState? state) => switch (state) {
-  ServiceRequestState.draft => 'Not sent yet',
-  ServiceRequestState.submitted => 'Sent to Taytay LGU',
-  ServiceRequestState.underReview => 'Being reviewed',
-  ServiceRequestState.needsMoreInformation => 'More information needed',
-  ServiceRequestState.approved => 'Approved',
-  ServiceRequestState.readyForRelease => 'Ready for release',
-  ServiceRequestState.completed => 'Completed',
-  ServiceRequestState.rejected => 'Not approved',
-  ServiceRequestState.cancelled => 'Cancelled',
-  null => 'Being processed',
-};
+// Status wording moved to `../domain/request_status_copy.dart` when a second
+// screen needed it. See that file for why there is exactly one switch.

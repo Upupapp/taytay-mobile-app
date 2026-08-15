@@ -15,6 +15,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
+import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake_validation.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
@@ -85,6 +86,10 @@ class RecordingIntakeRepository implements ServiceRequestRepository {
   @override
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
       const Err<ServiceRequest>(ServerFailure());
+
+  @override
+  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async =>
+      const Err<AssistanceCaseDetail>(ServerFailure());
 
   @override
   Future<Result<void>> cancelOwnRequest({

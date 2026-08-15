@@ -12,6 +12,7 @@ import '../../../shared/widgets/next_action_card.dart';
 import '../../events/domain/event_repository.dart';
 import '../../news/domain/announcement_repository.dart';
 import '../../services/domain/lgu_service.dart';
+import '../../services/domain/request_status_copy.dart';
 import '../../services/domain/service_request_repository.dart';
 import '../../verification/domain/verification_status_detail.dart';
 
@@ -471,7 +472,7 @@ class HomeRequestsSection extends StatelessWidget {
             ),
             const SizedBox(height: Spacing.xs),
             Text(
-              _requestStatusLabel(request.state),
+              requestStatusLabel(request.state),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
@@ -531,20 +532,7 @@ class HomeMunicipalHallSection extends StatelessWidget {
   }
 }
 
-/// Resident-facing status wording for a request.
-///
-/// Derived from the app's own state enum, never printed from the server's raw
-/// lifecycle string, and an unrecognised state reads as "being processed"
-/// rather than as something alarming.
-String _requestStatusLabel(ServiceRequestState? state) => switch (state) {
-  ServiceRequestState.draft => 'Not sent yet',
-  ServiceRequestState.submitted => 'Sent to Taytay LGU',
-  ServiceRequestState.underReview => 'Being reviewed',
-  ServiceRequestState.needsMoreInformation => 'More information needed',
-  ServiceRequestState.approved => 'Approved',
-  ServiceRequestState.readyForRelease => 'Ready for release',
-  ServiceRequestState.completed => 'Completed',
-  ServiceRequestState.rejected => 'Not approved',
-  ServiceRequestState.cancelled => 'Cancelled',
-  null => 'Being processed',
-};
+// Status wording moved to `services/presentation/request_status_copy.dart`
+// when a second screen needed it. Home and the request list had grown separate
+// exhaustive switches over the same enum, which is how a resident ends up
+// reading two different sentences about one application.
