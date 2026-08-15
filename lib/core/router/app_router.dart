@@ -17,8 +17,11 @@ import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/programs/presentation/program_detail_screen.dart';
+import '../../features/programs/presentation/programs_screen.dart';
 import '../../features/registration/presentation/registration_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
+import '../../features/services/presentation/service_detail_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
@@ -129,6 +132,15 @@ GoRouter buildAppRouter({
                 path: AppRoute.services.path,
                 name: AppRoute.services.routeName,
                 builder: (context, state) => const ServicesScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: ':serviceCode',
+                    name: AppRoute.serviceDetail.routeName,
+                    builder: (context, state) => ServiceDetailScreen(
+                      serviceCode: state.pathParameters['serviceCode'] ?? '',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -229,6 +241,20 @@ GoRouter buildAppRouter({
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoute.programs.path,
+        name: AppRoute.programs.routeName,
+        builder: (context, state) => const ProgramsScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: ':programCode',
+            name: AppRoute.programDetail.routeName,
+            builder: (context, state) => ProgramDetailScreen(
+              programCode: state.pathParameters['programCode'] ?? '',
+            ),
           ),
         ],
       ),

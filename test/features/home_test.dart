@@ -186,6 +186,7 @@ Future<Booted> bootHome(
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
+    programRepository: base.programRepository,
     announcementRepository: StubAnnouncementRepository(announcements),
     eventRepository: StubEventRepository(events),
     residentProfileRepository: base.residentProfileRepository,

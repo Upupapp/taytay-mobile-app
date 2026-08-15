@@ -32,6 +32,8 @@ import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
 import '../features/profile/data/planned_resident_profile_repository.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
+import '../features/programs/data/planned_program_repository.dart';
+import '../features/programs/domain/program_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
 import '../features/services/data/planned_service_request_repository.dart';
@@ -60,6 +62,7 @@ class AppDependencies {
     required this.deviceSessionRepository,
     required this.platformRepository,
     required this.serviceCatalogRepository,
+    required this.programRepository,
     required this.announcementRepository,
     required this.eventRepository,
     required this.residentProfileRepository,
@@ -141,6 +144,7 @@ class AppDependencies {
       serviceCatalogRepository: ServiceCatalogApiRepository(
         apiClient: apiClient,
       ),
+      programRepository: const PlannedProgramRepository(),
       announcementRepository: const PlannedAnnouncementRepository(),
       eventRepository: const PlannedEventRepository(),
       // Backed by modules the committed boundary map lists as planned. Each
@@ -178,6 +182,11 @@ class AppDependencies {
   final DeviceSessionRepository deviceSessionRepository;
   final PlatformRepository platformRepository;
   final ServiceCatalogRepository serviceCatalogRepository;
+
+  /// Assistance programmes, in the citizen projection. Bearer-authenticated by
+  /// contract, and `planned`, so the shipped implementation declines rather than
+  /// inventing an offer of public money in the LGU's name.
+  final ProgramRepository programRepository;
 
   /// Public municipal content. Both endpoints are committed and `planned`, so
   /// both shipped implementations decline rather than inventing announcements

@@ -113,6 +113,7 @@ Future<BootedHousehold> bootHousehold(
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
+    programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
     residentProfileRepository: base.residentProfileRepository,

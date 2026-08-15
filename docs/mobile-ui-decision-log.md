@@ -1654,6 +1654,109 @@ who can act on it — and the screen says so, and gives them no way to type it.
 
 ---
 
+## D-57 — Eligibility is text the app renders, never a rule it runs
+
+**Status: settled.** Category: eligibility / product.
+
+**Options**
+
+1. Take the machine-readable rule set and evaluate it against the resident's
+   profile — "You look eligible for this."
+2. Evaluate only the cheap criteria (age, barangay) and stay quiet on the rest.
+3. **Render the office's own sentences. Compute nothing.**
+
+**Chosen: 3.**
+
+**Why.** Option 1 creates a second rule set. It drifts from the office's the
+moment either changes, it is wrong in a released build nobody can patch quickly,
+and it is wrong in the direction that matters: a resident told they do not
+qualify stops asking, and never finds out that the counter would have said yes.
+An LGU can correct a clerk in an afternoon; it cannot correct an app store.
+
+Option 2 is worse than either extreme, because a partial verdict reads as a
+whole one. "You meet the age requirement" is heard as "you will get it".
+
+The backend's own position is the same and is written down: *"Eligibility rules
+are deliberately public… it lets a citizen self-screen instead of queueing to be
+refused."* **Self-screen — by reading.**
+
+The guarantee is structural. `EligibilityCriterion` holds text and an optional
+label; there is no operator, no threshold and no field name, so there is nowhere
+to put a rule. `eligibility_rules` is in the forbidden key list precisely because
+it is the one payload that would make local evaluation possible. Two app-wide
+scans fail the build on `isEligible`, `canApply`, `qualifies`,
+`computeEligibility`, `approvalChance` and `incomeCeiling`.
+
+**Sources.** REPO backend `docs/contracts/client-visibility-matrix.md` §5.
+
+---
+
+## D-58 — Dates are quoted, never turned into "open" or "closed"
+
+**Status: settled.** Category: lifecycle / copy.
+
+**Options**
+
+1. Compare `effective_to` against the device clock and label the programme
+   open or closed.
+2. Grey out and disable programmes whose window has passed.
+3. **Quote the window the office published, and let the resident judge.**
+
+**Chosen: 3.**
+
+**Why.** A municipal window is not a hard boundary. Offices extend deadlines,
+reopen for a batch, and accept late applications with a reason — and they do all
+three far more often than they publish the change the same afternoon. An app
+that computed "closed" would be confidently wrong on exactly the days it matters
+most, and it would send somebody away from help they could still have received.
+
+There is also a clock problem: the comparison runs on a phone whose date can be
+wrong, in a timezone the server never stated.
+
+Option 2 compounds it by removing the contact details along with the CTA — the
+resident cannot even ring the office to ask.
+
+So availability is backend-driven (acceptance 3): the server publishes dates, the
+app renders them, and if the LGU wants a programme to stop appearing it stops
+returning it. The decoder additionally **refuses any status that is not
+`active`**, so a widened projection could not leak a draft programme into a
+resident's list.
+
+---
+
+## D-59 — Search runs on the device, because a search term is a disclosure
+
+**Status: settled.** Category: privacy / schema.
+
+**Options**
+
+1. Add a `?search=` parameter to the request.
+2. Send the query to the server as a filter, as the web portal would.
+3. **Filter locally, over data the server already returned.**
+
+**Chosen: 3.**
+
+**Why.** The endpoint accepts `?category=` and `?channel=` and no search
+parameter, so options 1 and 2 would mean inventing one. But the local choice is
+also the better one on its own merits.
+
+"burial assistance", "solo parent", "medical", "cash aid" — typed into a
+municipal app by a signed-in account — is a sentence about somebody's
+circumstances, and it would be logged by every layer between the phone and the
+database. The catalogue is small enough to filter on the device, so the
+disclosure buys nothing at all.
+
+The limit is honest and recorded as gap S-5: a catalogue large enough to need
+server-side paging would need server-side search, and at that point the term
+leaves the device. That is a decision to take again with the LGU when it arises,
+not a default to drift into.
+
+Search matches name, description and the category label, and deliberately not the
+code: `JOBFAIR` is not a word a resident searches for, and matching it produces a
+result they cannot explain.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1714,5 +1817,8 @@ who can act on it — and the screen says so, and gives them no way to type it.
 | D-54 | A resident sees their household, never its members | privacy / household | settled |
 | D-55 | Head of household fails closed | authorization / lifecycle | settled |
 | D-56 | A household correction is a category, not a form | correction / privacy | settled |
+| D-57 | Eligibility is text the app renders, never a rule it runs | eligibility / product | settled |
+| D-58 | Dates are quoted, never turned into open or closed | lifecycle / copy | settled |
+| D-59 | Search runs on the device | privacy / schema | settled |
 
-**56 decisions — 52 settled, 4 provisional pending named backend gaps.**
+**59 decisions — 55 settled, 4 provisional pending named backend gaps.**

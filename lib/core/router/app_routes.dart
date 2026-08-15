@@ -51,6 +51,17 @@ enum AppRoute {
   /// browse it before registering".
   services('services', '/services', AccessRequirement.public),
 
+  /// One catalogue entry, addressed by its stable code rather than its UUID.
+  ///
+  /// A code is what a municipal office quotes, it is legible in a link, and it
+  /// survives a re-seed of the catalogue. Public, like the list it comes from.
+  serviceDetail(
+    'service-detail',
+    '/services/:serviceCode',
+    AccessRequirement.public,
+    parameters: <String>['serviceCode'],
+  ),
+
   /// Announcements (`balita`). Public: `GET /api/v1/announcements`.
   news('news', '/news', AccessRequirement.public),
 
@@ -135,6 +146,19 @@ enum AppRoute {
     '/requests/:requestId/requirements',
     AccessRequirement.verified,
     parameters: <String>['requestId'],
+  ),
+
+  /// Assistance programmes. **Authenticated**, because the committed citizen
+  /// row is `GET /api/v1/programs?status=active` with bearer auth — unlike the
+  /// service catalogue, which is public. The line is the server's.
+  programs('programs', '/programs', AccessRequirement.authenticated),
+
+  /// One programme, by its stable code.
+  programDetail(
+    'program-detail',
+    '/programs/:programCode',
+    AccessRequirement.authenticated,
+    parameters: <String>['programCode'],
   ),
 
   /// The resident's own household and family summary. Verified only: it is a

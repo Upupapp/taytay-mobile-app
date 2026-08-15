@@ -175,6 +175,10 @@ abstract final class DeepLink {
     'assistance_requirements': AppRoute.requestRequirements,
     // Verification steps.
     'verification': AppRoute.verification,
+    // Programs and services directory.
+    'service': AppRoute.serviceDetail,
+    'programs': AppRoute.programs,
+    'program': AppRoute.programDetail,
     // Generic landing places.
     'news': AppRoute.news,
     'services': AppRoute.services,

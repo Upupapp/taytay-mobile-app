@@ -72,6 +72,16 @@ enum ResidentCapability {
     BackendAvailability.available,
     route: AppRoute.security,
   ),
+
+  /// Assistance programmes. Authenticated because the citizen programme row is
+  /// bearer-authenticated — the service catalogue next door is public, and the
+  /// difference is the server's, not a product preference.
+  browsePrograms(
+    AccessRequirement.authenticated,
+    'See assistance programmes',
+    BackendAvailability.planned,
+    route: AppRoute.programs,
+  ),
   completeVerification(
     AccessRequirement.authenticated,
     'Verify your identity',

@@ -471,6 +471,62 @@ void main() {
     });
   });
 
+  group('eligibility and catalogue', () {
+    test('no source file computes eligibility or promises an outcome', () {
+      // Acceptance 2 of the directory TAB, enforced app-wide rather than in one
+      // feature. A local eligibility rule is a second rule set: it drifts from
+      // the office's the moment either changes, it is wrong in a released build
+      // nobody can patch quickly, and it tells residents they do not qualify
+      // for benefits they are entitled to — at which point they stop asking.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final source = stripComments(
+          file.readAsStringSync(),
+        ).split('\n').where((l) => !l.trimLeft().startsWith('///')).join('\n');
+
+        for (final pattern in <RegExp>[
+          RegExp(r'\bisEligible\b'),
+          RegExp(r'\bcanApply\b'),
+          RegExp(r'\bqualifies\b'),
+          RegExp(r'\bcomputeEligibility\b'),
+          RegExp(r'\bapprovalChance\b'),
+          RegExp(r'\bincomeCeiling\b'),
+        ]) {
+          if (pattern.hasMatch(source)) {
+            offenders.add('${file.path}: ${pattern.pattern}');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+
+    test('no source file models capacity, quota or ranking', () {
+      // None of it is in the citizen projection. A remaining-slots figure on a
+      // municipal benefit is the fastest way to start a queue at 4am for
+      // something that was never first-come-first-served.
+      final offenders = <String>[];
+      for (final file in dartFiles('lib')) {
+        final source = stripForbiddenKeySets(
+          stripComments(file.readAsStringSync()),
+        ).split('\n').where((l) => !l.trimLeft().startsWith('///')).join('\n');
+
+        for (final field in <String>[
+          'slotsRemaining',
+          'budgetRemaining',
+          'beneficiaryCount',
+          'priorityScore',
+          'queuePosition',
+          'fundingSource',
+        ]) {
+          if (RegExp('\\b$field\\b').hasMatch(source)) {
+            offenders.add('${file.path}: $field');
+          }
+        }
+      }
+      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    });
+  });
+
   group('transport safety', () {
     test('no absolute API URL is hard-coded outside configuration', () {
       // Every call goes through AppConfig.apiBaseUri, so an environment is
