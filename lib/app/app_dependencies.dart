@@ -8,6 +8,8 @@ import '../core/config/app_config.dart';
 import '../core/documents/document_capture.dart';
 import '../core/documents/platform_document_picker.dart';
 import '../core/intent/intent_controller.dart';
+import '../core/links/external_link_service.dart';
+import '../core/links/platform_external_link_service.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
@@ -81,6 +83,7 @@ class AppDependencies {
     required this.notificationRepository,
     required this.documentPicker,
     required this.shareService,
+    required this.externalLinks,
     this.onDispose,
   });
 
@@ -98,6 +101,7 @@ class AppDependencies {
     LocalAuthenticator? localAuthenticator,
     DocumentPicker? documentPicker,
     ShareService? shareService,
+    ExternalLinkService? externalLinks,
   }) {
     final secretStore = secrets ?? KeystoreSecretStore();
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
@@ -175,6 +179,9 @@ class AppDependencies {
       // Defaults to the OS share sheet, which falls back to the clipboard on a
       // device that has none. Tests inject `UnavailableShareService`.
       shareService: shareService ?? const PlatformShareService(),
+      // Defaults to the OS launcher, which refuses anything that is not https.
+      // Tests inject `UnavailableExternalLinkService`.
+      externalLinks: externalLinks ?? const PlatformExternalLinkService(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -242,6 +249,11 @@ class AppDependencies {
   /// Nothing personal is ever handed to it, and a device without a sheet
   /// degrades to copying rather than throwing.
   final ShareService shareService;
+
+  /// Opening an `https` link the **server** supplied — a map for a municipal
+  /// venue. Refuses every other scheme, so a mistaken or hostile payload cannot
+  /// open a `javascript:`, `intent:` or `file:` URI.
+  final ExternalLinkService externalLinks;
 
   /// Releases the transport's connection pool, when it owns one.
   final void Function()? onDispose;

@@ -220,7 +220,7 @@ class HomeEventsSection extends StatelessWidget {
             if (event.venue != null) ...<Widget>[
               const SizedBox(height: Spacing.xs),
               Text(
-                event.venue!,
+                event.venue!.name,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

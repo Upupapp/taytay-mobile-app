@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 21 — Events: Discovery & Event Detail",
-  "currentTabIndex": 21,
+  "currentTab": "TAB 22 — Events: Registration, Waitlist & Attendance Status",
+  "currentTabIndex": 22,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -24,15 +24,16 @@
     "TAB 17 — Assistance Status, Case Timeline & Next Steps",
     "TAB 18 — Assistance History, Referral & Release Resident View",
     "TAB 19 — Newsfeed, Resident Feed",
-    "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail"
+    "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
+    "TAB 21 — Events: Discovery & Event Detail"
   ],
-  "currentObjective": "Let residents discover official admin-created Taytay events in a visual but simple mobile experience (TAB 21).",
+  "currentObjective": "Allow residents to register for admin-created events while the backend remains authoritative for capacity and eligibility (TAB 22).",
   "status": "RUNNING",
-  "supervisorCycleCount": 6,
+  "supervisorCycleCount": 7,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 20 commit created at end of this cycle",
-  "workingTreeState": "TAB 20 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 21 commit created at end of this cycle",
+  "workingTreeState": "TAB 21 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -82,20 +83,28 @@
     "D-103 official replies come from the server's authorKind, never inferred from a name",
     "D-104 the share link is the server or absent - never composed by the app",
     "D-105 sharing degrades to the clipboard rather than throwing",
-    "D-106 an unrecognised reaction is shown by its raw label and is not pressable"
+    "D-106 an unrecognised reaction is shown by its raw label and is not pressable",
+    "D-107 LGU times render in Manila time and say so - never the device clock",
+    "D-108 a fixed +08:00 offset, not a timezone database",
+    "D-109 external links are https-only and refused rather than repaired",
+    "D-110 a directions link is the server or absent - never composed",
+    "D-111 remaining places are stated by the server, never computed",
+    "D-112 publication state is enforced at the list and the detail",
+    "D-113 Registered is hidden from a guest, decided via AccessPolicy"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
     "Announcement and post-interaction endpoints are `planned` - the shipped repository declines and posts carry PostCapabilities.none",
-    "The OS share sheet cannot run in a widget test; PlatformShareService is thin glue and the decidable parts are unit-tested",
-    "Replies are modelled but no reply composer is built - addComment already accepts parentId",
+    "GET /api/v1/events is `planned` - the events screens show their failure state against the real backend",
+    "Event registration, waitlist and attendance are TAB 22; TAB 21 displays state and offers no register control",
+    "Platform seams (document picker, share sheet, URL launcher) cannot run in widget tests; each is thin glue with the decidable parts unit-tested",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
     "Cover images use Image.network with no disk cache; TAB 25 owns caching",
     "The debug APK builds but was not installed or run on a device"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 884 tests",
+    "test": "PASS - 921 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

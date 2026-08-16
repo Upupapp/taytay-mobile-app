@@ -1867,5 +1867,12 @@ result they cannot explain.
 | D-104 | The share link is the server's or absent — never composed by the app | trust / safety | settled |
 | D-105 | Sharing degrades to the clipboard rather than throwing | resilience | settled |
 | D-106 | An unrecognised reaction is shown by its raw label and is not pressable | schema / trust | settled |
+| D-107 | LGU times render in Manila time and say so — never the device's clock | copy / safety | settled |
+| D-108 | A fixed +08:00 offset, not a timezone database | architecture / performance | settled |
+| D-109 | External links are `https`-only and refused rather than repaired | security | settled |
+| D-110 | A directions link is the server's or absent — never composed | trust / safety | settled |
+| D-111 | Remaining places are stated by the server, never computed by the app | trust / schema | settled |
+| D-112 | Publication state is enforced at the list **and** the detail | authorization / trust | settled |
+| D-113 | "Registered" is hidden from a guest, decided via `AccessPolicy` | authorization / product | settled |
 
-**106 decisions — 102 settled, 4 provisional pending named backend gaps.**
+**113 decisions — 109 settled, 4 provisional pending named backend gaps.**

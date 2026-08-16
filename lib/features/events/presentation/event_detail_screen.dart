@@ -3,22 +3,34 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
+import '../../../core/sharing/share_service.dart';
+import '../../../core/time/manila_time.dart';
+import '../../../shared/widgets/app_banner.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/event_repository.dart';
+import 'events_screen.dart' show EventCover, registrationStateLabel;
 
 /// One LGU event, opened from the list or from a notification.
 ///
-/// The identifier is re-validated here for the same reason it is on an
+/// ---
+///
+/// **The identifier is re-validated here** for the same reason it is on an
 /// announcement: a path can be typed or restored from the back stack without
 /// passing through [DeepLink].
 ///
-/// **Nothing on this screen registers attendance.** The endpoint matrix has no
-/// event-registration row, and a link must never act on a resident's behalf in
-/// any case. Opening an event shows it; that is all.
+/// **Nothing on this screen registers attendance.** Registration is TAB 22, with
+/// its capacity and waitlist rules; a button here that could not complete would
+/// be worse than none. Opening an event shows it — and a link must never act on
+/// a resident's behalf in any case.
+///
+/// **A guest sees the whole thing.** Every fact on this screen is public: what
+/// is happening, when, where, and who to ask.
 class EventDetailScreen extends StatefulWidget {
   const EventDetailScreen({required this.eventId, super.key});
 
@@ -50,10 +62,64 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     setState(() {
       _loading = false;
       result.fold(
-        onOk: (event) => _event = event,
+        onOk: (event) {
+          // An event the office has not published must not open from a stale
+          // link either. Same rule as the list, applied at the second door.
+          _event = event.isResidentVisible ? event : null;
+          _failure = event.isResidentVisible ? null : const NotFoundFailure();
+        },
         onErr: (failure) => _failure = failure,
       );
     });
+  }
+
+  Future<void> _openDirections(EventVenue venue) async {
+    final outcome = await AppDependencies.of(
+      context,
+    ).externalLinks.open(venue.directionsUrl!);
+    if (!mounted || outcome == LinkOutcome.opened) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          outcome == LinkOutcome.refused
+              // The app declined the link rather than the device failing, and
+              // saying so plainly beats blaming the phone.
+              ? 'That map link could not be opened safely.'
+              : 'No app on this device can open a map.',
+        ),
+      ),
+    );
+  }
+
+  Future<void> _share(LguEvent event) async {
+    final outcome = await AppDependencies.of(context).shareService.share(
+      ShareableContent(
+        title: event.title,
+        body: <String>[
+          event.title,
+          if (event.startsAt != null)
+            ManilaTime.formatRange(event.startsAt!, event.endsAt),
+          if (event.venue != null) event.venue!.name,
+          'From Taytay LGU',
+        ].join('\n'),
+        // The server's link or none. This app does not compose a public URL.
+        url: event.shareUrl,
+      ),
+    );
+    if (!mounted) return;
+
+    final message = switch (outcome) {
+      ShareOutcome.shared || ShareOutcome.dismissed => null,
+      ShareOutcome.copiedToClipboard =>
+        'Copied. You can paste this into any app.',
+      ShareOutcome.unavailable => 'Sharing is not available on this device.',
+    };
+    if (message != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
+    }
   }
 
   @override
@@ -71,25 +137,259 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           (_, _, null) => _NotAvailable(
             message: DeepLinkRejection.unknownTarget.residentMessage,
           ),
-          (_, _, final LguEvent loaded) => ListView(
-            padding: const EdgeInsets.all(Spacing.lg),
+          (_, _, final LguEvent loaded) => _Detail(
+            event: loaded,
+            onDirections: _openDirections,
+            onShare: () => _share(loaded),
+          ),
+        },
+      ),
+    );
+  }
+}
+
+class _Detail extends StatelessWidget {
+  const _Detail({
+    required this.event,
+    required this.onDirections,
+    required this.onShare,
+  });
+
+  final LguEvent event;
+  final Future<void> Function(EventVenue) onDirections;
+  final Future<void> Function() onShare;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final venue = event.venue;
+
+    return ListView(
+      padding: EdgeInsets.zero,
+      children: <Widget>[
+        if (event.coverImageUrl != null)
+          EventCover(url: event.coverImageUrl!, height: 200),
+
+        Padding(
+          padding: const EdgeInsets.all(Spacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
-                loaded.title,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              if (loaded.venue != null) ...<Widget>[
+              if (event.category != null) ...<Widget>[
+                Text(
+                  event.category!,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
                 const SizedBox(height: Spacing.xs),
-                Text(loaded.venue!),
               ],
+
+              Semantics(
+                header: true,
+                child: Text(event.title, style: theme.textTheme.headlineSmall),
+              ),
+
+              if (event.isRegistered) ...<Widget>[
+                const SizedBox(height: Spacing.md),
+                AppBanner(
+                  tone: BannerTone.success,
+                  title: registrationStateLabel(event.registrationState?.known),
+                  message:
+                      'Taytay LGU has your registration for this event. Bring a '
+                      'valid ID.',
+                ),
+              ],
+
+              const SizedBox(height: Spacing.lg),
+
+              // ── When and where ──────────────────────────────────────────
+              AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (event.startsAt != null)
+                      _Fact(
+                        icon: Icons.schedule_outlined,
+                        label: 'When',
+                        // Stated with the clock it belongs to. A phone set to
+                        // another timezone cannot make somebody arrive on the
+                        // wrong day.
+                        value: ManilaTime.formatRange(
+                          event.startsAt!,
+                          event.endsAt,
+                        ),
+                      ),
+                    if (venue != null)
+                      _Fact(
+                        icon: Icons.place_outlined,
+                        label: 'Where',
+                        value: <String>[
+                          venue.name,
+                          if (venue.address != null) venue.address!,
+                        ].join('\n'),
+                      ),
+                    if (event.organiser != null)
+                      _Fact(
+                        icon: Icons.account_balance_outlined,
+                        label: 'Organised by',
+                        value: event.organiser!,
+                      ),
+                    if (event.contact != null)
+                      _Fact(
+                        icon: Icons.call_outlined,
+                        label: 'Questions',
+                        value: event.contact!,
+                      ),
+
+                    // Offered only when the server supplied a link this app is
+                    // willing to open. See `ExternalLink.isSafe`.
+                    if (venue != null && venue.hasSafeDirections) ...<Widget>[
+                      const SizedBox(height: Spacing.sm),
+                      OutlinedButton.icon(
+                        onPressed: () => onDirections(venue),
+                        icon: const Icon(
+                          Icons.directions_outlined,
+                          size: IconSizes.sm,
+                        ),
+                        label: const Text('Open directions'),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: Spacing.lg),
+              Text(event.description, style: theme.textTheme.bodyLarge),
+
+              if (event.registrationRules != null) ...<Widget>[
+                const SizedBox(height: Spacing.lg),
+                _Section(title: 'Who can join', body: event.registrationRules!),
+              ],
+
+              if (event.capacity.isStated) ...<Widget>[
+                const SizedBox(height: Spacing.lg),
+                _Capacity(capacity: event.capacity),
+              ],
+
+              if (event.whatToBring != null) ...<Widget>[
+                const SizedBox(height: Spacing.lg),
+                _Section(title: 'What to bring', body: event.whatToBring!),
+              ],
+
+              const SizedBox(height: Spacing.xl),
+              OutlinedButton.icon(
+                onPressed: onShare.call,
+                icon: const Icon(Icons.share_outlined, size: IconSizes.sm),
+                label: const Text('Share this event'),
+              ),
+
               const SizedBox(height: Spacing.md),
+              // Says plainly what this screen does and does not do, so a
+              // resident does not leave believing they have a place.
               Text(
-                loaded.description,
-                style: Theme.of(context).textTheme.bodyLarge,
+                event.isRegistered
+                    ? 'To change or cancel your registration, contact the '
+                          'office above.'
+                    : 'Registering in this app is not switched on yet. The '
+                          'office above can tell you how to join.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
-        },
+        ),
+      ],
+    );
+  }
+}
+
+/// Places left, only as the office stated them.
+class _Capacity extends StatelessWidget {
+  const _Capacity({required this.capacity});
+
+  final EventCapacity capacity;
+
+  @override
+  Widget build(BuildContext context) {
+    final remaining = capacity.remaining;
+    final total = capacity.capacity;
+
+    final line = switch ((remaining, total)) {
+      (final int r, final int t) when r > 0 => '$r of $t places left',
+      (final int r, null) when r > 0 => '$r places left',
+      (final int r, _) when r <= 0 => 'No places left',
+      (null, final int t) => 'Room for $t people',
+      _ => null,
+    };
+    if (line == null) return const SizedBox.shrink();
+
+    return AppBanner(
+      tone: capacity.isFull ? BannerTone.warning : BannerTone.info,
+      title: 'Places',
+      message: capacity.isFull
+          ? '$line. The office can tell you whether a waitlist is open.'
+          : line,
+    );
+  }
+}
+
+class _Section extends StatelessWidget {
+  const _Section({required this.title, required this.body});
+
+  final String title;
+  final String body;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Semantics(
+          header: true,
+          child: Text(title, style: theme.textTheme.titleMedium),
+        ),
+        const SizedBox(height: Spacing.xs),
+        Text(body, style: theme.textTheme.bodyMedium),
+      ],
+    );
+  }
+}
+
+class _Fact extends StatelessWidget {
+  const _Fact({required this.icon, required this.label, required this.value});
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, size: IconSizes.md, color: theme.colorScheme.primary),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  label,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                Text(value, style: theme.textTheme.bodyMedium),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

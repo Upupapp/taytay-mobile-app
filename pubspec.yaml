@@ -117,6 +117,20 @@ dependencies:
   # move it backwards.
   share_plus: ^13.3.0
 
+  # Opening a map link for a municipal venue in whichever maps app the resident
+  # already uses. Reviewed against CLAUDE.md Article 1 before adding.
+  #
+  # * Maintenance — part of flutter/packages, maintained by the Flutter team.
+  # * Permissions — none. Android needs a `<queries>` entry to *see* browsers,
+  #   which is declared in the manifest and grants nothing.
+  # * Data egress — none by the plugin. It hands a URL to the OS.
+  # * Scope and safety — used for one thing: a directions link the **server**
+  #   supplied for a public venue. `ExternalLinkService` refuses anything that
+  #   is not `https`, so a compromised or mistaken payload cannot open a
+  #   `javascript:`, `intent:` or `file:` URI, and no screen calls the plugin
+  #   directly.
+  url_launcher: ^6.3.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -15,6 +15,7 @@ class PlannedEventRepository implements EventRepository {
 
   @override
   Future<Result<Paginated<LguEvent>>> listEvents({
+    EventScope scope = EventScope.upcoming,
     int page = 1,
     int perPage = 20,
   }) async => const Err<Paginated<LguEvent>>(

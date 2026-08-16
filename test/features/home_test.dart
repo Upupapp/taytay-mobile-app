@@ -180,6 +180,7 @@ class StubEventRepository implements EventRepository {
 
   @override
   Future<Result<Paginated<LguEvent>>> listEvents({
+    EventScope scope = EventScope.upcoming,
     int page = 1,
     int perPage = 20,
   }) async => Ok<Paginated<LguEvent>>(Paginated<LguEvent>.single(items));
@@ -266,6 +267,7 @@ Future<Booted> bootHome(
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
+    externalLinks: base.externalLinks,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,
@@ -415,7 +417,7 @@ void main() {
             id: 'e1',
             title: 'Medical mission',
             description: 'Free check-ups.',
-            venue: 'Barangay hall',
+            venue: EventVenue(name: 'Barangay hall'),
           ),
         ],
       );

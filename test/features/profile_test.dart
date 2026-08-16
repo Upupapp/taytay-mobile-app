@@ -131,6 +131,7 @@ Future<BootedProfile> bootProfile(
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
+    externalLinks: base.externalLinks,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

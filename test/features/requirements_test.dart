@@ -250,6 +250,7 @@ Future<BootedRequirements> bootRequirements(
     requirementRepository: repositoryOverride ?? requirements,
     documentPicker: picker,
     shareService: base.shareService,
+    externalLinks: base.externalLinks,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,
