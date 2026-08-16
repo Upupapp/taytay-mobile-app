@@ -1,6 +1,7 @@
 import '../../../core/api/planned_backend.dart';
 import '../../../core/result/result.dart';
 import '../domain/assistance_case.dart';
+import '../domain/assistance_history.dart';
 import '../domain/assistance_intake.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_request_repository.dart';
@@ -39,6 +40,22 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   @override
   Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async =>
       plannedBackendFailure<AssistanceCaseDetail>(_module, 'loadOwnCase');
+
+  /// Declines rather than showing an empty history.
+  ///
+  /// The distinction matters more here than it looks. "You have never received
+  /// assistance from Taytay LGU" and "we cannot reach Taytay LGU" are different
+  /// statements, and the first one — shown wrongly — is the app telling a
+  /// resident their record does not exist.
+  @override
+  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
+    required HistoryScope scope,
+    int page = 1,
+    int perPage = 25,
+  }) async => plannedBackendFailure<Paginated<AssistanceHistoryEntry>>(
+    _module,
+    'listOwnHistory',
+  );
 
   /// Declines rather than returning a question set of the app's own invention.
   ///

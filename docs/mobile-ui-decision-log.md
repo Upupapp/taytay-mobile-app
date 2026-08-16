@@ -1845,5 +1845,12 @@ result they cannot explain.
 | D-82 | The case model has no field for staff data — structural, not filtered | privacy / schema | settled |
 | D-83 | `assigned` never names a staff member | privacy / product | settled |
 | D-84 | The superseded single-request screen is deleted, not left behind | architecture | settled |
+| D-85 | One request list with Open/Past scopes, not two screens | product / navigation | settled |
+| D-86 | An approved amount is a server-authored string, never parsed or reformatted | schema / trust | settled |
+| D-87 | A receipt is a reference, not a download, until a document endpoint exists | product / schema | settled |
+| D-88 | Release acknowledgement is stated, never offered as a tap | consent / trust | settled |
+| D-89 | "No record" and "could not load" are separate branches and separate sentences | copy / trust | settled |
+| D-90 | A referral contact appears only when published; `declined` always points somewhere | privacy / copy | settled |
+| D-91 | Release and referral are structured once and shared by case and history | architecture | settled |
 
-**84 decisions — 80 settled, 4 provisional pending named backend gaps.**
+**91 decisions — 87 settled, 4 provisional pending named backend gaps.**

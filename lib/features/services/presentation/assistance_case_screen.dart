@@ -16,6 +16,7 @@ import '../../../shared/widgets/status_view.dart';
 import '../domain/assistance_case.dart';
 import '../domain/request_status_copy.dart';
 import '../domain/service_request_repository.dart';
+import 'release_and_referral.dart';
 
 /// One request: where it stands, what happens next, and what has happened so far.
 ///
@@ -134,21 +135,13 @@ class _Case extends StatelessWidget {
           const SizedBox(height: Spacing.lg),
         ],
 
-        if (detail.releaseInstructions != null) ...<Widget>[
-          AppBanner(
-            tone: BannerTone.info,
-            title: 'Collecting this',
-            message: detail.releaseInstructions!,
-          ),
+        if (detail.release != null && !detail.release!.isEmpty) ...<Widget>[
+          ReleaseCard(release: detail.release!),
           const SizedBox(height: Spacing.lg),
         ],
 
         if (detail.referral != null) ...<Widget>[
-          AppBanner(
-            tone: BannerTone.info,
-            title: 'Referred onward',
-            message: detail.referral!,
-          ),
+          ReferralCard(referral: detail.referral!),
           const SizedBox(height: Spacing.lg),
         ],
 
@@ -200,7 +193,7 @@ class _StatusCard extends StatelessWidget {
           if (request.referenceNumber != null)
             _Line(label: 'Reference', value: request.referenceNumber!),
           if (request.submittedAt != null)
-            _Line(label: 'Sent', value: _formatDate(request.submittedAt!)),
+            _Line(label: 'Sent', value: formatCaseDate(request.submittedAt!)),
           // The office's own vocabulary, kept visible so a resident and a clerk
           // are talking about the same thing. Labelled as such rather than
           // presented as the status, which is the friendly line above.
@@ -386,7 +379,7 @@ class _TimelineRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
-                    _formatDate(entry.occurredAt),
+                    formatCaseDate(entry.occurredAt),
                     style: theme.textTheme.labelMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -472,23 +465,6 @@ class _Unavailable extends StatelessWidget {
   }
 }
 
-/// `dd MMM yyyy`, written out because a numeric date is ambiguous between
-/// Philippine and US conventions and there is no localisation seam yet.
-String _formatDate(DateTime date) {
-  const List<String> months = <String>[
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-  final day = date.day.toString().padLeft(2, '0');
-  return '$day ${months[date.month - 1]} ${date.year}';
-}
+// Date formatting moved to `release_and_referral.dart` when the release card
+// and the history list needed the same rendering. One record should not print
+// three different ways.

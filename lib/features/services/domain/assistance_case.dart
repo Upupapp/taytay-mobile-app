@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'assistance_history.dart';
 import 'lgu_service.dart' show ServerValue;
 import 'service_request_repository.dart';
 
@@ -90,7 +91,7 @@ class AssistanceCaseDetail {
     this.timeline = const <CaseTimelineEntry>[],
     this.nextActions = const <CaseNextAction>[],
     this.outcomeReason,
-    this.releaseInstructions,
+    this.release,
     this.referral,
   });
 
@@ -113,10 +114,14 @@ class AssistanceCaseDetail {
   final String? outcomeReason;
 
   /// Where and when to collect, when the office has scheduled it.
-  final String? releaseInstructions;
+  ///
+  /// Structured rather than a sentence since TAB 18: the same release has to
+  /// render on this screen and in the resident's history, and two prose
+  /// representations of one record drift. One type, two renderings.
+  final ReleaseDetail? release;
 
   /// Where the case was referred, when that is intended for the resident.
-  final String? referral;
+  final ReferralDetail? referral;
 
   bool get hasTimeline => timeline.isNotEmpty;
 

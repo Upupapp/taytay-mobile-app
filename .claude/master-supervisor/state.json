@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 18 — Assistance History, Referral & Release Resident View",
-  "currentTabIndex": 18,
+  "currentTab": "TAB 19 — Newsfeed, Resident Feed",
+  "currentTabIndex": 19,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -21,15 +21,16 @@
     "TAB 14 — Social Welfare Programs & Services Directory",
     "TAB 15 — Assistance Request / Intake Flow",
     "TAB 16 — Requirements & Secure Document Upload",
-    "TAB 17 — Assistance Status, Case Timeline & Next Steps"
+    "TAB 17 — Assistance Status, Case Timeline & Next Steps",
+    "TAB 18 — Assistance History, Referral & Release Resident View"
   ],
-  "currentObjective": "Give residents a longitudinal record of their own assistance outcomes without exposing internal operations (TAB 18).",
+  "currentObjective": "Present admin-published Taytay posts as a polished, simple mobile feed (TAB 19).",
   "status": "RUNNING",
-  "supervisorCycleCount": 3,
+  "supervisorCycleCount": 4,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 17 commit created at end of this cycle",
-  "workingTreeState": "TAB 17 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 18 commit created at end of this cycle",
+  "workingTreeState": "TAB 18 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -57,16 +58,24 @@
     "D-81 a rejection reason appears only when the office published one",
     "D-82 the case model has no field for staff data - structural, not filtered",
     "D-83 assigned never names a staff member",
-    "D-84 the superseded single-request screen is deleted, not left behind"
+    "D-84 the superseded single-request screen is deleted, not left behind",
+    "D-85 one request list with Open/Past scopes, not two screens",
+    "D-86 an approved amount is a server-authored string, never parsed or reformatted",
+    "D-87 a receipt is a reference, not a download, until a document endpoint exists",
+    "D-88 release acknowledgement is stated, never offered as a tap",
+    "D-89 \"no record\" and \"could not load\" are separate branches and sentences",
+    "D-90 a referral contact appears only when published; declined always points somewhere",
+    "D-91 release and referral are structured once and shared by case and history"
   ],
   "environmentGaps": [
-    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement, upload or case endpoint; shipped repositories decline honestly",
+    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement, upload, case or history endpoint; shipped repositories decline honestly",
+    "No document endpoint exists, so a receipt is a reference rather than a download",
     "The platform document picker cannot be exercised in a widget test; the decidable parts are unit-tested",
-    "The debug APK builds but was not installed or run on a device, so the pickers are compiled but not exercised against a real camera"
+    "The debug APK builds but was not installed or run on a device"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 794 tests",
+    "test": "PASS - 820 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

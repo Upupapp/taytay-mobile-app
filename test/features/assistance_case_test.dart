@@ -15,6 +15,7 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
+import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart'
     show Paginated, ServerValue;
@@ -47,8 +48,8 @@ AssistanceCaseDetail caseDetail({
   List<CaseTimelineEntry>? timeline,
   List<CaseNextAction> nextActions = const <CaseNextAction>[],
   String? outcomeReason,
-  String? releaseInstructions,
-  String? referral,
+  ReleaseDetail? release,
+  ReferralDetail? referral,
 }) => AssistanceCaseDetail(
   request: subject ?? request(),
   timeline:
@@ -67,7 +68,7 @@ AssistanceCaseDetail caseDetail({
       ],
   nextActions: nextActions,
   outcomeReason: outcomeReason,
-  releaseInstructions: releaseInstructions,
+  release: release,
   referral: referral,
 );
 
@@ -97,6 +98,13 @@ class StubCaseRepository implements ServiceRequestRepository {
   @override
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
       Ok<ServiceRequest>(request());
+
+  @override
+  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
+    required HistoryScope scope,
+    int page = 1,
+    int perPage = 25,
+  }) async => const Err<Paginated<AssistanceHistoryEntry>>(ServerFailure());
 
   @override
   Future<Result<AssistanceIntakeForm>> loadIntakeForm(
@@ -463,14 +471,18 @@ void main() {
             state: ServiceRequestState.readyForRelease,
             rawState: 'ready_for_release',
           ),
-          releaseInstructions:
-              'Collect at the Taytay municipal hall, window 4.',
-          referral: 'Referred to the Provincial Social Welfare Office.',
+          release: const ReleaseDetail(
+            location: 'Taytay municipal hall, window 4',
+            instructions: 'Bring a valid ID and your reference number.',
+          ),
+          referral: const ReferralDetail(
+            destination: 'Provincial Social Welfare Office',
+          ),
         ),
       );
 
-      expect(find.text('Collecting this'), findsOneWidget);
-      expect(find.text('Referred onward'), findsOneWidget);
+      expect(find.text('What you are receiving'), findsOneWidget);
+      expect(find.text('Referred to another office'), findsOneWidget);
     });
 
     testWidgets('an absent backend explains rather than showing a blank case', (

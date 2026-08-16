@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
 import 'assistance_case.dart';
+import 'assistance_history.dart';
 import 'assistance_intake.dart';
 import 'lgu_service.dart';
 
@@ -115,6 +116,20 @@ abstract interface class ServiceRequestRepository {
   /// projection of an internal case file, and it should be fetched only by the
   /// screen that displays it.
   Future<Result<AssistanceCaseDetail>> loadOwnCase(String id);
+
+  /// The resident's own record of what they asked for and received.
+  ///
+  /// One list, filtered by [scope], rather than an "open" endpoint and a
+  /// separate "history" endpoint: they are the same records, and a resident
+  /// should not have to know which screen a request has moved to.
+  ///
+  /// `/me`-scoped like everything else here — it takes no resident identifier,
+  /// so there is no code path that could ask for somebody else's history.
+  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
+    required HistoryScope scope,
+    int page,
+    int perPage,
+  });
 
   /// What this service's application asks for, as the server describes it.
   ///
