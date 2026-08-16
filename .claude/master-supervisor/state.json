@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 26 — Accessibility, Localization & Device Adaptation",
-  "currentTabIndex": 26,
+  "currentTab": "TAB 27 — Analytics/Telemetry, Crash Safety & Privacy Guardrails",
+  "currentTabIndex": 27,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -29,15 +29,16 @@
     "TAB 22 — Events: Registration, Waitlist & Attendance Status",
     "TAB 23 — Notifications, Push, Inbox & Deep Links",
     "TAB 24 — Settings, Privacy, Consent, Help & Account Controls",
-    "TAB 25 — Network Loss, Offline/Degraded UX & Performance"
+    "TAB 25 — Network Loss, Offline/Degraded UX & Performance",
+    "TAB 26 — Accessibility, Localization & Device Adaptation"
   ],
-  "currentObjective": "Keep the Servana-level polish usable for a broad municipal resident population (TAB 26).",
+  "currentObjective": "Understand how the app is used without ever holding what a resident is doing (TAB 27).",
   "status": "RUNNING",
-  "supervisorCycleCount": 11,
+  "supervisorCycleCount": 12,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 25 commit created at end of this cycle",
-  "workingTreeState": "TAB 25 committed locally; nothing pushed",
+  "lastLocalCommit": "TAB 26 commit created at end of this cycle",
+  "workingTreeState": "TAB 26 committed locally; nothing pushed",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -134,7 +135,14 @@
     "D-150 read evicts stale; readAllowingStale returns it with its age attached",
     "D-151 the public cache stays in memory, and the cost of that is stated",
     "D-152 unsent work says \"not sent\", never \"saved\"",
-    "D-153 remote images decode to the size of the box, capped, feed and full-size ceilings"
+    "D-153 remote images decode to the size of the box, capped, feed and full-size ceilings",
+    "D-154 Filipino is a first-class locale, complete and guarded by a test",
+    "D-155 no in-app language switcher: the device preference decides, matched on the language subtag",
+    "D-156 failure copy is translated by kind; residentMessage stays the English default for context-free callers",
+    "D-157 dates never follow the device locale - a reordered date is a different day",
+    "D-158 every snackbar is announced as well as shown, tone as a parameter not a guess",
+    "D-159 the form error summary is a live region carrying every message as one sentence",
+    "D-160 keyboard action follows field shape: next, done, or newline"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
@@ -151,11 +159,15 @@
     "No DevTools trace or on-device scroll profile: the decode ceiling is reasoned and test-asserted, not measured on hardware",
     "No disk cache, deliberately (D-151): a force-quit on a dead connection shows nothing; within a process everything is kept",
     "Announcements/events/programmes are allow-listed for caching but their modules are planned, so nothing populates those entries yet",
-    "No offline submission queue, deliberately: a held request is one whose eligibility and capacity have since moved"
+    "No offline submission queue, deliberately: a held request is one whose eligibility and capacity have since moved",
+    "Screen-specific copy is still English literals: the l10n architecture is proven on the cross-cutting vocabulary, the rest is a mechanical lift",
+    "No real TalkBack/VoiceOver run: semantics are asserted through the tree, not on a device",
+    "No right-to-left support, deliberately - neither language this app speaks is RTL",
+    "Contrast over remote images is unasserted because nothing draws text over one; a future design needs a scrim and a test first"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 1078 tests",
+    "test": "PASS - 1119 tests",
     "format": "PASS - dart format clean, 0 changed",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

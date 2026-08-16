@@ -455,6 +455,9 @@ class _DescribeStep extends StatelessWidget {
           maxLines: 6,
           maxLength: maximum,
           textCapitalization: TextCapitalization.sentences,
+          // A narrative wraps, so the return key inserts a line rather than
+          // dismissing the keyboard mid-sentence.
+          textInputAction: TextInputAction.newline,
           onChanged: controller.updateNarrative,
           controller: TextEditingController.fromValue(
             TextEditingValue(
@@ -575,6 +578,12 @@ class _QuestionField extends StatelessWidget {
       maxLines: lines,
       maxLength: question.maxLength,
       textCapitalization: TextCapitalization.sentences,
+      // The office decides whether its question wants a paragraph or a line,
+      // and the keyboard follows: a one-line answer gets "next", a multi-line
+      // one gets a return key that actually returns.
+      textInputAction: lines > 1
+          ? TextInputAction.newline
+          : TextInputAction.next,
       controller: TextEditingController.fromValue(
         TextEditingValue(
           text: text,
@@ -590,6 +599,7 @@ class _QuestionField extends StatelessWidget {
     final text = answer == null ? '' : '$answer';
     return TextField(
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      textInputAction: TextInputAction.next,
       inputFormatters: <TextInputFormatter>[
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
       ],

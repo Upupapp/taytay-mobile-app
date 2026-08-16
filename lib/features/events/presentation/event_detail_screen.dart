@@ -5,6 +5,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/api/request_context.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
@@ -16,6 +17,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/event_repository.dart';
 import 'events_screen.dart' show EventCover, registrationStateLabel;
@@ -134,17 +136,21 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       );
     });
 
-    final message = switch (result) {
-      Ok<EventRegistration>() =>
-        'Your place has been given up. Taytay LGU has been told.',
-      // Copy from the failure kind, never the server's operator-facing text,
-      // and it says plainly that the place is still theirs.
-      Err<EventRegistration>(failure: final failure) =>
-        '${failure.residentMessage} You still have your place.',
-    };
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    switch (result) {
+      case Ok<EventRegistration>():
+        Outcome.succeeded(
+          context,
+          'Your place has been given up. Taytay LGU has been told.',
+        );
+      case Err<EventRegistration>(failure: final failure):
+        // Copy from the failure kind, never the server's operator-facing text,
+        // and it says plainly that the place is still theirs.
+        Outcome.problem(
+          context,
+          '${localisedResidentMessage(context, failure)} '
+          'You still have your place.',
+        );
+    }
   }
 
   Future<void> _openDirections(EventVenue venue) async {
@@ -153,16 +159,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     ).externalLinks.open(venue.directionsUrl!);
     if (!mounted || outcome == LinkOutcome.opened) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          outcome == LinkOutcome.refused
-              // The app declined the link rather than the device failing, and
-              // saying so plainly beats blaming the phone.
-              ? 'That map link could not be opened safely.'
-              : 'No app on this device can open a map.',
-        ),
-      ),
+    Outcome.problem(
+      context,
+      outcome == LinkOutcome.refused
+          // The app declined the link rather than the device failing, and
+          // saying so plainly beats blaming the phone.
+          ? 'That map link could not be opened safely.'
+          : 'No app on this device can open a map.',
     );
   }
 
@@ -190,9 +193,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
       ShareOutcome.unavailable => 'Sharing is not available on this device.',
     };
     if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      outcome == ShareOutcome.copiedToClipboard
+          ? Outcome.succeeded(context, message)
+          : Outcome.problem(context, message);
     }
   }
 

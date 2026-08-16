@@ -10,6 +10,7 @@ import '../../../core/session/local_authenticator.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
 import '../../auth/domain/device_session_repository.dart';
 
 /// Sign-in and security: the controls a resident has over their own session.
@@ -52,9 +53,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
       suppressed: reduced,
     );
     if (outcome != LocalUnlockOutcome.unlocked && mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_enableFailureCopy(outcome))));
+      Outcome.problem(context, _enableFailureCopy(outcome));
     }
   }
 

@@ -9,6 +9,7 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/notification_repository.dart';
 import 'notification_inbox_controller.dart';
@@ -81,9 +82,7 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
           pathParameters: target.arguments,
         );
       case DeepLinkRejected(:final reason):
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(reason.residentMessage)));
+        Outcome.problem(context, reason.residentMessage);
     }
   }
 

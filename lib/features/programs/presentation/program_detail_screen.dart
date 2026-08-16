@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/assistance_program.dart';
 import 'programs_screen.dart';
@@ -94,13 +95,10 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
         targetId: program.code,
       );
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Applying in this app is not switched on yet. Bring the documents '
-            'listed here to the Taytay municipal hall.',
-          ),
-        ),
+      Outcome.problem(
+        context,
+        'Applying in this app is not switched on yet. Bring the documents '
+        'listed here to the Taytay municipal hall.',
       );
       return;
     }

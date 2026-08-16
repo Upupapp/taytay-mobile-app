@@ -1,0 +1,46 @@
+{
+  "@@locale": "fil",
+
+  "appTitle": "Taytay LGU IDS",
+
+  "navHome": "Home",
+  "navServices": "Mga Serbisyo",
+  "navNews": "Balita",
+  "navEvents": "Mga Kaganapan",
+  "navProfile": "Profile",
+
+  "actionTryAgain": "Subukan muli",
+  "actionRefresh": "I-refresh",
+  "actionCancel": "Kanselahin",
+  "actionClose": "Isara",
+  "actionSignIn": "Mag-sign in",
+  "actionSignOut": "Mag-sign out",
+  "actionTrySendingAgain": "Subukang ipadala muli",
+
+  "networkUnreachableTitle": "Hindi maabot ang Taytay LGU",
+  "networkUnreachableMessage": "Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo, at wala pang naipadala.",
+
+  "unsentTitle": "Hindi pa naipapadala",
+  "unsentMessage": "Wala pa sa Taytay LGU ang {what}. Nandito pa sa telepono mo ang lahat ng na-type mo. Walang naisumite, kaya hindi magiging dalawa kapag ipinadala mong muli.",
+
+  "staleContentMessage": "Ipinapakita ang naitago noong {timestamp}. Maaaring nagbago na ito.",
+
+  "failureNetwork": "Hindi maabot ng app ang Taytay LGU. Pakisuri ang iyong koneksyon at subukan muli.",
+  "failureTimeout": "Matagal bago sumagot ang Taytay LGU. Pakisubukan muli.",
+  "failureUnauthenticated": "Na-sign out ka na. Mag-sign in muli para magpatuloy.",
+  "failureForbidden": "Hindi ito available para sa iyong account.",
+  "failureNotFound": "Hindi namin makita ang hinahanap mo.",
+  "failureValidation": "May kailangang baguhin sa iyong isinulat.",
+  "failureConflict": "Nagawa na ito, o may nagbago habang ginagawa mo.",
+  "failureRateLimited": "Masyadong maraming pagsubok. Maghintay saglit at subukan muli.",
+  "failureServer": "May naganap na problema sa panig ng Taytay LGU. Hindi ito kasalanan mo.",
+  "failureContract": "Hindi naintindihan ng bersyong ito ng app ang sagot ng Taytay LGU.",
+  "failureUnexpected": "May nangyaring mali. Pakisubukan muli.",
+
+  "a11yLoading": "Naglo-load",
+  "a11yBusy": "Ginagawa na. Pakihintay.",
+  "a11ySucceeded": "Tapos na. {what}",
+  "a11yFailed": "Hindi ito naisagawa. {why}",
+  "a11yRequired": "Kailangan",
+  "a11yFieldError": "Mali: {message}"
+}

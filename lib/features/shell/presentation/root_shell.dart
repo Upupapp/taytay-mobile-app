@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/intent_resumer.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import 'shell_destinations.dart';
@@ -118,6 +119,8 @@ class _BarScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return Scaffold(
       // The banner sits above the branch content rather than inside each
       // screen: reachability is one app-wide fact, and a per-screen banner is
@@ -140,8 +143,8 @@ class _BarScaffold extends StatelessWidget {
             NavigationDestination(
               icon: Icon(destination.icon),
               selectedIcon: Icon(destination.selectedIcon),
-              label: destination.label,
-              tooltip: destination.label,
+              label: destination.labelIn(strings),
+              tooltip: destination.labelIn(strings),
             ),
         ],
       ),
@@ -166,6 +169,7 @@ class _RailScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
     final expanded = layout == ShellLayout.expanded;
 
     return Scaffold(
@@ -197,7 +201,7 @@ class _RailScaffold extends StatelessWidget {
                 NavigationRailDestination(
                   icon: Icon(destination.icon),
                   selectedIcon: Icon(destination.selectedIcon),
-                  label: Text(destination.label),
+                  label: Text(destination.labelIn(strings)),
                 ),
             ],
           ),

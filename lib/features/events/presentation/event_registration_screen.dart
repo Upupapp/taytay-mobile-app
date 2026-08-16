@@ -519,6 +519,7 @@ class _Field extends StatelessWidget {
           ),
           ServerFieldKind.number => TextField(
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
             controller: TextEditingController(
               text: answer == null ? '' : '$answer',
             ),
@@ -533,6 +534,11 @@ class _Field extends StatelessWidget {
           _ => TextField(
             maxLines: field.kind.known == ServerFieldKind.longText ? 4 : 1,
             maxLength: field.maxLength,
+            // The office decides whether its question wants a paragraph, and
+            // the keyboard follows.
+            textInputAction: field.kind.known == ServerFieldKind.longText
+                ? TextInputAction.newline
+                : TextInputAction.next,
             controller: TextEditingController(
               text: answer is String ? answer : '',
             ),

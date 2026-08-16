@@ -5,6 +5,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/network/network_monitor.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -16,6 +17,7 @@ import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
 import 'package:taytay_resident/features/services/domain/service_catalog_repository.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/network_status_views.dart';
 import 'package:taytay_resident/shared/widgets/remote_image.dart';
 
@@ -91,6 +93,17 @@ CachedRead<Paginated<LguService>> remembered() =>
       storedAt: DateTime.utc(2026, 8, 16, 2),
       isFresh: false,
     );
+
+/// Wraps a bare widget in the localisations it now legitimately needs.
+///
+/// The offline vocabulary is translated, so `AppStrings.of` has to resolve —
+/// a widget test that skipped the delegates would be testing a configuration
+/// the app never runs in.
+Widget localised(Widget child) => MaterialApp(
+  localizationsDelegates: AppStrings.localizationsDelegates,
+  supportedLocales: AppLocales.supported,
+  home: Scaffold(body: child),
+);
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -305,9 +318,7 @@ void main() {
 
     testWidgets('the unsent notice never says "saved"', (tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(body: UnsentNotice(what: 'your application')),
-        ),
+        localised(const UnsentNotice(what: 'your application')),
       );
 
       expect(find.text('Not sent yet'), findsOneWidget);
@@ -333,13 +344,8 @@ void main() {
     ) async {
       var retried = 0;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: UnsentNotice(
-              what: 'your registration',
-              onRetry: () => retried++,
-            ),
-          ),
+        localised(
+          UnsentNotice(what: 'your registration', onRetry: () => retried++),
         ),
       );
 
@@ -357,12 +363,10 @@ void main() {
   group('Stale content notice', () {
     testWidgets('says nothing when the content is fresh', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StaleContentNotice(
-              storedAt: DateTime.utc(2026, 8, 16, 2),
-              isFresh: true,
-            ),
+        localised(
+          StaleContentNotice(
+            storedAt: DateTime.utc(2026, 8, 16, 2),
+            isFresh: true,
           ),
         ),
       );
@@ -374,12 +378,8 @@ void main() {
 
     testWidgets('states the age in Manila time when it is not', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            // 02:00 UTC is 10:00 AM in Taytay.
-            body: StaleContentNotice(storedAt: DateTime.utc(2026, 8, 16, 2)),
-          ),
-        ),
+        // 02:00 UTC is 10:00 AM in Taytay.
+        localised(StaleContentNotice(storedAt: DateTime.utc(2026, 8, 16, 2))),
       );
 
       expect(find.textContaining('16 Aug 2026'), findsOneWidget);
@@ -391,22 +391,16 @@ void main() {
       tester,
     ) async {
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StaleContentNotice(storedAt: DateTime.utc(2026, 8, 16, 2)),
-          ),
-        ),
+        localised(StaleContentNotice(storedAt: DateTime.utc(2026, 8, 16, 2))),
       );
       expect(find.text('Refresh'), findsNothing);
 
       var refreshed = 0;
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: StaleContentNotice(
-              storedAt: DateTime.utc(2026, 8, 16, 2),
-              onRefresh: () => refreshed++,
-            ),
+        localised(
+          StaleContentNotice(
+            storedAt: DateTime.utc(2026, 8, 16, 2),
+            onRefresh: () => refreshed++,
           ),
         ),
       );

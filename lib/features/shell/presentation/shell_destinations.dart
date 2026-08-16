@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// The five primary destinations, fixed for every resident.
 ///
@@ -40,9 +41,27 @@ enum ShellDestination {
 
   final AppRoute route;
 
+  /// The English label, and the fallback.
+  ///
   /// Short enough to survive a 200% text scale in a five-item bar without
-  /// wrapping into an unreadable stack.
+  /// wrapping into an unreadable stack. Prefer [labelIn] on any surface a
+  /// resident reads — this is what remains for the places with no
+  /// `BuildContext`: a test name, a route table, a log line.
   final String label;
+
+  /// The label in the reader's language.
+  ///
+  /// Filipino runs longer than English here — "Mga Kaganapan" against "Events"
+  /// — which is exactly why the bar is checked at both languages and at 200%
+  /// text. A five-item bar that fits one and clips the other is a bar that was
+  /// only ever looked at in one.
+  String labelIn(AppStrings strings) => switch (this) {
+    ShellDestination.home => strings.navHome,
+    ShellDestination.services => strings.navServices,
+    ShellDestination.news => strings.navNews,
+    ShellDestination.events => strings.navEvents,
+    ShellDestination.profile => strings.navProfile,
+  };
 
   final IconData icon;
 

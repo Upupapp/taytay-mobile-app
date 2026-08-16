@@ -1,0 +1,17 @@
+# Localisation generation for the Taytay resident app.
+#
+# English is the template because the backend contract, the design system and
+# every reviewer of this repository work in it. Filipino is the locale this app
+# actually ships for, and it is a first-class translation rather than an
+# afterthought: a municipal service in Taytay that only speaks English is a
+# service a large part of the population cannot use.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-localization-file: app_localizations.dart
+output-class: AppStrings
+nullable-getter: false
+
+# An untranslated key falls back to the template rather than failing the build,
+# so a partial Filipino translation ships as partial Filipino rather than
+# blocking a release. The report below keeps that visible instead of silent.
+untranslated-messages-file: lib/l10n/untranslated.json

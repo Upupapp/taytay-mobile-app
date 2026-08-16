@@ -289,6 +289,9 @@ class _CorrectionSection extends StatelessWidget {
             TextFormField(
               initialValue: controller.corrections[issue.category] ?? '',
               textCapitalization: TextCapitalization.sentences,
+              // One correction per issue, and there may be several, so "next"
+              // walks the resident down the list.
+              textInputAction: TextInputAction.next,
               onChanged: (value) =>
                   controller.updateCorrection(issue.category, value),
             ),

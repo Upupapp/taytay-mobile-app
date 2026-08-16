@@ -36,6 +36,19 @@ dependencies:
   cupertino_icons: ^1.0.8
   go_router: ^17.5.0
 
+  # Localisation. Both ship with the Flutter SDK, so neither adds a third-party
+  # maintainer, a permission, or a byte of data egress — the Article 1 review is
+  # short because there is nothing outside the SDK to review.
+  #
+  # `flutter_localizations` supplies Material's own translated widget strings
+  # (the date picker, "Back", "Show menu") for every locale this app declares.
+  # Without it a Filipino build would show translated app copy inside untranslated
+  # Material chrome. `intl` supplies the plural and date machinery `gen-l10n`
+  # generates against.
+  flutter_localizations:
+    sdk: flutter
+  intl: any
+
   # HTTP transport. Dart-team maintained, minimal surface, no code generation and
   # no interceptor framework of its own — retry, auth and correlation are this
   # app's own policy in `core/api/`, where they are unit-testable, rather than
@@ -154,6 +167,9 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+
+  # Generates `AppLocalizations` from `lib/l10n/*.arb`, configured in `l10n.yaml`.
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

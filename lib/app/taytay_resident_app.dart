@@ -6,8 +6,10 @@ import 'package:go_router/go_router.dart';
 import '../core/config/app_config.dart';
 import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
+import '../core/l10n/app_locales.dart';
 import '../core/router/app_router.dart';
 import '../features/auth/presentation/app_lock_screen.dart';
+import '../l10n/app_localizations.dart';
 import '../shared/widgets/session_expired_sheet.dart';
 import 'app_dependencies.dart';
 
@@ -79,6 +81,17 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
       child: MaterialApp.router(
         title: 'Taytay LGU IDS',
         debugShowCheckedModeBanner: false,
+
+        // Both app copy and Material's own widget strings. Without the second,
+        // a Filipino build would show translated content inside untranslated
+        // chrome — a date picker and a "Back" button still in English.
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppLocales.supported,
+        // The device's preference decides, matched on the language subtag so
+        // `fil_PH` resolves to Filipino rather than falling through to English
+        // on a region mismatch. There is no in-app switcher: a resident who has
+        // told their phone they read Filipino has already answered.
+        localeResolutionCallback: AppLocales.resolve,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
         // Follows the OS setting. Dark mode is an accessibility feature for

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_dependencies.dart';
+import 'outcome_feedback.dart';
 
 /// Resumes what a resident was doing, once the session can support it.
 ///
@@ -74,9 +75,7 @@ class _IntentResumerState extends State<IntentResumer> {
 
     // No screen for this intent yet. Confirm rather than navigate, so the
     // resident learns the gate is behind them.
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      SnackBar(content: Text('You can now ${intent.kind.description}.')),
-    );
+    Outcome.succeeded(context, 'You can now ${intent.kind.description}.');
   }
 
   @override

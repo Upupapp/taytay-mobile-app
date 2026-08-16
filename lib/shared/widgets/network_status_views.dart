@@ -4,6 +4,7 @@ import '../../app/app_dependencies.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/motion/motion_tokens.dart';
 import '../../core/time/manila_time.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_banner.dart';
 
 /// The strip that appears when Taytay LGU cannot be reached.
@@ -32,6 +33,7 @@ class OfflineBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final monitor = AppDependencies.of(context).network;
+    final strings = AppStrings.of(context);
 
     return AnimatedBuilder(
       animation: monitor,
@@ -47,15 +49,13 @@ class OfflineBanner extends StatelessWidget {
           ),
           child: AppBanner(
             tone: BannerTone.warning,
-            title: 'Not reaching Taytay LGU',
-            message:
-                'The app cannot get through right now. Anything you have typed '
-                'is still here, and nothing has been sent.',
+            title: strings.networkUnreachableTitle,
+            message: strings.networkUnreachableMessage,
             action: onRetry == null
                 ? null
                 : TextButton(
                     onPressed: onRetry,
-                    child: const Text('Try again'),
+                    child: Text(strings.actionTryAgain),
                   ),
           ),
         );
@@ -105,6 +105,7 @@ class StaleContentNotice extends StatelessWidget {
   Widget build(BuildContext context) {
     if (isFresh) return const SizedBox.shrink();
     final theme = Theme.of(context);
+    final strings = AppStrings.of(context);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: Spacing.md),
@@ -119,16 +120,20 @@ class StaleContentNotice extends StatelessWidget {
           Expanded(
             child: Text(
               // Manila time, like every other LGU timestamp in this app: the
-              // phone can be set to any timezone and Taytay is in one.
-              'Showing what was saved on '
-              '${ManilaTime.formatDateTime(storedAt)}. It may have changed.',
+              // phone can be set to any timezone and Taytay is in one. The
+              // timestamp is formatted before it reaches the translation, so
+              // no locale can reorder a date a resident acts on.
+              strings.staleContentMessage(ManilaTime.formatDateTime(storedAt)),
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
           if (onRefresh != null)
-            TextButton(onPressed: onRefresh, child: const Text('Refresh')),
+            TextButton(
+              onPressed: onRefresh,
+              child: Text(strings.actionRefresh),
+            ),
         ],
       ),
     );
@@ -154,7 +159,7 @@ class UnsentNotice extends StatelessWidget {
   const UnsentNotice({
     required this.what,
     this.onRetry,
-    this.retryLabel = 'Try sending again',
+    this.retryLabel,
     super.key,
   });
 
@@ -163,20 +168,24 @@ class UnsentNotice extends StatelessWidget {
   final String what;
 
   final VoidCallback? onRetry;
-  final String retryLabel;
+
+  /// Overrides the default retry wording. Null takes the translated default.
+  final String? retryLabel;
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+
     return AppBanner(
       tone: BannerTone.warning,
-      title: 'Not sent yet',
-      message:
-          'Taytay LGU does not have $what. Everything you typed is still on '
-          'this phone. Nothing was filed, so sending again does not create a '
-          'duplicate.',
+      title: strings.unsentTitle,
+      message: strings.unsentMessage(what),
       action: onRetry == null
           ? null
-          : TextButton(onPressed: onRetry, child: Text(retryLabel)),
+          : TextButton(
+              onPressed: onRetry,
+              child: Text(retryLabel ?? strings.actionTrySendingAgain),
+            ),
     );
   }
 }

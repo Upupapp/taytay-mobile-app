@@ -1,0 +1,343 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart' as intl;
+
+import 'app_localizations_en.dart';
+import 'app_localizations_fil.dart';
+
+// ignore_for_file: type=lint
+
+/// Callers can lookup localized strings with an instance of AppStrings
+/// returned by `AppStrings.of(context)`.
+///
+/// Applications need to include `AppStrings.delegate()` in their app's
+/// `localizationDelegates` list, and the locales they support in the app's
+/// `supportedLocales` list. For example:
+///
+/// ```dart
+/// import 'l10n/app_localizations.dart';
+///
+/// return MaterialApp(
+///   localizationsDelegates: AppStrings.localizationsDelegates,
+///   supportedLocales: AppStrings.supportedLocales,
+///   home: MyApplicationHome(),
+/// );
+/// ```
+///
+/// ## Update pubspec.yaml
+///
+/// Please make sure to update your pubspec.yaml to include the following
+/// packages:
+///
+/// ```yaml
+/// dependencies:
+///   # Internationalization support.
+///   flutter_localizations:
+///     sdk: flutter
+///   intl: any # Use the pinned version from flutter_localizations
+///
+///   # Rest of dependencies
+/// ```
+///
+/// ## iOS Applications
+///
+/// iOS applications define key application metadata, including supported
+/// locales, in an Info.plist file that is built into the application bundle.
+/// To configure the locales supported by your app, you’ll need to edit this
+/// file.
+///
+/// First, open your project’s ios/Runner.xcworkspace Xcode workspace file.
+/// Then, in the Project Navigator, open the Info.plist file under the Runner
+/// project’s Runner folder.
+///
+/// Next, select the Information Property List item, select Add Item from the
+/// Editor menu, then select Localizations from the pop-up menu.
+///
+/// Select and expand the newly-created Localizations item then, for each
+/// locale your application supports, add a new item and select the locale
+/// you wish to add from the pop-up menu in the Value field. This list should
+/// be consistent with the languages listed in the AppStrings.supportedLocales
+/// property.
+abstract class AppStrings {
+  AppStrings(String locale)
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+
+  final String localeName;
+
+  static AppStrings of(BuildContext context) {
+    return Localizations.of<AppStrings>(context, AppStrings)!;
+  }
+
+  static const LocalizationsDelegate<AppStrings> delegate =
+      _AppStringsDelegate();
+
+  /// A list of this localizations delegate along with the default localizations
+  /// delegates.
+  ///
+  /// Returns a list of localizations delegates containing this delegate along with
+  /// GlobalMaterialLocalizations.delegate, GlobalCupertinoLocalizations.delegate,
+  /// and GlobalWidgetsLocalizations.delegate.
+  ///
+  /// Additional delegates can be added by appending to this list in
+  /// MaterialApp. This list does not have to be used at all if a custom list
+  /// of delegates is preferred or required.
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
+      <LocalizationsDelegate<dynamic>>[
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
+
+  /// A list of this localizations delegate's supported locales.
+  static const List<Locale> supportedLocales = <Locale>[
+    Locale('en'),
+    Locale('fil'),
+  ];
+
+  /// The app's name. Not translated — it is the municipality's own identity.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU IDS'**
+  String get appTitle;
+
+  /// Shell destination: the resident's dashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get navHome;
+
+  /// Shell destination: the municipal service catalogue.
+  ///
+  /// In en, this message translates to:
+  /// **'Services'**
+  String get navServices;
+
+  /// Shell destination: LGU announcements.
+  ///
+  /// In en, this message translates to:
+  /// **'News'**
+  String get navNews;
+
+  /// Shell destination: LGU events.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get navEvents;
+
+  /// Shell destination: the resident's own account.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get navProfile;
+
+  /// Retries whatever just failed.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get actionTryAgain;
+
+  /// Fetches the content again.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get actionRefresh;
+
+  /// No description provided for @actionCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get actionCancel;
+
+  /// No description provided for @actionClose.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get actionClose;
+
+  /// No description provided for @actionSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get actionSignIn;
+
+  /// No description provided for @actionSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get actionSignOut;
+
+  /// Retries a submission that never reached the office.
+  ///
+  /// In en, this message translates to:
+  /// **'Try sending again'**
+  String get actionTrySendingAgain;
+
+  /// Offline banner heading. Deliberately not 'you appear to be offline' — that is a guess about the resident's phone, where this is what the app actually knows.
+  ///
+  /// In en, this message translates to:
+  /// **'Not reaching Taytay LGU'**
+  String get networkUnreachableTitle;
+
+  /// Offline banner body. Must keep the promise that nothing was sent.
+  ///
+  /// In en, this message translates to:
+  /// **'The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.'**
+  String get networkUnreachableMessage;
+
+  /// Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent yet'**
+  String get unsentTitle;
+
+  /// Body for unsent work.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU does not have {what}. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.'**
+  String unsentMessage(String what);
+
+  /// Last-updated line over cached content. The timestamp is pre-formatted in Manila time by ManilaTime, so it is passed in as a string rather than a DateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing what was saved on {timestamp}. It may have changed.'**
+  String staleContentMessage(String timestamp);
+
+  /// Resident copy for a request that never arrived. Chosen by failure kind, never taken from the server's message, which is operator-facing.
+  ///
+  /// In en, this message translates to:
+  /// **'The app could not reach Taytay LGU. Check your connection and try again.'**
+  String get failureNetwork;
+
+  /// No description provided for @failureTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU took too long to answer. Please try again.'**
+  String get failureTimeout;
+
+  /// No description provided for @failureUnauthenticated.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been signed out. Sign in again to continue.'**
+  String get failureUnauthenticated;
+
+  /// No description provided for @failureForbidden.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not available for your account.'**
+  String get failureForbidden;
+
+  /// No description provided for @failureNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not find what you were looking for.'**
+  String get failureNotFound;
+
+  /// No description provided for @failureValidation.
+  ///
+  /// In en, this message translates to:
+  /// **'Some of what you entered needs changing.'**
+  String get failureValidation;
+
+  /// No description provided for @failureConflict.
+  ///
+  /// In en, this message translates to:
+  /// **'That has already been done, or something changed while you were working.'**
+  String get failureConflict;
+
+  /// No description provided for @failureRateLimited.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please wait a moment and try again.'**
+  String get failureRateLimited;
+
+  /// No description provided for @failureServer.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong at Taytay LGU\'s end. This is not your fault.'**
+  String get failureServer;
+
+  /// No description provided for @failureContract.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of the app could not understand Taytay LGU\'s answer.'**
+  String get failureContract;
+
+  /// No description provided for @failureUnexpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get failureUnexpected;
+
+  /// Screen-reader hint on a control that is working.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading'**
+  String get a11yLoading;
+
+  /// Announced when an async action starts.
+  ///
+  /// In en, this message translates to:
+  /// **'Working. Please wait.'**
+  String get a11yBusy;
+
+  /// Announced when an async action succeeds. A screen reader user gets no visual confirmation, so the outcome has to be spoken.
+  ///
+  /// In en, this message translates to:
+  /// **'Done. {what}'**
+  String a11ySucceeded(String what);
+
+  /// Announced when an async action fails.
+  ///
+  /// In en, this message translates to:
+  /// **'That did not work. {why}'**
+  String a11yFailed(String why);
+
+  /// Spoken alongside a required field's label, because an asterisk is not announced.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get a11yRequired;
+
+  /// Prefix so a field's error is announced as an error rather than read as ordinary text.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {message}'**
+  String a11yFieldError(String message);
+}
+
+class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
+  const _AppStringsDelegate();
+
+  @override
+  Future<AppStrings> load(Locale locale) {
+    return SynchronousFuture<AppStrings>(lookupAppStrings(locale));
+  }
+
+  @override
+  bool isSupported(Locale locale) =>
+      <String>['en', 'fil'].contains(locale.languageCode);
+
+  @override
+  bool shouldReload(_AppStringsDelegate old) => false;
+}
+
+AppStrings lookupAppStrings(Locale locale) {
+  // Lookup logic when only language code is specified.
+  switch (locale.languageCode) {
+    case 'en':
+      return AppStringsEn();
+    case 'fil':
+      return AppStringsFil();
+  }
+
+  throw FlutterError(
+    'AppStrings.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
+}

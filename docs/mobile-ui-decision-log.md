@@ -1914,5 +1914,12 @@ result they cannot explain.
 | D-151 | The public cache stays in memory, and the cost of that is stated | privacy / architecture | settled |
 | D-152 | Unsent work says "not sent", never "saved" | copy / safety | settled |
 | D-153 | Remote images decode to the size of the box, capped, with a feed and a full-size ceiling | performance | settled |
+| D-154 | Filipino is a first-class locale, complete and guarded by a test — English is the template, not the priority | product / accessibility | settled |
+| D-155 | No in-app language switcher: the device's preference decides, matched on the language subtag | product / trust | settled |
+| D-156 | Failure copy is translated by kind; `residentMessage` stays the English default for context-free callers | architecture / privacy | settled |
+| D-157 | Dates never follow the device locale — a reordered date is a different day | correctness / safety | settled |
+| D-158 | Every snackbar is announced as well as shown, with tone as a parameter rather than a guess | accessibility | settled |
+| D-159 | The form error summary is a live region carrying every message as one sentence | accessibility | settled |
+| D-160 | Keyboard action follows field shape: `next`, `done`, or `newline` where the office asked for a paragraph | accessibility / product | settled |
 
-**153 decisions — 149 settled, 4 provisional pending named backend gaps.**
+**160 decisions — 156 settled, 4 provisional pending named backend gaps.**

@@ -207,6 +207,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       controller: _mobile,
       keyboardType: TextInputType.phone,
       autofillHints: const <String>[AutofillHints.telephoneNumber],
+      // One field per editor screen, so the keyboard closes rather than
+      // offering a "next" that goes nowhere.
+      textInputAction: TextInputAction.done,
       inputFormatters: <TextInputFormatter>[
         FilteringTextInputFormatter.digitsOnly,
         LengthLimitingTextInputFormatter(SignInIdentifier.length),
@@ -227,6 +230,7 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       controller: _email,
       keyboardType: TextInputType.emailAddress,
       autofillHints: const <String>[AutofillHints.email],
+      textInputAction: TextInputAction.done,
       decoration: InputDecoration(
         labelText: '${field.label} (optional)',
         helperText: field.hint,

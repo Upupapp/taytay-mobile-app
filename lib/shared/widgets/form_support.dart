@@ -32,35 +32,64 @@ class FormErrorSummary extends StatelessWidget {
     if (errors.isEmpty) return const SizedBox.shrink();
 
     final theme = Theme.of(context);
+    final heading = errors.length == 1
+        ? 'There is a problem'
+        : 'There are ${errors.length} problems';
+
     return Focus(
       focusNode: focusNode,
       child: Padding(
         padding: const EdgeInsets.only(bottom: Spacing.lg),
-        child: AppBanner(
-          tone: BannerTone.error,
-          title: errors.length == 1
-              ? 'There is a problem'
-              : 'There are ${errors.length} problems',
-          message: '',
-          action: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              for (final error in errors)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: Spacing.xs),
-                  child: Text(
-                    '• ${error.message}',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onErrorContainer,
+        // A live region, so a screen reader reads the summary when it appears
+        // rather than leaving a resident who has just pressed "Send" to
+        // discover by exploration that the form did not go anywhere.
+        //
+        // The whole summary is one node: read as a sentence and a list, not as
+        // a heading a resident then has to hunt around for.
+        child: Semantics(
+          liveRegion: true,
+          container: true,
+          // Sentences, joined once. Each message already ends in a full stop,
+          // so appending another makes a screen reader say "period period" —
+          // audible, and exactly the kind of thing that makes a resident stop
+          // listening to the part that matters.
+          label: <String>[
+            heading,
+            for (final error in errors) error.message,
+          ].map(_asSentence).join(' '),
+          child: ExcludeSemantics(
+            child: AppBanner(
+              tone: BannerTone.error,
+              title: heading,
+              message: '',
+              action: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  for (final error in errors)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: Spacing.xs),
+                      child: Text(
+                        '• ${error.message}',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onErrorContainer,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-            ],
+                ],
+              ),
+            ),
           ),
         ),
       ),
     );
   }
+}
+
+/// One sentence, ending in exactly one full stop.
+String _asSentence(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty) return trimmed;
+  return trimmed.endsWith('.') ? trimmed : '$trimmed.';
 }
 
 /// A field label that states whether it is required.

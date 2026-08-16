@@ -1,0 +1,139 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Taytay LGU IDS",
+  "@appTitle": {
+    "description": "The app's name. Not translated — it is the municipality's own identity."
+  },
+
+  "navHome": "Home",
+  "@navHome": {
+    "description": "Shell destination: the resident's dashboard."
+  },
+  "navServices": "Services",
+  "@navServices": {
+    "description": "Shell destination: the municipal service catalogue."
+  },
+  "navNews": "News",
+  "@navNews": {
+    "description": "Shell destination: LGU announcements."
+  },
+  "navEvents": "Events",
+  "@navEvents": {
+    "description": "Shell destination: LGU events."
+  },
+  "navProfile": "Profile",
+  "@navProfile": {
+    "description": "Shell destination: the resident's own account."
+  },
+
+  "actionTryAgain": "Try again",
+  "@actionTryAgain": {
+    "description": "Retries whatever just failed."
+  },
+  "actionRefresh": "Refresh",
+  "@actionRefresh": {
+    "description": "Fetches the content again."
+  },
+  "actionCancel": "Cancel",
+  "actionClose": "Close",
+  "actionSignIn": "Sign in",
+  "actionSignOut": "Sign out",
+  "actionTrySendingAgain": "Try sending again",
+  "@actionTrySendingAgain": {
+    "description": "Retries a submission that never reached the office."
+  },
+
+  "networkUnreachableTitle": "Not reaching Taytay LGU",
+  "@networkUnreachableTitle": {
+    "description": "Offline banner heading. Deliberately not 'you appear to be offline' — that is a guess about the resident's phone, where this is what the app actually knows."
+  },
+  "networkUnreachableMessage": "The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.",
+  "@networkUnreachableMessage": {
+    "description": "Offline banner body. Must keep the promise that nothing was sent."
+  },
+
+  "unsentTitle": "Not sent yet",
+  "@unsentTitle": {
+    "description": "Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it."
+  },
+  "unsentMessage": "Taytay LGU does not have {what}. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.",
+  "@unsentMessage": {
+    "description": "Body for unsent work.",
+    "placeholders": {
+      "what": {
+        "type": "String",
+        "example": "your application"
+      }
+    }
+  },
+
+  "staleContentMessage": "Showing what was saved on {timestamp}. It may have changed.",
+  "@staleContentMessage": {
+    "description": "Last-updated line over cached content. The timestamp is pre-formatted in Manila time by ManilaTime, so it is passed in as a string rather than a DateTime.",
+    "placeholders": {
+      "timestamp": {
+        "type": "String",
+        "example": "Sun 16 Aug 2026, 10:00 AM PHT"
+      }
+    }
+  },
+
+  "failureNetwork": "The app could not reach Taytay LGU. Check your connection and try again.",
+  "@failureNetwork": {
+    "description": "Resident copy for a request that never arrived. Chosen by failure kind, never taken from the server's message, which is operator-facing."
+  },
+  "failureTimeout": "Taytay LGU took too long to answer. Please try again.",
+  "failureUnauthenticated": "You have been signed out. Sign in again to continue.",
+  "failureForbidden": "This is not available for your account.",
+  "failureNotFound": "We could not find what you were looking for.",
+  "failureValidation": "Some of what you entered needs changing.",
+  "failureConflict": "That has already been done, or something changed while you were working.",
+  "failureRateLimited": "Too many attempts. Please wait a moment and try again.",
+  "failureServer": "Something went wrong at Taytay LGU's end. This is not your fault.",
+  "failureContract": "This version of the app could not understand Taytay LGU's answer.",
+  "failureUnexpected": "Something went wrong. Please try again.",
+
+  "a11yLoading": "Loading",
+  "@a11yLoading": {
+    "description": "Screen-reader hint on a control that is working."
+  },
+  "a11yBusy": "Working. Please wait.",
+  "@a11yBusy": {
+    "description": "Announced when an async action starts."
+  },
+  "a11ySucceeded": "Done. {what}",
+  "@a11ySucceeded": {
+    "description": "Announced when an async action succeeds. A screen reader user gets no visual confirmation, so the outcome has to be spoken.",
+    "placeholders": {
+      "what": {
+        "type": "String",
+        "example": "Your registration has been sent."
+      }
+    }
+  },
+  "a11yFailed": "That did not work. {why}",
+  "@a11yFailed": {
+    "description": "Announced when an async action fails.",
+    "placeholders": {
+      "why": {
+        "type": "String",
+        "example": "The app could not reach Taytay LGU."
+      }
+    }
+  },
+  "a11yRequired": "Required",
+  "@a11yRequired": {
+    "description": "Spoken alongside a required field's label, because an asterisk is not announced."
+  },
+  "a11yFieldError": "Error: {message}",
+  "@a11yFieldError": {
+    "description": "Prefix so a field's error is announced as an error rather than read as ordinary text.",
+    "placeholders": {
+      "message": {
+        "type": "String",
+        "example": "Enter your mobile number."
+      }
+    }
+  }
+}

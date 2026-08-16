@@ -358,6 +358,9 @@ class _ContactStep extends StatelessWidget {
           initialValue: controller.draft.mobileNumber,
           keyboardType: TextInputType.phone,
           autofillHints: const <String>[AutofillHints.telephoneNumber],
+          // The only field on this step, so the keyboard closes rather than
+          // offering a "next" that goes nowhere.
+          textInputAction: TextInputAction.done,
           inputFormatters: <TextInputFormatter>[
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(11),
@@ -407,6 +410,7 @@ class _VerifyCodeStep extends StatelessWidget {
           initialValue: controller.code,
           keyboardType: TextInputType.number,
           autofillHints: const <String>[AutofillHints.oneTimeCode],
+          textInputAction: TextInputAction.done,
           inputFormatters: <TextInputFormatter>[
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(10),
@@ -447,6 +451,11 @@ class _PersonalStep extends StatelessWidget {
         TextFormField(
           initialValue: draft.givenName,
           textCapitalization: TextCapitalization.words,
+          // The on-screen keyboard offers "next" and moves to the following
+          // field. Without this every field shows a "done" key that dismisses
+          // the keyboard, and a resident on a seven-field form taps back into
+          // it seven times.
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             errorText: _errorFor(controller, 'given_name'),
           ),
@@ -458,6 +467,7 @@ class _PersonalStep extends StatelessWidget {
         TextFormField(
           initialValue: draft.middleName,
           textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
           onChanged: (value) =>
               controller.updateDraft((d) => d.copyWith(middleName: value)),
         ),
@@ -466,6 +476,7 @@ class _PersonalStep extends StatelessWidget {
         TextFormField(
           initialValue: draft.familyName,
           textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.next,
           decoration: InputDecoration(
             errorText: _errorFor(controller, 'family_name'),
           ),
@@ -480,6 +491,9 @@ class _PersonalStep extends StatelessWidget {
         ),
         TextFormField(
           initialValue: draft.suffix,
+          // Last field of the run: the date of birth below is a picker, so the
+          // keyboard closes rather than pointing at nothing.
+          textInputAction: TextInputAction.done,
           decoration: const InputDecoration(hintText: 'Jr.'),
           onChanged: (value) =>
               controller.updateDraft((d) => d.copyWith(suffix: value)),
@@ -595,6 +609,9 @@ class _AddressStep extends StatelessWidget {
           initialValue: draft.streetAddress,
           textCapitalization: TextCapitalization.words,
           maxLines: 2,
+          // Multi-line by design — an address wraps — so the return key inserts
+          // a line rather than leaving the field.
+          textInputAction: TextInputAction.newline,
           decoration: InputDecoration(
             errorText: _errorFor(controller, 'street_address'),
           ),

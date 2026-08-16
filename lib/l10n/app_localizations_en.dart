@@ -1,0 +1,133 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppStringsEn extends AppStrings {
+  AppStringsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'Taytay LGU IDS';
+
+  @override
+  String get navHome => 'Home';
+
+  @override
+  String get navServices => 'Services';
+
+  @override
+  String get navNews => 'News';
+
+  @override
+  String get navEvents => 'Events';
+
+  @override
+  String get navProfile => 'Profile';
+
+  @override
+  String get actionTryAgain => 'Try again';
+
+  @override
+  String get actionRefresh => 'Refresh';
+
+  @override
+  String get actionCancel => 'Cancel';
+
+  @override
+  String get actionClose => 'Close';
+
+  @override
+  String get actionSignIn => 'Sign in';
+
+  @override
+  String get actionSignOut => 'Sign out';
+
+  @override
+  String get actionTrySendingAgain => 'Try sending again';
+
+  @override
+  String get networkUnreachableTitle => 'Not reaching Taytay LGU';
+
+  @override
+  String get networkUnreachableMessage =>
+      'The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.';
+
+  @override
+  String get unsentTitle => 'Not sent yet';
+
+  @override
+  String unsentMessage(String what) {
+    return 'Taytay LGU does not have $what. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.';
+  }
+
+  @override
+  String staleContentMessage(String timestamp) {
+    return 'Showing what was saved on $timestamp. It may have changed.';
+  }
+
+  @override
+  String get failureNetwork =>
+      'The app could not reach Taytay LGU. Check your connection and try again.';
+
+  @override
+  String get failureTimeout =>
+      'Taytay LGU took too long to answer. Please try again.';
+
+  @override
+  String get failureUnauthenticated =>
+      'You have been signed out. Sign in again to continue.';
+
+  @override
+  String get failureForbidden => 'This is not available for your account.';
+
+  @override
+  String get failureNotFound => 'We could not find what you were looking for.';
+
+  @override
+  String get failureValidation => 'Some of what you entered needs changing.';
+
+  @override
+  String get failureConflict =>
+      'That has already been done, or something changed while you were working.';
+
+  @override
+  String get failureRateLimited =>
+      'Too many attempts. Please wait a moment and try again.';
+
+  @override
+  String get failureServer =>
+      'Something went wrong at Taytay LGU\'s end. This is not your fault.';
+
+  @override
+  String get failureContract =>
+      'This version of the app could not understand Taytay LGU\'s answer.';
+
+  @override
+  String get failureUnexpected => 'Something went wrong. Please try again.';
+
+  @override
+  String get a11yLoading => 'Loading';
+
+  @override
+  String get a11yBusy => 'Working. Please wait.';
+
+  @override
+  String a11ySucceeded(String what) {
+    return 'Done. $what';
+  }
+
+  @override
+  String a11yFailed(String why) {
+    return 'That did not work. $why';
+  }
+
+  @override
+  String get a11yRequired => 'Required';
+
+  @override
+  String a11yFieldError(String message) {
+    return 'Error: $message';
+  }
+}

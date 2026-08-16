@@ -17,6 +17,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/announcement_repository.dart';
 import 'news_screen.dart' show formatPublishedDate;
@@ -169,9 +170,9 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
       ShareOutcome.unavailable => 'Sharing is not available on this device.',
     };
     if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      outcome == ShareOutcome.copiedToClipboard
+          ? Outcome.succeeded(context, message)
+          : Outcome.problem(context, message);
     }
   }
 
@@ -464,6 +465,8 @@ class _Composer extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         TextField(
+          // A comment wraps, so the return key inserts a line.
+          textInputAction: TextInputAction.newline,
           controller: composer,
           maxLines: 3,
           minLines: 1,
