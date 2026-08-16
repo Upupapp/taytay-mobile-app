@@ -47,6 +47,7 @@ LguEvent event({
   EventCapacity capacity = const EventCapacity(),
   ServerValue<EventRegistrationState>? registrationState,
   ServerValue<PublicationState>? publicationState,
+  EventRegistration? myRegistration,
 }) => LguEvent(
   id: id,
   title: title,
@@ -65,6 +66,22 @@ LguEvent event({
   capacity: capacity,
   registrationState: registrationState,
   publicationState: publicationState ?? publication(PublicationState.published),
+  myRegistration: myRegistration,
+);
+
+/// The resident's own place at an event, as the server would describe it.
+EventRegistration myPlace({
+  String eventId = 'e-1',
+  String? id = 'reg-1',
+  EventRegistrationState state = EventRegistrationState.registered,
+  String? reference = 'TR-2026-0001',
+  bool canCancel = true,
+}) => EventRegistration(
+  eventId: eventId,
+  id: id,
+  state: registration(state),
+  reference: reference,
+  canCancel: canCancel,
 );
 
 Paginated<LguEvent> pageOf(
@@ -130,12 +147,29 @@ class ScriptedEventRepository implements EventRepository {
     required String idempotencyKey,
   }) async => const Err<RegistrationAttempt>(ServerFailure());
 
+  /// Cancellation is scripted, because the detail screen offers it.
+  bool cancelFails = false;
+  final List<String> cancelledRegistrationIds = <String>[];
+  final List<String> cancelKeys = <String>[];
+
   @override
   Future<Result<EventRegistration>> cancelRegistration({
     required String eventId,
     required String registrationId,
     required String idempotencyKey,
-  }) async => const Err<EventRegistration>(ServerFailure());
+  }) async {
+    cancelledRegistrationIds.add(registrationId);
+    cancelKeys.add(idempotencyKey);
+    return cancelFails
+        ? const Err<EventRegistration>(NetworkFailure())
+        : Ok<EventRegistration>(
+            myPlace(
+              eventId: eventId,
+              state: EventRegistrationState.cancelled,
+              canCancel: false,
+            ),
+          );
+  }
 }
 
 /// Records what the app asked the OS to open.
@@ -236,6 +270,7 @@ Future<BootedEvents> bootEvents(
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: links,
+    accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,
@@ -856,6 +891,152 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.text('Medical mission'), findsOneWidget);
+    });
+  });
+
+  // ── Giving up a place ───────────────────────────────────────────────────
+  //
+  // Deferred from the registration TAB so it could be built on the shared
+  // confirmation sheet rather than a one-off dialog.
+
+  group('Cancelling a registration', () {
+    testWidgets('is offered only when the server says it may be', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace(canCancel: false)),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('TR-2026-0001'), findsOneWidget);
+      expect(find.text('Give up my place'), findsNothing);
+    });
+
+    testWidgets('is not offered without an id to cancel against', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace(id: null)),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('Give up my place'), findsNothing);
+    });
+
+    testWidgets('is not offered once the place is already given up', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(
+          myRegistration: myPlace(state: EventRegistrationState.cancelled),
+        ),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('Give up my place'), findsNothing);
+    });
+
+    testWidgets('asks first, and dismissing cancels nothing', (tester) async {
+      final booted = await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace()),
+        location: '/events/e-1',
+      );
+
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+
+      // The sheet names what is lost rather than asking "are you sure".
+      expect(find.text('Give up your place?'), findsOneWidget);
+      expect(
+        find.textContaining('offer your place to the next person'),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.text('Keep my place'));
+      await tester.pumpAndSettle();
+
+      expect(booted.events.cancelledRegistrationIds, isEmpty);
+    });
+
+    testWidgets('sends one keyed request and adopts the server answer', (
+      tester,
+    ) async {
+      final booted = await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace()),
+        location: '/events/e-1',
+      );
+
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Give up my place').last);
+      await tester.pumpAndSettle();
+
+      expect(booted.events.cancelledRegistrationIds, <String>['reg-1']);
+      expect(booted.events.cancelKeys.single, isNotEmpty);
+      // The card now shows the server's version, so the control is gone.
+      expect(find.text('Give up my place'), findsNothing);
+      expect(find.textContaining('has been given up'), findsOneWidget);
+    });
+
+    testWidgets('a failure keeps the place and says so', (tester) async {
+      final booted = await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace()),
+        location: '/events/e-1',
+      );
+      booted.events.cancelFails = true;
+
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Give up my place').last);
+      await tester.pumpAndSettle();
+
+      // A place the app quietly removed from view is a place the resident
+      // stops turning up for while still holding it.
+      expect(find.text('Give up my place'), findsOneWidget);
+      expect(find.textContaining('You still have your place'), findsOneWidget);
+    });
+  });
+
+  group('EventRegistration', () {
+    test('is not cancellable unless the server allows it', () {
+      expect(myPlace().isCancellable, isTrue);
+      expect(myPlace(canCancel: false).isCancellable, isFalse);
+      expect(myPlace(id: null).isCancellable, isFalse);
+      expect(
+        myPlace(state: EventRegistrationState.cancelled).isCancellable,
+        isFalse,
+      );
+    });
+
+    test('withRegistration keeps everything else about the event', () {
+      final original = event(
+        organiser: 'Taytay Health Office',
+        myRegistration: myPlace(),
+      );
+      final updated = original.withRegistration(
+        myPlace(state: EventRegistrationState.cancelled),
+      );
+
+      expect(updated.organiser, 'Taytay Health Office');
+      expect(updated.title, original.title);
+      expect(updated.startsAt, original.startsAt);
+      expect(updated.myRegistration!.isCancelled, isTrue);
+    });
+
+    test('toString carries no reference', () {
+      expect(myPlace().toString(), isNot(contains('TR-2026-0001')));
     });
   });
 }

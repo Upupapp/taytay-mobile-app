@@ -127,6 +127,28 @@ enum AppRoute {
   // ---------------------------------------------------------------------------
   // Destinations reached from inside the shell.
   // ---------------------------------------------------------------------------
+  /// Settings, help, privacy and accessibility.
+  ///
+  /// **Public.** Acceptance 1 of TAB 24 is that privacy text is reachable
+  /// without login, and the reasoning goes further: somebody deciding whether to
+  /// register should be able to read what they would be agreeing to, find out
+  /// how to reach the LGU, and turn motion down — all before handing over a
+  /// mobile number. The account sections are absent for a guest rather than
+  /// present and locked.
+  settings('settings', '/settings', AccessRequirement.public),
+
+  /// Help and FAQs. Public: it collects nothing and looks nothing up, and the
+  /// people who need it most are the ones without an account.
+  help('help', '/settings/help', AccessRequirement.public),
+
+  /// Consent history and account requests. Authenticated — it is a record about
+  /// one person.
+  privacyControls(
+    'privacy-controls',
+    '/settings/privacy',
+    AccessRequirement.authenticated,
+  ),
+
   /// Account and preferences — needs an account, verified or not.
   account('account', '/account', AccessRequirement.authenticated),
 

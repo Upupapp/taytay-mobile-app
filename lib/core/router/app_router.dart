@@ -28,6 +28,8 @@ import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/services/presentation/service_detail_screen.dart';
 import '../../features/services/presentation/services_screen.dart';
+import '../../features/settings/presentation/privacy_controls_screen.dart';
+import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
@@ -228,6 +230,23 @@ GoRouter buildAppRouter({
         path: AppRoute.security.path,
         name: AppRoute.security.routeName,
         builder: (context, state) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.settings.path,
+        name: AppRoute.settings.routeName,
+        builder: (context, state) => const SettingsScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'help',
+            name: AppRoute.help.routeName,
+            builder: (context, state) => const HelpScreen(),
+          ),
+          GoRoute(
+            path: 'privacy',
+            name: AppRoute.privacyControls.routeName,
+            builder: (context, state) => const PrivacyControlsScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoute.notifications.path,

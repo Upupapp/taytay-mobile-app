@@ -294,6 +294,7 @@ Future<BootedPost> bootPost(
     documentPicker: base.documentPicker,
     shareService: sharing,
     externalLinks: base.externalLinks,
+    accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

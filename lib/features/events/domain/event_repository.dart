@@ -220,6 +220,34 @@ class LguEvent {
   bool get isRegistered =>
       registrationState?.known?.isResidentRegistered ?? false;
 
+  /// This event with the resident's registration replaced by the server's
+  /// latest version of it.
+  ///
+  /// Used after a cancellation, so the screen adopts the server's answer rather
+  /// than editing the copy it already had. Everything else is carried across
+  /// untouched: cancelling a place changes the resident's registration, not the
+  /// event's schedule, venue or capacity, and re-deriving those from a partial
+  /// response is how a screen loses its own content.
+  LguEvent withRegistration(EventRegistration registration) => LguEvent(
+    id: id,
+    title: title,
+    description: description,
+    startsAt: startsAt,
+    endsAt: endsAt,
+    venue: venue,
+    category: category,
+    coverImageUrl: coverImageUrl,
+    organiser: organiser,
+    contact: contact,
+    registrationRules: registrationRules,
+    whatToBring: whatToBring,
+    shareUrl: shareUrl,
+    capacity: capacity,
+    registrationState: registrationState,
+    publicationState: publicationState,
+    myRegistration: registration,
+  );
+
   /// Whether the event has already happened, by its **end** where there is one.
   ///
   /// Using the end rather than the start means an event still running is not

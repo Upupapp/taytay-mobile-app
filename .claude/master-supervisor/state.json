@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 24 — Settings, Privacy, Consent, Help & Account Controls",
-  "currentTabIndex": 24,
+  "currentTab": "TAB 25 — Network Loss, Offline/Degraded UX & Performance",
+  "currentTabIndex": 25,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -27,15 +27,16 @@
     "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
     "TAB 21 — Events: Discovery & Event Detail",
     "TAB 22 — Events: Registration, Waitlist & Attendance Status",
-    "TAB 23 — Notifications, Push, Inbox & Deep Links"
+    "TAB 23 — Notifications, Push, Inbox & Deep Links",
+    "TAB 24 — Settings, Privacy, Consent, Help & Account Controls"
   ],
-  "currentObjective": "Give residents transparent control over app preferences and privacy-related account actions (TAB 24).",
+  "currentObjective": "Keep the app honest and usable on the weak, intermittent connections many Taytay residents have (TAB 25).",
   "status": "RUNNING",
-  "supervisorCycleCount": 9,
+  "supervisorCycleCount": 10,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 23 commit created at end of this cycle",
-  "workingTreeState": "TAB 23 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 24 commit created at end of this cycle",
+  "workingTreeState": "TAB 24 committed locally; nothing pushed",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -108,7 +109,22 @@
     "D-126 a category the backend has not set defaults to on",
     "D-127 the inbox groups by Manila recency, not by date headings",
     "D-128 reading is optimistic and restores the unread mark on refusal",
-    "D-129 a notification is a pointer; detail is fetched under the live session"
+    "D-129 a notification is a pointer; detail is fetched under the live session",
+    "D-130 settings, help, privacy and accessibility are public",
+    "D-131 account sections are absent for a guest, not present and disabled",
+    "D-132 AccountControls defaults to allowing nothing; no unsupported legal promise",
+    "D-133 loadControls succeeds with none where every other planned repository declines",
+    "D-134 deactivation and erasure are separate requests, never conflated",
+    "D-135 a retention period is the office sentence or nothing",
+    "D-136 a withdrawn consent keeps its row: the record is the evidence",
+    "D-137 a non-withdrawable consent shows its reason, not a switch that would fail",
+    "D-138 no invented phone number, address or opening hours anywhere in Help",
+    "D-139 reduce motion is a device preference, never sent to a server",
+    "D-140 the OS reduce-motion setting is the floor and cannot be overridden downward",
+    "D-141 the version row is omitted when the pipeline supplied no version",
+    "D-142 every irreversible act goes through one ConfirmSheet whose consequence is required",
+    "D-143 a registration cancellability is the server answer about that place, not the form promise",
+    "D-144 a cancellation adopts the server registration; a failure changes nothing on screen"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
@@ -116,16 +132,18 @@
     "Event and event-registration endpoints are `planned`",
     "Notification module is `planned` - list, preferences and token registration all decline",
     "No push SDK is wired, deliberately: PushService reports unsupported until an endpoint exists to register a token with",
-    "Event cancellation is contracted (cancelRegistration, canCancel) but no cancel control is built - it deserves TAB 24 confirmation treatment",
     "Platform seams (document picker, share sheet, URL launcher) cannot run in widget tests; each is thin glue with the decidable parts unit-tested",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
     "Cover images use Image.network with no disk cache; TAB 25 owns caching",
-    "The debug APK builds but was not installed or run on a device"
+    "The debug APK builds but was not installed or run on a device",
+    "ResidentProfile module is `planned` - consent history and every account request decline honestly",
+    "No account-controls contract exists yet: AccountControls is the client reading of such a block; wire names unfixed. Nothing is decoded from a guess",
+    "TAYTAY_APP_VERSION is not set by any pipeline here, so the version row is absent locally - designed behaviour, not a client-side gap"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 992 tests",
-    "format": "PASS - dart format clean",
+    "test": "PASS - 1028 tests",
+    "format": "PASS - dart format clean, 0 changed",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },
   "contextPressure": "NORMAL"

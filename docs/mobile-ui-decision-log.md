@@ -1890,5 +1890,20 @@ result they cannot explain.
 | D-127 | The inbox groups by Manila recency, not by date headings | copy / product | settled |
 | D-128 | Reading is optimistic and restores the unread mark on refusal | lifecycle / trust | settled |
 | D-129 | A notification is a pointer; detail is fetched under the live session | privacy / authorization | settled |
+| D-130 | Settings, help, privacy and accessibility are public — a guest reads them before handing over a number | product / privacy | settled |
+| D-131 | Account sections are absent for a guest, not present and disabled | product / copy | settled |
+| D-132 | `AccountControls` defaults to allowing nothing; no legal path appears the backend did not offer | authorization / privacy | settled |
+| D-133 | `loadControls` succeeds with `none` where every other planned repository declines — "nothing yet" is a true answer | architecture / trust | settled |
+| D-134 | Deactivation and erasure are separate requests, never conflated | privacy / copy | settled |
+| D-135 | A retention period is the office's sentence or nothing — never one this app guessed | privacy / copy | settled |
+| D-136 | A withdrawn consent keeps its row: the record is the evidence | privacy / trust | settled |
+| D-137 | A consent the LGU cannot operate without shows its reason, not a switch that would fail | copy / trust | settled |
+| D-138 | No invented phone number, address or opening hours anywhere in Help | trust / safety | settled |
+| D-139 | Reduce motion is a device preference, never sent to a server | privacy / accessibility | settled |
+| D-140 | The OS reduce-motion setting is the floor and cannot be overridden downward in-app | accessibility | settled |
+| D-141 | The version row is omitted when the pipeline supplied no version | trust / copy | settled |
+| D-142 | Every irreversible act goes through one `ConfirmSheet` whose `consequence` is required | product / safety | settled |
+| D-143 | A registration's cancellability is the server's answer about **that place**, not the form's promise | authorization / schema | settled |
+| D-144 | A cancellation adopts the server's registration; a failure changes nothing on screen | lifecycle / trust | settled |
 
-**129 decisions — 125 settled, 4 provisional pending named backend gaps.**
+**144 decisions — 140 settled, 4 provisional pending named backend gaps.**

@@ -183,6 +183,7 @@ Future<StubHistoryRepository> bootHistory(
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,
+    accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

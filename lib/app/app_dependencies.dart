@@ -48,6 +48,8 @@ import '../features/services/data/planned_service_request_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
 import '../features/services/domain/service_request_repository.dart';
+import '../features/settings/data/planned_account_controls_repository.dart';
+import '../features/settings/domain/account_controls.dart';
 import '../features/verification/data/planned_verification_repository.dart';
 import '../features/verification/domain/verification_repository.dart';
 
@@ -84,6 +86,7 @@ class AppDependencies {
     required this.documentPicker,
     required this.shareService,
     required this.externalLinks,
+    required this.accountControlsRepository,
     this.onDispose,
   });
 
@@ -182,6 +185,7 @@ class AppDependencies {
       // Defaults to the OS launcher, which refuses anything that is not https.
       // Tests inject `UnavailableExternalLinkService`.
       externalLinks: externalLinks ?? const PlatformExternalLinkService(),
+      accountControlsRepository: const PlannedAccountControlsRepository(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -254,6 +258,12 @@ class AppDependencies {
   /// venue. Refuses every other scheme, so a mistaken or hostile payload cannot
   /// open a `javascript:`, `intent:` or `file:` URI.
   final ExternalLinkService externalLinks;
+
+  /// What a resident may ask the office to do with their own account, and the
+  /// consent history behind it. Every control defaults to unavailable: a
+  /// deletion button on a government app is a statement about a civil record,
+  /// and it is not this client's to make.
+  final AccountControlsRepository accountControlsRepository;
 
   /// Releases the transport's connection pool, when it owns one.
   final void Function()? onDispose;

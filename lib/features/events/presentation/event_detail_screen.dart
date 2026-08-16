@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/api/request_context.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/haptics/app_haptics.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
@@ -13,6 +15,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/event_repository.dart';
 import 'events_screen.dart' show EventCover, registrationStateLabel;
@@ -25,10 +28,14 @@ import 'events_screen.dart' show EventCover, registrationStateLabel;
 /// announcement: a path can be typed or restored from the back stack without
 /// passing through [DeepLink].
 ///
-/// **Nothing on this screen registers attendance.** Registration is TAB 22, with
-/// its capacity and waitlist rules; a button here that could not complete would
-/// be worse than none. Opening an event shows it — and a link must never act on
-/// a resident's behalf in any case.
+/// **Nothing on this screen registers attendance.** Registering happens in its
+/// own flow, with its capacity, consent and waitlist rules. Opening an event
+/// shows it — a link must never act on a resident's behalf.
+///
+/// **Cancelling is the one exception, and it is confirmed.** Giving up a place
+/// needs no form and no wizard, so it lives on the card that shows the place;
+/// what it does need is a sentence naming what is lost, which is why it goes
+/// through [ConfirmSheet] rather than firing on tap.
 ///
 /// **A guest sees the whole thing.** Every fact on this screen is public: what
 /// is happening, when, where, and who to ask.
@@ -45,6 +52,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _loading = true;
   AppFailure? _failure;
   LguEvent? _event;
+  bool _cancelling = false;
 
   bool get _idIsValid => DeepLink.isValidIdentifier(widget.eventId);
 
@@ -72,6 +80,71 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         onErr: (failure) => _failure = failure,
       );
     });
+  }
+
+  /// Gives up the resident's place, after they say so in their own words.
+  ///
+  /// ---
+  ///
+  /// **The confirmation names what is lost, not "are you sure".** A place at an
+  /// LGU event is not always re-gettable — the next person on the waitlist takes
+  /// it, and a medical mission that filled will not have room again — so the
+  /// sheet says that before the button does anything.
+  ///
+  /// **One idempotency key per attempt.** Generated when the resident confirms,
+  /// not when the screen builds, so an abandoned confirmation leaves nothing
+  /// behind. It is not reused after the server answers.
+  ///
+  /// **A failure changes nothing on screen.** The registration stays exactly as
+  /// it was, because a place the app quietly removed from view is a place the
+  /// resident stops turning up for while still holding it.
+  Future<void> _cancelRegistration(EventRegistration registration) async {
+    final registrationId = registration.id;
+    if (registrationId == null || _cancelling) return;
+
+    final confirmed = await ConfirmSheet.show(
+      context: context,
+      title: 'Give up your place?',
+      consequence:
+          'Taytay LGU will offer your place to the next person waiting. If you '
+          'change your mind you will have to register again, and the event may '
+          'be full by then.',
+      confirmLabel: 'Give up my place',
+      cancelLabel: 'Keep my place',
+    );
+    if (!confirmed || !mounted) return;
+
+    final repository = AppDependencies.of(context).eventRepository;
+    setState(() => _cancelling = true);
+
+    final result = await repository.cancelRegistration(
+      eventId: registration.eventId,
+      registrationId: registrationId,
+      idempotencyKey: generateRequestId(),
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _cancelling = false;
+      result.fold(
+        // The server's own version of the registration replaces the local one —
+        // it knows whether this became `cancelled` or something else.
+        onOk: (updated) => _event = _event?.withRegistration(updated),
+        onErr: (_) {},
+      );
+    });
+
+    final message = switch (result) {
+      Ok<EventRegistration>() =>
+        'Your place has been given up. Taytay LGU has been told.',
+      // Copy from the failure kind, never the server's operator-facing text,
+      // and it says plainly that the place is still theirs.
+      Err<EventRegistration>(failure: final failure) =>
+        '${failure.residentMessage} You still have your place.',
+    };
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _openDirections(EventVenue venue) async {
@@ -142,6 +215,8 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
             event: loaded,
             onDirections: _openDirections,
             onShare: () => _share(loaded),
+            onCancelRegistration: _cancelRegistration,
+            cancelling: _cancelling,
           ),
         },
       ),
@@ -154,11 +229,15 @@ class _Detail extends StatelessWidget {
     required this.event,
     required this.onDirections,
     required this.onShare,
+    required this.onCancelRegistration,
+    required this.cancelling,
   });
 
   final LguEvent event;
   final Future<void> Function(EventVenue) onDirections;
   final Future<void> Function() onShare;
+  final Future<void> Function(EventRegistration) onCancelRegistration;
+  final bool cancelling;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +272,11 @@ class _Detail extends StatelessWidget {
 
               if (event.myRegistration != null) ...<Widget>[
                 const SizedBox(height: Spacing.md),
-                MyRegistrationCard(registration: event.myRegistration!),
+                MyRegistrationCard(
+                  registration: event.myRegistration!,
+                  cancelling: cancelling,
+                  onCancel: () => onCancelRegistration(event.myRegistration!),
+                ),
               ] else if (event.isRegistered) ...<Widget>[
                 const SizedBox(height: Spacing.md),
                 AppBanner(
@@ -346,9 +429,22 @@ bool _canOfferRegistration(LguEvent event) =>
 /// The resident's own registration: reference, position, instructions,
 /// attendance — and a way to give the place up when the office allows it.
 class MyRegistrationCard extends StatelessWidget {
-  const MyRegistrationCard({required this.registration, super.key});
+  const MyRegistrationCard({
+    required this.registration,
+    this.onCancel,
+    this.cancelling = false,
+    super.key,
+  });
 
   final EventRegistration registration;
+
+  /// Invoked after the resident confirms. Absent on surfaces that only display.
+  final Future<void> Function()? onCancel;
+
+  /// True while a cancellation is in flight, so the button cannot be pressed
+  /// twice — the second press would be a second idempotency key, which is a
+  /// second request against a place that may already be gone.
+  final bool cancelling;
 
   @override
   Widget build(BuildContext context) {
@@ -421,6 +517,25 @@ class MyRegistrationCard extends StatelessWidget {
               },
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+
+          // Only when the server says this place can still be given up. The
+          // control is quiet — a text button, not a red one — because giving up
+          // a place is an ordinary thing to do, and the weight belongs on the
+          // confirmation, not on the row.
+          if (registration.isCancellable && onCancel != null) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: AppButton(
+                label: 'Give up my place',
+                variant: AppButtonVariant.text,
+                fullWidth: false,
+                loading: cancelling,
+                hapticIntent: HapticIntent.selection,
+                onPressed: cancelling ? null : () => onCancel!(),
               ),
             ),
           ],

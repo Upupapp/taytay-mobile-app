@@ -108,6 +108,7 @@ class EventRegistration {
     this.waitlistPosition,
     this.attendance,
     this.registeredAt,
+    this.canCancel = false,
   });
 
   final String eventId;
@@ -137,7 +138,30 @@ class EventRegistration {
 
   final DateTime? registeredAt;
 
+  /// Whether **this** registration can still be given up from the app.
+  ///
+  /// ---
+  ///
+  /// **Separate from [EventRegistrationForm.canCancel], and answering a later
+  /// question.** The form's flag is what the office promises *before* somebody
+  /// registers — "you will be able to change your mind". This one is the answer
+  /// *now*, for this place, and it can be false while the form's is true: a
+  /// cancellation window closes, the register is printed, the event starts.
+  ///
+  /// Defaults to **false**, like every other permission-shaped field in this
+  /// app. An absent flag means the office did not say, and offering a button
+  /// the server will refuse teaches residents that the app lies to them.
+  final bool canCancel;
+
   bool get isActive => state.known?.isResidentRegistered ?? false;
+
+  /// Whether the app may offer a cancel control.
+  ///
+  /// Three conditions, all from the server: the office allows it, the place is
+  /// live, and there is an id to cancel against. A registration with no id is
+  /// one the backend has not made addressable, and cancelling "the one I have"
+  /// is not something this app will guess at.
+  bool get isCancellable => canCancel && isActive && id != null;
 
   bool get isWaitlisted => state.known == EventRegistrationState.waitlisted;
 
