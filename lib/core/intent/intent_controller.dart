@@ -95,7 +95,9 @@ class IntentController extends ChangeNotifier {
 
   /// Called when the session changes for any reason.
   ///
-  /// Wired to sign-out and to fail-closed invalidation. Deliberately unconditional:
+  /// Wired once in the composition root, to the **session itself** rather than
+  /// to any of the routes into it, so sign-out, expiry and a future account
+  /// switch all reach it. Deliberately unconditional:
   /// deciding *which* intents are safe to keep across a session change is the
   /// kind of judgement that is wrong once and then wrong in production.
   void onSessionChanged() => clear();

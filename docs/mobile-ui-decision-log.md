@@ -1930,5 +1930,8 @@ result they cannot explain.
 | D-167 | Consent gates crash reports too — "diagnostics" is not a different promise from "analytics" | privacy / trust | settled |
 | D-168 | The app never asks for consent it cannot act on; the build switch sits above consent | product / trust | settled |
 | D-169 | Settings states that nothing is collected, even with no switch to offer | copy / trust | settled |
+| D-170 | The persona dataset carries no identifier at all — not even a fake one | privacy / testing | settled |
+| D-171 | The session boundary is observed on the session itself, not on the three routes into it | correctness / privacy | settled |
+| D-172 | Signing in is not a boundary, it is the resume; only an ending or a swap clears | correctness / product | settled |
 
-**169 decisions — 165 settled, 4 provisional pending named backend gaps.**
+**172 decisions — 168 settled, 4 provisional pending named backend gaps.**

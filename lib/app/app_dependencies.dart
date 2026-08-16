@@ -135,20 +135,54 @@ class AppDependencies {
       secrets: secretStore,
     );
 
+    // ── The session boundary, in one place ──────────────────────────────
+    //
+    // A held intent must never survive a change of account, and neither must
+    // anything the previous session put on screen. Wiring that to the `401`
+    // path alone left a hole a shared phone walks straight through: a resident
+    // who *signs out* deliberately kept their pending intent, and the next
+    // person to sign in on the same handset had it replayed as them. In Taytay
+    // one smartphone per household is ordinary, so that is a real afternoon and
+    // not a hypothetical.
+    //
+    // So the boundary is observed on the **session itself** rather than on any
+    // of the three routes into it. Sign-out, expiry and a future account switch
+    // all pass through here, and none of them can be added later without it.
+    String? lastAccountId;
+    session.addListener(() {
+      final state = session.state;
+      // Still reading the store: nothing has changed yet, and clearing here
+      // would drop an intent captured before a cold start finished.
+      if (!state.isResolved) return;
+
+      final accountId = state.residentOrNull?.accountId;
+      final previous = lastAccountId;
+      lastAccountId = accountId;
+
+      // **Signing in is not a boundary — it is the resume.** A guest who met a
+      // gate, went and registered, and came back is the entire reason an intent
+      // is held; clearing it here would make the gate a dead end.
+      //
+      // What is a boundary: a session **ending** (sign-out or expiry), and one
+      // account replacing another. Both leave a held intent belonging to
+      // somebody who is no longer the person holding the phone.
+      final ended = previous != null && accountId == null;
+      final swapped =
+          previous != null && accountId != null && previous != accountId;
+      if (!ended && !swapped) return;
+
+      intents.onSessionChanged();
+      // Nothing personal is in the public cache by construction, but a
+      // resident handing the phone back should not see the previous session's
+      // screens repopulate from memory.
+      publicCache.clear();
+    });
+
     // Fail closed: with no refresher registered — and the committed backend
     // publishes no refresh endpoint — a 401 ends the session rather than being
     // retried or ignored.
     final authCoordinator = AuthCoordinator(
-      onSessionInvalidated: () async {
-        await session.handleUnauthenticated();
-        // A held intent must never survive a session boundary: resuming an
-        // action for a different account is the failure this prevents.
-        intents.onSessionChanged();
-        // Nothing personal is in the public cache by construction, but a
-        // resident handing the phone back should not see the previous session's
-        // screens repopulate from memory.
-        publicCache.clear();
-      },
+      onSessionInvalidated: session.handleUnauthenticated,
     );
 
     final httpTransport = transport ?? HttpApiTransport(config: config);
