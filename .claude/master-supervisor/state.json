@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 25 — Network Loss, Offline/Degraded UX & Performance",
-  "currentTabIndex": 25,
+  "currentTab": "TAB 26 — Accessibility, Localization & Device Adaptation",
+  "currentTabIndex": 26,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -28,15 +28,16 @@
     "TAB 21 — Events: Discovery & Event Detail",
     "TAB 22 — Events: Registration, Waitlist & Attendance Status",
     "TAB 23 — Notifications, Push, Inbox & Deep Links",
-    "TAB 24 — Settings, Privacy, Consent, Help & Account Controls"
+    "TAB 24 — Settings, Privacy, Consent, Help & Account Controls",
+    "TAB 25 — Network Loss, Offline/Degraded UX & Performance"
   ],
-  "currentObjective": "Keep the app honest and usable on the weak, intermittent connections many Taytay residents have (TAB 25).",
+  "currentObjective": "Keep the Servana-level polish usable for a broad municipal resident population (TAB 26).",
   "status": "RUNNING",
-  "supervisorCycleCount": 10,
+  "supervisorCycleCount": 11,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 24 commit created at end of this cycle",
-  "workingTreeState": "TAB 24 committed locally; nothing pushed",
+  "lastLocalCommit": "TAB 25 commit created at end of this cycle",
+  "workingTreeState": "TAB 25 committed locally; nothing pushed",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -124,7 +125,16 @@
     "D-141 the version row is omitted when the pipeline supplied no version",
     "D-142 every irreversible act goes through one ConfirmSheet whose consequence is required",
     "D-143 a registration cancellability is the server answer about that place, not the form promise",
-    "D-144 a cancellation adopts the server registration; a failure changes nothing on screen"
+    "D-144 a cancellation adopts the server registration; a failure changes nothing on screen",
+    "D-145 reachability is inferred from real request outcomes, never from a radio flag",
+    "D-146 no connectivity plugin: an Article 1 dependency to learn something less accurately",
+    "D-147 two consecutive failures before the app says anything",
+    "D-148 one offline banner, in the shell - reachability is one app-wide fact",
+    "D-149 the cache key is the path AND its sorted query; the allow-list is checked on the path",
+    "D-150 read evicts stale; readAllowingStale returns it with its age attached",
+    "D-151 the public cache stays in memory, and the cost of that is stated",
+    "D-152 unsent work says \"not sent\", never \"saved\"",
+    "D-153 remote images decode to the size of the box, capped, feed and full-size ceilings"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
@@ -134,15 +144,18 @@
     "No push SDK is wired, deliberately: PushService reports unsupported until an endpoint exists to register a token with",
     "Platform seams (document picker, share sheet, URL launcher) cannot run in widget tests; each is thin glue with the decidable parts unit-tested",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
-    "Cover images use Image.network with no disk cache; TAB 25 owns caching",
     "The debug APK builds but was not installed or run on a device",
     "ResidentProfile module is `planned` - consent history and every account request decline honestly",
     "No account-controls contract exists yet: AccountControls is the client reading of such a block; wire names unfixed. Nothing is decoded from a guess",
-    "TAYTAY_APP_VERSION is not set by any pipeline here, so the version row is absent locally - designed behaviour, not a client-side gap"
+    "TAYTAY_APP_VERSION is not set by any pipeline here, so the version row is absent locally - designed behaviour, not a client-side gap",
+    "No DevTools trace or on-device scroll profile: the decode ceiling is reasoned and test-asserted, not measured on hardware",
+    "No disk cache, deliberately (D-151): a force-quit on a dead connection shows nothing; within a process everything is kept",
+    "Announcements/events/programmes are allow-listed for caching but their modules are planned, so nothing populates those entries yet",
+    "No offline submission queue, deliberately: a held request is one whose eligibility and capacity have since moved"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 1028 tests",
+    "test": "PASS - 1078 tests",
     "format": "PASS - dart format clean, 0 changed",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

@@ -1905,5 +1905,14 @@ result they cannot explain.
 | D-142 | Every irreversible act goes through one `ConfirmSheet` whose `consequence` is required | product / safety | settled |
 | D-143 | A registration's cancellability is the server's answer about **that place**, not the form's promise | authorization / schema | settled |
 | D-144 | A cancellation adopts the server's registration; a failure changes nothing on screen | lifecycle / trust | settled |
+| D-145 | Reachability is inferred from real request outcomes, never from a radio flag | architecture / trust | settled |
+| D-146 | No connectivity plugin: a dependency reviewed under Article 1 to learn something less accurately | dependencies | settled |
+| D-147 | Two consecutive failures before the app says anything | product / trust | settled |
+| D-148 | One offline banner, in the shell — reachability is one app-wide fact | architecture | settled |
+| D-149 | The cache key is the path **and** its sorted query; the allow-list is checked on the path | correctness / privacy | settled |
+| D-150 | `read` evicts stale; `readAllowingStale` returns it with its age attached | architecture / trust | settled |
+| D-151 | The public cache stays in memory, and the cost of that is stated | privacy / architecture | settled |
+| D-152 | Unsent work says "not sent", never "saved" | copy / safety | settled |
+| D-153 | Remote images decode to the size of the box, capped, with a feed and a full-size ceiling | performance | settled |
 
-**144 decisions — 140 settled, 4 provisional pending named backend gaps.**
+**153 decisions — 149 settled, 4 provisional pending named backend gaps.**

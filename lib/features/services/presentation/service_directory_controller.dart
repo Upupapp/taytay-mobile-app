@@ -127,6 +127,23 @@ class ServiceDirectoryController extends ChangeNotifier {
         // connection keeps the catalogue they had, labelled as saved rather
         // than fresh.
         _failure = failure;
+
+        // With nothing on screen at all — a rebuilt controller, or a first
+        // load that never landed — fall back to whatever this process last
+        // actually fetched. An empty catalogue screen is the failure this
+        // avoids: a guest opening the app on a weak connection is exactly the
+        // person the public content is for.
+        //
+        // `loadedAt` becomes the cache's own timestamp rather than now, so the
+        // screen states when the office answered instead of when the app gave
+        // up.
+        if (_all.isEmpty) {
+          final remembered = _repository.lastKnownServices();
+          if (remembered != null && remembered.value.items.isNotEmpty) {
+            _all = remembered.value.items;
+            _loadedAt = remembered.storedAt;
+          }
+        }
     }
     notifyListeners();
   }

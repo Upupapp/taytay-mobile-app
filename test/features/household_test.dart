@@ -109,6 +109,7 @@ Future<BootedHousehold> bootHousehold(
     appLock: base.appLock,
     apiClient: base.apiClient,
     cache: base.cache,
+    network: base.network,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,

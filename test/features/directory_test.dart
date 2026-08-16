@@ -17,6 +17,7 @@ import 'package:taytay_resident/core/session/resident_capability.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
+import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/programs/data/planned_program_repository.dart';
 import 'package:taytay_resident/features/programs/data/program_dto.dart';
@@ -37,6 +38,10 @@ class StubCatalogRepository implements ServiceCatalogRepository {
   bool fails;
   int listCalls = 0;
 
+  /// What the process last actually fetched. Set by the cases that exercise
+  /// the offline fallback.
+  CachedRead<Paginated<LguService>>? lastKnown;
+
   @override
   Future<Result<Paginated<LguService>>> listServices({
     ServiceChannel? channel,
@@ -50,6 +55,14 @@ class StubCatalogRepository implements ServiceCatalogRepository {
     }
     return Ok<Paginated<LguService>>(Paginated<LguService>.single(services));
   }
+
+  @override
+  CachedRead<Paginated<LguService>>? lastKnownServices({
+    ServiceChannel? channel,
+    ServiceCategory? category,
+    int page = 1,
+    int perPage = 20,
+  }) => lastKnown;
 }
 
 /// Serves programmes, and records that a guest never asked.
@@ -211,6 +224,7 @@ Future<BootedDirectory> bootDirectory(
     appLock: base.appLock,
     apiClient: base.apiClient,
     cache: base.cache,
+    network: base.network,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,

@@ -5,6 +5,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../shared/widgets/intent_resumer.dart';
+import '../../../shared/widgets/network_status_views.dart';
 import 'shell_destinations.dart';
 
 /// Material 3 window size classes, as this app uses them.
@@ -118,7 +119,15 @@ class _BarScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: child,
+      // The banner sits above the branch content rather than inside each
+      // screen: reachability is one app-wide fact, and a per-screen banner is
+      // a banner some screens forget.
+      body: Column(
+        children: <Widget>[
+          const SafeArea(bottom: false, child: OfflineBanner()),
+          Expanded(child: child),
+        ],
+      ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: onSelected,
@@ -193,7 +202,14 @@ class _RailScaffold extends StatelessWidget {
             ],
           ),
           const VerticalDivider(width: 1, thickness: 1),
-          Expanded(child: child),
+          Expanded(
+            child: Column(
+              children: <Widget>[
+                const OfflineBanner(),
+                Expanded(child: child),
+              ],
+            ),
+          ),
         ],
       ),
     );

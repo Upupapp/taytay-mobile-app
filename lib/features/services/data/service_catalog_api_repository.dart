@@ -2,6 +2,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
+import '../../../core/storage/public_cache.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_catalog_repository.dart';
 import 'lgu_service_dto.dart';
@@ -32,25 +33,69 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
     int page = 1,
     int perPage = defaultPerPage,
   }) async {
-    final clampedPerPage = perPage.clamp(1, maxPerPage);
-    final clampedPage = page < 1 ? 1 : page;
-
     final response = await _apiClient.send<List<LguService>>(
       method: HttpMethod.get,
-      path: 'services',
+      path: path,
       // PUBLIC BY DESIGN: the server's route is unauthenticated so residents can
       // browse before registering.
       authenticated: false,
-      query: <String, String>{
-        'page': '$clampedPage',
-        'per_page': '$clampedPerPage',
-        if (channel != null) 'channel': channel.wireValue,
-        if (category != null) 'category': category.wireValue,
-      },
+      query: _query(
+        channel: channel,
+        category: category,
+        page: page,
+        perPage: perPage,
+      ),
       decode: LguServiceDto.listFromJson,
     );
 
     return response.map(_toPage);
+  }
+
+  @override
+  CachedRead<Paginated<LguService>>? lastKnownServices({
+    ServiceChannel? channel,
+    ServiceCategory? category,
+    int page = 1,
+    int perPage = defaultPerPage,
+  }) {
+    // The same query the request would have used, so the key matches the entry
+    // that request stored. Building it in one place is what makes that true.
+    final cached = _apiClient.cachedAllowingStale<List<LguService>>(
+      path,
+      _query(
+        channel: channel,
+        category: category,
+        page: page,
+        perPage: perPage,
+      ),
+    );
+    if (cached == null) return null;
+
+    return CachedRead<Paginated<LguService>>(
+      value: _toPage(cached.value),
+      storedAt: cached.storedAt,
+      isFresh: cached.isFresh,
+    );
+  }
+
+  /// The contract's own path for the catalogue.
+  static const String path = 'services';
+
+  /// One place the query is built, used by the request and by the cache lookup.
+  static Map<String, String> _query({
+    required ServiceChannel? channel,
+    required ServiceCategory? category,
+    required int page,
+    required int perPage,
+  }) {
+    final clampedPerPage = perPage.clamp(1, maxPerPage);
+    final clampedPage = page < 1 ? 1 : page;
+    return <String, String>{
+      'page': '$clampedPage',
+      'per_page': '$clampedPerPage',
+      if (channel != null) 'channel': channel.wireValue,
+      if (category != null) 'category': category.wireValue,
+    };
   }
 
   static Paginated<LguService> _toPage(ApiEnvelope<List<LguService>> envelope) {

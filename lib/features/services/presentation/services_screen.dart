@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
@@ -86,8 +87,8 @@ class _ServicesScreenState extends State<ServicesScreen> {
             if (controller.availableCategories.isNotEmpty)
               _CategoryChips(controller: controller),
             if (controller.isShowingStale)
-              const Padding(
-                padding: EdgeInsets.fromLTRB(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
                   Spacing.lg,
                   0,
                   Spacing.lg,
@@ -96,10 +97,17 @@ class _ServicesScreenState extends State<ServicesScreen> {
                 child: AppBanner(
                   tone: BannerTone.warning,
                   title: 'Showing what was saved on your phone',
-                  message:
-                      'Taytay LGU could not be reached, so this may be out of '
-                      'date. Check with the municipal hall before relying on '
-                      'dates or requirements.',
+                  // The timestamp is the point: a resident deciding whether to
+                  // travel to the municipal hall on the strength of a
+                  // requirement list needs to know how old the list is.
+                  message: <String>[
+                    if (controller.loadedAt != null)
+                      'Last updated '
+                          '${ManilaTime.formatDateTime(controller.loadedAt!)}.',
+                    'Taytay LGU could not be reached, so this may be out of '
+                        'date. Check with the municipal hall before relying on '
+                        'dates or requirements.',
+                  ].join(' '),
                 ),
               ),
             Expanded(

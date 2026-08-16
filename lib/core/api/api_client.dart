@@ -1,4 +1,5 @@
 import '../config/app_config.dart';
+import '../network/network_monitor.dart';
 import '../result/result.dart';
 import '../storage/public_cache.dart';
 import 'api_envelope.dart';
@@ -34,12 +35,14 @@ class ApiClient {
     UnauthenticatedHandler? onUnauthenticated,
     AuthCoordinator? authCoordinator,
     PublicCache? cache,
+    NetworkMonitor? networkMonitor,
   }) : _config = config,
        _transport = transport,
        _accessTokenProvider = accessTokenProvider,
        _onUnauthenticated = onUnauthenticated,
        _authCoordinator = authCoordinator,
-       _cache = cache;
+       _cache = cache,
+       _networkMonitor = networkMonitor;
 
   final AppConfig _config;
   final ApiTransport _transport;
@@ -52,6 +55,13 @@ class ApiClient {
 
   /// Public, non-personal responses only. See [PublicCache].
   final PublicCache? _cache;
+
+  /// Told the outcome of every request that reached the transport.
+  ///
+  /// Here rather than at call sites because reachability is one app-wide fact
+  /// and this is the one place every request passes through. A feature that
+  /// reported it separately would be a feature that could forget to.
+  final NetworkMonitor? _networkMonitor;
 
   /// Sends [method] [path] and decodes `data` with [decode].
   ///
@@ -128,11 +138,16 @@ class ApiClient {
 
     if (decoded.isOk && !authenticated) {
       _cache?.store<ApiEnvelope<T>>(
-        key: path,
+        // Path **and** query: a key of `services` alone would store page 3 and
+        // serve it to a request for page 1.
+        key: PublicCache.keyFor(path, query),
         value: decoded.valueOrNull!,
         authenticated: false,
       );
     }
+
+    // The verdict, not the request: no path, no payload, no identifier.
+    _networkMonitor?.recordOutcome(decoded.failureOrNull);
 
     return decoded;
   }
@@ -179,7 +194,22 @@ class ApiClient {
   /// A cached public envelope for [path], when one is fresh.
   ///
   /// Callers opt in explicitly; nothing is served from cache behind their back.
-  ApiEnvelope<T>? cached<T>(String path) => _cache?.read<ApiEnvelope<T>>(path);
+  ApiEnvelope<T>? cached<T>(
+    String path, [
+    Map<String, String> query = const <String, String>{},
+  ]) => _cache?.read<ApiEnvelope<T>>(PublicCache.keyFor(path, query));
+
+  /// A cached public envelope for [path] **even when it is stale**, with its
+  /// age attached.
+  ///
+  /// For the offline path only. A caller that takes this owes the resident a
+  /// visible statement of how old it is — see [CachedRead].
+  CachedRead<ApiEnvelope<T>>? cachedAllowingStale<T>(
+    String path, [
+    Map<String, String> query = const <String, String>{},
+  ]) => _cache?.readAllowingStale<ApiEnvelope<T>>(
+    PublicCache.keyFor(path, query),
+  );
 
   /// Absolute URI for [path], honouring the configured base path.
   ///

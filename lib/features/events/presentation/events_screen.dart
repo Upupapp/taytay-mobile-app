@@ -8,6 +8,7 @@ import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/remote_image.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/event_repository.dart';
 import 'events_controller.dart';
@@ -421,27 +422,13 @@ class EventCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    final image = Image.network(
-      url,
-      fit: BoxFit.cover,
-      // Decorative: the title, date and venue below carry every fact. Giving it
-      // a description this app invented for a picture it cannot see would be
-      // worse than silence.
-      excludeFromSemantics: true,
-      loadingBuilder: (context, child, progress) => progress == null
-          ? child
-          : ColoredBox(color: theme.colorScheme.surfaceContainerHighest),
-      errorBuilder: (context, error, stackTrace) => ColoredBox(
-        color: theme.colorScheme.surfaceContainerHighest,
-        child: Center(
-          child: Icon(
-            Icons.event_outlined,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ),
+    // Decorative: the title, date and venue below carry every fact. Giving it
+    // a description this app invented for a picture it cannot see would be
+    // worse than silence — so no `semanticLabel`.
+    final image = RemoteImage(
+      url: url,
+      placeholderIcon: Icons.event_outlined,
+      errorIcon: Icons.event_outlined,
     );
 
     return ClipRRect(

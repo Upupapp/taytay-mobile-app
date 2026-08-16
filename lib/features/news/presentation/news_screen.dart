@@ -6,6 +6,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/remote_image.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/announcement_repository.dart';
 import 'news_feed_controller.dart';
@@ -328,43 +329,19 @@ class _CoverImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(Radii.md),
       child: AspectRatio(
         aspectRatio: media.aspectRatio ?? _fallbackAspectRatio,
-        child: Image.network(
-          media.url,
-          fit: BoxFit.cover,
-          // Described by the LGU when it chose to; otherwise announced as
-          // decorative rather than given a description this app invented for a
-          // picture it cannot see.
+        // Described by the LGU when it chose to; otherwise announced as
+        // decorative rather than given a description this app invented for a
+        // picture it cannot see.
+        child: RemoteImage(
+          url: media.url,
           semanticLabel: media.alternativeText,
-          excludeFromSemantics: media.alternativeText == null,
-          loadingBuilder: (context, child, progress) => progress == null
-              ? child
-              : ColoredBox(
-                  color: theme.colorScheme.surfaceContainerHighest,
-                  child: const Center(
-                    child: SizedBox(
-                      width: IconSizes.md,
-                      height: IconSizes.md,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                ),
-          // A picture that will not load must never take the post down with it:
-          // the words are the part that matters in an advisory.
-          errorBuilder: (context, error, stackTrace) => ColoredBox(
-            color: theme.colorScheme.surfaceContainerHighest,
-            child: Center(
-              child: Icon(
-                Icons.image_not_supported_outlined,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
+          // One card at a time here rather than a screen of spinners: this is
+          // the lead image of a post the resident chose to read.
+          showProgress: true,
         ),
       ),
     );

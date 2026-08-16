@@ -54,6 +54,7 @@ Future<AppDependencies> boot(
     appLock: base.appLock,
     apiClient: base.apiClient,
     cache: base.cache,
+    network: base.network,
     authRepository: auth ?? base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,

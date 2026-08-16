@@ -472,11 +472,20 @@ void main() {
       expect(cache.size, 0);
     });
 
-    test('the allow-list holds only the committed public endpoints', () {
-      // services and health are unauthenticated by design on the server.
+    test('the allow-list holds only public endpoints', () {
+      // Every one of these is unauthenticated by design on the server: a guest
+      // browses services, announcements, events and programmes without an
+      // account, and `health` is the platform probe. Nothing personal is here,
+      // and a new endpoint is uncacheable until someone adds it deliberately.
       expect(
-        PublicCache.defaultAllowedKeys,
-        unorderedEquals(<String>['services', 'health']),
+        PublicCache.defaultAllowedPaths,
+        unorderedEquals(<String>[
+          'services',
+          'health',
+          'announcements',
+          'events',
+          'programs',
+        ]),
       );
     });
   });

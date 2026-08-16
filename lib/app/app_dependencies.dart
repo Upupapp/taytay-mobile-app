@@ -10,6 +10,7 @@ import '../core/documents/platform_document_picker.dart';
 import '../core/intent/intent_controller.dart';
 import '../core/links/external_link_service.dart';
 import '../core/links/platform_external_link_service.dart';
+import '../core/network/network_monitor.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
@@ -68,6 +69,7 @@ class AppDependencies {
     required this.appLock,
     required this.apiClient,
     required this.cache,
+    required this.network,
     required this.authRepository,
     required this.deviceSessionRepository,
     required this.platformRepository,
@@ -101,6 +103,7 @@ class AppDependencies {
     SecretStore? secrets,
     SessionStore? sessionStore,
     PublicCache? cache,
+    NetworkMonitor? networkMonitor,
     LocalAuthenticator? localAuthenticator,
     DocumentPicker? documentPicker,
     ShareService? shareService,
@@ -109,6 +112,7 @@ class AppDependencies {
     final secretStore = secrets ?? KeystoreSecretStore();
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
     final publicCache = cache ?? PublicCache();
+    final network = networkMonitor ?? NetworkMonitor();
     final session = SessionController(store: store);
     final launch = LaunchController(secrets: secretStore);
     final intents = IntentController();
@@ -146,6 +150,7 @@ class AppDependencies {
       onUnauthenticated: session.handleUnauthenticated,
       authCoordinator: authCoordinator,
       cache: publicCache,
+      networkMonitor: network,
     );
 
     return AppDependencies(
@@ -156,6 +161,7 @@ class AppDependencies {
       appLock: appLock,
       apiClient: apiClient,
       cache: publicCache,
+      network: network,
       authRepository: const PendingBackendAuthRepository(),
       deviceSessionRepository: const PlannedDeviceSessionRepository(),
       platformRepository: PlatformApiRepository(apiClient: apiClient),
@@ -204,6 +210,10 @@ class AppDependencies {
   final AppLockController appLock;
   final ApiClient apiClient;
   final PublicCache cache;
+
+  /// Whether Taytay LGU is reachable, inferred from the outcome of real
+  /// requests rather than from a radio flag. See [NetworkMonitor].
+  final NetworkMonitor network;
 
   final AuthRepository authRepository;
 
@@ -273,6 +283,7 @@ class AppDependencies {
     session.dispose();
     launch.dispose();
     intents.dispose();
+    network.dispose();
     cache.clear();
     onDispose?.call();
   }
