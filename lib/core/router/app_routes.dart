@@ -130,6 +130,24 @@ enum AppRoute {
   /// Account and preferences — needs an account, verified or not.
   account('account', '/account', AccessRequirement.authenticated),
 
+  /// Everything Taytay LGU has sent this resident.
+  ///
+  /// Authenticated: a notification is addressed to a person, and there is
+  /// nothing to show somebody without an account. A guest reading public
+  /// advisories does it in the newsfeed, which is open to them.
+  notifications(
+    'notifications',
+    '/notifications',
+    AccessRequirement.authenticated,
+  ),
+
+  /// What a resident chooses to be told about.
+  notificationSettings(
+    'notification-settings',
+    '/notifications/settings',
+    AccessRequirement.authenticated,
+  ),
+
   /// Sign-in and security: app lock, device sign-out, other sessions.
   /// Authenticated, because every control on it acts on a session that must
   /// exist for the screen to mean anything.

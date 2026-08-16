@@ -14,6 +14,7 @@ import '../../features/household/presentation/household_correction_screen.dart';
 import '../../features/household/presentation/household_screen.dart';
 import '../../features/news/presentation/news_post_screen.dart';
 import '../../features/news/presentation/news_screen.dart';
+import '../../features/notifications/presentation/notification_inbox_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
@@ -227,6 +228,18 @@ GoRouter buildAppRouter({
         path: AppRoute.security.path,
         name: AppRoute.security.routeName,
         builder: (context, state) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.notifications.path,
+        name: AppRoute.notifications.routeName,
+        builder: (context, state) => const NotificationInboxScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'settings',
+            name: AppRoute.notificationSettings.routeName,
+            builder: (context, state) => const NotificationPreferencesScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoute.verification.path,

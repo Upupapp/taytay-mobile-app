@@ -73,6 +73,18 @@ enum ResidentCapability {
     route: AppRoute.security,
   ),
 
+  /// The messages Taytay LGU has sent, and what to be told about.
+  ///
+  /// Authenticated rather than verified: a notification is addressed to a
+  /// person, not to a confirmed civil record, and an unverified resident going
+  /// through verification is precisely who needs to be told when it completes.
+  readNotifications(
+    AccessRequirement.authenticated,
+    'See your notifications',
+    BackendAvailability.planned,
+    route: AppRoute.notifications,
+  ),
+
   /// Assistance programmes. Authenticated because the citizen programme row is
   /// bearer-authenticated — the service catalogue next door is public, and the
   /// difference is the server's, not a product preference.

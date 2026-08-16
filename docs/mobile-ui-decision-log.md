@@ -1882,5 +1882,13 @@ result they cannot explain.
 | D-119 | `ServerValue` promoted to `core/api/`, re-exported | architecture | settled |
 | D-120 | A waitlist position and an attendance result appear only when published | privacy / trust | settled |
 | D-121 | `block` yields to an outcome once an attempt has answered | product / correctness | settled |
+| D-122 | The push prompt waits for a meaningful moment, and is never re-asked | product / trust | settled |
+| D-123 | No push SDK until an endpoint exists to register a token with | privacy / dependencies | settled |
+| D-124 | A push payload redacts itself entirely, including its keys | privacy | settled |
+| D-125 | Public advisories and security notices have no off switch | product / safety | settled |
+| D-126 | A category the backend has not set defaults to on | schema / safety | settled |
+| D-127 | The inbox groups by Manila recency, not by date headings | copy / product | settled |
+| D-128 | Reading is optimistic and restores the unread mark on refusal | lifecycle / trust | settled |
+| D-129 | A notification is a pointer; detail is fetched under the live session | privacy / authorization | settled |
 
-**121 decisions — 117 settled, 4 provisional pending named backend gaps.**
+**129 decisions — 125 settled, 4 provisional pending named backend gaps.**

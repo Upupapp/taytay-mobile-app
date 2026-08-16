@@ -30,6 +30,23 @@ class PlannedNotificationRepository implements NotificationRepository {
       plannedBackendFailure<void>(_module, 'markRead');
 
   @override
+  Future<Result<void>> markAllRead() async =>
+      plannedBackendFailure<void>(_module, 'markAllRead');
+
+  /// Declines rather than pretending the device is reachable.
+  ///
+  /// Registering a token against nothing would leave the app believing the LGU
+  /// can contact this resident when it cannot — and a resident who trusts that
+  /// stops checking the app for the answer they are waiting for.
+  @override
+  Future<Result<void>> registerPushToken(String token) async =>
+      plannedBackendFailure<void>(_module, 'registerPushToken');
+
+  @override
+  Future<Result<void>> unregisterPushToken() async =>
+      plannedBackendFailure<void>(_module, 'unregisterPushToken');
+
+  @override
   Future<Result<NotificationPreferences>> loadPreferences() async =>
       plannedBackendFailure<NotificationPreferences>(
         _module,

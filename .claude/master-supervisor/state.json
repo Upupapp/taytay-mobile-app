@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 23 — Notifications, Push, Inbox & Deep Links",
-  "currentTabIndex": 23,
+  "currentTab": "TAB 24 — Settings, Privacy, Consent, Help & Account Controls",
+  "currentTabIndex": 24,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -26,15 +26,16 @@
     "TAB 19 — Newsfeed, Resident Feed",
     "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
     "TAB 21 — Events: Discovery & Event Detail",
-    "TAB 22 — Events: Registration, Waitlist & Attendance Status"
+    "TAB 22 — Events: Registration, Waitlist & Attendance Status",
+    "TAB 23 — Notifications, Push, Inbox & Deep Links"
   ],
-  "currentObjective": "Connect residents to meaningful workflow updates without creating notification noise (TAB 23).",
+  "currentObjective": "Give residents transparent control over app preferences and privacy-related account actions (TAB 24).",
   "status": "RUNNING",
-  "supervisorCycleCount": 8,
+  "supervisorCycleCount": 9,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 22 commit created at end of this cycle",
-  "workingTreeState": "TAB 22 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 23 commit created at end of this cycle",
+  "workingTreeState": "TAB 23 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -99,12 +100,22 @@
     "D-118 server-defined form shapes promoted to core/forms, aliased in intake",
     "D-119 ServerValue promoted to core/api, re-exported",
     "D-120 a waitlist position and an attendance result appear only when published",
-    "D-121 block yields to an outcome once an attempt has answered"
+    "D-121 block yields to an outcome once an attempt has answered",
+    "D-122 the push prompt waits for a meaningful moment, and is never re-asked",
+    "D-123 no push SDK until an endpoint exists to register a token with",
+    "D-124 a push payload redacts itself entirely, including its keys",
+    "D-125 public advisories and security notices have no off switch",
+    "D-126 a category the backend has not set defaults to on",
+    "D-127 the inbox groups by Manila recency, not by date headings",
+    "D-128 reading is optimistic and restores the unread mark on refusal",
+    "D-129 a notification is a pointer; detail is fetched under the live session"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
     "Announcement and post-interaction endpoints are `planned`",
-    "Event and event-registration endpoints are `planned`; the screens show their honest states",
+    "Event and event-registration endpoints are `planned`",
+    "Notification module is `planned` - list, preferences and token registration all decline",
+    "No push SDK is wired, deliberately: PushService reports unsupported until an endpoint exists to register a token with",
     "Event cancellation is contracted (cancelRegistration, canCancel) but no cancel control is built - it deserves TAB 24 confirmation treatment",
     "Platform seams (document picker, share sheet, URL launcher) cannot run in widget tests; each is thin glue with the decidable parts unit-tested",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
@@ -113,7 +124,7 @@
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 956 tests",
+    "test": "PASS - 992 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },
