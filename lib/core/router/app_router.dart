@@ -75,10 +75,14 @@ GoRouter buildAppRouter({
   required LaunchController launch,
   String? initialLocation,
   GlobalKey<NavigatorState>? navigatorKey,
+  List<NavigatorObserver> observers = const <NavigatorObserver>[],
 }) {
   return GoRouter(
     navigatorKey: navigatorKey,
     initialLocation: initialLocation ?? AppRoute.splash.path,
+    // Observation only. An observer is told where navigation went; it never
+    // decides. The guard remains the single source of navigation truth.
+    observers: observers,
     // Both are navigation inputs: the session decides what is reachable, and
     // first-launch decides where a cold start begins. Merged so a change to
     // either re-evaluates the guard.

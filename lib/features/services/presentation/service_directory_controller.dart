@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_catalog_repository.dart';
 
@@ -32,11 +35,18 @@ import '../domain/service_catalog_repository.dart';
 class ServiceDirectoryController extends ChangeNotifier {
   ServiceDirectoryController({
     required ServiceCatalogRepository repository,
+    Telemetry? telemetry,
     DateTime Function()? clock,
   }) : _repository = repository,
+       _telemetry = telemetry,
        _now = clock ?? DateTime.now;
 
   final ServiceCatalogRepository _repository;
+
+  /// Optional, and inert unless a resident consented. Absent in the tests that
+  /// are about the catalogue rather than about instrumentation.
+  final Telemetry? _telemetry;
+
   final DateTime Function() _now;
 
   List<LguService> _all = const <LguService>[];
@@ -109,6 +119,9 @@ class ServiceDirectoryController extends ChangeNotifier {
   /// True when a filter is hiding entries that were loaded.
   bool get isFiltered => _query.trim().isNotEmpty || _category != null;
 
+  /// Distinguishes a first attempt from a retry, which are different problems.
+  bool _hasLoadedOnce = false;
+
   Future<void> load() async {
     _loading = true;
     notifyListeners();
@@ -117,6 +130,23 @@ class ServiceDirectoryController extends ChangeNotifier {
 
     _loading = false;
     _hasLoaded = true;
+
+    // The category, from the failure's kind. Never its message, never the
+    // server's, and nothing about what was in the catalogue.
+    //
+    // Unawaited: instrumentation never delays what a resident is waiting for,
+    // and `record` cannot throw.
+    unawaited(
+      _telemetry?.record(
+        OperationFinished(
+          operation: TelemetryOperation.loadCatalogue,
+          result: CrashRedaction.resultOf(result.failureOrNull),
+          retried: _hasLoadedOnce,
+        ),
+      ),
+    );
+    _hasLoadedOnce = true;
+
     switch (result) {
       case Ok<Paginated<LguService>>(:final value):
         _all = value.items;

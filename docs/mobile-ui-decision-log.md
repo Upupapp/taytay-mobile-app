@@ -1921,5 +1921,14 @@ result they cannot explain.
 | D-158 | Every snackbar is announced as well as shown, with tone as a parameter rather than a guess | accessibility | settled |
 | D-159 | The form error summary is a live region carrying every message as one sentence | accessibility | settled |
 | D-160 | Keyboard action follows field shape: `next`, `done`, or `newline` where the office asked for a paragraph | accessibility / product | settled |
+| D-161 | No analytics or crash SDK: a third-party processor is a decision the municipality signs, not a pubspec line | privacy / dependencies | settled |
+| D-162 | The event catalogue is a sealed type set with no free-text field — structural, not a convention | privacy / architecture | settled |
+| D-163 | A screen view carries an `AppRoute` enum value; an unresolvable path sends nothing | privacy | settled |
+| D-164 | Durations and counts travel as buckets — a precise timing is a weak identifier | privacy | settled |
+| D-165 | `CrashReport` has no field for the message: a Dart exception quotes the value that broke it | privacy / architecture | settled |
+| D-166 | Stack frames are scrubbed of absolute paths and bounded to 24 | privacy | settled |
+| D-167 | Consent gates crash reports too — "diagnostics" is not a different promise from "analytics" | privacy / trust | settled |
+| D-168 | The app never asks for consent it cannot act on; the build switch sits above consent | product / trust | settled |
+| D-169 | Settings states that nothing is collected, even with no switch to offer | copy / trust | settled |
 
-**160 decisions — 156 settled, 4 provisional pending named backend gaps.**
+**169 decisions — 165 settled, 4 provisional pending named backend gaps.**

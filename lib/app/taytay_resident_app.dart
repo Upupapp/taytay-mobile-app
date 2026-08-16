@@ -8,6 +8,7 @@ import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
 import '../core/l10n/app_locales.dart';
 import '../core/router/app_router.dart';
+import '../core/telemetry/telemetry_route_observer.dart';
 import '../features/auth/presentation/app_lock_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../shared/widgets/session_expired_sheet.dart';
@@ -31,6 +32,9 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   late final GoRouter _router = buildAppRouter(
+    observers: <NavigatorObserver>[
+      TelemetryRouteObserver(widget.dependencies.telemetry),
+    ],
     session: widget.dependencies.session,
     launch: widget.dependencies.launch,
     navigatorKey: _navigatorKey,

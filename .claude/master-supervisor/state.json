@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 27 — Analytics/Telemetry, Crash Safety & Privacy Guardrails",
-  "currentTabIndex": 27,
+  "currentTab": "TAB 28 — QA, Test Journeys, Final Servana/Taytay Polish & Release Readiness",
+  "currentTabIndex": 28,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -30,15 +30,16 @@
     "TAB 23 — Notifications, Push, Inbox & Deep Links",
     "TAB 24 — Settings, Privacy, Consent, Help & Account Controls",
     "TAB 25 — Network Loss, Offline/Degraded UX & Performance",
-    "TAB 26 — Accessibility, Localization & Device Adaptation"
+    "TAB 26 — Accessibility, Localization & Device Adaptation",
+    "TAB 27 — Analytics/Telemetry, Crash Safety & Privacy Guardrails"
   ],
-  "currentObjective": "Understand how the app is used without ever holding what a resident is doing (TAB 27).",
+  "currentObjective": "Validate the complete resident experience and certify release readiness (TAB 28).",
   "status": "RUNNING",
-  "supervisorCycleCount": 12,
+  "supervisorCycleCount": 13,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 26 commit created at end of this cycle",
-  "workingTreeState": "TAB 26 committed locally; nothing pushed",
+  "lastLocalCommit": "TAB 27 commit created at end of this cycle",
+  "workingTreeState": "TAB 27 committed locally; nothing pushed",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -142,7 +143,16 @@
     "D-157 dates never follow the device locale - a reordered date is a different day",
     "D-158 every snackbar is announced as well as shown, tone as a parameter not a guess",
     "D-159 the form error summary is a live region carrying every message as one sentence",
-    "D-160 keyboard action follows field shape: next, done, or newline"
+    "D-160 keyboard action follows field shape: next, done, or newline",
+    "D-161 no analytics or crash SDK: a third-party processor is a decision the municipality signs",
+    "D-162 the event catalogue is a sealed type set with no free-text field - structural, not a convention",
+    "D-163 a screen view carries an AppRoute enum value; an unresolvable path sends nothing",
+    "D-164 durations and counts travel as buckets - a precise timing is a weak identifier",
+    "D-165 CrashReport has no field for the message: a Dart exception quotes the value that broke it",
+    "D-166 stack frames are scrubbed of absolute paths and bounded to 24",
+    "D-167 consent gates crash reports too - diagnostics is not a different promise from analytics",
+    "D-168 the app never asks for consent it cannot act on; the build switch sits above consent",
+    "D-169 Settings states that nothing is collected, even with no switch to offer"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
@@ -163,11 +173,14 @@
     "Screen-specific copy is still English literals: the l10n architecture is proven on the cross-cutting vocabulary, the rest is a mechanical lift",
     "No real TalkBack/VoiceOver run: semantics are asserted through the tree, not on a device",
     "No right-to-left support, deliberately - neither language this app speaks is RTL",
-    "Contrast over remote images is unasserted because nothing draws text over one; a future design needs a scrim and a test first"
+    "Contrast over remote images is unasserted because nothing draws text over one; a future design needs a scrim and a test first",
+    "No TelemetrySink implementation exists, deliberately: no analytics service is named and no endpoint is published",
+    "Most of the telemetry catalogue has no call sites yet - defined and tested rather than scattered",
+    "The consent prompt has no UI flow because shouldAskForConsent is false in every shipped build"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 1119 tests",
+    "test": "PASS - 1151 tests",
     "format": "PASS - dart format clean, 0 changed",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

@@ -7,6 +7,7 @@ import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
@@ -100,6 +101,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: 'What you agreed to, and asking for changes',
                     route: AppRoute.privacyControls,
                   ),
+                const SizedBox(height: Spacing.sm),
+                const _TelemetrySection(),
 
                 const SizedBox(height: Spacing.lg),
                 const _SectionHeading('Accessibility'),
@@ -194,6 +197,71 @@ class _AccessibilitySectionState extends State<_AccessibilitySection> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// What the app sends about how it is used, and the switch when there is one.
+///
+/// ---
+///
+/// **The statement is shown even when there is nothing to switch.** A government
+/// app that collects no usage data should say so, plainly, on the screen where a
+/// resident goes looking — silence reads as "they are not telling me", and on a
+/// municipal ID app that is the wrong impression to leave.
+///
+/// The switch appears only when telemetry could actually run: a resident asked
+/// for permission to do something the app cannot do is a dialog that costs trust
+/// and buys nothing.
+class _TelemetrySection extends StatefulWidget {
+  const _TelemetrySection();
+
+  @override
+  State<_TelemetrySection> createState() => _TelemetrySectionState();
+}
+
+class _TelemetrySectionState extends State<_TelemetrySection> {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final telemetry = AppDependencies.of(context).telemetry;
+
+    return AnimatedBuilder(
+      animation: telemetry,
+      builder: (context, _) {
+        final offerable =
+            telemetry.shouldAskForConsent ||
+            telemetry.consent != TelemetryConsent.notAsked;
+
+        if (!offerable) {
+          return Text(
+            'This app sends no information about how you use it to anyone. It '
+            'contacts Taytay LGU only to show you what you asked for.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            SwitchListTile(
+              value: telemetry.consent == TelemetryConsent.granted,
+              onChanged: (on) => telemetry.setConsent(
+                on ? TelemetryConsent.granted : TelemetryConsent.declined,
+              ),
+              contentPadding: EdgeInsets.zero,
+              title: const Text('Help improve this app'),
+              subtitle: const Text(
+                'Sends which screens are opened and whether things worked. '
+                'Never your name, your documents, what you applied for, or '
+                'anything you typed.',
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

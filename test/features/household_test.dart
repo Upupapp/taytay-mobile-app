@@ -110,6 +110,7 @@ Future<BootedHousehold> bootHousehold(
     apiClient: base.apiClient,
     cache: base.cache,
     network: base.network,
+    telemetry: base.telemetry,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,

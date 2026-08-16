@@ -55,6 +55,7 @@ Future<AppDependencies> boot(
     apiClient: base.apiClient,
     cache: base.cache,
     network: base.network,
+    telemetry: base.telemetry,
     authRepository: auth ?? base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
     platformRepository: base.platformRepository,

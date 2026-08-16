@@ -21,6 +21,7 @@ import '../core/startup/launch_controller.dart';
 import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
+import '../core/telemetry/telemetry.dart';
 import '../features/auth/data/pending_backend_auth_repository.dart';
 import '../features/auth/data/planned_device_session_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
@@ -70,6 +71,7 @@ class AppDependencies {
     required this.apiClient,
     required this.cache,
     required this.network,
+    required this.telemetry,
     required this.authRepository,
     required this.deviceSessionRepository,
     required this.platformRepository,
@@ -104,6 +106,7 @@ class AppDependencies {
     SessionStore? sessionStore,
     PublicCache? cache,
     NetworkMonitor? networkMonitor,
+    TelemetrySink? telemetrySink,
     LocalAuthenticator? localAuthenticator,
     DocumentPicker? documentPicker,
     ShareService? shareService,
@@ -113,6 +116,13 @@ class AppDependencies {
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
     final publicCache = cache ?? PublicCache();
     final network = networkMonitor ?? NetworkMonitor();
+    // Off by default and off in every shipped build: `DisabledTelemetrySink`
+    // reports itself unavailable, so nothing is collected until the
+    // municipality names a service and a resident agrees separately.
+    final telemetry = Telemetry(
+      sink: telemetrySink ?? const DisabledTelemetrySink(),
+      secrets: secretStore,
+    );
     final session = SessionController(store: store);
     final launch = LaunchController(secrets: secretStore);
     final intents = IntentController();
@@ -162,6 +172,7 @@ class AppDependencies {
       apiClient: apiClient,
       cache: publicCache,
       network: network,
+      telemetry: telemetry,
       authRepository: const PendingBackendAuthRepository(),
       deviceSessionRepository: const PlannedDeviceSessionRepository(),
       platformRepository: PlatformApiRepository(apiClient: apiClient),
@@ -214,6 +225,11 @@ class AppDependencies {
   /// Whether Taytay LGU is reachable, inferred from the outcome of real
   /// requests rather than from a radio flag. See [NetworkMonitor].
   final NetworkMonitor network;
+
+  /// Operational telemetry, off unless the resident agreed, the build permits
+  /// it **and** a sink exists. The shipped build fails all three. See
+  /// [Telemetry].
+  final Telemetry telemetry;
 
   final AuthRepository authRepository;
 
@@ -284,6 +300,7 @@ class AppDependencies {
     launch.dispose();
     intents.dispose();
     network.dispose();
+    telemetry.dispose();
     cache.clear();
     onDispose?.call();
   }

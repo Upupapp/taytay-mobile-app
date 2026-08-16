@@ -59,6 +59,7 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     _controller =
         ServiceDirectoryController(
             repository: AppDependencies.of(context).serviceCatalogRepository,
+            telemetry: AppDependencies.of(context).telemetry,
           )
           ..addListener(_onChanged)
           ..load();
