@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 22 — Events: Registration, Waitlist & Attendance Status",
-  "currentTabIndex": 22,
+  "currentTab": "TAB 23 — Notifications, Push, Inbox & Deep Links",
+  "currentTabIndex": 23,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -25,15 +25,16 @@
     "TAB 18 — Assistance History, Referral & Release Resident View",
     "TAB 19 — Newsfeed, Resident Feed",
     "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
-    "TAB 21 — Events: Discovery & Event Detail"
+    "TAB 21 — Events: Discovery & Event Detail",
+    "TAB 22 — Events: Registration, Waitlist & Attendance Status"
   ],
-  "currentObjective": "Allow residents to register for admin-created events while the backend remains authoritative for capacity and eligibility (TAB 22).",
+  "currentObjective": "Connect residents to meaningful workflow updates without creating notification noise (TAB 23).",
   "status": "RUNNING",
-  "supervisorCycleCount": 7,
+  "supervisorCycleCount": 8,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 21 commit created at end of this cycle",
-  "workingTreeState": "TAB 21 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 22 commit created at end of this cycle",
+  "workingTreeState": "TAB 22 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -90,13 +91,21 @@
     "D-110 a directions link is the server or absent - never composed",
     "D-111 remaining places are stated by the server, never computed",
     "D-112 publication state is enforced at the list and the detail",
-    "D-113 Registered is hidden from a guest, decided via AccessPolicy"
+    "D-113 Registered is hidden from a guest, decided via AccessPolicy",
+    "D-114 full and closed are outcomes to read, not errors to report",
+    "D-115 the register control appears only on the server open state",
+    "D-116 whether an unverified resident may register is a per-event server answer",
+    "D-117 the registration route is authenticated, with the form gating verification",
+    "D-118 server-defined form shapes promoted to core/forms, aliased in intake",
+    "D-119 ServerValue promoted to core/api, re-exported",
+    "D-120 a waitlist position and an attendance result appear only when published",
+    "D-121 block yields to an outcome once an attempt has answered"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
-    "Announcement and post-interaction endpoints are `planned` - the shipped repository declines and posts carry PostCapabilities.none",
-    "GET /api/v1/events is `planned` - the events screens show their failure state against the real backend",
-    "Event registration, waitlist and attendance are TAB 22; TAB 21 displays state and offers no register control",
+    "Announcement and post-interaction endpoints are `planned`",
+    "Event and event-registration endpoints are `planned`; the screens show their honest states",
+    "Event cancellation is contracted (cancelRegistration, canCancel) but no cancel control is built - it deserves TAB 24 confirmation treatment",
     "Platform seams (document picker, share sheet, URL launcher) cannot run in widget tests; each is thin glue with the decidable parts unit-tested",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
     "Cover images use Image.network with no disk cache; TAB 25 owns caching",
@@ -104,7 +113,7 @@
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 921 tests",
+    "test": "PASS - 956 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

@@ -5,10 +5,11 @@ import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
 import '../../news/domain/announcement_repository.dart' show PublicationState;
-import '../../services/domain/lgu_service.dart' show ServerValue;
+import 'event_registration.dart';
 
+export '../../../core/api/server_value.dart';
 export '../../news/domain/announcement_repository.dart' show PublicationState;
-export '../../services/domain/lgu_service.dart' show ServerValue;
+export 'event_registration.dart';
 
 /// Which part of the events list is being asked for.
 ///
@@ -149,6 +150,7 @@ class LguEvent {
     this.capacity = const EventCapacity(),
     this.registrationState,
     this.publicationState,
+    this.myRegistration,
   });
 
   /// Opaque server identifier. The deep-link target for `event`.
@@ -190,6 +192,12 @@ class LguEvent {
 
   final ServerValue<EventRegistrationState>? registrationState;
   final ServerValue<PublicationState>? publicationState;
+
+  /// The signed-in resident's own registration, when the server sent one.
+  ///
+  /// Absent for a guest by construction — the endpoint has nothing to attach —
+  /// which is why nothing on the public screens has to guard against it.
+  final EventRegistration? myRegistration;
 
   /// Whether this event may be shown to a resident.
   ///
@@ -251,4 +259,42 @@ abstract interface class EventRepository {
   });
 
   Future<Result<LguEvent>> loadEvent(String id);
+
+  // ── Registration ─────────────────────────────────────────────────────────
+  //
+  // The server is authoritative for capacity and eligibility. Nothing here
+  // lets the app decide a place is available; it asks, and reports the answer.
+
+  /// What this event asks before it will accept a registration.
+  ///
+  /// Also carries whether an unverified resident may register — the Master
+  /// Command's middle case, which is a per-event policy the client asks about
+  /// rather than assumes.
+  Future<Result<EventRegistrationForm>> loadRegistrationForm(String eventId);
+
+  /// Registers the signed-in resident.
+  ///
+  /// [idempotencyKey] is required: a dropped connection after the server took
+  /// the last place is indistinguishable from one before, and a resident who
+  /// retried into a double registration would be holding a place somebody else
+  /// could have had.
+  ///
+  /// A full or closed event is an ordinary outcome carried in the result, not a
+  /// failure — see [RegistrationOutcome].
+  Future<Result<RegistrationAttempt>> register({
+    required String eventId,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required String idempotencyKey,
+  });
+
+  /// Gives up a place, when the office allows it.
+  ///
+  /// `/me`-scoped: it names the resident's own registration and takes no
+  /// resident identifier.
+  Future<Result<EventRegistration>> cancelRegistration({
+    required String eventId,
+    required String registrationId,
+    required String idempotencyKey,
+  });
 }

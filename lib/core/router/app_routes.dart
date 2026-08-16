@@ -84,6 +84,22 @@ enum AppRoute {
     parameters: <String>['eventId'],
   ),
 
+  /// Registering for one event.
+  ///
+  /// **Authenticated, not verified** — and that is the server's call, not a
+  /// guess. Whether an unverified resident may register is a per-event policy
+  /// (`EventRegistrationForm.allowsUnverifiedResidents`): a barangay clean-up
+  /// may take anyone with an account, a cash-aid orientation may not. Gating the
+  /// route at `verified` would refuse the first case; gating it at `public`
+  /// would open a `/me`-scoped write to a guest. `authenticated` is the honest
+  /// floor, and the screen shows a verification gate when the form asks for one.
+  eventRegistration(
+    'event-registration',
+    '/events/:eventId/register',
+    AccessRequirement.authenticated,
+    parameters: <String>['eventId'],
+  ),
+
   /// The resident's own area. **Public**, and deliberately so: it is the fifth
   /// tab, it must exist for a guest, and for a guest it shows the way in rather
   /// than a locked door. Everything inside it that needs an account declares

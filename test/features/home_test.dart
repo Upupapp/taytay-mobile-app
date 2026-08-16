@@ -188,6 +188,26 @@ class StubEventRepository implements EventRepository {
   @override
   Future<Result<LguEvent>> loadEvent(String id) async =>
       const Err<LguEvent>(ServerFailure());
+
+  @override
+  Future<Result<EventRegistrationForm>> loadRegistrationForm(
+    String eventId,
+  ) async => const Err<EventRegistrationForm>(ServerFailure());
+
+  @override
+  Future<Result<RegistrationAttempt>> register({
+    required String eventId,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required String idempotencyKey,
+  }) async => const Err<RegistrationAttempt>(ServerFailure());
+
+  @override
+  Future<Result<EventRegistration>> cancelRegistration({
+    required String eventId,
+    required String registrationId,
+    required String idempotencyKey,
+  }) async => const Err<EventRegistration>(ServerFailure());
 }
 
 AppConfig config() => AppConfig.from(

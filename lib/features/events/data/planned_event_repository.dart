@@ -26,4 +26,36 @@ class PlannedEventRepository implements EventRepository {
   Future<Result<LguEvent>> loadEvent(String id) async => const Err<LguEvent>(
     ServerFailure(isTemporary: true, debugMessage: _reason),
   );
+
+  // ── Registration ─────────────────────────────────────────────────────────
+  //
+  // All decline. A fabricated registration is the worst outcome available
+  // here: a resident would arrive at a covered court holding a reference the
+  // office has never seen, and be turned away in front of the queue.
+
+  @override
+  Future<Result<EventRegistrationForm>> loadRegistrationForm(
+    String eventId,
+  ) async => const Err<EventRegistrationForm>(
+    ServerFailure(isTemporary: true, debugMessage: _reason),
+  );
+
+  @override
+  Future<Result<RegistrationAttempt>> register({
+    required String eventId,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required String idempotencyKey,
+  }) async => const Err<RegistrationAttempt>(
+    ServerFailure(isTemporary: true, debugMessage: _reason),
+  );
+
+  @override
+  Future<Result<EventRegistration>> cancelRegistration({
+    required String eventId,
+    required String registrationId,
+    required String idempotencyKey,
+  }) async => const Err<EventRegistration>(
+    ServerFailure(isTemporary: true, debugMessage: _reason),
+  );
 }

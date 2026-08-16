@@ -33,106 +33,35 @@ library;
 
 import 'package:flutter/foundation.dart';
 
-import 'lgu_service.dart';
+import '../../../core/forms/server_form.dart';
 
-/// How one question is answered.
+export '../../../core/forms/server_form.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The field shapes moved to `core/forms/server_form.dart` when event
+// registration (TAB 22) needed the same thing: a set of fields an office
+// defined, rendered by a client that does not know what they are. Duplicating
+// them would have produced two enums and two `isRenderable` rules over one
+// concept, which is the drift D-79 already records.
+//
+// Aliased rather than renamed, because "intake question" is the right word in
+// this flow and every call site here reads better for it. The definitions are
+// shared; the vocabulary is local.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// How one question is answered. See [ServerFieldKind].
+typedef IntakeAnswerKind = ServerFieldKind;
+
+/// One option on a choice question. See [ServerFieldChoice].
+typedef IntakeChoice = ServerFieldChoice;
+
+/// One question the office asks about this application. See [ServerField].
 ///
-/// Carried as a [ServerValue] wherever it appears, because the backend contract
-/// is explicit that adding an enum value is not a breaking change.
-enum IntakeAnswerKind {
-  shortText('short_text'),
-  longText('long_text'),
-  number('number'),
-  date('date'),
-  yesNo('yes_no'),
-  singleChoice('single_choice'),
-  multipleChoice('multiple_choice');
-
-  const IntakeAnswerKind(this.wireValue);
-
-  final String wireValue;
-}
-
-/// One option on a choice question.
-@immutable
-class IntakeChoice {
-  const IntakeChoice({required this.value, required this.label});
-
-  /// Sent back verbatim. Opaque to the app.
-  final String value;
-
-  /// Resident-facing, authored by the LGU.
-  final String label;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is IntakeChoice && other.value == value && other.label == label);
-
-  @override
-  int get hashCode => Object.hash(value, label);
-
-  @override
-  String toString() => 'IntakeChoice($value)';
-}
-
-/// One question the office asks about this application.
-@immutable
-class IntakeQuestion {
-  const IntakeQuestion({
-    required this.key,
-    required this.prompt,
-    required this.kind,
-    this.helpText,
-    this.isRequired = true,
-    this.maxLength,
-    this.choices = const <IntakeChoice>[],
-  });
-
-  /// Stable server key. The answer is sent under it, and a server-side
-  /// validation error against it lands on this control without translation.
-  final String key;
-
-  final String prompt;
-  final ServerValue<IntakeAnswerKind> kind;
-
-  /// Optional guidance shown under the prompt.
-  final String? helpText;
-
-  final bool isRequired;
-
-  /// Server-declared cap. `null` means the server did not state one, and the
-  /// app does not invent a limit — a guessed cap silently truncates an answer
-  /// the office would have accepted.
-  final int? maxLength;
-
-  final List<IntakeChoice> choices;
-
-  bool get _needsChoices =>
-      kind.known == IntakeAnswerKind.singleChoice ||
-      kind.known == IntakeAnswerKind.multipleChoice;
-
-  /// Whether this build can present an input for this question.
-  ///
-  /// False for a kind this version has never heard of, and for a choice
-  /// question that arrived with no options. **An unrenderable question is never
-  /// skipped**: skipping it would submit an application the office considers
-  /// incomplete, and the resident would never learn why. The wizard blocks
-  /// submission and sends them to the municipal hall instead. See
-  /// [AssistanceIntakeForm.hasUnrenderableQuestions].
-  bool get isRenderable =>
-      kind.isRecognised && (!_needsChoices || choices.isNotEmpty);
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || (other is IntakeQuestion && other.key == key);
-
-  @override
-  int get hashCode => key.hashCode;
-
-  @override
-  String toString() => 'IntakeQuestion($key, ${kind.raw})';
-}
+/// **An unrenderable question is never skipped**: skipping it would submit an
+/// application the office considers incomplete, and the resident would never
+/// learn why. The wizard blocks submission and sends them to the municipal hall
+/// instead — see [AssistanceIntakeForm.hasUnrenderableQuestions].
+typedef IntakeQuestion = ServerField;
 
 /// A document the office needs for this application.
 ///
@@ -168,39 +97,10 @@ class IntakeRequirement {
 
 /// An acknowledgement the LGU requires before this application is accepted.
 ///
-/// **Declared by the server, never by the app.** What a resident is asked to
-/// consent to under RA 10173 is a decision with legal weight; a client that
-/// invents a consent statement is asserting a purpose of processing that nobody
-/// with authority wrote.
-@immutable
-class IntakeConsent {
-  const IntakeConsent({
-    required this.key,
-    required this.label,
-    required this.statement,
-    this.isRequired = true,
-  });
-
-  final String key;
-
-  /// Short name, for a review row.
-  final String label;
-
-  /// The full sentence a resident is agreeing to.
-  final String statement;
-
-  final bool isRequired;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) || (other is IntakeConsent && other.key == key);
-
-  @override
-  int get hashCode => key.hashCode;
-
-  @override
-  String toString() => 'IntakeConsent($key)';
-}
+/// See [ServerConsent] — shared with event registration, because what a
+/// resident is asked to agree to under RA 10173 is the same kind of record
+/// whichever flow collects it.
+typedef IntakeConsent = ServerConsent;
 
 /// The server reporting that this resident already has an open application for
 /// this service.

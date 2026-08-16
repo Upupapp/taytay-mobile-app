@@ -10,6 +10,7 @@ import '../../../core/router/deep_link.dart';
 import '../../../core/sharing/share_service.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
+import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/status_view.dart';
@@ -190,7 +191,10 @@ class _Detail extends StatelessWidget {
                 child: Text(event.title, style: theme.textTheme.headlineSmall),
               ),
 
-              if (event.isRegistered) ...<Widget>[
+              if (event.myRegistration != null) ...<Widget>[
+                const SizedBox(height: Spacing.md),
+                MyRegistrationCard(registration: event.myRegistration!),
+              ] else if (event.isRegistered) ...<Widget>[
                 const SizedBox(height: Spacing.md),
                 AppBanner(
                   tone: BannerTone.success,
@@ -278,29 +282,150 @@ class _Detail extends StatelessWidget {
               ],
 
               const SizedBox(height: Spacing.xl),
+
+              // Offered only when the server says registration is open and the
+              // resident does not already hold a place. Capacity is never
+              // judged here — the server decides on submission, and a resident
+              // who reaches the last place a second late reads that on the
+              // outcome screen rather than being pre-emptively refused.
+              if (_canOfferRegistration(event)) ...<Widget>[
+                AppButton(
+                  label: 'Register for this event',
+                  onPressed: () => context.goNamed(
+                    AppRoute.eventRegistration.routeName,
+                    pathParameters: <String, String>{'eventId': event.id},
+                  ),
+                ),
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Taytay LGU decides whether a place is available.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: Spacing.md),
+              ],
+
               OutlinedButton.icon(
                 onPressed: onShare.call,
                 icon: const Icon(Icons.share_outlined, size: IconSizes.sm),
                 label: const Text('Share this event'),
               ),
 
-              const SizedBox(height: Spacing.md),
-              // Says plainly what this screen does and does not do, so a
-              // resident does not leave believing they have a place.
-              Text(
-                event.isRegistered
-                    ? 'To change or cancel your registration, contact the '
-                          'office above.'
-                    : 'Registering in this app is not switched on yet. The '
-                          'office above can tell you how to join.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              if (!_canOfferRegistration(event) &&
+                  event.myRegistration == null) ...<Widget>[
+                const SizedBox(height: Spacing.md),
+                // Says plainly what this screen does and does not do, so a
+                // resident does not leave believing they have a place.
+                Text(
+                  registrationStateLabel(event.registrationState?.known),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Whether to offer the register control at all.
+///
+/// **Only on the server's own `open` state.** Not on an unrecognised one, and
+/// never inferred from a capacity number: offering registration for a full or
+/// closed event sends a resident through a form to be refused at the end of it.
+bool _canOfferRegistration(LguEvent event) =>
+    event.myRegistration == null &&
+    !event.isRegistered &&
+    event.registrationState?.known == EventRegistrationState.open;
+
+/// The resident's own registration: reference, position, instructions,
+/// attendance — and a way to give the place up when the office allows it.
+class MyRegistrationCard extends StatelessWidget {
+  const MyRegistrationCard({required this.registration, super.key});
+
+  final EventRegistration registration;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final attendance = registration.attendance?.known;
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(
+                registration.isCancelled
+                    ? Icons.event_busy_outlined
+                    : Icons.how_to_reg_outlined,
+                size: IconSizes.md,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: Spacing.sm),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    registrationStateLabel(registration.state.known),
+                    style: theme.textTheme.titleSmall,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+
+          if (registration.reference != null)
+            _Fact(
+              icon: Icons.confirmation_number_outlined,
+              label: 'Reference',
+              value: registration.reference!,
+            ),
+
+          // Only when the office publishes it. A queue position is a statement
+          // about other people as much as about this resident, and an estimate
+          // would be the app inventing one.
+          if (registration.isWaitlisted &&
+              registration.waitlistPosition != null)
+            _Fact(
+              icon: Icons.format_list_numbered_outlined,
+              label: 'Waitlist position',
+              value: '${registration.waitlistPosition}',
+            ),
+
+          if (registration.instructions != null) ...<Widget>[
+            const SizedBox(height: Spacing.xs),
+            Text(registration.instructions!, style: theme.textTheme.bodyMedium),
+          ],
+
+          // Recorded after the event, and only when the office exposes it.
+          // `notRecorded` says so rather than implying absence.
+          if (attendance != null) ...<Widget>[
+            const SizedBox(height: Spacing.md),
+            Text(
+              switch (attendance) {
+                AttendanceResult.attended =>
+                  'Taytay LGU recorded you as having attended.',
+                AttendanceResult.absent =>
+                  'Taytay LGU did not record you as attending. If that is '
+                      'wrong, contact the office.',
+                AttendanceResult.notRecorded =>
+                  'Attendance for this event has not been recorded yet.',
+              },
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

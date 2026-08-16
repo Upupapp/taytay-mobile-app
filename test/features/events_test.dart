@@ -114,6 +114,28 @@ class ScriptedEventRepository implements EventRepository {
         ? const Err<LguEvent>(NotFoundFailure())
         : Ok<LguEvent>(value);
   }
+
+  // Discovery does not register. TAB 22 has its own scripted repository; these
+  // decline so a stray call from a discovery test would fail loudly.
+  @override
+  Future<Result<EventRegistrationForm>> loadRegistrationForm(
+    String eventId,
+  ) async => const Err<EventRegistrationForm>(ServerFailure());
+
+  @override
+  Future<Result<RegistrationAttempt>> register({
+    required String eventId,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required String idempotencyKey,
+  }) async => const Err<RegistrationAttempt>(ServerFailure());
+
+  @override
+  Future<Result<EventRegistration>> cancelRegistration({
+    required String eventId,
+    required String registrationId,
+    required String idempotencyKey,
+  }) async => const Err<EventRegistration>(ServerFailure());
 }
 
 /// Records what the app asked the OS to open.
@@ -774,16 +796,32 @@ void main() {
       expect(find.text('Medical mission'), findsNothing);
     });
 
-    testWidgets('it says plainly that registering is not switched on', (
+    testWidgets('no register control when the office has not opened one', (
       tester,
     ) async {
+      // No registration state at all: the office has said nothing, so the app
+      // says nothing either and points at the office. TAB 22 added the control;
+      // it appears only on the server's own `open` state.
       await bootEvents(tester, detail: event(), location: '/events/e-1');
 
-      expect(
-        find.textContaining('Registering in this app is not switched on yet'),
-        findsOneWidget,
+      expect(find.text('Register for this event'), findsNothing);
+      expect(find.text('Ask the office about registering'), findsOneWidget);
+    });
+
+    testWidgets('a full event offers no register control', (tester) async {
+      await bootEvents(
+        tester,
+        detail: event(
+          registrationState: registration(EventRegistrationState.full),
+          capacity: const EventCapacity(capacity: 50, remaining: 0),
+        ),
+        location: '/events/e-1',
       );
-      expect(find.text('Register'), findsNothing);
+
+      // Offering it would send a resident through a form to be refused at the
+      // end of it.
+      expect(find.text('Register for this event'), findsNothing);
+      expect(find.text('Fully booked'), findsOneWidget);
     });
 
     testWidgets('a full event says so without inventing a number', (

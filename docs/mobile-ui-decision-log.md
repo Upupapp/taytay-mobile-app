@@ -1874,5 +1874,13 @@ result they cannot explain.
 | D-111 | Remaining places are stated by the server, never computed by the app | trust / schema | settled |
 | D-112 | Publication state is enforced at the list **and** the detail | authorization / trust | settled |
 | D-113 | "Registered" is hidden from a guest, decided via `AccessPolicy` | authorization / product | settled |
+| D-114 | Full and closed are outcomes to read, not errors to report | copy / trust | settled |
+| D-115 | The register control appears only on the server's own `open` state | product / trust | settled |
+| D-116 | Whether an unverified resident may register is a per-event server answer | authorization / schema | settled |
+| D-117 | The registration route is `authenticated`, with the form gating verification | authorization | settled |
+| D-118 | Server-defined form shapes promoted to `core/forms/`, aliased in intake | architecture | settled |
+| D-119 | `ServerValue` promoted to `core/api/`, re-exported | architecture | settled |
+| D-120 | A waitlist position and an attendance result appear only when published | privacy / trust | settled |
+| D-121 | `block` yields to an outcome once an attempt has answered | product / correctness | settled |
 
-**113 decisions — 109 settled, 4 provisional pending named backend gaps.**
+**121 decisions — 117 settled, 4 provisional pending named backend gaps.**

@@ -1,61 +1,16 @@
 import 'package:flutter/foundation.dart';
 
-// `Paginated` moved to `core/api/` when a second feature needed it. Re-exported
-// so existing importers keep working, and there is still one definition.
+// `Paginated` and `ServerValue` both moved to `core/api/` once a second feature
+// needed them. Re-exported so existing importers keep working, and so there is
+// still exactly one definition of each.
+import '../../../core/api/server_value.dart';
+
 export '../../../core/api/paginated.dart';
+export '../../../core/api/server_value.dart';
 
-/// A value the server sent that this build may or may not recognise.
-///
-/// ---
-///
-/// **Why enums alone are not enough here.** The backend contract is explicit
-/// that adding a new enum value is *not* a breaking change
-/// (`docs/api/conventions.md` §1: "Adding an optional field or a new error
-/// `code` for a new condition is **not** breaking", and "Clients must ignore
-/// unknown fields"). A released app therefore has to meet values it has never
-/// heard of, and it must not crash, must not silently drop them, and must not
-/// guess what they mean.
-///
-/// So a server value is carried as a pair: the [raw] string exactly as sent, and
-/// [known], the enum case when this build recognises it. Screens branch on
-/// [known] and fall back gracefully; logs and support quote [raw].
-@immutable
-class ServerValue<T extends Enum> {
-  const ServerValue({required this.raw, required this.known});
-
-  /// Exactly what the server sent. Never normalised, never discarded.
-  final String raw;
-
-  /// The matching case, or `null` when this build does not recognise [raw].
-  final T? known;
-
-  bool get isRecognised => known != null;
-
-  static ServerValue<T> parse<T extends Enum>(
-    String? raw,
-    List<T> values,
-    String Function(T) wireValueOf,
-  ) {
-    final value = raw ?? '';
-    for (final candidate in values) {
-      if (wireValueOf(candidate) == value) {
-        return ServerValue<T>(raw: value, known: candidate);
-      }
-    }
-    return ServerValue<T>(raw: value, known: null);
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is ServerValue<T> && other.raw == raw && other.known == known);
-
-  @override
-  int get hashCode => Object.hash(raw, known);
-
-  @override
-  String toString() => 'ServerValue($raw${isRecognised ? '' : ', unknown'})';
-}
+// `ServerValue` moved to `core/api/` once every feature was decoding server
+// enums and `core/forms/` needed it too. Re-exported so nothing that imported
+// it from here had to change, and so there is still exactly one definition.
 
 /// Service groupings published by the backend
 /// (`Modules\ServiceCatalog\Domain\ServiceCategory`, commit `7844859`).

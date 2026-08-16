@@ -7,6 +7,7 @@ import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/events/presentation/event_detail_screen.dart';
+import '../../features/events/presentation/event_registration_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/household/presentation/household_correction_screen.dart';
@@ -178,6 +179,15 @@ GoRouter buildAppRouter({
                     builder: (context, state) => EventDetailScreen(
                       eventId: state.pathParameters['eventId'] ?? '',
                     ),
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'register',
+                        name: AppRoute.eventRegistration.routeName,
+                        builder: (context, state) => EventRegistrationScreen(
+                          eventId: state.pathParameters['eventId'] ?? '',
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
