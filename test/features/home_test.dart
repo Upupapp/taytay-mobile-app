@@ -126,6 +126,51 @@ class StubAnnouncementRepository implements AnnouncementRepository {
   @override
   Future<Result<Announcement>> loadAnnouncement(String id) async =>
       const Err<Announcement>(ServerFailure());
+
+  // Home never interacts with a post; these exist to satisfy the contract and
+  // decline if anything ever tried.
+  @override
+  Future<Result<Paginated<PostComment>>> listComments(
+    String postId, {
+    int page = 1,
+    int perPage = 20,
+  }) async => const Err<Paginated<PostComment>>(ServerFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> setReaction({
+    required String postId,
+    required ReactionKind reaction,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(ServerFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> clearReaction({
+    required String postId,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(ServerFailure());
+
+  @override
+  Future<Result<PostComment>> addComment({
+    required String postId,
+    required String body,
+    required String idempotencyKey,
+    String? parentId,
+  }) async => const Err<PostComment>(ServerFailure());
+
+  @override
+  Future<Result<void>> deleteOwnComment({
+    required String postId,
+    required String commentId,
+    required String idempotencyKey,
+  }) async => const Err<void>(ServerFailure());
+
+  @override
+  Future<Result<void>> reportComment({
+    required String postId,
+    required String commentId,
+    required String reason,
+    required String idempotencyKey,
+  }) async => const Err<void>(ServerFailure());
 }
 
 class StubEventRepository implements EventRepository {
@@ -220,6 +265,7 @@ Future<Booted> bootHome(
     serviceRequestRepository: requests,
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
+    shareService: base.shareService,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

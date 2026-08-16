@@ -12,6 +12,8 @@ import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
 import '../core/session/session_store.dart';
+import '../core/sharing/platform_share_service.dart';
+import '../core/sharing/share_service.dart';
 import '../core/startup/launch_controller.dart';
 import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
@@ -78,6 +80,7 @@ class AppDependencies {
     required this.requirementRepository,
     required this.notificationRepository,
     required this.documentPicker,
+    required this.shareService,
     this.onDispose,
   });
 
@@ -94,6 +97,7 @@ class AppDependencies {
     PublicCache? cache,
     LocalAuthenticator? localAuthenticator,
     DocumentPicker? documentPicker,
+    ShareService? shareService,
   }) {
     final secretStore = secrets ?? KeystoreSecretStore();
     final store = sessionStore ?? KeystoreSessionStore(secrets: secretStore);
@@ -168,6 +172,9 @@ class AppDependencies {
       // `UnavailableDocumentPicker`, which reports every source as absent
       // rather than pretending a camera opened.
       documentPicker: documentPicker ?? PlatformDocumentPicker(),
+      // Defaults to the OS share sheet, which falls back to the clipboard on a
+      // device that has none. Tests inject `UnavailableShareService`.
+      shareService: shareService ?? const PlatformShareService(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -230,6 +237,11 @@ class AppDependencies {
   /// system file picker. An interface so the whole upload flow is testable
   /// without a platform channel.
   final DocumentPicker documentPicker;
+
+  /// Passing **public** content to another app through the OS share sheet.
+  /// Nothing personal is ever handed to it, and a device without a sheet
+  /// degrades to copying rather than throwing.
+  final ShareService shareService;
 
   /// Releases the transport's connection pool, when it owns one.
   final void Function()? onDispose;

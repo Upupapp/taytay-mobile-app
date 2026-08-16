@@ -94,6 +94,29 @@ dependencies:
   # * Data egress — none.
   file_selector: ^1.0.3
 
+  # The OS share sheet, so a resident can pass a municipal advisory to a
+  # neighbour through whichever app they already use. Reviewed against
+  # CLAUDE.md Article 1 before adding.
+  #
+  # * Maintenance — `fluttercommunity/plus_plugins`, the most widely used share
+  #   plugin in the ecosystem and the de-facto standard. Not flutter/packages:
+  #   the Flutter team publishes no share plugin, so there is no first-party
+  #   option to prefer.
+  # * Permissions — none on either platform. It hands text to the system sheet.
+  # * Data egress — none by the plugin. What leaves the device is exactly what
+  #   the resident chose to send, to the app they chose to send it with.
+  # * Scope — used for one thing: sharing a *public* announcement. Nothing
+  #   personal is ever passed to it, and `ShareService` wraps it so no screen
+  #   calls the plugin directly and a device without a share sheet degrades to
+  #   copying the text instead.
+  #
+  # Pinned at ^13 rather than ^12: the older line depends on `win32 ^5`, which
+  # conflicts with `flutter_secure_storage`'s `win32 ^6`. Downgrading the secure
+  # storage to resolve it was the other option and was rejected — that package
+  # holds this app's credential material, and a share sheet is not a reason to
+  # move it backwards.
+  share_plus: ^13.3.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

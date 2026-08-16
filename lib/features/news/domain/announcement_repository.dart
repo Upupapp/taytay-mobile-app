@@ -3,6 +3,12 @@ import 'package:flutter/foundation.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../../services/domain/lgu_service.dart' show ServerValue;
+import 'post_interaction.dart';
+
+// Re-exported so a screen or controller working with announcements gets the
+// interaction types and `ServerValue` from one import rather than three.
+export '../../services/domain/lgu_service.dart' show ServerValue;
+export 'post_interaction.dart';
 
 /// Whether an announcement is ordinary news or something a resident needs now.
 ///
@@ -132,6 +138,10 @@ class Announcement {
     this.advisoryLevel,
     this.publicationState,
     this.engagement,
+    this.shareUrl,
+    this.capabilities = PostCapabilities.none,
+    this.availableReactions = const <ServerValue<ReactionKind>>[],
+    this.myReaction,
   });
 
   /// Opaque server identifier. The deep-link target for `news_post`.
@@ -167,6 +177,53 @@ class Announcement {
   final ServerValue<PublicationState>? publicationState;
 
   final AnnouncementEngagement? engagement;
+
+  /// The canonical public link, **exactly as the server supplied it**.
+  ///
+  /// Never composed by the app from a host and an id: this client does not know
+  /// the LGU's public web address, and a fabricated link inside a shared typhoon
+  /// advisory sends people to a 404 or to a domain somebody else owns.
+  final String? shareUrl;
+
+  /// What the backend says this resident may do here. Defaults to nothing.
+  final PostCapabilities capabilities;
+
+  /// The reaction set this post accepts, in the server's order.
+  final List<ServerValue<ReactionKind>> availableReactions;
+
+  /// The resident's own reaction, when they have one.
+  final ServerValue<ReactionKind>? myReaction;
+
+  /// A copy with the reaction fields replaced.
+  ///
+  /// Exists so a controller can apply an optimistic change and then adopt the
+  /// server's answer without rebuilding the whole post by hand — the sort of
+  /// by-hand copy where one field quietly gets dropped.
+  Announcement withReaction({
+    required ServerValue<ReactionKind>? myReaction,
+    int? reactions,
+  }) => Announcement(
+    id: id,
+    title: title,
+    body: body,
+    publishedAt: publishedAt,
+    category: category,
+    author: author,
+    summary: summary,
+    media: media,
+    isPinned: isPinned,
+    advisoryLevel: advisoryLevel,
+    publicationState: publicationState,
+    engagement: AnnouncementEngagement(
+      reactions: reactions ?? engagement?.reactions,
+      comments: engagement?.comments,
+      shares: engagement?.shares,
+    ),
+    shareUrl: shareUrl,
+    capabilities: capabilities,
+    availableReactions: availableReactions,
+    myReaction: myReaction,
+  );
 
   /// Whether this post may be shown to a resident.
   ///
@@ -241,4 +298,64 @@ abstract interface class AnnouncementRepository {
   /// can be withdrawn between the notification being sent and the resident
   /// tapping it, and the screen says so plainly.
   Future<Result<Announcement>> loadAnnouncement(String id);
+
+  // ── Resident interactions ────────────────────────────────────────────────
+  //
+  // Every one of these is offered only when `Announcement.capabilities` says
+  // the backend supports it, and every mutation carries an idempotency key for
+  // the same reason a submission does: a dropped connection after the server
+  // committed is indistinguishable from one before.
+
+  /// Comments the resident is allowed to see, oldest first.
+  Future<Result<Paginated<PostComment>>> listComments(
+    String postId, {
+    int page,
+    int perPage,
+  });
+
+  /// Sets or replaces the resident's reaction.
+  ///
+  /// Returns the post's new total so the screen can adopt the server's count
+  /// rather than keep its own optimistic arithmetic — which is wrong the moment
+  /// two people react at once.
+  Future<Result<ReactionOutcome>> setReaction({
+    required String postId,
+    required ReactionKind reaction,
+    required String idempotencyKey,
+  });
+
+  /// Removes the resident's reaction.
+  Future<Result<ReactionOutcome>> clearReaction({
+    required String postId,
+    required String idempotencyKey,
+  });
+
+  /// Posts a comment, optionally as a reply.
+  Future<Result<PostComment>> addComment({
+    required String postId,
+    required String body,
+    required String idempotencyKey,
+    String? parentId,
+  });
+
+  /// Deletes a comment the resident wrote.
+  ///
+  /// **Own comments only.** There is no method here that names somebody else's,
+  /// and there must not be: moderation is an admin-console act.
+  Future<Result<void>> deleteOwnComment({
+    required String postId,
+    required String commentId,
+    required String idempotencyKey,
+  });
+
+  /// Reports a comment to the office.
+  ///
+  /// Reporting is *asking a moderator to look*, which is a resident action.
+  /// Acting on the report is not, and nothing here does.
+  Future<Result<void>> reportComment({
+    required String postId,
+    required String commentId,
+    required String reason,
+    required String idempotencyKey,
+  });
 }

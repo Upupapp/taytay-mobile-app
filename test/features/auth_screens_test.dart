@@ -68,6 +68,7 @@ Future<AppDependencies> boot(
     serviceRequestRepository: base.serviceRequestRepository,
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
+    shareService: base.shareService,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

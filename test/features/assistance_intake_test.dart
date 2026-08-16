@@ -243,6 +243,7 @@ Future<BootedIntake> bootIntake(
     serviceRequestRepository: repositoryOverride ?? requests,
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
+    shareService: base.shareService,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

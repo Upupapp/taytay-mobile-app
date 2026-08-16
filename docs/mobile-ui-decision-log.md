@@ -1859,5 +1859,13 @@ result they cannot explain.
 | D-96 | The preview is the office's summary or the full body, never machine-truncated | copy / safety | settled |
 | D-97 | Remote media reserves its space; a broken image never takes the post down | performance / resilience | settled |
 | D-98 | No interaction control until TAB 20 — a disabled one advertises a missing feature | product | settled |
+| D-99 | Every post capability defaults to false, and is guarded in screen *and* controller | authorization / product | settled |
+| D-100 | An optimistic reaction adopts the server's count; a failure restores the prior state exactly | lifecycle / trust | settled |
+| D-101 | A failed comment keeps its text and replays one idempotency key | lifecycle / product | settled |
+| D-102 | A hidden comment is rendered as withheld, never dropped | moderation / trust | settled |
+| D-103 | Official replies come from the server's `authorKind`, never inferred from a name | privacy / trust | settled |
+| D-104 | The share link is the server's or absent — never composed by the app | trust / safety | settled |
+| D-105 | Sharing degrades to the clipboard rather than throwing | resilience | settled |
+| D-106 | An unrecognised reaction is shown by its raw label and is not pressable | schema / trust | settled |
 
-**98 decisions — 94 settled, 4 provisional pending named backend gaps.**
+**106 decisions — 102 settled, 4 provisional pending named backend gaps.**

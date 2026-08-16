@@ -16,8 +16,6 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/news/data/planned_announcement_repository.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/news_feed_controller.dart';
-import 'package:taytay_resident/features/services/domain/lgu_service.dart'
-    show ServerValue;
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -98,6 +96,51 @@ class ScriptedAnnouncementRepository implements AnnouncementRepository {
   @override
   Future<Result<Announcement>> loadAnnouncement(String id) async =>
       const Err<Announcement>(NotFoundFailure());
+
+  // The feed never interacts with a post — TAB 20's detail screen does. These
+  // decline so a stray call in a feed test would fail loudly.
+  @override
+  Future<Result<Paginated<PostComment>>> listComments(
+    String postId, {
+    int page = 1,
+    int perPage = 20,
+  }) async => const Err<Paginated<PostComment>>(ServerFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> setReaction({
+    required String postId,
+    required ReactionKind reaction,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(ServerFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> clearReaction({
+    required String postId,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(ServerFailure());
+
+  @override
+  Future<Result<PostComment>> addComment({
+    required String postId,
+    required String body,
+    required String idempotencyKey,
+    String? parentId,
+  }) async => const Err<PostComment>(ServerFailure());
+
+  @override
+  Future<Result<void>> deleteOwnComment({
+    required String postId,
+    required String commentId,
+    required String idempotencyKey,
+  }) async => const Err<void>(ServerFailure());
+
+  @override
+  Future<Result<void>> reportComment({
+    required String postId,
+    required String commentId,
+    required String reason,
+    required String idempotencyKey,
+  }) async => const Err<void>(ServerFailure());
 }
 
 // ─── Harness ────────────────────────────────────────────────────────────────
@@ -165,6 +208,7 @@ Future<void> bootNews(
     serviceRequestRepository: base.serviceRequestRepository,
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
+    shareService: base.shareService,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

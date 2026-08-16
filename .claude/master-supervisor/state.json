@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
-  "currentTabIndex": 20,
+  "currentTab": "TAB 21 — Events: Discovery & Event Detail",
+  "currentTabIndex": 21,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -23,15 +23,16 @@
     "TAB 16 — Requirements & Secure Document Upload",
     "TAB 17 — Assistance Status, Case Timeline & Next Steps",
     "TAB 18 — Assistance History, Referral & Release Resident View",
-    "TAB 19 — Newsfeed, Resident Feed"
+    "TAB 19 — Newsfeed, Resident Feed",
+    "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail"
   ],
-  "currentObjective": "Implement the exact resident interactions the Taytay Newsfeed scope allows: post detail, reactions, comments, native share (TAB 20).",
+  "currentObjective": "Let residents discover official admin-created Taytay events in a visual but simple mobile experience (TAB 21).",
   "status": "RUNNING",
-  "supervisorCycleCount": 5,
+  "supervisorCycleCount": 6,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 19 commit created at end of this cycle",
-  "workingTreeState": "TAB 19 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 20 commit created at end of this cycle",
+  "workingTreeState": "TAB 20 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -73,18 +74,28 @@
     "D-95 a page failure keeps the pages already read",
     "D-96 the preview is the office summary or the full body, never machine-truncated",
     "D-97 remote media reserves its space; a broken image never takes the post down",
-    "D-98 no interaction control until TAB 20 - a disabled one advertises a missing feature"
+    "D-98 no interaction control until TAB 20 - a disabled one advertises a missing feature",
+    "D-99 every post capability defaults to false, guarded in screen and controller",
+    "D-100 an optimistic reaction adopts the server's count; failure restores prior state exactly",
+    "D-101 a failed comment keeps its text and replays one idempotency key",
+    "D-102 a hidden comment is rendered as withheld, never dropped",
+    "D-103 official replies come from the server's authorKind, never inferred from a name",
+    "D-104 the share link is the server or absent - never composed by the app",
+    "D-105 sharing degrades to the clipboard rather than throwing",
+    "D-106 an unrecognised reaction is shown by its raw label and is not pressable"
   ],
   "environmentGaps": [
     "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
-    "Announcement endpoints are `planned` - the feed shows its failure state against the real backend; tests exercise it through an injected repository",
+    "Announcement and post-interaction endpoints are `planned` - the shipped repository declines and posts carry PostCapabilities.none",
+    "The OS share sheet cannot run in a widget test; PlatformShareService is thin glue and the decidable parts are unit-tested",
+    "Replies are modelled but no reply composer is built - addComment already accepts parentId",
     "No document endpoint exists, so an assistance receipt is a reference rather than a download",
     "Cover images use Image.network with no disk cache; TAB 25 owns caching",
     "The debug APK builds but was not installed or run on a device"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 850 tests",
+    "test": "PASS - 884 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },
