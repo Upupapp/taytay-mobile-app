@@ -1852,5 +1852,12 @@ result they cannot explain.
 | D-89 | "No record" and "could not load" are separate branches and separate sentences | copy / trust | settled |
 | D-90 | A referral contact appears only when published; `declined` always points somewhere | privacy / copy | settled |
 | D-91 | Release and referral are structured once and shared by case and history | architecture | settled |
+| D-92 | Publication state fails open on unknown, closed on known non-public | schema / trust | settled |
+| D-93 | An absent engagement count renders as nothing, never zero | copy / trust | settled |
+| D-94 | The end of the feed is the server's `hasMore`, never a short page | schema / pagination | settled |
+| D-95 | A page failure keeps the pages already read | product / resilience | settled |
+| D-96 | The preview is the office's summary or the full body, never machine-truncated | copy / safety | settled |
+| D-97 | Remote media reserves its space; a broken image never takes the post down | performance / resilience | settled |
+| D-98 | No interaction control until TAB 20 — a disabled one advertises a missing feature | product | settled |
 
-**91 decisions — 87 settled, 4 provisional pending named backend gaps.**
+**98 decisions — 94 settled, 4 provisional pending named backend gaps.**

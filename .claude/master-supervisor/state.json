@@ -1,8 +1,8 @@
 {
   "masterCommand": "Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter_Master_Command.pdf",
   "repository": "C:\\Users\\paulg\\OneDrive\\Desktop\\Taytay_Rizal_LGUIDS_Resident_Mobile_Flutter",
-  "currentTab": "TAB 19 — Newsfeed, Resident Feed",
-  "currentTabIndex": 19,
+  "currentTab": "TAB 20 — Newsfeed: Like, Comment, Share & Post Detail",
+  "currentTabIndex": 20,
   "totalTabs": 28,
   "completedTabs": [
     "TAB 01 — Project Constitution & Flutter Foundation",
@@ -22,15 +22,16 @@
     "TAB 15 — Assistance Request / Intake Flow",
     "TAB 16 — Requirements & Secure Document Upload",
     "TAB 17 — Assistance Status, Case Timeline & Next Steps",
-    "TAB 18 — Assistance History, Referral & Release Resident View"
+    "TAB 18 — Assistance History, Referral & Release Resident View",
+    "TAB 19 — Newsfeed, Resident Feed"
   ],
-  "currentObjective": "Present admin-published Taytay posts as a polished, simple mobile feed (TAB 19).",
+  "currentObjective": "Implement the exact resident interactions the Taytay Newsfeed scope allows: post detail, reactions, comments, native share (TAB 20).",
   "status": "RUNNING",
-  "supervisorCycleCount": 4,
+  "supervisorCycleCount": 5,
   "lastHourlyReportAt": null,
   "lastCheckpointAt": "2026-08-16",
-  "lastLocalCommit": "TAB 18 commit created at end of this cycle",
-  "workingTreeState": "TAB 18 committed locally; no pre-existing dirty work at session start",
+  "lastLocalCommit": "TAB 19 commit created at end of this cycle",
+  "workingTreeState": "TAB 19 committed locally; no pre-existing dirty work at session start",
   "activeBlockers": [],
   "pendingQuestions": [],
   "researchDecisions": [
@@ -65,17 +66,25 @@
     "D-88 release acknowledgement is stated, never offered as a tap",
     "D-89 \"no record\" and \"could not load\" are separate branches and sentences",
     "D-90 a referral contact appears only when published; declined always points somewhere",
-    "D-91 release and referral are structured once and shared by case and history"
+    "D-91 release and referral are structured once and shared by case and history",
+    "D-92 publication state fails open on unknown, closed on known non-public",
+    "D-93 an absent engagement count renders as nothing, never zero",
+    "D-94 the end of the feed is the server's hasMore, never a short page",
+    "D-95 a page failure keeps the pages already read",
+    "D-96 the preview is the office summary or the full body, never machine-truncated",
+    "D-97 remote media reserves its space; a broken image never takes the post down",
+    "D-98 no interaction control until TAB 20 - a disabled one advertises a missing feature"
   ],
   "environmentGaps": [
-    "Backend ServiceDelivery module is `planned` - no intake, submission, requirement, upload, case or history endpoint; shipped repositories decline honestly",
-    "No document endpoint exists, so a receipt is a reference rather than a download",
-    "The platform document picker cannot be exercised in a widget test; the decidable parts are unit-tested",
+    "Backend ServiceDelivery module is `planned` - intake, submission, requirement, upload, case and history endpoints all decline honestly",
+    "Announcement endpoints are `planned` - the feed shows its failure state against the real backend; tests exercise it through an injected repository",
+    "No document endpoint exists, so an assistance receipt is a reference rather than a download",
+    "Cover images use Image.network with no disk cache; TAB 25 owns caching",
     "The debug APK builds but was not installed or run on a device"
   ],
   "verification": {
     "analyze": "PASS - no issues found",
-    "test": "PASS - 820 tests",
+    "test": "PASS - 850 tests",
     "format": "PASS - dart format clean",
     "build": "PASS - flutter build apk --debug produced app-debug.apk"
   },

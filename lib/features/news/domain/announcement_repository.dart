@@ -2,6 +2,107 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
+import '../../services/domain/lgu_service.dart' show ServerValue;
+
+/// Whether an announcement is ordinary news or something a resident needs now.
+///
+/// Carried as a [ServerValue] like every other server enum: adding a value is
+/// not a breaking change, and a released app must meet an unknown one without
+/// dropping the post.
+enum AdvisoryLevel {
+  /// Ordinary municipal news.
+  normal('normal'),
+
+  /// Something residents should act on — a schedule change, a road closure.
+  advisory('advisory'),
+
+  /// Public safety. A typhoon, a suspension of classes, an evacuation.
+  emergency('emergency');
+
+  const AdvisoryLevel(this.wireValue);
+
+  final String wireValue;
+}
+
+/// The publication state the office recorded.
+///
+/// ---
+///
+/// **The app does not decide what is published — but it will not display
+/// something the server has told it is not.** The contract says
+/// `GET /api/v1/announcements` returns published posts, so in practice every
+/// value here is `published`. The field exists as a belt on that brace: if a
+/// draft or an archived typhoon advisory ever reaches this client through a
+/// contract slip, showing it is worse than dropping it. See
+/// [Announcement.isResidentVisible].
+enum PublicationState {
+  draft('draft'),
+  scheduled('scheduled'),
+  published('published'),
+  archived('archived');
+
+  const PublicationState(this.wireValue);
+
+  final String wireValue;
+}
+
+/// A picture attached to a post.
+///
+/// **Dimensions travel with the URL** so a card can reserve the right space
+/// before the bytes arrive. Without them an image-heavy feed reflows as each
+/// picture lands, which moves whatever is under the resident's thumb — the
+/// layout-jump rule from the asset pipeline, applied to remote media.
+@immutable
+class AnnouncementMedia {
+  const AnnouncementMedia({
+    required this.url,
+    this.width,
+    this.height,
+    this.alternativeText,
+  });
+
+  final String url;
+  final int? width;
+  final int? height;
+
+  /// Authored by the LGU. Absent is handled by describing the post rather than
+  /// inventing a description of a picture the app cannot see.
+  final String? alternativeText;
+
+  /// Width ÷ height when the server sent both, for reserving space.
+  double? get aspectRatio {
+    final w = width;
+    final h = height;
+    if (w == null || h == null || w <= 0 || h <= 0) return null;
+    return w / h;
+  }
+
+  @override
+  String toString() => 'AnnouncementMedia(${width}x$height)';
+}
+
+/// Counts the office publishes about a post.
+///
+/// ---
+///
+/// **Every count is nullable, and absent renders as nothing rather than zero.**
+/// "0 comments" is a claim: it says the office counted and found none. When the
+/// backend has not sent a number, the app has not been told anything, and
+/// printing a zero invents a fact — on a municipal advisory, where a resident
+/// may read an empty comment count as "nobody else is affected".
+@immutable
+class AnnouncementEngagement {
+  const AnnouncementEngagement({this.reactions, this.comments, this.shares});
+
+  final int? reactions;
+  final int? comments;
+  final int? shares;
+
+  bool get hasAny => reactions != null || comments != null || shares != null;
+
+  @override
+  String toString() => 'AnnouncementEngagement()';
+}
 
 /// One municipal announcement — `balita`.
 ///
@@ -9,6 +110,13 @@ import '../../../core/result/result.dart';
 /// column entry and is marked `public`. Nothing here is personal data, which is
 /// why the whole feature is readable by a guest and why an announcement id is
 /// safe to put in a push notification.
+///
+/// ---
+///
+/// **This app consumes; it never publishes.** Creating, scheduling, pinning,
+/// archiving and moderating are admin-portal actions. There is no field here
+/// that would let a resident set one, and no repository method that would send
+/// one.
 @immutable
 class Announcement {
   const Announcement({
@@ -17,6 +125,13 @@ class Announcement {
     required this.body,
     this.publishedAt,
     this.category,
+    this.author,
+    this.summary,
+    this.media,
+    this.isPinned = false,
+    this.advisoryLevel,
+    this.publicationState,
+    this.engagement,
   });
 
   /// Opaque server identifier. The deep-link target for `news_post`.
@@ -31,6 +146,73 @@ class Announcement {
   /// display, not disappear.
   final String? category;
 
+  /// The office or official identity that published it, as the LGU wrote it.
+  /// Never a staff member's personal name unless the office chose to publish one.
+  final String? author;
+
+  /// A short preview the office authored.
+  ///
+  /// Falls back to the body in [preview] rather than being generated: a
+  /// machine-truncated first paragraph of an emergency advisory can cut off the
+  /// half that says what to do.
+  final String? summary;
+
+  final AnnouncementMedia? media;
+
+  /// Pinned by the admin portal. Presentation emphasis only — the app never
+  /// re-orders on its own.
+  final bool isPinned;
+
+  final ServerValue<AdvisoryLevel>? advisoryLevel;
+  final ServerValue<PublicationState>? publicationState;
+
+  final AnnouncementEngagement? engagement;
+
+  /// Whether this post may be shown to a resident.
+  ///
+  /// ---
+  ///
+  /// **Fails open on an unknown state, closed on a known non-public one**, and
+  /// the asymmetry is deliberate.
+  ///
+  /// A state this build does not recognise means the office added a value after
+  /// the app shipped. Hiding those would turn one backend change into a blank
+  /// feed for every unpatched phone — during precisely the kind of event that
+  /// makes a municipality add a new publication state. The server chose to send
+  /// the post; that is the authority the constitution defers to.
+  ///
+  /// A state this build *does* recognise as non-public — a draft, a scheduled
+  /// post, an archived advisory — is a different matter. There the app knows
+  /// what it was told, and displaying a withdrawn typhoon advisory is worse than
+  /// displaying nothing.
+  ///
+  /// This is the opposite default to `ResidentRequirement.acceptsUpload`, which
+  /// fails closed. The difference is that one governs *reading public content
+  /// the server deliberately sent*, and the other governs *acting on a record*.
+  bool get isResidentVisible => switch (publicationState?.known) {
+    PublicationState.draft ||
+    PublicationState.scheduled ||
+    PublicationState.archived => false,
+    PublicationState.published => true,
+    // Unrecognised, or not sent at all.
+    null => true,
+  };
+
+  /// What the card shows under the title.
+  String get preview => summary ?? body;
+
+  /// True when the post should carry advisory emphasis.
+  bool get isAdvisory =>
+      advisoryLevel?.known == AdvisoryLevel.advisory ||
+      advisoryLevel?.known == AdvisoryLevel.emergency;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) || (other is Announcement && other.id == id);
+
+  @override
+  int get hashCode => id.hashCode;
+
   @override
   String toString() => 'Announcement($id)';
 }
@@ -43,6 +225,10 @@ class Announcement {
 /// notification deep link needs and what the conventions' resource shape
 /// implies. Should the backend ship the list without a detail route, this is
 /// the one method that changes.
+///
+/// **There is no create, update, publish, pin or archive method, and there
+/// cannot be one.** Those belong to the admin console, and a resident client
+/// that could express them would be carrying an authority it must never hold.
 abstract interface class AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page,
