@@ -17,7 +17,6 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/household/data/household_dto.dart';
-import 'package:taytay_resident/features/household/data/planned_household_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_summary.dart';
 
@@ -543,20 +542,6 @@ void main() {
       expect(
         AppRoute.householdCorrection.requirement,
         AccessRequirement.verified,
-      );
-    });
-
-    test('the shipped repository declines both operations', () {
-      const repository = PlannedHouseholdRepository();
-      expect(repository.loadOwnHousehold(), completion(isA<Err<dynamic>>()));
-      expect(
-        repository.submitCorrectionRequest(
-          request: const HouseholdCorrectionRequest(
-            kind: HouseholdCorrectionKind.addressWrong,
-          ),
-          idempotencyKey: 'k',
-        ),
-        completion(isA<Err<dynamic>>()),
       );
     });
 

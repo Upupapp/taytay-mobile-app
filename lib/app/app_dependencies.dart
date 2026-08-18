@@ -31,7 +31,7 @@ import '../features/credential/data/planned_credential_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
 import '../features/events/data/planned_event_repository.dart';
 import '../features/events/domain/event_repository.dart';
-import '../features/household/data/planned_household_repository.dart';
+import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
 import '../features/news/data/planned_announcement_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
@@ -235,7 +235,7 @@ class AppDependencies {
       residentProfileRepository: ResidentProfileApiRepository(
         apiClient: apiClient,
       ),
-      householdRepository: const PlannedHouseholdRepository(),
+      householdRepository: HouseholdApiRepository(apiClient: apiClient),
       registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: const PlannedCredentialRepository(),
       verificationRepository: KycApiRepository(apiClient: apiClient),
