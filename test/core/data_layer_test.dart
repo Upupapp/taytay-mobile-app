@@ -469,15 +469,18 @@ void main() {
 
     test('the allow-list holds only public endpoints', () {
       // Every one of these is unauthenticated by design on the server: a guest
-      // browses services, announcements, events and programmes without an
+      // browses services, the newsfeed, events and programmes without an
       // account, and `health` is the platform probe. Nothing personal is here,
       // and a new endpoint is uncacheable until someone adds it deliberately.
+      //
+      // `announcements` left this list at TAB 11: no module has ever served that
+      // path, so the entry could never have been hit. The real one is `newsfeed`.
       expect(
         PublicCache.defaultAllowedPaths,
         unorderedEquals(<String>[
           'services',
           'health',
-          'announcements',
+          'newsfeed',
           'events',
           'programs',
         ]),

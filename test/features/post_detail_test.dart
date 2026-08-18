@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/sharing/share_service.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/news/data/planned_announcement_repository.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/post_detail_controller.dart';
 
@@ -370,28 +369,6 @@ void main() {
       expect(find.byType(FilterChip), findsNothing);
       // The post itself still reads.
       expect(find.text('Classes suspended tomorrow'), findsOneWidget);
-    });
-
-    test('the shipped repository declines every interaction', () async {
-      const repository = PlannedAnnouncementRepository();
-
-      expect((await repository.listComments('p')).isErr, isTrue);
-      expect(
-        (await repository.setReaction(
-          postId: 'p',
-          reaction: ReactionKind.like,
-          idempotencyKey: 'k',
-        )).isErr,
-        isTrue,
-      );
-      expect(
-        (await repository.addComment(
-          postId: 'p',
-          body: 'x',
-          idempotencyKey: 'k',
-        )).isErr,
-        isTrue,
-      );
     });
   });
 

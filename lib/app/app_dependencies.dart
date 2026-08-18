@@ -33,7 +33,7 @@ import '../features/events/data/planned_event_repository.dart';
 import '../features/events/domain/event_repository.dart';
 import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
-import '../features/news/data/planned_announcement_repository.dart';
+import '../features/news/data/newsfeed_api_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
 import '../features/notifications/data/planned_notification_repository.dart';
 import '../features/notifications/domain/notification_repository.dart';
@@ -228,7 +228,7 @@ class AppDependencies {
         apiClient: apiClient,
       ),
       programRepository: ProgramApiRepository(apiClient: apiClient),
-      announcementRepository: const PlannedAnnouncementRepository(),
+      announcementRepository: NewsfeedApiRepository(apiClient: apiClient),
       eventRepository: const PlannedEventRepository(),
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.

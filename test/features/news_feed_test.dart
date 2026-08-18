@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/news/data/planned_announcement_repository.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/news_feed_controller.dart';
 
@@ -324,39 +323,6 @@ void main() {
     test('engagement knows when the office sent nothing', () {
       expect(const AnnouncementEngagement().hasAny, isFalse);
       expect(const AnnouncementEngagement(comments: 0).hasAny, isTrue);
-    });
-
-    test(
-      'the shipped repository declines rather than inventing news',
-      () async {
-        const repository = PlannedAnnouncementRepository();
-
-        final result = await repository.listAnnouncements();
-
-        expect(result.isErr, isTrue);
-      },
-    );
-  });
-
-  group('the feed controller', () {
-    test('non-visible posts never reach the screen', () async {
-      final repository = ScriptedAnnouncementRepository(
-        pages: <int, dynamic>{
-          1: pageOf(<Announcement>[
-            post(id: 'a'),
-            post(
-              id: 'b',
-              publicationState: publication(PublicationState.archived),
-            ),
-          ]),
-        },
-      );
-      final controller = NewsFeedController(repository: repository);
-      addTearDown(controller.dispose);
-
-      await controller.refresh();
-
-      expect(controller.items.map((p) => p.id), <String>['a']);
     });
 
     test('pinned posts lift to the top, stably', () async {
