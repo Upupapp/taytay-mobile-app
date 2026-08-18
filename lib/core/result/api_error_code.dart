@@ -36,6 +36,23 @@ enum ApiErrorCode {
   /// 429 — throttled; the response carries `Retry-After`.
   rateLimited('RATE_LIMITED'),
 
+  /// 413 — the body exceeded the server's limit.
+  ///
+  /// Added when the TAB 01 conformance harness first read the published contract
+  /// and found the app knew twelve codes to the backend's thirteen. Both this and
+  /// [unsupportedMediaType] collapsed to [unknown], which is exactly the pair a
+  /// document upload produces — so a resident who photographed an identity
+  /// document at full camera resolution was told "something went wrong" instead
+  /// of "that file is too large".
+  ///
+  /// Note that a reverse proxy can answer 413 *before* the application does, in
+  /// which case the body is not this envelope at all. TAB 10 owns that path and
+  /// the resident copy for both codes; decoding them is this TAB's job.
+  payloadTooLarge('PAYLOAD_TOO_LARGE'),
+
+  /// 415 — the body's content type is not accepted.
+  unsupportedMediaType('UNSUPPORTED_MEDIA_TYPE'),
+
   /// 500 — unhandled server fault.
   serverError('SERVER_ERROR'),
 

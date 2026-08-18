@@ -31,6 +31,8 @@
   "failureForbidden": "Hindi ito available para sa iyong account.",
   "failureNotFound": "Hindi namin makita ang hinahanap mo.",
   "failureValidation": "May kailangang baguhin sa iyong isinulat.",
+  "failureFileTooLarge": "Masyadong malaki ang file na iyon. Subukan ang mas maliit na larawan, o kunan itong muli sa mas mababang kalidad.",
+  "failureFileType": "Hindi maipapadala ang ganitong uri ng file. Subukan ang larawan o PDF.",
   "failureConflict": "Nagawa na ito, o may nagbago habang ginagawa mo.",
   "failureRateLimited": "Masyadong maraming pagsubok. Maghintay saglit at subukan muli.",
   "failureServer": "May naganap na problema sa panig ng Taytay LGU. Hindi ito kasalanan mo.",
@@ -42,5 +44,10 @@
   "a11ySucceeded": "Tapos na. {what}",
   "a11yFailed": "Hindi ito naisagawa. {why}",
   "a11yRequired": "Kailangan",
-  "a11yFieldError": "Mali: {message}"
+  "a11yFieldError": "Mali: {message}",
+  "updateRequiredTitle": "I-update ang app para makapagpatuloy",
+  "updateRequiredBody": "Hindi na suportado ang bersyong ito ng Taytay LGU app. Pakiupdate ito mula sa iyong app store, pagkatapos ay buksan itong muli.",
+  "maintenanceTitle": "May maintenance ang sistema ng LGU",
+  "maintenanceBody": "Ligtas ang iyong account at mga hiling. Maaari ka pa ring tumingin ng mga serbisyo at programa habang nangyayari ito. Pakisubukang muli mamaya.",
+  "blockingNoticeSupport": "Kung kailangan mo ng tulong ngayon"
 }

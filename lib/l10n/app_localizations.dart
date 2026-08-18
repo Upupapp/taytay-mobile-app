@@ -242,6 +242,18 @@ abstract class AppStrings {
   /// **'Some of what you entered needs changing.'**
   String get failureValidation;
 
+  /// No description provided for @failureFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is too large to send. Try a smaller photo, or take it again at a lower quality.'**
+  String get failureFileTooLarge;
+
+  /// No description provided for @failureFileType.
+  ///
+  /// In en, this message translates to:
+  /// **'That kind of file cannot be sent. Try a photo or a PDF instead.'**
+  String get failureFileType;
+
   /// No description provided for @failureConflict.
   ///
   /// In en, this message translates to:
@@ -307,6 +319,36 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Error: {message}'**
   String a11yFieldError(String message);
+
+  /// No description provided for @updateRequiredTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the app to continue'**
+  String get updateRequiredTitle;
+
+  /// No description provided for @updateRequiredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This version of the Taytay LGU app is no longer supported. Please update it from your app store, then open it again.'**
+  String get updateRequiredBody;
+
+  /// No description provided for @maintenanceTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'The LGU system is down for maintenance'**
+  String get maintenanceTitle;
+
+  /// No description provided for @maintenanceBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account and requests are safe. You can still browse services and programmes while this is going on. Please try again shortly.'**
+  String get maintenanceBody;
+
+  /// No description provided for @blockingNoticeSupport.
+  ///
+  /// In en, this message translates to:
+  /// **'If you need help now'**
+  String get blockingNoticeSupport;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

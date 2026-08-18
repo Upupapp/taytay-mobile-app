@@ -16,6 +16,7 @@ import '../../features/news/presentation/news_post_screen.dart';
 import '../../features/news/presentation/news_screen.dart';
 import '../../features/notifications/presentation/notification_inbox_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
+import '../../features/platform/presentation/blocking_notice_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -36,6 +37,7 @@ import '../../features/verification/presentation/verification_screen.dart';
 import '../design/design_tokens.dart';
 import '../session/session_controller.dart';
 import '../startup/launch_controller.dart';
+import '../startup/platform_controller.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
@@ -73,6 +75,7 @@ import 'route_guard.dart';
 GoRouter buildAppRouter({
   required SessionController session,
   required LaunchController launch,
+  required PlatformController platform,
   String? initialLocation,
   GlobalKey<NavigatorState>? navigatorKey,
   List<NavigatorObserver> observers = const <NavigatorObserver>[],
@@ -86,12 +89,20 @@ GoRouter buildAppRouter({
     // Both are navigation inputs: the session decides what is reachable, and
     // first-launch decides where a cold start begins. Merged so a change to
     // either re-evaluates the guard.
-    refreshListenable: Listenable.merge(<Listenable>[session, launch]),
+    refreshListenable: Listenable.merge(<Listenable>[
+      session,
+      launch,
+      // The server's verdict is a navigation input too: a 503 arriving mid-
+      // session, or a bootstrap answering late, must re-evaluate the guard.
+      platform,
+    ]),
     debugLogDiagnostics: false,
     redirect: (context, state) => resolveRedirect(
       session: session.state,
       location: state.uri.toString(),
       launch: launch.state,
+      mustUpgrade: platform.mustUpgrade,
+      isInMaintenance: platform.isInMaintenance,
     ),
     errorBuilder: (context, state) => const _RouteNotFoundScreen(),
     routes: <RouteBase>[
@@ -104,6 +115,18 @@ GoRouter buildAppRouter({
         path: AppRoute.onboarding.path,
         name: AppRoute.onboarding.routeName,
         builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.updateRequired.path,
+        name: AppRoute.updateRequired.routeName,
+        builder: (context, state) =>
+            const BlockingNoticeScreen(kind: BlockingNoticeKind.updateRequired),
+      ),
+      GoRoute(
+        path: AppRoute.maintenance.path,
+        name: AppRoute.maintenance.routeName,
+        builder: (context, state) =>
+            const BlockingNoticeScreen(kind: BlockingNoticeKind.maintenance),
       ),
       GoRoute(
         path: AppRoute.signIn.path,

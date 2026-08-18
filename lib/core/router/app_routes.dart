@@ -23,6 +23,18 @@ enum AppRoute {
   /// asking anyone to hand over identity information.
   onboarding('onboarding', '/onboarding', AccessRequirement.public),
 
+  /// The server will not serve this build. Blocking, and public — a resident
+  /// who cannot sign in must still be able to be told why.
+  updateRequired(
+    'update-required',
+    '/update-required',
+    AccessRequirement.public,
+  ),
+
+  /// The office's system is down. Public for the same reason, and reachable
+  /// while cached public content still is.
+  maintenance('maintenance', '/maintenance', AccessRequirement.public),
+
   /// Sign-in. Public by definition.
   signIn('sign-in', '/sign-in', AccessRequirement.public),
 

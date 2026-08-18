@@ -210,12 +210,29 @@ final class RateLimitedFailure extends AppFailure {
 final class ServerFailure extends AppFailure {
   const ServerFailure({
     this.isTemporary = false,
+    this.isMaintenance = false,
     super.requestId,
     super.debugMessage,
   });
 
   /// True for 503 / maintenance, where retrying later is the right advice.
   final bool isTemporary;
+
+  /// The server itself answered `503 SERVICE_UNAVAILABLE`.
+  ///
+  /// **Narrower than [isTemporary] on purpose, and the narrowness is the point.**
+  /// Every unwired repository in this app also returns a temporary
+  /// [ServerFailure] — that is how they decline honestly — so a maintenance
+  /// banner keyed on [isTemporary] would be showing right now, on a healthy
+  /// server, for fourteen features. This flag is set only by
+  /// [failureFromApiError], which means only a real response from a real server
+  /// can raise it.
+  ///
+  /// It is how the app knows there is maintenance at all: the published
+  /// `app/bootstrap` contract carries no maintenance field (F18), and inventing
+  /// a cached one would claim maintenance after it ended and miss one that
+  /// started. A live 503 is the server saying so, now.
+  final bool isMaintenance;
 
   @override
   String get kind => isTemporary ? 'service_unavailable' : 'server_error';
@@ -268,6 +285,44 @@ final class UnexpectedFailure extends AppFailure {
       'Something went wrong. Please try again, or contact the LGU if it keeps happening.';
 }
 
+/// The resident sent something the server will not accept: too large, or the
+/// wrong kind of file.
+///
+/// Its own case rather than a [ValidationFailure] because nothing here is a
+/// field. A validation failure points at an input the resident can correct in
+/// place; this one points at a *file*, and the remedy is to choose or retake it.
+/// Folding the two together is how an upload error ends up rendered as a red
+/// outline on a text box that was never the problem.
+///
+/// Distinct from [UnexpectedFailure] for the opposite reason: a body over the
+/// limit is not a client defect the resident can do nothing about — it is the
+/// single most common thing that goes wrong when somebody photographs a birth
+/// certificate on a modern phone, and it is entirely actionable.
+///
+/// TAB 10 owns the resident-facing copy per context and the client-side
+/// compression that should stop most residents ever meeting it. This type exists
+/// so that path has something true to carry.
+final class UnacceptableUploadFailure extends AppFailure {
+  const UnacceptableUploadFailure({
+    required this.isTooLarge,
+    super.requestId,
+    super.debugMessage,
+  });
+
+  /// True for `PAYLOAD_TOO_LARGE`, false for `UNSUPPORTED_MEDIA_TYPE`. Two
+  /// different remedies — shrink it, or send a different kind of file — so the
+  /// screen must be able to tell them apart.
+  final bool isTooLarge;
+
+  @override
+  String get kind => 'unacceptable-upload';
+
+  @override
+  String get residentMessage => isTooLarge
+      ? 'That file is too large to send. Try a smaller photo or a lower quality setting.'
+      : 'That kind of file cannot be sent. Try a photo or a PDF instead.';
+}
+
 /// Maps an HTTP status and canonical error code onto the failure taxonomy.
 ///
 /// The code wins where the two disagree, because the code is the contract; the
@@ -314,11 +369,24 @@ AppFailure failureFromApiError({
     case ApiErrorCode.serviceUnavailable:
       return ServerFailure(
         isTemporary: true,
+        isMaintenance: true,
         requestId: requestId,
         debugMessage: message,
       );
     case ApiErrorCode.serverError:
       return ServerFailure(requestId: requestId, debugMessage: message);
+    case ApiErrorCode.payloadTooLarge:
+      return UnacceptableUploadFailure(
+        isTooLarge: true,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.unsupportedMediaType:
+      return UnacceptableUploadFailure(
+        isTooLarge: false,
+        requestId: requestId,
+        debugMessage: message,
+      );
     case ApiErrorCode.badRequest:
     case ApiErrorCode.methodNotAllowed:
       // A malformed request or wrong verb is a client defect the resident can do

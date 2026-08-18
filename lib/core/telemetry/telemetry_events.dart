@@ -84,7 +84,14 @@ enum TelemetryResult {
 
   /// The module has no endpoint yet. Distinct from a server error, because it
   /// is a roadmap fact rather than an incident.
-  notImplemented('not_implemented');
+  notImplemented('not_implemented'),
+
+  /// The file was refused: too large, or the wrong kind.
+  ///
+  /// Kept out of `validation` because it is the upload funnel's own health
+  /// signal. If client-side compression regresses, this rate is where it shows,
+  /// and it would be invisible folded in with mistyped form fields.
+  unacceptableUpload('unacceptable_upload');
 
   const TelemetryResult(this.wireValue);
 

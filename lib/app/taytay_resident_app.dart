@@ -37,6 +37,7 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
     ],
     session: widget.dependencies.session,
     launch: widget.dependencies.launch,
+    platform: widget.dependencies.platform,
     navigatorKey: _navigatorKey,
   );
 
@@ -50,6 +51,15 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
     // it completes the lock reports "off", which is the right default: a lock
     // that has not been confirmed to exist must not hide the app.
     unawaited(widget.dependencies.appLock.load());
+
+    // Asks the server what it expects of this build: minimum supported version,
+    // feature flags, support contact.
+    //
+    // FIRED, NOT AWAITED. Nothing here draws a frame, and nothing waits on it.
+    // Startup must not sit on the network — a resident on a weak connection
+    // gets the app, and a request that never answers leaves the permissive
+    // defaults in place rather than a spinner or a lock-out.
+    unawaited(widget.dependencies.platform.refresh());
 
     _lifecycle = AppLifecycleListener(
       // Leaving the foreground is the moment the phone might change hands.

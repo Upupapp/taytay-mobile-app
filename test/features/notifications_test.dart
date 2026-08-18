@@ -220,6 +220,7 @@ Future<BootedInbox> bootInbox(
     clock: () => fixedNow,
     notificationRepository: repositoryOverride ?? notifications,
     registrationRepository: base.registrationRepository,
+    platform: base.platform,
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);

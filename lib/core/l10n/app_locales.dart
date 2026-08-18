@@ -78,6 +78,8 @@ String localisedResidentMessage(BuildContext context, AppFailure failure) {
     ForbiddenFailure() => strings.failureForbidden,
     NotFoundFailure() => strings.failureNotFound,
     ValidationFailure() => strings.failureValidation,
+    UnacceptableUploadFailure(isTooLarge: final tooLarge) =>
+      tooLarge ? strings.failureFileTooLarge : strings.failureFileType,
     ConflictFailure() => strings.failureConflict,
     RateLimitedFailure() => strings.failureRateLimited,
     ServerFailure() => strings.failureServer,

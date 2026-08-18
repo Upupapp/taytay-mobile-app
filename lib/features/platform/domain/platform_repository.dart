@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'app_bootstrap.dart';
 
 /// Result of the backend liveness probe.
 ///
@@ -29,4 +30,12 @@ abstract interface class PlatformRepository {
   /// Unauthenticated liveness probe. Used to tell "the LGU service is down" from
   /// "your connection is down" — two problems with very different advice.
   Future<Result<ServiceHealth>> checkHealth();
+
+  /// The server's canonical startup contract: minimum supported client version,
+  /// feature flags, server time and support contact.
+  ///
+  /// Unauthenticated, and must stay that way — see [AppBootstrap]. A failure
+  /// here is not fatal: the caller falls back to [AppBootstrap.unknown], which
+  /// is permissive about versions and closed about features.
+  Future<Result<AppBootstrap>> loadBootstrap();
 }

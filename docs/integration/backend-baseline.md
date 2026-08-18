@@ -39,7 +39,9 @@ Verified at the tag: the published error enum carries all thirteen wire values, 
 Command's TAB 01 §2 — "do not generate the app's error enum from `openapi.json` while F05
 stands" — no longer binds. It is safe to generate from the contract at this tag onward. The
 exception it asked to be recorded is recorded here as *lifted*, with the commit that lifted
-it.
+it, and `test/contract/contract_conformance_test.dart` now uses the published enum as the
+authority in both directions. A guard named `_wire values are SCREAMING_SNAKE_CASE, not PHP
+case names_` keeps the regression visible if a future generator change reintroduces it.
 
 The tag is a local annotated tag. It has not been pushed; pushing is outside the boundary
 this programme runs under.
@@ -128,6 +130,7 @@ likely to be planned around by both sides and closed by neither.
 | **F14** | P2 | **No resident-facing barangay directory.** The registration and address flows need Taytay's barangays. The only barangay routes are `POST staff/{staff}/barangays` and its delete — `AccessControl` staff scoping. Hardcoding the list in the client was considered and rejected: barangay names and boundaries are municipal records, and a client copy is a second source of truth that goes wrong quietly. | backend · TAB 04 |
 | **F15** | **P0** | **No resident can create their own account.** The entire public `Identity` surface is sign-in. `auth/otp` answers "if that number is registered, a code has been sent to it" and returns null for a number it does not hold. Citizen accounts are created by staff at `POST admin/residents` and bound to a login at `POST admin/residents/{resident}/account-links` — admin-console surfaces this app may not call. **Onboarding on this platform is staff-mediated by construction, and this app ships a seven-field self-registration wizard with no server counterpart.** | product · LGU |
 | **F16** | **P0** | **A sign-in code is issued, recorded, and never sent.** `AuthenticationController::requestCode` calls `requestSignInCode` and then `unset($code)` — deliberately, so it is neither returned nor logged, which is right. Nothing dispatches it. The comment there still says delivery waits on the `Notification` module; `Notification` has been implemented since backend TAB 20 and has no awareness of sign-in codes at all. **TAB 02's definition of done — a resident signing in by OTP on a physical device — is unreachable by any amount of correct client wiring while this stands.** | backend · TAB 02 |
+| **F18** | P2 | **`app/bootstrap` publishes no maintenance state.** The payload carries `service`, `api_version`, `server_time`, `timezone`, `client`, `features`, `support` and `conventions` — TAB 01 asks for a maintenance screen driven by it and there is no field. **Recorded with a decision rather than a request: the app infers maintenance from a live `503 SERVICE_UNAVAILABLE` instead.** Maintenance changes minute to minute; a flag read once at startup would announce it after it ended and miss one that began, and a client caching it to survive a cold start caches the most perishable fact the server has. A 503 is the server saying so, at the moment it is true. Do not "fix" this by adding the field. | decided · TAB 01 (closed) |
 | **F17** | P1 | **Four repositories name the wrong module, and shrinking `PlannedModule` cannot catch them.** Removing the four shipped members made the compiler point at six files. It could not point at these, because the names they reference still exist and still mean something real — just not this. See the table below. | this repo · TAB 00 (closed) |
 
 ### F17 in detail — the mis-attributions

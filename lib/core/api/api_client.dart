@@ -14,6 +14,9 @@ import 'request_context.dart';
 /// refreshed or cleared between building a request and sending it).
 typedef AccessTokenProvider = Future<String?> Function();
 
+/// Called with the verdict of every decoded response, success or failure.
+typedef OutcomeObserver = void Function(AppFailure? failure);
+
 /// Called when the server answers `401 UNAUTHENTICATED`.
 ///
 /// Session expiry is a server verdict, so this is the single place the app
@@ -33,6 +36,7 @@ class ApiClient {
     required ApiTransport transport,
     AccessTokenProvider? accessTokenProvider,
     UnauthenticatedHandler? onUnauthenticated,
+    OutcomeObserver? onOutcome,
     AuthCoordinator? authCoordinator,
     PublicCache? cache,
     NetworkMonitor? networkMonitor,
@@ -40,6 +44,7 @@ class ApiClient {
        _transport = transport,
        _accessTokenProvider = accessTokenProvider,
        _onUnauthenticated = onUnauthenticated,
+       _onOutcome = onOutcome,
        _authCoordinator = authCoordinator,
        _cache = cache,
        _networkMonitor = networkMonitor;
@@ -48,6 +53,14 @@ class ApiClient {
   final ApiTransport _transport;
   final AccessTokenProvider? _accessTokenProvider;
   final UnauthenticatedHandler? _onUnauthenticated;
+
+  /// Told the verdict of every request, alongside the network monitor.
+  ///
+  /// Same discipline as `recordOutcome`: the verdict, never the request. It
+  /// exists so `503 SERVICE_UNAVAILABLE` reaches the startup layer from the one
+  /// place every response already passes through, rather than each of thirteen
+  /// repositories learning to recognise maintenance for itself.
+  final OutcomeObserver? _onOutcome;
 
   /// Serialises recovery from `401`. When absent, a `401` ends the session
   /// directly through [_onUnauthenticated] — the same fail-closed outcome.
@@ -148,6 +161,7 @@ class ApiClient {
 
     // The verdict, not the request: no path, no payload, no identifier.
     _networkMonitor?.recordOutcome(decoded.failureOrNull);
+    _onOutcome?.call(decoded.failureOrNull);
 
     return decoded;
   }

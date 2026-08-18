@@ -88,6 +88,8 @@
   "failureForbidden": "This is not available for your account.",
   "failureNotFound": "We could not find what you were looking for.",
   "failureValidation": "Some of what you entered needs changing.",
+  "failureFileTooLarge": "That file is too large to send. Try a smaller photo, or take it again at a lower quality.",
+  "failureFileType": "That kind of file cannot be sent. Try a photo or a PDF instead.",
   "failureConflict": "That has already been done, or something changed while you were working.",
   "failureRateLimited": "Too many attempts. Please wait a moment and try again.",
   "failureServer": "Something went wrong at Taytay LGU's end. This is not your fault.",
@@ -135,5 +137,10 @@
         "example": "Enter your mobile number."
       }
     }
-  }
+  },
+  "updateRequiredTitle": "Update the app to continue",
+  "updateRequiredBody": "This version of the Taytay LGU app is no longer supported. Please update it from your app store, then open it again.",
+  "maintenanceTitle": "The LGU system is down for maintenance",
+  "maintenanceBody": "Your account and requests are safe. You can still browse services and programmes while this is going on. Please try again shortly.",
+  "blockingNoticeSupport": "If you need help now"
 }

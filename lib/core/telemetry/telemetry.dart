@@ -215,6 +215,7 @@ abstract final class CrashRedaction {
     RateLimitedFailure() => TelemetryResult.rateLimited,
     ServerFailure() => TelemetryResult.server,
     ContractFailure() => TelemetryResult.contract,
+    UnacceptableUploadFailure() => TelemetryResult.unacceptableUpload,
     UnexpectedFailure() => TelemetryResult.unexpected,
   };
 }

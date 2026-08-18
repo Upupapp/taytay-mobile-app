@@ -89,6 +89,14 @@ class AppStringsEn extends AppStrings {
   String get failureValidation => 'Some of what you entered needs changing.';
 
   @override
+  String get failureFileTooLarge =>
+      'That file is too large to send. Try a smaller photo, or take it again at a lower quality.';
+
+  @override
+  String get failureFileType =>
+      'That kind of file cannot be sent. Try a photo or a PDF instead.';
+
+  @override
   String get failureConflict =>
       'That has already been done, or something changed while you were working.';
 
@@ -130,4 +138,21 @@ class AppStringsEn extends AppStrings {
   String a11yFieldError(String message) {
     return 'Error: $message';
   }
+
+  @override
+  String get updateRequiredTitle => 'Update the app to continue';
+
+  @override
+  String get updateRequiredBody =>
+      'This version of the Taytay LGU app is no longer supported. Please update it from your app store, then open it again.';
+
+  @override
+  String get maintenanceTitle => 'The LGU system is down for maintenance';
+
+  @override
+  String get maintenanceBody =>
+      'Your account and requests are safe. You can still browse services and programmes while this is going on. Please try again shortly.';
+
+  @override
+  String get blockingNoticeSupport => 'If you need help now';
 }

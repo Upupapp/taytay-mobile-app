@@ -89,6 +89,14 @@ class AppStringsFil extends AppStrings {
   String get failureValidation => 'May kailangang baguhin sa iyong isinulat.';
 
   @override
+  String get failureFileTooLarge =>
+      'Masyadong malaki ang file na iyon. Subukan ang mas maliit na larawan, o kunan itong muli sa mas mababang kalidad.';
+
+  @override
+  String get failureFileType =>
+      'Hindi maipapadala ang ganitong uri ng file. Subukan ang larawan o PDF.';
+
+  @override
   String get failureConflict =>
       'Nagawa na ito, o may nagbago habang ginagawa mo.';
 
@@ -130,4 +138,21 @@ class AppStringsFil extends AppStrings {
   String a11yFieldError(String message) {
     return 'Mali: $message';
   }
+
+  @override
+  String get updateRequiredTitle => 'I-update ang app para makapagpatuloy';
+
+  @override
+  String get updateRequiredBody =>
+      'Hindi na suportado ang bersyong ito ng Taytay LGU app. Pakiupdate ito mula sa iyong app store, pagkatapos ay buksan itong muli.';
+
+  @override
+  String get maintenanceTitle => 'May maintenance ang sistema ng LGU';
+
+  @override
+  String get maintenanceBody =>
+      'Ligtas ang iyong account at mga hiling. Maaari ka pa ring tumingin ng mga serbisyo at programa habang nangyayari ito. Pakisubukang muli mamaya.';
+
+  @override
+  String get blockingNoticeSupport => 'Kung kailangan mo ng tulong ngayon';
 }

@@ -18,6 +18,7 @@ import '../core/session/session_store.dart';
 import '../core/sharing/platform_share_service.dart';
 import '../core/sharing/share_service.dart';
 import '../core/startup/launch_controller.dart';
+import '../core/startup/platform_controller.dart';
 import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
@@ -91,6 +92,7 @@ class AppDependencies {
     required this.shareService,
     required this.externalLinks,
     required this.accountControlsRepository,
+    required this.platform,
     this.clock = DateTime.now,
     this.onDispose,
   });
@@ -188,6 +190,12 @@ class AppDependencies {
 
     final httpTransport = transport ?? HttpApiTransport(config: config);
 
+    // Late-bound so the client can tell the startup layer about a `503` while
+    // the startup layer's own repository is built on the client. The knot is
+    // real — maintenance is observed on the same connection that reports it —
+    // and a nullable holder is a smaller price than a second client.
+    late final PlatformController platform;
+
     final apiClient = ApiClient(
       config: config,
       transport: httpTransport,
@@ -196,7 +204,11 @@ class AppDependencies {
       authCoordinator: authCoordinator,
       cache: publicCache,
       networkMonitor: network,
+      onOutcome: (failure) => platform.observe(failure),
     );
+
+    final platformRepository = PlatformApiRepository(apiClient: apiClient);
+    platform = PlatformController(repository: platformRepository);
 
     return AppDependencies(
       config: config,
@@ -210,7 +222,8 @@ class AppDependencies {
       telemetry: telemetry,
       authRepository: const PendingBackendAuthRepository(),
       deviceSessionRepository: const PlannedDeviceSessionRepository(),
-      platformRepository: PlatformApiRepository(apiClient: apiClient),
+      platformRepository: platformRepository,
+      platform: platform,
       serviceCatalogRepository: ServiceCatalogApiRepository(
         apiClient: apiClient,
       ),
@@ -241,6 +254,13 @@ class AppDependencies {
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
+
+  /// What the server said at startup: minimum supported version, feature flags,
+  /// support contact — and, from a live `503`, whether it is in maintenance.
+  ///
+  /// Read by the route guard. Never blocks a first frame; see
+  /// [PlatformController].
+  final PlatformController platform;
 
   /// What the app calls "now".
   ///

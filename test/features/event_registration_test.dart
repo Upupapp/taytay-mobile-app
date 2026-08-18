@@ -252,6 +252,7 @@ Future<BootedRegistration> bootRegistration(
     accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
+    platform: base.platform,
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);

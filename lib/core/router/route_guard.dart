@@ -19,12 +19,25 @@ String? resolveRedirect({
   required SessionState session,
   required String location,
   LaunchState launch = LaunchState.returning,
+  bool mustUpgrade = false,
+  bool isInMaintenance = false,
 }) {
   final target = AppRoute.forPath(_pathOf(location));
   if (target == null) {
     // Unknown location: let the router's not-found page handle it rather than
     // silently rewriting an address a resident may have typed or been sent.
     return null;
+  }
+
+  // THE SERVER REFUSES THIS BUILD. Ahead of everything, including the session
+  // and launch gates: there is no point restoring a session for a client the
+  // server will not serve, and the screen has to be reachable by a resident who
+  // cannot sign in at all. Defaults to false, so a bootstrap that has not
+  // answered — or never answers — never locks anybody out.
+  if (mustUpgrade) {
+    return target == AppRoute.updateRequired
+        ? null
+        : AppRoute.updateRequired.path;
   }
 
   // Until the stored session has been read, the only honest answer is "wait".
@@ -70,6 +83,24 @@ String? resolveRedirect({
       return resumed.path;
     }
     return AppRoute.home.path;
+  }
+
+  // THE OFFICE'S SYSTEM IS DOWN, and this deliberately blocks less than the
+  // upgrade gate does.
+  //
+  // Maintenance stops anything that needs the server to answer for a particular
+  // resident — a case, an ID, an inbox — because those cannot work and a screen
+  // of "temporarily unavailable" tiles explains nothing. It does *not* stop
+  // guest browsing, because cached services and programmes still read, and a
+  // resident who opened the app to check what documents a clearance needs should
+  // get that answer rather than a wall.
+  //
+  // Raised only by a live `503 SERVICE_UNAVAILABLE` and cleared by the next
+  // request that succeeds, so it follows the server rather than a timer.
+  if (isInMaintenance &&
+      target.requirement != AccessRequirement.public &&
+      target != AppRoute.maintenance) {
+    return AppRoute.maintenance.path;
   }
 
   final decision = AccessPolicy.evaluate(

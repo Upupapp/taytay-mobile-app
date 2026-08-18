@@ -161,6 +161,12 @@ abstract final class SignInFeedback {
     ValidationFailure() ||
     ConflictFailure() ||
     UnauthenticatedFailure() => SignInMessage.codeNotAccepted,
-    ContractFailure() || UnexpectedFailure() => SignInMessage.unexpected,
+    // No sign-in request carries a body a proxy or the server could refuse, so
+    // this is unreachable in practice. It resolves to `unexpected` rather than
+    // being excluded, because a switch that is total by construction cannot be
+    // made wrong later by a new upload on this path.
+    ContractFailure() ||
+    UnacceptableUploadFailure() ||
+    UnexpectedFailure() => SignInMessage.unexpected,
   };
 }

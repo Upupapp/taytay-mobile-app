@@ -35,6 +35,43 @@ jobs:
       - run: flutter analyze
       - run: flutter test test/integration/backend_baseline_test.dart
 
+  contract-conformance:
+    name: The app matches the published contract
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  fixture-drift:
+    name: Staging still sends what it publishes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Exit 3 is "skipped, loudly" — no staging URL configured, or nothing
+      # recorded yet. Surfaced as a warning annotation rather than a green tick,
+      # because a check that passes when it could not run reports proof it does
+      # not have. It is the state at TAB 01 and it must stay visible until a
+      # staging environment exists.
+      - name: Re-fetch every recorded fixture
+        env:
+          TAYTAY_STAGING: ${{ secrets.TAYTAY_STAGING }}
+        run: |
+          set +e
+          ./tool/check_fixture_drift.sh
+          code=$?
+          set -e
+          if [ $code -eq 3 ]; then
+            echo "::warning title=Fixture drift not proven::No staging API or no recorded fixtures. This is not a pass."
+            exit 0
+          fi
+          exit $code
+
   baseline-agrees-with-backend:
     name: Committed baseline agrees with the backend at its tag
     runs-on: ubuntu-latest

@@ -190,6 +190,7 @@ Future<BootedSettings> bootSettings(
     accountControlsRepository: repositoryOverride ?? scripted,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
+    platform: base.platform,
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);
