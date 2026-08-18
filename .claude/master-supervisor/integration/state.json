@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 21,
-  "currentTab": "TAB 21 \u2014 Release engineering and signing",
+  "currentTabIndex": 22,
+  "currentTab": "TAB 22 \u2014 Store readiness",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -241,11 +241,21 @@
       "analyze": "clean",
       "tests": "1330 passing",
       "measured": "universal APK 57MB, arm64 split 20.9MB, assets 155KB \u2014 ship the AAB"
+    },
+    {
+      "tab": "TAB 21 \u2014 Release engineering and signing",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; keystore custody and iOS account are LGU actions",
+      "closes": [
+        "F03 (client half)",
+        "F11"
+      ],
+      "analyze": "clean",
+      "tests": "1338 passing"
     }
   ],
   "openFindings": {
     "P0": [
-      "F03",
+      "F03 (LGU: keystore custody)",
       "F14",
       "F15",
       "F16",
@@ -257,12 +267,13 @@
       "F23",
       "F24",
       "F25",
-      "F27"
+      "F27",
+      "F29"
     ],
     "P2": [
       "F09",
-      "F10",
-      "F11"
+      "F10 (declined)",
+      "F28"
     ]
   },
   "boundary": "Local commits only. No push, no remote administration, no deployment, no production.",
