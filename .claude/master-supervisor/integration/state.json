@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 17,
-  "currentTab": "TAB 17 \u2014 Security hardening",
+  "currentTabIndex": 18,
+  "currentTab": "TAB 18 \u2014 Privacy and the Data Privacy Act",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -208,6 +208,15 @@
       "analyze": "clean",
       "tests": "1321 passing",
       "finding": "five funnels were declared with zero call sites; all now instrumented"
+    },
+    {
+      "tab": "TAB 17 \u2014 Security hardening",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; F10 declined with rationale, F03 still open (TAB 21)",
+      "raises": [
+        "F28 \u2014 release artifact declares 4 permissions, not 2"
+      ],
+      "analyze": "clean",
+      "tests": "1321 passing"
     }
   ],
   "openFindings": {
