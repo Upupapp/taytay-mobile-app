@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 14,
-  "currentTab": "TAB 14 \u2014 Error taxonomy and the resident voice",
+  "currentTabIndex": 15,
+  "currentTab": "TAB 15 \u2014 Offline, caching and degraded mode",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -185,6 +185,15 @@
       "analyze": "clean",
       "tests": "1294 passing",
       "note": "18 tests; 2 proven red before being trusted"
+    },
+    {
+      "tab": "TAB 14 \u2014 Error taxonomy and the resident voice",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
+      "closes": [
+        "F04 (fully)"
+      ],
+      "analyze": "clean",
+      "tests": "1307 passing"
     }
   ],
   "openFindings": {
