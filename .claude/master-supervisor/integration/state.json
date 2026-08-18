@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 4,
-  "currentTab": "TAB 04 \u2014 Resident profile, KYC and corrections",
+  "currentTabIndex": 5,
+  "currentTab": "TAB 05 \u2014 Household and family",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -96,23 +96,36 @@
       "analyze": "clean",
       "tests": "1299 passing",
       "stubsRemaining": 11
+    },
+    {
+      "tab": "TAB 04 \u2014 Resident profile, KYC and corrections",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; Verified path blocked by F14",
+      "commit": "58577ce",
+      "raises": [
+        "F23",
+        "F14 raised to P1"
+      ],
+      "analyze": "clean",
+      "tests": "1297 passing",
+      "stubsRemaining": 9
     }
   ],
   "openFindings": {
     "P0": [
       "F03",
+      "F14",
       "F15",
       "F16"
     ],
     "P1": [
       "F13",
-      "F17-residual"
+      "F22",
+      "F23"
     ],
     "P2": [
       "F09",
       "F10",
-      "F11",
-      "F14"
+      "F11"
     ]
   },
   "boundary": "Local commits only. No push, no remote administration, no deployment, no production.",
