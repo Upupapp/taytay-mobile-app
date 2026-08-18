@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 16,
-  "currentTab": "TAB 16 \u2014 Observability and correlation",
+  "currentTabIndex": 17,
+  "currentTab": "TAB 17 \u2014 Security hardening",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -201,6 +201,13 @@
       "analyze": "clean",
       "tests": "1316 passing",
       "decision": "no offline write queue \u2014 writes are time-dependent; \"not sent\" never \"saved\""
+    },
+    {
+      "tab": "TAB 16 \u2014 Observability and correlation",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; thresholds unvalidated until staged rollout",
+      "analyze": "clean",
+      "tests": "1321 passing",
+      "finding": "five funnels were declared with zero call sites; all now instrumented"
     }
   ],
   "openFindings": {
