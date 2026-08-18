@@ -51,7 +51,7 @@ import '../features/services/data/assistance_api_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
 import '../features/services/domain/service_request_repository.dart';
-import '../features/settings/data/planned_account_controls_repository.dart';
+import '../features/settings/data/privacy_api_repository.dart';
 import '../features/settings/domain/account_controls.dart';
 import '../features/verification/data/kyc_api_repository.dart';
 import '../features/verification/domain/verification_repository.dart';
@@ -267,7 +267,7 @@ class AppDependencies {
       // Defaults to the OS launcher, which refuses anything that is not https.
       // Tests inject `UnavailableExternalLinkService`.
       externalLinks: externalLinks ?? const PlatformExternalLinkService(),
-      accountControlsRepository: const PlannedAccountControlsRepository(),
+      accountControlsRepository: PrivacyApiRepository(apiClient: apiClient),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }

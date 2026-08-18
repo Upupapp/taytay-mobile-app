@@ -42,7 +42,6 @@ void main() {
   /// runtime type name of the bound instance.
   const Map<String, String> stubbed = <String, String>{
     'registrationRepository': 'blocked — F15',
-    'accountControlsRepository': 'TAB 18',
   };
 
   /// Repositories that already call the server.
@@ -71,6 +70,8 @@ void main() {
     'eventRepository',
     // TAB 13
     'notificationRepository',
+    // TAB 18
+    'accountControlsRepository',
     'verificationRepository',
   };
 

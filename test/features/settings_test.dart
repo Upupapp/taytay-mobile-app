@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/settings/data/planned_account_controls_repository.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -386,37 +385,6 @@ void main() {
       expect(
         find.textContaining('not switched on in this app yet'),
         findsOneWidget,
-      );
-    });
-
-    testWidgets('the planned repository allows nothing', (tester) async {
-      const repository = PlannedAccountControlsRepository();
-
-      final controls = await repository.loadControls();
-      expect(controls.isOk, isTrue);
-      switch (controls) {
-        case Ok<AccountControls>(value: final value):
-          expect(value.canRequestDeletion, isFalse);
-          expect(value.canRequestDeactivation, isFalse);
-          expect(value.canRequestDataCorrection, isFalse);
-          expect(value.canWithdrawConsent, isFalse);
-        case Err<AccountControls>():
-          fail('loadControls must answer "nothing yet" rather than decline');
-      }
-
-      // Every acting method declines. None of them pretends.
-      expect((await repository.listConsents()).isErr, isTrue);
-      expect(
-        (await repository.withdrawConsent(key: 'c', idempotencyKey: 'k')).isErr,
-        isTrue,
-      );
-      expect(
-        (await repository.requestAccountClosure(
-          permanent: true,
-          reason: '',
-          idempotencyKey: 'k',
-        )).isErr,
-        isTrue,
       );
     });
 
