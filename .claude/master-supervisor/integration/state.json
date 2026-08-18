@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 9,
-  "currentTab": "TAB 09 \u2014 Cases, assistance history and referrals",
+  "currentTabIndex": 10,
+  "currentTab": "TAB 10 \u2014 Documents and uploads",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -133,6 +133,14 @@
       "analyze": "clean",
       "tests": "1288 passing",
       "stubsRemaining": 6
+    },
+    {
+      "tab": "TAB 09 \u2014 Cases, assistance history and referrals",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; me/referrals deferred (disclosure records need their own pass)",
+      "analyze": "clean",
+      "tests": "1288 passing",
+      "stubsRemaining": 6,
+      "entityQuestion": "settled from source: me/cases = WelfareCase = /admin/assistance-requests, one lifecycle two audiences"
     }
   ],
   "openFindings": {
