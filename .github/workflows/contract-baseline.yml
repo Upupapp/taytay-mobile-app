@@ -72,6 +72,34 @@ jobs:
           fi
           exit $code
 
+  accessibility-and-localisation:
+    name: Filipino is complete and nothing rots on the calendar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+
+      # Regenerated rather than trusted. `untranslated.json` is an output, and
+      # checking the committed copy would pass on a stale one — which is exactly
+      # how a missing translation ships.
+      - run: flutter gen-l10n
+
+      - name: Fail on any untranslated key
+        run: |
+          if [ -s lib/l10n/untranslated.json ] && \
+             [ "$(tr -d '[:space:]' < lib/l10n/untranslated.json)" != "{}" ]; then
+            echo "::error title=Filipino incomplete::A language setting that silently falls back to English lies to the resident who chose it."
+            cat lib/l10n/untranslated.json
+            exit 1
+          fi
+          echo "Filipino complete."
+
+      # The date-dependence sweep and the arb key comparison.
+      - run: flutter test test/core/date_dependence_test.dart
+
   release-hardening:
     name: The artifact is hardened, not just the source
     runs-on: ubuntu-latest

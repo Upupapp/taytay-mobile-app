@@ -54,14 +54,29 @@ const List<AccessLevel> levels = <AccessLevel>[
 /// Routes a resident reaches without a backend. Every one of these renders from
 /// the app's own state, so a layout failure here is a layout failure, not a
 /// missing endpoint.
+/// Every public route that renders without a path parameter.
+///
+/// Was seven of the twenty public routes. TAB 19 asks for *every* screen at
+/// 200%, not just the inbox — and the seven that were covered were the ones
+/// somebody had already thought about, which is the opposite of a sweep. The
+/// additions are the screens a resident meets when something has gone wrong or
+/// when they have no account yet: sign-in, its help page, the privacy screen,
+/// programmes, and the two blocking notices TAB 01 added.
+///
+/// Detail routes are absent because they need an id and a loaded record; they
+/// are covered by their own feature tests.
 const List<String> coreRoutes = <String>[
   '/home',
   '/services',
+  '/programs',
   '/news',
   '/events',
   '/profile',
+  '/profile/privacy',
   '/settings',
   '/settings/help',
+  '/sign-in',
+  '/sign-in-help',
 ];
 
 AppConfig config() => AppConfig.from(
