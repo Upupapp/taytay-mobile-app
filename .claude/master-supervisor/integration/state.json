@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 11,
-  "currentTab": "TAB 11 \u2014 Newsfeed and engagement",
+  "currentTabIndex": 12,
+  "currentTab": "TAB 12 \u2014 Events and registration",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -151,6 +151,16 @@
       "analyze": "clean",
       "tests": "1286 passing",
       "stubsRemaining": 5
+    },
+    {
+      "tab": "TAB 11 \u2014 Newsfeed and engagement",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; reporting blocked by F26 (store blocker)",
+      "raises": [
+        "F26"
+      ],
+      "analyze": "clean",
+      "tests": "1283 passing",
+      "stubsRemaining": 4
     }
   ],
   "openFindings": {
@@ -158,7 +168,8 @@
       "F03",
       "F14",
       "F15",
-      "F16"
+      "F16",
+      "F26"
     ],
     "P1": [
       "F13",
