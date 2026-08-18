@@ -57,7 +57,7 @@ the analyzer clean — and that is not what a launch turns on.
 | --- | --- | --- |
 | ~~**F14**~~ | ~~No barangay directory~~ — **CLOSED on both sides since this dossier was written.** The backend publishes `GET barangays` with a UUID and a stable code and accepts `barangay_code` on `POST me/kyc`; this app reads the directory and files a claim against the code. Proven by the app’s own repositories against the API running locally, and proven red by sending the published identifier as `barangay_id` (422). See `qa-and-evidence.md`. | closed |
 | **F15** | No self-registration route. Onboarding is staff-mediated by construction; the app ships a wizard with no server counterpart | product / LGU |
-| **F16** | Sign-in codes are issued, recorded and **never dispatched** → nobody can sign in | backend |
+| ~~**F16**~~ | ~~Codes never dispatched~~ — **the code is CLOSED** (`backend@7922e84`): the seam exists, the code is sent, and sign-in is proven end to end against a running API. **The P0 does not close with it.** No SMS provider has been chosen, so a real resident still receives nothing. Downgraded from "nobody can sign in because of a defect" to "nobody can sign in until a vendor is contracted" — a procurement blocker, not an engineering one. | LGU (procurement) |
 | **F26** | No content-reporting route. Both stores require one for user-generated content | backend |
 
 **P1**
@@ -122,8 +122,10 @@ are currently empty strings.
 
 In order of what unblocks the most:
 
-1. **F16** — dispatch sign-in codes. Nothing else about the app is reachable
-   until a resident can get in.
+1. ~~**F16** — dispatch sign-in codes.~~ **The engineering half is done.** What
+   is left is contracting an SMS provider, which is item 2 below in disguise:
+   organisational, not technical. Still first, because nothing else about the
+   app is reachable until a resident can get in.
 2. **F15** — decide whether onboarding is staff-mediated. If yes, replace the
    registration wizard; if no, the backend needs a route.
 3. ~~**F14** — publish a barangay directory.~~ **Done.** The directory ships, the

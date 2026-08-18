@@ -11,7 +11,9 @@ gets closed by work, not by asking. This list exists so that the things which
 twenty-five TAB reports.
 
 Ordered by lead time, longest first, because the long ones decide the launch
-date and the short ones do not.
+date and the short ones do not. **Items refer to each other by name, never by
+number** — this list is renumbered whenever something closes, and a stale "see
+item 5" points at whatever moved into that slot.
 
 ---
 
@@ -27,7 +29,28 @@ is erased and what is kept — and a municipal record cannot always simply be
 erased. Both stores require the deletion path, so this is on the critical path
 to submission, not after it.
 
-## 2. Custody of the release signing keys — F03
+## 2. Contract a Philippine SMS provider — the other half of F16
+
+**Owner: LGU. Blocks: every resident, from signing in at all.**
+
+The engineering half is closed (`backend@7922e84`): a sign-in code is now issued
+*and sent*, through a transactional sender that persists nothing, proven end to
+end against the API running locally. **There is no SMS provider.** Not
+unconfigured — not chosen. `ChannelRegistry` binds a null SMS channel and no
+adapter for any vendor exists anywhere in the codebase, so what a deployment
+binds today is `NullTransactionalSender`: the code is issued, recorded as
+`identity.code-undelivered` in the audit trail, and reaches nobody.
+
+Selecting and contracting a provider is procurement, and the credentials are
+material an agent must never generate or hold. Once a vendor exists the adapter
+is a small class behind `Modules\Shared\Contracts\TransactionalSender` and one
+line of config — the seam, the tests and the failure semantics are already
+there.
+
+Worth deciding alongside **"Is the newsfeed public in production?"** — both are
+questions about who this platform can actually reach.
+
+## 3. Custody of the release signing keys — F03
 
 **Owner: LGU. Blocks: any releasable artifact at all.**
 
@@ -41,7 +64,7 @@ there is no artifact until somebody does this.
 An agent must never generate, hold or rotate these. Losing the Android keystore
 means the app can never be updated under the same listing again.
 
-## 3. Store accounts and listings
+## 4. Store accounts and listings
 
 **Owner: LGU. Blocks: submission.**
 
@@ -51,7 +74,7 @@ screenshots, support contact, and the privacy declarations — which must match
 what `PrivacyInfo.xcprivacy` and the data-safety form actually say. See
 `store-readiness.md` for what the app already declares.
 
-## 4. Is onboarding staff-mediated? — F15
+## 5. Is onboarding staff-mediated? — F15
 
 **Owner: LGU, with the backend owner. Blocks: a P0 either way.**
 
@@ -70,7 +93,7 @@ Two answers, and they lead to opposite work:
 Nobody can pick this from the code. It is what the municipality intends the
 service to be.
 
-## 5. The deployed proxy's body limit — F25
+## 6. The deployed proxy's body limit — F25
 
 **Owner: whoever operates the deployment.**
 
@@ -81,7 +104,7 @@ like a dropped connection. Too high and residents meet an unreadable failure
 after paying to upload; too low and the app refuses documents the office would
 have accepted. Needs the real value from the real deployment.
 
-## 6. A staging environment
+## 7. A staging environment
 
 **Owner: whoever operates the deployment.**
 
@@ -91,7 +114,7 @@ is recorded as such in `qa-and-evidence.md`, but it is not the deployment. The
 contract harness (`tool/record_fixtures.sh`, `tool/check_fixture_drift.sh`) is
 built to point at a staging URL and will work the day one exists.
 
-## 7. Is the newsfeed public in production? — F30
+## 8. Is the newsfeed public in production? — F30
 
 **Owner: LGU.**
 
@@ -102,7 +125,7 @@ correctly. What is missing is a statement of which is intended, because it
 decides whether municipal announcements are readable by a resident who has not
 signed in — the residents least likely to have an account.
 
-## 8. Whose page size wins
+## 9. Whose page size wins
 
 **Owner: backend owner.**
 
@@ -111,7 +134,7 @@ channel. This app clamps and sends its own. Nothing is broken, but a page size
 chosen for this channel by the backend is being overridden by a number chosen in
 a client, and that should be a decision rather than a silent divergence.
 
-## 9. Confirm the `case` entity — carried from the Master Command
+## 10. Confirm the `case` entity — carried from the Master Command
 
 **Owner: backend owner.**
 
@@ -120,7 +143,7 @@ thing to the office. They are different modules with different lifecycles here,
 and the app models them separately; this was raised at TAB 09 and never
 answered.
 
-## 10. What each service asks for — F24
+## 11. What each service asks for — F24
 
 **Owner: the office that adjudicates each service.**
 
@@ -134,7 +157,12 @@ backend can publish it.
 
 ## Not on this list, deliberately
 
-**F16** (sign-in codes are never dispatched), **F26** (no content-reporting
-route), **F28** (a KYC case has nowhere to put a document) and the
-implementation of **F13** once the schedule exists are all code. They are
-tracked in `backend-baseline.md` and closed by writing it.
+**F26** (no content-reporting route), **F28** (a KYC case has nowhere to put a
+document) and the implementation of **F13** once the retention schedule exists
+are all code. They are tracked in `backend-baseline.md` and closed by writing it.
+
+**F16 was on this list for one revision and then split.** Its engineering half
+is closed; its procurement half is item 2. That split is the shape to look for
+when adding anything here: most P0s that look organisational have a seam
+somebody can build before the decision arrives, and building it first means the
+decision, when it comes, costs a line of config instead of a sprint.
