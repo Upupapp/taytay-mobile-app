@@ -78,13 +78,37 @@ abstract final class ApiEnvelopeDecoder {
       try {
         decodedBody = jsonDecode(response.body);
       } on FormatException catch (error) {
-        // An HTML error page reaching a JSON client is the exact failure the
-        // server's ForceJsonResponse middleware exists to prevent; if it happens
-        // it is a contract breach, not a resident's problem.
+        // A NON-JSON BODY MEANS DIFFERENT THINGS ON DIFFERENT STATUSES, and
+        // collapsing them cost the upload path its whole error message.
+        //
+        // On a 2xx it is the captive-portal case: a login page arriving where
+        // the envelope should be. That is a connectivity problem and a contract
+        // breach, and reporting it as a server fault sends somebody to a
+        // barangay hall over their own wifi.
+        //
+        // On a non-2xx it usually means something answered *before* the
+        // application — a reverse proxy refusing a body over
+        // `client_max_body_size` returns an HTML 413 with no `error.code`. The
+        // status is the only thing carrying meaning, and it carries plenty: a
+        // resident who photographed an ID at full resolution should be told the
+        // file is too large, not that something went wrong.
+        if (response.isSuccess) {
+          return Err<ApiEnvelope<T>>(
+            ContractFailure(
+              requestId: response.requestId,
+              debugMessage: 'Response body was not JSON: ${error.message}',
+            ),
+          );
+        }
+
         return Err<ApiEnvelope<T>>(
-          ContractFailure(
+          failureFromApiError(
+            statusCode: response.statusCode,
+            code: ApiErrorCode.unknown,
             requestId: response.requestId,
-            debugMessage: 'Response body was not JSON: ${error.message}',
+            retryAfter: response.retryAfter,
+            message:
+                'Non-JSON body on ${response.statusCode}: ${error.message}',
           ),
         );
       }

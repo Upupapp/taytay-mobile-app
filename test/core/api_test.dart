@@ -235,7 +235,33 @@ void main() {
         const ApiHttpResponse(statusCode: 502, body: 'upstream down'),
         (data) => data,
       );
-      // Body is unparseable, so the contract is what broke.
+      // This test's name always said "falls back to the status" and its
+      // assertion said the opposite — ContractFailure, which is what the decoder
+      // returned for *any* unparseable body regardless of status. TAB 23 found
+      // what that cost on the upload path: a reverse proxy answering 413 with an
+      // HTML page became "something went wrong" instead of "that file is too
+      // large".
+      //
+      // A gateway 502 with no envelope is a server problem and reads as one.
+      // The contract-breach reading is reserved for an unparseable body on a
+      // *success*, which is the captive-portal case.
+      // A ServerFailure, and deliberately no claim about `isTemporary`: only a
+      // 503 carries that today, and widening it here would be changing the retry
+      // taxonomy from inside a decoder test.
+      expect(result.failureOrNull, isA<ServerFailure>());
+    });
+
+    test('an unparseable body on a 200 is still a contract breach', () {
+      // The captive-portal case: a login page arriving where the envelope should
+      // be. Reporting it as a server fault sends somebody to a barangay hall
+      // over their own wifi.
+      final result = ApiEnvelopeDecoder.decode<Object?>(
+        const ApiHttpResponse(
+          statusCode: 200,
+          body: '<html>Sign in to this network</html>',
+        ),
+        (data) => data,
+      );
       expect(result.failureOrNull, isA<ContractFailure>());
     });
   });

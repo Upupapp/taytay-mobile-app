@@ -463,6 +463,28 @@ AppFailure _failureFromStatus({
   if (statusCode == 409) {
     return ConflictFailure(requestId: requestId, debugMessage: message);
   }
+  // 413 and 415 WITHOUT AN ENVELOPE, which is the reverse-proxy case.
+  //
+  // When a body exceeds nginx's `client_max_body_size` the proxy answers before
+  // the application does, so there is no `error.code` to branch on — the body is
+  // an HTML page. Without these, the status falls through to `unexpected` and a
+  // resident who photographed an ID at full resolution is told "something went
+  // wrong" on the one screen where the remedy is obvious and theirs. That is F04
+  // reappearing at a layer below the one that fixed it.
+  if (statusCode == 413) {
+    return UnacceptableUploadFailure(
+      isTooLarge: true,
+      requestId: requestId,
+      debugMessage: message,
+    );
+  }
+  if (statusCode == 415) {
+    return UnacceptableUploadFailure(
+      isTooLarge: false,
+      requestId: requestId,
+      debugMessage: message,
+    );
+  }
   if (statusCode == 422) {
     return ValidationFailure(requestId: requestId, debugMessage: message);
   }
