@@ -1,0 +1,97 @@
+{
+  "endpoint": "services",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": [
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c001",
+        "code": "CEDULA",
+        "name": "Community Tax Certificate (Cedula)",
+        "description": "Application and issuance of the community tax certificate.",
+        "category": "dokumento",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "citizen-mobile",
+          "admin-console"
+        ]
+      },
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c002",
+        "code": "BUSINESS_PERMIT",
+        "name": "Business Permit Application",
+        "description": "New and renewal applications for a municipal business permit.",
+        "category": "dokumento",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "admin-console"
+        ]
+      },
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c003",
+        "code": "REAL_PROPERTY_TAX",
+        "name": "Real Property Tax Assessment and Payment",
+        "description": "Assessment enquiry and payment of real property tax.",
+        "category": "buwis",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "citizen-mobile",
+          "admin-console"
+        ]
+      },
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c004",
+        "code": "HEALTH_CERTIFICATE",
+        "name": "Health Certificate",
+        "description": "Occupational health certificate issued by the municipal health office.",
+        "category": "kalusugan",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "citizen-mobile",
+          "admin-console"
+        ]
+      },
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c005",
+        "code": "PESO_JOB_MATCHING",
+        "name": "PESO Job Matching",
+        "description": "Public Employment Service Office job referral and matching.",
+        "category": "trabaho",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "citizen-mobile",
+          "admin-console"
+        ]
+      },
+      {
+        "id": "018f2c8a-0a01-7000-8000-00000000c006",
+        "code": "LGU_RESIDENT_ID",
+        "name": "Taytay Resident ID Application",
+        "description": "Application, renewal and replacement of the Taytay resident ID.",
+        "category": "ids",
+        "status": "published",
+        "available_channels": [
+          "citizen-web",
+          "citizen-mobile",
+          "admin-console"
+        ]
+      }
+    ],
+    "meta": {
+      "request_id": "85a71f4b09bedebfe5e901b405cef944",
+      "pagination": {
+        "page": 1,
+        "per_page": 15,
+        "total": 6,
+        "total_pages": 1,
+        "has_more": false
+      }
+    }
+  }
+}

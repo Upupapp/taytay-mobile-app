@@ -71,7 +71,17 @@ redact() {
 }
 
 capture() {
-  local path="$1" auth="$2" file
+  # $3: "public" for endpoints that carry no personal data by construction.
+  #
+  # Redaction is by key and deliberately blunt, which is right for a resident's
+  # record and wrong for the service catalogue: `name` on a published municipal
+  # service is the service's name. Redacting it produces a fixture whose decoder
+  # test cannot run, so the safe default destroys the artefact it was protecting.
+  #
+  # Public municipal content is exempt — services, programmes, events, the
+  # newsfeed, the privacy notice, health and bootstrap are the same for every
+  # resident and there is nothing in them to redact.
+  local path="$1" auth="$2" public="${3:-}" file
   file="$OUT/$(echo "$path" | tr '/' '_').json"
 
   local args=(-sS -o /tmp/fixture.body -w '%{http_code}'
@@ -91,7 +101,7 @@ capture() {
         --argjson status "$status" --slurpfile body /tmp/fixture.body \
     '{endpoint: $endpoint, baseline_tag: $tag, captured: $captured,
       status: $status, body: $body[0]}' \
-    | redact > "$file"
+    | { if [ "$public" = "public" ]; then cat; else redact; fi; } > "$file"
 
   # Last line of defence. If a value that looks like a Philippine mobile number
   # or a PhilSys number survived the key list, the key list is wrong — so fail
@@ -107,7 +117,7 @@ capture() {
 }
 
 echo "Recording against $TAYTAY_STAGING at $TAG"
-for p in "${PUBLIC[@]}"; do capture "$p" no; done
+for p in "${PUBLIC[@]}"; do capture "$p" no public; done
 
 if [ -n "${TAYTAY_TOKEN:-}" ]; then
   for p in "${AUTHENTICATED[@]}"; do capture "$p" yes; done

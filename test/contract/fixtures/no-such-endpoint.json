@@ -1,0 +1,13 @@
+{
+  "endpoint": "no-such-endpoint",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 404,
+  "body": {
+    "error": {
+      "code": "NOT_FOUND",
+      "message": "The requested resource was not found.",
+      "request_id": "9af0d668b01c2203aca84e7a077e8621"
+    }
+  }
+}

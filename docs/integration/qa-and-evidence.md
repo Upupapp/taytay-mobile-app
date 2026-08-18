@@ -23,10 +23,29 @@ evidence, so it needs to know exactly what kind of evidence this suite is.
 
 ## What is not proven, and must not be read as proven
 
-**No test in this suite has ever talked to the Taytay backend.** Not once. There
-is no staging environment and no PHP toolchain on this machine, so every claim
-about the server is derived from reading its source at a pinned commit, and every
-claim about the app is derived from running it against a scripted transport.
+**CORRECTED after this document was first written.** It said no test had ever
+talked to the Taytay backend, and that there was no PHP toolchain on this
+machine. The first half was true at the time. **The second was taken from the
+Master Command and never checked, and it is wrong**: PHP 8.4 and Composer are
+installed via Herd, the backend boots against sqlite, and it serves in about six
+seconds.
+
+So the caveat is now narrower and more precise:
+
+* **Nine endpoints have been called for real**, their responses recorded as
+  golden fixtures under `test/contract/fixtures/`, and decoded through the app's
+  own decoders — `app/bootstrap`, `health`, `services`, `programs`, `events`,
+  `privacy/notice`, `newsfeed`, `me` (401) and a 404.
+* **The fixture drift check runs and passes** rather than skipping loudly.
+* **Still not exercised:** every authenticated resident journey, because no
+  account can exist (F15) and no code can be dispatched (F16). That gap is the
+  platform's, not the tooling's.
+
+Calling the API found something reading it could not: **`GET newsfeed` answers
+401 to a guest** on a route carrying no `auth:sanctum`, because the controller
+gates anonymous readers on a feature flag that defaults off. Raised as **F30**,
+and the app was wrong in a way that would have broken the feed for signed-in
+residents too.
 
 Specifically absent:
 

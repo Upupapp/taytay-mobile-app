@@ -92,6 +92,7 @@ class ApiClient {
     Duration? timeout,
     String? bearerOverride,
     MultipartFile? file,
+    bool attachTokenIfAvailable = false,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -101,9 +102,21 @@ class ApiClient {
     // the session is made of. Storing the token first to make the provider find
     // it would mean a session existed for a moment at a level nobody had
     // checked, and fail-closed means never guessing that level even briefly.
+    // OPTIONALLY AUTHENTICATED, for content whose public-ness is a server flag.
+    //
+    // `GET newsfeed` is an unauthenticated route whose controller still refuses
+    // an anonymous reader unless `newsfeed.public_access` is on — and it defaults
+    // off. Reading the route file says "public"; calling it says 401. A request
+    // that is anonymous by construction therefore fails for a signed-in resident
+    // too, which is the worst of both: the token exists and is deliberately
+    // withheld.
+    //
+    // So: attach the token when there is one, stay anonymous when there is not,
+    // and never fail for the lack of it. A guest still gets the server's own
+    // answer about whether the feed is public, rather than the app guessing.
     final token = authenticated
         ? (bearerOverride ?? await _accessTokenProvider?.call())
-        : null;
+        : (attachTokenIfAvailable ? await _accessTokenProvider?.call() : null);
     if (authenticated && (token == null || token.isEmpty)) {
       // Never send a protected request as a guest and let the server decide:
       // it produces a misleading 401 and, worse, a request that looks

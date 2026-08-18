@@ -1,0 +1,37 @@
+{
+  "endpoint": "app/bootstrap",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": {
+      "service": "taytay-lguids-backend",
+      "api_version": "v1",
+      "server_time": "2026-08-18T08:49:17Z",
+      "timezone": "Asia/Manila",
+      "client": {
+        "channel": "citizen-mobile",
+        "default_page_size": 15,
+        "minimum_version": ""
+      },
+      "features": {
+        "digital_id": false,
+        "newsfeed_public": false,
+        "newsfeed_comments": false,
+        "push_notifications": false
+      },
+      "support": {
+        "email": "",
+        "phone": ""
+      },
+      "conventions": {
+        "idempotency_header": "Idempotency-Key",
+        "request_id_header": "X-Request-Id",
+        "channel_header": "X-Client-Channel"
+      }
+    },
+    "meta": {
+      "request_id": "e4dfb654a49a8ea344c5d1a21bbf5bef"
+    }
+  }
+}

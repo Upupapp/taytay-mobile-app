@@ -292,16 +292,45 @@ void main() {
   });
 
   group('newsfeed — public reads stay anonymous, comments do not', () {
-    test('the feed is fetched without a token', () async {
+    test('the feed sends a token when there is one, and works without', () async {
+      // THIS TEST ASSERTED THE OPPOSITE UNTIL A REAL SERVER DISAGREED.
+      //
+      // It required the feed to be fetched anonymously, because the route file
+      // carries no `auth:sanctum` and anonymous keeps a response publicly
+      // cacheable. Calling the running API returned 401: the controller refuses
+      // an anonymous reader unless `newsfeed.public_access` is on, and it
+      // defaults off (F30). So a request anonymous *by construction* failed for
+      // signed-in residents too — the token existed and was withheld on
+      // principle.
       transport.responses.add(ok(<Object?>[]));
       await NewsfeedApiRepository(
         apiClient: clientFor(transport),
       ).listAnnouncements();
 
       expect(transport.requests.single.path, 'newsfeed');
-      // Anonymous keeps the answer publicly cacheable, which matters most to
-      // residents on metered prepaid data.
-      expect(sentAuthenticated(transport.requests.single), isFalse);
+      expect(sentAuthenticated(transport.requests.single), isTrue);
+
+      // With no session it still goes rather than failing for the lack of a
+      // token: a guest gets the server's own answer about whether the feed is
+      // public, instead of the app guessing on their behalf.
+      final _Scripted guest = _Scripted(<Result<ApiHttpResponse>>[
+        ok(<Object?>[]),
+      ]);
+      final Result<Paginated<Announcement>> result =
+          await NewsfeedApiRepository(
+            apiClient: ApiClient(
+              config: AppConfig.from(
+                rawEnvironment: 'dev',
+                rawApiBaseUrl: 'https://example.test/api/v1',
+                isReleaseBuild: false,
+              ),
+              transport: guest,
+              accessTokenProvider: () async => null,
+            ),
+          ).listAnnouncements();
+
+      expect(result.isOk, isTrue);
+      expect(sentAuthenticated(guest.requests.single), isFalse);
     });
 
     test(

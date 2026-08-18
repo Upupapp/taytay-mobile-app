@@ -1,0 +1,32 @@
+{
+  "endpoint": "privacy/notice",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": {
+      "notice": null,
+      "acknowledged": false,
+      "legal_bases": {
+        "resident_registry": "public-task",
+        "welfare_assistance": "legal-obligation",
+        "kyc_verification": "legal-obligation",
+        "credential_issuance": "public-task",
+        "audit_and_accountability": "legal-obligation",
+        "marketing_communications": "consent",
+        "photography_for_publication": "consent",
+        "referral_to_external_provider": "consent",
+        "research_and_statistics": "consent"
+      },
+      "consent_purposes": [
+        "marketing_communications",
+        "photography_for_publication",
+        "referral_to_external_provider",
+        "research_and_statistics"
+      ]
+    },
+    "meta": {
+      "request_id": "833322e46eb189a3a9f53a7814b44b2c"
+    }
+  }
+}

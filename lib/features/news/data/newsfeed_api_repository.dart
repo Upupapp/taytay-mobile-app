@@ -37,9 +37,17 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     final response = await _apiClient.send<List<Announcement>>(
       method: HttpMethod.get,
       path: path,
-      // Guest-visible by design, and sent anonymously so the response stays
-      // publicly cacheable — the same reasoning as the service catalogue.
+      // NOT guest-visible unconditionally, which reading the route file would
+      // have you believe and which calling it disproves. The route carries no
+      // `auth:sanctum`, and the controller still refuses an anonymous reader
+      // unless `newsfeed.public_access` is on — a flag that defaults off (F30).
+      //
+      // So the token goes if there is one and the request stays anonymous if
+      // there is not. Sending nothing by construction would fail for a signed-in
+      // resident too, which is the worse half of the bug: the token exists and
+      // is withheld on principle.
       authenticated: false,
+      attachTokenIfAvailable: true,
       query: <String, String>{
         'page': '${page < 1 ? 1 : page}',
         'per_page': '${perPage.clamp(1, 100)}',
@@ -60,6 +68,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       method: HttpMethod.get,
       path: '$path/$id',
       authenticated: false,
+      attachTokenIfAvailable: true,
       decode: _decodePost,
     );
     return response.flatMap(

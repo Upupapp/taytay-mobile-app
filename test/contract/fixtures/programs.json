@@ -1,0 +1,19 @@
+{
+  "endpoint": "programs",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": [],
+    "meta": {
+      "request_id": "0f1eaaaa43bfbcdd8d29086f080c935c",
+      "pagination": {
+        "page": 1,
+        "per_page": 15,
+        "total": 0,
+        "total_pages": 0,
+        "has_more": false
+      }
+    }
+  }
+}

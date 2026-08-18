@@ -1,0 +1,19 @@
+{
+  "endpoint": "events",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": [],
+    "meta": {
+      "request_id": "fef25fe4606855a9f8780f4e94f23325",
+      "pagination": {
+        "page": 1,
+        "per_page": 15,
+        "total": 0,
+        "total_pages": 0,
+        "has_more": false
+      }
+    }
+  }
+}

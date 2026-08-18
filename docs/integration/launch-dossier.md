@@ -135,9 +135,40 @@ In order of what unblocks the most:
 Items 1–3 are days of backend work each. Items 4–6 are weeks of organisational
 work, and are the ones that will decide the launch date.
 
+## Post-decision addendum — one caveat narrowed, one finding added
+
+After the go/no-go was recorded, the claim that no PHP toolchain existed on this
+machine was checked and found to be **false** — it had been carried from the
+Master Command through twenty-five TABs without verification. The backend runs
+locally against sqlite.
+
+That does not change the decision, and it improves the evidence behind it:
+
+* Nine endpoints called for real; responses recorded as golden fixtures and
+  decoded through the app's own decoders. The fixture drift check now **passes**
+  instead of skipping.
+* **F30 raised**: `GET newsfeed` answers 401 to a guest, because the controller
+  gates anonymous readers on `newsfeed.public_access`, which defaults off. The
+  route file carries no `auth:sanctum`, so reading it says public and calling it
+  says otherwise. The app had been wired anonymously by construction, which would
+  have broken the feed for signed-in residents too. Fixed.
+* Also recorded: the server publishes `default_page_size: 15` for
+  `citizen-mobile` and this app sends its own 25. Nothing breaks; it is a
+  divergence that should be a decision.
+
+The four blocking P0s are unchanged, and none of them became testable: F15 and
+F16 mean no account can exist and no code can be sent, so **no authenticated
+journey was exercised even with a server running**. That is the platform's gap,
+not the tooling's.
+
 ## Dissents
 
-None recorded. This dossier was assembled by one engineer with no access to a
+One, recorded against myself and now demonstrated: I repeated a document's claim
+about this machine for twenty-five TABs without checking it, and it was wrong.
+The lesson is the one this whole programme is about — a status document is not
+evidence, including the one that told me what I could not do.
+
+Beyond that: This dossier was assembled by one engineer with no access to a
 staging environment, a device, or the LGU. **That is itself the most important
 caveat in it:** every "closed" above means closed against a contract read from
 source and a suite run against scripted transports. Nothing here has been proven

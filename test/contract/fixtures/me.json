@@ -1,0 +1,13 @@
+{
+  "endpoint": "me",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 401,
+  "body": {
+    "error": {
+      "code": "UNAUTHENTICATED",
+      "message": "Authentication is required.",
+      "request_id": "bf42c30267b120e302ff37becd819ed9"
+    }
+  }
+}
