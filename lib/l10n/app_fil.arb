@@ -49,5 +49,12 @@
   "updateRequiredBody": "Hindi na suportado ang bersyong ito ng Taytay LGU app. Pakiupdate ito mula sa iyong app store, pagkatapos ay buksan itong muli.",
   "maintenanceTitle": "May maintenance ang sistema ng LGU",
   "maintenanceBody": "Ligtas ang iyong account at mga hiling. Maaari ka pa ring tumingin ng mga serbisyo at programa habang nangyayari ito. Pakisubukang muli mamaya.",
-  "blockingNoticeSupport": "Kung kailangan mo ng tulong ngayon"
+  "blockingNoticeSupport": "Kung kailangan mo ng tulong ngayon",
+  "signInCodeSent": "Kung nakarehistro ang numerong iyon sa Taytay LGU, papadalhan ka ng code.",
+  "signInCodeNotAccepted": "Hindi gumana ang code na iyon. Pakisuri ang code at subukang muli, o humingi ng bago.",
+  "signInTooManyAttempts": "Masyadong maraming pagsubok. Maghintay muna nang kaunti bago subukang muli.",
+  "signInOffline": "Mukhang wala kang koneksyon. Pakisuri ang iyong internet at subukang muli.",
+  "signInTimedOut": "Masyadong natagalan iyon. Pakisubukang muli.",
+  "signInServiceUnavailable": "Pansamantalang hindi available ang pag-sign in. Pakisubukang muli mamaya.",
+  "signInUnexpected": "May hindi inaasahang naganap. Pakisubukang muli, o pumunta sa munisipyo ng Taytay kung magpapatuloy ito."
 }

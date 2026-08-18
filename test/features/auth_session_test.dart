@@ -7,7 +7,6 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/auth/data/pending_backend_auth_repository.dart';
 import 'package:taytay_resident/features/auth/data/planned_device_session_repository.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
@@ -748,14 +747,9 @@ void main() {
       expect(failure.residentMessage, isNot(contains('endpoint')));
     });
 
-    test(
-      'sign-out succeeds locally with no server session to revoke',
-      () async {
-        // Local sign-out must never be blocked by the network.
-        final result = await const PendingBackendAuthRepository().signOut();
-        expect(result.isOk, isTrue);
-      },
-    );
+    // Sign-out's local-first guarantee moved with the repository: it is proven
+    // against the wired implementation in `auth_api_test.dart`, where a server
+    // that refuses, times out or never answers still produces `Ok`.
 
     test('no refresh is attempted, because none is published', () async {
       // TAB 05 built the coordinator and left the refresher unregistered. TAB 09

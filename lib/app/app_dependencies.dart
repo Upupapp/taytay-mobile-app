@@ -23,7 +23,7 @@ import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
 import '../core/telemetry/telemetry.dart';
-import '../features/auth/data/pending_backend_auth_repository.dart';
+import '../features/auth/data/auth_api_repository.dart';
 import '../features/auth/data/planned_device_session_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
@@ -220,7 +220,7 @@ class AppDependencies {
       cache: publicCache,
       network: network,
       telemetry: telemetry,
-      authRepository: const PendingBackendAuthRepository(),
+      authRepository: AuthApiRepository(apiClient: apiClient),
       deviceSessionRepository: const PlannedDeviceSessionRepository(),
       platformRepository: platformRepository,
       platform: platform,

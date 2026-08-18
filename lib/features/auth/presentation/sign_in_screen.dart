@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -383,7 +384,7 @@ class _MessageBanner extends StatelessWidget {
         SignInMessage.tooManyAttempts => BannerTone.warning,
         _ => BannerTone.error,
       },
-      message: message.text,
+      message: localisedSignInMessage(context, message),
     );
   }
 }

@@ -11,6 +11,7 @@ class AuthOutcome {
     required this.resident,
     required this.accessToken,
     this.expiresAt,
+    this.requiresContactVerification = false,
   });
 
   final ResidentSession resident;
@@ -23,6 +24,23 @@ class AuthOutcome {
   /// It is never treated as permission to *keep* using one: revocation is
   /// server-side and can happen at any moment before this time.
   final DateTime? expiresAt;
+
+  /// The account's mobile number is not marked verified on the server.
+  ///
+  /// A successful, expected branch of sign-in rather than a failure — the
+  /// resident is authenticated and the session is real; there is simply one more
+  /// step before some things will work. Routing to it is right; dead-ending on a
+  /// permission error later is not.
+  ///
+  /// **There is deliberately no `mfaRequired` branch, and that is a measured
+  /// fact rather than an omission.** The Master Command asks for one, because
+  /// `POST auth/tokens` answers `{"status":"mfa-required"}`. Measured at
+  /// `backend@api-baseline-2026-08`, that route filters
+  /// `account_type = Staff` and takes an email and a password — it is the admin
+  /// console's front door, and a citizen account can never authenticate through
+  /// it. `verifySignInCode`, the citizen path, has no MFA branch at all. See
+  /// F20 in `docs/integration/backend-baseline.md`.
+  final bool requiresContactVerification;
 
   /// Redacted: this object holds bearer credential material.
   @override

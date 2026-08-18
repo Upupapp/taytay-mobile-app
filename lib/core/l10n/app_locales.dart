@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../../features/auth/domain/sign_in_challenge.dart';
 import '../../l10n/app_localizations.dart';
 import '../result/app_failure.dart';
 
@@ -69,6 +70,27 @@ abstract final class AppLocales {
 /// that have no `BuildContext` — a log line, a controller under test, a value
 /// captured before a widget exists. This is the widget-side door, and every
 /// surface a resident actually reads should take it.
+/// The resident-facing copy for a sign-in outcome, in the device's language.
+///
+/// Sign-in is where the largest number of residents meet this app, including
+/// those who cannot use it in English at all — so it is localised here rather
+/// than waiting for the general sweep in TAB 19.
+///
+/// [SignInMessage.text] stays as the English default for callers with no
+/// `BuildContext`, the same arrangement as [AppFailure.residentMessage].
+String localisedSignInMessage(BuildContext context, SignInMessage message) {
+  final strings = AppStrings.of(context);
+  return switch (message) {
+    SignInMessage.codeSent => strings.signInCodeSent,
+    SignInMessage.codeNotAccepted => strings.signInCodeNotAccepted,
+    SignInMessage.tooManyAttempts => strings.signInTooManyAttempts,
+    SignInMessage.offline => strings.signInOffline,
+    SignInMessage.timedOut => strings.signInTimedOut,
+    SignInMessage.serviceUnavailable => strings.signInServiceUnavailable,
+    SignInMessage.unexpected => strings.signInUnexpected,
+  };
+}
+
 String localisedResidentMessage(BuildContext context, AppFailure failure) {
   final strings = AppStrings.of(context);
   return switch (failure) {

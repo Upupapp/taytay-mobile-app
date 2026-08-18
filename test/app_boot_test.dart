@@ -8,6 +8,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 
 AppConfig _config({String environment = 'dev', String baseUrl = ''}) =>
     AppConfig.from(
@@ -359,8 +360,25 @@ void main() {
       // The operator-facing debug text is no longer surfaced here even in a dev
       // build, because on this screen it would name the endpoint that refused —
       // and that is one step from naming *why* it refused.
-      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
-      expect(find.textContaining('Identity endpoints'), findsNothing);
+      //
+      // TAB 02 changed which message this is, and the change is the point. The
+      // repository used to decline with a temporary ServerFailure whatever
+      // happened; it now really calls `auth/otp`, and in a test there is no
+      // socket — so the honest answer is that the device is offline, which is
+      // also more useful to a resident than "temporarily unavailable" was.
+      // Asserted as a property rather than as one string. Which SignInMessage
+      // appears depends on how the request failed, and in a widget test that is
+      // an artefact of the harness; what must hold is that the resident sees
+      // copy this app wrote, and nothing else.
+      expect(
+        SignInMessage.values.any(
+          (m) => find.textContaining(m.text).evaluate().isNotEmpty,
+        ),
+        isTrue,
+        reason: 'no resident-facing sign-in message was shown',
+      );
+      expect(find.textContaining('auth/otp'), findsNothing);
+      expect(find.textContaining('Identity'), findsNothing);
       // Nothing distinguishes an unknown number from any other refusal.
       expect(find.textContaining('not registered'), findsNothing);
       expect(find.textContaining('no account'), findsNothing);

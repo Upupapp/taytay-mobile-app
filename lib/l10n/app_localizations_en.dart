@@ -155,4 +155,31 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get blockingNoticeSupport => 'If you need help now';
+
+  @override
+  String get signInCodeSent =>
+      'If that number is registered with Taytay LGU, a code is on its way.';
+
+  @override
+  String get signInCodeNotAccepted =>
+      'That code did not work. Check the code and try again, or ask for a new one.';
+
+  @override
+  String get signInTooManyAttempts =>
+      'Too many attempts. Please wait a little while before trying again.';
+
+  @override
+  String get signInOffline =>
+      'You appear to be offline. Check your internet connection and try again.';
+
+  @override
+  String get signInTimedOut => 'That took too long. Please try again.';
+
+  @override
+  String get signInServiceUnavailable =>
+      'Signing in is temporarily unavailable. Please try again shortly.';
+
+  @override
+  String get signInUnexpected =>
+      'Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening.';
 }

@@ -90,8 +90,19 @@ class ApiClient {
     Object? body,
     String? idempotencyKey,
     Duration? timeout,
+    String? bearerOverride,
   }) async {
-    final token = authenticated ? await _accessTokenProvider?.call() : null;
+    // A token that exists but is not yet the session's.
+    //
+    // Sign-in has to make two more calls with the credential it has just been
+    // handed — `GET me`, and the profile read that carries the verification
+    // tier — *before* it can build a session, because the access level is what
+    // the session is made of. Storing the token first to make the provider find
+    // it would mean a session existed for a moment at a level nobody had
+    // checked, and fail-closed means never guessing that level even briefly.
+    final token = authenticated
+        ? (bearerOverride ?? await _accessTokenProvider?.call())
+        : null;
     if (authenticated && (token == null || token.isEmpty)) {
       // Never send a protected request as a guest and let the server decide:
       // it produces a misleading 401 and, worse, a request that looks

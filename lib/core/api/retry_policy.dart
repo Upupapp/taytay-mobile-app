@@ -94,6 +94,24 @@ class RetryPolicy {
   }) {
     if (!_isRepeatable(request)) return false;
 
+    // A THROTTLE ON A WRITE IS NEVER RETRIED AUTOMATICALLY.
+    //
+    // The Master Command asks for two things that pull against each other: an
+    // `Idempotency-Key` on `auth/otp`, so a dropped connection cannot send a
+    // resident a second SMS and invalidate the first code; and no automatic
+    // retry of a throttled code request, because rate limiting on an OTP
+    // endpoint is a security control and a client that retries around it
+    // defeats it. The key alone would satisfy `_isRepeatable` and hand the
+    // second one back.
+    //
+    // Both hold if the distinction is *what the server said*. A request that
+    // never arrived is worth repeating and the key makes that safe. A `429` is
+    // the server pacing this caller deliberately; repeating it inside the
+    // transport spends the resident's allowance without their knowledge and
+    // without their seeing why. Reads are exempt — honouring `Retry-After` on a
+    // catalogue fetch costs nobody anything.
+    if (statusCode == 429 && !request.method.isSafe) return false;
+
     if (statusCode != null) {
       if (nonRetryableStatuses.contains(statusCode)) return false;
       return retryableStatuses.contains(statusCode);

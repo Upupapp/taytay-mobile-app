@@ -155,4 +155,31 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get blockingNoticeSupport => 'Kung kailangan mo ng tulong ngayon';
+
+  @override
+  String get signInCodeSent =>
+      'Kung nakarehistro ang numerong iyon sa Taytay LGU, papadalhan ka ng code.';
+
+  @override
+  String get signInCodeNotAccepted =>
+      'Hindi gumana ang code na iyon. Pakisuri ang code at subukang muli, o humingi ng bago.';
+
+  @override
+  String get signInTooManyAttempts =>
+      'Masyadong maraming pagsubok. Maghintay muna nang kaunti bago subukang muli.';
+
+  @override
+  String get signInOffline =>
+      'Mukhang wala kang koneksyon. Pakisuri ang iyong internet at subukang muli.';
+
+  @override
+  String get signInTimedOut => 'Masyadong natagalan iyon. Pakisubukang muli.';
+
+  @override
+  String get signInServiceUnavailable =>
+      'Pansamantalang hindi available ang pag-sign in. Pakisubukang muli mamaya.';
+
+  @override
+  String get signInUnexpected =>
+      'May hindi inaasahang naganap. Pakisubukang muli, o pumunta sa munisipyo ng Taytay kung magpapatuloy ito.';
 }

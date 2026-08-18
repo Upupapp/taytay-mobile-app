@@ -10,6 +10,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -469,7 +470,7 @@ void main() {
   });
 
   group('honest seams for absent backends', () {
-    testWidgets('sign-in declines rather than pretending to work', (
+    testWidgets('sign-in reports the real failure, never a fake success', (
       tester,
     ) async {
       await boot(tester, welcomeSeen: true);
@@ -482,7 +483,17 @@ void main() {
       await tester.tap(find.text('Send one-time code'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
+      // The repository is wired now, so this is a real request that could not
+      // leave the device. What must never happen is the screen advancing to the
+      // code step as though a code had been sent.
+      expect(
+        SignInMessage.values.any(
+          (m) => find.textContaining(m.text).evaluate().isNotEmpty,
+        ),
+        isTrue,
+        reason: 'no resident-facing sign-in message was shown',
+      );
+      expect(find.text('Send one-time code'), findsOneWidget);
     });
 
     testWidgets('verification explains rather than collecting documents', (

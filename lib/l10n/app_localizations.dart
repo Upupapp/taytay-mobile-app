@@ -349,6 +349,48 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'If you need help now'**
   String get blockingNoticeSupport;
+
+  /// No description provided for @signInCodeSent.
+  ///
+  /// In en, this message translates to:
+  /// **'If that number is registered with Taytay LGU, a code is on its way.'**
+  String get signInCodeSent;
+
+  /// No description provided for @signInCodeNotAccepted.
+  ///
+  /// In en, this message translates to:
+  /// **'That code did not work. Check the code and try again, or ask for a new one.'**
+  String get signInCodeNotAccepted;
+
+  /// No description provided for @signInTooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please wait a little while before trying again.'**
+  String get signInTooManyAttempts;
+
+  /// No description provided for @signInOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'You appear to be offline. Check your internet connection and try again.'**
+  String get signInOffline;
+
+  /// No description provided for @signInTimedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'That took too long. Please try again.'**
+  String get signInTimedOut;
+
+  /// No description provided for @signInServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in is temporarily unavailable. Please try again shortly.'**
+  String get signInServiceUnavailable;
+
+  /// No description provided for @signInUnexpected.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening.'**
+  String get signInUnexpected;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {
