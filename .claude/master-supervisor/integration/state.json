@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 13,
-  "currentTab": "TAB 13 \u2014 Notifications and push",
+  "currentTabIndex": 14,
+  "currentTab": "TAB 14 \u2014 Error taxonomy and the resident voice",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -168,6 +168,16 @@
       "analyze": "clean",
       "tests": "1279 passing",
       "stubsRemaining": 3
+    },
+    {
+      "tab": "TAB 13 \u2014 Notifications and push",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; push receipt needs an SDK decision (TAB 18)",
+      "raises": [
+        "F27"
+      ],
+      "analyze": "clean",
+      "tests": "1276 passing",
+      "stubsRemaining": 2
     }
   ],
   "openFindings": {
@@ -183,7 +193,8 @@
       "F22",
       "F23",
       "F24",
-      "F25"
+      "F25",
+      "F27"
     ],
     "P2": [
       "F09",
