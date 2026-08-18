@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 12,
-  "currentTab": "TAB 12 \u2014 Events and registration",
+  "currentTabIndex": 13,
+  "currentTab": "TAB 13 \u2014 Notifications and push",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -161,6 +161,13 @@
       "analyze": "clean",
       "tests": "1283 passing",
       "stubsRemaining": 4
+    },
+    {
+      "tab": "TAB 12 \u2014 Events and registration",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
+      "analyze": "clean",
+      "tests": "1279 passing",
+      "stubsRemaining": 3
     }
   ],
   "openFindings": {
