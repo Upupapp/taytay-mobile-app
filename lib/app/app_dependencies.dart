@@ -27,7 +27,7 @@ import '../features/auth/data/auth_api_repository.dart';
 import '../features/auth/data/session_api_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
-import '../features/credential/data/planned_credential_repository.dart';
+import '../features/credential/data/credential_api_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
 import '../features/events/data/planned_event_repository.dart';
 import '../features/events/domain/event_repository.dart';
@@ -237,7 +237,7 @@ class AppDependencies {
       ),
       householdRepository: HouseholdApiRepository(apiClient: apiClient),
       registrationRepository: const PlannedRegistrationRepository(),
-      credentialRepository: const PlannedCredentialRepository(),
+      credentialRepository: CredentialApiRepository(apiClient: apiClient),
       verificationRepository: KycApiRepository(apiClient: apiClient),
       serviceRequestRepository: const PlannedServiceRequestRepository(),
       requirementRepository: const PlannedRequirementRepository(),

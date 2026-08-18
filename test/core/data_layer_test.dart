@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/keystore_session_store.dart';
 import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/credential/data/planned_credential_repository.dart';
 import 'package:taytay_resident/features/notifications/data/planned_notification_repository.dart';
 import 'package:taytay_resident/features/services/data/lgu_service_dto.dart';
 import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
@@ -853,8 +852,6 @@ void main() {
         // Profile and verification left this list at TAB 04 — both are wired
         // now. What remains is the shape of the honest decline itself, which
         // every stub still standing shares.
-        'credential': await const PlannedCredentialRepository()
-            .loadOwnCredential(),
         'requests': await const PlannedServiceRequestRepository()
             .listOwnRequests(),
         'notifications': await const PlannedNotificationRepository().listOwn(),
