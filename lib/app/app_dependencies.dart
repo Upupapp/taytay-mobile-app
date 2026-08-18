@@ -39,7 +39,7 @@ import '../features/notifications/data/planned_notification_repository.dart';
 import '../features/notifications/domain/notification_repository.dart';
 import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
-import '../features/profile/data/planned_resident_profile_repository.dart';
+import '../features/profile/data/resident_profile_api_repository.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
 import '../features/programs/data/program_api_repository.dart';
 import '../features/programs/domain/program_repository.dart';
@@ -53,7 +53,7 @@ import '../features/services/domain/service_catalog_repository.dart';
 import '../features/services/domain/service_request_repository.dart';
 import '../features/settings/data/planned_account_controls_repository.dart';
 import '../features/settings/domain/account_controls.dart';
-import '../features/verification/data/planned_verification_repository.dart';
+import '../features/verification/data/kyc_api_repository.dart';
 import '../features/verification/domain/verification_repository.dart';
 
 /// The composition root: every long-lived object the app needs, built once.
@@ -232,11 +232,13 @@ class AppDependencies {
       eventRepository: const PlannedEventRepository(),
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
-      residentProfileRepository: const PlannedResidentProfileRepository(),
+      residentProfileRepository: ResidentProfileApiRepository(
+        apiClient: apiClient,
+      ),
       householdRepository: const PlannedHouseholdRepository(),
       registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: const PlannedCredentialRepository(),
-      verificationRepository: const PlannedVerificationRepository(),
+      verificationRepository: KycApiRepository(apiClient: apiClient),
       serviceRequestRepository: const PlannedServiceRequestRepository(),
       requirementRepository: const PlannedRequirementRepository(),
       notificationRepository: const PlannedNotificationRepository(),

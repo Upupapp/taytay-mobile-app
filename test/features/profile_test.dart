@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/profile/data/planned_resident_profile_repository.dart';
 import 'package:taytay_resident/features/profile/data/resident_profile_dto.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
@@ -435,18 +434,6 @@ void main() {
         }
       }
       expect(offenders, isEmpty, reason: offenders.join('\n'));
-    });
-
-    test('the shipped repository declines every operation', () {
-      const repository = PlannedResidentProfileRepository();
-      expect(repository.loadOwnDetail(), completion(isA<Err<dynamic>>()));
-      expect(
-        repository.updateContactDetails(
-          update: const ContactDetailsUpdate(mobileNumber: '09171234567'),
-          idempotencyKey: 'k',
-        ),
-        completion(isA<Err<dynamic>>()),
-      );
     });
   });
 

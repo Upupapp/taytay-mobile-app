@@ -4,7 +4,6 @@ import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
-import 'package:taytay_resident/features/verification/data/planned_verification_repository.dart';
 import 'package:taytay_resident/features/verification/data/verification_status_dto.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
@@ -614,25 +613,6 @@ void main() {
   });
 
   group('honest seams', () {
-    test('the shipped repository declines every verification call', () async {
-      const repository = PlannedVerificationRepository();
-
-      final status = await repository.loadOwnStatusDetail();
-      final corrections = await repository.submitCorrections(
-        corrections: const <VerificationItemCategory, String>{},
-        idempotencyKey: 'key',
-      );
-
-      for (final failure in <AppFailure?>[
-        status.failureOrNull,
-        corrections.failureOrNull,
-      ]) {
-        expect(failure, isA<ServerFailure>());
-        expect((failure! as ServerFailure).isTemporary, isTrue);
-        expect(failure.residentMessage, contains('temporarily unavailable'));
-      }
-    });
-
     test('categories describe kinds, never values', () {
       for (final category in VerificationItemCategory.values) {
         expect(category.label, isNotEmpty, reason: category.name);

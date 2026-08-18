@@ -17,12 +17,10 @@ import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/credential/data/planned_credential_repository.dart';
 import 'package:taytay_resident/features/notifications/data/planned_notification_repository.dart';
-import 'package:taytay_resident/features/profile/data/planned_resident_profile_repository.dart';
 import 'package:taytay_resident/features/services/data/lgu_service_dto.dart';
 import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/data/service_catalog_api_repository.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
-import 'package:taytay_resident/features/verification/data/planned_verification_repository.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -852,12 +850,11 @@ void main() {
   group('planned backend repositories decline honestly', () {
     test('every planned module declines with a temporary failure', () async {
       final outcomes = <String, Result<Object?>>{
-        'profile': await const PlannedResidentProfileRepository()
-            .loadOwnSummary(),
+        // Profile and verification left this list at TAB 04 — both are wired
+        // now. What remains is the shape of the honest decline itself, which
+        // every stub still standing shares.
         'credential': await const PlannedCredentialRepository()
             .loadOwnCredential(),
-        'verification': await const PlannedVerificationRepository()
-            .loadOwnStatus(),
         'requests': await const PlannedServiceRequestRepository()
             .listOwnRequests(),
         'notifications': await const PlannedNotificationRepository().listOwn(),

@@ -85,6 +85,26 @@ enum BackendGap {
     servedInstead: 'staff scope grants only (staff/{staff}/barangays)',
   ),
 
+  /// **F23 — a KYC correction cannot be filed the way the office asks for it.**
+  ///
+  /// `POST me/profile/corrections` takes named fields. This app groups what a
+  /// resident recognises — "your details", "proof of identity" — because those
+  /// are the categories a reviewer flags. The two do not line up: "your details"
+  /// is three fields and a document is none of them, and choosing one on the
+  /// resident's behalf files a correction against something the office never
+  /// questioned.
+  ///
+  /// Closing it needs a decision rather than code: either this app models
+  /// corrections per field, or the server accepts a KYC-shaped one. Until then
+  /// the categories that map to exactly one field are sent and the rest decline,
+  /// because a correction filed against the wrong field is worse than one not
+  /// filed — the resident believes the office has been told.
+  kycFieldCorrections(
+    finding: 'F23',
+    missing: 'a correction route keyed the way a KYC reviewer flags items',
+    servedInstead: 'POST me/profile/corrections, keyed by named field',
+  ),
+
   /// **F13 — no route closes, erases or deletes an account.**
   ///
   /// `Audit` serves consents and acknowledgements, so most of the privacy screen

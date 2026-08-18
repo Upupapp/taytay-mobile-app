@@ -60,11 +60,13 @@ enum ResidentProfileField {
     'Mobile number',
     FieldOwnership.accountOwned,
     hint: 'How Taytay LGU sends your one-time codes and updates.',
+    wireName: 'mobile_number',
   ),
   emailAddress(
     'Email address',
     FieldOwnership.accountOwned,
     hint: 'Optional. Used for copies of what the LGU sends you.',
+    wireName: 'email',
   ),
 
   // --- LGU-verified: everything a benefit or a credential rests on. ---------
@@ -79,24 +81,33 @@ enum ResidentProfileField {
     FieldOwnership.lguVerified,
     isEligibilityBearing: true,
     hint: 'Decides age-based services such as senior citizen benefits.',
+    wireName: 'birth_date',
   ),
-  sex('Sex', FieldOwnership.lguVerified, isEligibilityBearing: true),
+  sex(
+    'Sex',
+    FieldOwnership.lguVerified,
+    isEligibilityBearing: true,
+    wireName: 'sex',
+  ),
   civilStatus(
     'Civil status',
     FieldOwnership.lguVerified,
     isEligibilityBearing: true,
+    wireName: 'civil_status',
   ),
   barangay(
     'Barangay',
     FieldOwnership.lguVerified,
     isEligibilityBearing: true,
     hint: 'Decides which barangay office serves you.',
+    wireName: 'barangay_id',
   ),
   streetAddress(
     'Street address',
     FieldOwnership.lguVerified,
     isEligibilityBearing: true,
     hint: 'Your registered address in Taytay.',
+    wireName: 'street_address',
   );
 
   const ResidentProfileField(
@@ -104,7 +115,15 @@ enum ResidentProfileField {
     this.ownership, {
     this.hint,
     this.isEligibilityBearing = false,
+    this.wireName,
   });
+
+  /// The field's name on `me/profile`, when the server publishes it under one.
+  ///
+  /// Null for anything this app composes rather than reads — [fullName] is three
+  /// wire fields joined for a screen, so there is no single name to send a
+  /// correction against and no property here pretending otherwise.
+  final String? wireName;
 
   /// Resident-facing name. Fixed copy, never composed from server data.
   final String label;

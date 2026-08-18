@@ -42,8 +42,6 @@ void main() {
   /// runtime type name of the bound instance.
   const Map<String, String> stubbed = <String, String>{
     'registrationRepository': 'blocked — F15',
-    'residentProfileRepository': 'TAB 04',
-    'verificationRepository': 'TAB 04',
     'householdRepository': 'TAB 05',
     'credentialRepository': 'TAB 06',
     'serviceRequestRepository': 'TAB 08',
@@ -64,6 +62,9 @@ void main() {
     'authRepository',
     // TAB 03
     'deviceSessionRepository',
+    // TAB 04
+    'residentProfileRepository',
+    'verificationRepository',
   };
 
   AppDependencies build() => AppDependencies.build(

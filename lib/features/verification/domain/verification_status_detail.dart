@@ -112,8 +112,19 @@ enum ResidentVerificationStage {
     VerificationAttemptState.submitted ||
     VerificationAttemptState.underReview =>
       ResidentVerificationStage.pendingReview,
+    // The office is waiting on the resident. Until TAB 04 this state had no
+    // server value behind it and could never be reached; `needs-more-information`
+    // has been published since backend TAB 06.
+    VerificationAttemptState.needsMoreInformation =>
+      ResidentVerificationStage.needsMoreInformation,
     VerificationAttemptState.approved => ResidentVerificationStage.verified,
     VerificationAttemptState.rejected => ResidentVerificationStage.unsuccessful,
+    // Withdrawn and expired both end with nothing on file and a resident free to
+    // start again — which is `notStarted` from where they are standing, and is
+    // deliberately not `unsuccessful`: being told you were refused when a clock
+    // ran out is a different conversation at a counter.
+    VerificationAttemptState.withdrawn ||
+    VerificationAttemptState.expired => ResidentVerificationStage.notStarted,
     null => ResidentVerificationStage.manualReview,
   };
 }
@@ -130,15 +141,33 @@ enum ResidentVerificationStage {
 /// not already know.
 enum VerificationItemCategory {
   personalDetails('Your details', 'Name and date of birth'),
-  address('Your address', 'Barangay and street'),
-  contact('Contact details', 'Mobile number'),
+  address('Your address', 'Barangay and street', field: 'street_address'),
+  contact('Contact details', 'Mobile number', field: 'mobile_number'),
   identityDocument('Proof of identity', 'Government-issued ID'),
   photo('Photo of you', 'Used to check the ID belongs to you');
 
-  const VerificationItemCategory(this.label, this.description);
+  const VerificationItemCategory(this.label, this.description, {this.field});
 
   final String label;
   final String description;
+
+  /// The correctable field on `POST me/profile/corrections`, when this category
+  /// maps to exactly one.
+  ///
+  /// **Null is the common case and is deliberate.** The two contracts are keyed
+  /// differently: this app groups what a resident recognises — "your details",
+  /// "proof of identity" — and the server takes named fields. "Your details" is
+  /// three of them (`first_name`, `last_name`, `birth_date`) and a document is
+  /// none of them; picking one on the resident's behalf would file a correction
+  /// against a field the office never questioned, and re-typing a name into a
+  /// birth-date correction is the kind of error nobody notices until a
+  /// caseworker reads it.
+  ///
+  /// So a category with no single field is not sent. Raised as F23: closing it
+  /// properly needs either per-field correction in the app's own model or a
+  /// server route that accepts a KYC correction keyed the way the office asks
+  /// for it — a contract conversation, not a client workaround.
+  final String? field;
 
   /// Maps a server category code, falling back to `null` for anything this
   /// build does not recognise. An unknown category is dropped from the list

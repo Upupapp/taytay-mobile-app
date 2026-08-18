@@ -508,11 +508,13 @@ void main() {
       expect(find.text('One step to go'), findsOneWidget);
       await tapVisible(tester, find.text('Check my status'));
 
-      // TAB 08: the status screen declines honestly because the Verification
-      // module is unbuilt, rather than showing an invented status or
-      // collecting documents it cannot send.
+      // TAB 04 wired this to `GET me/kyc`, so the screen now reports a real
+      // failure rather than an absent module — in a widget test there is no
+      // socket, so the request cannot leave the device. What the acceptance is
+      // actually about survives unchanged and is what is asserted: the screen
+      // says it could not check, and it never invents a status or starts
+      // collecting identity documents it has nowhere to send.
       expect(find.text('Could not check your status'), findsOneWidget);
-      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
       expect(find.byType(TextFormField), findsNothing);
     });
   });

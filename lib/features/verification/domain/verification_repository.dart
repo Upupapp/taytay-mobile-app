@@ -5,22 +5,76 @@ import 'verification_status_detail.dart';
 
 /// Where a resident's verification attempt has reached, as the server reports it.
 ///
-/// The `Verification` module owns "verification attempts, scan events, verifier
-/// registry" per the committed boundary map. Wire values are not published, so
-/// none are assigned here.
+/// **These are `ResidentProfile`'s KYC states, not the `Verification` module's.**
+/// This file used to name `Verification` and say wire values were not
+/// published. Both were wrong: `Verification` is the verifier-device side (F17),
+/// and `GET me/kyc` has published nine states since backend TAB 06. They are
+/// mapped in [parse].
 enum VerificationAttemptState {
   notStarted,
   draft,
   submitted,
+
+  /// Automatic matching, or a reviewer holding it. Two server states —
+  /// `screening` and `manual-review` — with one resident meaning: somebody or
+  /// something is looking at it and there is nothing to do but wait. Kept as one
+  /// state here because splitting them would put the office's internal handover
+  /// on a resident's screen without giving them anything to act on.
   underReview,
+
+  /// **The office asked for something.** The one non-terminal state with a
+  /// resident action in it, and the one this enum was missing: the server has
+  /// published `needs-more-information` since backend TAB 06 and the app had no
+  /// value for it, so a resident whose application was waiting on *them* would
+  /// have been shown a state that did not exist.
+  needsMoreInformation,
+
   approved,
-  rejected;
+  rejected,
+
+  /// The applicant withdrew it. Terminal.
+  withdrawn,
+
+  /// Left unattended past its window. Terminal, and the applicant may start
+  /// again — which is why it is not folded into [rejected]: one is a decision
+  /// about them and the other is a clock, and telling a resident they were
+  /// refused when they were not is a different conversation at a counter.
+  expired;
 
   /// Whether the resident has something to do next.
   bool get needsResidentAction =>
       this == VerificationAttemptState.notStarted ||
       this == VerificationAttemptState.draft ||
-      this == VerificationAttemptState.rejected;
+      this == VerificationAttemptState.needsMoreInformation ||
+      this == VerificationAttemptState.expired;
+
+  /// Nothing further will happen to this attempt.
+  bool get isTerminal =>
+      this == VerificationAttemptState.approved ||
+      this == VerificationAttemptState.rejected ||
+      this == VerificationAttemptState.withdrawn ||
+      this == VerificationAttemptState.expired;
+
+  /// The wire values `GET me/kyc` publishes, mapped.
+  ///
+  /// Unrecognised values resolve to [underReview] rather than to a state with a
+  /// resident action in it. A new server state this build has never heard of
+  /// must not tell somebody to do something — "we are looking at it" is the
+  /// answer that is still true whatever the new state turns out to mean.
+  static VerificationAttemptState parse(String? wireValue) =>
+      switch (wireValue) {
+        'draft' => VerificationAttemptState.draft,
+        'submitted' => VerificationAttemptState.submitted,
+        'screening' || 'manual-review' => VerificationAttemptState.underReview,
+        'needs-more-information' =>
+          VerificationAttemptState.needsMoreInformation,
+        'approved' => VerificationAttemptState.approved,
+        'rejected' => VerificationAttemptState.rejected,
+        'withdrawn' => VerificationAttemptState.withdrawn,
+        'expired' => VerificationAttemptState.expired,
+        null => VerificationAttemptState.notStarted,
+        _ => VerificationAttemptState.underReview,
+      };
 }
 
 /// The state of the resident's own verification, with the next step.
