@@ -33,13 +33,17 @@ import '../domain/registration_domain.dart';
 /// collects a government ID or a photograph of a resident's face on its own
 /// initiative.
 class PlannedRegistrationRepository implements RegistrationRepository {
-  const PlannedRegistrationRepository();
+  const PlannedRegistrationRepository({required BarangayDirectory directory})
+    : _directory = directory;
+
+  /// The one dependency this class has, because the one thing it can do is read
+  /// the barangay list. Everything else here still declines.
+  final BarangayDirectory _directory;
 
   /// Sign-in codes exist; codes that enrol a new resident do not, and no issued
   /// code is delivered on any channel either (`F16`).
   static const BackendGap _selfRegistration =
       BackendGap.residentSelfRegistration;
-  static const BackendGap _barangays = BackendGap.barangayDirectory;
 
   @override
   Future<Result<void>> requestOneTimeCode({
@@ -64,8 +68,16 @@ class PlannedRegistrationRepository implements RegistrationRepository {
       RegistrationCapabilities.denied;
 
   @override
-  Future<Result<List<Barangay>>> listBarangays() async =>
-      backendGapFailure<List<Barangay>>(_barangays, 'listBarangays');
+  /// **No longer declines.** The backend published `GET barangays`, so the one
+  /// method on this repository that was blocked by a missing endpoint rather
+  /// than by a missing product decision now works.
+  ///
+  /// Delegated rather than reimplemented: the directory is its own contract
+  /// because a KYC claim, a profile correction and a household address all need
+  /// it and none of them is registration. This class keeps the method only so
+  /// existing callers do not have to move at the same time.
+  @override
+  Future<Result<List<Barangay>>> listBarangays() => _directory.listBarangays();
 
   @override
   Future<Result<RegistrationResult>> submitRegistration({

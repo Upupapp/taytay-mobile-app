@@ -148,9 +148,26 @@ class RegistrationCapabilities {
 /// authoritative list arrives from `GET /api/v1/barangays` when that lands.
 @immutable
 class Barangay {
-  const Barangay({required this.id, required this.name, this.psgcCode});
+  const Barangay({
+    required this.id,
+    required this.name,
+    this.code,
+    this.psgcCode,
+  });
 
+  /// Server-issued UUID.
   final String id;
+
+  /// The stable slug — `brgy-san-juan` — and **the value `POST me/kyc` accepts**.
+  ///
+  /// Two identifiers rather than one because the server has two and they answer
+  /// different questions: the UUID names the row, and the code is what a
+  /// resident's KYC claim is filed against. The auto-increment primary key is
+  /// neither, is published by nothing, and is the reason this list did not exist
+  /// until the backend added `GET barangays` — an applicant was asked for a key
+  /// no endpoint gave out.
+  final String? code;
+
   final String name;
   final String? psgcCode;
 
@@ -361,6 +378,26 @@ class RegistrationResult {
 
   /// Opaque tracking reference a resident can quote. Not a record identifier.
   final String? referenceId;
+}
+
+/// The municipality's barangays.
+///
+/// ---
+///
+/// **Its own contract, narrower than [RegistrationRepository], because the list
+/// outlived the reason it was first needed.** Registration asked for it, and so
+/// does a KYC claim, a profile correction and a household address — none of
+/// which are registration. Leaving it on the registration contract would mean a
+/// screen that only needs an address list depending on a repository that also
+/// creates accounts, which is exactly the shape that made this list unreachable
+/// in the first place: the one method that worked sat behind a class that
+/// declined everything.
+///
+/// Public: no account is needed, because the first thing onboarding asks for is
+/// an address.
+abstract interface class BarangayDirectory {
+  /// Every barangay, in one page.
+  Future<Result<List<Barangay>>> listBarangays();
 }
 
 /// The registration and identity-verification contract.

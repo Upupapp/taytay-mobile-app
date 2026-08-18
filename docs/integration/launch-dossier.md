@@ -55,7 +55,7 @@ the analyzer clean — and that is not what a launch turns on.
 
 | ID | Finding | Owner |
 | --- | --- | --- |
-| **F14** | No barangay directory. `POST me/kyc` needs a `barangay_id` no route publishes → **nobody can become Verified**, so no digital ID and no service that rests on it | backend |
+| ~~**F14**~~ | ~~No barangay directory~~ — **CLOSED on both sides since this dossier was written.** The backend publishes `GET barangays` with a UUID and a stable code and accepts `barangay_code` on `POST me/kyc`; this app reads the directory and files a claim against the code. Proven by the app’s own repositories against the API running locally, and proven red by sending the published identifier as `barangay_id` (422). See `qa-and-evidence.md`. | closed |
 | **F15** | No self-registration route. Onboarding is staff-mediated by construction; the app ships a wizard with no server counterpart | product / LGU |
 | **F16** | Sign-in codes are issued, recorded and **never dispatched** → nobody can sign in | backend |
 | **F26** | No content-reporting route. Both stores require one for user-generated content | backend |
@@ -126,14 +126,21 @@ In order of what unblocks the most:
    until a resident can get in.
 2. **F15** — decide whether onboarding is staff-mediated. If yes, replace the
    registration wizard; if no, the backend needs a route.
-3. **F14** — publish a barangay directory. Unblocks KYC, and with it the Verified
-   state, the digital ID, and every service resting on them.
+3. ~~**F14** — publish a barangay directory.~~ **Done.** The directory ships, the
+   app reads it, and a KYC case has been opened end to end. What is left is the
+   claim form on this side, and **F28**: a KYC case still has nowhere to put an
+   identity document.
 4. **The keystore**, so an artifact exists at all.
 5. **F13 and F26**, without which no store will accept a submission.
 6. **DPO and retention schedule** — longest lead time, start first.
 
-Items 1–3 are days of backend work each. Items 4–6 are weeks of organisational
+Items 1–2 are days of backend work each. Items 4–6 are weeks of organisational
 work, and are the ones that will decide the launch date.
+
+**The verdict does not change.** F14 was the largest single blocker and it is
+gone, but F16 alone still means no resident can sign in, so nothing behind
+sign-in — including the KYC door this closed — is reachable by a person. **Still
+NO-GO.**
 
 ## Post-decision addendum — one caveat narrowed, one finding added
 

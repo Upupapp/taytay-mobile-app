@@ -7,7 +7,7 @@
     "data": {
       "service": "taytay-lguids-backend",
       "api_version": "v1",
-      "server_time": "2026-08-18T08:49:17Z",
+      "server_time": "2026-08-18T11:34:26Z",
       "timezone": "Asia/Manila",
       "client": {
         "channel": "citizen-mobile",
@@ -31,7 +31,7 @@
       }
     },
     "meta": {
-      "request_id": "e4dfb654a49a8ea344c5d1a21bbf5bef"
+      "request_id": "ebed94588d6266dfd58807e33bcaeb7e"
     }
   }
 }

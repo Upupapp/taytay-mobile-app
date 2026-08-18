@@ -181,6 +181,35 @@ void main() {
       }
     });
 
+    test('the barangay directory decodes, and closes F14 on this side', () {
+      // The endpoint that did not exist for the whole integration sequence. A
+      // resident could not open a KYC case without a barangay, and the only
+      // accepted identifier was an auto-increment key no route published — so
+      // the Verified tier, the digital ID and every service resting on them were
+      // unreachable from any client.
+      final Map<String, dynamic> f = fixture('barangays');
+      expect(f['status'], 200);
+
+      final Result<ApiEnvelope<List<dynamic>>> result =
+          ApiEnvelopeDecoder.decode<List<dynamic>>(
+            responseFrom(f),
+            (Object? data) => data! as List<dynamic>,
+          );
+
+      final List<dynamic> rows =
+          (result as Ok<ApiEnvelope<List<dynamic>>>).value.data;
+      expect(rows, isNotEmpty);
+
+      for (final Object? row in rows) {
+        final Map<String, dynamic> barangay = row! as Map<String, dynamic>;
+        // A UUID and a slug, never the primary key — the shape the backend's own
+        // L-15 exists to protect.
+        expect(barangay['id'], isA<String>());
+        expect(barangay['code'], isA<String>());
+        expect(barangay['name'], isA<String>());
+      }
+    });
+
     test('a real 401 decodes to an unauthenticated failure', () {
       final Result<ApiEnvelope<void>> result = ApiEnvelopeDecoder.decode<void>(
         responseFrom(fixture('me')),

@@ -110,6 +110,14 @@ Future<void> fillToReview(
   await controller.next();
 }
 
+/// A directory that answers, so the registration repository under test is
+/// exercised on the one method that is no longer blocked.
+class StubBarangayDirectory implements BarangayDirectory {
+  @override
+  Future<Result<List<Barangay>>> listBarangays() async =>
+      const Ok<List<Barangay>>(TaytayBarangays.fallback);
+}
+
 void main() {
   group('data minimisation', () {
     test('the draft carries only what resident matching needs', () {
@@ -295,7 +303,9 @@ void main() {
     test('the shipped repository denies every capability', () async {
       // The client never collects a government ID or a face photo on its own
       // initiative.
-      const repository = PlannedRegistrationRepository();
+      final repository = PlannedRegistrationRepository(
+        directory: StubBarangayDirectory(),
+      );
       expect(
         await repository.loadCapabilities(),
         RegistrationCapabilities.denied,
@@ -568,7 +578,9 @@ void main() {
     });
 
     test('the shipped repository declines rather than pretending', () async {
-      const repository = PlannedRegistrationRepository();
+      final repository = PlannedRegistrationRepository(
+        directory: StubBarangayDirectory(),
+      );
       final outcome = await repository.submitRegistration(
         draft: completeDraft(),
         idempotencyKey: 'key',
@@ -584,7 +596,9 @@ void main() {
       // The committed matrix has no account-creation row: an account comes into
       // existence through the one-time-code exchange. A `createAccount` here
       // would be an invented endpoint.
-      const repository = PlannedRegistrationRepository();
+      final repository = PlannedRegistrationRepository(
+        directory: StubBarangayDirectory(),
+      );
       expect(repository, isA<RegistrationRepository>());
       expect(
         RegistrationRepository,

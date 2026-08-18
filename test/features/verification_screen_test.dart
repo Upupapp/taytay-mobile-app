@@ -10,6 +10,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 
@@ -32,6 +33,12 @@ class StubVerificationRepository implements VerificationRepository {
     required Map<VerificationItemCategory, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
 
   @override
   Future<Result<void>> submitForReview({

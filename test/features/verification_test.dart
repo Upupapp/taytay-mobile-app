@@ -5,6 +5,7 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/features/verification/data/verification_status_dto.dart';
+import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_controller.dart';
@@ -40,6 +41,12 @@ class FakeVerificationRepository implements VerificationRepository {
     );
     return correctionOutcome ?? const Ok<void>(null);
   }
+
+  @override
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
 
   @override
   Future<Result<void>> submitForReview({

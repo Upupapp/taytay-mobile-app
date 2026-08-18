@@ -1,4 +1,4 @@
-# QA — what 1,346 passing tests do and do not evidence
+# QA — what 1,369 passing tests do and do not evidence
 
 TAB 24 consumes this. Its whole job is to refuse to launch on anything but
 evidence, so it needs to know exactly what kind of evidence this suite is.
@@ -20,6 +20,42 @@ evidence, so it needs to know exactly what kind of evidence this suite is.
 * **That the guards fail.** Every check added across TABs 00–23 was proven red
   before being trusted, then restored. A conformance suite that passes because it
   asserts nothing is worse than none, because it is believed.
+
+* **That a resident can open a KYC case**, run by this app's own repositories
+  against the API serving locally — the one thing no amount of unit testing could
+  establish, because F14 was about composing a request the server would accept
+  rather than decoding one it sent. See below.
+
+## F14 — the live proof, and its red half
+
+`test/live/f14_live_proof_test.dart`, tagged `live` and excluded from
+`flutter test` by `dart_test.yaml`, so the ordinary suite stays hermetic. Run
+against the backend on sqlite at `http://127.0.0.1:8000/api/v1` with a citizen
+bearer token, obtained the way L-18 records: `AuthenticationService` issues the
+sign-in code, it is read directly because **nothing delivers it (F16)**, and
+`auth/otp/verify` exchanges it for a token.
+
+```
+BarangayApiRepository.listBarangays()   → 5 rows, first {id: 01a0140e-…, code: brgy-dolores}
+KycApiRepository.openCase(code)         → 201, case 01a014b2-e396-7271-bbbe-d86ade9dcc00
+  persisted: claimed_barangay_id = 1    ← resolved from "brgy-dolores"
+             claimed_birth_date  = 1990-03-07   (no timezone drift)
+             claimed_sex         = female
+POST me/kyc/submit                      → 200, draft → manual-review
+```
+
+**Proven red, and this is the part that matters.** The case table was emptied
+first, because a case already existed from an earlier curl-based run and
+`KycCaseService::register` returns an open case *before* looking at the claim —
+so the first green run proved only that validation accepted the body, not that a
+case was created from it. With the table empty, sending the directory's own
+identifier as `barangay_id` instead of `barangay_code` is refused **422**. That
+is precisely the original defect: the server published identifiers no client
+could file against.
+
+**What it still does not prove.** No screen calls `openCase` yet — the claim
+form is presentation work that follows this — and a KYC case has nowhere to put
+an identity document (**F28**), so a submission carrying one declines.
 
 ## What is not proven, and must not be read as proven
 

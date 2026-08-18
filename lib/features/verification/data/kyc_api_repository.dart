@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
+import '../domain/kyc_claim.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
 
@@ -19,13 +21,25 @@ import '../domain/verification_status_detail.dart';
 /// read where it has got to, answer a request for more information. That has
 /// been served since backend TAB 06. See F17.
 ///
-/// **Opening an attempt is blocked, and not by wiring.** `POST me/kyc` requires
-/// a `barangay_id` validated against the `barangays` table, and no route
-/// publishes that list to a resident (F14). A resident cannot supply an
-/// identifier they have no way to obtain, so `submitForReview` declines through
-/// [BackendGap] rather than posting a guess — the alternative is a 422 the
-/// resident can do nothing about, on the screen that decides whether they ever
-/// become Verified.
+/// **Opening an attempt used to be impossible, and now is not.** `POST me/kyc`
+/// requires a barangay; until the backend published `GET barangays` the only
+/// identifier it accepted was the `barangays` auto-increment primary key, which
+/// no route gave out. A resident cannot supply an identifier they have no way to
+/// obtain, so this class declined rather than posting a guess — and with it the
+/// Verified tier, the digital ID and every service resting on them were
+/// unreachable from any client. That was F14, the largest single blocker in the
+/// platform.
+///
+/// The directory now publishes a UUID and a stable slug, `POST me/kyc` accepts
+/// `barangay_code`, and [openCase] sends it. The integer primary key never
+/// enters this app.
+///
+/// **What is still declined, and why it is not F14.** [submitForReview] posts
+/// the submission, but a KYC case has nowhere to put an identity document —
+/// `POST me/kyc/submit` takes no body and no route attaches a file to a case
+/// (F28). A submission carrying documents therefore declines instead of quietly
+/// dropping them, because a resident who has just photographed their PhilID
+/// believes the office has it.
 class KycApiRepository implements VerificationRepository {
   const KycApiRepository({required ApiClient apiClient, Telemetry? telemetry})
     : _apiClient = apiClient,
@@ -123,17 +137,106 @@ class KycApiRepository implements VerificationRepository {
   }
 
   @override
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  }) async {
+    // Refused here rather than at the server. A 422 on this screen is a dead end
+    // for a resident — the server's field errors are keyed by wire names they
+    // have never seen — and this is the screen that decides whether they ever
+    // become Verified.
+    if (!claim.isComplete) {
+      return const Err<VerificationStatus>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{},
+          debugMessage: 'openCase called with an incomplete claim',
+        ),
+      );
+    }
+
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.verification,
+          stage: TelemetryStage.started,
+        ),
+      ),
+    );
+
+    final response = await _apiClient.send<VerificationStatus>(
+      method: HttpMethod.post,
+      path: 'me/kyc',
+      authenticated: true,
+      idempotencyKey: idempotencyKey,
+      body: <String, Object?>{
+        'first_name': claim.givenName.trim(),
+        // Omitted entirely when absent rather than sent as an empty string: the
+        // server's rule is `nullable`, and a blank middle name written to a
+        // claimed_* column is a value a reviewer has to interpret.
+        if (claim.middleName.trim().isNotEmpty)
+          'middle_name': claim.middleName.trim(),
+        'last_name': claim.familyName.trim(),
+        if (claim.suffix.trim().isNotEmpty) 'suffix': claim.suffix.trim(),
+        // Date only, in the server's own format. Sending an ISO instant would
+        // put a timezone on a birthday, and a birthday that moves across
+        // midnight fails a registry match.
+        'birth_date': _dateOnly(claim.birthDate),
+        'sex': claim.sex.wireValue,
+        // The slug, never the integer. See F14 and `BarangayDirectory`.
+        'barangay_code': claim.barangayCode,
+        'street_address': claim.streetAddress.trim(),
+      },
+      decode: _decodeStatus,
+    );
+
+    return response.map(
+      (ApiEnvelope<VerificationStatus> envelope) => envelope.data,
+    );
+  }
+
+  @override
   Future<Result<void>> submitForReview({
     required List<String> documentUploadIds,
     required String idempotencyKey,
   }) async {
-    // Blocked before it starts: opening the case needs a barangay this app
-    // cannot resolve. See the class doc and F14.
-    return backendGapFailure<void>(
-      BackendGap.barangayDirectory,
-      'submitForReview',
+    if (documentUploadIds.isNotEmpty) {
+      // Nothing attaches a file to a KYC case (F28). Submitting anyway would
+      // tell a resident their identity document had reached the office when it
+      // never left the device — on the one screen where being wrong about that
+      // costs them the Verified state.
+      return backendGapFailure<void>(
+        BackendGap.kycDocumentUpload,
+        'submitForReview',
+      );
+    }
+
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.verification,
+          stage: TelemetryStage.completed,
+        ),
+      ),
     );
+
+    // Takes no body: the case is resolved from the authenticated account, so
+    // there is no identifier to tamper with and nothing to send. Rate limited
+    // server-side, because each submission puts a case in front of a human.
+    final response = await _apiClient.send<VerificationStatus>(
+      method: HttpMethod.post,
+      path: 'me/kyc/submit',
+      authenticated: true,
+      idempotencyKey: idempotencyKey,
+      decode: _decodeStatus,
+    );
+    return response.map((_) {});
   }
+
+  /// `YYYY-MM-DD`, built from the local date the resident picked.
+  static String _dateOnly(DateTime value) =>
+      '${value.year.toString().padLeft(4, '0')}-'
+      '${value.month.toString().padLeft(2, '0')}-'
+      '${value.day.toString().padLeft(2, '0')}';
 
   static VerificationStatus _decodeStatus(Object? data) {
     final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};

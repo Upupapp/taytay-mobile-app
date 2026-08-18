@@ -20,6 +20,7 @@ import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
 import 'package:taytay_resident/features/services/domain/service_request_repository.dart';
+import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/shared/widgets/next_action_card.dart';
@@ -102,6 +103,12 @@ class CountingVerificationRepository implements VerificationRepository {
     required Map<VerificationItemCategory, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
 
   @override
   Future<Result<void>> submitForReview({

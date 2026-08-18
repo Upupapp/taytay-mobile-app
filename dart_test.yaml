@@ -1,0 +1,18 @@
+# Test tags for this package.
+#
+# `live` marks tests that need a running API and a real bearer token. They are
+# excluded by default so that `flutter test` — what CI and every developer runs —
+# stays hermetic: a suite that needs a server is a suite that goes red for a
+# reason nobody caused.
+#
+# They are *excluded*, not skipped-when-unset. A live proof that quietly passes
+# with no server is worse than no live proof at all, because the launch dossier
+# cites it as evidence. Run them explicitly:
+#
+#   TAYTAY_LIVE_API=http://127.0.0.1:8000/api/v1 \
+#   TAYTAY_LIVE_TOKEN=<citizen token> \
+#     flutter test --tags live
+tags:
+  live:
+    # Overridden on the command line by `--tags live`.
+    skip: "needs a running API; run with --tags live and TAYTAY_LIVE_* set"

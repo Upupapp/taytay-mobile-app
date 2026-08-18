@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'kyc_claim.dart';
 import 'verification_status_detail.dart';
 
 /// Where a resident's verification attempt has reached, as the server reports it.
@@ -122,6 +123,30 @@ abstract interface class VerificationRepository {
   /// breaks. Both map the same server state; this one carries what the status
   /// screen needs.
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail();
+
+  /// Opens the resident's KYC case with what they claim about themselves.
+  ///
+  /// **This is the door to the Verified state, and it was shut for the whole
+  /// integration sequence.** `POST me/kyc` requires a barangay, the only
+  /// identifier it accepted was an auto-increment primary key no route
+  /// published, and so no client could open a case — which put the Verified
+  /// tier, the digital ID and every service resting on them out of reach. That
+  /// was F14. The backend now publishes `GET barangays` and accepts the code it
+  /// publishes, so [KycClaim.barangayCode] is what a claim is filed against.
+  ///
+  /// **Idempotent by account, server-side**: the case is resolved from the
+  /// authenticated actor, so opening twice returns the same case rather than
+  /// creating a second one. [idempotencyKey] is still sent, because the app does
+  /// not get to rely on a server-side guarantee it cannot see, and a retried
+  /// request that creates a duplicate municipal case is not recoverable from
+  /// this side.
+  ///
+  /// Returns the case's state, so a caller that has just opened one shows the
+  /// server's answer rather than assuming `draft`.
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  });
 
   /// Resends only the items the office asked to have corrected.
   ///

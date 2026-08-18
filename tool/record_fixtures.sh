@@ -39,7 +39,7 @@ mkdir -p "$OUT"
 # captured with no token and carry no personal data by construction.
 PUBLIC=(
   "app/bootstrap" "health" "services" "programs" "newsfeed" "events"
-  "privacy/notice"
+  "privacy/notice" "barangays"
 )
 AUTHENTICATED=(
   "me" "me/profile" "me/household" "me/kyc" "me/credential"

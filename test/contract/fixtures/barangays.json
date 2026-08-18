@@ -1,0 +1,50 @@
+{
+  "endpoint": "barangays",
+  "baseline_tag": "api-baseline-2026-08",
+  "captured": "2026-08-18",
+  "status": 200,
+  "body": {
+    "data": [
+      {
+        "id": "01a0140e-0eaf-71fa-bcb7-c354b5edee94",
+        "code": "brgy-dolores",
+        "name": "Dolores",
+        "psgc_code": null
+      },
+      {
+        "id": "01a0140e-0eb0-73fe-a7d7-c529ee656c0f",
+        "code": "brgy-muzon",
+        "name": "Muzon",
+        "psgc_code": null
+      },
+      {
+        "id": "01a0140e-0eb0-73fe-a7d7-c529eefc34d3",
+        "code": "brgy-san-isidro",
+        "name": "San Isidro",
+        "psgc_code": null
+      },
+      {
+        "id": "01a0140e-0eb0-73fe-a7d7-c529efb96dfb",
+        "code": "brgy-san-juan",
+        "name": "San Juan",
+        "psgc_code": null
+      },
+      {
+        "id": "01a0140e-0eb0-73fe-a7d7-c529f0357d5a",
+        "code": "brgy-santa-ana",
+        "name": "Santa Ana",
+        "psgc_code": null
+      }
+    ],
+    "meta": {
+      "request_id": "a744e3ddb96ae14afd672293775cb53d",
+      "pagination": {
+        "page": 1,
+        "per_page": 15,
+        "total": 5,
+        "total_pages": 1,
+        "has_more": false
+      }
+    }
+  }
+}

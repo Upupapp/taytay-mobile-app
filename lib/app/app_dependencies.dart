@@ -43,6 +43,7 @@ import '../features/profile/data/resident_profile_api_repository.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
 import '../features/programs/data/program_api_repository.dart';
 import '../features/programs/domain/program_repository.dart';
+import '../features/registration/data/barangay_api_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
 import '../features/requirements/data/requirement_api_repository.dart';
@@ -208,6 +209,7 @@ class AppDependencies {
     );
 
     final platformRepository = PlatformApiRepository(apiClient: apiClient);
+    final barangayDirectory = BarangayApiRepository(apiClient: apiClient);
     platform = PlatformController(repository: platformRepository);
 
     return AppDependencies(
@@ -242,7 +244,9 @@ class AppDependencies {
         apiClient: apiClient,
       ),
       householdRepository: HouseholdApiRepository(apiClient: apiClient),
-      registrationRepository: const PlannedRegistrationRepository(),
+      registrationRepository: PlannedRegistrationRepository(
+        directory: barangayDirectory,
+      ),
       credentialRepository: CredentialApiRepository(apiClient: apiClient),
       verificationRepository: KycApiRepository(
         apiClient: apiClient,
