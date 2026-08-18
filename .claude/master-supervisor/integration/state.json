@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 10,
-  "currentTab": "TAB 10 \u2014 Documents and uploads",
+  "currentTabIndex": 11,
+  "currentTab": "TAB 11 \u2014 Newsfeed and engagement",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -141,6 +141,16 @@
       "tests": "1288 passing",
       "stubsRemaining": 6,
       "entityQuestion": "settled from source: me/cases = WelfareCase = /admin/assistance-requests, one lifecycle two audiences"
+    },
+    {
+      "tab": "TAB 10 \u2014 Documents and uploads",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; access grants and version history deferred",
+      "raises": [
+        "F25"
+      ],
+      "analyze": "clean",
+      "tests": "1286 passing",
+      "stubsRemaining": 5
     }
   ],
   "openFindings": {
@@ -154,7 +164,8 @@
       "F13",
       "F22",
       "F23",
-      "F24"
+      "F24",
+      "F25"
     ],
     "P2": [
       "F09",
