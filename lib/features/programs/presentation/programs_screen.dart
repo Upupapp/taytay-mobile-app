@@ -171,10 +171,14 @@ class _ProgramCard extends StatelessWidget {
     final availability = program.availabilityNote;
 
     return AppCard(
-      onTap: DeepLink.isValidIdentifier(program.code)
+      // Addressed by id, not by code. `programs/{program}` resolves the path
+      // segment with `findByUuid` server-side; the code is the human-facing
+      // string an office quotes at a counter and is not a route key. It stays
+      // visible on the detail screen, where a resident can read it out.
+      onTap: DeepLink.isValidIdentifier(program.id)
           ? () => context.goNamed(
               AppRoute.programDetail.routeName,
-              pathParameters: <String, String>{'programCode': program.code},
+              pathParameters: <String, String>{'programId': program.id},
             )
           : null,
       semanticLabel: program.name,
@@ -191,19 +195,17 @@ class _ProgramCard extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
-          if (program.owningOffice != null) ...<Widget>[
+          if (program.ownerOffice != null) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             Text(
-              program.owningOffice!,
+              program.ownerOffice!,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ],
-          if (availability != null) ...<Widget>[
-            const SizedBox(height: Spacing.xs),
-            Text(availability, style: theme.textTheme.bodySmall),
-          ],
+          const SizedBox(height: Spacing.xs),
+          Text(availability, style: theme.textTheme.bodySmall),
         ],
       ),
     );

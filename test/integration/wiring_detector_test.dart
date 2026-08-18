@@ -48,7 +48,6 @@ void main() {
     'verificationRepository': 'TAB 04',
     'householdRepository': 'TAB 05',
     'credentialRepository': 'TAB 06',
-    'programRepository': 'TAB 07',
     'serviceRequestRepository': 'TAB 08',
     'requirementRepository': 'TAB 10',
     'announcementRepository': 'TAB 11',
@@ -61,6 +60,8 @@ void main() {
   const Set<String> wired = <String>{
     'platformRepository',
     'serviceCatalogRepository',
+    // TAB 07
+    'programRepository',
   };
 
   AppDependencies build() => AppDependencies.build(

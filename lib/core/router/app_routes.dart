@@ -237,14 +237,20 @@ enum AppRoute {
   /// Assistance programmes. **Authenticated**, because the committed citizen
   /// row is `GET /api/v1/programs?status=active` with bearer auth — unlike the
   /// service catalogue, which is public. The line is the server's.
-  programs('programs', '/programs', AccessRequirement.authenticated),
+  /// Public, because the server publishes it that way.
+  ///
+  /// This route required an account until TAB 07. `GET programs` carries no
+  /// `auth:sanctum` and never has — so the app was withholding information the
+  /// municipality had deliberately made public, from exactly the residents least
+  /// likely to already have an account.
+  programs('programs', '/programs', AccessRequirement.public),
 
   /// One programme, by its stable code.
   programDetail(
     'program-detail',
-    '/programs/:programCode',
-    AccessRequirement.authenticated,
-    parameters: <String>['programCode'],
+    '/programs/:programId',
+    AccessRequirement.public,
+    parameters: <String>['programId'],
   ),
 
   /// The resident's own household and family summary. Verified only: it is a

@@ -85,13 +85,18 @@ enum ResidentCapability {
     route: AppRoute.notifications,
   ),
 
-  /// Assistance programmes. Authenticated because the citizen programme row is
-  /// bearer-authenticated — the service catalogue next door is public, and the
-  /// difference is the server's, not a product preference.
+  /// Assistance programmes. **Public and available**, both of which changed at
+  /// TAB 07.
+  ///
+  /// This said the programme row was bearer-authenticated and planned. Neither
+  /// was true at `backend@api-baseline-2026-08`: `GET programs` carries no
+  /// `auth:sanctum`, and `ServiceCatalog` has served it all along. The service
+  /// catalogue next door is public for the same reason and there was never a
+  /// difference between them to draw.
   browsePrograms(
-    AccessRequirement.authenticated,
+    AccessRequirement.public,
     'See assistance programmes',
-    BackendAvailability.planned,
+    BackendAvailability.available,
     route: AppRoute.programs,
   ),
   completeVerification(

@@ -1,153 +1,214 @@
 import 'package:flutter/foundation.dart';
 
-/// One eligibility criterion, as the LGU publishes it.
+/// One eligibility condition, **in words**.
 ///
 /// ---
 ///
-/// **Text, never a rule the app can run.** The criterion arrives as a sentence
-/// the office wrote — "60 years old and above", "household income below ₱12,000
-/// a month" — and this app renders it. There is no operator, no threshold and no
-/// value to compare a resident against, because the type has nowhere to put one.
+/// **There is no comparator, no threshold and no blocking flag here, and that is
+/// the backend's decision rather than an omission.** Publishing the exact
+/// numbers would turn an assistance programme into a form to be gamed, and the
+/// people who would game it successfully are not the ones it exists for. The
+/// server sends `conditions` as plain sentences and nothing else.
 ///
-/// That is deliberate and it is acceptance 2. An app that evaluated eligibility
-/// locally would be a second rule set: it would drift from the office's the
-/// moment either changed, it would be wrong in a released build nobody can patch
-/// quickly, and — worst — it would tell a resident they do not qualify for a
-/// benefit they are entitled to, at which point they stop asking.
-///
-/// The visibility matrix is explicit that publishing the criteria is the point:
-/// *"Eligibility rules are deliberately public. Publishing the criteria for a
-/// public benefit is good administration, and it lets a citizen self-screen
-/// instead of queueing to be refused."* Self-screen — by reading, and deciding
-/// for themselves.
+/// So this app cannot compute whether a resident qualifies even if somebody
+/// later wanted it to — which is the point. ADR 0018 §3 is explicit that
+/// eligibility guidance **advises and never decides**, and an app that rendered
+/// "you qualify" would have invented an authority the platform deliberately
+/// refused to create.
 @immutable
-class EligibilityCriterion {
-  const EligibilityCriterion({required this.text, this.category});
+class EligibilityCondition {
+  const EligibilityCondition(this.explanation);
 
-  /// The office's own words. Rendered as sent.
-  final String text;
-
-  /// An optional grouping label the server supplied, e.g. "Age" or "Residency".
-  /// Presentation only.
-  final String? category;
-
-  @override
-  String toString() => 'EligibilityCriterion(${category ?? 'general'})';
+  /// The office's own words, addressed to a resident.
+  final String explanation;
 }
 
-/// A document or condition an applicant is asked to bring.
+/// Whether a document is always needed, or only in some circumstances.
+enum RequirementObligation {
+  required('required'),
+  conditional('conditional'),
+  optional('optional');
+
+  const RequirementObligation(this.wireValue);
+
+  final String wireValue;
+
+  /// Unrecognised obligations read as [required].
+  ///
+  /// Fails **towards** the resident bringing the document. Being told to bring
+  /// something that turns out to be unnecessary costs a photocopy; being told it
+  /// was optional and arriving without it costs the trip.
+  static RequirementObligation parse(String? value) {
+    for (final RequirementObligation o in RequirementObligation.values) {
+      if (o.wireValue == value) return o;
+    }
+    return RequirementObligation.required;
+  }
+}
+
+/// A document the office asks for.
 @immutable
 class ProgramRequirement {
-  const ProgramRequirement({required this.text, this.isOptional = false});
+  const ProgramRequirement({
+    required this.code,
+    required this.label,
+    required this.obligation,
+    this.conditionNote,
+    this.instructions,
+    this.acceptedDocuments = const <String>[],
+  });
 
-  final String text;
+  final String code;
+  final String label;
+  final RequirementObligation obligation;
 
-  /// True only when the server said so. Never inferred.
-  final bool isOptional;
+  /// When a conditional requirement applies. Meaningless without
+  /// [RequirementObligation.conditional] and rendered only alongside it.
+  final String? conditionNote;
 
-  @override
-  String toString() => 'ProgramRequirement(optional: $isOptional)';
+  /// The office's instructions for obtaining or preparing it.
+  final String? instructions;
+
+  /// Document types the office will accept for this requirement.
+  final List<String> acceptedDocuments;
 }
 
-/// A social-welfare programme, in the projection a citizen is entitled to.
+/// A social-welfare programme as a **resident** may see it.
 ///
 /// ---
 ///
-/// **Every field here appears in the committed client-visibility matrix's
-/// citizen column** (§5 Program): code, name, category, description, status,
-/// `legal_basis`, `maximum_grant`, eligibility, requirements, and the effective
-/// dates. Two fields in that table are marked ⛔ for a citizen — `funding_source`
-/// and `audit` — and this type has no property for either.
+/// **Re-modelled at `backend@api-baseline-2026-08` against the projection the
+/// server actually sends.** The previous shape was transcribed from a
+/// "visibility matrix §5" that no longer describes anything. It expected
+/// `status`, `legal_basis`, `maximum_grant`, `category`, `effective_from`,
+/// `effective_to`, `contact` and `application_channel`; the citizen projection
+/// sends none of them, spells the office `owner_office` rather than
+/// `owning_office`, and shapes a requirement as `{code, label, obligation, …}`
+/// rather than `{text, optional}`.
 ///
-/// **Status is `active` only.** The citizen row in the endpoint matrix is
-/// `GET /api/v1/programs?status=active` with a *"narrowed projection"*. A
-/// resident is never shown a draft, a suspended or a retired programme, so this
-/// app does not model those states and cannot render one.
+/// **The failure that would have produced is the quiet kind.** Nothing throws —
+/// unknown fields are ignored by design, and the old status guard let an absent
+/// `status` through — so every programme would have decoded successfully with a
+/// name, a code, a description, and every other field null. A screen showing
+/// municipal benefits with no office, no requirements and no conditions reads as
+/// a thin catalogue rather than as a broken decoder, and nothing anywhere would
+/// have said which it was.
 ///
-/// **No capacity, no ranking, no queue position.** None of it is in the citizen
-/// projection, and none of it has a field here. A remaining-slots figure on a
-/// municipal benefit is the fastest way to start a queue at 4am for something
-/// that was never first-come-first-served.
+/// That is why TAB 07 was not the same-day win it looked like, and it is exactly
+/// the class of defect the TAB 01 harness exists to surface before thirteen more
+/// repositories are written on the same assumption.
+///
+/// **One controller, two audiences, and this is the smaller one.** The server
+/// decides what a caller sees from their resolved permissions, never from which
+/// URL they used. A resident's projection carries no `status`, no
+/// `is_citizen_visible`, no `funding_source_label` and no guidance version — so
+/// there is nowhere for any of it to land here.
 @immutable
 class AssistanceProgram {
   const AssistanceProgram({
+    required this.id,
     required this.code,
     required this.name,
     required this.description,
-    this.category,
-    this.legalBasis,
-    this.maximumGrant,
-    this.eligibility = const <EligibilityCriterion>[],
+    required this.acceptsApplications,
+    this.ownerOffice,
+    this.targetPopulation,
+    this.benefitType,
+    this.applicationsCloseAt,
+    this.decidedBy,
+    this.turnaroundTargetDays,
     this.requirements = const <ProgramRequirement>[],
-    this.effectiveFrom,
-    this.effectiveTo,
-    this.owningOffice,
-    this.contact,
-    this.applicationChannel,
+    this.conditions = const <EligibilityCondition>[],
   });
 
-  /// Stable machine code, e.g. `AICS`. The deep-link identifier — see
-  /// `ProgramDto`. Never the registry UUID.
+  /// Server-issued UUID. **This, not [code], addresses `programs/{program}`** —
+  /// the server resolves the path segment by UUID.
+  final String id;
+
+  /// The stable human-facing code the office quotes at a counter.
   final String code;
 
   final String name;
   final String description;
 
-  /// The server's own label. Rendered as sent; the app takes no decision from
-  /// it, so an unrecognised category displays rather than disappearing.
-  final String? category;
+  /// Which office owns it — where a resident actually goes.
+  final String? ownerOffice;
 
-  /// The ordinance or statute the benefit rests on. *"A citizen is entitled to
-  /// know the basis of a benefit."*
-  final String? legalBasis;
+  /// Who it is for, in the office's words.
+  final String? targetPopulation;
 
-  /// The ceiling the office publishes, as text — "up to ₱10,000".
+  /// What kind of help it is. Never an amount: the server publishes no figure,
+  /// because a number on a screen is a promise the caseworker has to keep.
+  final String? benefitType;
+
+  /// Whether the office is taking applications **right now**, as the server
+  /// computed it at the moment it answered.
   ///
-  /// A string rather than a number, because the app must not do arithmetic with
-  /// it. Rendering "you could receive ₱10,000" from a maximum is a promise, and
-  /// the amount is a case-by-case decision.
-  final String? maximumGrant;
+  /// Not derived from [applicationsCloseAt] here. A closing date and an open
+  /// window are two facts, the server holds both, and a client that recomputed
+  /// one from the other would eventually disagree with the office about whether
+  /// a resident may still apply.
+  final bool acceptsApplications;
 
-  final List<EligibilityCriterion> eligibility;
+  final DateTime? applicationsCloseAt;
+
+  /// Who decides the outcome: `lgu`, or the name of the national authority.
+  ///
+  /// Published deliberately, and worth rendering plainly: an applicant deciding
+  /// whether to travel to a municipal office deserves to know when the LGU does
+  /// not control the answer.
+  final String? decidedBy;
+
+  /// The office's own target, in days. A target, never a promise.
+  final int? turnaroundTargetDays;
+
   final List<ProgramRequirement> requirements;
 
-  /// The window the office published, as text. Absent means "no window stated",
-  /// which is not the same as "open" — see [availabilityNote].
-  final String? effectiveFrom;
-  final String? effectiveTo;
+  /// Conditions in words. See [EligibilityCondition] — advice, never a verdict.
+  final List<EligibilityCondition> conditions;
 
-  /// The Taytay office that runs it.
-  final String? owningOffice;
+  /// True when the LGU itself decides, rather than a national authority.
+  bool get isLocallyDecided => decidedBy == 'lgu';
 
-  /// How to reach that office. A public office contact, never a person's.
-  final String? contact;
-
-  /// How the office says to apply — "at the municipal hall", "through your
-  /// barangay". Text, because the app has no submission endpoint to offer.
-  final String? applicationChannel;
-
-  bool get hasEligibility => eligibility.isNotEmpty;
+  bool get hasConditions => conditions.isNotEmpty;
   bool get hasRequirements => requirements.isNotEmpty;
 
-  /// What to say about timing, without inventing a state.
+  /// Whether a resident can still apply, and until when — as one sentence.
   ///
-  /// The app never computes "open" or "closed" from the dates. A window that has
-  /// passed on the resident's phone clock may still be open at the counter — an
-  /// office extends a deadline far more often than it publishes the extension
-  /// the same afternoon — and an app that says "closed" sends somebody away from
-  /// help they could still have got.
-  String? get availabilityNote {
-    final from = effectiveFrom;
-    final to = effectiveTo;
-    if (from == null && to == null) return null;
-    if (from != null && to != null) {
-      return 'Taytay LGU lists this for $from to $to.';
+  /// Reads [acceptsApplications] first and only then the date, because the two
+  /// can disagree: a programme can be paused with its published closing date
+  /// still in the future, and the server's answer is the one that decides
+  /// whether somebody should make the trip.
+  String get availabilityNote {
+    final DateTime? closes = applicationsCloseAt;
+    if (!acceptsApplications) {
+      return closes == null
+          ? 'Not accepting applications right now'
+          : 'Closed to new applications';
     }
-    if (from != null) return 'Taytay LGU lists this from $from.';
-    return 'Taytay LGU lists this until $to.';
+    if (closes == null) return 'Accepting applications';
+    return 'Accepting applications until ${_manilaDate(closes)}';
   }
 
-  /// Public reference data — safe to log, and useful when it is.
-  @override
-  String toString() => 'AssistanceProgram($code)';
+  /// Manila wall time. An office's closing date is a date in Taytay, not on the
+  /// device — a resident whose phone is set to another timezone must not read a
+  /// deadline a day out.
+  static String _manilaDate(DateTime utc) {
+    final DateTime manila = utc.toUtc().add(const Duration(hours: 8));
+    const List<String> months = <String>[
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
+    ];
+    return '${manila.day} ${months[manila.month - 1]} ${manila.year}';
+  }
 }

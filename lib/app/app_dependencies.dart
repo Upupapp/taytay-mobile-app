@@ -41,7 +41,7 @@ import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
 import '../features/profile/data/planned_resident_profile_repository.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
-import '../features/programs/data/planned_program_repository.dart';
+import '../features/programs/data/program_api_repository.dart';
 import '../features/programs/domain/program_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
@@ -227,7 +227,7 @@ class AppDependencies {
       serviceCatalogRepository: ServiceCatalogApiRepository(
         apiClient: apiClient,
       ),
-      programRepository: const PlannedProgramRepository(),
+      programRepository: ProgramApiRepository(apiClient: apiClient),
       announcementRepository: const PlannedAnnouncementRepository(),
       eventRepository: const PlannedEventRepository(),
       // Backed by modules the committed boundary map lists as planned. Each

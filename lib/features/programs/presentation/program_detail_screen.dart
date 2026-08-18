@@ -39,9 +39,9 @@ import 'programs_screen.dart';
 /// back through a sign-in gate must be shown what applying involves rather than
 /// have it done in their name.
 class ProgramDetailScreen extends StatefulWidget {
-  const ProgramDetailScreen({required this.programCode, super.key});
+  const ProgramDetailScreen({required this.programId, super.key});
 
-  final String programCode;
+  final String programId;
 
   @override
   State<ProgramDetailScreen> createState() => _ProgramDetailScreenState();
@@ -52,7 +52,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
   bool _loading = false;
   AssistanceProgram? _program;
 
-  bool get _codeIsValid => DeepLink.isValidIdentifier(widget.programCode);
+  bool get _codeIsValid => DeepLink.isValidIdentifier(widget.programId);
 
   @override
   void didChangeDependencies() {
@@ -73,7 +73,7 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 
     setState(() => _loading = true);
     final result = await dependencies.programRepository.loadProgram(
-      widget.programCode,
+      widget.programId,
     );
     if (!mounted) return;
     setState(() {
@@ -162,7 +162,7 @@ class _Detail extends StatelessWidget {
         const ProgramGuidanceNotice(),
         const SizedBox(height: Spacing.lg),
 
-        if (program.hasEligibility) ...<Widget>[
+        if (program.hasConditions) ...<Widget>[
           _Section(
             title: 'Who this is meant to help',
             // Named as guidance in the heading itself, not only in a footnote.
@@ -172,10 +172,9 @@ class _Detail extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                for (final criterion in program.eligibility)
+                for (final condition in program.conditions)
                   _Bullet(
-                    text: criterion.text,
-                    label: criterion.category,
+                    text: condition.explanation,
                     icon: Icons.circle_outlined,
                   ),
               ],
@@ -191,12 +190,43 @@ class _Detail extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                for (final requirement in program.requirements)
+                for (final requirement in program.requirements) ...<Widget>[
                   _Bullet(
-                    text: requirement.text,
-                    label: requirement.isOptional ? 'Optional' : null,
+                    text: requirement.label,
+                    label: switch (requirement.obligation) {
+                      RequirementObligation.required => null,
+                      RequirementObligation.conditional => 'If it applies',
+                      RequirementObligation.optional => 'Optional',
+                    },
                     icon: Icons.description_outlined,
                   ),
+                  // Rendered only next to a conditional requirement: on its own
+                  // the note reads as a rule everybody must satisfy.
+                  if (requirement.obligation ==
+                          RequirementObligation.conditional &&
+                      requirement.conditionNote != null)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: Spacing.lg,
+                        bottom: Spacing.sm,
+                      ),
+                      child: Text(
+                        requirement.conditionNote!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                  if (requirement.instructions != null)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        left: Spacing.lg,
+                        bottom: Spacing.sm,
+                      ),
+                      child: Text(
+                        requirement.instructions!,
+                        style: theme.textTheme.bodySmall,
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -213,16 +243,30 @@ class _Detail extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.sm),
               _Line(label: 'Reference code', value: program.code),
-              _Line(label: 'Category', value: program.category),
-              _Line(label: 'Run by', value: program.owningOffice),
-              _Line(label: 'Contact', value: program.contact),
-              _Line(label: 'Legal basis', value: program.legalBasis),
+              _Line(label: 'Who this is for', value: program.targetPopulation),
+              _Line(label: 'Run by', value: program.ownerOffice),
+              _Line(label: 'Kind of help', value: program.benefitType),
+              // Told plainly, because an applicant deciding whether to travel to
+              // a municipal office deserves to know when the LGU does not
+              // control the answer.
               _Line(
-                label: 'Most that can be granted',
-                value: program.maximumGrant,
+                label: 'Decided by',
+                value: program.decidedBy == null
+                    ? null
+                    : (program.isLocallyDecided
+                          ? 'Taytay LGU'
+                          : program.decidedBy),
+              ),
+              _Line(
+                label: 'Usually takes',
+                value: program.turnaroundTargetDays == null
+                    ? null
+                    : 'about ${program.turnaroundTargetDays} days',
               ),
               _Line(label: 'When', value: availability),
-              _Line(label: 'Where to apply', value: program.applicationChannel),
+              // No contact, no legal basis and no maximum grant: the citizen
+              // projection publishes none of them. A figure on this screen is a
+              // promise a caseworker then has to keep.
             ],
           ),
         ),

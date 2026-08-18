@@ -331,10 +331,10 @@ GoRouter buildAppRouter({
         builder: (context, state) => const ProgramsScreen(),
         routes: <RouteBase>[
           GoRoute(
-            path: ':programCode',
+            path: ':programId',
             name: AppRoute.programDetail.routeName,
             builder: (context, state) => ProgramDetailScreen(
-              programCode: state.pathParameters['programCode'] ?? '',
+              programId: state.pathParameters['programId'] ?? '',
             ),
           ),
         ],

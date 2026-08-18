@@ -1,72 +1,82 @@
 import '../domain/assistance_program.dart';
 
-/// Decodes a programme by naming the fields the citizen column authorises.
+/// Decodes a programme by naming the fields the **citizen projection** sends.
 ///
 /// ---
 ///
-/// **The allow-list is the visibility matrix §5, transcribed.** Every key below
-/// is marked ✅ for a citizen there. The two marked ⛔ — `funding_source` and
-/// `audit` — are in [forbiddenKeys] and have no property to arrive in.
+/// **Re-derived at `backend@api-baseline-2026-08` from `ProgramController`'s own
+/// `citizenProjection()` and `citizenDetail()`.** The previous allow-list was a
+/// transcription of a visibility matrix the server no longer follows; see
+/// [AssistanceProgram] for what that would have rendered.
 ///
-/// **`status` is read but never stored.** The citizen endpoint is
-/// `?status=active`, so a programme that reaches this app is active by
-/// construction. Modelling the field would invite a screen to render "status:
-/// active" — noise — or worse, to branch on a value the server already filtered.
-/// What the decoder does instead is **refuse anything that is not active**, so a
-/// server change that widened the projection could not leak a draft programme
-/// into a resident's list.
+/// **The allow-list is not the defence — the deny-list is, and it is kept.** An
+/// allow-list only decides what is read; a field absent from it is ignored
+/// anyway, because conventions §1 requires clients to tolerate unknown keys. The
+/// deny-list exists for a different reason: it makes a server change that
+/// *widened* the citizen projection fail here, loudly, instead of quietly
+/// rendering budget lines or applicant names on a resident's phone. It has been
+/// re-checked against the staff projection at this baseline, so every key the
+/// server holds back is named.
 abstract final class ProgramDto {
+  static const String idKey = 'id';
   static const String codeKey = 'code';
   static const String nameKey = 'name';
   static const String descriptionKey = 'description';
-  static const String categoryKey = 'category';
-  static const String statusKey = 'status';
-  static const String legalBasisKey = 'legal_basis';
-  static const String maximumGrantKey = 'maximum_grant';
-  static const String eligibilityKey = 'eligibility';
+  static const String ownerOfficeKey = 'owner_office';
+  static const String targetPopulationKey = 'target_population';
+  static const String benefitTypeKey = 'benefit_type';
+  static const String acceptsApplicationsKey = 'accepts_applications';
+  static const String applicationsCloseAtKey = 'applications_close_at';
+  static const String decidedByKey = 'decided_by';
+  static const String turnaroundTargetDaysKey = 'turnaround_target_days';
   static const String requirementsKey = 'requirements';
-  static const String effectiveFromKey = 'effective_from';
-  static const String effectiveToKey = 'effective_to';
-  static const String owningOfficeKey = 'owning_office';
-  static const String contactKey = 'contact';
-  static const String applicationChannelKey = 'application_channel';
+  static const String conditionsKey = 'conditions';
 
   static const Set<String> allowedKeys = <String>{
+    idKey,
     codeKey,
     nameKey,
     descriptionKey,
-    categoryKey,
-    statusKey,
-    legalBasisKey,
-    maximumGrantKey,
-    eligibilityKey,
+    ownerOfficeKey,
+    targetPopulationKey,
+    benefitTypeKey,
+    acceptsApplicationsKey,
+    applicationsCloseAtKey,
+    decidedByKey,
+    turnaroundTargetDaysKey,
     requirementsKey,
-    effectiveFromKey,
-    effectiveToKey,
-    owningOfficeKey,
-    contactKey,
-    applicationChannelKey,
+    conditionsKey,
   };
 
-  /// The only status a citizen may be shown.
-  static const String activeStatus = 'active';
-
-  /// What must never reach a resident, in four groups.
+  /// What must never reach a resident, in five groups.
   ///
-  /// * **Marked ⛔ in the matrix** — `funding_source` (budget-line information,
-  ///   *"meaningless and misleading to an applicant"*), `audit`, `created_by`,
-  ///   `updated_by`.
+  /// * **Held back by the staff projection** — `status`, `is_citizen_visible`,
+  ///   `authority`, `funding_source_label`, `active_from`, `active_to`,
+  ///   `eligibility_guidance_version`. These are the exact keys
+  ///   `staffProjection()` adds on top of the citizen one at this baseline, so
+  ///   this group is a mirror of the server's own line and goes stale only when
+  ///   that line moves.
+  /// * **Budget and audit** — `funding_source`, `audit`, `created_by`,
+  ///   `updated_by`. Budget-line information is meaningless and misleading to an
+  ///   applicant.
   /// * **Operational capacity** — `slots_remaining`, `quota`, `capacity`,
-  ///   `budget_remaining`, `beneficiary_count`. None of it is in the citizen
-  ///   projection, and a remaining-slots figure on a municipal benefit is the
-  ///   fastest way to start a queue at 4am for something that was never
-  ///   first-come-first-served.
+  ///   `budget_remaining`, `beneficiary_count`. A remaining-slots figure on a
+  ///   municipal benefit is the fastest way to start a queue at 4am for
+  ///   something that was never first-come-first-served.
   /// * **Ranking and scoring** — `priority_score`, `ranking`, `weight`,
-  ///   `eligibility_rules`. A machine-readable rule set is exactly what would
-  ///   let this app compute a verdict, which acceptance 2 forbids.
-  /// * **Draft and internal** — `internal_notes`, `remarks`, `draft`,
-  ///   `applicants`, `beneficiaries`. Applicant lists are other residents' data.
+  ///   `eligibility_rules`, `vulnerability_score`. A machine-readable rule set is
+  ///   precisely what would let this app compute a verdict, and ADR 0018 §3 says
+  ///   the guidance advises and never decides.
+  /// * **Draft and other people** — `internal_notes`, `remarks`, `draft`,
+  ///   `applicants`, `beneficiaries`.
   static const Set<String> forbiddenKeys = <String>{
+    'status',
+    'is_citizen_visible',
+    'authority',
+    'funding_source_label',
+    'active_from',
+    'active_to',
+    'eligibility_guidance_version',
     'funding_source',
     'audit',
     'created_by',
@@ -80,6 +90,7 @@ abstract final class ProgramDto {
     'ranking',
     'weight',
     'eligibility_rules',
+    'vulnerability_score',
     'internal_notes',
     'remarks',
     'draft',
@@ -87,115 +98,112 @@ abstract final class ProgramDto {
     'beneficiaries',
   };
 
-  /// Decodes one programme, or `null` when it is not a programme a citizen may
-  /// see.
+  /// Decodes one programme, or `null` when it is not one a resident can act on.
   ///
-  /// Returns `null` — rather than a half-built object — when the code or name is
-  /// missing, or when the status is anything other than `active`. A nameless
-  /// entry in a list of public benefits is not degraded data, it is a row a
-  /// resident cannot act on.
+  /// Returns `null` rather than a half-built object when the id, code or name is
+  /// missing. A nameless entry in a list of public benefits is not degraded
+  /// data — it is a row a resident cannot do anything with, and showing it is
+  /// worse than showing a shorter list.
   static AssistanceProgram? decode(Object? payload) {
     if (payload is! Map<String, dynamic>) return null;
 
-    final code = _stringOf(payload, codeKey);
-    final name = _stringOf(payload, nameKey);
-    if (code == null || name == null) return null;
-
-    // Deny by default: absent status is not assumed active.
-    final status = _stringOf(payload, statusKey);
-    if (status != null && status.toLowerCase() != activeStatus) return null;
+    final String? id = _stringOf(payload, idKey);
+    final String? code = _stringOf(payload, codeKey);
+    final String? name = _stringOf(payload, nameKey);
+    if (id == null || code == null || name == null) return null;
 
     return AssistanceProgram(
+      id: id,
       code: code,
       name: name,
       description: _stringOf(payload, descriptionKey) ?? '',
-      category: _stringOf(payload, categoryKey),
-      legalBasis: _stringOf(payload, legalBasisKey),
-      maximumGrant: _stringOf(payload, maximumGrantKey),
-      eligibility: _eligibilityOf(payload),
+      ownerOffice: _stringOf(payload, ownerOfficeKey),
+      targetPopulation: _stringOf(payload, targetPopulationKey),
+      benefitType: _stringOf(payload, benefitTypeKey),
+      // Absent reads as CLOSED. The alternative sends somebody to a municipal
+      // office for a programme that is not taking applications, and the journey
+      // is the expensive half of a wrong answer here.
+      acceptsApplications: payload[acceptsApplicationsKey] == true,
+      applicationsCloseAt: DateTime.tryParse(
+        _stringOf(payload, applicationsCloseAtKey) ?? '',
+      )?.toUtc(),
+      decidedBy: _stringOf(payload, decidedByKey),
+      turnaroundTargetDays: _intOf(payload, turnaroundTargetDaysKey),
       requirements: _requirementsOf(payload),
-      effectiveFrom: _stringOf(payload, effectiveFromKey),
-      effectiveTo: _stringOf(payload, effectiveToKey),
-      owningOffice: _stringOf(payload, owningOfficeKey),
-      contact: _stringOf(payload, contactKey),
-      applicationChannel: _stringOf(payload, applicationChannelKey),
+      conditions: _conditionsOf(payload),
     );
   }
 
-  /// Decodes a page, dropping entries a citizen may not see.
-  ///
-  /// A programme that fails [decode] is skipped rather than failing the page:
-  /// one malformed or non-active row must not take the whole directory down.
+  /// Every programme in a page, dropping the ones that cannot be rendered.
   static List<AssistanceProgram> decodeAll(Object? payload) {
-    if (payload is! List) return const <AssistanceProgram>[];
+    if (payload is! List<dynamic>) return const <AssistanceProgram>[];
     return payload
-        .map(decode)
+        .map(ProgramDto.decode)
         .whereType<AssistanceProgram>()
         .toList(growable: false);
-  }
-
-  static String? _stringOf(Map<String, dynamic> payload, String key) {
-    final raw = payload[key];
-    if (raw is! String) return null;
-    final value = raw.trim();
-    return value.isEmpty ? null : value;
-  }
-
-  /// Eligibility as **text**, never as a rule.
-  ///
-  /// An entry may be a plain string or an object with a `text` and an optional
-  /// `category`. Anything carrying an operator, a field name or a threshold is
-  /// not read — this app has no property to put it in, so a machine-readable
-  /// rule set arriving here is simply ignored rather than becoming a local
-  /// eligibility calculation.
-  static List<EligibilityCriterion> _eligibilityOf(
-    Map<String, dynamic> payload,
-  ) {
-    final raw = payload[eligibilityKey];
-    if (raw is! List) return const <EligibilityCriterion>[];
-
-    final criteria = <EligibilityCriterion>[];
-    for (final entry in raw) {
-      if (entry is String && entry.trim().isNotEmpty) {
-        criteria.add(EligibilityCriterion(text: entry.trim()));
-      } else if (entry is Map<String, dynamic>) {
-        final text = _stringOf(entry, 'text') ?? _stringOf(entry, 'label');
-        if (text == null) continue;
-        criteria.add(
-          EligibilityCriterion(
-            text: text,
-            category: _stringOf(entry, 'category'),
-          ),
-        );
-      }
-    }
-    return List<EligibilityCriterion>.unmodifiable(criteria);
   }
 
   static List<ProgramRequirement> _requirementsOf(
     Map<String, dynamic> payload,
   ) {
-    final raw = payload[requirementsKey];
-    if (raw is! List) return const <ProgramRequirement>[];
+    final Object? raw = payload[requirementsKey];
+    if (raw is! List<dynamic>) return const <ProgramRequirement>[];
 
-    final requirements = <ProgramRequirement>[];
-    for (final entry in raw) {
-      if (entry is String && entry.trim().isNotEmpty) {
-        requirements.add(ProgramRequirement(text: entry.trim()));
-      } else if (entry is Map<String, dynamic>) {
-        final text = _stringOf(entry, 'text') ?? _stringOf(entry, 'label');
-        if (text == null) continue;
-        requirements.add(
-          ProgramRequirement(
-            text: text,
-            // Optional only when the server says so. Never inferred, because
-            // telling somebody a document is optional when it is not sends them
-            // home from a counter.
-            isOptional: entry['optional'] == true,
+    final List<ProgramRequirement> requirements = <ProgramRequirement>[];
+    for (final Object? entry in raw) {
+      if (entry is! Map<String, dynamic>) continue;
+      final String? code = _stringOf(entry, 'code');
+      final String? label = _stringOf(entry, 'label');
+      // A requirement with no label cannot be brought to an office.
+      if (code == null || label == null) continue;
+
+      final Object? accepted = entry['accepted_documents'];
+      requirements.add(
+        ProgramRequirement(
+          code: code,
+          label: label,
+          obligation: RequirementObligation.parse(
+            _stringOf(entry, 'obligation'),
           ),
-        );
-      }
+          conditionNote: _stringOf(entry, 'condition_note'),
+          instructions: _stringOf(entry, 'instructions'),
+          acceptedDocuments: accepted is List<dynamic>
+              ? accepted.whereType<String>().toList(growable: false)
+              : const <String>[],
+        ),
+      );
     }
     return List<ProgramRequirement>.unmodifiable(requirements);
+  }
+
+  /// `conditions` is a list of plain sentences. Anything else — an object with a
+  /// comparator, a threshold, a boolean verdict — is dropped rather than
+  /// modelled, because the moment this app can read a rule it can be asked to
+  /// apply one.
+  static List<EligibilityCondition> _conditionsOf(
+    Map<String, dynamic> payload,
+  ) {
+    final Object? raw = payload[conditionsKey];
+    if (raw is! List<dynamic>) return const <EligibilityCondition>[];
+    return List<EligibilityCondition>.unmodifiable(
+      raw
+          .whereType<String>()
+          .where((String text) => text.trim().isNotEmpty)
+          .map(EligibilityCondition.new),
+    );
+  }
+
+  static String? _stringOf(Map<String, dynamic> payload, String key) {
+    final Object? value = payload[key];
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  static int? _intOf(Map<String, dynamic> payload, String key) {
+    final Object? value = payload[key];
+    if (value is int) return value;
+    if (value is String) return int.tryParse(value);
+    return null;
   }
 }
