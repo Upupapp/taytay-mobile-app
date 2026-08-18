@@ -220,7 +220,10 @@ class AppDependencies {
       cache: publicCache,
       network: network,
       telemetry: telemetry,
-      authRepository: AuthApiRepository(apiClient: apiClient),
+      authRepository: AuthApiRepository(
+        apiClient: apiClient,
+        telemetry: telemetry,
+      ),
       deviceSessionRepository: SessionApiRepository(apiClient: apiClient),
       platformRepository: platformRepository,
       platform: platform,
@@ -229,7 +232,10 @@ class AppDependencies {
       ),
       programRepository: ProgramApiRepository(apiClient: apiClient),
       announcementRepository: NewsfeedApiRepository(apiClient: apiClient),
-      eventRepository: EventApiRepository(apiClient: apiClient),
+      eventRepository: EventApiRepository(
+        apiClient: apiClient,
+        telemetry: telemetry,
+      ),
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
       residentProfileRepository: ResidentProfileApiRepository(
@@ -238,9 +244,18 @@ class AppDependencies {
       householdRepository: HouseholdApiRepository(apiClient: apiClient),
       registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: CredentialApiRepository(apiClient: apiClient),
-      verificationRepository: KycApiRepository(apiClient: apiClient),
-      serviceRequestRepository: AssistanceApiRepository(apiClient: apiClient),
-      requirementRepository: RequirementApiRepository(apiClient: apiClient),
+      verificationRepository: KycApiRepository(
+        apiClient: apiClient,
+        telemetry: telemetry,
+      ),
+      serviceRequestRepository: AssistanceApiRepository(
+        apiClient: apiClient,
+        telemetry: telemetry,
+      ),
+      requirementRepository: RequirementApiRepository(
+        apiClient: apiClient,
+        telemetry: telemetry,
+      ),
       notificationRepository: NotificationApiRepository(apiClient: apiClient),
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/assistance_case.dart';
 import '../domain/assistance_history.dart';
 import '../domain/assistance_intake.dart';
@@ -29,10 +32,18 @@ import '../domain/service_request_repository.dart';
 /// verbatim — status included — so a retry is genuinely indistinguishable from
 /// the original.
 class AssistanceApiRepository implements ServiceRequestRepository {
-  const AssistanceApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  const AssistanceApiRepository({
+    required ApiClient apiClient,
+    Telemetry? telemetry,
+  }) : _apiClient = apiClient,
+       _telemetry = telemetry;
 
   final ApiClient _apiClient;
+
+  /// Counts and outcomes, never contents. See `Telemetry` for the three
+  /// conditions that gate every signal, and `TelemetrySignal` for why the
+  /// payload is a sealed set with no free-text field.
+  final Telemetry? _telemetry;
 
   static const String draftsPath = 'me/assistance/drafts';
 
@@ -69,6 +80,15 @@ class AssistanceApiRepository implements ServiceRequestRepository {
     // construction, and giving it the submit key would spend that key on the
     // wrong operation. Submitting is the irreversible one and is what the key
     // protects: it is the difference between one case and two.
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.assistanceApplication,
+          stage: TelemetryStage.started,
+        ),
+      ),
+    );
+
     final Result<ApiEnvelope<String?>> opened = await _apiClient.send<String?>(
       method: HttpMethod.post,
       path: draftsPath,
@@ -97,6 +117,15 @@ class AssistanceApiRepository implements ServiceRequestRepository {
             ),
           );
         }
+
+        unawaited(
+          _telemetry?.record(
+            const FlowStep(
+              flow: TelemetryFlow.assistanceApplication,
+              stage: TelemetryStage.submitted,
+            ),
+          ),
+        );
 
         final response = await _apiClient.send<ServiceRequest>(
           method: HttpMethod.post,

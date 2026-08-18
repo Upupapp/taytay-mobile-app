@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -6,6 +7,7 @@ import '../../../core/api/api_transport.dart';
 import '../../../core/api/server_value.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/result/result.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/resident_requirement.dart';
 
 /// Talks to `me/cases/{case}/requirements` and the document routes beneath it.
@@ -25,10 +27,18 @@ import '../domain/resident_requirement.dart';
 /// width and decodes straight to it, which is also less memory than decoding
 /// full-size and scaling after.
 class RequirementApiRepository implements RequirementRepository {
-  const RequirementApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  const RequirementApiRepository({
+    required ApiClient apiClient,
+    Telemetry? telemetry,
+  }) : _apiClient = apiClient,
+       _telemetry = telemetry;
 
   final ApiClient _apiClient;
+
+  /// Counts and outcomes, never contents. See `Telemetry` for the three
+  /// conditions that gate every signal, and `TelemetrySignal` for why the
+  /// payload is a sealed set with no free-text field.
+  final Telemetry? _telemetry;
 
   /// The longest edge an identity document is sent at.
   ///
@@ -80,6 +90,15 @@ class RequirementApiRepository implements RequirementRepository {
     // decides the app has frozen and kills it mid-upload.
     onProgress?.call(0);
 
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.documentUpload,
+          stage: TelemetryStage.started,
+        ),
+      ),
+    );
+
     final Uint8List bytes = await _rightSized(document);
 
     // Checked before sending, and again after: an upload that has already
@@ -122,6 +141,15 @@ class RequirementApiRepository implements RequirementRepository {
     );
 
     onProgress?.call(1);
+
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.documentUpload,
+          stage: TelemetryStage.completed,
+        ),
+      ),
+    );
 
     if (cancellation?.isCancelled ?? false) {
       return const Err<UploadedDocumentReference>(

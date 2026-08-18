@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/event_repository.dart';
 
 /// Talks to `events` and the registration routes beneath it.
@@ -27,10 +30,16 @@ import '../domain/event_repository.dart';
 /// waitlisted or refused, and the refusal needs calm, specific words rather than
 /// an error dialog.
 class EventApiRepository implements EventRepository {
-  const EventApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  const EventApiRepository({required ApiClient apiClient, Telemetry? telemetry})
+    : _apiClient = apiClient,
+      _telemetry = telemetry;
 
   final ApiClient _apiClient;
+
+  /// Counts and outcomes, never contents. See `Telemetry` for the three
+  /// conditions that gate every signal, and `TelemetrySignal` for why the
+  /// payload is a sealed set with no free-text field.
+  final Telemetry? _telemetry;
 
   static const String path = 'events';
 
@@ -100,6 +109,15 @@ class EventApiRepository implements EventRepository {
     required List<String> consentKeys,
     required String idempotencyKey,
   }) async {
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.eventRegistration,
+          stage: TelemetryStage.started,
+        ),
+      ),
+    );
+
     final response = await _apiClient.send<RegistrationAttempt>(
       method: HttpMethod.post,
       path: '$path/$eventId/registration',

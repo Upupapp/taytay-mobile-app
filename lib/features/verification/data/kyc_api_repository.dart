@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
 
@@ -24,10 +27,16 @@ import '../domain/verification_status_detail.dart';
 /// resident can do nothing about, on the screen that decides whether they ever
 /// become Verified.
 class KycApiRepository implements VerificationRepository {
-  const KycApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  const KycApiRepository({required ApiClient apiClient, Telemetry? telemetry})
+    : _apiClient = apiClient,
+      _telemetry = telemetry;
 
   final ApiClient _apiClient;
+
+  /// Counts and outcomes, never contents. See `Telemetry` for the three
+  /// conditions that gate every signal, and `TelemetrySignal` for why the
+  /// payload is a sealed set with no free-text field.
+  final Telemetry? _telemetry;
 
   @override
   Future<Result<VerificationStatus>> loadOwnStatus() async {
@@ -92,6 +101,15 @@ class KycApiRepository implements VerificationRepository {
         'submitCorrections',
       );
     }
+
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.verification,
+          stage: TelemetryStage.advanced,
+        ),
+      ),
+    );
 
     final response = await _apiClient.send<void>(
       method: HttpMethod.post,

@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/session_state.dart';
+import '../../../core/telemetry/telemetry.dart';
 import '../domain/auth_repository.dart';
 
 /// Talks to the citizen half of `Identity`.
@@ -34,15 +37,34 @@ import '../domain/auth_repository.dart';
 /// exists. That ordering is Article 3.6 and it is also the only thing that could
 /// work: the response has no field to infer from.
 class AuthApiRepository implements AuthRepository {
-  const AuthApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  const AuthApiRepository({required ApiClient apiClient, Telemetry? telemetry})
+    : _apiClient = apiClient,
+      _telemetry = telemetry;
 
   final ApiClient _apiClient;
+
+  /// Counts and outcomes, never contents.
+  ///
+  /// Sign-in is the funnel the LGU most needs to see, because a fall in its
+  /// completion rate is the difference between "nobody is using the app" and
+  /// "nobody can get in" — and those have opposite responses. What is recorded
+  /// is that a stage happened, from a sealed enum with nowhere to put a mobile
+  /// number.
+  final Telemetry? _telemetry;
 
   @override
   Future<Result<void>> requestOneTimeCode({
     required String mobileNumber,
   }) async {
+    unawaited(
+      _telemetry?.record(
+        const FlowStep(
+          flow: TelemetryFlow.signIn,
+          stage: TelemetryStage.started,
+        ),
+      ),
+    );
+
     final response = await _apiClient.send<void>(
       method: HttpMethod.post,
       path: 'auth/otp',
@@ -79,6 +101,14 @@ class AuthApiRepository implements AuthRepository {
 
     switch (tokenResult) {
       case Err<ApiEnvelope<_IssuedToken>>(:final failure):
+        unawaited(
+          _telemetry?.record(
+            const FlowStep(
+              flow: TelemetryFlow.signIn,
+              stage: TelemetryStage.blocked,
+            ),
+          ),
+        );
         return Err<AuthOutcome>(failure);
       case Ok<ApiEnvelope<_IssuedToken>>(:final value):
         final _IssuedToken issued = value.data;
@@ -89,6 +119,14 @@ class AuthApiRepository implements AuthRepository {
             ),
           );
         }
+        unawaited(
+          _telemetry?.record(
+            const FlowStep(
+              flow: TelemetryFlow.signIn,
+              stage: TelemetryStage.completed,
+            ),
+          ),
+        );
         return _establishSession(issued);
     }
   }
