@@ -84,6 +84,7 @@ class AppDependencies {
     required this.residentProfileRepository,
     required this.householdRepository,
     required this.registrationRepository,
+    required this.barangayDirectory,
     required this.credentialRepository,
     required this.verificationRepository,
     required this.serviceRequestRepository,
@@ -247,6 +248,7 @@ class AppDependencies {
       registrationRepository: PlannedRegistrationRepository(
         directory: barangayDirectory,
       ),
+      barangayDirectory: barangayDirectory,
       credentialRepository: CredentialApiRepository(apiClient: apiClient),
       verificationRepository: KycApiRepository(
         apiClient: apiClient,
@@ -354,6 +356,14 @@ class AppDependencies {
 
   /// Citizen registration and identity verification submission.
   final RegistrationRepository registrationRepository;
+
+  /// Taytay's barangays, as the server publishes them.
+  ///
+  /// Its own dependency rather than a method on one repository, because a KYC
+  /// claim, a profile correction and a household address all need the list and
+  /// none of them is registration. Exposed here so the KYC claim form can read
+  /// it without going through a repository that declines everything else (F15).
+  final BarangayDirectory barangayDirectory;
   final CredentialRepository credentialRepository;
   final VerificationRepository verificationRepository;
   final ServiceRequestRepository serviceRequestRepository;

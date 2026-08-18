@@ -58,6 +58,8 @@ void main() {
     'residentProfileRepository',
     // TAB 05
     'householdRepository',
+    // F14 — the directory that unblocked KYC
+    'barangayDirectory',
     // TAB 06
     'credentialRepository',
     // TAB 08
@@ -99,6 +101,7 @@ void main() {
     'residentProfileRepository': d.residentProfileRepository,
     'householdRepository': d.householdRepository,
     'registrationRepository': d.registrationRepository,
+    'barangayDirectory': d.barangayDirectory,
     'credentialRepository': d.credentialRepository,
     'verificationRepository': d.verificationRepository,
     'serviceRequestRepository': d.serviceRequestRepository,

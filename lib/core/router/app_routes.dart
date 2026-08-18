@@ -196,6 +196,19 @@ enum AppRoute {
     AccessRequirement.authenticated,
   ),
 
+  /// The form that opens a KYC case: name, date of birth, sex, barangay,
+  /// street address. Authenticated and explicitly *not* verified, for the same
+  /// reason as its parent — this is how a resident becomes verified, so
+  /// requiring verification to reach it would close the only door to it.
+  ///
+  /// Unreachable in any meaningful sense until backend `api-baseline-2026-08`:
+  /// `POST me/kyc` required a barangay identifier no route published (F14).
+  verificationClaim(
+    'verification-claim',
+    '/verification/start',
+    AccessRequirement.authenticated,
+  ),
+
   /// The resident's own assistance requests. Verified only: an assistance
   /// request is an act on the resident's civil record.
   requests('requests', '/requests', AccessRequirement.verified),

@@ -254,6 +254,7 @@ Future<BootedDirectory> bootDirectory(
     accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
+    barangayDirectory: base.barangayDirectory,
     platform: base.platform,
     onDispose: base.onDispose,
   );

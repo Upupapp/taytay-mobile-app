@@ -196,7 +196,7 @@ contracts side by side, and would have shipped silently otherwise.
 | --- | --- | --- | --- | --- |
 | `PendingBackendAuthRepository` | `Identity` | `auth/otp`, `auth/otp/verify`, `auth/tokens`, `auth/tokens/mfa`, `auth/password/forgot`, `DELETE auth/tokens/current` | TAB 02 | reading (no enum reference) |
 | `PlannedDeviceSessionRepository` | `Identity` | `me/sessions` ×3, `me/devices` ×3 | TAB 03 | reading (no enum reference) |
-| `PlannedRegistrationRepository` | — | **blocked, F15 + F14** | product decision | compiler |
+| `PlannedRegistrationRepository` | `ResidentProfile` (directory only) | `barangays` served; **the rest blocked, F15** | product decision; `listBarangays` wired via `BarangayDirectory` | compiler |
 | `PlannedResidentProfileRepository` | `ResidentProfile` | `me`, `me/profile` | TAB 04 | compiler |
 | ~~`PlannedVerificationRepository`~~ → `KycApiRepository` | `ResidentProfile` | `me/kyc` ×3, `me/profile/corrections` ×3 | **TAB 04 — wired; `POST me/kyc` closed F14** | reading (F17) |
 | `PlannedHouseholdRepository` | `ResidentProfile` | `me/household` | TAB 05 | compiler |

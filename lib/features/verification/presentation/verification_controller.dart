@@ -42,6 +42,7 @@ class VerificationController extends ChangeNotifier {
   bool _loading = false;
   bool _submitting = false;
   String? _correctionKey;
+  String? _submissionKey;
 
   /// Corrections the resident has typed, keyed by the category the office
   /// flagged. Nothing can be entered for a category that was not flagged.
@@ -116,6 +117,53 @@ class VerificationController extends ChangeNotifier {
     _corrections[category] = value;
     _failure = null;
     notifyListeners();
+  }
+
+  /// Sends a saved draft to Taytay LGU for review.
+  ///
+  /// ---
+  ///
+  /// **This is the moment a case enters a municipal queue**, and it is a
+  /// separate press from saving the claim for exactly that reason: somebody who
+  /// mistyped a birth date has not already spent their place in it.
+  ///
+  /// No documents are attached — a KYC case has nowhere to put one (F28), and
+  /// the repository declines rather than dropping any it is given. Passing the
+  /// empty list is not a stub: it is the true statement that this submission
+  /// carries none, and it is the one shape the server actually serves.
+  ///
+  /// Re-reads the status afterwards rather than assuming the new state. The
+  /// server decides whether a submission goes to screening or straight to a
+  /// person, and the app has no basis for guessing which.
+  Future<bool> sendForReview() async {
+    if (_submitting) return false;
+
+    // Reused on retry, so a dropped connection cannot put two cases in front of
+    // a reviewer. Cleared once the server has answered.
+    _submissionKey ??= generateRequestId();
+    _submitting = true;
+    _failure = null;
+    notifyListeners();
+
+    final outcome = await _repository.submitForReview(
+      documentUploadIds: const <String>[],
+      idempotencyKey: _submissionKey!,
+    );
+    _submitting = false;
+
+    return outcome.fold(
+      onOk: (_) {
+        _submissionKey = null;
+        notifyListeners();
+        unawaited(refresh());
+        return true;
+      },
+      onErr: (failure) {
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
   }
 
   /// Sends the corrections the office asked for.

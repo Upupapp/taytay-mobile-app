@@ -189,6 +189,7 @@ Future<BootedSettings> bootSettings(
     accountControlsRepository: repositoryOverride ?? scripted,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
+    barangayDirectory: base.barangayDirectory,
     platform: base.platform,
     onDispose: base.onDispose,
   );

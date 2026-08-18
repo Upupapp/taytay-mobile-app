@@ -33,6 +33,7 @@ import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../design/design_tokens.dart';
 import '../session/session_controller.dart';
@@ -291,6 +292,13 @@ GoRouter buildAppRouter({
         path: AppRoute.verification.path,
         name: AppRoute.verification.routeName,
         builder: (context, state) => const VerificationScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'start',
+            name: AppRoute.verificationClaim.routeName,
+            builder: (context, state) => const KycClaimScreen(),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoute.requests.path,

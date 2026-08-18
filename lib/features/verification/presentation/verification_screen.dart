@@ -122,7 +122,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         _SubmittedItems(status: status),
                         const SizedBox(height: Spacing.xl),
                       ],
-                      _NextSteps(status: status),
+                      _NextSteps(status: status, controller: _controller),
                     ] else if (_controller.failure == null)
                       const AppLoadingView(message: 'Checking your status…'),
                   ],
@@ -325,9 +325,10 @@ class _CorrectionSection extends StatelessWidget {
 /// resolved in the app — `unsuccessful` and `manualReview` — end with the
 /// municipal hall, which is a route that works when nothing else does.
 class _NextSteps extends StatelessWidget {
-  const _NextSteps({required this.status});
+  const _NextSteps({required this.status, required this.controller});
 
   final VerificationStatusDetail status;
+  final VerificationController controller;
 
   @override
   Widget build(BuildContext context) {
@@ -349,7 +350,8 @@ class _NextSteps extends StatelessWidget {
             const SizedBox(height: Spacing.lg),
             AppButton(
               label: actionLabel,
-              onPressed: () => context.goNamed(AppRoute.register.routeName),
+              loading: controller.submitting,
+              onPressed: controller.submitting ? null : () => _act(context),
             ),
           ],
           if (stage.suggestsInPerson ||
@@ -377,6 +379,45 @@ class _NextSteps extends StatelessWidget {
     );
   }
 
+  /// What the button does, per stage.
+  ///
+  /// ---
+  ///
+  /// **This used to send every stage to the registration wizard**, which has no
+  /// server counterpart at all (F15): a resident who tapped "Start verification"
+  /// was taken to a seven-field form that could never submit. The wizard is
+  /// still there and still blocked — but verification itself is not, now that
+  /// `POST me/kyc` accepts an identifier a client can obtain (F14), so the
+  /// stages that lead to a KYC case go to the KYC form instead.
+  ///
+  /// `needsMoreInformation` keeps the old destination deliberately: the
+  /// correction section is already on this screen and is the real path, and
+  /// re-opening a case would discard what the office already holds.
+  void _act(BuildContext context) {
+    switch (status.stage) {
+      // No case, or a terminal one. Both start a claim; the server opens a new
+      // case only when there is no open one, so this cannot duplicate.
+      case ResidentVerificationStage.notStarted:
+      case ResidentVerificationStage.unsuccessful:
+        context.goNamed(AppRoute.verificationClaim.routeName);
+
+      // A draft the resident owns. The only thing left is to send it, and that
+      // is the moment it enters a municipal queue — so it is its own press,
+      // never folded into saving the form.
+      case ResidentVerificationStage.inProgress:
+        controller.sendForReview();
+
+      case ResidentVerificationStage.needsMoreInformation:
+        context.goNamed(AppRoute.register.routeName);
+
+      // No button is offered for these.
+      case ResidentVerificationStage.pendingReview:
+      case ResidentVerificationStage.verified:
+      case ResidentVerificationStage.manualReview:
+        break;
+    }
+  }
+
   /// Copy per stage.
   ///
   /// Written to state facts and actions only. No estimate of how long a review
@@ -389,8 +430,8 @@ class _NextSteps extends StatelessWidget {
       'Verifying your identity lets you hold your Taytay digital ID and '
           'apply for municipal services.',
     ResidentVerificationStage.inProgress =>
-      'You can pick up where you left off. Nothing has been sent to Taytay '
-          'LGU yet.',
+      'Your details are saved but have not been sent. Taytay LGU cannot see '
+          'them until you send them for review.',
     ResidentVerificationStage.pendingReview =>
       'Taytay LGU staff will check your details against the municipal '
           'resident register. You will be notified when there is an update, '

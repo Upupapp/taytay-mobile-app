@@ -364,6 +364,7 @@ void main() {
         accountControlsRepository: base.accountControlsRepository,
         notificationRepository: base.notificationRepository,
         registrationRepository: base.registrationRepository,
+        barangayDirectory: base.barangayDirectory,
         platform: platform,
         onDispose: base.onDispose,
       );

@@ -110,6 +110,7 @@ Future<AppDependencies> bootVerification(
     accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
+    barangayDirectory: base.barangayDirectory,
     platform: base.platform,
     onDispose: base.onDispose,
   );
@@ -167,6 +168,125 @@ Future<void> goHome(WidgetTester tester) async {
 }
 
 void main() {
+  group('the door out of Not started — F14 and F15', () {
+    testWidgets(
+      'Start verification opens the KYC form, not the blocked wizard',
+      (tester) async {
+        await bootVerification(
+          tester,
+          detail: const VerificationStatusDetail(
+            stage: ResidentVerificationStage.notStarted,
+            rawState: '',
+          ),
+        );
+
+        final Finder start = find.text('Start verification');
+        await scrollToTile(tester, start);
+        await tester.tap(start);
+        await tester.pumpAndSettle();
+
+        // REGRESSION GUARD. This button used to go to the self-registration
+        // wizard, which has no server counterpart at all (F15): a resident who
+        // pressed it reached a seven-field form that could never submit. It now
+        // goes to the KYC claim form, which the backend serves — the whole point
+        // of closing F14.
+        expect(find.text('Verify your identity'), findsOneWidget);
+        expect(
+          find.textContaining('municipal resident register'),
+          findsOneWidget,
+        );
+      },
+    );
+
+    testWidgets('the KYC form asks for nothing the office did not', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.notStarted,
+          rawState: '',
+        ),
+      );
+      final Finder start = find.text('Start verification');
+      await scrollToTile(tester, start);
+      await tester.tap(start);
+      await tester.pumpAndSettle();
+
+      // Every label the form renders, gathered by scrolling the whole thing.
+      //
+      // NOT by asserting `findsNothing` on the unscrolled screen: a `ListView`
+      // only builds what fits, so a field below the fold is absent from the tree
+      // and every negative assertion would pass whether or not the field exists.
+      // That is a test that cannot fail, which is worse than no test.
+      final Set<String> rendered = <String>{};
+      final Finder list = find.byType(Scrollable).last;
+      for (int i = 0; i < 40; i++) {
+        rendered.addAll(
+          tester
+              .widgetList<Text>(find.byType(Text))
+              .map((Text t) => t.data ?? '')
+              .where((String d) => d.isNotEmpty),
+        );
+        await tester.drag(list, const Offset(0, -280));
+        await tester.pumpAndSettle();
+      }
+
+      // Exactly what POST me/kyc validates. Every one becomes a claimed_*
+      // column in a municipal review queue.
+      for (final String label in <String>[
+        'First name',
+        'Middle name (optional)',
+        'Last name',
+        'Suffix (optional)',
+        'Date of birth',
+        'Sex',
+        'Barangay',
+        'Street address',
+      ]) {
+        expect(rendered, contains(label), reason: label);
+      }
+
+      // And nothing else. A PhilSys number is what the office looks up, never
+      // what an applicant asserts, and the account already carries the contact
+      // details. No document capture either: a KYC case has nowhere to put one
+      // (F28), and a screen that took a photograph of somebody's ID and dropped
+      // it would have collected the most sensitive thing this app can hold, for
+      // nothing.
+      for (final String forbidden in <String>[
+        'PhilSys',
+        'Mobile number',
+        'Email',
+        'Take a photo',
+        'Upload',
+        'Selfie',
+      ]) {
+        expect(
+          rendered.where((String t) => t.contains(forbidden)),
+          isEmpty,
+          reason: forbidden,
+        );
+      }
+    });
+
+    testWidgets('a saved draft says plainly that nothing has been sent', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.inProgress,
+          rawState: 'draft',
+        ),
+      );
+
+      // The one thing a resident must not be wrong about: a draft is not a
+      // submission, and the office cannot see it yet.
+      expect(find.textContaining('have not been sent'), findsOneWidget);
+      expect(find.text('Continue verification'), findsOneWidget);
+    });
+  });
+
   group('status is understandable without staff detail', () {
     testWidgets(
       'pending review states what is happening and offers no action',

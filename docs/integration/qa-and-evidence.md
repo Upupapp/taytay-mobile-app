@@ -1,4 +1,4 @@
-# QA — what 1,369 passing tests do and do not evidence
+# QA — what 1,381 passing tests do and do not evidence
 
 TAB 24 consumes this. Its whole job is to refuse to launch on anything but
 evidence, so it needs to know exactly what kind of evidence this suite is.
@@ -53,9 +53,16 @@ identifier as `barangay_id` instead of `barangay_code` is refused **422**. That
 is precisely the original defect: the server published identifiers no client
 could file against.
 
-**What it still does not prove.** No screen calls `openCase` yet — the claim
-form is presentation work that follows this — and a KYC case has nowhere to put
-an identity document (**F28**), so a submission carrying one declines.
+**The client half is now reachable by a person.** `/verification/start` is the
+claim form; "Start verification" on the status screen goes there instead of to
+the self-registration wizard, which has no server counterpart at all (F15) and
+which a resident used to be sent to. Guarded by a regression test, proven red by
+pointing the button back at the wizard.
+
+**What it still does not prove.** No test drives the form itself against a live
+server — the claim form's own tests use stubs, and the live proof calls the
+repository directly. And a KYC case has nowhere to put an identity document
+(**F28**), so a submission carrying one declines.
 
 ## What is not proven, and must not be read as proven
 
