@@ -1,7 +1,6 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
-import '../../../core/api/backend_gap.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../domain/announcement_repository.dart';
@@ -188,25 +187,31 @@ class NewsfeedApiRepository implements AnnouncementRepository {
   Future<Result<void>> reportComment({
     required String postId,
     required String commentId,
-    required String reason,
+    required ReportReason reason,
     required String idempotencyKey,
   }) async {
-    // F26, and it is a store-submission blocker rather than a missing nicety.
+    // F26, and it was a store-submission blocker: both stores require a way to
+    // report objectionable user-generated content, and the newsfeed's comments
+    // are the only user-generated content this app has.
     //
-    // Both Google Play and the App Store require a way to report objectionable
-    // user-generated content, and this is the only feature in the app that
-    // produces any. The backend's moderation surface is
+    // This used to decline, because the only moderation surface was
     // `admin/newsfeed-comments/{comment}/moderation` — staff-only, and calling
-    // it from here would breach Article 0 twice over: a staff route, and a
-    // resident acting on somebody else's comment.
+    // it from here would breach Article 0 twice: a staff route, and a resident
+    // acting on somebody else's comment. The backend now publishes a resident
+    // surface that records an objection and changes nothing about the comment.
     //
-    // Declining rather than pretending: a report button that silently does
-    // nothing is worse than an absent one, because a resident who has just seen
-    // something abusive believes they have told the municipality.
-    return backendGapFailure<void>(
-      BackendGap.contentReporting,
-      'reportComment',
+    // Addressed by comment id alone. There is no post in the path and none is
+    // sent: the server resolves the comment itself, so there is no second
+    // identifier for a caller to get wrong or to tamper with.
+    final response = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'newsfeed-comments/$commentId/reports',
+      authenticated: true,
+      idempotencyKey: idempotencyKey,
+      body: <String, Object?>{'reason': reason.wireValue},
+      decode: (_) {},
     );
+    return response.map((_) {});
   }
 
   static Announcement? _decodePost(Object? entry) {
@@ -239,6 +244,16 @@ class NewsfeedApiRepository implements AnnouncementRepository {
         // decision to make per post — never a global app setting.
         canComment: entry['comments_enabled'] == true,
         canShare: true,
+        // Both were false while their endpoints worked, so no screen offered
+        // either. Deleting your own words and reporting somebody else's are
+        // things every store expects of an app carrying user content, and the
+        // routes have served both since this baseline.
+        //
+        // Not tied to `comments_enabled`: closing comments on a post stops new
+        // ones, and the ones already there are exactly the ones that might need
+        // reporting.
+        canDeleteOwnComment: true,
+        canReportComment: true,
       ),
     );
   }

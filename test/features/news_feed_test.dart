@@ -137,7 +137,7 @@ class ScriptedAnnouncementRepository implements AnnouncementRepository {
   Future<Result<void>> reportComment({
     required String postId,
     required String commentId,
-    required String reason,
+    required ReportReason reason,
     required String idempotencyKey,
   }) async => const Err<void>(ServerFailure());
 }

@@ -76,6 +76,61 @@ class PostCapabilities {
       'PostCapabilities(react: $canReact, comment: $canComment)';
 }
 
+/// Why a resident says a comment should not be there (F26).
+///
+/// ---
+///
+/// **A closed set, mirroring the server's, and there is deliberately no
+/// `other`.** `other` is the door free text comes back through: a category that
+/// means nothing forces a box to explain it, and that box is where somebody
+/// types a neighbour's name and address into a municipal record that staff read
+/// and retention rules keep. The moderator has the comment in front of them; the
+/// category tells them what to look for, which is the whole job it has.
+///
+/// Typed rather than a `String` so a screen cannot send a value the server will
+/// refuse — a 422 on a report is a resident believing they told the LGU about
+/// something abusive when they did not.
+enum ReportReason {
+  abusive(
+    'abusive',
+    'Abusive or threatening',
+    'Insults, threats, or hateful language.',
+  ),
+  harassment(
+    'harassment',
+    'Targeting someone',
+    'Aimed at a particular person.',
+  ),
+
+  /// The one that matters most on a municipal feed specifically. A comment under
+  /// an advisory saying relief distribution moved sends people to the wrong
+  /// place.
+  falseInformation(
+    'false-information',
+    'False information about services',
+    'Wrong claims about Taytay LGU services or schedules.',
+  ),
+  spam(
+    'spam',
+    'Spam or advertising',
+    'Selling something, or posted repeatedly.',
+  ),
+  personalInformation(
+    'personal-information',
+    "Someone's personal information",
+    'A phone number, address, or other private detail posted without consent.',
+  );
+
+  const ReportReason(this.wireValue, this.label, this.description);
+
+  /// Sent as-is, and matched against the server's own vocabulary.
+  final String wireValue;
+
+  /// What the resident chooses from.
+  final String label;
+  final String description;
+}
+
 /// One comment on an announcement.
 @immutable
 class PostComment {

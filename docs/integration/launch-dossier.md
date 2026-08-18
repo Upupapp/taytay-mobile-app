@@ -58,7 +58,7 @@ the analyzer clean — and that is not what a launch turns on.
 | ~~**F14**~~ | ~~No barangay directory~~ — **CLOSED on both sides since this dossier was written.** The backend publishes `GET barangays` with a UUID and a stable code and accepts `barangay_code` on `POST me/kyc`; this app reads the directory and files a claim against the code. Proven by the app’s own repositories against the API running locally, and proven red by sending the published identifier as `barangay_id` (422). See `qa-and-evidence.md`. | closed |
 | **F15** | No self-registration route. Onboarding is staff-mediated by construction; the app ships a wizard with no server counterpart | product / LGU |
 | ~~**F16**~~ | ~~Codes never dispatched~~ — **the code is CLOSED** (`backend@7922e84`): the seam exists, the code is sent, and sign-in is proven end to end against a running API. **The P0 does not close with it.** No SMS provider has been chosen, so a real resident still receives nothing. Downgraded from "nobody can sign in because of a defect" to "nobody can sign in until a vendor is contracted" — a procurement blocker, not an engineering one. | LGU (procurement) |
-| **F26** | No content-reporting route. Both stores require one for user-generated content | backend |
+| ~~**F26**~~ | ~~No content-reporting route~~ — **CLOSED on both sides** (`backend@c7a902d`). A resident can report a comment; it flags for a person and removes nothing, so it cannot be used to silence a neighbour. Closed vocabulary, no free text, and the app tells the resident when the send failed. | closed |
 
 **P1**
 
@@ -133,7 +133,9 @@ In order of what unblocks the most:
    claim form on this side, and **F28**: a KYC case still has nowhere to put an
    identity document.
 4. **The keystore**, so an artifact exists at all.
-5. **F13 and F26**, without which no store will accept a submission.
+5. **F13** — ~~and F26~~, without which no store will accept a submission. F26 is
+   done; F13 still needs the retention schedule from item 1 before it can even
+   be specified.
 6. **DPO and retention schedule** — longest lead time, start first.
 
 Items 1–2 are days of backend work each. Items 4–6 are weeks of organisational

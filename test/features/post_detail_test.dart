@@ -94,7 +94,7 @@ class ScriptedPostRepository implements AnnouncementRepository {
 
   final List<String> reactionKeys = <String>[];
   final List<String> commentKeys = <String>[];
-  final List<String> reportedReasons = <String>[];
+  final List<ReportReason> reportedReasons = <ReportReason>[];
   int setReactionCalls = 0;
   int clearReactionCalls = 0;
   int addCommentCalls = 0;
@@ -182,7 +182,7 @@ class ScriptedPostRepository implements AnnouncementRepository {
   Future<Result<void>> reportComment({
     required String postId,
     required String commentId,
-    required String reason,
+    required ReportReason reason,
     required String idempotencyKey,
   }) async {
     reportedReasons.add(reason);
@@ -233,6 +233,7 @@ Future<BootedPost> bootPost(
   List<PostComment> comments = const <PostComment>[],
   AnnouncementRepository? repositoryOverride,
   ShareOutcome shareOutcome = ShareOutcome.shared,
+  Result<void> reportOutcome = const Ok<void>(null),
   String location = '/news/post-1',
   Size size = const Size(400, 4000),
   TextScaler textScaler = TextScaler.noScaling,
@@ -258,7 +259,8 @@ Future<BootedPost> bootPost(
     );
   }
 
-  final posts = ScriptedPostRepository(detail: detail, comments: comments);
+  final posts = ScriptedPostRepository(detail: detail, comments: comments)
+    ..reportOutcome = reportOutcome;
   final sharing = RecordingShareService(outcome: shareOutcome);
 
   final base = AppDependencies.build(
@@ -350,7 +352,7 @@ void main() {
 
       await controller.toggleReaction(ReactionKind.like);
       final posted = await controller.submitComment('hello');
-      final reported = await controller.reportComment('c-1', 'spam');
+      final reported = await controller.reportComment('c-1', ReportReason.spam);
 
       expect(repository.setReactionCalls, 0);
       expect(repository.addCommentCalls, 0);
@@ -370,6 +372,149 @@ void main() {
       expect(find.byType(FilterChip), findsNothing);
       // The post itself still reads.
       expect(find.text('Classes suspended tomorrow'), findsOneWidget);
+    });
+  });
+
+  group('reporting a comment — F26', () {
+    testWidgets(
+      'Report is offered on somebody else\'s comment, never on your own',
+      (tester) async {
+        await bootPost(
+          tester,
+          detail: post(comments: 2),
+          comments: <PostComment>[
+            comment(id: 'c-1', body: 'Somebody else wrote this.'),
+            comment(id: 'c-2', body: 'I wrote this.', isMine: true),
+          ],
+        );
+
+        // One Report and one Delete: the author already has Delete, which is
+        // immediate and needs nobody, and the server refuses a self-report — so a
+        // Report control on your own comment is one that always fails.
+        expect(find.text('Report'), findsOneWidget);
+        expect(find.text('Delete'), findsOneWidget);
+      },
+    );
+
+    testWidgets('the reasons are the five, with no other and no text box', (
+      tester,
+    ) async {
+      await bootPost(
+        tester,
+        detail: post(comments: 1),
+        comments: <PostComment>[comment()],
+      );
+
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+
+      for (final ReportReason reason in ReportReason.values) {
+        expect(find.text(reason.label), findsOneWidget, reason: reason.name);
+      }
+
+      // No "other", and therefore no box under it — which is where a resident
+      // types a neighbour's name and address into a municipal record.
+      //
+      // Scoped to the sheet. An unscoped `findsNothing` for TextField finds the
+      // post's own comment box on the screen underneath and fails for a reason
+      // that has nothing to do with reporting.
+      final Finder sheet = find.byType(BottomSheet);
+      expect(
+        find.descendant(of: sheet, matching: find.textContaining('Other')),
+        findsNothing,
+      );
+      expect(
+        find.descendant(of: sheet, matching: find.byType(TextField)),
+        findsNothing,
+      );
+    });
+
+    testWidgets('the sheet says what a report does and does not do', (
+      tester,
+    ) async {
+      await bootPost(
+        tester,
+        detail: post(comments: 1),
+        comments: <PostComment>[comment()],
+      );
+
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+
+      // Both halves matter. "Nothing is removed automatically" stops a resident
+      // expecting a comment to vanish; "the person is not told who reported it"
+      // is what makes reporting a neighbour on a municipal feed safe to do.
+      expect(find.textContaining('Nothing is removed'), findsOneWidget);
+      expect(find.textContaining('not told who'), findsOneWidget);
+    });
+
+    testWidgets('choosing a reason sends it and confirms', (tester) async {
+      await bootPost(
+        tester,
+        detail: post(comments: 1),
+        comments: <PostComment>[comment()],
+      );
+
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(ReportReason.spam.label));
+      await tester.pumpAndSettle();
+
+      // Scoped to the SnackBar: the sample comment body is "Thank you for the
+      // update.", so an unscoped match finds the comment being reported.
+      expect(
+        find.descendant(
+          of: find.byType(SnackBar),
+          matching: find.textContaining('Taytay LGU staff will look'),
+        ),
+        findsOneWidget,
+      );
+    });
+  });
+
+  group('reporting a comment — F26, the failure path', () {
+    testWidgets('a report that never reached the server says so', (
+      tester,
+    ) async {
+      await bootPost(
+        tester,
+        detail: post(comments: 1),
+        comments: <PostComment>[comment()],
+        reportOutcome: const Err<void>(NetworkFailure()),
+      );
+
+      await tester.tap(find.text('Report'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(ReportReason.abusive.label));
+      await tester.pumpAndSettle();
+
+      /*
+       * THE WHOLE REASON F26 WAS FILED AS A BLOCKER RATHER THAN A NICETY.
+       *
+       * A report button that silently does nothing is worse than an absent one,
+       * because a resident who has just seen something abusive believes they
+       * have told the municipality. That is true of a declining backend and
+       * equally true of a dropped connection.
+       *
+       * This test was written after a guard proof: hardcoding the confirmation
+       * to "sent" changed nothing, because every existing test used a stub that
+       * succeeds. The failure path had no coverage at all.
+       */
+      final Finder snack = find.byType(SnackBar);
+      expect(
+        find.descendant(
+          of: snack,
+          matching: find.textContaining('Could not send'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: snack,
+          matching: find.textContaining('Taytay LGU staff will look'),
+        ),
+        findsNothing,
+      );
     });
   });
 
@@ -601,10 +746,10 @@ void main() {
       addTearDown(controller.dispose);
       await controller.load();
 
-      final reported = await controller.reportComment('c-1', 'spam');
+      final reported = await controller.reportComment('c-1', ReportReason.spam);
 
       expect(reported, isTrue);
-      expect(repository.reportedReasons.single, 'spam');
+      expect(repository.reportedReasons.single, ReportReason.spam);
       // The comment is untouched: acting on the report is the office's job.
       expect(controller.comments.length, 1);
     });

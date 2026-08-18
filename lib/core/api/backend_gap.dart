@@ -132,25 +132,6 @@ enum BackendGap {
     servedInstead: "a programme's requirement template, keyed differently",
   ),
 
-  /// **F26 — a resident cannot report objectionable content.**
-  ///
-  /// Both Google Play and the App Store require a way to report user-generated
-  /// content, and the newsfeed's comments are the only user-generated content
-  /// this app has. The backend's moderation surface is
-  /// `admin/newsfeed-comments/{comment}/moderation` — staff-only, and calling it
-  /// from here would breach Article 0 twice: a staff route, and a resident
-  /// acting on somebody else's comment.
-  ///
-  /// A store-submission blocker rather than a missing nicety, and it declines
-  /// rather than pretending, because a report button that silently does nothing
-  /// is worse than an absent one — a resident who has just seen something
-  /// abusive believes they have told the municipality.
-  contentReporting(
-    finding: 'F26',
-    missing: 'a resident-facing route to report a comment',
-    servedInstead: 'admin/newsfeed-comments/{comment}/moderation, staff only',
-  ),
-
   /// **F13 — no route closes, erases or deletes an account.**
   ///
   /// `Audit` serves consents and acknowledgements, so most of the privacy screen

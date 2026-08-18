@@ -351,11 +351,17 @@ abstract interface class AnnouncementRepository {
   /// Reports a comment to the office.
   ///
   /// Reporting is *asking a moderator to look*, which is a resident action.
-  /// Acting on the report is not, and nothing here does.
+  /// Acting on the report is not, and nothing here does — the server records
+  /// that somebody objected and changes nothing about the comment, so a report
+  /// cannot be used to remove a neighbour from the municipality's feed.
+  ///
+  /// [reason] is a closed vocabulary, not a string: a value the server refuses
+  /// means a resident who has just seen something abusive believes they have
+  /// told the LGU when they have not.
   Future<Result<void>> reportComment({
     required String postId,
     required String commentId,
-    required String reason,
+    required ReportReason reason,
     required String idempotencyKey,
   });
 }

@@ -263,7 +263,7 @@ class PostDetailController extends ChangeNotifier {
 
   /// Reports a comment to the office. Asking a moderator to look is a resident
   /// action; acting on the report is not, and nothing here does.
-  Future<bool> reportComment(String commentId, String reason) async {
+  Future<bool> reportComment(String commentId, ReportReason reason) async {
     if (!capabilities.canReportComment) return false;
 
     final result = await _repository.reportComment(

@@ -407,22 +407,41 @@ void main() {
       expect(post.media!.alternativeText, isNotNull);
     });
 
-    test('reporting declines rather than pretending', () async {
-      // F26. A report button that silently does nothing is worse than an absent
-      // one: the resident believes they have told the municipality.
-      final Result<void> result =
-          await NewsfeedApiRepository(
-            apiClient: clientFor(transport),
-          ).reportComment(
-            postId: 'p-1',
-            commentId: 'c-1',
-            reason: 'abusive',
-            idempotencyKey: 'k',
-          );
+    test(
+      'reporting a comment reaches the resident surface, not the staff one',
+      () async {
+        // F26, and it used to decline. A report button that silently does nothing
+        // is worse than an absent one — the resident believes they have told the
+        // municipality — so this was an honest failure until the backend published
+        // a route a resident may call.
+        transport.responses.add(
+          ok(<String, Object?>{'status': 'accepted'}, status: 202),
+        );
 
-      expect(result.isErr, isTrue);
-      expect(transport.requests, isEmpty);
-    });
+        final Result<void> result =
+            await NewsfeedApiRepository(
+              apiClient: clientFor(transport),
+            ).reportComment(
+              postId: 'p-1',
+              commentId: 'c-1',
+              reason: ReportReason.abusive,
+              idempotencyKey: 'k',
+            );
+
+        expect(result.isOk, isTrue);
+
+        final ApiRequest request = transport.requests.single;
+        // The resident surface. `admin/newsfeed-comments/{comment}/moderation` is
+        // a staff route and this app may never call it — Article 0.
+        expect(request.path, 'newsfeed-comments/c-1/reports');
+        expect(request.path, isNot(contains('admin')));
+        expect(request.method, HttpMethod.post);
+
+        // The wire value, not the Dart name: `false-information` would arrive as
+        // `falseInformation` if anybody reached for `.name`.
+        expect((request.body! as Map<String, Object?>)['reason'], 'abusive');
+      },
+    );
   });
 
   group('events — there is no seats-left number to be found', () {

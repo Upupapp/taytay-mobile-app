@@ -17,6 +17,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../domain/announcement_repository.dart';
@@ -575,17 +576,102 @@ class _CommentTile extends StatelessWidget {
             ),
           ],
 
-          // Own comment only, and only when the backend supports deleting one.
-          // There is no control here that acts on somebody else's words.
-          if (comment.isMine && controller.capabilities.canDeleteOwnComment)
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => controller.deleteOwnComment(comment.id),
-                child: const Text('Delete'),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Wrap(
+              children: <Widget>[
+                // Own comment only, and only when the backend supports deleting
+                // one. There is no control here that hides or edits somebody
+                // else's words — that is an admin-console act (Article 0).
+                if (comment.isMine &&
+                    controller.capabilities.canDeleteOwnComment)
+                  TextButton(
+                    onPressed: () => controller.deleteOwnComment(comment.id),
+                    child: const Text('Delete'),
+                  ),
+
+                /*
+                 * REPORTING — F26, and required by both app stores for
+                 * user-generated content.
+                 *
+                 * Never on your own comment: the author already has Delete,
+                 * which is immediate and needs nobody, and the server refuses a
+                 * self-report anyway. Offering a control that always fails is
+                 * the thing this app refuses to do.
+                 *
+                 * Reporting *asks a moderator to look*. Nothing here removes
+                 * anything, and the server changes nothing about the comment
+                 * either — so this cannot be used to take a neighbour off the
+                 * municipality's feed.
+                 */
+                if (!comment.isMine && controller.capabilities.canReportComment)
+                  TextButton(
+                    onPressed: () => _report(context),
+                    child: const Text('Report'),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Asks which of the five reasons, then sends it.
+  ///
+  /// A picker rather than a text field, and there is deliberately no "other"
+  /// with a box under it. That box is where a resident types a neighbour's name
+  /// and address into a municipal record that staff read — see [ReportReason].
+  Future<void> _report(BuildContext context) async {
+    final ReportReason? reason = await AppSheet.show<ReportReason>(
+      context: context,
+      title: 'Report this comment',
+      builder: (BuildContext sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.only(bottom: Spacing.md),
+            child: Text(
+              'Taytay LGU staff will look at this comment. Nothing is removed '
+              'automatically, and the person who wrote it is not told who '
+              'reported it.',
+              style: Theme.of(sheetContext).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(sheetContext).colorScheme.onSurfaceVariant,
               ),
             ),
+          ),
+          for (final ReportReason option in ReportReason.values)
+            ListTile(
+              title: Text(option.label),
+              subtitle: Text(option.description),
+              onTap: () => Navigator.of(sheetContext).pop(option),
+            ),
         ],
+      ),
+    );
+
+    if (reason == null || !context.mounted) return;
+
+    final bool sent = await controller.reportComment(comment.id, reason);
+    if (!context.mounted) return;
+
+    /*
+     * The same answer either way is NOT what happens here.
+     *
+     * The server's response never varies — reported now, already reported,
+     * reported by nine others — because any difference would publish other
+     * residents' actions. But a *failure to reach the server at all* is
+     * different, and a resident who has just reported something abusive must
+     * not be left believing the municipality was told when nothing was sent.
+     */
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          sent
+              ? 'Thank you. Taytay LGU staff will look at this comment.'
+              : 'Could not send your report. Please try again.',
+        ),
       ),
     );
   }
