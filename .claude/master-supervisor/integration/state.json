@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 19,
-  "currentTab": "TAB 19 \u2014 Accessibility and localisation",
+  "currentTabIndex": 20,
+  "currentTab": "TAB 20 \u2014 Performance and startup",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -228,6 +228,12 @@
       "tests": "1320 passing",
       "stubsRemaining": 1,
       "recommendation": "do not adopt a push SDK before launch"
+    },
+    {
+      "tab": "TAB 19 \u2014 Accessibility and localisation",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; TalkBack/VoiceOver and a Filipino copy review need a person (TAB 23)",
+      "analyze": "clean",
+      "tests": "1325 passing"
     }
   ],
   "openFindings": {
