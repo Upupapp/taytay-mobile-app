@@ -178,6 +178,13 @@
       "analyze": "clean",
       "tests": "1276 passing",
       "stubsRemaining": 2
+    },
+    {
+      "tab": "Coverage pass \u2014 wire tests for TABs 05, 08\u201313",
+      "verdict": "CERTIFIED",
+      "analyze": "clean",
+      "tests": "1294 passing",
+      "note": "18 tests; 2 proven red before being trusted"
     }
   ],
   "openFindings": {
