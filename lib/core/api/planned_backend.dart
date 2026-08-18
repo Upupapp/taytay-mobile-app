@@ -2,35 +2,37 @@ import '../result/result.dart';
 
 /// Backend modules that the committed contract names as **planned**.
 ///
-/// Taken verbatim from `docs/architecture/domain-boundary-map.md` at
-/// `Taytay_Rizal_LGUIDS_Backend@7844859`. Only `Shared`, `AccessControl` and
-/// `ServiceCatalog` are implemented; everything below is designed for and not
-/// yet published.
+/// Re-derived from `docs/architecture/domain-boundary-map.md` at
+/// `Upupapp/taytay-backend@api-baseline-2026-08` (`eec71e6`). See
+/// `docs/integration/backend-baseline.md` for the full two-axis status table
+/// and the guard that keeps this list honest.
+///
+/// ---
+///
+/// **This enum shrank from six members to two, and that is the point.** It was
+/// first written against backend `7844859` and named `Identity`,
+/// `ResidentProfile`, `Credential` and `Notification` as planned. All four have
+/// since shipped. Because the belief was compiled into a Dart enum, nothing
+/// ever said so: the app went on declining roughly seventy endpoints that were
+/// serving, including every route a resident needs to sign in.
+///
+/// Two members remain, and they are the only two. A module belongs here when
+/// the backend has not built it — never when the backend has built it and this
+/// app has not yet called it. For that, and it is now the common case, see
+/// `UnwiredRepository` in `unwired_repository.dart`: it is a different
+/// statement about a different party, and collapsing the two is what produced
+/// the condition this file exists to end.
 enum PlannedModule {
-  identity(
-    'Identity',
-    'accounts, sessions, tokens, devices, MFA, account lifecycle',
-  ),
-  residentProfile(
-    'ResidentProfile',
-    'resident master record, demographics, addresses, household links, '
-        'verification tier',
-  ),
-  credential(
-    'Credential',
-    'LGU ID lifecycle, card artifacts, QR credential material',
-  ),
   verification(
     'Verification',
-    'verification attempts, scan events, verifier registry',
+    'verification attempts, scan events, verifier registry, '
+        'offline-verification key distribution',
   ),
   serviceDelivery(
     'ServiceDelivery',
-    'service applications and transactions against catalog entries',
-  ),
-  notification(
-    'Notification',
-    'notification dispatch, delivery receipts, channel preferences',
+    'service applications and transactions against catalog entries '
+        '(dokumento, buwis, kalusugan, trabaho, national referrals), their '
+        'state machines and attachments',
   );
 
   const PlannedModule(this.moduleName, this.owns);
@@ -45,7 +47,7 @@ enum PlannedModule {
 ///
 /// ---
 ///
-/// **Why decline rather than mock.** Three options were available for the five
+/// **Why decline rather than mock.** Three options were available for the
 /// unbuilt domains:
 ///
 /// 1. Invent request and response schemas and code against them. Rejected: it
@@ -58,6 +60,9 @@ enum PlannedModule {
 /// 3. **Decline with a temporary failure.** Chosen. It exercises the whole error
 ///    seam — `Result`, `AppFailure`, the resident-safe message, the retry rules —
 ///    and it tells the truth: the service is not available yet.
+///
+/// That reasoning was sound and survives the re-baseline; only its *inputs* were
+/// wrong. A future planned module can use this on its first day.
 ///
 /// The failure is [ServerFailure] with `isTemporary: true`, so the resident sees
 /// "temporarily unavailable, try again shortly" rather than a message implying

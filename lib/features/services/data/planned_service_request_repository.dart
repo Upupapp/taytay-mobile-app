@@ -1,4 +1,4 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/result/result.dart';
 import '../domain/assistance_case.dart';
 import '../domain/assistance_history.dart';
@@ -6,31 +6,38 @@ import '../domain/assistance_intake.dart';
 import '../domain/lgu_service.dart';
 import '../domain/service_request_repository.dart';
 
-/// Service request repository for a backend module that does not exist yet.
+/// The [ServiceRequestRepository] this build ships with: it declines, honestly.
 ///
-/// The `ServiceDelivery` module is listed as **planned** in the committed
-/// `docs/architecture/domain-boundary-map.md`, and publishes no endpoint. Rather
-/// than invent one, every operation declines with a temporary failure — which
-/// exercises the real error path and tells the truth. See `planned_backend.dart`
-/// for why this is preferred to a mock.
+/// **Mis-filed under the wrong module.** This file named `ServiceDelivery`,
+/// which is genuinely planned — and which owns national service transactions
+/// (dokumento, buwis, kalusugan, trabaho), not this. What a resident does here —
+/// open an assistance draft, submit it, follow the case, read their history —
+/// is `Welfare`, implemented since backend TAB 11 and serving
+/// `me/assistance/drafts`, `me/cases`, `me/assistance-history` and `me/referrals`
+/// today.
+///
+/// Shrinking `PlannedModule` to the truth did not catch this: `serviceDelivery`
+/// still exists and still means something real, just not this. Only reading the
+/// two contracts side by side did. TAB 08 wires the drafts; TAB 09 the cases.
 
 class PlannedServiceRequestRepository implements ServiceRequestRepository {
   const PlannedServiceRequestRepository();
 
-  static const PlannedModule _module = PlannedModule.serviceDelivery;
+  static const UnwiredRepository _repository =
+      UnwiredRepository.serviceRequests;
 
   @override
   Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
     int page = 1,
     int perPage = 25,
-  }) async => plannedBackendFailure<Paginated<ServiceRequest>>(
-    _module,
+  }) async => unwiredRepositoryFailure<Paginated<ServiceRequest>>(
+    _repository,
     'listOwnRequests',
   );
 
   @override
   Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
-      plannedBackendFailure<ServiceRequest>(_module, 'loadOwnRequest');
+      unwiredRepositoryFailure<ServiceRequest>(_repository, 'loadOwnRequest');
 
   /// Declines rather than composing a plausible history.
   ///
@@ -39,7 +46,10 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   /// 12 August" would stop chasing an application that does not exist.
   @override
   Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async =>
-      plannedBackendFailure<AssistanceCaseDetail>(_module, 'loadOwnCase');
+      unwiredRepositoryFailure<AssistanceCaseDetail>(
+        _repository,
+        'loadOwnCase',
+      );
 
   /// Declines rather than showing an empty history.
   ///
@@ -52,8 +62,8 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
     required HistoryScope scope,
     int page = 1,
     int perPage = 25,
-  }) async => plannedBackendFailure<Paginated<AssistanceHistoryEntry>>(
-    _module,
+  }) async => unwiredRepositoryFailure<Paginated<AssistanceHistoryEntry>>(
+    _repository,
     'listOwnHistory',
   );
 
@@ -66,8 +76,10 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
   @override
   Future<Result<AssistanceIntakeForm>> loadIntakeForm(
     String serviceCode,
-  ) async =>
-      plannedBackendFailure<AssistanceIntakeForm>(_module, 'loadIntakeForm');
+  ) async => unwiredRepositoryFailure<AssistanceIntakeForm>(
+    _repository,
+    'loadIntakeForm',
+  );
 
   @override
   Future<Result<ServiceRequest>> submitRequest({
@@ -77,11 +89,12 @@ class PlannedServiceRequestRepository implements ServiceRequestRepository {
     required List<String> consentKeys,
     required List<String> attachmentIds,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<ServiceRequest>(_module, 'submitRequest');
+  }) async =>
+      unwiredRepositoryFailure<ServiceRequest>(_repository, 'submitRequest');
 
   @override
   Future<Result<void>> cancelOwnRequest({
     required String id,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<void>(_module, 'cancelOwnRequest');
+  }) async => unwiredRepositoryFailure<void>(_repository, 'cancelOwnRequest');
 }

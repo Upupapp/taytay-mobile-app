@@ -1,31 +1,35 @@
 import '../../../core/api/paginated.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/result/result.dart';
 import '../domain/event_repository.dart';
 
 /// The [EventRepository] this build ships with: it declines, honestly.
 ///
-/// `GET /api/v1/events` is in the committed matrix and marked `planned`. An
-/// invented event would send residents to a municipal hall on a date the LGU
-/// never announced, which is a worse failure than an empty screen.
+/// **`Events` has been implemented since backend TAB 25.** This file said
+/// `GET /api/v1/events` was `planned`; the module serves events, registration,
+/// waitlist and attendance today. Wiring it is TAB 12, and the interesting part
+/// there is that availability is derived server-side and must never be cached or
+/// recomputed here.
+///
+/// It still declines rather than inventing an event, which would send residents
+/// to a municipal hall on a date the LGU never announced — a worse failure than
+/// an empty screen.
 class PlannedEventRepository implements EventRepository {
   const PlannedEventRepository();
-
-  static const String _reason =
-      'GET /api/v1/events is planned; no events module is built.';
 
   @override
   Future<Result<Paginated<LguEvent>>> listEvents({
     EventScope scope = EventScope.upcoming,
     int page = 1,
     int perPage = 20,
-  }) async => const Err<Paginated<LguEvent>>(
-    ServerFailure(isTemporary: true, debugMessage: _reason),
+  }) async => unwiredRepositoryFailure<Paginated<LguEvent>>(
+    UnwiredRepository.events,
+    'listEvents',
   );
 
   @override
-  Future<Result<LguEvent>> loadEvent(String id) async => const Err<LguEvent>(
-    ServerFailure(isTemporary: true, debugMessage: _reason),
-  );
+  Future<Result<LguEvent>> loadEvent(String id) async =>
+      unwiredRepositoryFailure<LguEvent>(UnwiredRepository.events, 'loadEvent');
 
   // ── Registration ─────────────────────────────────────────────────────────
   //
@@ -36,8 +40,9 @@ class PlannedEventRepository implements EventRepository {
   @override
   Future<Result<EventRegistrationForm>> loadRegistrationForm(
     String eventId,
-  ) async => const Err<EventRegistrationForm>(
-    ServerFailure(isTemporary: true, debugMessage: _reason),
+  ) async => unwiredRepositoryFailure<EventRegistrationForm>(
+    UnwiredRepository.events,
+    'loadRegistrationForm',
   );
 
   @override
@@ -46,8 +51,9 @@ class PlannedEventRepository implements EventRepository {
     required Map<String, Object?> answers,
     required List<String> consentKeys,
     required String idempotencyKey,
-  }) async => const Err<RegistrationAttempt>(
-    ServerFailure(isTemporary: true, debugMessage: _reason),
+  }) async => unwiredRepositoryFailure<RegistrationAttempt>(
+    UnwiredRepository.events,
+    'register',
   );
 
   @override
@@ -55,7 +61,8 @@ class PlannedEventRepository implements EventRepository {
     required String eventId,
     required String registrationId,
     required String idempotencyKey,
-  }) async => const Err<EventRegistration>(
-    ServerFailure(isTemporary: true, debugMessage: _reason),
+  }) async => unwiredRepositoryFailure<EventRegistration>(
+    UnwiredRepository.events,
+    'cancelRegistration',
   );
 }

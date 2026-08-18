@@ -1,4 +1,4 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/result/result.dart';
 import '../domain/household_repository.dart';
 import '../domain/household_summary.dart';
@@ -7,11 +7,11 @@ import '../domain/household_summary.dart';
 ///
 /// ---
 ///
-/// **There is no citizen household endpoint at all.** The committed matrix has
-/// one household row — `GET /api/v1/households/{household_id}`, staff-scoped
-/// under `resident.view` — and no `/me/household`. There is likewise no
-/// correction route: nothing in the contract lets a resident raise a question
-/// about their own household record.
+/// **Both halves of this are now wrong.** It said there was no citizen household
+/// endpoint and no correction route. `ResidentProfile` serves `GET me/household`
+/// and the full `me/profile/corrections` surface — get, post and delete — and
+/// has since backend TAB 09. TAB 05 wires the household; corrections go through
+/// TAB 04 rather than a second editing path built here.
 ///
 /// Mocking either would be worse here than anywhere else in the app. A
 /// fabricated household is a claim by a local government about who somebody
@@ -25,16 +25,21 @@ import '../domain/household_summary.dart';
 class PlannedHouseholdRepository implements HouseholdRepository {
   const PlannedHouseholdRepository();
 
-  static const PlannedModule _module = PlannedModule.residentProfile;
+  static const UnwiredRepository _repository = UnwiredRepository.household;
 
   @override
   Future<Result<HouseholdSummary>> loadOwnHousehold() async =>
-      plannedBackendFailure<HouseholdSummary>(_module, 'loadOwnHousehold');
+      unwiredRepositoryFailure<HouseholdSummary>(
+        _repository,
+        'loadOwnHousehold',
+      );
 
   @override
   Future<Result<void>> submitCorrectionRequest({
     required HouseholdCorrectionRequest request,
     required String idempotencyKey,
-  }) async =>
-      plannedBackendFailure<void>(_module, 'submitHouseholdCorrectionRequest');
+  }) async => unwiredRepositoryFailure<void>(
+    _repository,
+    'submitHouseholdCorrectionRequest',
+  );
 }

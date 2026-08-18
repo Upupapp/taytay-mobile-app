@@ -1,0 +1,56 @@
+name: Backend baseline
+
+# TAB 00's staleness guard, and the first CI this repository has had.
+#
+# Two jobs because the two halves fail for different reasons and a human needs to
+# know which. `baseline-agrees-with-code` catches this repository drifting from
+# its own document and needs nothing but the checkout. `baseline-agrees-with-backend`
+# catches the backend moving underneath the pinned tag, and needs the backend repo.
+#
+# The nightly schedule matters as much as the pull-request trigger: the failure this
+# guards against did not arrive in a pull request. It arrived by the backend
+# advancing forty-five commits while this repository sat still, and nothing here
+# would ever have run to notice.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    # 21:00 UTC = 05:00 Asia/Manila, so a red result is waiting at the start of
+    # the working day in Taytay rather than at the end of it.
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+jobs:
+  baseline-agrees-with-code:
+    name: Committed baseline agrees with the enums
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test test/integration/backend_baseline_test.dart
+
+  baseline-agrees-with-backend:
+    name: Committed baseline agrees with the backend at its tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Fetch tags: the guard refuses a baseline that is not an existing tag, and
+      # a shallow checkout without tags would fail for the wrong reason.
+      - name: Check out the backend at the pinned tag
+        uses: actions/checkout@v4
+        with:
+          repository: Upupapp/taytay-backend
+          path: .backend
+          fetch-depth: 0
+
+      - name: Compare module status
+        env:
+          TAYTAY_BACKEND: ${{ github.workspace }}/.backend
+        run: ./tool/check_backend_baseline.sh

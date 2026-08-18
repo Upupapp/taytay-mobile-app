@@ -1,8 +1,19 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/backend_gap.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/result/result.dart';
 import '../domain/account_controls.dart';
 
-/// Account controls for a backend module that does not exist yet.
+/// The [AccountControlsRepository] this build ships with — and the one place
+/// where "not built" is still partly the right answer.
+///
+/// `Audit` serves consents and acknowledgements today (`me/privacy/consents`,
+/// `me/privacy/acknowledgement`) and corrections are `me/profile/corrections`,
+/// so most of this screen is wiring work — TAB 18. **Account closure is not:**
+/// no module publishes a route that closes, erases or deletes an account at the
+/// baseline (`F13`). Both app stores require an in-app deletion path, so that is
+/// a launch blocker owned by TAB 22, and it needs TAB 18's retention schedule
+/// first — a municipal record cannot always simply be erased, and the screen has
+/// to say what is deleted and what is kept by law.
 ///
 /// ---
 ///
@@ -23,7 +34,8 @@ import '../domain/account_controls.dart';
 class PlannedAccountControlsRepository implements AccountControlsRepository {
   const PlannedAccountControlsRepository();
 
-  static const PlannedModule _module = PlannedModule.residentProfile;
+  static const UnwiredRepository _repository =
+      UnwiredRepository.accountControls;
 
   @override
   Future<Result<AccountControls>> loadControls() async =>
@@ -31,24 +43,32 @@ class PlannedAccountControlsRepository implements AccountControlsRepository {
 
   @override
   Future<Result<List<ConsentRecord>>> listConsents() async =>
-      plannedBackendFailure<List<ConsentRecord>>(_module, 'listConsents');
+      unwiredRepositoryFailure<List<ConsentRecord>>(
+        _repository,
+        'listConsents',
+      );
 
   @override
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<ConsentRecord>(_module, 'withdrawConsent');
+  }) async =>
+      unwiredRepositoryFailure<ConsentRecord>(_repository, 'withdrawConsent');
 
   @override
   Future<Result<void>> requestDataCorrection({
     required String detail,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<void>(_module, 'requestDataCorrection');
+  }) async =>
+      unwiredRepositoryFailure<void>(_repository, 'requestDataCorrection');
 
   @override
   Future<Result<void>> requestAccountClosure({
     required bool permanent,
     required String reason,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<void>(_module, 'requestAccountClosure');
+  }) async => backendGapFailure<void>(
+    BackendGap.accountClosure,
+    'requestAccountClosure',
+  );
 }

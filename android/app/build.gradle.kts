@@ -17,6 +17,18 @@ android {
     // credential-storage plugin, and the keystore layer is the last place to run
     // an older version. Revisit when AGP officially supports 37.
     compileSdk = 37
+
+    // Android SDK platforms are minor-versioned from API 37 onward, and the
+    // unqualified `platforms;android-37` package no longer exists — the SDK
+    // manager offers `android-37.0` and `android-37.1`. `compileSdk = 37` alone
+    // resolves to the hash string `android-37` and fails to find a target on any
+    // machine whose SDK was installed after that change, which is what happened
+    // when this repository moved from its original Windows host to macOS.
+    //
+    // Pinned to minor 0 rather than the newest available: it is the closest
+    // equivalent to the platform the 28 build TABs were verified against, and a
+    // minor bump is an additive API change nothing here has asked for.
+    compileSdkMinor = 0
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

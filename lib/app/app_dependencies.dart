@@ -91,6 +91,7 @@ class AppDependencies {
     required this.shareService,
     required this.externalLinks,
     required this.accountControlsRepository,
+    this.clock = DateTime.now,
     this.onDispose,
   });
 
@@ -240,6 +241,26 @@ class AppDependencies {
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
+
+  /// What the app calls "now".
+  ///
+  /// Injectable at the composition root rather than read from `DateTime.now`
+  /// inside each controller. Two reasons, and only the second was foreseen:
+  ///
+  /// * A widget test that asserts a date-derived label — "Today", "Earlier this
+  ///   week" — against a fixture pinned to a calendar date passes on the day it
+  ///   is written and fails every day after. That is not hypothetical: the inbox
+  ///   text-scale test began failing two days after it was committed, and the
+  ///   release gate was red on arrival at this machine. The controller under it
+  ///   already took a clock; nothing threaded one through the app, so the test
+  ///   harness had no way to reach it.
+  /// * Later work needs one seam rather than a habit. A registration window and
+  ///   an event's capacity are decided by the server, not by a device clock a
+  ///   resident can set (Master Command TAB 12), and "inject clocks everywhere"
+  ///   is easier to hold as one field than as a rule people remember.
+  ///
+  /// Production never passes it, so the default is the real clock.
+  final DateTime Function() clock;
 
   final AppConfig config;
   final SessionController session;

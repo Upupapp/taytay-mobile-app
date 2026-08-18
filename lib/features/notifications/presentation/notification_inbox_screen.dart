@@ -43,9 +43,11 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
     super.didChangeDependencies();
     if (_controller != null) return;
 
+    final dependencies = AppDependencies.of(context);
     _controller =
         NotificationInboxController(
-            repository: AppDependencies.of(context).notificationRepository,
+            repository: dependencies.notificationRepository,
+            clock: dependencies.clock,
           )
           ..addListener(_onChanged)
           ..refresh();

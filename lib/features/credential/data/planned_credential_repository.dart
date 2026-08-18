@@ -1,25 +1,38 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/result/result.dart';
 import '../domain/credential_repository.dart';
 
-/// Credential repository for a backend module that does not exist yet.
+/// The [CredentialRepository] this build ships with: it declines, honestly.
 ///
-/// The `Credential` module is listed as **planned** in the committed
-/// `docs/architecture/domain-boundary-map.md`, and publishes no endpoint. Rather
-/// than invent one, every operation declines with a temporary failure — which
-/// exercises the real error path and tells the truth. See `planned_backend.dart`
-/// for why this is preferred to a mock.
+/// **`Credential` is not planned — it is built and switched off.** It has been
+/// implemented since backend TAB 06 and serves `GET me/credential` and
+/// `POST me/credential/qr`; what it also carries is a second axis this file had
+/// no way to express, `credential.enabled`, currently false. Status on this
+/// platform is two questions — built, and enabled — and collapsing them is how
+/// TAB 06 would have been planned against a false premise the same way this file
+/// was.
+///
+/// So the digital ID needs both halves: TAB 06 wires the repository, and the LGU
+/// lifts the flag deliberately and in coordination. Both states must ship in one
+/// build, driven by `digital_id` on `GET app/bootstrap` — never hardcoded — so
+/// the ID can be switched on for real residents without a new app version.
 
 class PlannedCredentialRepository implements CredentialRepository {
   const PlannedCredentialRepository();
 
-  static const PlannedModule _module = PlannedModule.credential;
+  static const UnwiredRepository _repository = UnwiredRepository.credential;
 
   @override
   Future<Result<ResidentCredential?>> loadOwnCredential() async =>
-      plannedBackendFailure<ResidentCredential?>(_module, 'loadOwnCredential');
+      unwiredRepositoryFailure<ResidentCredential?>(
+        _repository,
+        'loadOwnCredential',
+      );
 
   @override
   Future<Result<String>> requestPresentationArtifact() async =>
-      plannedBackendFailure<String>(_module, 'requestPresentationArtifact');
+      unwiredRepositoryFailure<String>(
+        _repository,
+        'requestPresentationArtifact',
+      );
 }

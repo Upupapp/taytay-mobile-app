@@ -1,4 +1,4 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../domain/registration_domain.dart';
 
@@ -6,10 +6,20 @@ import '../domain/registration_domain.dart';
 ///
 /// ---
 ///
-/// Every row this feature needs is marked `planned` in the committed endpoint
-/// matrix (`Taytay_Rizal_LGUIDS_Backend@896cec9`), and the `Identity` module is
-/// absent from `modules/`. So each method declines, honestly, rather than
-/// posting to a path that does not exist.
+/// **Re-baselined at `backend@api-baseline-2026-08`, and the reason changed.**
+/// This file used to say every row it needs was `planned` at
+/// `Taytay_Rizal_LGUIDS_Backend@896cec9` and that `Identity` was absent from
+/// `modules/`. `Identity` has been implemented since backend TAB 05; the older
+/// statement was two backends out of date and pinned to a third commit, which is
+/// how a belief compiled into source goes wrong without anybody noticing.
+///
+/// The methods still decline, and the true reason is worse than the old one.
+/// There is **no self-registration endpoint at all** — see [BackendGap] `F15`.
+/// The public `Identity` surface is sign-in only; citizen accounts are created
+/// by staff on the admin console. Onboarding on this platform is staff-mediated
+/// by construction, so this is a product question for the LGU rather than a
+/// wiring task, and it is the one place in the app where the screens and the
+/// server disagree about what the product is.
 ///
 /// **Why not a mock that succeeds.** A registration flow that appears to work
 /// is the single most dangerous placeholder in this app: it would tell a
@@ -25,20 +35,22 @@ import '../domain/registration_domain.dart';
 class PlannedRegistrationRepository implements RegistrationRepository {
   const PlannedRegistrationRepository();
 
-  static const PlannedModule _identity = PlannedModule.identity;
-  static const PlannedModule _profile = PlannedModule.residentProfile;
-  static const PlannedModule _verification = PlannedModule.verification;
+  /// Sign-in codes exist; codes that enrol a new resident do not, and no issued
+  /// code is delivered on any channel either (`F16`).
+  static const BackendGap _selfRegistration =
+      BackendGap.residentSelfRegistration;
+  static const BackendGap _barangays = BackendGap.barangayDirectory;
 
   @override
   Future<Result<void>> requestOneTimeCode({
     required String mobileNumber,
-  }) async => plannedBackendFailure<void>(_identity, 'requestOneTimeCode');
+  }) async => backendGapFailure<void>(_selfRegistration, 'requestOneTimeCode');
 
   @override
   Future<Result<void>> verifyOneTimeCode({
     required String mobileNumber,
     required String code,
-  }) async => plannedBackendFailure<void>(_identity, 'verifyOneTimeCode');
+  }) async => backendGapFailure<void>(_selfRegistration, 'verifyOneTimeCode');
 
   /// Always denied.
   ///
@@ -53,14 +65,14 @@ class PlannedRegistrationRepository implements RegistrationRepository {
 
   @override
   Future<Result<List<Barangay>>> listBarangays() async =>
-      plannedBackendFailure<List<Barangay>>(_profile, 'listBarangays');
+      backendGapFailure<List<Barangay>>(_barangays, 'listBarangays');
 
   @override
   Future<Result<RegistrationResult>> submitRegistration({
     required RegistrationDraft draft,
     required String idempotencyKey,
-  }) async => plannedBackendFailure<RegistrationResult>(
-    _verification,
+  }) async => backendGapFailure<RegistrationResult>(
+    _selfRegistration,
     'submitRegistration',
   );
 }

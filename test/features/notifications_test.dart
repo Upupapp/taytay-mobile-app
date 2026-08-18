@@ -154,6 +154,9 @@ Future<BootedInbox> bootInbox(
   Size size = const Size(400, 4000),
   TextScaler textScaler = TextScaler.noScaling,
 }) async {
+  // The fixture clock reaches the real widget tree through the composition root.
+  // Without this, a test pinned to `fixedNow` groups its messages against
+  // today's date and every recency assertion in this file rots on the calendar.
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
@@ -214,6 +217,7 @@ Future<BootedInbox> bootInbox(
     shareService: base.shareService,
     externalLinks: base.externalLinks,
     accountControlsRepository: base.accountControlsRepository,
+    clock: () => fixedNow,
     notificationRepository: repositoryOverride ?? notifications,
     registrationRepository: base.registrationRepository,
     onDispose: base.onDispose,

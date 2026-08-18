@@ -1,14 +1,16 @@
-import '../../../core/api/planned_backend.dart';
+import '../../../core/api/unwired_repository.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/result/result.dart';
 import '../domain/resident_requirement.dart';
 
-/// Requirements for a backend module that does not exist yet.
+/// The [RequirementRepository] this build ships with: it declines, honestly.
 ///
-/// `ServiceDelivery` owns "service applications and transactions against catalog
-/// entries … their state machines and attachments" and is listed as **planned**
-/// in the committed boundary map. It publishes no requirement list and no upload
-/// endpoint, so both operations decline.
+/// **Mis-filed under the wrong module**, in the same way as the assistance
+/// requests it belongs to. This file named the planned `ServiceDelivery`;
+/// requirements are `Welfare` (`GET me/cases/{case}/requirements`) and the
+/// documents behind them are `Files` (`documents/{handle}` and the upload and
+/// single-use access routes). Both have been implemented since backend TAB 11
+/// and TAB 15 respectively. TAB 10 wires them.
 ///
 /// **Declining matters more here than anywhere else in the app.** A mocked
 /// upload that reported success would tell a resident their barangay clearance
@@ -17,13 +19,15 @@ import '../domain/resident_requirement.dart';
 class PlannedRequirementRepository implements RequirementRepository {
   const PlannedRequirementRepository();
 
-  static const PlannedModule _module = PlannedModule.serviceDelivery;
+  static const UnwiredRepository _repository = UnwiredRepository.requirements;
 
   @override
   Future<Result<RequirementChecklist>> listRequirements(
     String requestId,
-  ) async =>
-      plannedBackendFailure<RequirementChecklist>(_module, 'listRequirements');
+  ) async => unwiredRepositoryFailure<RequirementChecklist>(
+    _repository,
+    'listRequirements',
+  );
 
   @override
   Future<Result<UploadedDocumentReference>> uploadRequirementDocument({
@@ -36,8 +40,8 @@ class PlannedRequirementRepository implements RequirementRepository {
   }) async {
     // Deliberately no progress callback: reporting bytes moving for an upload
     // that is not happening is the one lie this class exists to avoid.
-    return plannedBackendFailure<UploadedDocumentReference>(
-      _module,
+    return unwiredRepositoryFailure<UploadedDocumentReference>(
+      _repository,
       'uploadRequirementDocument',
     );
   }

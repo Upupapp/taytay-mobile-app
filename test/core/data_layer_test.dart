@@ -875,16 +875,17 @@ void main() {
     });
 
     test('the module list matches the committed boundary map', () {
+      // Re-derived at backend@api-baseline-2026-08 (eec71e6). This list was six
+      // members long, pinned to backend 7844859, and four of them had shipped —
+      // which is why the app declined roughly seventy live endpoints and no
+      // resident could sign in. Two remain, and neither has a repository here.
+      //
+      // The pair is asserted against docs/integration/backend-baseline.md by
+      // test/integration/backend_baseline_test.dart; this test guards the enum
+      // itself, so that shrinking or growing it is always a deliberate act.
       expect(
         PlannedModule.values.map((m) => m.moduleName),
-        unorderedEquals(<String>[
-          'Identity',
-          'ResidentProfile',
-          'Credential',
-          'Verification',
-          'ServiceDelivery',
-          'Notification',
-        ]),
+        unorderedEquals(<String>['Verification', 'ServiceDelivery']),
       );
     });
   });
