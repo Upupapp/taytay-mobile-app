@@ -37,6 +37,10 @@ class FailureView extends StatelessWidget {
     final requestId = failure.requestId;
 
     final details = <String>[
+      // Copyable, not just visible. The backend echoes `request_id` in every
+      // error body precisely so a resident can quote it to the support desk, and
+      // a reference somebody has to transcribe by hand off a phone screen is one
+      // they get wrong.
       if (requestId != null) 'Reference: $requestId',
       if (environment.allowsDiagnosticsUi && failure.debugMessage != null)
         '[${environment.badgeLabel}] ${failure.kind}: ${failure.debugMessage}',
@@ -46,7 +50,12 @@ class FailureView extends StatelessWidget {
       kind: StatusKind.error,
       icon: _iconFor(failure),
       title: failure.residentMessage,
-      primaryAction: onRetry != null && failure.isRetryable
+      // Offered only when trying again could work *now*. A `429` is retryable
+      // and a button beside it is a lie: the server has said when to come back,
+      // and an action that fails again spends a resident's data teaching them
+      // nothing.
+      primaryAction:
+          onRetry != null && failure.affordance == FailureAffordance.retryNow
           ? AppButton(
               label: 'Try again',
               variant: AppButtonVariant.secondary,
@@ -61,7 +70,10 @@ class FailureView extends StatelessWidget {
                 for (final detail in details)
                   Padding(
                     padding: const EdgeInsets.only(top: Spacing.xs),
-                    child: Text(
+                    // Selectable so the reference can be copied rather than
+                    // transcribed off a phone screen — which is how a support
+                    // desk ends up searching for an id that was never issued.
+                    child: SelectableText(
                       detail,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodySmall?.copyWith(

@@ -33,6 +33,22 @@ sealed class AppFailure {
   /// Whether retrying the same request unchanged could reasonably succeed.
   bool get isRetryable => false;
 
+  /// What the screen should offer, which is not the same question.
+  ///
+  /// ---
+  ///
+  /// **Retryable is about the request; this is about the resident.** A `429` is
+  /// retryable and a "Try again" button next to it is a lie — the server has
+  /// said when to come back, and offering an action that will fail again is how
+  /// somebody spends the rest of their allowance discovering that. A `403` is
+  /// not retryable and needs no button at all, but it does need the reference
+  /// they can quote to a clerk.
+  ///
+  /// Three answers, because two produced a screen that either offered a retry
+  /// that could not work or hid one that would have.
+  FailureAffordance get affordance =>
+      isRetryable ? FailureAffordance.retryNow : FailureAffordance.terminal;
+
   /// Whether the app must drop to a signed-out session and ask the resident to
   /// authenticate again.
   bool get requiresReauthentication => false;
@@ -195,6 +211,10 @@ final class RateLimitedFailure extends AppFailure {
   @override
   bool get isRetryable => true;
 
+  /// Retryable, and not yet. The server named the moment.
+  @override
+  FailureAffordance get affordance => FailureAffordance.retryAfter;
+
   @override
   String get residentMessage {
     final seconds = retryAfter?.inSeconds;
@@ -314,6 +334,11 @@ final class UnacceptableUploadFailure extends AppFailure {
   /// screen must be able to tell them apart.
   final bool isTooLarge;
 
+  /// Nothing about retrying the same file will change the answer. What the
+  /// resident needs is a different file, which is an action rather than a retry.
+  @override
+  FailureAffordance get affordance => FailureAffordance.terminal;
+
   @override
   String get kind => 'unacceptable-upload';
 
@@ -321,6 +346,20 @@ final class UnacceptableUploadFailure extends AppFailure {
   String get residentMessage => isTooLarge
       ? 'That file is too large to send. Try a smaller photo or a lower quality setting.'
       : 'That kind of file cannot be sent. Try a photo or a PDF instead.';
+}
+
+/// What a screen should offer a resident in front of a failure.
+enum FailureAffordance {
+  /// Try again now. The request could plausibly succeed unchanged.
+  retryNow,
+
+  /// Try again later, and not yet. The server has said so — offering a button
+  /// that fails again spends a resident's data teaching them nothing.
+  retryAfter,
+
+  /// Nothing to retry. What the screen owes them instead is a reference they can
+  /// quote and somewhere to take it.
+  terminal,
 }
 
 /// Maps an HTTP status and canonical error code onto the failure taxonomy.
