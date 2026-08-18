@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 6,
-  "currentTab": "TAB 06 \u2014 Credential: the digital ID",
+  "currentTabIndex": 8,
+  "currentTab": "TAB 08 \u2014 Assistance intake and drafts",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -116,6 +116,13 @@
       "analyze": "clean",
       "tests": "1296 passing",
       "stubsRemaining": 8
+    },
+    {
+      "tab": "TAB 06 \u2014 Credential: the digital ID",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; flag off server-side, brightness \u2192 TAB 17",
+      "analyze": "clean",
+      "tests": "1296 passing",
+      "stubsRemaining": 7
     }
   ],
   "openFindings": {
