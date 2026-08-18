@@ -1,0 +1,33 @@
+{
+  "masterCommand": "Taytay_Resident_Mobile_Backend_Integration_Master_Command_2026-08-18.pdf",
+  "sequence": "resident-mobile-backend-integration",
+  "note": "Separate from ../state.json, which records the completed 28-TAB build sequence. That state is preserved, not superseded.",
+  "repository": "/Users/user/development/taytay-mobile-app",
+  "backendRepository": "/Users/user/development/taytay-backend",
+  "backendBaselineTag": "api-baseline-2026-08",
+  "backendBaselineCommit": "eec71e6",
+  "appCommitAtStart": "86e92b3",
+  "totalTabs": 25,
+  "currentTabIndex": 1,
+  "currentTab": "TAB 01 — Contract conformance harness",
+  "completedTabs": [
+    {
+      "tab": "TAB 00 — Re-baseline the contract premise",
+      "verdict": "CERTIFIED — LOCAL COMPLETION",
+      "commit": "91f8e08",
+      "closes": ["F01", "F12 (documented)", "F05 (closed upstream)", "F07"],
+      "raises": ["F13", "F14", "F15", "F16", "F17"],
+      "analyze": "clean",
+      "tests": "1210 passing",
+      "builds": ["debug APK", "iOS debug (no-codesign)"]
+    }
+  ],
+  "openFindings": {
+    "P0": ["F02", "F03", "F15", "F16"],
+    "P1": ["F04", "F06", "F13", "F17-residual"],
+    "P2": ["F08", "F09", "F10", "F11", "F14"]
+  },
+  "boundary": "Local commits only. No push, no remote administration, no deployment, no production.",
+  "supervisorCadence": "hourly at :52",
+  "turnCeiling": 200
+}
