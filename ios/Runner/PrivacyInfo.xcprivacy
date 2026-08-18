@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+    Apple's privacy manifest. Required for App Store submission.
+
+    THE ANSWERS HERE ARE UNUSUALLY SHORT, AND THAT IS THE PRODUCT RATHER THAN AN
+    OVERSIGHT. This app has no analytics SDK, no crash-reporting SDK and no
+    messaging SDK, so there is no third-party processor to declare — every one of
+    those decisions is recorded in docs/integration/privacy-and-dpa.md, and the
+    short answer here is what they add up to.
+
+    NSPrivacyTracking is false and there are no tracking domains, because nothing
+    in this app follows a resident anywhere. The correlation id is per request and
+    is asserted never to become a stable device identifier
+    (test/core/observability_test.dart).
+
+    Data types collected: none *by this app for its own purposes*. A resident's
+    details reach the LGU's own server because they are applying for a municipal
+    service, which is the service being performed rather than collection by the
+    app — but this is exactly the line Apple's reviewers read differently from
+    engineers, so it must be reconciled with the Data Safety form and the privacy
+    notice before submission, and the three must say the same thing.
+
+    Required-reason APIs: declared for what the Flutter engine and the plugins in
+    this build actually reach for. Reviewed at TAB 22 against the dependency list
+    in docs/integration/security-decisions.md; re-review when a dependency is
+    added, because a new one can introduce a reason without changing a line of
+    Dart.
+-->
+<plist version="1.0">
+<dict>
+	<key>NSPrivacyTracking</key>
+	<false/>
+
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- Flutter and flutter_secure_storage read and write files in the
+			     app container; the timestamp reason is the one Apple expects for
+			     an app's own sandbox. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- The launch flag and the app-lock preference. Nothing about a
+			     resident: the session itself lives in the Keychain. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Flutter's engine reports free disk space when deciding whether it
+			     can write a cache. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryDiskSpace</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>E174.1</string>
+			</array>
+		</dict>
+		<dict>
+			<!-- Timers and elapsed-time measurement in the engine. -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategorySystemBootTime</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>35F9.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>
