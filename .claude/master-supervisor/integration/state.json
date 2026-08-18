@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 8,
-  "currentTab": "TAB 08 \u2014 Assistance intake and drafts",
+  "currentTabIndex": 9,
+  "currentTab": "TAB 09 \u2014 Cases, assistance history and referrals",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -123,6 +123,16 @@
       "analyze": "clean",
       "tests": "1296 passing",
       "stubsRemaining": 7
+    },
+    {
+      "tab": "TAB 08 \u2014 Assistance intake and drafts",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; intake questions blocked by F24, wizard step-save deferred",
+      "raises": [
+        "F24"
+      ],
+      "analyze": "clean",
+      "tests": "1288 passing",
+      "stubsRemaining": 6
     }
   ],
   "openFindings": {
@@ -135,7 +145,8 @@
     "P1": [
       "F13",
       "F22",
-      "F23"
+      "F23",
+      "F24"
     ],
     "P2": [
       "F09",
