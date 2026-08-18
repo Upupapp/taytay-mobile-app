@@ -24,7 +24,7 @@ import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
 import '../core/telemetry/telemetry.dart';
 import '../features/auth/data/auth_api_repository.dart';
-import '../features/auth/data/planned_device_session_repository.dart';
+import '../features/auth/data/session_api_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
 import '../features/credential/data/planned_credential_repository.dart';
@@ -221,7 +221,7 @@ class AppDependencies {
       network: network,
       telemetry: telemetry,
       authRepository: AuthApiRepository(apiClient: apiClient),
-      deviceSessionRepository: const PlannedDeviceSessionRepository(),
+      deviceSessionRepository: SessionApiRepository(apiClient: apiClient),
       platformRepository: platformRepository,
       platform: platform,
       serviceCatalogRepository: ServiceCatalogApiRepository(

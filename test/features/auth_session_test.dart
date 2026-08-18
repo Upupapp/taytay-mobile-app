@@ -7,7 +7,6 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/auth/data/planned_device_session_repository.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_controller.dart';
@@ -725,28 +724,6 @@ void main() {
   });
 
   group('honest seams for absent endpoints', () {
-    test('device sessions decline rather than fabricate a list', () async {
-      const repository = PlannedDeviceSessionRepository();
-
-      final list = await repository.listActiveSessions();
-      expect(list.isErr, isTrue);
-      // A fabricated list would reassure a resident checking for an intruder.
-      expect(list.valueOrNull, isNull);
-
-      final revoked = await repository.revokeSession(sessionId: 'anything');
-      expect(revoked.isErr, isTrue);
-    });
-
-    test('the declining reason is operator-facing only', () async {
-      final result = await const PlannedDeviceSessionRepository()
-          .listActiveSessions();
-      final failure = result.failureOrNull!;
-
-      expect(failure.debugMessage, isNotNull);
-      // The resident sees the taxonomy's own copy, never the debug text.
-      expect(failure.residentMessage, isNot(contains('endpoint')));
-    });
-
     // Sign-out's local-first guarantee moved with the repository: it is proven
     // against the wired implementation in `auth_api_test.dart`, where a server
     // that refuses, times out or never answers still produces `Ok`.

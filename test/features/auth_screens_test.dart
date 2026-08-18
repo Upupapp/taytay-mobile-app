@@ -529,7 +529,7 @@ void main() {
       );
     });
 
-    testWidgets('the device list declines honestly, showing no fake devices', (
+    testWidgets('a failed sign-in check says so, and shows no fake devices', (
       tester,
     ) async {
       await boot(
@@ -548,10 +548,17 @@ void main() {
       await tester.tap(find.text('Check my devices'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Not available yet'), findsOneWidget);
-      // No fabricated device rows: the honest banner replaced the list.
+      // Wired at TAB 03, so this is a real request that could not leave the
+      // device — and the copy must not be reassuring. A resident who came here
+      // to check for an intruder and is told "not available yet" has learned
+      // nothing; one told the check failed knows to try again.
+      expect(find.text('Could not check your sign-ins'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+      // No fabricated rows either way. Keyed on the row's own icon rather than
+      // its copy: "This device" is also a section heading on this screen, and a
+      // test that matches the heading passes for the wrong reason.
       expect(find.byIcon(Icons.smartphone_outlined), findsNothing);
-      expect(find.text('Signed in'), findsNothing);
+      expect(find.text('Sign out all 2 other devices'), findsNothing);
     });
   });
 

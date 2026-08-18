@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/app_lock_controller.dart';
 import '../../../core/session/local_authenticator.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_dialog.dart';
@@ -74,6 +78,60 @@ class _SecurityScreenState extends State<SecurityScreen> {
         onErr: (failure) => _deviceFailure = failure,
       );
     });
+  }
+
+  Future<void> _revokeOne(DeviceSessionSummary session) async {
+    final confirmed = await AppDialog.confirm(
+      context: context,
+      title: 'Sign out ${session.label}?',
+      // States the consequence, not just "are you sure". A confirmation that
+      // only asks whether somebody meant to tap tests intent, not understanding.
+      message:
+          'That device will be signed out of your Taytay LGU IDS account. '
+          'Whoever is using it will need a new one-time code sent to your '
+          'mobile number to sign in again. This device stays signed in.',
+      confirmLabel: 'Sign out that device',
+    );
+    if (confirmed != true || !mounted) return;
+
+    final result = await AppDependencies.of(
+      context,
+    ).deviceSessionRepository.revokeSession(sessionId: session.id);
+    if (!mounted) return;
+
+    // Re-read rather than removing the row locally. A place the app quietly
+    // stopped showing is a place the resident stops worrying about while it is
+    // still signed in.
+    result.fold(
+      onOk: (_) => unawaited(_loadDevices()),
+      onErr: (failure) =>
+          Outcome.problem(context, localisedResidentMessage(context, failure)),
+    );
+  }
+
+  Future<void> _revokeOthers() async {
+    final confirmed = await AppDialog.confirm(
+      context: context,
+      title: 'Sign out all other devices?',
+      message:
+          'Every other phone, tablet or computer signed in to your Taytay LGU '
+          'IDS account will be signed out. This device stays signed in. Anyone '
+          'using the others will need a new one-time code sent to your mobile '
+          'number.',
+      confirmLabel: 'Sign out the others',
+    );
+    if (confirmed != true || !mounted) return;
+
+    final result = await AppDependencies.of(
+      context,
+    ).deviceSessionRepository.revokeAllOtherSessions();
+    if (!mounted) return;
+
+    result.fold(
+      onOk: (_) => unawaited(_loadDevices()),
+      onErr: (failure) =>
+          Outcome.problem(context, localisedResidentMessage(context, failure)),
+    );
   }
 
   Future<void> _signOut() async {
@@ -157,6 +215,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
                 failure: _deviceFailure,
                 devices: _devices,
                 onLoad: _loadDevices,
+                onRevoke: _revokeOne,
+                onRevokeOthers: _revokeOthers,
               ),
               const SizedBox(height: Spacing.xxl),
               Semantics(
@@ -220,12 +280,16 @@ class _DeviceSessions extends StatelessWidget {
     required this.failure,
     required this.devices,
     required this.onLoad,
+    required this.onRevoke,
+    required this.onRevokeOthers,
   });
 
   final bool loading;
   final AppFailure? failure;
   final List<DeviceSessionSummary>? devices;
   final Future<void> Function() onLoad;
+  final void Function(DeviceSessionSummary) onRevoke;
+  final VoidCallback onRevokeOthers;
 
   @override
   Widget build(BuildContext context) {
@@ -240,13 +304,17 @@ class _DeviceSessions extends StatelessWidget {
     }
 
     if (failure != null) {
-      return const AppBanner(
-        tone: BannerTone.info,
-        title: 'Not available yet',
+      // Wired at TAB 03, so this is a real failure rather than a missing
+      // endpoint — and it must not be reassuring. A resident who came here to
+      // check for an intruder and is told nothing has learned nothing.
+      return AppBanner(
+        tone: BannerTone.warning,
+        title: 'Could not check your sign-ins',
         message:
-            'Taytay LGU IDS cannot yet show the other devices your account is '
-            'signed in on. Signing out here always ends this device\'s '
-            'session.',
+            'We could not reach Taytay LGU IDS to list where your account is '
+            'signed in. Try again in a moment. Signing out here always ends '
+            'this device\'s session.',
+        action: TextButton(onPressed: onLoad, child: const Text('Try again')),
       );
     }
 
@@ -270,6 +338,8 @@ class _DeviceSessions extends StatelessWidget {
       );
     }
 
+    final others = list.where((d) => !d.isCurrentDevice).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -278,10 +348,41 @@ class _DeviceSessions extends StatelessWidget {
             leading: const Icon(Icons.smartphone_outlined),
             title: Text(device.label),
             subtitle: Text(
-              device.isCurrentDevice ? 'This device' : 'Signed in',
+              device.isCurrentDevice
+                  ? 'This device'
+                  : _lastSeenCopy(device.lastSeenAt),
             ),
+            // Only other sign-ins get a revoke action. Ending the current one is
+            // "sign out", which lives above with its own confirmation and its
+            // own local-first behaviour — offering it twice under two names is
+            // how a resident ends up unsure which button did what.
+            trailing: device.isCurrentDevice
+                ? null
+                : TextButton(
+                    onPressed: () => onRevoke(device),
+                    child: const Text('Sign out'),
+                  ),
           ),
+        if (others.length > 1) ...<Widget>[
+          const SizedBox(height: Spacing.md),
+          // One request, not a loop over the list. A loop that fails halfway
+          // leaves some phones signed out and some not, and no way for the
+          // resident to tell which — on the screen they opened because they had
+          // lost one.
+          OutlinedButton.icon(
+            onPressed: onRevokeOthers,
+            icon: const Icon(Icons.logout_outlined),
+            label: Text('Sign out all ${others.length} other devices'),
+          ),
+        ],
       ],
     );
+  }
+
+  /// A last-seen time a resident can judge "is that me?" against.
+  static String _lastSeenCopy(DateTime? lastSeenAt) {
+    if (lastSeenAt == null) return 'Signed in';
+    final DateTime seen = ManilaTime.of(lastSeenAt);
+    return 'Last used ${seen.day}/${seen.month}/${seen.year}';
   }
 }

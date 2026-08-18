@@ -41,7 +41,6 @@ void main() {
   /// with an owner rather than a note. The strings are matched against the
   /// runtime type name of the bound instance.
   const Map<String, String> stubbed = <String, String>{
-    'deviceSessionRepository': 'TAB 03',
     'registrationRepository': 'blocked — F15',
     'residentProfileRepository': 'TAB 04',
     'verificationRepository': 'TAB 04',
@@ -63,6 +62,8 @@ void main() {
     'programRepository',
     // TAB 02
     'authRepository',
+    // TAB 03
+    'deviceSessionRepository',
   };
 
   AppDependencies build() => AppDependencies.build(
