@@ -44,6 +44,18 @@ import 'package:taytay_resident/features/verification/domain/verification_reposi
 ///
 /// A token is not committed and never should be. `qa-and-evidence.md` records
 /// how the one used for the recorded run was obtained.
+///
+/// **Empty the case table first, or this proves less than it looks like it
+/// does.** `KycCaseService::register` returns an already-open case *before* it
+/// looks at the claim, so with a case present this exercises validation only —
+/// the body is accepted, but nothing is written from it. That is how the first
+/// green run of this test passed while proving nothing about creation. On the
+/// integration database:
+///
+/// ```
+/// php artisan tinker --env=integration --execute='\
+///   \Modules\ResidentProfile\Infrastructure\Eloquent\KycCase::query()->delete();'
+/// ```
 void main() {
   final String baseUrl = Platform.environment['TAYTAY_LIVE_API'] ?? '';
   final String token = Platform.environment['TAYTAY_LIVE_TOKEN'] ?? '';
