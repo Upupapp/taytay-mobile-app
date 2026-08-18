@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 15,
-  "currentTab": "TAB 15 \u2014 Offline, caching and degraded mode",
+  "currentTabIndex": 16,
+  "currentTab": "TAB 16 \u2014 Observability and correlation",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -194,6 +194,13 @@
       ],
       "analyze": "clean",
       "tests": "1307 passing"
+    },
+    {
+      "tab": "TAB 15 \u2014 Offline, caching and degraded mode",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; airplane-mode device journeys \u2192 TAB 23",
+      "analyze": "clean",
+      "tests": "1316 passing",
+      "decision": "no offline write queue \u2014 writes are time-dependent; \"not sent\" never \"saved\""
     }
   ],
   "openFindings": {
