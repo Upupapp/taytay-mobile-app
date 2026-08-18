@@ -53,6 +53,22 @@
         "debug APK",
         "iOS debug (no-codesign)"
       ]
+    },
+    {
+      "tab": "TAB 07 \u2014 Services and programmes",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
+      "commit": "4c0a880",
+      "closes": [
+        "F08",
+        "F19"
+      ],
+      "raises": [
+        "F19"
+      ],
+      "analyze": "clean",
+      "tests": "1276 passing",
+      "stubsRemaining": 13,
+      "deferred": "programme \u2192 intake link, to TAB 08"
     }
   ],
   "openFindings": {
@@ -67,7 +83,6 @@
       "F17-residual"
     ],
     "P2": [
-      "F08",
       "F09",
       "F10",
       "F11",
