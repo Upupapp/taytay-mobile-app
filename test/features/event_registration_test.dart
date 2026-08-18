@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/events/data/planned_event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/presentation/event_registration_controller.dart';
 
@@ -294,29 +293,6 @@ String currentLocation(WidgetTester tester) => GoRouter.of(
 
 void main() {
   group('the server owns capacity and eligibility', () {
-    test('the shipped repository declines every registration call', () async {
-      const repository = PlannedEventRepository();
-
-      expect((await repository.loadRegistrationForm('e-1')).isErr, isTrue);
-      expect(
-        (await repository.register(
-          eventId: 'e-1',
-          answers: const <String, Object?>{},
-          consentKeys: const <String>[],
-          idempotencyKey: 'k',
-        )).isErr,
-        isTrue,
-      );
-      expect(
-        (await repository.cancelRegistration(
-          eventId: 'e-1',
-          registrationId: 'r',
-          idempotencyKey: 'k',
-        )).isErr,
-        isTrue,
-      );
-    });
-
     test('a full answer is an outcome, not a failure', () async {
       final repository =
           ScriptedRegistrationRepository(registrationForm: form())
@@ -667,18 +643,6 @@ void main() {
   });
 
   group('the registration screen', () {
-    testWidgets('an absent backend explains rather than offering a form', (
-      tester,
-    ) async {
-      await bootRegistration(
-        tester,
-        repositoryOverride: const PlannedEventRepository(),
-      );
-
-      expect(find.textContaining('not switched on yet'), findsOneWidget);
-      expect(registerButton, findsNothing);
-    });
-
     testWidgets('a short form registers end to end', (tester) async {
       final booted = await bootRegistration(
         tester,

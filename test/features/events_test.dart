@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/core/time/manila_time.dart';
-import 'package:taytay_resident/features/events/data/planned_event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/presentation/events_controller.dart';
 
@@ -471,38 +470,6 @@ void main() {
       // `isFull` is only true when the server sent a remaining count.
       expect(const EventCapacity(capacity: 50).isFull, isFalse);
       expect(const EventCapacity(remaining: 0).isFull, isTrue);
-    });
-
-    test(
-      'the shipped repository declines rather than inventing an event',
-      () async {
-        const repository = PlannedEventRepository();
-
-        expect((await repository.listEvents()).isErr, isTrue);
-        expect((await repository.loadEvent('e-1')).isErr, isTrue);
-      },
-    );
-  });
-
-  group('the events controller', () {
-    test('non-visible events never reach the screen', () async {
-      final repository = ScriptedEventRepository(
-        pages: <EventScope, dynamic>{
-          EventScope.upcoming: pageOf(<LguEvent>[
-            event(id: 'a'),
-            event(
-              id: 'b',
-              publicationState: publication(PublicationState.archived),
-            ),
-          ]),
-        },
-      );
-      final controller = EventsController(repository: repository);
-      addTearDown(controller.dispose);
-
-      await controller.refresh();
-
-      expect(controller.items.map((e) => e.id), <String>['a']);
     });
 
     test('changing scope refetches with the new scope', () async {

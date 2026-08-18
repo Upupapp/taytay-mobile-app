@@ -29,7 +29,7 @@ import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
 import '../features/credential/data/credential_api_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
-import '../features/events/data/planned_event_repository.dart';
+import '../features/events/data/event_api_repository.dart';
 import '../features/events/domain/event_repository.dart';
 import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
@@ -229,7 +229,7 @@ class AppDependencies {
       ),
       programRepository: ProgramApiRepository(apiClient: apiClient),
       announcementRepository: NewsfeedApiRepository(apiClient: apiClient),
-      eventRepository: const PlannedEventRepository(),
+      eventRepository: EventApiRepository(apiClient: apiClient),
       // Backed by modules the committed boundary map lists as planned. Each
       // declines honestly rather than mocking a response.
       residentProfileRepository: ResidentProfileApiRepository(
