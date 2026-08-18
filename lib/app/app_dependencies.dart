@@ -45,7 +45,7 @@ import '../features/programs/data/program_api_repository.dart';
 import '../features/programs/domain/program_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
-import '../features/requirements/data/planned_requirement_repository.dart';
+import '../features/requirements/data/requirement_api_repository.dart';
 import '../features/requirements/domain/resident_requirement.dart';
 import '../features/services/data/assistance_api_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
@@ -240,7 +240,7 @@ class AppDependencies {
       credentialRepository: CredentialApiRepository(apiClient: apiClient),
       verificationRepository: KycApiRepository(apiClient: apiClient),
       serviceRequestRepository: AssistanceApiRepository(apiClient: apiClient),
-      requirementRepository: const PlannedRequirementRepository(),
+      requirementRepository: RequirementApiRepository(apiClient: apiClient),
       notificationRepository: const PlannedNotificationRepository(),
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent

@@ -91,6 +91,7 @@ class ApiClient {
     String? idempotencyKey,
     Duration? timeout,
     String? bearerOverride,
+    MultipartFile? file,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -123,6 +124,7 @@ class ApiClient {
       timeout: timeout,
       token: token,
       decode: decode,
+      file: file,
     );
 
     // `401` is the single signal that ends a session, handled once here rather
@@ -186,6 +188,7 @@ class ApiClient {
     required String? idempotencyKey,
     required Duration? timeout,
     required String? token,
+    MultipartFile? file,
     required T Function(Object? data) decode,
   }) async {
     // A fresh correlation id per attempt: a replay is a different request and
@@ -202,10 +205,14 @@ class ApiClient {
         query: query,
         body: body,
         headers: context.headers(
-          hasJsonBody: body != null,
+          // A multipart request's Content-Type is generated with its boundary by
+          // the transport; declaring JSON here would produce a body the server
+          // cannot parse and a 400 that reads like a validation failure.
+          hasJsonBody: body != null && file == null,
           idempotencyKey: idempotencyKey,
         ),
         timeout: timeout ?? _config.requestTimeout,
+        file: file,
       ),
     );
 

@@ -29,6 +29,7 @@ class ApiRequest {
     this.body,
     this.headers = const <String, String>{},
     this.timeout,
+    this.file,
   });
 
   final HttpMethod method;
@@ -47,6 +48,15 @@ class ApiRequest {
 
   /// Overrides the config default; used for uploads.
   final Duration? timeout;
+
+  /// A file to send as `multipart/form-data` instead of a JSON body.
+  ///
+  /// The only request shape in this app that is not JSON. It is expressed here
+  /// rather than left to a bespoke upload path so that everything above the
+  /// transport — retry, idempotency, correlation, failure mapping — keeps
+  /// working identically for an upload, which is the request most likely to be
+  /// retried and therefore the one that needs those rules most.
+  final MultipartFile? file;
 
   @override
   String toString() => 'ApiRequest(${method.wireValue} $path)';
@@ -82,6 +92,27 @@ class ApiHttpResponse {
     if (seconds == null || seconds < 0) return null;
     return Duration(seconds: seconds);
   }
+}
+
+/// A file being sent, with the field name the server expects it under.
+@immutable
+class MultipartFile {
+  const MultipartFile({
+    required this.field,
+    required this.filename,
+    required this.bytes,
+    required this.mimeType,
+  });
+
+  final String field;
+  final String filename;
+  final Uint8List bytes;
+  final String mimeType;
+
+  /// Redacted: the bytes are a resident's identity document.
+  @override
+  String toString() =>
+      'MultipartFile($field, $mimeType, ${bytes.length} bytes)';
 }
 
 /// The seam between the app and the network.

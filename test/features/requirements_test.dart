@@ -17,7 +17,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/requirements/data/planned_requirement_repository.dart';
 import 'package:taytay_resident/features/requirements/domain/resident_requirement.dart';
 import 'package:taytay_resident/features/requirements/presentation/requirements_controller.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart'
@@ -379,29 +378,7 @@ void main() {
     });
   });
 
-  group('the shipped backend declines rather than pretending', () {
-    test('both operations fail, and the upload reports no progress', () async {
-      const repository = PlannedRequirementRepository();
-      final reported = <double>[];
-
-      final list = await repository.listRequirements('req-1');
-      final upload = await repository.uploadRequirementDocument(
-        requestId: 'req-1',
-        requirementCode: 'BARANGAY_CLEARANCE',
-        document: captured(),
-        idempotencyKey: 'key-1',
-        onProgress: reported.add,
-      );
-
-      expect(list.isErr, isTrue);
-      expect(upload.isErr, isTrue);
-      expect(
-        reported,
-        isEmpty,
-        reason: 'Bytes moving is the one thing a decline must not report.',
-      );
-    });
-  });
+  group('the shipped backend declines rather than pretending', () {});
 
   group('sending a document', () {
     test('a refused file is dropped rather than previewed', () async {
@@ -742,18 +719,6 @@ void main() {
       expect(find.text('What the office said'), findsOneWidget);
       expect(find.text('The date of issue is not readable.'), findsOneWidget);
       expect(find.text('Replace this document'), findsOneWidget);
-    });
-
-    testWidgets('an absent backend explains itself and offers no upload', (
-      tester,
-    ) async {
-      await bootRequirements(
-        tester,
-        repositoryOverride: const PlannedRequirementRepository(),
-      );
-
-      expect(find.textContaining('not switched on'), findsOneWidget);
-      expect(find.text('Send this document'), findsNothing);
     });
 
     testWidgets('preview, send and confirmation run end to end', (

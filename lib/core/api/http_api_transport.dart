@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config/app_config.dart';
 import '../result/result.dart';
@@ -82,10 +83,36 @@ class HttpApiTransport implements ApiTransport {
     Duration timeout,
   ) async {
     try {
-      final outgoing = http.Request(request.method.wireValue, uri)
-        ..headers.addAll(request.headers);
-      if (request.body != null) {
-        outgoing.body = jsonEncode(request.body);
+      final http.BaseRequest outgoing;
+      final MultipartFile? file = request.file;
+      if (file != null) {
+        // Content-Type is left to `package:http` so it can generate the
+        // boundary. Setting it by hand produces a body the server cannot parse
+        // and a 400 that looks like a validation failure.
+        final multipart = http.MultipartRequest(request.method.wireValue, uri)
+          ..headers.addAll(
+            <String, String>{...request.headers}..remove('Content-Type'),
+          )
+          ..files.add(
+            http.MultipartFile.fromBytes(
+              file.field,
+              file.bytes,
+              filename: file.filename,
+              contentType: MediaType.parse(file.mimeType),
+            ),
+          );
+        if (request.body is Map<String, dynamic>) {
+          (request.body! as Map<String, dynamic>).forEach((key, value) {
+            if (value != null) multipart.fields[key] = '\$value';
+          });
+        }
+        outgoing = multipart;
+      } else {
+        outgoing = http.Request(request.method.wireValue, uri)
+          ..headers.addAll(request.headers);
+        if (request.body != null) {
+          (outgoing as http.Request).body = jsonEncode(request.body);
+        }
       }
 
       final streamed = await _client.send(outgoing).timeout(timeout);

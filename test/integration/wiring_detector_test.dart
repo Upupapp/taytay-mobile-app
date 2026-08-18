@@ -42,7 +42,6 @@ void main() {
   /// runtime type name of the bound instance.
   const Map<String, String> stubbed = <String, String>{
     'registrationRepository': 'blocked — F15',
-    'requirementRepository': 'TAB 10',
     'announcementRepository': 'TAB 11',
     'eventRepository': 'TAB 12',
     'notificationRepository': 'TAB 13',
@@ -67,6 +66,8 @@ void main() {
     'credentialRepository',
     // TAB 08
     'serviceRequestRepository',
+    // TAB 10
+    'requirementRepository',
     'verificationRepository',
   };
 

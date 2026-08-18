@@ -49,6 +49,14 @@ dependencies:
     sdk: flutter
   intl: any
 
+  # Media-type parsing for the one multipart request this app makes — a document
+  # upload. Already in the tree as `http`'s own transitive dependency, so this
+  # declares what is being used directly rather than adding a maintainer: same
+  # Dart team, same review, no new permissions and no data egress of its own.
+  # Declared because relying on another package's transitive dependency is how a
+  # build breaks on an unrelated upgrade.
+  http_parser: ^4.1.2
+
   # HTTP transport. Dart-team maintained, minimal surface, no code generation and
   # no interceptor framework of its own — retry, auth and correlation are this
   # app's own policy in `core/api/`, where they are unit-testable, rather than
