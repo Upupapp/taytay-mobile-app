@@ -8,26 +8,76 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 1,
-  "currentTab": "TAB 01 — Contract conformance harness",
+  "currentTabIndex": 2,
+  "currentTab": "TAB 02 \u2014 Identity: sign-in, OTP and MFA",
   "completedTabs": [
     {
-      "tab": "TAB 00 — Re-baseline the contract premise",
-      "verdict": "CERTIFIED — LOCAL COMPLETION",
+      "tab": "TAB 00 \u2014 Re-baseline the contract premise",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
       "commit": "91f8e08",
-      "closes": ["F01", "F12 (documented)", "F05 (closed upstream)", "F07"],
-      "raises": ["F13", "F14", "F15", "F16", "F17"],
+      "closes": [
+        "F01",
+        "F12 (documented)",
+        "F05 (closed upstream)",
+        "F07"
+      ],
+      "raises": [
+        "F13",
+        "F14",
+        "F15",
+        "F16",
+        "F17"
+      ],
       "analyze": "clean",
       "tests": "1210 passing",
-      "builds": ["debug APK", "iOS debug (no-codesign)"]
+      "builds": [
+        "debug APK",
+        "iOS debug (no-codesign)"
+      ]
+    },
+    {
+      "tab": "TAB 01 \u2014 Contract conformance harness",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION (fixtures unproven: no staging API)",
+      "commit": "4971edd",
+      "closes": [
+        "F04",
+        "F05 (upstream)",
+        "F06"
+      ],
+      "raises": [
+        "F18 (decided, closed)"
+      ],
+      "analyze": "clean",
+      "tests": "1268 passing",
+      "builds": [
+        "debug APK",
+        "iOS debug (no-codesign)"
+      ]
     }
   ],
   "openFindings": {
-    "P0": ["F02", "F03", "F15", "F16"],
-    "P1": ["F04", "F06", "F13", "F17-residual"],
-    "P2": ["F08", "F09", "F10", "F11", "F14"]
+    "P0": [
+      "F02",
+      "F03",
+      "F15",
+      "F16"
+    ],
+    "P1": [
+      "F13",
+      "F17-residual"
+    ],
+    "P2": [
+      "F08",
+      "F09",
+      "F10",
+      "F11",
+      "F14"
+    ]
   },
   "boundary": "Local commits only. No push, no remote administration, no deployment, no production.",
   "supervisorCadence": "hourly at :52",
-  "turnCeiling": 200
+  "turnCeiling": 200,
+  "blockedTabs": {
+    "TAB 02": "definition of done unreachable \u2014 F16 (codes never dispatched) and F15 (no self-registration). Needs a decision from the LGU and a backend change."
+  }
 }
