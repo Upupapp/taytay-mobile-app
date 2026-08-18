@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/notifications/data/planned_notification_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/notifications/presentation/notification_inbox_controller.dart';
 
@@ -383,15 +382,6 @@ void main() {
       // And nothing else moved.
       expect(prefs.isEnabled(NotificationCategory.assistanceStatus), isTrue);
     });
-
-    test('the shipped repository declines everything', () async {
-      const repository = PlannedNotificationRepository();
-
-      expect((await repository.listOwn()).isErr, isTrue);
-      expect((await repository.markAllRead()).isErr, isTrue);
-      expect((await repository.registerPushToken('t')).isErr, isTrue);
-      expect((await repository.unregisterPushToken()).isErr, isTrue);
-    });
   });
 
   group('the inbox groups by recency', () {
@@ -559,18 +549,6 @@ void main() {
 
       expect(currentLocation(tester), '/notifications');
       expect(find.text('Your application moved'), findsOneWidget);
-    });
-
-    testWidgets('an absent backend explains rather than showing nothing', (
-      tester,
-    ) async {
-      await bootInbox(
-        tester,
-        repositoryOverride: const PlannedNotificationRepository(),
-      );
-
-      expect(find.text('Notifications are not available yet'), findsOneWidget);
-      expect(find.text('Nothing yet'), findsNothing);
     });
 
     testWidgets('an empty inbox says so, distinctly', (tester) async {
@@ -751,19 +729,6 @@ void main() {
         reason:
             'A preference that appeared to save and did not is how a '
             'resident ends up believing they turned something off.',
-      );
-    });
-
-    testWidgets('an absent backend explains', (tester) async {
-      await bootInbox(
-        tester,
-        repositoryOverride: const PlannedNotificationRepository(),
-        location: '/notifications/settings',
-      );
-
-      expect(
-        find.text('Notification settings are not available yet'),
-        findsOneWidget,
       );
     });
   });

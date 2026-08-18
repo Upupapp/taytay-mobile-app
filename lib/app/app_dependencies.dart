@@ -35,7 +35,7 @@ import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
 import '../features/news/data/newsfeed_api_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
-import '../features/notifications/data/planned_notification_repository.dart';
+import '../features/notifications/data/notification_api_repository.dart';
 import '../features/notifications/domain/notification_repository.dart';
 import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
@@ -241,7 +241,7 @@ class AppDependencies {
       verificationRepository: KycApiRepository(apiClient: apiClient),
       serviceRequestRepository: AssistanceApiRepository(apiClient: apiClient),
       requirementRepository: RequirementApiRepository(apiClient: apiClient),
-      notificationRepository: const PlannedNotificationRepository(),
+      notificationRepository: NotificationApiRepository(apiClient: apiClient),
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent
       // rather than pretending a camera opened.
