@@ -47,7 +47,7 @@ import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
 import '../features/requirements/data/planned_requirement_repository.dart';
 import '../features/requirements/domain/resident_requirement.dart';
-import '../features/services/data/planned_service_request_repository.dart';
+import '../features/services/data/assistance_api_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
 import '../features/services/domain/service_request_repository.dart';
@@ -239,7 +239,7 @@ class AppDependencies {
       registrationRepository: const PlannedRegistrationRepository(),
       credentialRepository: CredentialApiRepository(apiClient: apiClient),
       verificationRepository: KycApiRepository(apiClient: apiClient),
-      serviceRequestRepository: const PlannedServiceRequestRepository(),
+      serviceRequestRepository: AssistanceApiRepository(apiClient: apiClient),
       requirementRepository: const PlannedRequirementRepository(),
       notificationRepository: const PlannedNotificationRepository(),
       // Defaults to the real system pickers. Tests inject

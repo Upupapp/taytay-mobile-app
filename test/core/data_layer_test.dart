@@ -15,9 +15,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/keystore_session_store.dart';
 import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/notifications/data/planned_notification_repository.dart';
 import 'package:taytay_resident/features/services/data/lgu_service_dto.dart';
-import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/data/service_catalog_api_repository.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
 
@@ -846,28 +844,7 @@ void main() {
     });
   });
 
-  group('planned backend repositories decline honestly', () {
-    test('every planned module declines with a temporary failure', () async {
-      final outcomes = <String, Result<Object?>>{
-        // Profile and verification left this list at TAB 04 — both are wired
-        // now. What remains is the shape of the honest decline itself, which
-        // every stub still standing shares.
-        'requests': await const PlannedServiceRequestRepository()
-            .listOwnRequests(),
-        'notifications': await const PlannedNotificationRepository().listOwn(),
-      };
-
-      outcomes.forEach((name, result) {
-        final failure = result.failureOrNull;
-        expect(failure, isA<ServerFailure>(), reason: name);
-        expect((failure! as ServerFailure).isTemporary, isTrue, reason: name);
-        // The resident is told to try later, never that they did something
-        // wrong, and never the operator-facing detail.
-        expect(failure.residentMessage, contains('temporarily unavailable'));
-        expect(failure.residentMessage, isNot(contains('module')));
-      });
-    });
-
+  group('the planned-module list stays the truth', () {
     test('the module list matches the committed boundary map', () {
       // Re-derived at backend@api-baseline-2026-08 (eec71e6). This list was six
       // members long, pinned to backend 7844859, and four of them had shipped —

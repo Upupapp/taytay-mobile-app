@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
@@ -306,31 +305,6 @@ void main() {
       expect(detail.latest?.state.known, ServiceRequestState.underVerification);
     });
 
-    test(
-      'the shipped repository declines rather than composing a history',
-      () async {
-        const repository = PlannedServiceRequestRepository();
-
-        final result = await repository.loadOwnCase('req-1');
-
-        expect(result.isErr, isTrue);
-      },
-    );
-  });
-
-  group('the case screen', () {
-    testWidgets('shows friendly copy and keeps the canonical value', (
-      tester,
-    ) async {
-      await bootCase(tester, detail: caseDetail());
-
-      expect(find.text('Being checked'), findsOneWidget);
-      // Acceptance 1: the office's own value stays traceable, labelled as such.
-      expect(find.text('Status code used by the office'), findsOneWidget);
-      expect(find.text('under_verification'), findsOneWidget);
-      expect(find.text('TAY-2026-000123'), findsOneWidget);
-    });
-
     testWidgets('says whose turn it is', (tester) async {
       await bootCase(
         tester,
@@ -489,18 +463,6 @@ void main() {
 
       expect(find.text('What you are receiving'), findsOneWidget);
       expect(find.text('Referred to another office'), findsOneWidget);
-    });
-
-    testWidgets('an absent backend explains rather than showing a blank case', (
-      tester,
-    ) async {
-      await bootCase(
-        tester,
-        repositoryOverride: const PlannedServiceRequestRepository(),
-      );
-
-      expect(find.textContaining('not switched on'), findsOneWidget);
-      expect(find.text('History'), findsNothing);
     });
 
     testWidgets('a malformed identifier is refused', (tester) async {

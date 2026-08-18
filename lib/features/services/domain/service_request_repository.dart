@@ -50,6 +50,19 @@ enum ServiceRequestState {
 
   final String wireValue;
 
+  /// Maps a server state, failing to `null` rather than to a guess.
+  ///
+  /// `rawState` keeps the server's own word alongside, so a resident and a
+  /// support desk are always looking at the same one even when this build has
+  /// never heard of it.
+  static ServiceRequestState? fromWire(String? value) {
+    if (value == null) return null;
+    for (final ServiceRequestState state in ServiceRequestState.values) {
+      if (state.wireValue == value) return state;
+    }
+    return null;
+  }
+
   bool get isTerminal =>
       this == ServiceRequestState.completed ||
       this == ServiceRequestState.rejected ||

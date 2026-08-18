@@ -14,7 +14,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
@@ -284,36 +283,6 @@ String renderedText(WidgetTester tester) => tester
 
 void main() {
   group('the form belongs to the server', () {
-    test(
-      'the shipped repository declines rather than inventing questions',
-      () async {
-        const repository = PlannedServiceRequestRepository();
-
-        final result = await repository.loadIntakeForm('CEDULA');
-
-        // The whole point: with `ServiceDelivery` unpublished there is no form,
-        // and the app says so instead of asking a resident for personal data no
-        // municipal office requested.
-        expect(result.isErr, isTrue);
-        expect(result.failureOrNull, isA<ServerFailure>());
-      },
-    );
-
-    testWidgets('an absent backend produces an honest screen, not a form', (
-      tester,
-    ) async {
-      await bootIntake(
-        tester,
-        repositoryOverride: const PlannedServiceRequestRepository(),
-      );
-
-      expect(find.textContaining('not switched on yet'), findsOneWidget);
-      expect(find.textContaining('municipal hall'), findsWidgets);
-      // Nothing to fill in, so nothing that could be sent.
-      expect(find.byType(TextField), findsNothing);
-      expect(find.text('Send my application'), findsNothing);
-    });
-
     testWidgets('the steps are derived from the form, not fixed', (
       tester,
     ) async {

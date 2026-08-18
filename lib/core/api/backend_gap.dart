@@ -105,6 +105,23 @@ enum BackendGap {
     servedInstead: 'POST me/profile/corrections, keyed by named field',
   ),
 
+  /// **F24 — there is no per-service intake form.**
+  ///
+  /// The app asks the server what to put on an application form, so that a
+  /// change to a programme does not need an app release. Nothing publishes that.
+  /// The closest thing is a programme's requirement template — wired at TAB 07 —
+  /// but it is keyed by programme UUID rather than service code, and it lists
+  /// documents to bring rather than questions to answer.
+  ///
+  /// Hardcoding a question list is what this app already refuses: a form the
+  /// office never agreed to, collecting answers nobody reads, discovered wrong
+  /// once a caseworker opens the first application.
+  assistanceIntakeForm(
+    finding: 'F24',
+    missing: 'a per-service intake form the office declares',
+    servedInstead: "a programme's requirement template, keyed differently",
+  ),
+
   /// **F13 — no route closes, erases or deletes an account.**
   ///
   /// `Audit` serves consents and acknowledgements, so most of the privacy screen

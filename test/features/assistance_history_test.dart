@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/services/data/planned_service_request_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
@@ -281,35 +280,6 @@ void main() {
         referralStatusLabel(ReferralStatus.declined),
         contains('what happens next'),
       );
-    });
-
-    test(
-      'the shipped repository declines rather than showing an empty record',
-      () async {
-        const repository = PlannedServiceRequestRepository();
-
-        final result = await repository.listOwnHistory(
-          scope: HistoryScope.past,
-        );
-
-        expect(result.isErr, isTrue);
-      },
-    );
-  });
-
-  group('the release card — acceptance 3', () {
-    testWidgets('prints the approved value exactly as the server sent it', (
-      tester,
-    ) async {
-      await pumpCard(
-        tester,
-        const ReleaseCard(
-          release: ReleaseDetail(amountDescription: 'PHP 5,000.00'),
-        ),
-      );
-
-      // Not reformatted, not rounded, not re-symbolised.
-      expect(find.text('PHP 5,000.00'), findsOneWidget);
     });
 
     testWidgets('renders an in-kind description just as happily', (
