@@ -163,29 +163,196 @@ class AssistanceApiRepository implements ServiceRequestRepository {
     );
   }
 
+  /// One case, with its timeline and whatever the office says can be done next.
+  ///
+  /// **The vocabulary is the server's, twice over.** `status` is already the
+  /// *citizen* projection — `assessment` and `endorsed` both arrive as
+  /// `under-review`, because which desk holds a file would identify the handling
+  /// social worker — and `status_message` is the office's own sentence for it.
+  /// The app renders both rather than composing its own, so a resident and the
+  /// clerk they are standing in front of are reading the same words.
+  ///
+  /// **`available_actions` is computed server-side and that replaced something.**
+  /// The app used to decide locally whether a case could be cancelled, which put
+  /// a business rule inside a shipped mobile build that could not be patched on
+  /// demand (backend ADR 0007 §4). It is now asked, never inferred.
   @override
-  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) =>
-      // TAB 09 owns the case surface. Declining here rather than half-wiring it
-      // keeps the ledger honest: a repository that answers some of its contract
-      // and silently fails the rest is worse than one that says which.
-      Future<Result<AssistanceCaseDetail>>.value(
-        backendGapFailure<AssistanceCaseDetail>(
-          BackendGap.assistanceIntakeForm,
-          'loadOwnCase — wired by TAB 09',
-        ),
-      );
+  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async {
+    final response = await _apiClient.send<AssistanceCaseDetail?>(
+      method: HttpMethod.get,
+      path: 'me/cases/$id',
+      authenticated: true,
+      decode: _decodeCase,
+    );
+    return response.flatMap(
+      (envelope) => envelope.data == null
+          ? const Err<AssistanceCaseDetail>(
+              ContractFailure(debugMessage: 'No readable case in the body.'),
+            )
+          : Ok<AssistanceCaseDetail>(envelope.data!),
+    );
+  }
 
+  /// What the resident has actually received.
+  ///
+  /// **In-flight cases are deliberately absent from this endpoint** — those are
+  /// tracked through `me/cases`, and listing one here would tell somebody they
+  /// were given what they were not. So `HistoryScope.open` is answered from the
+  /// case list and `HistoryScope.past` from the history endpoint; they are two
+  /// different questions and the server treats them as such.
   @override
   Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
     required HistoryScope scope,
     int page = 1,
     int perPage = 25,
-  }) => Future<Result<Paginated<AssistanceHistoryEntry>>>.value(
-    backendGapFailure<Paginated<AssistanceHistoryEntry>>(
-      BackendGap.assistanceIntakeForm,
-      'listOwnHistory — wired by TAB 09',
-    ),
-  );
+  }) async {
+    if (!scope.isPast) {
+      final Result<Paginated<ServiceRequest>> open = await listOwnRequests(
+        page: page,
+        perPage: perPage,
+      );
+      return open.map(
+        (Paginated<ServiceRequest> page) => Paginated<AssistanceHistoryEntry>(
+          items: page.items
+              .map(
+                (ServiceRequest r) => AssistanceHistoryEntry(
+                  requestId: r.id,
+                  serviceCode: r.serviceCode,
+                  status: ServerValue<ServiceRequestState>(
+                    raw: r.rawState,
+                    known: r.state,
+                  ),
+                  referenceNumber: r.referenceNumber,
+                  submittedAt: r.submittedAt,
+                ),
+              )
+              .toList(growable: false),
+          page: page.page,
+          perPage: page.perPage,
+          total: page.total,
+          totalPages: page.totalPages,
+          hasMore: page.hasMore,
+        ),
+      );
+    }
+
+    final response = await _apiClient.send<List<AssistanceHistoryEntry>>(
+      method: HttpMethod.get,
+      path: 'me/assistance-history',
+      authenticated: true,
+      decode: _decodeHistory,
+    );
+    return response.map(
+      (envelope) => Paginated<AssistanceHistoryEntry>.single(envelope.data),
+    );
+  }
+
+  static AssistanceCaseDetail? _decodeCase(Object? data) {
+    final ServiceRequest? request = _decodeOne(data);
+    if (request == null || data is! Map<String, dynamic>) return null;
+
+    final List<CaseTimelineEntry> timeline = <CaseTimelineEntry>[];
+    final Object? events = data['timeline'];
+    if (events is List<dynamic>) {
+      for (final Object? event in events) {
+        if (event is! Map<String, dynamic>) continue;
+        final Object? message = event['message'];
+        final DateTime? at = DateTime.tryParse(
+          event['occurred_at'] is String ? event['occurred_at'] as String : '',
+        );
+        // A timeline row with no time or no sentence is not a step a resident
+        // can read. `message` is the line written *for the applicant* — never
+        // `summary`, which is operator-facing, and never the transition
+        // `reason`, which is the caseworker's internal justification.
+        final bool unreadable =
+            at == null || message is! String || message.trim().isEmpty;
+        if (unreadable) {
+          continue;
+        }
+        timeline.add(
+          CaseTimelineEntry(
+            occurredAt: at.toUtc(),
+            state: ServerValue<ServiceRequestState>(
+              raw: request.rawState,
+              known: request.state,
+            ),
+            summary: message.trim(),
+          ),
+        );
+      }
+    }
+
+    final Object? actions = data['available_actions'];
+    final List<CaseNextAction> nextActions = <CaseNextAction>[];
+    if (actions is List<dynamic>) {
+      for (final Object? action in actions) {
+        if (action is! String) continue;
+        nextActions.add(
+          CaseNextAction(
+            kind: ServerValue.parse<NextActionKind>(
+              action,
+              NextActionKind.values,
+              (NextActionKind k) => k.wireValue,
+            ),
+            label: action == 'cancel' ? 'Withdraw this request' : action,
+          ),
+        );
+      }
+    }
+
+    return AssistanceCaseDetail(
+      request: request,
+      timeline: List<CaseTimelineEntry>.unmodifiable(timeline),
+      nextActions: List<CaseNextAction>.unmodifiable(nextActions),
+    );
+  }
+
+  static List<AssistanceHistoryEntry> _decodeHistory(Object? data) {
+    final Object? received = data is Map<String, dynamic>
+        ? data['received']
+        : null;
+    if (received is! List<dynamic>) return const <AssistanceHistoryEntry>[];
+
+    final List<AssistanceHistoryEntry> entries = <AssistanceHistoryEntry>[];
+    for (final Object? entry in received) {
+      if (entry is! Map<String, dynamic>) continue;
+      final Object? id = entry['id'] ?? entry['case_id'];
+      if (id is! String || id.isEmpty) continue;
+
+      final Object? status = entry['status'];
+      entries.add(
+        AssistanceHistoryEntry(
+          requestId: id,
+          serviceCode: entry['service_code'] is String
+              ? entry['service_code'] as String
+              : '',
+          serviceName: entry['program'] is String
+              ? entry['program'] as String
+              : null,
+          status: ServerValue.parse<ServiceRequestState>(
+            status is String ? status : null,
+            ServiceRequestState.values,
+            (ServiceRequestState s) => s.wireValue,
+          ),
+          referenceNumber: entry['reference'] is String
+              ? entry['reference'] as String
+              : null,
+          completedAt: DateTime.tryParse(
+            entry['released_at'] is String
+                ? entry['released_at'] as String
+                : '',
+          )?.toUtc(),
+          // Never composed from a status. If the office published no summary,
+          // the screen says less rather than inventing a sentence about what
+          // somebody received.
+          outcomeSummary: entry['summary'] is String
+              ? entry['summary'] as String
+              : null,
+        ),
+      );
+    }
+    return List<AssistanceHistoryEntry>.unmodifiable(entries);
+  }
 
   static List<ServiceRequest> _decodeDrafts(Object? data) {
     if (data is! List<dynamic>) return const <ServiceRequest>[];
