@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 5,
-  "currentTab": "TAB 05 \u2014 Household and family",
+  "currentTabIndex": 6,
+  "currentTab": "TAB 06 \u2014 Credential: the digital ID",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -108,6 +108,14 @@
       "analyze": "clean",
       "tests": "1297 passing",
       "stubsRemaining": 9
+    },
+    {
+      "tab": "TAB 05 \u2014 Household and family",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; corrections decline (F23)",
+      "commit": "pending",
+      "analyze": "clean",
+      "tests": "1296 passing",
+      "stubsRemaining": 8
     }
   ],
   "openFindings": {
