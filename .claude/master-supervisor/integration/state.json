@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 2,
-  "currentTab": "TAB 02 \u2014 Identity: sign-in, OTP and MFA",
+  "currentTabIndex": 3,
+  "currentTab": "TAB 03 \u2014 Session, tokens and the device registry",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -69,11 +69,26 @@
       "tests": "1276 passing",
       "stubsRemaining": 13,
       "deferred": "programme \u2192 intake link, to TAB 08"
+    },
+    {
+      "tab": "TAB 02 \u2014 Identity: sign-in, OTP and MFA",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; end-to-end unreachable (F16)",
+      "commit": "bb5e9cb",
+      "closes": [
+        "F02 (client half)"
+      ],
+      "raises": [
+        "F20",
+        "F21"
+      ],
+      "analyze": "clean",
+      "tests": "1292 passing",
+      "stubsRemaining": 12,
+      "notApplicable": "password sign-in and MFA challenge \u2014 staff surfaces (F20)"
     }
   ],
   "openFindings": {
     "P0": [
-      "F02",
       "F03",
       "F15",
       "F16"
@@ -93,6 +108,6 @@
   "supervisorCadence": "hourly at :52",
   "turnCeiling": 200,
   "blockedTabs": {
-    "TAB 02": "definition of done unreachable \u2014 F16 (codes never dispatched) and F15 (no self-registration). Needs a decision from the LGU and a backend change."
+    "TAB 02": "end-to-end sign-in blocked by F16 (codes never dispatched); client wiring complete"
   }
 }
