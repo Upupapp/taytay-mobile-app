@@ -72,6 +72,55 @@ jobs:
           fi
           exit $code
 
+  release-hardening:
+    name: The artifact is hardened, not just the source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+
+      # A build file can say one thing while the thing it produces says another.
+      # This reads the APK: cleartext, the permission set, the signing
+      # certificate, and anything secret-shaped in the bundle.
+      - name: Build a release artifact
+        run: flutter build apk --release --dart-define=TAYTAY_ENV=prod
+
+      # EXPECTED RED until TAB 21 establishes signing key custody (F03). Surfaced
+      # as a warning rather than a hard failure *only* for that one finding, and
+      # the annotation says which — a gate that is red for a known reason and
+      # silent about it is a gate people stop reading.
+      - name: Check the artifact
+        run: |
+          set +e
+          out=$(./tool/check_release_hardening.sh 2>&1)
+          code=$?
+          echo "$out"
+          set -e
+          if [ $code -ne 0 ] && [ "$(echo "$out" | grep -c 'FAIL:')" = "1" ] \
+             && echo "$out" | grep -q 'ANDROID DEBUG KEY'; then
+            echo "::warning title=F03 open::Release artifact is debug-signed. Expected until TAB 21."
+            exit 0
+          fi
+          exit $code
+
+  dependency-advisories:
+    name: Dependency surface
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      # Reported, not gated. Dart has no first-party advisory database to fail a
+      # build against, and a gate that cannot distinguish severity would be
+      # switched off within a month. Reviewed at each release instead — see
+      # docs/integration/security-decisions.md.
+      - run: flutter pub outdated --show-all
+
   baseline-agrees-with-backend:
     name: Committed baseline agrees with the backend at its tag
     runs-on: ubuntu-latest
