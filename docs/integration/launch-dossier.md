@@ -156,10 +156,34 @@ That does not change the decision, and it improves the evidence behind it:
   `citizen-mobile` and this app sends its own 25. Nothing breaks; it is a
   divergence that should be a decision.
 
-The four blocking P0s are unchanged, and none of them became testable: F15 and
-F16 mean no account can exist and no code can be sent, so **no authenticated
-journey was exercised even with a server running**. That is the platform's gap,
-not the tooling's.
+### F16 and F21, now confirmed empirically rather than by reading
+
+With the API running and a citizen account created by hand, sign-in was walked
+end to end:
+
+| Step | Result |
+| --- | --- |
+| `POST auth/otp` | **202**, `verification_codes` grows by one |
+| Anything delivered | **nothing** — no notification row, no SMS, no push, no log line carrying the code |
+| `POST auth/otp/verify` with the code | **token issued** |
+| `GET me` with that token | returns exactly the shape this app decodes |
+| `resident_id` | `null` → the app resolves to **unverified**, as F21 requires |
+
+**F16 is confirmed and narrowed**: every part of sign-in is built except the part
+that reaches a person. And **TAB 02's wiring is validated against a real server**
+for the first time.
+
+Two further confirmations, recorded in the backend's own ledger as **L-18**: no
+seeder creates a citizen account, so a fresh environment has nobody who can sign
+in at all — which makes reviewer access and UAT impossible to set up without a
+manual database write; and the fix for F16 must **not** go through
+`Notifier::notify`, because that persists a title and body read back over an
+authenticated API, putting a one-time code in an inbox the recipient cannot open
+until they have used it.
+
+The four blocking P0s are unchanged. F15 and F16 still mean no account can be
+created and no code dispatched, so **no authenticated resident journey is
+reachable by the app itself**. That is the platform's gap, not the tooling's.
 
 ## Dissents
 
