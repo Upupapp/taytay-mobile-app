@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 3,
-  "currentTab": "TAB 03 \u2014 Session, tokens and the device registry",
+  "currentTabIndex": 4,
+  "currentTab": "TAB 04 \u2014 Resident profile, KYC and corrections",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -85,6 +85,17 @@
       "tests": "1292 passing",
       "stubsRemaining": 12,
       "notApplicable": "password sign-in and MFA challenge \u2014 staff surfaces (F20)"
+    },
+    {
+      "tab": "TAB 03 \u2014 Session, tokens and the device registry",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; me/devices \u2192 TAB 13, me/mfa \u2192 TAB 17",
+      "commit": "96e40e2",
+      "raises": [
+        "F22"
+      ],
+      "analyze": "clean",
+      "tests": "1299 passing",
+      "stubsRemaining": 11
     }
   ],
   "openFindings": {
