@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 20,
-  "currentTab": "TAB 20 \u2014 Performance and startup",
+  "currentTabIndex": 21,
+  "currentTab": "TAB 21 \u2014 Release engineering and signing",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -234,6 +234,13 @@
       "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; TalkBack/VoiceOver and a Filipino copy review need a person (TAB 23)",
       "analyze": "clean",
       "tests": "1325 passing"
+    },
+    {
+      "tab": "TAB 20 \u2014 Performance and startup",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; latency budgets are targets, need a low-end device (TAB 23)",
+      "analyze": "clean",
+      "tests": "1330 passing",
+      "measured": "universal APK 57MB, arm64 split 20.9MB, assets 155KB \u2014 ship the AAB"
     }
   ],
   "openFindings": {
