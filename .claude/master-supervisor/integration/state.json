@@ -8,8 +8,8 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 25,
-  "currentTabIndex": 18,
-  "currentTab": "TAB 18 \u2014 Privacy and the Data Privacy Act",
+  "currentTabIndex": 19,
+  "currentTab": "TAB 19 \u2014 Accessibility and localisation",
   "completedTabs": [
     {
       "tab": "TAB 00 \u2014 Re-baseline the contract premise",
@@ -217,6 +217,17 @@
       ],
       "analyze": "clean",
       "tests": "1321 passing"
+    },
+    {
+      "tab": "TAB 18 \u2014 Privacy and the Data Privacy Act",
+      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; DPO and retention schedule remain LGU blockers",
+      "raises": [
+        "F29 \u2014 no data portability/export route"
+      ],
+      "analyze": "clean",
+      "tests": "1320 passing",
+      "stubsRemaining": 1,
+      "recommendation": "do not adopt a push SDK before launch"
     }
   ],
   "openFindings": {
