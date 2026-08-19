@@ -39,7 +39,7 @@ Figures from the run, not from any document.
 | **C-05** | P2 | The client overrides the page size the server published for this channel | **TAB 05 — CLOSED** |
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | **TAB 06 — CLOSED, and it was not holding** |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | **TAB 07 — PARTIAL; still no screen reader** |
-| **C-08** | P1 | No physical device run; no iOS run of any kind | TAB 08 |
+| **C-08** | P1 | No physical device run; no iOS run of any kind | **TAB 08 — PARTIAL; iOS runs, Android has never run** |
 | **C-09** | **P1** | The app calls two routes that do not exist at its own pinned baseline | **TAB 00A — detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
 
@@ -425,4 +425,48 @@ pattern is the finding.
 **The single most valuable next step is one hour with a real Android phone and TalkBack, in
 Filipino**, walking sign-in → home → KYC claim → upload. It answers most of the deferred table and
 cannot be answered from here.
+
+---
+
+## C-08 — TAB 08, 19 August 2026: **PARTIAL**
+
+**The app ran on an Apple runtime for the first time in this programme's history.** Built on a
+Windows host through twenty-eight TABs, established as *compiling* for iOS during the integration
+sequence — and never launched. On 19 August it was installed on an iPhone 17 simulator and rendered
+its first screen correctly: brand blue, notch cleared, the `DEV` banner Article 7 requires, white
+text on the brand-blue button.
+
+That last detail settles TAB 07's contrast finding **by eye**: the button is white on blue, and
+`textContrastGuideline`'s 1.06:1 really was the sampler weighing fill against fill.
+
+`integration_test/device_journey_test.dart` is the first thing here to drive the app on a real
+engine rather than a fake window — cold start to a readable frame, past the welcome scenes via
+**Skip** (the escape nobody exercises by hand), and every shell destination in turn against an
+unreachable API, so what is exercised is each screen's own empty and error state. Given F15 and
+F16 that is **every journey a resident can complete today**: no account can be created and no code
+is dispatched, so there is no authenticated journey to walk.
+
+`integration_test` was added as a dev dependency with a stated reason (Article 1): it ships with the
+Flutter SDK, adds nothing to a release artifact, and touches no identity, storage, networking or
+crypto surface.
+
+**Two of the four matrix entries are Android, and neither could be run.** `flutter emulators`
+reports no AVD sources on this machine and no device has ever been attached. That is not a small
+gap — Android is the majority platform for this audience and `minSdk = 24` is the entry this app
+most needs to prove.
+
+**No performance figure here is a pass.** The budgets say each target needs a low-end device; an
+iPhone 17 simulator on an Apple-silicon Mac is the opposite of one. Cold start is **reported and not
+compared**, because comparing it would turn an untested claim into a green tick. The budgets stay
+unmet in the honest sense: nothing has been measured on a device that could fail them.
+
+The signing guardrail was re-verified rather than assumed: `key.properties` is absent and the
+release build refuses instead of falling back to the debug key.
+
+`docs/frontend/device-matrix.md` carries the per-criterion simulator-versus-device split. Nothing in
+its right-hand column is claimed anywhere in this repository.
+
+**Also corrected here:** `docs/integration/performance-budgets.md` still said "a feed page is 25
+rows". TAB 05 made the page size the server's — 15 at the pinned baseline. Fixed rather than left
+as a document contradicting the code.
 

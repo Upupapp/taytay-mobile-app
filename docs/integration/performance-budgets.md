@@ -39,7 +39,7 @@ regardless of how well it works.
 | Decision | Effect |
 | --- | --- |
 | Public reads sent **anonymously** | Keeps the response publicly cacheable; a signed-in resident gains nothing by identifying themselves on a catalogue |
-| Every list request **paged and clamped** | A feed page is 25 rows, never the whole table |
+| Every list request **paged and clamped** | A page is whatever the server publishes for `citizen-mobile` — 15 at the pinned baseline — never the whole table. Was 25 here, and 20 on three surfaces, until TAB 05 made the client read `client.default_page_size` instead of copying it |
 | Images decoded to the **displayed** size | A 4000×3000 cover in a 360dp card is ~48 MB of ARGB; right-sized it is ~2.6 MB and visually identical |
 | Uploads **downscaled before sending** | A phone photo goes from megabytes to hundreds of kilobytes, and the resident never pays to upload bytes a reviewer cannot use |
 | **No offline write queue** | Nothing is silently replayed on a metered connection later |

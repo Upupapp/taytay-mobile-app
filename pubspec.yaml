@@ -153,6 +153,19 @@ dependencies:
   url_launcher: ^6.3.2
 
 dev_dependencies:
+  # ── Why this dependency exists (Article 1 asks for a stated reason) ──────────
+  #
+  # TAB 08 needs the core journeys walked on a real runtime, and until it there
+  # was no way to do that: `flutter test` runs headless against a fake window,
+  # and `simctl` can install and launch an app but cannot tap it. Everything this
+  # programme claimed about the app on a device was therefore an inference from a
+  # widget test.
+  #
+  # `integration_test` ships with the Flutter SDK — it is not a third-party
+  # package, adds nothing to a release artifact, and touches no identity,
+  # storage, networking or crypto surface. It is a dev dependency only.
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
 
