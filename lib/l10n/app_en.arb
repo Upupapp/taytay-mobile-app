@@ -1,11 +1,9 @@
 {
   "@@locale": "en",
-
   "appTitle": "Taytay LGU IDS",
   "@appTitle": {
     "description": "The app's name. Not translated — it is the municipality's own identity."
   },
-
   "navHome": "Home",
   "@navHome": {
     "description": "Shell destination: the resident's dashboard."
@@ -26,7 +24,6 @@
   "@navProfile": {
     "description": "Shell destination: the resident's own account."
   },
-
   "actionTryAgain": "Try again",
   "@actionTryAgain": {
     "description": "Retries whatever just failed."
@@ -43,7 +40,6 @@
   "@actionTrySendingAgain": {
     "description": "Retries a submission that never reached the office."
   },
-
   "networkUnreachableTitle": "Not reaching Taytay LGU",
   "@networkUnreachableTitle": {
     "description": "Offline banner heading. Deliberately not 'you appear to be offline' — that is a guess about the resident's phone, where this is what the app actually knows."
@@ -52,7 +48,6 @@
   "@networkUnreachableMessage": {
     "description": "Offline banner body. Must keep the promise that nothing was sent."
   },
-
   "unsentTitle": "Not sent yet",
   "@unsentTitle": {
     "description": "Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it."
@@ -67,7 +62,6 @@
       }
     }
   },
-
   "staleContentMessage": "Showing what was saved on {timestamp}. It may have changed.",
   "@staleContentMessage": {
     "description": "Last-updated line over cached content. The timestamp is pre-formatted in Manila time by ManilaTime, so it is passed in as a string rather than a DateTime.",
@@ -78,7 +72,6 @@
       }
     }
   },
-
   "failureNetwork": "The app could not reach Taytay LGU. Check your connection and try again.",
   "@failureNetwork": {
     "description": "Resident copy for a request that never arrived. Chosen by failure kind, never taken from the server's message, which is operator-facing."
@@ -95,7 +88,6 @@
   "failureServer": "Something went wrong at Taytay LGU's end. This is not your fault.",
   "failureContract": "This version of the app could not understand Taytay LGU's answer.",
   "failureUnexpected": "Something went wrong. Please try again.",
-
   "a11yLoading": "Loading",
   "@a11yLoading": {
     "description": "Screen-reader hint on a control that is working."
@@ -149,5 +141,35 @@
   "signInOffline": "You appear to be offline. Check your internet connection and try again.",
   "signInTimedOut": "That took too long. Please try again.",
   "signInServiceUnavailable": "Signing in is temporarily unavailable. Please try again shortly.",
-  "signInUnexpected": "Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening."
+  "signInUnexpected": "Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening.",
+  "uploadRefusedTooLarge": "That file is {actual} MB. Taytay LGU accepts up to {limit} MB. A photo taken in this app is usually small enough.",
+  "@uploadRefusedTooLarge": {
+    "description": "Shown when a chosen file is larger than the ceiling the API published. Both figures are real: the file, and the limit the server actually enforces.",
+    "placeholders": {
+      "actual": {
+        "type": "int",
+        "example": "12"
+      },
+      "limit": {
+        "type": "int",
+        "example": "10"
+      }
+    }
+  },
+  "uploadRefusedType": "Taytay LGU can only accept a photo (JPEG or PNG) or a PDF. Take a photo of the document if you have it on paper.",
+  "@uploadRefusedType": {
+    "description": "Shown when a chosen file is a type the office does not accept."
+  },
+  "uploadRefusedEmpty": "That file is empty. Choose it again, or take a photo of the document instead.",
+  "@uploadRefusedEmpty": {
+    "description": "Shown when a chosen file has no contents."
+  },
+  "uploadRefusedUnreadable": "That file could not be read as a photo or a PDF. Take a photo of the document instead.",
+  "@uploadRefusedUnreadable": {
+    "description": "Shown when a file’s contents do not match the type it claims."
+  },
+  "uploadRefusedTitle": "That file cannot be sent",
+  "@uploadRefusedTitle": {
+    "description": "Banner heading above any upload refusal."
+  }
 }

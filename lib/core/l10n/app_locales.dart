@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 
 import '../../features/auth/domain/sign_in_challenge.dart';
 import '../../l10n/app_localizations.dart';
+import '../documents/document_capture.dart';
+import '../documents/upload_policy.dart';
 import '../result/app_failure.dart';
 
 /// The languages this app speaks, and the rule for choosing between them.
@@ -107,5 +109,36 @@ String localisedResidentMessage(BuildContext context, AppFailure failure) {
     ServerFailure() => strings.failureServer,
     ContractFailure() => strings.failureContract,
     UnexpectedFailure() => strings.failureUnexpected,
+  };
+}
+
+/// The refusal a resident reads when a file cannot be sent, with real figures.
+///
+/// TAB 01. Two numbers appear and they are rounded in opposite directions on
+/// purpose: the **file** rounds up and the **limit** rounds down, so the
+/// sentence can never read as "that file is 10 MB and the limit is 10 MB". A
+/// refusal that looks like it should have succeeded is one a resident retries
+/// unchanged.
+///
+/// The limit is whatever the server published on this response — never a
+/// constant in this repository. See [UploadPolicy].
+String localisedDocumentRejection(
+  BuildContext context,
+  DocumentRejection rejection, {
+  required int actualBytes,
+  required UploadPolicy policy,
+}) {
+  final strings = AppStrings.of(context);
+
+  return switch (rejection) {
+    DocumentRejection.empty => strings.uploadRefusedEmpty,
+    DocumentRejection.tooLarge => strings.uploadRefusedTooLarge(
+      // Rounded up, and never below 1: a 400 KB file refused by a 0 MB policy
+      // would otherwise read as "that file is 0 MB".
+      (actualBytes / (1024 * 1024)).ceil().clamp(1, 1 << 30),
+      policy.maxMegabytes,
+    ),
+    DocumentRejection.unsupportedType => strings.uploadRefusedType,
+    DocumentRejection.contentsDoNotMatchType => strings.uploadRefusedUnreadable,
   };
 }

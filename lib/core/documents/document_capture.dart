@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'upload_policy.dart';
+
 /// Where a document came from.
 enum DocumentSource {
   camera('Take a photo'),
@@ -129,25 +131,6 @@ abstract final class DocumentCapturePolicy {
   /// JPEG quality handed to the platform re-encoder, 0–100.
   static const int imageQuality = 88;
 
-  /// Hard ceiling. Generous enough for a multi-page scanned PDF, small enough
-  /// that a resident on a weak connection is not left uploading for minutes.
-  static const int maxBytes = 10 * 1024 * 1024;
-
-  /// The only types a municipal office accepts here.
-  static const Set<String> acceptedMimeTypes = <String>{
-    'image/jpeg',
-    'image/png',
-    'application/pdf',
-  };
-
-  /// File extensions offered to the system document picker.
-  static const List<String> acceptedExtensions = <String>[
-    'jpg',
-    'jpeg',
-    'png',
-    'pdf',
-  ];
-
   /// Checks a chosen file, returning the reason it cannot be sent or `null`.
   ///
   /// ---
@@ -161,10 +144,15 @@ abstract final class DocumentCapturePolicy {
   /// answer is the one that counts. It is here because catching it on the device
   /// tells the resident something actionable *now*, instead of after a round
   /// trip that ends in a message written for an operator.
-  static DocumentRejection? inspect(CapturedDocument document) {
+  /// [policy] is the server's, carried on the requirements response. It is a
+  /// **parameter rather than a constant** because a ceiling maintained in this
+  /// repository is a second description of a boundary the server owns, and it
+  /// drifts the first time the server's changes — which is exactly what TAB 01
+  /// found had already happened, twice, in two different files.
+  static DocumentRejection? inspect(CapturedDocument document, UploadPolicy policy) {
     if (document.sizeBytes == 0) return DocumentRejection.empty;
-    if (document.sizeBytes > maxBytes) return DocumentRejection.tooLarge;
-    if (!acceptedMimeTypes.contains(document.mimeType)) {
+    if (document.sizeBytes > policy.maxBytes) return DocumentRejection.tooLarge;
+    if (!policy.mimeTypes.contains(document.mimeType)) {
       return DocumentRejection.unsupportedType;
     }
     if (!_signatureMatches(document)) {
@@ -215,7 +203,10 @@ abstract interface class DocumentPicker {
   ///
   /// Cancelling is not an error and must never be reported as one — a person
   /// backing out of a camera is exercising a choice.
-  Future<CapturedDocument?> pick(DocumentSource source);
+  /// [policy] decides which file extensions the system picker offers, so the
+  /// list a resident sees comes from the server rather than from a constant
+  /// this repository maintains beside it.
+  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy);
 
   /// Whether this device offers [source] at all. A tablet with no camera should
   /// not show a camera button that cannot work.
@@ -231,7 +222,7 @@ class UnavailableDocumentPicker implements DocumentPicker {
   const UnavailableDocumentPicker();
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source) async => null;
+  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async => null;
 
   @override
   bool supports(DocumentSource source) => false;

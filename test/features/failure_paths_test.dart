@@ -7,6 +7,7 @@ import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/auth_coordinator.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/events/data/event_api_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_registration.dart';
@@ -170,6 +171,7 @@ void main() {
             ).uploadRequirementDocument(
               requestId: 'case-1',
               requirementCode: 'valid-id',
+              policy: UploadPolicy.fallback,
               document: CapturedDocument(
                 bytes: Uint8List.fromList(<int>[1, 2, 3]),
                 fileName: 'id.pdf',
@@ -197,6 +199,7 @@ void main() {
           ).uploadRequirementDocument(
             requestId: 'case-1',
             requirementCode: 'valid-id',
+            policy: UploadPolicy.fallback,
             // Not an image, so it is not downscaled — a PDF larger than the ceiling.
             document: CapturedDocument(
               bytes: Uint8List(9 * 1024 * 1024),
@@ -245,6 +248,7 @@ void main() {
           ).uploadRequirementDocument(
             requestId: 'case-1',
             requirementCode: 'valid-id',
+            policy: UploadPolicy.fallback,
             document: CapturedDocument(
               bytes: Uint8List.fromList(<int>[1, 2, 3]),
               fileName: 'id.pdf',

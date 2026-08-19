@@ -182,4 +182,24 @@ class AppStringsFil extends AppStrings {
   @override
   String get signInUnexpected =>
       'May hindi inaasahang naganap. Pakisubukang muli, o pumunta sa munisipyo ng Taytay kung magpapatuloy ito.';
+
+  @override
+  String uploadRefusedTooLarge(int actual, int limit) {
+    return 'Ang file na iyon ay $actual MB. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Karaniwang sapat na ang laki ng larawang kinunan sa app na ito.';
+  }
+
+  @override
+  String get uploadRefusedType =>
+      'Larawan lamang (JPEG o PNG) o PDF ang tinatanggap ng Taytay LGU. Kunan ng larawan ang dokumento kung nasa papel ito.';
+
+  @override
+  String get uploadRefusedEmpty =>
+      'Walang laman ang file na iyon. Piliin itong muli, o kunan na lang ng larawan ang dokumento.';
+
+  @override
+  String get uploadRefusedUnreadable =>
+      'Hindi mabasa ang file na iyon bilang larawan o PDF. Kunan na lang ng larawan ang dokumento.';
+
+  @override
+  String get uploadRefusedTitle => 'Hindi maipapadala ang file na iyon';
 }

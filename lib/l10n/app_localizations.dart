@@ -391,6 +391,36 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening.'**
   String get signInUnexpected;
+
+  /// Shown when a chosen file is larger than the ceiling the API published. Both figures are real: the file, and the limit the server actually enforces.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is {actual} MB. Taytay LGU accepts up to {limit} MB. A photo taken in this app is usually small enough.'**
+  String uploadRefusedTooLarge(int actual, int limit);
+
+  /// Shown when a chosen file is a type the office does not accept.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU can only accept a photo (JPEG or PNG) or a PDF. Take a photo of the document if you have it on paper.'**
+  String get uploadRefusedType;
+
+  /// Shown when a chosen file has no contents.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is empty. Choose it again, or take a photo of the document instead.'**
+  String get uploadRefusedEmpty;
+
+  /// Shown when a file’s contents do not match the type it claims.
+  ///
+  /// In en, this message translates to:
+  /// **'That file could not be read as a photo or a PDF. Take a photo of the document instead.'**
+  String get uploadRefusedUnreadable;
+
+  /// Banner heading above any upload refusal.
+  ///
+  /// In en, this message translates to:
+  /// **'That file cannot be sent'**
+  String get uploadRefusedTitle;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

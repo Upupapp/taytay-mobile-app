@@ -4,10 +4,13 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
@@ -432,6 +435,10 @@ class _ChooseStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rejection = controller.rejection;
+    // The document that was refused, still held so the message can name its
+    // size, and the policy that refused it — the server's, not a constant.
+    final refusedSize = controller.refusedSizeBytes;
+    final policy = controller.checklist?.uploadPolicy ?? UploadPolicy.fallback;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -440,8 +447,15 @@ class _ChooseStage extends StatelessWidget {
         if (rejection != null) ...<Widget>[
           AppBanner(
             tone: BannerTone.error,
-            title: 'That file cannot be sent',
-            message: rejection.residentMessage,
+            title: AppStrings.of(context).uploadRefusedTitle,
+            message: refusedSize == null
+                ? rejection.residentMessage
+                : localisedDocumentRejection(
+                    context,
+                    rejection,
+                    actualBytes: refusedSize,
+                    policy: policy,
+                  ),
           ),
           const SizedBox(height: Spacing.lg),
         ],

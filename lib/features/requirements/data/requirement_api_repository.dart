@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/server_value.dart';
 import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/resident_requirement.dart';
@@ -50,15 +51,23 @@ class RequirementApiRepository implements RequirementRepository {
   /// once in data and once in the time they stand there waiting.
   static const int maxLongEdge = 2000;
 
-  /// The client-side ceiling, deliberately below any proxy limit.
-  ///
-  /// A body that exceeds nginx's `client_max_body_size` is refused *by nginx*,
-  /// before the application sees it — so the answer is not the JSON envelope and
-  /// carries no error code. Refusing here first means the resident is told the
-  /// file is too large, in words, instead of meeting a failure the app cannot
-  /// read. The number needs confirming against the deployed proxy: it is a guess
-  /// at a value only the backend team knows, and it is recorded as one.
-  static const int maxUploadBytes = 8 * 1024 * 1024;
+  // THE CEILING IS NOT DECLARED HERE ANY MORE (TAB 01).
+  //
+  // It used to be, at 8 MB, while `DocumentCapturePolicy` refused above 10 —
+  // so a 9 MB PDF passed the check made when the file was chosen and died at
+  // the one made when it was sent, after the resident had waited through the
+  // preparation. Both were guesses; the server had been publishing the real
+  // figure on this very response, in `accepts`, the whole time.
+  //
+  // The policy now arrives with the checklist and is threaded to both
+  // enforcement points. See `UploadPolicy`.
+  //
+  // The **proxy** limit is a separate and still-unknown number (F25, manual
+  // item 6): a body over nginx's `client_max_body_size` is refused before the
+  // application, so the answer carries no error code. That is handled where it
+  // surfaces — `ApiEnvelope` reads a non-JSON non-2xx as its status — rather
+  // than by guessing low here and refusing documents the office would have
+  // accepted.
 
   @override
   Future<Result<RequirementChecklist>> listRequirements(
@@ -70,6 +79,21 @@ class RequirementApiRepository implements RequirementRepository {
       authenticated: true,
       decode: (Object? data) => _decodeChecklist(requestId, data),
     );
+
+    // Recorded on the read rather than at the point of refusal: by the time a
+    // file is refused it is too late to learn that the ceiling was never the
+    // server's, and most reads never lead to an upload at all.
+    if (response.valueOrNull?.data.uploadPolicy.source ==
+        UploadPolicySource.fallback) {
+      unawaited(
+        _telemetry?.record(
+          const ClientLimitationHit(
+            limitation: TelemetryLimitation.unpublishedUploadPolicy,
+          ),
+        ),
+      );
+    }
+
     return response.map((envelope) => envelope.data);
   }
 
@@ -79,6 +103,7 @@ class RequirementApiRepository implements RequirementRepository {
     required String requirementCode,
     required CapturedDocument document,
     required String idempotencyKey,
+    required UploadPolicy policy,
     void Function(double)? onProgress,
     UploadCancellation? cancellation,
   }) async {
@@ -110,7 +135,7 @@ class RequirementApiRepository implements RequirementRepository {
       );
     }
 
-    if (bytes.lengthInBytes > maxUploadBytes) {
+    if (bytes.lengthInBytes > policy.maxBytes) {
       // Refused before it leaves the device. The alternative is pushing several
       // megabytes over mobile data to be told no by a proxy that cannot say why.
       return const Err<UploadedDocumentReference>(
@@ -249,6 +274,9 @@ class RequirementApiRepository implements RequirementRepository {
     return RequirementChecklist(
       requestId: requestId,
       items: List<ResidentRequirement>.unmodifiable(items),
+      // Absent, malformed or half-present all resolve to the labelled fallback.
+      // A policy assembled out of part of a response is one nobody published.
+      uploadPolicy: UploadPolicy.decode(map['accepts']),
     );
   }
 

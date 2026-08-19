@@ -7,6 +7,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -87,8 +88,22 @@ ResidentRequirement requirement({
   lastSubmittedAt: lastSubmittedAt,
 );
 
-RequirementChecklist checklist(List<ResidentRequirement> items) =>
-    RequirementChecklist(requestId: 'req-1', items: items);
+/// A served policy by default, so the tests exercise the path a resident takes
+/// rather than the fallback.
+const UploadPolicy servedPolicy = UploadPolicy(
+  maxBytes: 10 * 1024 * 1024,
+  mimeTypes: <String>{'image/jpeg', 'image/png', 'application/pdf'},
+  source: UploadPolicySource.served,
+);
+
+RequirementChecklist checklist(
+  List<ResidentRequirement> items, {
+  UploadPolicy uploadPolicy = servedPolicy,
+}) => RequirementChecklist(
+  requestId: 'req-1',
+  items: items,
+  uploadPolicy: uploadPolicy,
+);
 
 /// Hands back a fixed document, or nothing when the resident "cancels".
 class FakeDocumentPicker implements DocumentPicker {
@@ -98,10 +113,12 @@ class FakeDocumentPicker implements DocumentPicker {
   bool available;
 
   final List<DocumentSource> picked = <DocumentSource>[];
+  final List<UploadPolicy> policies = <UploadPolicy>[];
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source) async {
+  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async {
     picked.add(source);
+    policies.add(policy);
     return document;
   }
 
@@ -117,6 +134,7 @@ class RecordingRequirementRepository implements RequirementRepository {
 
   int listCalls = 0;
   int uploadCalls = 0;
+  final List<UploadPolicy> policies = <UploadPolicy>[];
   final List<String> idempotencyKeys = <String>[];
   final List<String> requirementCodes = <String>[];
 
@@ -151,10 +169,12 @@ class RecordingRequirementRepository implements RequirementRepository {
     required String requirementCode,
     required CapturedDocument document,
     required String idempotencyKey,
+    required UploadPolicy policy,
     void Function(double fraction)? onProgress,
     UploadCancellation? cancellation,
   }) async {
     uploadCalls++;
+    policies.add(policy);
     idempotencyKeys.add(idempotencyKey);
     requirementCodes.add(requirementCode);
 
@@ -305,7 +325,7 @@ void main() {
   group('what may be uploaded', () {
     test('an empty file is refused', () {
       expect(
-        DocumentCapturePolicy.inspect(captured(bytes: Uint8List(0))),
+        DocumentCapturePolicy.inspect(captured(bytes: Uint8List(0)), servedPolicy),
         DocumentRejection.empty,
       );
     });
@@ -315,18 +335,18 @@ void main() {
         0xFF,
         0xD8,
         0xFF,
-        ...List<int>.filled(DocumentCapturePolicy.maxBytes, 0),
+        ...List<int>.filled(servedPolicy.maxBytes, 0),
       ]);
 
       expect(
-        DocumentCapturePolicy.inspect(captured(bytes: huge)),
+        DocumentCapturePolicy.inspect(captured(bytes: huge), servedPolicy),
         DocumentRejection.tooLarge,
       );
     });
 
     test('a type the office does not accept is refused', () {
       expect(
-        DocumentCapturePolicy.inspect(captured(mimeType: 'application/zip')),
+        DocumentCapturePolicy.inspect(captured(mimeType: 'application/zip'), servedPolicy),
         DocumentRejection.unsupportedType,
       );
     });
@@ -344,26 +364,75 @@ void main() {
       ]);
 
       expect(
-        DocumentCapturePolicy.inspect(captured(bytes: spoofed)),
+        DocumentCapturePolicy.inspect(captured(bytes: spoofed), servedPolicy),
         DocumentRejection.contentsDoNotMatchType,
       );
     });
 
     test('JPEG, PNG and PDF are all accepted', () {
-      expect(DocumentCapturePolicy.inspect(captured()), isNull);
+      expect(DocumentCapturePolicy.inspect(captured(), servedPolicy), isNull);
       expect(
         DocumentCapturePolicy.inspect(
           captured(bytes: pngBytes(), mimeType: 'image/png'),
+          servedPolicy,
         ),
         isNull,
       );
       expect(
         DocumentCapturePolicy.inspect(
           captured(bytes: pdfBytes(), mimeType: 'application/pdf'),
+          servedPolicy,
         ),
         isNull,
       );
     });
+
+    test(
+      'the two checks agree — the 9 MB PDF that used to pass one and fail the other',
+      () {
+        // The TAB 01 defect, as a regression. DocumentCapturePolicy accepted up
+        // to 10 MB and RequirementApiRepository refused above 8, so a 9 MB PDF
+        // passed the check made when the file was chosen and died at the one
+        // made when it was sent — after the resident had waited through the
+        // preparation, and with no downscaling possible because a PDF is never
+        // re-encoded.
+        //
+        // Both now read the same policy, so whichever answer is right, it is the
+        // same answer at both points.
+        final nineMegabytes = Uint8List.fromList(<int>[
+          0x25,
+          0x50,
+          0x44,
+          0x46,
+          ...List<int>.filled(9 * 1024 * 1024, 0),
+        ]);
+
+        final document = captured(
+          bytes: nineMegabytes,
+          mimeType: 'application/pdf',
+        );
+
+        // Served 10 MB: accepted, and it stays accepted all the way to the wire.
+        expect(
+          DocumentCapturePolicy.inspect(document, servedPolicy),
+          isNull,
+          reason: 'the server accepts 10 MB, so 9 MB is fine',
+        );
+        expect(document.sizeBytes, lessThanOrEqualTo(servedPolicy.maxBytes));
+
+        // Fallback 8 MB: refused, and refused at the moment it is chosen rather
+        // than after the wait.
+        expect(
+          DocumentCapturePolicy.inspect(document, UploadPolicy.fallback),
+          DocumentRejection.tooLarge,
+        );
+        expect(
+          document.sizeBytes,
+          greaterThan(UploadPolicy.fallback.maxBytes),
+          reason: 'and the send-side check would agree, being the same number',
+        );
+      },
+    );
 
     test('a PDF is never re-encoded, an image may be', () {
       expect(DocumentCapturePolicy.mayCompress('application/pdf'), isFalse);

@@ -32,7 +32,7 @@ Figures from the run, not from any document.
 
 | ID | Sev | Finding | Closes in |
 | --- | --- | --- | --- |
-| **C-01** | P1 | Two upload ceilings disagree, and neither is the server's | TAB 01 |
+| **C-01** | P1 | Two upload ceilings disagree, and neither is the server's | **TAB 01 — CLOSED** |
 | **C-02** | P1 | A push registration cannot be withdrawn (F27) | TAB 02 |
 | **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | TAB 03 |
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | TAB 04 |
@@ -176,3 +176,31 @@ trusted and why.
   is recorded as the commit observed rather than as a stable baseline.
 * The 25-TAB integration sequence's own state is **preserved, not superseded**. Its verdict
   (NO-GO, platform scope) stands and is not restated as a client verdict — that is TAB 09's job.
+
+---
+
+## C-01 closed — TAB 01, 19 August 2026
+
+The client now refuses what the server refuses, using the server's own number.
+
+* `UploadPolicy` (`lib/core/documents/upload_policy.dart`) is **the only place in
+  `lib/` that states an upload ceiling or an accepted-type set.** It is decoded from the
+  `accepts` block the requirements response has been carrying all along.
+* Both enforcement points take it as a parameter — `DocumentCapturePolicy.inspect` when the
+  file is chosen, and the repository before the body is sent. The 8 MB constant is gone.
+* The system picker's extension list is **derived** from the served MIME types rather than
+  hand-listed, so it cannot offer a type the upload would refuse.
+* A response without a usable `accepts` falls back to **8 MB — the lower** of the two ceilings
+  replaced — labelled `UploadPolicySource.fallback` and recorded as
+  `client_limitation_hit / unpublished_upload_policy` telemetry, so a fallback can never later
+  be read as a measurement.
+* Refusal copy names both real figures in English and Filipino. The file rounds **up** and the
+  ceiling rounds **down**, so a refusal can never read "that file is 10 MB and the limit is
+  10 MB".
+
+**What this does not close.** F25 stays open: the deployed proxy's `client_max_body_size` is
+still unknown (manual item 6), and it is a different limit from the application's. The client no
+longer guesses low against it — a guess that was refusing documents the office would have
+accepted — and a body refused by the proxy still surfaces through `ApiEnvelope`'s non-JSON
+non-2xx path.
+

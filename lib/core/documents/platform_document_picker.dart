@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:image_picker/image_picker.dart';
 
 import 'document_capture.dart';
+import 'upload_policy.dart';
 
 /// The real picker: the system camera, the system photo picker, and the system
 /// document picker.
@@ -40,11 +41,11 @@ class PlatformDocumentPicker implements DocumentPicker {
   }
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source) async {
+  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async {
     return switch (source) {
       DocumentSource.camera => _pickImage(ImageSource.camera, source),
       DocumentSource.gallery => _pickImage(ImageSource.gallery, source),
-      DocumentSource.file => _pickFile(),
+      DocumentSource.file => _pickFile(policy),
     };
   }
 
@@ -75,13 +76,16 @@ class PlatformDocumentPicker implements DocumentPicker {
     );
   }
 
-  Future<CapturedDocument?> _pickFile() async {
+  Future<CapturedDocument?> _pickFile(UploadPolicy policy) async {
     final file = await openFile(
+      // No longer `const`: both lists now come from the server's own `accepts`
+      // block rather than from constants beside each other here, which is what
+      // stops the picker offering a type the upload would refuse.
       acceptedTypeGroups: <XTypeGroup>[
-        const XTypeGroup(
+        XTypeGroup(
           label: 'Documents',
-          extensions: DocumentCapturePolicy.acceptedExtensions,
-          mimeTypes: <String>['image/jpeg', 'image/png', 'application/pdf'],
+          extensions: policy.pickerExtensions,
+          mimeTypes: policy.mimeTypes.toList(growable: false),
         ),
       ],
     );

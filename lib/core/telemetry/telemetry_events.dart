@@ -351,6 +351,14 @@ enum TelemetryLimitation {
   unknownServerEnum('unknown_server_enum'),
   unsupportedDeepLink('unsupported_deep_link'),
   unsupportedDocumentType('unsupported_document_type'),
+
+  /// The requirements response carried no usable `accepts` block, so the
+  /// labelled fallback ceiling applied instead of the server's own.
+  ///
+  /// Recorded because a fallback that nobody can see is a fallback that gets
+  /// read later as a measurement — and the number it stands in for is the one
+  /// deciding whether a resident's document is refused.
+  unpublishedUploadPolicy('unpublished_upload_policy'),
   missingCapability('missing_capability');
 
   const TelemetryLimitation(this.wireValue);

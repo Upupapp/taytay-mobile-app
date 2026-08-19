@@ -1,14 +1,11 @@
 {
   "@@locale": "fil",
-
   "appTitle": "Taytay LGU IDS",
-
   "navHome": "Home",
   "navServices": "Mga Serbisyo",
   "navNews": "Balita",
   "navEvents": "Mga Kaganapan",
   "navProfile": "Profile",
-
   "actionTryAgain": "Subukan muli",
   "actionRefresh": "I-refresh",
   "actionCancel": "Kanselahin",
@@ -16,15 +13,11 @@
   "actionSignIn": "Mag-sign in",
   "actionSignOut": "Mag-sign out",
   "actionTrySendingAgain": "Subukang ipadala muli",
-
   "networkUnreachableTitle": "Hindi maabot ang Taytay LGU",
   "networkUnreachableMessage": "Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo, at wala pang naipadala.",
-
   "unsentTitle": "Hindi pa naipapadala",
   "unsentMessage": "Wala pa sa Taytay LGU ang {what}. Nandito pa sa telepono mo ang lahat ng na-type mo. Walang naisumite, kaya hindi magiging dalawa kapag ipinadala mong muli.",
-
   "staleContentMessage": "Ipinapakita ang naitago noong {timestamp}. Maaaring nagbago na ito.",
-
   "failureNetwork": "Hindi maabot ng app ang Taytay LGU. Pakisuri ang iyong koneksyon at subukan muli.",
   "failureTimeout": "Matagal bago sumagot ang Taytay LGU. Pakisubukan muli.",
   "failureUnauthenticated": "Na-sign out ka na. Mag-sign in muli para magpatuloy.",
@@ -38,7 +31,6 @@
   "failureServer": "May naganap na problema sa panig ng Taytay LGU. Hindi ito kasalanan mo.",
   "failureContract": "Hindi naintindihan ng bersyong ito ng app ang sagot ng Taytay LGU.",
   "failureUnexpected": "May nangyaring mali. Pakisubukan muli.",
-
   "a11yLoading": "Naglo-load",
   "a11yBusy": "Ginagawa na. Pakihintay.",
   "a11ySucceeded": "Tapos na. {what}",
@@ -56,5 +48,10 @@
   "signInOffline": "Mukhang wala kang koneksyon. Pakisuri ang iyong internet at subukang muli.",
   "signInTimedOut": "Masyadong natagalan iyon. Pakisubukang muli.",
   "signInServiceUnavailable": "Pansamantalang hindi available ang pag-sign in. Pakisubukang muli mamaya.",
-  "signInUnexpected": "May hindi inaasahang naganap. Pakisubukang muli, o pumunta sa munisipyo ng Taytay kung magpapatuloy ito."
+  "signInUnexpected": "May hindi inaasahang naganap. Pakisubukang muli, o pumunta sa munisipyo ng Taytay kung magpapatuloy ito.",
+  "uploadRefusedTooLarge": "Ang file na iyon ay {actual} MB. Hanggang {limit} MB lang ang tinatanggap ng Taytay LGU. Karaniwang sapat na ang laki ng larawang kinunan sa app na ito.",
+  "uploadRefusedType": "Larawan lamang (JPEG o PNG) o PDF ang tinatanggap ng Taytay LGU. Kunan ng larawan ang dokumento kung nasa papel ito.",
+  "uploadRefusedEmpty": "Walang laman ang file na iyon. Piliin itong muli, o kunan na lang ng larawan ang dokumento.",
+  "uploadRefusedUnreadable": "Hindi mabasa ang file na iyon bilang larawan o PDF. Kunan na lang ng larawan ang dokumento.",
+  "uploadRefusedTitle": "Hindi maipapadala ang file na iyon"
 }

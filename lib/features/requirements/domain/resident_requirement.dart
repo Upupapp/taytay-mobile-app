@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../services/domain/lgu_service.dart' show ServerValue;
 
@@ -132,10 +133,21 @@ class ResidentRequirement {
 /// Every document one request is waiting on.
 @immutable
 class RequirementChecklist {
-  const RequirementChecklist({required this.requestId, required this.items});
+  const RequirementChecklist({
+    required this.requestId,
+    required this.items,
+    required this.uploadPolicy,
+  });
 
   final String requestId;
   final List<ResidentRequirement> items;
+
+  /// What the office accepts, as the office published it on this response.
+  ///
+  /// Carried on the checklist rather than fetched separately because it arrives
+  /// on the same call and describes the same screen. A second request for it
+  /// would be a second chance to be out of date.
+  final UploadPolicy uploadPolicy;
 
   bool get isEmpty => items.isEmpty;
 
@@ -229,11 +241,14 @@ abstract interface class RequirementRepository {
   /// [idempotencyKey] is required for the same reason it is on a submission —
   /// a dropped connection after the server stored the file is indistinguishable
   /// from one before, and a duplicate document creates work for the office.
+  /// [policy] is the one the checklist arrived with, threaded through rather
+  /// than re-stated here — see [UploadPolicy].
   Future<Result<UploadedDocumentReference>> uploadRequirementDocument({
     required String requestId,
     required String requirementCode,
     required CapturedDocument document,
     required String idempotencyKey,
+    required UploadPolicy policy,
     void Function(double fraction)? onProgress,
     UploadCancellation? cancellation,
   });

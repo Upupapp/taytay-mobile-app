@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/api/request_context.dart';
 import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../services/domain/lgu_service.dart' show ServerValue;
 import '../domain/resident_requirement.dart';
@@ -69,6 +70,14 @@ class RequirementsController extends ChangeNotifier {
   UploadStage _stage = UploadStage.choosing;
   CapturedDocument? _document;
   DocumentRejection? _rejection;
+
+  /// How big the refused file was, in bytes.
+  ///
+  /// **A number, not the document.** The refusal needs to say "that file is
+  /// 12 MB", and that is the only thing about it worth keeping — holding the
+  /// bytes of a resident's identity document that the app has already refused
+  /// would be retaining personal data for no purpose (Article 5.1).
+  int? _refusedSizeBytes;
   AppFailure? _uploadFailure;
   double _progress = 0;
   UploadCancellation? _cancellation;
@@ -86,6 +95,9 @@ class RequirementsController extends ChangeNotifier {
 
   /// Why the chosen file was refused before anything was sent.
   DocumentRejection? get rejection => _rejection;
+
+  /// Size of the refused file, for the message. Null unless [rejection] is set.
+  int? get refusedSizeBytes => _refusedSizeBytes;
 
   AppFailure? get uploadFailure => _uploadFailure;
 
@@ -137,6 +149,7 @@ class RequirementsController extends ChangeNotifier {
     _stage = UploadStage.choosing;
     _clearDocument();
     _rejection = null;
+    _refusedSizeBytes = null;
     _uploadFailure = null;
     _progress = 0;
     _idempotencyKey = null;
@@ -151,6 +164,7 @@ class RequirementsController extends ChangeNotifier {
     _stage = UploadStage.choosing;
     _clearDocument();
     _rejection = null;
+    _refusedSizeBytes = null;
     _uploadFailure = null;
     _progress = 0;
     _idempotencyKey = null;
@@ -160,9 +174,16 @@ class RequirementsController extends ChangeNotifier {
   /// Asks the platform for a document and checks it before showing a preview.
   Future<void> choose(DocumentSource source) async {
     _rejection = null;
+    _refusedSizeBytes = null;
     _uploadFailure = null;
 
-    final picked = await _picker.pick(source);
+    // The policy the checklist arrived with. Until it has, the labelled
+    // fallback applies — a resident who opens the picker before the list has
+    // loaded is still told about a file that is plainly too big, and told with
+    // the conservative number rather than with nothing.
+    final policy = _checklist?.uploadPolicy ?? UploadPolicy.fallback;
+
+    final picked = await _picker.pick(source, policy);
     // Backing out of a picker is a choice, not a failure. The sheet stays where
     // it was, with nothing reported.
     if (picked == null) {
@@ -170,11 +191,12 @@ class RequirementsController extends ChangeNotifier {
       return;
     }
 
-    final refusal = DocumentCapturePolicy.inspect(picked);
+    final refusal = DocumentCapturePolicy.inspect(picked, policy);
     if (refusal != null) {
       // Refused locally, so the bytes are dropped immediately rather than kept
       // around for a send that will not happen.
       _rejection = refusal;
+      _refusedSizeBytes = picked.sizeBytes;
       _clearDocument();
       _stage = UploadStage.choosing;
       notifyListeners();
@@ -192,6 +214,7 @@ class RequirementsController extends ChangeNotifier {
   void discard() {
     _clearDocument();
     _rejection = null;
+    _refusedSizeBytes = null;
     _stage = UploadStage.choosing;
     notifyListeners();
   }
@@ -216,6 +239,7 @@ class RequirementsController extends ChangeNotifier {
       requirementCode: code,
       document: document,
       idempotencyKey: _idempotencyKey!,
+      policy: _checklist?.uploadPolicy ?? UploadPolicy.fallback,
       onProgress: _onProgress,
       cancellation: _cancellation,
     );
@@ -277,6 +301,9 @@ class RequirementsController extends ChangeNotifier {
     if (current == null) return;
 
     _checklist = RequirementChecklist(
+      // Carried forward unchanged: what the office accepts is a property of the
+      // response, not of this local status move.
+      uploadPolicy: current.uploadPolicy,
       requestId: current.requestId,
       items: <ResidentRequirement>[
         for (final item in current.items)

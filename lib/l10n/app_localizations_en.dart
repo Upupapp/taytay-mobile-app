@@ -182,4 +182,24 @@ class AppStringsEn extends AppStrings {
   @override
   String get signInUnexpected =>
       'Something went wrong. Please try again, or visit the Taytay municipal hall if it keeps happening.';
+
+  @override
+  String uploadRefusedTooLarge(int actual, int limit) {
+    return 'That file is $actual MB. Taytay LGU accepts up to $limit MB. A photo taken in this app is usually small enough.';
+  }
+
+  @override
+  String get uploadRefusedType =>
+      'Taytay LGU can only accept a photo (JPEG or PNG) or a PDF. Take a photo of the document if you have it on paper.';
+
+  @override
+  String get uploadRefusedEmpty =>
+      'That file is empty. Choose it again, or take a photo of the document instead.';
+
+  @override
+  String get uploadRefusedUnreadable =>
+      'That file could not be read as a photo or a PDF. Take a photo of the document instead.';
+
+  @override
+  String get uploadRefusedTitle => 'That file cannot be sent';
 }
