@@ -1,312 +1,88 @@
 {
-  "masterCommand": "Taytay_Resident_Mobile_Backend_Integration_Master_Command_2026-08-18.pdf",
-  "sequence": "resident-mobile-backend-integration",
+  "masterCommand": "docs/master-command/Taytay_Resident_Mobile_Frontend_Master_Command_2026-08-19.md — 10 commands (TAB 00–09) closing the work still owed by the Flutter client, and nothing owed by the LGU or the backend.",
+  "sequence": "resident-mobile-frontend",
   "note": "Separate from ../state.json, which records the completed 28-TAB build sequence. That state is preserved, not superseded.",
   "repository": "/Users/user/development/taytay-mobile-app",
   "backendRepository": "/Users/user/development/taytay-backend",
   "backendBaselineTag": "api-baseline-2026-08",
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
-  "totalTabs": 25,
-  "currentTabIndex": 24,
-  "currentTab": "COMPLETE \u2014 25 of 25 TABs",
+  "totalTabs": 10,
+  "currentTabIndex": 1,
+  "currentTab": "TAB 01 — One upload ceiling, and it is the server’s",
   "completedTabs": [
-    {
-      "tab": "TAB 00 \u2014 Re-baseline the contract premise",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
-      "commit": "91f8e08",
-      "closes": [
-        "F01",
-        "F12 (documented)",
-        "F05 (closed upstream)",
-        "F07"
-      ],
-      "raises": [
-        "F13",
-        "F14",
-        "F15",
-        "F16",
-        "F17"
-      ],
-      "analyze": "clean",
-      "tests": "1210 passing",
-      "builds": [
-        "debug APK",
-        "iOS debug (no-codesign)"
-      ]
-    },
-    {
-      "tab": "TAB 01 \u2014 Contract conformance harness",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION (fixtures unproven: no staging API)",
-      "commit": "4971edd",
-      "closes": [
-        "F04",
-        "F05 (upstream)",
-        "F06"
-      ],
-      "raises": [
-        "F18 (decided, closed)"
-      ],
-      "analyze": "clean",
-      "tests": "1268 passing",
-      "builds": [
-        "debug APK",
-        "iOS debug (no-codesign)"
-      ]
-    },
-    {
-      "tab": "TAB 07 \u2014 Services and programmes",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
-      "commit": "4c0a880",
-      "closes": [
-        "F08",
-        "F19"
-      ],
-      "raises": [
-        "F19"
-      ],
-      "analyze": "clean",
-      "tests": "1276 passing",
-      "stubsRemaining": 13,
-      "deferred": "programme \u2192 intake link, to TAB 08"
-    },
-    {
-      "tab": "TAB 02 \u2014 Identity: sign-in, OTP and MFA",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; end-to-end unreachable (F16)",
-      "commit": "bb5e9cb",
-      "closes": [
-        "F02 (client half)"
-      ],
-      "raises": [
-        "F20",
-        "F21"
-      ],
-      "analyze": "clean",
-      "tests": "1292 passing",
-      "stubsRemaining": 12,
-      "notApplicable": "password sign-in and MFA challenge \u2014 staff surfaces (F20)"
-    },
-    {
-      "tab": "TAB 03 \u2014 Session, tokens and the device registry",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; me/devices \u2192 TAB 13, me/mfa \u2192 TAB 17",
-      "commit": "96e40e2",
-      "raises": [
-        "F22"
-      ],
-      "analyze": "clean",
-      "tests": "1299 passing",
-      "stubsRemaining": 11
-    },
-    {
-      "tab": "TAB 04 \u2014 Resident profile, KYC and corrections",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; Verified path blocked by F14",
-      "commit": "58577ce",
-      "raises": [
-        "F23",
-        "F14 raised to P1"
-      ],
-      "analyze": "clean",
-      "tests": "1297 passing",
-      "stubsRemaining": 9
-    },
-    {
-      "tab": "TAB 05 \u2014 Household and family",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; corrections decline (F23)",
-      "commit": "pending",
-      "analyze": "clean",
-      "tests": "1296 passing",
-      "stubsRemaining": 8
-    },
-    {
-      "tab": "TAB 06 \u2014 Credential: the digital ID",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; flag off server-side, brightness \u2192 TAB 17",
-      "analyze": "clean",
-      "tests": "1296 passing",
-      "stubsRemaining": 7
-    },
-    {
-      "tab": "TAB 08 \u2014 Assistance intake and drafts",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; intake questions blocked by F24, wizard step-save deferred",
-      "raises": [
-        "F24"
-      ],
-      "analyze": "clean",
-      "tests": "1288 passing",
-      "stubsRemaining": 6
-    },
-    {
-      "tab": "TAB 09 \u2014 Cases, assistance history and referrals",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; me/referrals deferred (disclosure records need their own pass)",
-      "analyze": "clean",
-      "tests": "1288 passing",
-      "stubsRemaining": 6,
-      "entityQuestion": "settled from source: me/cases = WelfareCase = /admin/assistance-requests, one lifecycle two audiences"
-    },
-    {
-      "tab": "TAB 10 \u2014 Documents and uploads",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; access grants and version history deferred",
-      "raises": [
-        "F25"
-      ],
-      "analyze": "clean",
-      "tests": "1286 passing",
-      "stubsRemaining": 5
-    },
-    {
-      "tab": "TAB 11 \u2014 Newsfeed and engagement",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; reporting blocked by F26 (store blocker)",
-      "raises": [
-        "F26"
-      ],
-      "analyze": "clean",
-      "tests": "1283 passing",
-      "stubsRemaining": 4
-    },
-    {
-      "tab": "TAB 12 \u2014 Events and registration",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
-      "analyze": "clean",
-      "tests": "1279 passing",
-      "stubsRemaining": 3
-    },
-    {
-      "tab": "TAB 13 \u2014 Notifications and push",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; push receipt needs an SDK decision (TAB 18)",
-      "raises": [
-        "F27"
-      ],
-      "analyze": "clean",
-      "tests": "1276 passing",
-      "stubsRemaining": 2
-    },
-    {
-      "tab": "Coverage pass \u2014 wire tests for TABs 05, 08\u201313",
-      "verdict": "CERTIFIED",
-      "analyze": "clean",
-      "tests": "1294 passing",
-      "note": "18 tests; 2 proven red before being trusted"
-    },
-    {
-      "tab": "TAB 14 \u2014 Error taxonomy and the resident voice",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION",
-      "closes": [
-        "F04 (fully)"
-      ],
-      "analyze": "clean",
-      "tests": "1307 passing"
-    },
-    {
-      "tab": "TAB 15 \u2014 Offline, caching and degraded mode",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; airplane-mode device journeys \u2192 TAB 23",
-      "analyze": "clean",
-      "tests": "1316 passing",
-      "decision": "no offline write queue \u2014 writes are time-dependent; \"not sent\" never \"saved\""
-    },
-    {
-      "tab": "TAB 16 \u2014 Observability and correlation",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; thresholds unvalidated until staged rollout",
-      "analyze": "clean",
-      "tests": "1321 passing",
-      "finding": "five funnels were declared with zero call sites; all now instrumented"
-    },
-    {
-      "tab": "TAB 17 \u2014 Security hardening",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; F10 declined with rationale, F03 still open (TAB 21)",
-      "raises": [
-        "F28 \u2014 release artifact declares 4 permissions, not 2"
-      ],
-      "analyze": "clean",
-      "tests": "1321 passing"
-    },
-    {
-      "tab": "TAB 18 \u2014 Privacy and the Data Privacy Act",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; DPO and retention schedule remain LGU blockers",
-      "raises": [
-        "F29 \u2014 no data portability/export route"
-      ],
-      "analyze": "clean",
-      "tests": "1320 passing",
-      "stubsRemaining": 1,
-      "recommendation": "do not adopt a push SDK before launch"
-    },
-    {
-      "tab": "TAB 19 \u2014 Accessibility and localisation",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; TalkBack/VoiceOver and a Filipino copy review need a person (TAB 23)",
-      "analyze": "clean",
-      "tests": "1325 passing"
-    },
-    {
-      "tab": "TAB 20 \u2014 Performance and startup",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; latency budgets are targets, need a low-end device (TAB 23)",
-      "analyze": "clean",
-      "tests": "1330 passing",
-      "measured": "universal APK 57MB, arm64 split 20.9MB, assets 155KB \u2014 ship the AAB"
-    },
-    {
-      "tab": "TAB 21 \u2014 Release engineering and signing",
-      "verdict": "CERTIFIED \u2014 LOCAL COMPLETION; keystore custody and iOS account are LGU actions",
-      "closes": [
-        "F03 (client half)",
-        "F11"
-      ],
-      "analyze": "clean",
-      "tests": "1338 passing"
-    },
-    {
-      "tab": "TAB 22 \u2014 Store readiness",
-      "verdict": "BLOCKED \u2014 submission impossible: F13, F26, no developer account, no privacy policy, no usable test account (F15/F16)",
-      "delivered": "PrivacyInfo.xcprivacy verified in the bundle; declarations, permissions, listing draft, rollout plan",
-      "analyze": "clean",
-      "tests": "1338 passing"
-    },
-    {
-      "tab": "TAB 23 \u2014 QA, E2E and device matrix",
-      "verdict": "PARTIAL \u2014 failure paths and evidence statement delivered; E2E journeys, device matrix, UAT and security review all blocked (no staging, no device)",
-      "found": "proxy 413 produced \"something went wrong\" \u2014 non-JSON body ignored the status",
-      "analyze": "clean",
-      "tests": "1346 passing"
-    },
-    {
-      "tab": "TAB 24 \u2014 Launch readiness and go/no-go",
-      "verdict": "NO-GO, recorded with evidence and one dissent",
-      "remeasured": "1346 tests, analyzer clean, baseline guard OK, 1 stub, release build fails unsigned, credential flag false, F14/F15 routes absent",
-      "blockingP0": [
-        "F14",
-        "F15",
-        "F16",
-        "F26"
-      ],
-      "plus": "F03 keystore custody, DPO, retention schedule"
-    }
+    "TAB 00 — Re-baseline and reconcile (complete; C-09 and C-10 raised, both unassigned)"
   ],
   "openFindings": {
-    "P0": [
-      "F03 (LGU: keystore custody)",
-      "F14",
-      "F15",
-      "F16",
-      "F26"
-    ],
-    "P1": [
-      "F13",
-      "F22",
-      "F23",
-      "F24",
-      "F25",
-      "F27",
-      "F29"
-    ],
-    "P2": [
-      "F09",
-      "F10 (declined)",
-      "F28"
+    "clientOwed": {
+      "ledger": "docs/frontend/open-work.md",
+      "P1": [
+        "C-01 two upload ceilings",
+        "C-02 push registration cannot be withdrawn (F27)",
+        "C-03 registration wizard with no server counterpart (F15 client half)",
+        "C-04 KYC corrections keyed differently (F23)",
+        "C-06 token concurrency unproven (F22)",
+        "C-07 no screen-reader session ever run",
+        "C-08 no physical device run, no iOS run",
+        "C-09 the app calls two routes absent at its own pinned baseline — UNASSIGNED"
+      ],
+      "P2": [
+        "C-05 client overrides the server’s page size"
+      ],
+      "P3": [
+        "C-10 baseline guard network path cannot work in a no-push programme — UNASSIGNED"
+      ]
+    },
+    "notClientOwed": {
+      "note": "Restated, not adopted. Detail in docs/integration/manual-tasks.md.",
+      "P0": [
+        "F03 keystore custody (LGU)",
+        "F15 no self-registration route (LGU product, then backend)",
+        "F16 no SMS provider — engineering half closed, procurement open (LGU)"
+      ],
+      "P1": [
+        "F13 no account-closure route (needs retention schedule first)",
+        "F24 no per-service intake form (the office)",
+        "F25 proxy body limit unknown (deployment)",
+        "F29 no data-portability export (backend)",
+        "KYC case has nowhere to put a document (backend)"
+      ]
+    },
+    "closedSinceTheDossier": [
+      "F14 — GET barangays published; verified by opening the route",
+      "F26 — POST newsfeed-comments/{comment}/reports published; verified by opening the route"
     ]
   },
-  "boundary": "Local commits only. No push, no remote administration, no deployment, no production.",
+  "boundary": "Local commits only. No push, no remote administration, no deployment, no production. A local HEAD and local branches are allowed.",
   "supervisorCadence": "hourly at :52",
   "turnCeiling": 200,
   "blockedTabs": {
     "TAB 02": "end-to-end sign-in blocked by F16 (codes never dispatched); client wiring complete"
   },
-  "status": "COMPLETE \u2014 go/no-go recorded: NO-GO"
+  "status": "IN_PROGRESS",
+  "priorSequence": {
+    "name": "resident-mobile-backend-integration",
+    "status": "COMPLETE — go/no-go recorded: NO-GO",
+    "currentTab": "COMPLETE — 25 of 25 TABs",
+    "totalTabs": 25,
+    "verdict": "NO-GO — platform scope, recorded 2026-08-18 at 33dc73b",
+    "note": "Complete, 25 of 25 TABs. Preserved, not superseded. Its findings list was accurate when written and is corrected below."
+  },
+  "currentObjective": "TAB 01: the client refuses exactly what the server would refuse, using the number the server publishes.",
+  "lastCheckpointAt": "2026-08-19T18:55:00+08:00",
+  "measuredAtTab00": {
+    "analyze": "clean",
+    "tests": 1386,
+    "skipped": 1,
+    "wiredRepositories": 16,
+    "stubbedRepositories": 1,
+    "baselineGuard": "OK — 17 modules agree at api-baseline-2026-08 (eec71e6), run with TAYTAY_BACKEND set",
+    "appHead": "bc9cdb5",
+    "aheadOfOrigin": 61,
+    "workingTree": "clean at start",
+    "backendObservedAt": "4236b51 — a MOVING reference; another session was modifying that repository throughout this TAB"
+  },
+  "activeBlockers": [
+    "C-09 re-baseline is blocked: taytay-backend is under another session’s active control and its HEAD moved during TAB 00"
+  ]
 }
