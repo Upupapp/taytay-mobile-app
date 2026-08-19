@@ -78,9 +78,19 @@ void main() {
         final String source = sourceOf(path);
         expect(source, contains("'page'"), reason: path);
         expect(source, contains("'per_page'"), reason: path);
-        // Clamped, because an over-large page is a slow response for a resident
-        // on a weak connection even when the server tolerates it.
-        expect(source, contains('clamp('), reason: path);
+        // Bounded, because an over-large page is a slow response for a resident
+        // on a weak connection even when the server tolerates it — and since
+        // TAB 05 the bound and the default both come from `PagePolicy` rather
+        // than from a literal written out at each call site. Asserting the
+        // policy is used is a stronger statement than asserting `clamp(`
+        // appears: it also catches a repository that clamps to a number of its
+        // own.
+        expect(source, contains('pages.clampRequest('), reason: path);
+        expect(
+          source,
+          isNot(contains('clamp(1, 100)')),
+          reason: '$path still carries its own ceiling',
+        );
       }
     });
   });

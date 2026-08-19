@@ -359,6 +359,10 @@ enum TelemetryLimitation {
   /// read later as a measurement — and the number it stands in for is the one
   /// deciding whether a resident's document is refused.
   unpublishedUploadPolicy('unpublished_upload_policy'),
+
+  /// `app/bootstrap` answered without a usable `default_page_size`, so the
+  /// labelled fallback applied instead of the size chosen for this channel.
+  unpublishedPageSize('unpublished_page_size'),
   missingCapability('missing_capability');
 
   const TelemetryLimitation(this.wireValue);

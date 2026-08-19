@@ -211,7 +211,13 @@ class AppDependencies {
 
     final platformRepository = PlatformApiRepository(apiClient: apiClient);
     final barangayDirectory = BarangayApiRepository(apiClient: apiClient);
-    platform = PlatformController(repository: platformRepository);
+    platform = PlatformController(
+      repository: platformRepository,
+      telemetry: telemetry,
+      // TAB 05: the page size the server chose for this channel reaches every
+      // paged repository through the one client they all already hold.
+      onPagePolicy: (policy) => apiClient.pages = policy,
+    );
 
     // ── F27: the session boundary can now withdraw what this install registered
     //

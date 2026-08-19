@@ -16,8 +16,10 @@ class PageMeta {
     required this.hasMore,
   });
 
-  static const int defaultPerPage = 25;
-  static const int maxPerPage = 100;
+  // The page size and its ceiling moved to `PagePolicy` in TAB 05. They were
+  // three copies of a default and five copies of a clamp, and `PageMeta`
+  // describes what a page CAME BACK as — it was never the right home for what
+  // to ask for.
 
   final int page;
   final int perPage;

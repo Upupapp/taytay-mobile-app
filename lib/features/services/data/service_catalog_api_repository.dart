@@ -1,6 +1,7 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/page_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/storage/public_cache.dart';
 import '../domain/lgu_service.dart';
@@ -23,15 +24,13 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
   /// relying on the default, so the page size is visible at the call site — and
   /// clamped here too, because an over-large page is a slow response for a
   /// resident on a weak connection even when the server tolerates it.
-  static const int defaultPerPage = 25;
-  static const int maxPerPage = 100;
 
   @override
   Future<Result<Paginated<LguService>>> listServices({
     ServiceChannel? channel,
     ServiceCategory? category,
     int page = 1,
-    int perPage = defaultPerPage,
+    int? perPage,
   }) async {
     final response = await _apiClient.send<List<LguService>>(
       method: HttpMethod.get,
@@ -43,7 +42,9 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
         channel: channel,
         category: category,
         page: page,
-        perPage: perPage,
+        perPage: _apiClient.pages.clampRequest(
+          perPage ?? _apiClient.pages.defaultPerPage,
+        ),
       ),
       decode: LguServiceDto.listFromJson,
     );
@@ -56,7 +57,7 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
     ServiceChannel? channel,
     ServiceCategory? category,
     int page = 1,
-    int perPage = defaultPerPage,
+    int? perPage,
   }) {
     // The same query the request would have used, so the key matches the entry
     // that request stored. Building it in one place is what makes that true.
@@ -66,7 +67,9 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
         channel: channel,
         category: category,
         page: page,
-        perPage: perPage,
+        perPage: _apiClient.pages.clampRequest(
+          perPage ?? _apiClient.pages.defaultPerPage,
+        ),
       ),
     );
     if (cached == null) return null;
@@ -88,7 +91,7 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
     required int page,
     required int perPage,
   }) {
-    final clampedPerPage = perPage.clamp(1, maxPerPage);
+    final clampedPerPage = perPage.clamp(1, PagePolicy.maxPerPage);
     final clampedPage = page < 1 ? 1 : page;
     return <String, String>{
       'page': '$clampedPage',

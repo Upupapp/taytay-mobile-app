@@ -1,4 +1,5 @@
 import '../../../core/api/api_client.dart';
+
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
@@ -37,7 +38,7 @@ class NotificationApiRepository
   @override
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
-    int perPage = 20,
+    int? perPage,
   }) async {
     final response = await _apiClient.send<List<ResidentNotification>>(
       method: HttpMethod.get,
@@ -45,7 +46,12 @@ class NotificationApiRepository
       authenticated: true,
       query: <String, String>{
         'page': '${page < 1 ? 1 : page}',
-        'per_page': '${perPage.clamp(1, 100)}',
+        // Resolved from what the server chose for this channel (TAB 05). A null
+        // request means "whatever the office publishes", which is what every
+        // caller here actually meant — the four different hardcoded defaults
+        // this replaced were 20 and 25, and the server had said 15 all along.
+        'per_page':
+            '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
       },
       decode: (Object? data) => data is List<dynamic>
           ? data

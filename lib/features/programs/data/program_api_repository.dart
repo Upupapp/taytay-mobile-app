@@ -1,6 +1,7 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/page_policy.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../domain/assistance_program.dart';
@@ -26,13 +27,11 @@ class ProgramApiRepository implements ProgramRepository {
   /// Conventions §5. Clamped here as well as server-side, because an over-large
   /// page is a slow response for a resident on a weak connection even when the
   /// server tolerates it.
-  static const int defaultPerPage = 25;
-  static const int maxPerPage = 100;
 
   @override
   Future<Result<Paginated<AssistanceProgram>>> listActivePrograms({
     int page = 1,
-    int perPage = defaultPerPage,
+    int? perPage,
   }) async {
     final response = await _apiClient.send<List<AssistanceProgram>>(
       method: HttpMethod.get,
@@ -46,7 +45,13 @@ class ProgramApiRepository implements ProgramRepository {
       // the shared, cacheable answer — which matters most to exactly the people
       // on metered prepaid data.
       authenticated: false,
-      query: _query(page: page, perPage: perPage),
+      // Resolved once, here, from what the server chose for this channel.
+      query: _query(
+        page: page,
+        perPage: _apiClient.pages.clampRequest(
+          perPage ?? _apiClient.pages.defaultPerPage,
+        ),
+      ),
       decode: ProgramDto.decodeAll,
     );
 
@@ -86,7 +91,7 @@ class ProgramApiRepository implements ProgramRepository {
     required int perPage,
   }) => <String, String>{
     'page': '${page < 1 ? 1 : page}',
-    'per_page': '${perPage.clamp(1, maxPerPage)}',
+    'per_page': '${PagePolicy.maxPerPage < perPage ? PagePolicy.maxPerPage : perPage}',
   };
 
   static Paginated<AssistanceProgram> _toPage(

@@ -5,6 +5,7 @@ import '../storage/public_cache.dart';
 import 'api_envelope.dart';
 import 'api_transport.dart';
 import 'auth_coordinator.dart';
+import 'page_policy.dart';
 import 'request_context.dart';
 
 /// Supplies the current access token to the API layer.
@@ -51,6 +52,16 @@ class ApiClient {
 
   final AppConfig _config;
   final ApiTransport _transport;
+
+  /// The page size this channel was told to use, once the bootstrap says so.
+  ///
+  /// Held here because every paged call already has the client, and because it
+  /// is channel-level contract state of the same kind as the base URL and the
+  /// headers — not because the transport decides it. `PlatformController` sets
+  /// it when `app/bootstrap` answers; until then it is the labelled fallback.
+  ///
+  /// See [PagePolicy] for why this is read rather than copied.
+  PagePolicy pages = PagePolicy.fallback;
   final AccessTokenProvider? _accessTokenProvider;
   final UnauthenticatedHandler? _onUnauthenticated;
 

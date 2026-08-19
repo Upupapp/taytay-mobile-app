@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import '../../../core/api/api_client.dart';
+
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
@@ -50,7 +51,7 @@ class AssistanceApiRepository implements ServiceRequestRepository {
   @override
   Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
     int page = 1,
-    int perPage = 25,
+    int? perPage,
   }) async {
     final response = await _apiClient.send<List<ServiceRequest>>(
       method: HttpMethod.get,
@@ -58,7 +59,12 @@ class AssistanceApiRepository implements ServiceRequestRepository {
       authenticated: true,
       query: <String, String>{
         'page': '${page < 1 ? 1 : page}',
-        'per_page': '${perPage.clamp(1, 100)}',
+        // Resolved from what the server chose for this channel (TAB 05). A null
+        // request means "whatever the office publishes", which is what every
+        // caller here actually meant — the four different hardcoded defaults
+        // this replaced were 20 and 25, and the server had said 15 all along.
+        'per_page':
+            '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
       },
       decode: _decodeDrafts,
     );
@@ -233,7 +239,7 @@ class AssistanceApiRepository implements ServiceRequestRepository {
   Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
     required HistoryScope scope,
     int page = 1,
-    int perPage = 25,
+    int? perPage,
   }) async {
     if (!scope.isPast) {
       final Result<Paginated<ServiceRequest>> open = await listOwnRequests(

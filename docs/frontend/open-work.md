@@ -36,7 +36,7 @@ Figures from the run, not from any document.
 | **C-02** | P1 | A push registration cannot be withdrawn (F27) | **TAB 02 — CLOSED, as a seam** |
 | **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | **TAB 03 — CLOSED, client half** |
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | **TAB 04 — CLOSED** |
-| **C-05** | P2 | The client overrides the page size the server published for this channel | TAB 05 |
+| **C-05** | P2 | The client overrides the page size the server published for this channel | **TAB 05 — CLOSED** |
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | TAB 06 |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | TAB 07 |
 | **C-08** | P1 | No physical device run; no iOS run of any kind | TAB 08 |
@@ -308,4 +308,45 @@ report. `test/features/correctable_field_test.dart` holds coverage inside the ap
 
 The vendored contract could not be used for this: it publishes the path and no request schema
 (backend finding L-11), so the guard reads the backend clone like the route check does.
+
+---
+
+## C-05 closed — TAB 05, 19 August 2026
+
+The finding said the client sent 25 where the server published 15. **It was worse than that.**
+
+| | before | after |
+| --- | --- | --- |
+| declared defaults in `lib/` | **3** — `PageMeta`, `ProgramApiRepository`, `ServiceCatalogApiRepository` | 1, in `PagePolicy` |
+| distinct values actually sent | **20 and 25**, depending on the screen | whatever the server publishes |
+| inline ceilings (`clamp(1, 100)`) | **5** | 0 |
+
+Nothing was broken, which is exactly why it was worth closing: three copies of a default agree
+until one of them is edited, and no reader could have told which screen sent which number.
+
+* `PagePolicy` holds the size and the contract's ceiling, and is **read** from
+  `app/bootstrap`'s `client.default_page_size` — the per-channel value the server chose.
+* It lives on `ApiClient` because every paged call already holds one, and because it is
+  channel-level contract state of the same kind as the base URL — not because the transport
+  decides it. `PlatformController` publishes it through a callback, so it still knows nothing
+  about transport.
+* **Clamped, not trusted.** An absurd value is brought into range rather than rejected, and
+  `wasClamped` says it happened so the result is never read as the server's choice.
+* **The fallback stays 25, not 15.** An app that quietly halved its page size on every screen the
+  moment a fallback engaged would look like a performance regression with no cause anybody could
+  find. Labelled `PagePolicySource.fallback` and recorded as
+  `client_limitation_hit / unpublished_page_size`.
+* **One deliberate exception, and it is argued in place**: the barangay directory asks for
+  `PagePolicy.maxPerPage`, because a partial list of barangays is not a shorter list — it is an
+  address a resident cannot select. It still goes through the policy so it cannot exceed what the
+  server will serve.
+
+An existing guard asserted each paged repository contained `clamp(`. It now asserts
+`pages.clampRequest(` **and** the absence of `clamp(1, 100)` — a stronger statement, because the
+old one would have passed a repository that clamped to a ceiling of its own.
+
+**One red-proof in this TAB proved nothing and was redone.** It pointed at
+`test/core/startup_test.dart`, which does not exist; the run "failed" on a missing file and looked
+like a guard firing. Recorded because it is the exact failure this programme keeps finding — a
+check that appears to work and is measuring nothing.
 

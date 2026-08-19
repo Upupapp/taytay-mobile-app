@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../../features/platform/domain/app_bootstrap.dart';
 import '../../features/platform/domain/onboarding_mode.dart';
 import '../../features/platform/domain/platform_repository.dart';
+import '../api/page_policy.dart';
 import '../config/app_version.dart';
 import '../result/result.dart';
+import '../telemetry/telemetry.dart';
 
 /// What the server said at startup, and what the app must do about it.
 ///
@@ -43,11 +47,23 @@ class PlatformController extends ChangeNotifier {
   PlatformController({
     required PlatformRepository repository,
     String version = appVersion,
+    void Function(PagePolicy policy)? onPagePolicy,
+    Telemetry? telemetry,
   }) : _repository = repository,
-       _version = version;
+       _version = version,
+       _onPagePolicy = onPagePolicy,
+       _telemetry = telemetry;
 
   final PlatformRepository _repository;
   final String _version;
+
+  /// Publishes the page size the server chose for this channel (TAB 05).
+  ///
+  /// A callback rather than a reference to the API client, so this controller
+  /// keeps knowing nothing about transport and a test can watch what it decides.
+  final void Function(PagePolicy policy)? _onPagePolicy;
+
+  final Telemetry? _telemetry;
 
   AppBootstrap _bootstrap = AppBootstrap.unknown;
   bool _hasAnswered = false;
@@ -89,6 +105,27 @@ class PlatformController extends ChangeNotifier {
   OnboardingMode get onboardingMode =>
       OnboardingMode.fromFlag(_bootstrap.features.selfRegistration);
 
+  /// Takes the page size the server published for this channel, and says so
+  /// when it could not.
+  ///
+  /// Recorded on the read rather than at a call site: by the time a list is
+  /// short there is nothing left to learn about why, and most reads never lead
+  /// to a paged call at all.
+  void _adoptPageSize(int served) {
+    final PagePolicy policy = PagePolicy.adopt(served);
+    _onPagePolicy?.call(policy);
+
+    if (policy.source == PagePolicySource.fallback) {
+      unawaited(
+        _telemetry?.record(
+          const ClientLimitationHit(
+            limitation: TelemetryLimitation.unpublishedPageSize,
+          ),
+        ),
+      );
+    }
+  }
+
   /// Reads the startup contract. Never throws, never blocks a first frame.
   Future<void> refresh() async {
     final Result<AppBootstrap> result = await _repository.loadBootstrap();
@@ -97,6 +134,7 @@ class PlatformController extends ChangeNotifier {
       case Ok<AppBootstrap>(:final AppBootstrap value):
         _bootstrap = value;
         _hasAnswered = true;
+        _adoptPageSize(value.defaultPageSize);
         // Reaching bootstrap at all is proof the service is up. A maintenance
         // window that has ended clears itself on the next successful startup
         // rather than persisting until the app is killed.
