@@ -257,4 +257,30 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get fieldEmail => 'Email address';
+
+  @override
+  String get sessionEndedTitle => 'Your session ended';
+
+  @override
+  String get sessionEndedBody =>
+      'For your security, Taytay LGU IDS signed you out on this device. This happens after a period of time, or when the LGU ends a session.';
+
+  @override
+  String get sessionEndedUnsent =>
+      'Anything you already sent is with the office. Anything you had typed and not yet sent is not kept on this phone — you will need to enter it again.';
+
+  @override
+  String get sessionEndedSignInAgain => 'Sign in again';
+
+  @override
+  String get signInNoticeExpired =>
+      'Your session ended for your security. Please sign in again.';
+
+  @override
+  String get signInNoticeSignedOut =>
+      'You are signed out on this device. You can still browse Taytay services as a guest.';
+
+  @override
+  String get signInNoticeReturnTo =>
+      'Sign in to continue to the page you opened. We will take you straight there.';
 }

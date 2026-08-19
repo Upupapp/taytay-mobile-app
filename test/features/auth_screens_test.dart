@@ -345,9 +345,20 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Your session ended'), findsOneWidget);
+
+      // TAB 06. This used to assert "Nothing you submitted has been lost." That
+      // sentence was narrowly true and read as something else: this app queues
+      // nothing (DL-118), so anything typed and not yet sent when a session dies
+      // is gone. The sheet now says which is which, and the old promise is
+      // asserted ABSENT so it cannot come back as a kindness.
       expect(
         find.textContaining('Nothing you submitted has been lost'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('not kept on this phone'),
         findsOneWidget,
+        reason: 'the resident is told what was actually lost',
       );
       expect(find.text('Sign in again'), findsOneWidget);
       expect(find.text('Continue as guest'), findsWidgets);

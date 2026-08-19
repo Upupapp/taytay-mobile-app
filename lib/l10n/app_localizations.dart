@@ -523,6 +523,48 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Email address'**
   String get fieldEmail;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'Your session ended'**
+  String get sessionEndedTitle;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, Taytay LGU IDS signed you out on this device. This happens after a period of time, or when the LGU ends a session.'**
+  String get sessionEndedBody;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'Anything you already sent is with the office. Anything you had typed and not yet sent is not kept on this phone — you will need to enter it again.'**
+  String get sessionEndedUnsent;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again'**
+  String get sessionEndedSignInAgain;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'Your session ended for your security. Please sign in again.'**
+  String get signInNoticeExpired;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'You are signed out on this device. You can still browse Taytay services as a guest.'**
+  String get signInNoticeSignedOut;
+
+  /// Session-ending copy (TAB 06 / F22).
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue to the page you opened. We will take you straight there.'**
+  String get signInNoticeReturnTo;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

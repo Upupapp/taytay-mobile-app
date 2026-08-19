@@ -151,26 +151,25 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
+              // Three distinct notices, and the distinction is the point of
+              // TAB 06 step 2. An expiry is not a sign-out and neither is a
+              // network failure; a resident dropped on this screen with one
+              // generic sentence cannot tell whether something went wrong,
+              // whether they did it, or whether to try again.
               if (endedReason == SessionEndedReason.expired)
-                const _Notice(
+                _Notice(
                   icon: Icons.lock_clock_outlined,
-                  text:
-                      'Your session ended for your security. Please sign in '
-                      'again.',
+                  text: AppStrings.of(context).signInNoticeExpired,
                 )
               else if (endedReason == SessionEndedReason.signedOut)
-                const _Notice(
+                _Notice(
                   icon: Icons.check_circle_outline,
-                  text:
-                      'You are signed out on this device. You can still browse '
-                      'Taytay services as a guest.',
+                  text: AppStrings.of(context).signInNoticeSignedOut,
                 )
               else if (widget.returnTo != null)
-                const _Notice(
+                _Notice(
                   icon: Icons.login_outlined,
-                  text:
-                      'Sign in to continue to the page you opened. We will '
-                      'take you straight there.',
+                  text: AppStrings.of(context).signInNoticeReturnTo,
                 ),
               switch (controller.step) {
                 SignInStep.identifier => _IdentifierStep(

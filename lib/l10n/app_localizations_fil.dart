@@ -258,4 +258,30 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get fieldEmail => 'Email address';
+
+  @override
+  String get sessionEndedTitle => 'Natapos ang iyong session';
+
+  @override
+  String get sessionEndedBody =>
+      'Para sa iyong seguridad, ini-sign out ka ng Taytay LGU IDS sa device na ito. Nangyayari ito pagkatapos ng ilang panahon, o kapag tinapos ng LGU ang isang session.';
+
+  @override
+  String get sessionEndedUnsent =>
+      'Nasa tanggapan na ang anumang naipadala mo na. Ang anumang naisulat mo ngunit hindi pa naipapadala ay hindi itinatago sa teleponong ito — kakailanganin mong ilagay itong muli.';
+
+  @override
+  String get sessionEndedSignInAgain => 'Mag-sign in muli';
+
+  @override
+  String get signInNoticeExpired =>
+      'Natapos ang iyong session para sa iyong seguridad. Mangyaring mag-sign in muli.';
+
+  @override
+  String get signInNoticeSignedOut =>
+      'Naka-sign out ka sa device na ito. Maaari ka pa ring mag-browse ng mga serbisyo ng Taytay bilang bisita.';
+
+  @override
+  String get signInNoticeReturnTo =>
+      'Mag-sign in upang magpatuloy sa pahinang binuksan mo. Dadalhin ka namin doon agad.';
 }

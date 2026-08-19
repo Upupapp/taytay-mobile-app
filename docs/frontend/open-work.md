@@ -37,7 +37,7 @@ Figures from the run, not from any document.
 | **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | **TAB 03 — CLOSED, client half** |
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | **TAB 04 — CLOSED** |
 | **C-05** | P2 | The client overrides the page size the server published for this channel | **TAB 05 — CLOSED** |
-| **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | TAB 06 |
+| **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | **TAB 06 — CLOSED, and it was not holding** |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | TAB 07 |
 | **C-08** | P1 | No physical device run; no iOS run of any kind | TAB 08 |
 | **C-09** | **P1** | The app calls two routes that do not exist at its own pinned baseline | **TAB 00A — detected and guarded; resolution still blocked** |
@@ -349,4 +349,44 @@ old one would have passed a repository that clamped to a ceiling of its own.
 `test/core/startup_test.dart`, which does not exist; the run "failed" on a missing file and looked
 like a guard firing. Recorded because it is the exact failure this programme keeps finding — a
 check that appears to work and is measuring nothing.
+
+---
+
+## C-06 closed — TAB 06, 19 August 2026
+
+**The decision was recorded and the behaviour was not there.** Writing the concurrency test first
+is what found it.
+
+`SessionController.handleUnauthenticated` carried a doc comment reading *"Idempotent: several
+in-flight requests can fail at once, and the resident should be told the session expired exactly
+once."* That had been true — the body was synchronous up to `_set`, and `_set` collapses a repeated
+state — and **TAB 02 ended it two hours earlier** by putting an `await` in front of it: the push
+withdrawal.
+
+Measured before the fix: **ten concurrent 401s produced ten teardowns.** The resident was still told
+once, because the state still only changed once, so nothing visible was wrong. What actually
+happened was **nine extra `DELETE me/devices` calls carrying a credential the server had just
+refused**, on the connection of somebody whose session had died mid-screen. An expiry racing a
+deliberate sign-out produced two.
+
+* One `_endSession`, shared by both paths, single-flighted on an in-flight future rather than on a
+  flag — a flag read before an `await` is a flag two callers read before either writes it.
+* **The first reason wins** when an expiry races a sign-out. Neither is wrong, and inventing a
+  precedence rule would mean claiming to know which the resident experienced.
+* Clearing in `whenComplete`, so a teardown that fails cannot wedge the controller into a state
+  where no session can ever end again.
+
+**The sheet was making a promise the app cannot keep.** It said *"Nothing you submitted has been
+lost."* Narrowly true and read as something else entirely — a resident does not separate what they
+*submitted* from what they *typed*, and this app queues nothing (`DL-118`), so work not yet sent
+when a session dies is gone. It now says what is true: what was sent is with the office, what was
+not is not kept. That is `DL-87`'s rule about failed sends, applied to the moment a session ends.
+
+Three notices, now localised and asserted distinct: expiry, deliberate sign-out, network failure.
+Seven session-ending strings in both locales.
+
+**No refresh was built, and a guard now says so.** There is no refresh endpoint at the pinned
+baseline; the composition root registers no `TokenRefresher`, and a source-level test fails if one
+appears — a behavioural test would pass just as well against a build that had quietly acquired one,
+which is the change worth catching.
 

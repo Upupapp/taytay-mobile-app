@@ -249,5 +249,33 @@
   "fieldEmail": "Email address",
   "@fieldEmail": {
     "description": "Resident-facing label for a correctable profile field."
+  },
+  "sessionEndedTitle": "Your session ended",
+  "@sessionEndedTitle": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "sessionEndedBody": "For your security, Taytay LGU IDS signed you out on this device. This happens after a period of time, or when the LGU ends a session.",
+  "@sessionEndedBody": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "sessionEndedUnsent": "Anything you already sent is with the office. Anything you had typed and not yet sent is not kept on this phone — you will need to enter it again.",
+  "@sessionEndedUnsent": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "sessionEndedSignInAgain": "Sign in again",
+  "@sessionEndedSignInAgain": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "signInNoticeExpired": "Your session ended for your security. Please sign in again.",
+  "@signInNoticeExpired": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "signInNoticeSignedOut": "You are signed out on this device. You can still browse Taytay services as a guest.",
+  "@signInNoticeSignedOut": {
+    "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "signInNoticeReturnTo": "Sign in to continue to the page you opened. We will take you straight there.",
+  "@signInNoticeReturnTo": {
+    "description": "Session-ending copy (TAB 06 / F22)."
   }
 }

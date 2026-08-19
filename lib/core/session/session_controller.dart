@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import 'access_level.dart';
@@ -116,27 +118,62 @@ class SessionController extends ChangeNotifier {
   }
 
   /// Deliberate sign-out by the resident.
-  Future<void> signOut() async {
-    await _withdrawPushRegistration();
-    await _store.clear();
-    _set(const GuestSession(endedReason: SessionEndedReason.signedOut));
-  }
+  Future<void> signOut() => _endSession(SessionEndedReason.signedOut);
 
   /// The server said `401 UNAUTHENTICATED`. Wired into `ApiClient` so every
   /// endpoint gets this behaviour without remembering to ask for it.
+  Future<void> handleUnauthenticated() =>
+      _endSession(SessionEndedReason.expired);
+
+  /// The one teardown, shared by every path that ends a session.
   ///
-  /// Idempotent: several in-flight requests can fail at once, and the resident
-  /// should be told the session expired exactly once.
-  Future<void> handleUnauthenticated() async {
+  /// ## Why this is single-flighted (F22, TAB 06)
+  ///
+  /// This used to be two methods that each did the work, and the doc comment on
+  /// one of them claimed idempotence. It had been true — the whole body was
+  /// synchronous up to [_set], and `_set` collapses a repeated state — and TAB
+  /// 02 quietly ended it by putting an `await` in front: the push withdrawal.
+  ///
+  /// After that, ten requests meeting `401` together all passed the guard, all
+  /// awaited, and all ran the teardown. The resident was still told once,
+  /// because the state only changes once, so **nothing visible was wrong** —
+  /// what actually happened was nine extra `DELETE me/devices` calls carrying a
+  /// credential the server had just refused, on the connection of somebody whose
+  /// session had died mid-screen. That is the failure mode this app is most
+  /// likely to meet in Taytay and the least likely to hear about.
+  ///
+  /// Sharing the in-flight future rather than re-checking the state is what
+  /// makes it hold: a flag read before an `await` is a flag two callers read
+  /// before either writes it.
+  ///
+  /// **The first reason wins.** An expiry racing a deliberate sign-out lands on
+  /// whichever started, and neither is wrong: the session ends either way, and
+  /// inventing a precedence rule would mean claiming to know which the resident
+  /// experienced.
+  Future<void> _endSession(SessionEndedReason reason) {
+    final existing = _ending;
+    if (existing != null) return existing;
+
+    final attempt = _tearDown(reason);
+    _ending = attempt;
+    // Cleared in `whenComplete`, so a teardown that fails cannot wedge the
+    // controller into a state where no session can ever end again.
+    unawaited(attempt.whenComplete(() => _ending = null));
+    return attempt;
+  }
+
+  Future<void>? _ending;
+
+  Future<void> _tearDown(SessionEndedReason reason) async {
     if (_state is GuestSession) return;
-    // Attempted here too, and expected to fail: the credential it would need is
-    // the one the server has just refused. It is still attempted rather than
-    // skipped, because a 401 on one endpoint does not always mean the token is
-    // dead for all of them, and the cost of trying is one request that is
-    // already known not to block anything.
+
+    // Attempted on the expiry path too, and expected to fail there: the
+    // credential it needs is the one the server has just refused. Still
+    // attempted rather than skipped, because a `401` on one endpoint does not
+    // always mean the token is dead for all of them, and it cannot block.
     await _withdrawPushRegistration();
     await _store.clear();
-    _set(const GuestSession(endedReason: SessionEndedReason.expired));
+    _set(GuestSession(endedReason: reason));
   }
 
   /// Applies a verification tier the server has just reported, e.g. after the

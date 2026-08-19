@@ -70,5 +70,12 @@
   "fieldStreetAddress": "Numero ng bahay at kalye",
   "fieldPurokOrSitio": "Purok o sitio",
   "fieldMobileNumber": "Numero ng cellphone",
-  "fieldEmail": "Email address"
+  "fieldEmail": "Email address",
+  "sessionEndedTitle": "Natapos ang iyong session",
+  "sessionEndedBody": "Para sa iyong seguridad, ini-sign out ka ng Taytay LGU IDS sa device na ito. Nangyayari ito pagkatapos ng ilang panahon, o kapag tinapos ng LGU ang isang session.",
+  "sessionEndedUnsent": "Nasa tanggapan na ang anumang naipadala mo na. Ang anumang naisulat mo ngunit hindi pa naipapadala ay hindi itinatago sa teleponong ito — kakailanganin mong ilagay itong muli.",
+  "sessionEndedSignInAgain": "Mag-sign in muli",
+  "signInNoticeExpired": "Natapos ang iyong session para sa iyong seguridad. Mangyaring mag-sign in muli.",
+  "signInNoticeSignedOut": "Naka-sign out ka sa device na ito. Maaari ka pa ring mag-browse ng mga serbisyo ng Taytay bilang bisita.",
+  "signInNoticeReturnTo": "Mag-sign in upang magpatuloy sa pahinang binuksan mo. Dadalhin ka namin doon agad."
 }

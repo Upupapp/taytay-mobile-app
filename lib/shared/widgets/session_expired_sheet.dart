@@ -9,6 +9,7 @@ import '../../core/motion/motion_tokens.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/session/session_state.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_button.dart';
 import 'app_sheet.dart';
 
@@ -43,25 +44,32 @@ abstract final class SessionExpiredSheet {
 
     await AppSheet.show<void>(
       context: context,
-      title: 'Your session ended',
+      title: AppStrings.of(context).sessionEndedTitle,
       builder: (sheetContext) => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           Text(
-            'For your security, Taytay LGU IDS signed you out on this device. '
-            'This happens after a period of time, or when the LGU ends a '
-            'session.',
+            AppStrings.of(sheetContext).sessionEndedBody,
             style: Theme.of(sheetContext).textTheme.bodyMedium,
           ),
           const SizedBox(height: Spacing.sm),
+          // WHAT THIS USED TO SAY WAS "Nothing you submitted has been lost."
+          //
+          // Narrowly true and read as something else entirely. A resident does
+          // not distinguish what they *submitted* from what they *typed*, and
+          // this app queues nothing (`DL-118`): work not yet sent when a session
+          // dies is gone. Telling somebody nothing was lost, and having them
+          // find out otherwise, is worse than losing it — it is the app's own
+          // rule about failed sends (`DL-87`) applied to the moment a session
+          // ends.
           Text(
-            'Nothing you submitted has been lost.',
+            AppStrings.of(sheetContext).sessionEndedUnsent,
             style: Theme.of(sheetContext).textTheme.bodyMedium,
           ),
           const SizedBox(height: Spacing.xl),
           AppButton(
-            label: 'Sign in again',
+            label: AppStrings.of(sheetContext).sessionEndedSignInAgain,
             onPressed: () {
               Navigator.of(sheetContext).pop();
               router.goNamed(AppRoute.signIn.routeName);
