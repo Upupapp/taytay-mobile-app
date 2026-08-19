@@ -12,11 +12,16 @@
 # re-runs TAB 00 — it is not a check to silence.
 #
 # Source of the backend copy, in order:
-#   TAYTAY_BACKEND=/path/to/clone   a local clone; read with `git show <tag>:<path>`
+#   TAYTAY_BACKEND=/path/to/clone   an explicit clone
+#   ../taytay-backend               the conventional sibling checkout
 #   otherwise                       raw.githubusercontent.com at the tag
 #
-# A local clone is preferred in CI: it proves the tag exists on a real object
-# graph rather than trusting a URL that a moved tag would silently re-point.
+# A local clone is not merely preferred, it is the only path that can work here,
+# and the sibling default exists because of finding C-10. The baseline is a LOCAL
+# annotated tag: this programme's boundary forbids pushing, so GitHub has never
+# heard of it and the network path can only ever 404. It is kept for the day this
+# repository is used somewhere the tag has been published — and it now says why
+# it failed rather than only that it did.
 
 set -euo pipefail
 
@@ -36,8 +41,24 @@ fi
 
 echo "Baseline: $TAG ($COMMIT)"
 
+# An explicit clone wins; otherwise the conventional sibling, if it is one.
+BACKEND_CLONE="${TAYTAY_BACKEND:-}"
+if [ -z "$BACKEND_CLONE" ]; then
+  SIBLING="$(cd "$REPO_ROOT/.." && pwd)/taytay-backend"
+  [ -d "$SIBLING/.git" ] && BACKEND_CLONE="$SIBLING"
+fi
+
 fetch_map() {
-  if [ -n "${TAYTAY_BACKEND:-}" ]; then
+  if [ -n "$BACKEND_CLONE" ]; then
+    local TAYTAY_BACKEND="$BACKEND_CLONE"
+    # Distinguish "that is not a checkout" from "that checkout lacks the tag".
+    # C-10 was a guard whose message described the wrong problem, so this one
+    # says which of the two happened.
+    if [ ! -d "$TAYTAY_BACKEND/.git" ]; then
+      echo "FAIL: $TAYTAY_BACKEND is not a git checkout." >&2
+      echo "      Point TAYTAY_BACKEND at a clone of taytay-backend." >&2
+      exit 2
+    fi
     git -C "$TAYTAY_BACKEND" rev-parse "$TAG^{commit}" >/dev/null 2>&1 || {
       echo "FAIL: tag $TAG not found in $TAYTAY_BACKEND." >&2
       echo "      The baseline must be an existing annotated tag, never a branch." >&2
@@ -53,7 +74,13 @@ fetch_map() {
     git -C "$TAYTAY_BACKEND" show "$TAG:$MAP_PATH"
   else
     curl -fsSL "https://raw.githubusercontent.com/Upupapp/taytay-backend/$TAG/$MAP_PATH" || {
-      echo "FAIL: could not fetch $MAP_PATH at $TAG." >&2
+      echo "FAIL: could not fetch $MAP_PATH at $TAG, and no local clone was found." >&2
+      echo "      Expected one at $(cd "$REPO_ROOT/.." && pwd)/taytay-backend, or set" >&2
+      echo "      TAYTAY_BACKEND=/path/to/taytay-backend." >&2
+      echo >&2
+      echo "      A 404 here is the normal answer, not a broken guard: $TAG is a local" >&2
+      echo "      annotated tag and this programme never pushes, so no host serves it" >&2
+      echo "      (finding C-10)." >&2
       exit 2
     }
   fi

@@ -40,12 +40,19 @@ Figures from the run, not from any document.
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | TAB 06 |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | TAB 07 |
 | **C-08** | P1 | No physical device run; no iOS run of any kind | TAB 08 |
-| **C-09** | **P1** | **The app calls two routes that do not exist at its own pinned baseline** | *unassigned — see below* |
-| **C-10** | P3 | The baseline guard's network path cannot work in this programme | *unassigned — see below* |
+| **C-09** | **P1** | The app calls two routes that do not exist at its own pinned baseline | **TAB 00A — detected and guarded; resolution still blocked** |
+| **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
 
 C-01 through C-08 are the findings the front-end command was written from, each already carrying a
-TAB. **C-09 and C-10 were found by TAB 00 and the command did not anticipate them.** They are
-recorded here rather than quietly folded into a neighbouring TAB.
+TAB. **C-09 and C-10 were found by TAB 00 and the command did not anticipate them.** They were
+recorded here rather than quietly folded into a neighbouring TAB, and then taken as an inserted
+**TAB 00A** on the owner's instruction.
+
+**TAB 00A closed C-10 and closed the part of C-09 that a repository can close.** The app can now
+*see* route-level drift — `lib/core/api/backend_routes.dart` declares all 49 routes it calls, a Dart
+test keeps that declaration honest against the source, and `tool/check_backend_routes.sh` checks
+each one against the pinned baseline. What remains open in C-09 is the resolution: two routes are
+still ahead of the pin, and moving the pin needs the backend repository to be still.
 
 ---
 
@@ -88,8 +95,10 @@ baseline it has already moved past, and its own guard reports agreement.
    and the guard checks each exists at the pinned baseline. This belongs in this repository and
    would have caught C-09 on the day it was introduced.
 
-Both are real work and neither belongs inside a TAB written for something else. **Raise with the
-owner before TAB 01 begins.**
+**Taken as TAB 00A, 19 August 2026.** Option 2 is done. Option 1 remains blocked and is the whole
+of what is still open here: `routesAheadOfBaseline` in `backend_routes.dart` names the two routes,
+and the guard fails if a third appears **or** if one of the two turns out to be served — so the
+list can only shrink, and it cannot outlive the finding.
 
 ---
 
@@ -115,9 +124,10 @@ Nothing is wrong with the check — it passes correctly with `TAYTAY_BACKEND` se
 was run in TAB 00. What is wrong is that the documented default is one that cannot work, so the
 first person to run it plainly reads a 404 as a broken guard rather than a missing variable.
 
-Fix: prefer a local clone found at the conventional sibling path, keep the variable as an override,
-and make the failure message say *why* the network path cannot work here rather than only that it
-did not.
+**CLOSED in TAB 00A.** The guard now defaults to the conventional sibling checkout, keeps
+`TAYTAY_BACKEND` as an override, distinguishes "that is not a checkout" from "that checkout lacks
+the tag", and — if it ever does fall through to the network — says that a 404 is the *expected*
+answer for an unpushed tag rather than reporting a broken guard.
 
 ---
 
