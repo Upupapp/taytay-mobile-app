@@ -33,7 +33,7 @@ Figures from the run, not from any document.
 | ID | Sev | Finding | Closes in |
 | --- | --- | --- | --- |
 | **C-01** | P1 | Two upload ceilings disagree, and neither is the server's | **TAB 01 — CLOSED** |
-| **C-02** | P1 | A push registration cannot be withdrawn (F27) | TAB 02 |
+| **C-02** | P1 | A push registration cannot be withdrawn (F27) | **TAB 02 — CLOSED, as a seam** |
 | **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | TAB 03 |
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | TAB 04 |
 | **C-05** | P2 | The client overrides the page size the server published for this channel | TAB 05 |
@@ -203,4 +203,44 @@ still unknown (manual item 6), and it is a different limit from the application'
 longer guesses low against it — a guess that was refusing documents the office would have
 accepted — and a body refused by the proxy still surfaces through `ApiEnvelope`'s non-JSON
 non-2xx path.
+
+---
+
+## C-02 closed — TAB 02, 19 August 2026
+
+**F27 was misdiagnosed, and the misdiagnosis is the finding.** The note in
+`notification_api_repository.dart` read: *"There is no route that removes a registration by push
+token; `me/devices` deletes by device id, which this app does not hold."* Both halves are true and
+the conclusion did not follow. `DELETE me/devices/{device}` exists, it existed at the pinned
+baseline, and the id was **not unavailable — it was being discarded.** `POST me/devices` answers
+`{"id": …}` with 201, and the client decoded it as `(_) {}`.
+
+What changed:
+
+* `registerPushToken` returns the server's id instead of throwing it away.
+* `StoredSession.deviceId` holds it, with **exactly the lifetime of the token that can revoke
+  it** — an id outliving its token names a registration the app can no longer revoke; a token
+  outliving its id leaves a registration nothing knows to revoke, which is F27 itself.
+* `PushRegistrationWithdrawal` is a port in `core/session`, because `SessionController` is the only
+  thing that knows a session is ending and `core/` may not import `features/` (Article 2.3). The
+  notifications repository implements it; the composition root binds it after `apiClient` exists,
+  which is where the cycle had to be broken.
+* Withdrawal runs on **both** session-ending paths — deliberate sign-out and `401` — and **before**
+  the store is cleared, because the call needs the credential the sign-out is about to discard.
+  All three properties are asserted, and each was proven red.
+* **Sign-out is never blocked.** A refusal is recorded on `lastWithdrawalSucceeded`; an
+  implementation that throws is caught. The port says implementations must not throw and the
+  controller catches anyway — a rule this important should not rest on every future implementer
+  having read a doc comment.
+
+**What this does not do, stated plainly: nothing in production calls `registerPushToken`.** There
+is no push service in this build — the launch dossier recommends launching without one until a DPO
+has reviewed a processor — so today there is never a registration to withdraw. This is therefore a
+**seam, not a live path**: it is complete, tested and proven red, and the day push is adopted the
+withdrawal is already correct instead of being remembered. That is the shape F16 took, and it is
+the shape this programme keeps choosing on purpose.
+
+**The route guard earned itself here.** `DELETE me/devices/{}` was added by this TAB, and
+`backend_routes_test.dart` failed the suite until it was declared — one TAB after being built, on
+the first new route anybody wrote.
 

@@ -69,6 +69,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'me/credential', 'credential_api_repository.dart'),
   BackendRoute('POST', 'me/credential/qr', 'credential_api_repository.dart'),
   BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
+  BackendRoute('DELETE', 'me/devices/{}', 'notification_api_repository.dart'),
   BackendRoute('GET', 'me/household', 'household_api_repository.dart'),
   BackendRoute('GET', 'me/kyc', 'kyc_api_repository.dart'),
   BackendRoute('POST', 'me/kyc', 'kyc_api_repository.dart'),

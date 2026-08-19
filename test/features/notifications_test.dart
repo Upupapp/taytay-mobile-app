@@ -121,13 +121,10 @@ class ScriptedNotificationRepository implements NotificationRepository {
   }
 
   @override
-  Future<Result<void>> registerPushToken(String token) async {
+  Future<Result<String>> registerPushToken(String token) async {
     registeredTokens.add(token);
-    return const Ok<void>(null);
+    return const Ok<String>('device-1');
   }
-
-  @override
-  Future<Result<void>> unregisterPushToken() async => const Ok<void>(null);
 }
 
 // ─── Harness ────────────────────────────────────────────────────────────────

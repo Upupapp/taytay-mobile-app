@@ -213,6 +213,15 @@ class AppDependencies {
     final barangayDirectory = BarangayApiRepository(apiClient: apiClient);
     platform = PlatformController(repository: platformRepository);
 
+    // ── F27: the session boundary can now withdraw what this install registered
+    //
+    // Bound here rather than passed to the constructor because the cycle has to
+    // be broken somewhere: this repository needs `apiClient`, `apiClient` needs
+    // `session` for its bearer token, and `session` needs this to withdraw a
+    // registration before it discards that token.
+    final notifications = NotificationApiRepository(apiClient: apiClient);
+    session.bindPushRegistration(notifications);
+
     return AppDependencies(
       config: config,
       session: session,
@@ -262,7 +271,7 @@ class AppDependencies {
         apiClient: apiClient,
         telemetry: telemetry,
       ),
-      notificationRepository: NotificationApiRepository(apiClient: apiClient),
+      notificationRepository: notifications,
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent
       // rather than pretending a camera opened.

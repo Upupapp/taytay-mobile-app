@@ -196,13 +196,20 @@ abstract interface class NotificationRepository {
 
   Future<Result<void>> updatePreferences(NotificationPreferences preferences);
 
-  /// Registers this device so the LGU can reach it.
+  /// Registers this device so the LGU can reach it, returning the server's own
+  /// id for the registration.
   ///
-  /// The token is a stable device identifier: it is sent here and **never**
+  /// **The id is the whole point of the return value.** Before TAB 02 this
+  /// returned nothing and the response was discarded, so the app created a
+  /// registration it had no way to name afterwards — and therefore no way to
+  /// withdraw. That was F27, and it read as "the API has no route for this"
+  /// when the API had one all along and this client was throwing away its
+  /// argument.
+  ///
+  /// The caller passes the id to `SessionController.rememberDeviceRegistration`,
+  /// which holds it for exactly as long as the token that can revoke it.
+  ///
+  /// The push token is a stable device identifier: it is sent here and **never**
   /// logged, cached or put in an analytics event.
-  Future<Result<void>> registerPushToken(String token);
-
-  /// Stops notifications to this device — on sign-out, or when a resident turns
-  /// push off.
-  Future<Result<void>> unregisterPushToken();
+  Future<Result<String>> registerPushToken(String token);
 }

@@ -35,6 +35,7 @@ class StoredSession {
     required this.resident,
     required this.accessToken,
     this.expiresAt,
+    this.deviceId,
   });
 
   final ResidentSession resident;
@@ -70,6 +71,26 @@ class StoredSession {
     if (deadline == null) return false;
     return !now.toUtc().isBefore(deadline.toUtc());
   }
+
+  /// The `me/devices` registration this install made, if it has made one.
+  ///
+  /// Held here rather than in the notifications feature so that it has **the
+  /// same lifetime as the credential that can withdraw it**. A device id that
+  /// outlived its token would name a registration the app could no longer
+  /// revoke; one that died first would leave a registration nothing knew to
+  /// revoke at all — which is F27.
+  ///
+  /// Null until this install registers. Not a hardware identifier: it is the
+  /// server's own opaque handle for a registration this app created.
+  final String? deviceId;
+
+  /// A copy carrying [deviceId], for the moment registration returns one.
+  StoredSession withDeviceId(String? id) => StoredSession(
+    resident: resident,
+    accessToken: accessToken,
+    expiresAt: expiresAt,
+    deviceId: id,
+  );
 
   /// Redacted deliberately — see the class doc.
   @override

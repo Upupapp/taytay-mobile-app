@@ -3,6 +3,7 @@ import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
+import '../../../core/session/push_registration.dart';
 import '../domain/notification_repository.dart';
 
 /// Talks to `me/notifications` and `me/notification-preferences`.
@@ -23,7 +24,8 @@ import '../domain/notification_repository.dart';
 /// narrative, would be personal data delivered to a lock screen that anybody
 /// standing nearby can read — which is why the policy above this refuses it and
 /// why nothing here widens what a target may contain.
-class NotificationApiRepository implements NotificationRepository {
+class NotificationApiRepository
+    implements NotificationRepository, PushRegistrationWithdrawal {
   const NotificationApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
 
@@ -123,8 +125,8 @@ class NotificationApiRepository implements NotificationRepository {
   /// not touch, because a registration whose purpose is a push token is not a
   /// session list and had nothing to carry. Here it has one.
   @override
-  Future<Result<void>> registerPushToken(String token) async {
-    final response = await _apiClient.send<void>(
+  Future<Result<String>> registerPushToken(String token) async {
+    final response = await _apiClient.send<String>(
       method: HttpMethod.post,
       path: 'me/devices',
       authenticated: true,
@@ -137,31 +139,40 @@ class NotificationApiRepository implements NotificationRepository {
         'platform': 'android',
         'push_token': token,
       },
-      decode: (_) {},
+      // The id is read, not discarded. `ApiResponse::item(['id' => ...], 201)`
+      // is what the server returns and it is the only handle that can revoke
+      // this registration later.
+      decode: (Object? data) =>
+          data is Map<String, dynamic> && data['id'] is String
+          ? data['id'] as String
+          : '',
     );
-    return response.map((_) {});
+
+    return response.map((envelope) => envelope.data);
   }
 
+  /// Withdraws a registration this install made (F27, closed in TAB 02).
+  ///
+  /// The old note here said "there is no route that removes a registration by
+  /// push token" — true, and beside the point. `DELETE me/devices/{device}`
+  /// removes it by **id**, and the id was being thrown away at registration
+  /// rather than being unavailable.
+  ///
+  /// Returns false rather than throwing, and never blocks: the contract in
+  /// [PushRegistrationWithdrawal] is that a resident signing out is signed out
+  /// whatever the network does.
   @override
-  Future<Result<void>> unregisterPushToken() async {
-    // Sign-out must leave nothing addressed to this phone. The next person to
-    // hold a shared handset receiving the previous resident's case updates is a
-    // real privacy incident on this user base, not a hypothetical — and it
-    // happens on the lock screen, where it needs no password at all.
-    //
-    // There is no route that removes a registration by push token; `me/devices`
-    // is deleted by device id, which this app does not hold. Recorded rather
-    // than faked: the local push service is torn down at sign-out, so nothing
-    // arrives on the device, but the registration itself outlives the session
-    // server-side until it expires.
-    return const Err<void>(
-      ServerFailure(
-        isTemporary: true,
-        debugMessage:
-            'No route removes a push registration by token; me/devices deletes '
-            'by device id, which this client never receives. See F27.',
-      ),
+  Future<bool> withdraw(String deviceId) async {
+    if (deviceId.isEmpty) return false;
+
+    final response = await _apiClient.send<void>(
+      method: HttpMethod.delete,
+      path: 'me/devices/$deviceId',
+      authenticated: true,
+      decode: (_) {},
     );
+
+    return response.isOk;
   }
 
   static ResidentNotification? _decode(Object? entry) {

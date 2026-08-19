@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'access_level.dart';
+import 'push_registration.dart';
 import 'session_state.dart';
 import 'session_store.dart';
 
@@ -21,11 +22,32 @@ import 'session_store.dart';
 ///   AuthenticatedSession ──endSessionIfTokenExpired()──> GuestSession(expired)
 /// ```
 class SessionController extends ChangeNotifier {
-  SessionController({required SessionStore store, DateTime Function()? clock})
-    : _store = store,
-      _now = clock ?? DateTime.now;
+  SessionController({
+    required SessionStore store,
+    DateTime Function()? clock,
+    PushRegistrationWithdrawal? pushRegistration,
+  }) : _store = store,
+       _now = clock ?? DateTime.now,
+       _pushRegistration = pushRegistration;
 
   final SessionStore _store;
+
+  /// Bound at the composition root, usually *after* construction.
+  ///
+  /// Not final, and that is the composition root's shape rather than laziness:
+  /// the thing that withdraws a registration needs the API client, the API
+  /// client needs this controller for its bearer token, and something has to be
+  /// built first. A constructor argument is still accepted so a test can pass
+  /// one straight in.
+  ///
+  /// Null in tests and in any build with no push registration at all, where
+  /// there is nothing to withdraw and nothing to bind.
+  PushRegistrationWithdrawal? _pushRegistration;
+
+  /// Binds the withdrawal once the API client exists. See [_pushRegistration].
+  void bindPushRegistration(PushRegistrationWithdrawal withdrawal) {
+    _pushRegistration = withdrawal;
+  }
 
   /// Injectable so expiry can be tested without waiting for real time to pass.
   final DateTime Function() _now;
@@ -95,6 +117,7 @@ class SessionController extends ChangeNotifier {
 
   /// Deliberate sign-out by the resident.
   Future<void> signOut() async {
+    await _withdrawPushRegistration();
     await _store.clear();
     _set(const GuestSession(endedReason: SessionEndedReason.signedOut));
   }
@@ -106,6 +129,12 @@ class SessionController extends ChangeNotifier {
   /// should be told the session expired exactly once.
   Future<void> handleUnauthenticated() async {
     if (_state is GuestSession) return;
+    // Attempted here too, and expected to fail: the credential it would need is
+    // the one the server has just refused. It is still attempted rather than
+    // skipped, because a 401 on one endpoint does not always mean the token is
+    // dead for all of them, and the cost of trying is one request that is
+    // already known not to block anything.
+    await _withdrawPushRegistration();
     await _store.clear();
     _set(const GuestSession(endedReason: SessionEndedReason.expired));
   }
@@ -150,6 +179,50 @@ class SessionController extends ChangeNotifier {
     if (stored != null && !stored.isExpiredAt(_now())) return false;
     await handleUnauthenticated();
     return true;
+  }
+
+  /// Withdraws this device's push registration, if there is one, before the
+  /// token that could withdraw it is discarded.
+  ///
+  /// **Never blocks the sign-out and never throws.** A resident who asks to sign
+  /// out is signed out; a registration that could not be withdrawn is recorded
+  /// as still standing rather than reported as gone. The alternative — holding
+  /// the local session open until the network answers — punishes the resident
+  /// for the server's availability at the exact moment they are trying to leave.
+  Future<void> _withdrawPushRegistration() async {
+    final withdrawal = _pushRegistration;
+    if (withdrawal == null) return;
+
+    final stored = await _store.read();
+    final deviceId = stored?.deviceId;
+    // Nothing registered by this install: there is nothing to withdraw, and
+    // deleting a device this app did not register is not this app's business.
+    if (deviceId == null) return;
+
+    // [PushRegistrationWithdrawal] says implementations must not throw, and
+    // this catches it anyway. The rule above — a resident who asks to sign out
+    // is signed out — is too important to rest on every future implementer
+    // having read a doc comment, and the cost of being wrong is that somebody
+    // cannot leave a shared phone.
+    try {
+      lastWithdrawalSucceeded = await withdrawal.withdraw(deviceId);
+    } on Object {
+      lastWithdrawalSucceeded = false;
+    }
+  }
+
+  /// Whether the last session-ending withdrawal reached the server.
+  ///
+  /// Null when no withdrawal has been attempted. False is a fact worth keeping:
+  /// it means a registration outlived its session, which is exactly the
+  /// condition F27 is about, and something may need to say so.
+  bool? lastWithdrawalSucceeded;
+
+  /// Records the registration this install just made, so it can be withdrawn.
+  Future<void> rememberDeviceRegistration(String deviceId) async {
+    final stored = await _store.read();
+    if (stored == null) return;
+    await _store.write(stored.withDeviceId(deviceId));
   }
 
   void _set(SessionState next) {
