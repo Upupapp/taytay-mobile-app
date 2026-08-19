@@ -38,7 +38,7 @@ Figures from the run, not from any document.
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | **TAB 04 — CLOSED** |
 | **C-05** | P2 | The client overrides the page size the server published for this channel | **TAB 05 — CLOSED** |
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | **TAB 06 — CLOSED, and it was not holding** |
-| **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | TAB 07 |
+| **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | **TAB 07 — PARTIAL; still no screen reader** |
 | **C-08** | P1 | No physical device run; no iOS run of any kind | TAB 08 |
 | **C-09** | **P1** | The app calls two routes that do not exist at its own pinned baseline | **TAB 00A — detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
@@ -389,4 +389,40 @@ Seven session-ending strings in both locales.
 baseline; the composition root registers no `TokenRefresher`, and a source-level test fails if one
 appears — a behavioural test would pass just as well against a build that had quietly acquired one,
 which is the change worth catching.
+
+---
+
+## C-07 — TAB 07, 19 August 2026: **PARTIAL, and the partiality is the point**
+
+**No screen reader was run, and none could be.** No physical device has ever been attached to this
+programme; no Android emulator image is installed; and **VoiceOver does not run on the iOS
+Simulator**, which is the only runtime this machine has. `docs/frontend/accessibility-session.md`
+records the whole of it, criterion by criterion.
+
+What was delivered is the half a machine can prove — the semantics tree a screen reader reads:
+
+* `labeledTapTargetGuideline`, `androidTapTargetGuideline` and `iOSTapTargetGuideline` across
+  **11 routes × 3 access levels × 2 languages**, plus `/verification`. All pass. Both directions
+  proven with planted defects.
+
+**Two findings, and neither is a pass.**
+
+**`textContrastGuideline` cannot judge this app.** It samples pixels; the primary buttons are a
+brand gradient with white text, so the sample is nearly all fill and it called a 4.5:1 button
+**1.06:1** — naming `#0B3D91`, which is `BrandColors.taytayBlue` exactly. It was dropped and
+contrast was **not** weakened: `BrandGradient.worstCaseContrastRatio()` already proves the declared
+foreground across the whole ramp including interpolated midpoints, which is stronger than sampling.
+
+**This audit had a hole on its first draft.** The tap-target and Filipino sweeps ran only at
+`verified`, and `resolveRedirect` moves a signed-in resident off `/sign-in` — so those routes booted,
+redirected, and passed without rendering. A deliberately undersized button planted on the sign-in
+screen **went undetected**. Fixed by running every level; re-planted to confirm it is caught now.
+
+That is the **second** check in this sequence that appeared to work and measured nothing (the first
+was a TAB 05 red-proof pointing at a file that does not exist). Recorded both times, because the
+pattern is the finding.
+
+**The single most valuable next step is one hour with a real Android phone and TalkBack, in
+Filipino**, walking sign-in → home → KYC claim → upload. It answers most of the deferred table and
+cannot be answered from here.
 
