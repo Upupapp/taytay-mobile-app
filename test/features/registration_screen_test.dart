@@ -1,11 +1,16 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -14,6 +19,39 @@ AppConfig config() => AppConfig.from(
 );
 
 /// Boots the app straight into the registration wizard.
+/// Answers `app/bootstrap` with self-registration switched ON, and nothing else.
+///
+/// TAB 03 made the wizard reachable only when the server says residents may
+/// enrol themselves. These tests are the wizard's own, so they run in the mode
+/// where the wizard exists — the staff-mediated behaviour has its own tests in
+/// `test/core/router_test.dart` and `test/features/onboarding_mode_test.dart`.
+class _SelfEnrolledTransport implements ApiTransport {
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    if (request.path == 'app/bootstrap') {
+      return Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'service': 'taytay',
+              'api_version': 'v1',
+              'client': <String, Object?>{
+                'channel': 'citizen-mobile',
+                'default_page_size': 15,
+                'minimum_version': '0.0.0',
+              },
+              'features': <String, Object?>{'self_registration': true},
+            },
+          }),
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      );
+    }
+    return const Err<ApiHttpResponse>(NetworkFailure());
+  }
+}
+
 Future<AppDependencies> bootRegistration(
   WidgetTester tester, {
   TextScaler textScaler = TextScaler.noScaling,
@@ -27,6 +65,7 @@ Future<AppDependencies> bootRegistration(
 
   final dependencies = AppDependencies.build(
     config: config(),
+    transport: _SelfEnrolledTransport(),
     secrets: secrets,
     sessionStore: InMemorySessionStore(),
   );

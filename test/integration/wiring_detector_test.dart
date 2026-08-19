@@ -41,7 +41,11 @@ void main() {
   /// with an owner rather than a note. The strings are matched against the
   /// runtime type name of the bound instance.
   const Map<String, String> stubbed = <String, String>{
-    'registrationRepository': 'blocked — F15',
+    // Still stubbed, deliberately. TAB 03 built the onboarding seam around it
+    // — the wizard is kept and gated on a server flag — but did NOT wire it:
+    // there is no self-registration route to wire it to, and whether there
+    // should be is the LGU's decision (manual-tasks item 5).
+    'registrationRepository': 'blocked — F15 (seam built in TAB 03)',
   };
 
   /// Repositories that already call the server.

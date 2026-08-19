@@ -202,4 +202,17 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get uploadRefusedTitle => 'Hindi maipapadala ang file na iyon';
+
+  @override
+  String get onboardingOfficeTitle =>
+      'Ginagawa ang account sa tanggapan ng MSWDO';
+
+  @override
+  String get onboardingOfficeBody =>
+      'Ang Taytay LGU ang gagawa ng iyong account. Pumunta sa Municipal Social Welfare and Development Office dala ang wastong ID, at irerehistro ng staff ang numerong nais mong gamitin. Pagkatapos, mag-sign in dito gamit ang numerong iyon.';
+
+  @override
+  String onboardingOfficeContact(String email, String phone) {
+    return 'Magtanong sa tanggapan: $email · $phone';
+  }
 }

@@ -104,6 +104,7 @@ GoRouter buildAppRouter({
       launch: launch.state,
       mustUpgrade: platform.mustUpgrade,
       isInMaintenance: platform.isInMaintenance,
+      onboarding: platform.onboardingMode,
     ),
     errorBuilder: (context, state) => const _RouteNotFoundScreen(),
     routes: <RouteBase>[

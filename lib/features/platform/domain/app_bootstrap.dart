@@ -108,6 +108,12 @@ class FeatureFlags {
   /// real residents without a new app version.
   bool get digitalId => isOn('digital_id');
 
+  /// Whether residents may create their own accounts (TAB 03, F15).
+  ///
+  /// Off unless the server says otherwise, and off is the platform's actual
+  /// state: there is no self-registration route. See `OnboardingMode`.
+  bool get selfRegistration => isOn('self_registration');
+
   bool get newsfeedPublic => isOn('newsfeed_public');
   bool get newsfeedComments => isOn('newsfeed_comments');
   bool get pushNotifications => isOn('push_notifications');

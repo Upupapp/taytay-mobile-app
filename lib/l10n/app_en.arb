@@ -171,5 +171,27 @@
   "uploadRefusedTitle": "That file cannot be sent",
   "@uploadRefusedTitle": {
     "description": "Banner heading above any upload refusal."
+  },
+  "onboardingOfficeTitle": "Accounts are made at the MSWDO office",
+  "@onboardingOfficeTitle": {
+    "description": "Heading of the panel shown when onboarding is staff-mediated."
+  },
+  "onboardingOfficeBody": "Taytay LGU creates your account for you. Visit the Municipal Social Welfare and Development Office with a valid ID, and staff will register the mobile number you want to use. Then sign in here with that number.",
+  "@onboardingOfficeBody": {
+    "description": "Body of the staff-mediated onboarding panel. Says what to do and what to bring."
+  },
+  "onboardingOfficeContact": "Ask the office: {email} · {phone}",
+  "@onboardingOfficeContact": {
+    "description": "Support line under the staff-mediated panel. Both values come from the server, never from a constant.",
+    "placeholders": {
+      "email": {
+        "type": "String",
+        "example": "mswdo@taytayrizal.gov.ph"
+      },
+      "phone": {
+        "type": "String",
+        "example": "(02) 8286-0000"
+      }
+    }
   }
 }

@@ -421,6 +421,24 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'That file cannot be sent'**
   String get uploadRefusedTitle;
+
+  /// Heading of the panel shown when onboarding is staff-mediated.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts are made at the MSWDO office'**
+  String get onboardingOfficeTitle;
+
+  /// Body of the staff-mediated onboarding panel. Says what to do and what to bring.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU creates your account for you. Visit the Municipal Social Welfare and Development Office with a valid ID, and staff will register the mobile number you want to use. Then sign in here with that number.'**
+  String get onboardingOfficeBody;
+
+  /// Support line under the staff-mediated panel. Both values come from the server, never from a constant.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the office: {email} · {phone}'**
+  String onboardingOfficeContact(String email, String phone);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

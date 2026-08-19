@@ -202,4 +202,16 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get uploadRefusedTitle => 'That file cannot be sent';
+
+  @override
+  String get onboardingOfficeTitle => 'Accounts are made at the MSWDO office';
+
+  @override
+  String get onboardingOfficeBody =>
+      'Taytay LGU creates your account for you. Visit the Municipal Social Welfare and Development Office with a valid ID, and staff will register the mobile number you want to use. Then sign in here with that number.';
+
+  @override
+  String onboardingOfficeContact(String email, String phone) {
+    return 'Ask the office: $email · $phone';
+  }
 }

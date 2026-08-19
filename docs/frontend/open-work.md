@@ -34,7 +34,7 @@ Figures from the run, not from any document.
 | --- | --- | --- | --- |
 | **C-01** | P1 | Two upload ceilings disagree, and neither is the server's | **TAB 01 — CLOSED** |
 | **C-02** | P1 | A push registration cannot be withdrawn (F27) | **TAB 02 — CLOSED, as a seam** |
-| **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | TAB 03 |
+| **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | **TAB 03 — CLOSED, client half** |
 | **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | TAB 04 |
 | **C-05** | P2 | The client overrides the page size the server published for this channel | TAB 05 |
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | TAB 06 |
@@ -243,4 +243,36 @@ the shape this programme keeps choosing on purpose.
 **The route guard earned itself here.** `DELETE me/devices/{}` was added by this TAB, and
 `backend_routes_test.dart` failed the suite until it was declared — one TAB after being built, on
 the first new route anybody wrote.
+
+---
+
+## C-03 closed — TAB 03, 19 August 2026
+
+**The LGU's decision was not taken, and could not have been.** Whether residents should enrol
+themselves is manual-tasks item 5 and it needs the municipality, not this repository. What the
+client owed was to stop being wrong in the meantime: there is no self-registration route on the
+server, so a resident who downloads this app fills in seven fields and meets a dead end.
+
+* `OnboardingMode` has exactly two values and is read from `app/bootstrap`'s
+  `features.self_registration` — the same arrangement `digital_id` already uses, where **both
+  states ship in one build and the server decides which one a resident sees.** The day the LGU
+  answers, it costs a line of configuration rather than a store release.
+* **Default is staff-mediated**, including before the bootstrap has answered and if it never
+  answers. A default that describes the platform is the safe one; a default that describes an
+  intention is a bug waiting for the intention to change. The backend publishes no such flag
+  today, which is correct — it has no route behind it.
+* **The wizard is kept**, and made unreachable **in the route guard** rather than by hiding a
+  button. A screen that hides its own entrance is still reachable by deep link, by the back stack
+  and by the two other places in this app that navigate to it. `/register` resolves to sign-in,
+  which is the honest next step.
+* The staff-mediated entry is **a panel, not a disabled control**: what the office does, what to
+  bring, and the office's own contact details **taken from the server**, because a phone number
+  compiled into a released app is one the municipality cannot correct without a store submission.
+  Both languages; both modes asserted by widget test.
+* `registrationRepository` **stays stubbed** and its ledger entry now names this TAB. The stub
+  count is still 1. TAB 03 built the seam around it and deliberately did not wire it.
+
+**No identity-assurance step was invented.** No document capture, no selfie, no verification added
+to the wizard on the theory that it will be wanted — that is the LGU's policy, and writing it here
+would be inventing a rule the office never agreed to.
 

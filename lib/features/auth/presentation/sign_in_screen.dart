@@ -11,10 +11,13 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/session_state.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_card.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
+
 
 /// Sign-in: a mobile number, then a one-time code.
 ///
@@ -195,10 +198,21 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               if (controller.step == SignInStep.identifier) ...<Widget>[
                 const SizedBox(height: Spacing.sm),
-                OutlinedButton(
-                  onPressed: () => context.goNamed(AppRoute.register.routeName),
-                  child: const Text('Create an account'),
-                ),
+                // TAB 03 / F15. Two states in one build, chosen by the server.
+                //
+                // Under staff-mediated onboarding this is NOT a disabled
+                // button. A control a resident cannot use tells them the app is
+                // broken; a sentence tells them where to go. There is no
+                // self-registration route on the server, so offering the wizard
+                // here would be a promise the platform cannot keep.
+                if (dependencies.platform.onboardingMode.allowsSelfRegistration)
+                  OutlinedButton(
+                    onPressed: () =>
+                        context.goNamed(AppRoute.register.routeName),
+                    child: const Text('Create an account'),
+                  )
+                else
+                  const _OfficeOnboardingPanel(),
               ],
               const SizedBox(height: Spacing.sm),
               TextButton(
@@ -489,3 +503,54 @@ class _DebugSessionSimulator extends StatelessWidget {
     );
   }
 }
+
+/// Where an account comes from, when it does not come from this app.
+///
+/// Shown instead of the wizard whenever the server has not said residents may
+/// enrol themselves — which is every build today, because there is no route
+/// behind self-registration (F15, manual-tasks item 5).
+///
+/// The office's contact details come from `app/bootstrap`, never from a
+/// constant here: a phone number compiled into a released app is one the
+/// municipality cannot correct without a store submission.
+class _OfficeOnboardingPanel extends StatelessWidget {
+  const _OfficeOnboardingPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final support = AppDependencies.of(context).platform.bootstrap.support;
+    final theme = Theme.of(context);
+
+    return Semantics(
+      container: true,
+      child: AppCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              strings.onboardingOfficeTitle,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              strings.onboardingOfficeBody,
+              style: theme.textTheme.bodyMedium,
+            ),
+            // Rendered only when the server actually supplied them. A line
+            // reading "Ask the office:  · " is worse than no line.
+            if (support.email.isNotEmpty || support.phone.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.sm),
+              Text(
+                strings.onboardingOfficeContact(support.email, support.phone),
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+

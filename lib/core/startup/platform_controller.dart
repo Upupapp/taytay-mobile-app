@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../features/platform/domain/app_bootstrap.dart';
+import '../../features/platform/domain/onboarding_mode.dart';
 import '../../features/platform/domain/platform_repository.dart';
 import '../config/app_version.dart';
 import '../result/result.dart';
@@ -78,6 +79,15 @@ class PlatformController extends ChangeNotifier {
 
   /// The server answered `503` on the most recent request that reached it.
   bool get isInMaintenance => _isInMaintenance;
+
+  /// How a resident comes to have an account (TAB 03, F15).
+  ///
+  /// Staff-mediated until the server says otherwise — including before the
+  /// bootstrap has answered at all, and if it never answers. An app that
+  /// offered self-registration while it was still asking would offer it to
+  /// exactly the residents on the worst connections.
+  OnboardingMode get onboardingMode =>
+      OnboardingMode.fromFlag(_bootstrap.features.selfRegistration);
 
   /// Reads the startup contract. Never throws, never blocks a first frame.
   Future<void> refresh() async {

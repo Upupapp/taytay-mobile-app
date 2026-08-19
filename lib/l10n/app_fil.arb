@@ -53,5 +53,8 @@
   "uploadRefusedType": "Larawan lamang (JPEG o PNG) o PDF ang tinatanggap ng Taytay LGU. Kunan ng larawan ang dokumento kung nasa papel ito.",
   "uploadRefusedEmpty": "Walang laman ang file na iyon. Piliin itong muli, o kunan na lang ng larawan ang dokumento.",
   "uploadRefusedUnreadable": "Hindi mabasa ang file na iyon bilang larawan o PDF. Kunan na lang ng larawan ang dokumento.",
-  "uploadRefusedTitle": "Hindi maipapadala ang file na iyon"
+  "uploadRefusedTitle": "Hindi maipapadala ang file na iyon",
+  "onboardingOfficeTitle": "Ginagawa ang account sa tanggapan ng MSWDO",
+  "onboardingOfficeBody": "Ang Taytay LGU ang gagawa ng iyong account. Pumunta sa Municipal Social Welfare and Development Office dala ang wastong ID, at irerehistro ng staff ang numerong nais mong gamitin. Pagkatapos, mag-sign in dito gamit ang numerong iyon.",
+  "onboardingOfficeContact": "Magtanong sa tanggapan: {email} · {phone}"
 }

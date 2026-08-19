@@ -4,6 +4,7 @@ import 'package:taytay_resident/core/router/route_guard.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/access_policy.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
+import 'package:taytay_resident/features/platform/domain/onboarding_mode.dart';
 
 const SessionState _restoring = SessionRestoring();
 const SessionState _guest = GuestSession();
@@ -124,7 +125,16 @@ void main() {
         (r) => r != AppRoute.splash && r != AppRoute.signIn,
       )) {
         expect(
-          resolveRedirect(session: _verified, location: route.path),
+          resolveRedirect(
+            session: _verified,
+            location: route.path,
+            // Every route means every route, so the wizard is included and the
+            // mode that makes it exist is stated. Its absence under the default
+            // is asserted separately rather than by omission here — a route
+            // quietly dropped from a "reaches every route" loop is a route
+            // nobody notices going missing.
+            onboarding: OnboardingMode.selfEnrolled,
+          ),
           isNull,
           reason: route.name,
         );
