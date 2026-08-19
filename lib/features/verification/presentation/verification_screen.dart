@@ -3,13 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/illustrations/state_illustrations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/form_support.dart';
+import '../domain/correctable_field.dart';
 import '../domain/verification_status_detail.dart';
 import 'verification_controller.dart';
 
@@ -286,15 +289,57 @@ class _CorrectionSection extends StatelessWidget {
           const SizedBox(height: Spacing.md),
           for (final issue in status.issues) ...<Widget>[
             FieldLabel(label: issue.category.label, hint: issue.instruction),
-            TextFormField(
-              initialValue: controller.corrections[issue.category] ?? '',
-              textCapitalization: TextCapitalization.sentences,
-              // One correction per issue, and there may be several, so "next"
-              // walks the resident down the list.
-              textInputAction: TextInputAction.next,
-              onChanged: (value) =>
-                  controller.updateCorrection(issue.category, value),
-            ),
+
+            // A CATEGORY THIS ROUTE CANNOT CARRY GETS A SENTENCE, NOT A FIELD
+            // (TAB 04, F23). "Proof of identity" and "photo of you" are
+            // documents, and `me/profile/corrections` adjudicates named profile
+            // fields. Offering a text box here and refusing afterwards is a
+            // refusal disguised as a form: the resident types, taps send, and
+            // is told the thing they were invited to do was never possible.
+            if (!issue.category.isCorrectable)
+              Text(
+                AppStrings.of(context).correctionNotByMessage,
+                style: theme.textTheme.bodyMedium,
+              )
+            else ...<Widget>[
+              // ASKED, NEVER GUESSED. "Your address" is a barangay, a street and
+              // a purok; picking one on the resident's behalf files a correction
+              // against a field the office never questioned, and the office
+              // reads it, finds nothing wrong, and the resident believes they
+              // have been heard.
+              if (issue.category.needsFieldChoice) ...<Widget>[
+                Text(
+                  AppStrings.of(context).correctionWhichDetail,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: Spacing.xs),
+                for (final field in issue.category.fields)
+                  RadioListTile<CorrectableField>(
+                    value: field,
+                    // ignore: deprecated_member_use
+                    groupValue: controller.chosenFieldFor(issue.category),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(correctableFieldLabel(context, field)),
+                    // ignore: deprecated_member_use
+                    onChanged: (value) => value == null
+                        ? null
+                        : controller.chooseField(issue.category, value),
+                  ),
+                const SizedBox(height: Spacing.xs),
+              ],
+              if (controller.chosenFieldFor(issue.category) case final field?)
+                TextFormField(
+                  key: ValueKey<CorrectableField>(field),
+                  initialValue: controller.corrections[field] ?? '',
+                  textCapitalization: TextCapitalization.sentences,
+                  // One correction per issue, and there may be several, so
+                  // "next" walks the resident down the list.
+                  textInputAction: TextInputAction.next,
+                  onChanged: (value) =>
+                      controller.updateCorrection(field, value),
+                ),
+            ],
             const SizedBox(height: Spacing.lg),
           ],
           AppButton(

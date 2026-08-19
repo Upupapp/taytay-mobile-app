@@ -439,6 +439,90 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Ask the office: {email} · {phone}'**
   String onboardingOfficeContact(String email, String phone);
+
+  /// Correction flow copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Which detail needs correcting?'**
+  String get correctionWhichDetail;
+
+  /// Correction flow copy.
+  ///
+  /// In en, this message translates to:
+  /// **'This one cannot be corrected by message — bring the document to the MSWDO office, or upload it again when the office asks.'**
+  String get correctionNotByMessage;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'First name'**
+  String get fieldFirstName;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Middle name'**
+  String get fieldMiddleName;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Last name'**
+  String get fieldLastName;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Suffix (Jr., III)'**
+  String get fieldSuffix;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get fieldBirthDate;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Sex'**
+  String get fieldSex;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Civil status'**
+  String get fieldCivilStatus;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Barangay'**
+  String get fieldBarangay;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'House number and street'**
+  String get fieldStreetAddress;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Purok or sitio'**
+  String get fieldPurokOrSitio;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number'**
+  String get fieldMobileNumber;
+
+  /// Resident-facing label for a correctable profile field.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get fieldEmail;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

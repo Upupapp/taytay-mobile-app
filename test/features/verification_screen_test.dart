@@ -10,6 +10,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
@@ -30,7 +31,7 @@ class StubVerificationRepository implements VerificationRepository {
 
   @override
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
 
@@ -308,7 +309,10 @@ void main() {
         expect(find.text('Your details'), findsOneWidget);
         expect(find.text('Your address'), findsOneWidget);
         // Categories, never values.
-        expect(find.textContaining('Name and date of birth'), findsOneWidget);
+        expect(
+          find.textContaining('Name, birth date and civil status'),
+          findsOneWidget,
+        );
       },
     );
 
@@ -452,10 +456,56 @@ void main() {
 
       expect(find.text('Fill in every item above to send.'), findsOneWidget);
 
+      // TAB 04 / F23: "your address" is a barangay, a street and a purok, so
+      // there is no input until the resident says which one they mean. Before
+      // this, the app picked `street_address` on their behalf and a resident
+      // correcting their barangay filed a street correction the office would
+      // read, find nothing wrong with, and close.
+      expect(
+        find.byType(TextFormField),
+        findsNothing,
+        reason: 'nothing to type into until the detail is chosen',
+      );
+      expect(find.text('Which detail needs correcting?'), findsOneWidget);
+
+      await tester.tap(find.text('House number and street'));
+      await tester.pumpAndSettle();
+
       await tester.enterText(find.byType(TextFormField).first, '12 Rizal St');
       await tester.pumpAndSettle();
 
       expect(find.text('Fill in every item above to send.'), findsNothing);
+    });
+
+    testWidgets('a document cannot be corrected by message, and says so first', (
+      tester,
+    ) async {
+      // The other half of F23. "Proof of identity" maps to no profile field at
+      // all, and the old flow offered a text box and refused after the typing —
+      // a refusal disguised as a form.
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.needsMoreInformation,
+          rawState: 'under_review',
+          issues: <VerificationItemIssue>[
+            VerificationItemIssue(
+              category: VerificationItemCategory.identityDocument,
+              instruction: 'Your ID photo was blurry.',
+            ),
+          ],
+        ),
+      );
+
+      expect(
+        find.textContaining('cannot be corrected by message'),
+        findsOneWidget,
+      );
+      expect(
+        find.byType(TextFormField),
+        findsNothing,
+        reason: 'no input is offered for something this route cannot carry',
+      );
     });
   });
 

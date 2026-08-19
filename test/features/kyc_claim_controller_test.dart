@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
@@ -53,7 +54,7 @@ class _StubRepository implements VerificationRepository {
 
   @override
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
 

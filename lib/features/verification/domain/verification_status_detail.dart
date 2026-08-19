@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import 'correctable_field.dart';
 import 'verification_repository.dart';
 
 /// What a resident sees about their own verification.
@@ -140,38 +141,70 @@ enum ResidentVerificationStage {
 /// that may be read over a shoulder in a queue, for no purpose the resident does
 /// not already know.
 enum VerificationItemCategory {
-  personalDetails('Your details', 'Name and date of birth'),
-  address('Your address', 'Barangay and street', field: 'street_address'),
-  contact('Contact details', 'Mobile number', field: 'mobile_number'),
+  personalDetails(
+    'Your details',
+    'Name, birth date and civil status',
+    fields: <CorrectableField>[
+      CorrectableField.firstName,
+      CorrectableField.middleName,
+      CorrectableField.lastName,
+      CorrectableField.suffix,
+      CorrectableField.birthDate,
+      CorrectableField.sex,
+      CorrectableField.civilStatus,
+    ],
+  ),
+  address(
+    'Your address',
+    'Barangay and street',
+    fields: <CorrectableField>[
+      CorrectableField.barangayId,
+      CorrectableField.streetAddress,
+      CorrectableField.purokOrSitio,
+    ],
+  ),
+  contact(
+    'Contact details',
+    'Mobile number or email',
+    fields: <CorrectableField>[
+      CorrectableField.mobileNumber,
+      CorrectableField.email,
+    ],
+  ),
   identityDocument('Proof of identity', 'Government-issued ID'),
   photo('Photo of you', 'Used to check the ID belongs to you');
 
-  const VerificationItemCategory(this.label, this.description, {this.field});
+  const VerificationItemCategory(
+    this.label,
+    this.description, {
+    this.fields = const <CorrectableField>[],
+  });
 
   final String label;
   final String description;
 
-  /// The correctable field on `POST me/profile/corrections`, when this category
-  /// maps to exactly one.
+  /// Which named fields on `POST me/profile/corrections` this category covers.
   ///
-  /// **Null is the common case and is deliberate.** The two contracts are keyed
-  /// differently: this app groups what a resident recognises — "your details",
-  /// "proof of identity" — and the server takes named fields. "Your details" is
-  /// three of them (`first_name`, `last_name`, `birth_date`) and a document is
-  /// none of them; picking one on the resident's behalf would file a correction
-  /// against a field the office never questioned, and re-typing a name into a
-  /// birth-date correction is the kind of error nobody notices until a
-  /// caseworker reads it.
+  /// **Three cases, and the difference is the whole of F23:**
   ///
-  /// So a category with no single field is not sent. Raised as F23: closing it
-  /// properly needs either per-field correction in the app's own model or a
-  /// server route that accepts a KYC correction keyed the way the office asks
-  /// for it — a contract conversation, not a client workaround.
-  final String? field;
+  ///  * **Several** — the common one. "Your address" is a barangay, a street and
+  ///    a purok. The resident is asked *which*; the app does not pick, because
+  ///    picking files a correction against a field the office never questioned.
+  ///  * **Empty** — "proof of identity" and "photo of you" are documents, and a
+  ///    document is not a profile field. The route cannot carry them at all, so
+  ///    the app says so **before** the input rather than after the typing.
+  ///  * One — currently none, and the model no longer assumes it.
+  ///
+  /// See [CorrectableField] for where the vocabulary comes from and what keeps
+  /// it honest.
+  final List<CorrectableField> fields;
 
-  /// Maps a server category code, falling back to `null` for anything this
-  /// build does not recognise. An unknown category is dropped from the list
-  /// rather than shown as a raw code a resident cannot act on.
+  /// Whether a resident must be asked which detail they mean.
+  bool get needsFieldChoice => fields.length > 1;
+
+  /// Whether this category can be corrected through this route at all.
+  bool get isCorrectable => fields.isNotEmpty;
+
   static VerificationItemCategory? fromCode(String? code) {
     if (code == null) return null;
     for (final value in VerificationItemCategory.values) {

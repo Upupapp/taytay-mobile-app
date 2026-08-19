@@ -193,5 +193,61 @@
         "example": "(02) 8286-0000"
       }
     }
+  },
+  "correctionWhichDetail": "Which detail needs correcting?",
+  "@correctionWhichDetail": {
+    "description": "Correction flow copy."
+  },
+  "correctionNotByMessage": "This one cannot be corrected by message — bring the document to the MSWDO office, or upload it again when the office asks.",
+  "@correctionNotByMessage": {
+    "description": "Correction flow copy."
+  },
+  "fieldFirstName": "First name",
+  "@fieldFirstName": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldMiddleName": "Middle name",
+  "@fieldMiddleName": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldLastName": "Last name",
+  "@fieldLastName": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldSuffix": "Suffix (Jr., III)",
+  "@fieldSuffix": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldBirthDate": "Date of birth",
+  "@fieldBirthDate": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldSex": "Sex",
+  "@fieldSex": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldCivilStatus": "Civil status",
+  "@fieldCivilStatus": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldBarangay": "Barangay",
+  "@fieldBarangay": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldStreetAddress": "House number and street",
+  "@fieldStreetAddress": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldPurokOrSitio": "Purok or sitio",
+  "@fieldPurokOrSitio": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldMobileNumber": "Mobile number",
+  "@fieldMobileNumber": {
+    "description": "Resident-facing label for a correctable profile field."
+  },
+  "fieldEmail": "Email address",
+  "@fieldEmail": {
+    "description": "Resident-facing label for a correctable profile field."
   }
 }

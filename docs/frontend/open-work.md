@@ -35,7 +35,7 @@ Figures from the run, not from any document.
 | **C-01** | P1 | Two upload ceilings disagree, and neither is the server's | **TAB 01 — CLOSED** |
 | **C-02** | P1 | A push registration cannot be withdrawn (F27) | **TAB 02 — CLOSED, as a seam** |
 | **C-03** | P1 | A registration wizard with no server counterpart (F15, client half) | **TAB 03 — CLOSED, client half** |
-| **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | TAB 04 |
+| **C-04** | P1 | KYC corrections keyed by category here, by field on the server (F23) | **TAB 04 — CLOSED** |
 | **C-05** | P2 | The client overrides the page size the server published for this channel | TAB 05 |
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | TAB 06 |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | TAB 07 |
@@ -275,4 +275,37 @@ server, so a resident who downloads this app fills in seven fields and meets a d
 **No identity-assurance step was invented.** No document capture, no selfie, no verification added
 to the wizard on the theory that it will be wanted — that is the LGU's policy, and writing it here
 would be inventing a rule the office never agreed to.
+
+---
+
+## C-04 closed — TAB 04, 19 August 2026
+
+F23 was recorded as needing "a decision rather than code — either this app models corrections per
+field, or the server accepts a KYC-shaped one". **The first was always available**, and it is what
+TAB 04 built. No server change.
+
+* `CorrectableField` models the server's **twelve** fields, read from
+  `Modules\ResidentProfile\Contracts\CorrectableField` at the pinned baseline rather than
+  inferred from the category names.
+* Categories now carry a **list** of fields, not an optional single one. The old shape made "one
+  field" the normal case and "several" the exception; it is the other way round, and every
+  correctable category spans more than one.
+* **The resident is asked which detail.** `address` is a barangay, a street *and* a purok — the old
+  code silently sent `street_address`, so a resident correcting their barangay filed a street
+  correction the office would read, find nothing wrong with, and close.
+* **A document is refused before the input, not after the typing.** `identityDocument` and `photo`
+  map to no profile field; the screen says so where the text box used to be. A refusal that arrives
+  after the form is a refusal disguised as a form.
+* Changing the chosen detail **drops the text typed against the old one**, so nothing is re-filed
+  against a field the resident no longer means.
+* Twelve field labels in English and Filipino — the server's own names are operator-facing and no
+  resident has seen `purok_or_sitio`.
+
+**Two guards, both directions each.** `tool/check_correctable_fields.sh` fails on a field this app
+invents (the server refuses the whole request on an unknown key) **and** on a field the server
+accepts that no category offers — a correction nobody can ask for, which nothing would otherwise
+report. `test/features/correctable_field_test.dart` holds coverage inside the app. All proven red.
+
+The vendored contract could not be used for this: it publishes the path and no request schema
+(backend finding L-11), so the guard reads the backend clone like the route check does.
 

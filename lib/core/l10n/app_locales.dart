@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../features/auth/domain/sign_in_challenge.dart';
+import '../../features/verification/domain/correctable_field.dart';
 import '../../l10n/app_localizations.dart';
 import '../documents/document_capture.dart';
 import '../documents/upload_policy.dart';
@@ -142,3 +143,28 @@ String localisedDocumentRejection(
     DocumentRejection.contentsDoNotMatchType => strings.uploadRefusedUnreadable,
   };
 }
+
+/// The resident-facing name of a correctable profile field.
+///
+/// The server's own names — `purok_or_sitio`, `birth_date` — are operator-facing
+/// and a resident has never seen them. Mapped here rather than on the enum so
+/// that [CorrectableField] stays a statement about the contract and carries no
+/// presentation.
+String correctableFieldLabel(BuildContext context, CorrectableField field) {
+  final strings = AppStrings.of(context);
+  return switch (field) {
+    CorrectableField.firstName => strings.fieldFirstName,
+    CorrectableField.middleName => strings.fieldMiddleName,
+    CorrectableField.lastName => strings.fieldLastName,
+    CorrectableField.suffix => strings.fieldSuffix,
+    CorrectableField.birthDate => strings.fieldBirthDate,
+    CorrectableField.sex => strings.fieldSex,
+    CorrectableField.civilStatus => strings.fieldCivilStatus,
+    CorrectableField.barangayId => strings.fieldBarangay,
+    CorrectableField.streetAddress => strings.fieldStreetAddress,
+    CorrectableField.purokOrSitio => strings.fieldPurokOrSitio,
+    CorrectableField.mobileNumber => strings.fieldMobileNumber,
+    CorrectableField.email => strings.fieldEmail,
+  };
+}
+

@@ -214,4 +214,47 @@ class AppStringsEn extends AppStrings {
   String onboardingOfficeContact(String email, String phone) {
     return 'Ask the office: $email · $phone';
   }
+
+  @override
+  String get correctionWhichDetail => 'Which detail needs correcting?';
+
+  @override
+  String get correctionNotByMessage =>
+      'This one cannot be corrected by message — bring the document to the MSWDO office, or upload it again when the office asks.';
+
+  @override
+  String get fieldFirstName => 'First name';
+
+  @override
+  String get fieldMiddleName => 'Middle name';
+
+  @override
+  String get fieldLastName => 'Last name';
+
+  @override
+  String get fieldSuffix => 'Suffix (Jr., III)';
+
+  @override
+  String get fieldBirthDate => 'Date of birth';
+
+  @override
+  String get fieldSex => 'Sex';
+
+  @override
+  String get fieldCivilStatus => 'Civil status';
+
+  @override
+  String get fieldBarangay => 'Barangay';
+
+  @override
+  String get fieldStreetAddress => 'House number and street';
+
+  @override
+  String get fieldPurokOrSitio => 'Purok or sitio';
+
+  @override
+  String get fieldMobileNumber => 'Mobile number';
+
+  @override
+  String get fieldEmail => 'Email address';
 }

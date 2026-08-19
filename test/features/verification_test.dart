@@ -5,6 +5,7 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/features/verification/data/verification_status_dto.dart';
+import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
@@ -18,8 +19,8 @@ class FakeVerificationRepository implements VerificationRepository {
   Result<void>? correctionOutcome;
 
   final List<String> correctionKeys = <String>[];
-  final List<Map<VerificationItemCategory, String>> sentCorrections =
-      <Map<VerificationItemCategory, String>>[];
+  final List<Map<CorrectableField, String>> sentCorrections =
+      <Map<CorrectableField, String>>[];
 
   @override
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async =>
@@ -32,13 +33,11 @@ class FakeVerificationRepository implements VerificationRepository {
 
   @override
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async {
     correctionKeys.add(idempotencyKey);
-    sentCorrections.add(
-      Map<VerificationItemCategory, String>.from(corrections),
-    );
+    sentCorrections.add(Map<CorrectableField, String>.from(corrections));
     return correctionOutcome ?? const Ok<void>(null);
   }
 
@@ -533,19 +532,20 @@ void main() {
     test('a correction can only be entered for a flagged category', () async {
       final (controller, _) = await build();
 
-      controller.updateCorrection(
-        VerificationItemCategory.personalDetails,
-        'Ana',
-      );
+      controller.updateCorrection(CorrectableField.firstName, 'Ana');
       expect(
         controller.corrections,
         isEmpty,
         reason: 'the office did not flag personal details',
       );
 
-      controller.updateCorrection(VerificationItemCategory.address, '12 Rizal');
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
       expect(
-        controller.corrections[VerificationItemCategory.address],
+        controller.corrections[CorrectableField.streetAddress],
         '12 Rizal',
       );
     });
@@ -557,14 +557,22 @@ void main() {
       expect(await controller.submitCorrections(), isFalse);
       expect(repository.correctionKeys, isEmpty);
 
-      controller.updateCorrection(VerificationItemCategory.address, '   ');
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '   ');
       expect(
         controller.correctionsComplete,
         isFalse,
         reason: 'whitespace only',
       );
 
-      controller.updateCorrection(VerificationItemCategory.address, '12 Rizal');
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
       expect(controller.correctionsComplete, isTrue);
     });
 
@@ -572,10 +580,11 @@ void main() {
       'sending carries an idempotency key and only the flagged item',
       () async {
         final (controller, repository) = await build();
-        controller.updateCorrection(
+        controller.chooseField(
           VerificationItemCategory.address,
-          '12 Rizal',
+          CorrectableField.streetAddress,
         );
+        controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
 
         expect(await controller.submitCorrections(), isTrue);
 
@@ -583,7 +592,7 @@ void main() {
         expect(repository.correctionKeys.single, isNotEmpty);
         expect(
           repository.sentCorrections.single.keys,
-          <VerificationItemCategory>[VerificationItemCategory.address],
+          <CorrectableField>[CorrectableField.streetAddress],
         );
       },
     );
@@ -591,12 +600,16 @@ void main() {
     test('a failed send keeps the typed values and reuses the key', () async {
       final (controller, repository) = await build();
       repository.correctionOutcome = const Err<void>(NetworkFailure());
-      controller.updateCorrection(VerificationItemCategory.address, '12 Rizal');
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
 
       expect(await controller.submitCorrections(), isFalse);
       expect(controller.failure, isA<NetworkFailure>());
       expect(
-        controller.corrections[VerificationItemCategory.address],
+        controller.corrections[CorrectableField.streetAddress],
         '12 Rizal',
         reason: 'a resident should not retype after a dropped connection',
       );
@@ -612,7 +625,11 @@ void main() {
 
     test('a successful send clears the typed values', () async {
       final (controller, _) = await build();
-      controller.updateCorrection(VerificationItemCategory.address, '12 Rizal');
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
       await controller.submitCorrections();
 
       expect(controller.corrections, isEmpty);

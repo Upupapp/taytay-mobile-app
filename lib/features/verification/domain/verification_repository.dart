@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'correctable_field.dart';
 import 'kyc_claim.dart';
 import 'verification_status_detail.dart';
 
@@ -161,7 +162,7 @@ abstract interface class VerificationRepository {
   /// [idempotencyKey] is required: a resend that arrives twice is a second item
   /// in a municipal review queue.
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   });
 

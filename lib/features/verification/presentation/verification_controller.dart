@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/api/request_context.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/session_controller.dart';
+import '../domain/correctable_field.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
 
@@ -46,24 +47,55 @@ class VerificationController extends ChangeNotifier {
 
   /// Corrections the resident has typed, keyed by the category the office
   /// flagged. Nothing can be entered for a category that was not flagged.
-  final Map<VerificationItemCategory, String> _corrections =
-      <VerificationItemCategory, String>{};
+  final Map<CorrectableField, String> _corrections = <CorrectableField, String>{};
+
+  /// Which field the resident chose for each category that spans several.
+  ///
+  /// Held apart from the values so that changing the choice does not silently
+  /// re-file text typed for a different field — the old entry is removed, and
+  /// the resident types again against the field they actually meant.
+  final Map<VerificationItemCategory, CorrectableField> _chosenField =
+      <VerificationItemCategory, CorrectableField>{};
 
   VerificationStatusDetail? get status => _status;
   AppFailure? get failure => _failure;
   bool get loading => _loading;
   bool get submitting => _submitting;
 
-  Map<VerificationItemCategory, String> get corrections =>
-      Map<VerificationItemCategory, String>.unmodifiable(_corrections);
+  Map<CorrectableField, String> get corrections =>
+      Map<CorrectableField, String>.unmodifiable(_corrections);
+
+  /// The field chosen for [category], or the only one it has.
+  CorrectableField? chosenFieldFor(VerificationItemCategory category) =>
+      _chosenField[category] ??
+      (category.fields.length == 1 ? category.fields.first : null);
+
+  /// Records which detail a resident means, and drops anything typed against
+  /// the field they no longer mean.
+  void chooseField(VerificationItemCategory category, CorrectableField field) {
+    final previous = chosenFieldFor(category);
+    if (previous != null && previous != field) _corrections.remove(previous);
+    _chosenField[category] = field;
+    notifyListeners();
+  }
 
   /// Whether every flagged item has something typed against it.
   bool get correctionsComplete {
     final issues = _status?.issues ?? const <VerificationItemIssue>[];
     if (issues.isEmpty) return false;
-    return issues.every(
-      (issue) => (_corrections[issue.category] ?? '').trim().isNotEmpty,
-    );
+
+    // Only the categories this route can carry are required. A flagged document
+    // has no field to correct and never gets an input, so demanding one would
+    // make the button permanently dead for a resident whose only problem is a
+    // blurry ID — which is the correction they can least afford to be blocked on.
+    final correctable = issues.where((i) => i.category.isCorrectable);
+    if (correctable.isEmpty) return false;
+
+    return correctable.every((issue) {
+      final field = chosenFieldFor(issue.category);
+      if (field == null) return false;
+      return (_corrections[field] ?? '').trim().isNotEmpty;
+    });
   }
 
   /// Loads the status and, if it says verified, unlocks access centrally.
@@ -107,14 +139,16 @@ class VerificationController extends ChangeNotifier {
     _session.applyVerificationTier(detail.rawState);
   }
 
-  /// Records a correction for a flagged category.
+  /// Records a correction against the field the office adjudicates.
   ///
-  /// Ignores categories the office did not flag: the correction flow is a reply
-  /// to a specific request, not an opportunity to resubmit anything.
-  void updateCorrection(VerificationItemCategory category, String value) {
-    final flagged = _status?.issues.any((i) => i.category == category) ?? false;
+  /// Ignores fields no flagged category covers: the correction flow is a reply
+  /// to a specific request, not an opportunity to resubmit anything. Keyed by
+  /// field rather than category since TAB 04 — see [CorrectableField].
+  void updateCorrection(CorrectableField field, String value) {
+    final flagged =
+        _status?.issues.any((i) => i.category.fields.contains(field)) ?? false;
     if (!flagged) return;
-    _corrections[category] = value;
+    _corrections[field] = value;
     _failure = null;
     notifyListeners();
   }
@@ -179,7 +213,7 @@ class VerificationController extends ChangeNotifier {
     notifyListeners();
 
     final outcome = await _repository.submitCorrections(
-      corrections: Map<VerificationItemCategory, String>.from(_corrections),
+      corrections: Map<CorrectableField, String>.from(_corrections),
       idempotencyKey: _correctionKey!,
     );
     _submitting = false;

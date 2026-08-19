@@ -20,6 +20,7 @@ import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
 import 'package:taytay_resident/features/services/domain/service_request_repository.dart';
+import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
@@ -100,7 +101,7 @@ class CountingVerificationRepository implements VerificationRepository {
 
   @override
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
 

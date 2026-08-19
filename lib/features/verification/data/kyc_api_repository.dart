@@ -6,6 +6,7 @@ import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
+import '../domain/correctable_field.dart';
 import '../domain/kyc_claim.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
@@ -92,27 +93,30 @@ class KycApiRepository implements VerificationRepository {
 
   @override
   Future<Result<void>> submitCorrections({
-    required Map<VerificationItemCategory, String> corrections,
+    required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async {
     // A correction to a claimed detail is a correction request against the
     // record, not a second KYC submission. `POST me/profile/corrections` is
     // where the office already adjudicates them, and routing it anywhere else
     // would build the second editing path TAB 05 warns against.
+    // Keyed by the field the SERVER adjudicates, decided by the resident rather
+    // than by this repository (TAB 04). Nothing is inferred here any more: a
+    // category that spans several fields was resolved on the screen, and one
+    // that spans none never reached an input.
     final Map<String, Object?> changes = <String, Object?>{
-      for (final MapEntry<VerificationItemCategory, String> entry
-          in corrections.entries)
-        if (entry.key.field != null) entry.key.field!: entry.value,
+      for (final MapEntry<CorrectableField, String> entry in corrections.entries)
+        entry.key.wireValue: entry.value,
     };
 
     if (changes.isEmpty) {
-      // Nothing here maps to a named field the office adjudicates. Declining is
-      // the honest answer: a correction filed against the wrong field is worse
-      // than one not filed, because the resident believes the office has been
-      // told. See F23 and `VerificationItemCategory.field`.
-      return backendGapFailure<void>(
-        BackendGap.kycFieldCorrections,
-        'submitCorrections',
+      // The server requires `changes` to hold at least one entry, so an empty
+      // map is refused here rather than sent to collect a 422 whose field names
+      // a resident has never seen.
+      return const Err<void>(
+        ValidationFailure(
+          debugMessage: 'submitCorrections called with nothing to correct.',
+        ),
       );
     }
 

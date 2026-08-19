@@ -215,4 +215,47 @@ class AppStringsFil extends AppStrings {
   String onboardingOfficeContact(String email, String phone) {
     return 'Magtanong sa tanggapan: $email · $phone';
   }
+
+  @override
+  String get correctionWhichDetail => 'Aling detalye ang kailangang itama?';
+
+  @override
+  String get correctionNotByMessage =>
+      'Hindi ito maitatama sa pamamagitan ng mensahe — dalhin ang dokumento sa tanggapan ng MSWDO, o i-upload itong muli kapag hiniling ng tanggapan.';
+
+  @override
+  String get fieldFirstName => 'Pangalan';
+
+  @override
+  String get fieldMiddleName => 'Gitnang pangalan';
+
+  @override
+  String get fieldLastName => 'Apelyido';
+
+  @override
+  String get fieldSuffix => 'Suffix (Jr., III)';
+
+  @override
+  String get fieldBirthDate => 'Petsa ng kapanganakan';
+
+  @override
+  String get fieldSex => 'Kasarian';
+
+  @override
+  String get fieldCivilStatus => 'Katayuang sibil';
+
+  @override
+  String get fieldBarangay => 'Barangay';
+
+  @override
+  String get fieldStreetAddress => 'Numero ng bahay at kalye';
+
+  @override
+  String get fieldPurokOrSitio => 'Purok o sitio';
+
+  @override
+  String get fieldMobileNumber => 'Numero ng cellphone';
+
+  @override
+  String get fieldEmail => 'Email address';
 }

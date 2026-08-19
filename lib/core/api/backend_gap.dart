@@ -104,11 +104,18 @@ enum BackendGap {
   /// resident's behalf files a correction against something the office never
   /// questioned.
   ///
-  /// Closing it needs a decision rather than code: either this app models
-  /// corrections per field, or the server accepts a KYC-shaped one. Until then
-  /// the categories that map to exactly one field are sent and the rest decline,
-  /// because a correction filed against the wrong field is worse than one not
-  /// filed — the resident believes the office has been told.
+  /// **CLOSED IN TAB 04, and the decision went the other way from the one this
+  /// note expected.** It said closing F23 needed either per-field corrections in
+  /// this app or a KYC-shaped route on the server. The first was always
+  /// available and is what was built: the app now models the server's twelve
+  /// correctable fields directly, asks the resident *which* detail when a
+  /// category spans several, and says a document cannot be corrected by message
+  /// **before** offering an input rather than refusing after the typing.
+  ///
+  /// Nothing is inferred on the resident's behalf any more. This entry is kept
+  /// because the reasoning is still the reasoning — a correction filed against
+  /// the wrong field is worse than one not filed, since the resident believes
+  /// the office has been told.
   kycFieldCorrections(
     finding: 'F23',
     missing: 'a correction route keyed the way a KYC reviewer flags items',
