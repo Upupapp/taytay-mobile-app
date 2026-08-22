@@ -8,10 +8,20 @@
   "backendBaselineCommit": "eec71e6",
   "appCommitAtStart": "86e92b3",
   "totalTabs": 10,
-  "currentTabIndex": 1,
-  "currentTab": "TAB 01 — One upload ceiling, and it is the server’s",
+  "currentTabIndex": 9,
+  "currentTab": "COMPLETE — 10 of 10 TABs (00, 00A inserted, 01–09)",
   "completedTabs": [
-    "TAB 00 — Re-baseline and reconcile (complete; C-09 and C-10 raised, both unassigned)"
+    "TAB 00 — Re-baseline and reconcile (CERTIFIED; raised C-09, C-10)",
+    "TAB 00A — Route-level baseline guard, inserted (CERTIFIED; C-10 closed, C-09 detected and guarded)",
+    "TAB 01 — One upload ceiling, the server’s (CERTIFIED; C-01 closed)",
+    "TAB 02 — Push registration withdrawal (CERTIFIED; C-02 closed as a seam)",
+    "TAB 03 — Onboarding seam (CERTIFIED; C-03 closed, LGU decision untaken)",
+    "TAB 04 — KYC corrections keyed by field (CERTIFIED; C-04 closed, no server change)",
+    "TAB 05 — Page size read, not copied (CERTIFIED; C-05 closed)",
+    "TAB 06 — One expiry is one sign-out (CERTIFIED; C-06 closed — the decision was not holding)",
+    "TAB 07 — Screen-reader audit (PARTIAL; no screen reader exists to run here)",
+    "TAB 08 — Device matrix (PARTIAL; iOS journeys pass, Android renders, Android journeys untestable here)",
+    "TAB 09 — Client readiness gate (COMPLETE; verdict NOT READY on client scope)"
   ],
   "openFindings": {
     "clientOwed": {
@@ -59,7 +69,7 @@
   "blockedTabs": {
     "TAB 02": "end-to-end sign-in blocked by F16 (codes never dispatched); client wiring complete"
   },
-  "status": "IN_PROGRESS",
+  "status": "COMPLETE — client verdict: NOT READY, on client scope alone",
   "priorSequence": {
     "name": "resident-mobile-backend-integration",
     "status": "COMPLETE — go/no-go recorded: NO-GO",
@@ -68,8 +78,8 @@
     "verdict": "NO-GO — platform scope, recorded 2026-08-18 at 33dc73b",
     "note": "Complete, 25 of 25 TABs. Preserved, not superseded. Its findings list was accurate when written and is corrected below."
   },
-  "currentObjective": "TAB 01: the client refuses exactly what the server would refuse, using the number the server publishes.",
-  "lastCheckpointAt": "2026-08-19T18:55:00+08:00",
+  "currentObjective": "Sequence closed. docs/frontend/client-readiness.md is the verdict.",
+  "lastCheckpointAt": "2026-08-23T00:50:00+08:00",
   "measuredAtTab00": {
     "analyze": "clean",
     "tests": 1386,
@@ -84,5 +94,33 @@
   },
   "activeBlockers": [
     "C-09 re-baseline is blocked: taytay-backend is under another session’s active control and its HEAD moved during TAB 00"
-  ]
+  ],
+  "clientVerdict": {
+    "verdict": "NOT READY — on the client’s own scope",
+    "measuredAt": "2026-08-23",
+    "document": "docs/frontend/client-readiness.md",
+    "reasons": [
+      "Android journeys unverified — the majority platform has never been driven",
+      "No screen reader has ever been run — RA 9994 / RA 10754 sectors are served by this app",
+      "C-09 — the app calls two routes absent at its own pinned baseline"
+    ],
+    "note": "None of the three is an LGU blocker. If every LGU item closed tomorrow, all three would stand."
+  },
+  "measuredAtGate": {
+    "head": "efa74d1",
+    "analyze": "clean",
+    "tests": 1464,
+    "skipped": 1,
+    "wired": 16,
+    "stubbed": 1,
+    "modules": 17,
+    "routesDeclared": 50,
+    "routesServedAtPin": 48,
+    "routesAheadOfPin": 2,
+    "correctableFields": 12,
+    "aheadOfOrigin": 71,
+    "iosJourneys": "pass",
+    "androidJourneys": "not run — harness hangs on emulated arm64 API 24",
+    "releaseBuild": "refuses to sign itself"
+  }
 }

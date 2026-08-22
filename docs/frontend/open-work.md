@@ -450,10 +450,34 @@ is dispatched, so there is no authenticated journey to walk.
 Flutter SDK, adds nothing to a release artifact, and touches no identity, storage, networking or
 crypto surface.
 
-**Two of the four matrix entries are Android, and neither could be run.** `flutter emulators`
-reports no AVD sources on this machine and no device has ever been attached. That is not a small
-gap — Android is the majority platform for this audience and `minSdk = 24` is the entry this app
-most needs to prove.
+**Correction, made in TAB 09 before the gate: "neither could be run" was wrong.** `flutter
+emulators` reports "unable to find any emulator sources", and that means *no AVD is configured*, not
+*Android cannot run here*. Android Studio was installed the whole time, `sdkmanager` and
+`avdmanager` were on disk, and `system-images;android-24;default;arm64-v8a` was one download away —
+`minSdk = 24` exactly, and arm64, so it runs natively rather than under emulation.
+
+The image was installed (4.2 GB), an AVD created, and **Android 7.0 / API 24 / arm64-v8a booted and
+visible to Flutter**. It is the first time this app has run on Android in twenty-eight build TABs,
+twenty-five integration TABs and eight TABs of this sequence.
+
+**This is the fourth time in this sequence a tool said something true and I heard something
+stronger** — after a red-proof pointing at a file that does not exist (TAB 05), an audit passing by
+redirection (TAB 07), and a cold-start figure that was really `pumpAndSettle` timing out (TAB 08).
+Recorded in place rather than quietly corrected, because four instances is a pattern and not a run
+of bad luck.
+
+An emulator is still not a handset: no thermals, no real camera, no network transitions, no screen
+reader. And the row reading "Android, at any version" only **half** closes.
+
+**Android builds, installs, launches and renders at API 24. Android journeys did not run.** The
+driven walk was killed after 74 minutes having never left the onboarding screen, and a bounded
+probe — an `integration_test` containing one `Text` widget — hung for twelve hours on a test that
+cannot fail. That rules the app out of the diagnosis: **`integration_test` does not complete against
+an emulated arm64 API 24 image on this machine**, while the same harness and the same file pass on
+the iOS Simulator in ninety seconds.
+
+A physical handset over `adb` would settle it in minutes and remains the thing worth an hour of
+somebody's time.
 
 **No performance figure here is a pass.** The budgets say each target needs a low-end device; an
 iPhone 17 simulator on an Apple-silicon Mac is the opposite of one. Cold start is **reported and not

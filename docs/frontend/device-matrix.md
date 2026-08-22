@@ -24,15 +24,25 @@ and `textContrastGuideline`'s claim of 1.06:1 really was the sampler weighing fi
 
 | Entry | Why this one | Status |
 | --- | --- | --- |
-| **Oldest supported Android — `minSdk = 24`** | The 5-inch Android phone still in service in Taytay. It is the device the app is most likely to be *used* on and the one that clips first. | **NOT RUN — no Android emulator image installed, no device attached** |
-| **Current mid-range Android** | What a resident buying a phone this year holds. | **NOT RUN — same** |
+| **Oldest supported Android — `minSdk = 24`** | The 5-inch Android phone still in service in Taytay. It is the device the app is most likely to be *used* on and the one that clips first. | **PARTIAL** — builds, installs, launches and renders at Android 7.0 / API 24 / arm64-v8a, 1080×1920 @ 420dpi (411×731 dp). **Driven journeys did not complete** — see below |
+| **Current mid-range Android** | What a resident buying a phone this year holds. | **NOT RUN** — one image was installed and it was deliberately the oldest, because that is the entry that fails first |
 | **Smallest supported iPhone** | The narrowest iOS layout. | **NOT RUN as hardware.** 320×568 and 390×844 are exercised in `device_adaptation_test.dart` |
 | **Current iPhone** | The widest. | **iPhone 17 simulator — launched, rendered, journeys driven** |
 
-**Two of the four entries are Android, and neither could be run.** `flutter emulators` reports no
-AVD sources on this machine. That is not a small gap: Android is the majority platform for this
-audience, `minSdk = 24` is the entry this app most needs to prove, and it remains entirely
-unproven on anything but a widget test.
+### Correction — "neither could be run" was wrong, and it was wrong in the direction that flatters
+
+This document first recorded both Android entries as unrunnable because `flutter emulators` reports
+no AVD sources. That is what the tool says and it is not what it means. Android Studio is installed
+on this machine, `sdkmanager` and `avdmanager` are on disk, and
+**`system-images;android-24;default;arm64-v8a` is available to download** — exactly `minSdk = 24`,
+and arm64, so it runs natively on Apple silicon rather than under emulation.
+
+What was true was that no image was *installed*. What was written was that Android could not be
+run. Those are different statements, and the second one turned a task into an impossibility on the
+strength of one command's output — which is the same mistake this sequence has now made three other
+times and recorded each time.
+
+The image was installed and the run attempted. What follows is what actually happened.
 
 ---
 
@@ -123,3 +133,59 @@ Nothing in the right-hand column is claimed anywhere in this repository.
 One Android phone at `minSdk = 24` and one hour. It would answer the whole Android column, the
 frame-timing budget, and — with a photograph taken rather than a fixture loaded — the first real
 exercise of the upload path this sequence spent TAB 01 fixing.
+
+---
+
+## What the first Android run actually showed
+
+Nothing in fifty-three TABs of widget tests had ever put this app in front of Android's own chrome.
+One thing came out of it immediately, and it is exactly the class of observation a device run
+exists to produce:
+
+**The `DEV` ribbon overlaps the status-bar clock on Android, and does not on iOS.** The ribbon is
+drawn into the top-right corner. iOS puts its clock top-*left*, so they never meet; Android puts
+its clock top-*right*, so the ribbon sits over it. Neither a widget test nor an iOS run could have
+found this, because both were looking at the wrong corner.
+
+**It is not a release defect.** Article 7 shows the environment banner on non-production builds
+only, so no resident ever sees it — it is an LGU acceptance-testing surface, and the cost is that a
+tester reads the clock through a brown diagonal. Recorded rather than fixed: changing it would be
+scope this TAB does not own, and a finding logged is worth more than a change nobody asked for.
+
+---
+
+## The Android journeys did not run, and the harness is why
+
+The driven walk was started against the emulator and killed after **74 minutes with no output**.
+The proof it had not progressed is exact: the screen at 11:18 was the onboarding screen from
+10:05, pixel-identical but for the clock.
+
+Rather than guess whether that was the app or the tooling, a bounded probe was run — an
+`integration_test` containing nothing but a `Text` widget pumped once and matched. **It hung too**,
+for over twelve hours, on a test that cannot fail.
+
+So the finding is about the tooling, not the app: **`integration_test` does not complete against an
+emulated arm64 API 24 image on this machine.** The same harness, the same test file and the same
+app pass on the iOS Simulator in about ninety seconds.
+
+**What that does and does not license:**
+
+* It does **not** say the app is fine on Android. Nothing has driven it there.
+* It does **not** say the app is broken on Android. The probe rules the app out of the diagnosis
+  entirely — whatever is wrong is upstream of any code in this repository.
+* It **does** mean this machine cannot answer the question, and a real handset would settle it in
+  minutes. `adb` over USB to a physical phone bypasses the emulator entirely.
+
+## What the Android leg actually bought
+
+Two things, and they are worth stating plainly against the cost — 4.2 GB of SDK downloaded and
+roughly fourteen hours of wall-clock spent, most of it on a hang that should have been called at
+twenty minutes.
+
+1. **The app builds, installs, launches and renders correctly at `minSdk = 24`.** Nothing in
+   twenty-eight build TABs, twenty-five integration TABs or eight TABs of this sequence had
+   established that. It is now established.
+2. **One defect, from the launch rather than the walk** — the `DEV` ribbon over the status-bar
+   clock, which only an Android render could have shown.
+
+The cheapest part of the exercise found everything the exercise found.
