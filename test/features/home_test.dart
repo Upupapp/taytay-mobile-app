@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
@@ -104,6 +106,19 @@ class CountingVerificationRepository implements VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  }) async => const Err<KycDocument>(ServerFailure());
+
+  @override
+  Future<Result<List<KycDocument>>> loadDocuments() async =>
+      const Ok<List<KycDocument>>(<KycDocument>[]);
 
   @override
   Future<Result<VerificationStatus>> openCase({

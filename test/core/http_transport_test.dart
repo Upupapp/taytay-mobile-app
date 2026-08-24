@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -24,6 +25,50 @@ class _Clock {
 }
 
 void main() {
+  group('multipart', () {
+    test(
+      'a text field beside a file carries its value, not the word value',
+      () async {
+        // THE DEFECT THIS EXISTS FOR. The line read `multipart.fields[key] =
+        // '\$value'` — a backslash-escaped dollar, so every text field sent
+        // alongside a file was the literal five characters `$value`.
+        //
+        // It survived because nothing exercised it: no repository sent a body
+        // with a file until the KYC document upload (F28), which would have sent
+        // `type=$value` and met a 422 the resident could do nothing about, on the
+        // screen that decides whether they ever become Verified.
+        late String seenBody;
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((http.Request request) async {
+            seenBody = request.body;
+            return http.Response('{"data":{}}', 200);
+          }),
+        );
+
+        await transport.send(
+          ApiRequest(
+            method: HttpMethod.post,
+            path: 'me/kyc/documents',
+            body: const <String, dynamic>{'type': 'identity-document'},
+            file: MultipartFile(
+              field: 'file',
+              filename: 'philid.jpg',
+              bytes: Uint8List.fromList(<int>[1, 2, 3]),
+              mimeType: 'image/jpeg',
+            ),
+          ),
+        );
+
+        expect(seenBody, contains('identity-document'));
+        expect(seenBody, isNot(contains(r'$value')));
+        // And the file is still there — a fix that dropped it would pass the
+        // assertions above.
+        expect(seenBody, contains('philid.jpg'));
+      },
+    );
+  });
+
   group('URL resolution', () {
     test('preserves the configured base path and appends the query', () async {
       late Uri seen;

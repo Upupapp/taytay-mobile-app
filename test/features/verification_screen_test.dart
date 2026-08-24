@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
@@ -34,6 +37,19 @@ class StubVerificationRepository implements VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  }) async => const Err<KycDocument>(ServerFailure());
+
+  @override
+  Future<Result<List<KycDocument>>> loadDocuments() async =>
+      const Ok<List<KycDocument>>(<KycDocument>[]);
 
   @override
   Future<Result<VerificationStatus>> openCase({
@@ -168,6 +184,23 @@ Future<void> goHome(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Scrolls the verification list until [finder] is built and visible.
+///
+/// Needed since F28 put a documents card between the status header and the
+/// next-steps card: a `ListView` only builds what fits, so an assertion about
+/// copy below the fold fails with "found 0 widgets" rather than with anything
+/// about what changed.
+Future<void> scrollToText(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      finder,
+      160,
+      scrollable: find.byType(Scrollable).last,
+    );
+  }
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('the door out of Not started — F14 and F15', () {
     testWidgets(
@@ -283,8 +316,113 @@ void main() {
 
       // The one thing a resident must not be wrong about: a draft is not a
       // submission, and the office cannot see it yet.
+      await scrollToText(tester, find.textContaining('have not been sent'));
       expect(find.textContaining('have not been sent'), findsOneWidget);
       expect(find.text('Continue verification'), findsOneWidget);
+    });
+  });
+
+  group('documents — F28', () {
+    testWidgets('a draft offers both types and neither is demanded', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.inProgress,
+          rawState: 'draft',
+        ),
+      );
+
+      await scrollToText(tester, find.text('Documents you can send'));
+
+      // "can send", not "must send". A KYC case is adjudicated against the
+      // municipal register first; presenting documents as a checklist tells
+      // somebody their application is incomplete when the office may need
+      // nothing from them at all.
+      expect(find.text('Documents you can send'), findsOneWidget);
+      expect(find.textContaining('only if you are asked'), findsOneWidget);
+      expect(find.text('Government-issued ID'), findsOneWidget);
+      expect(find.text('Proof of address'), findsOneWidget);
+    });
+
+    testWidgets('there is no selfie or face capture anywhere in the flow', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.inProgress,
+          rawState: 'draft',
+        ),
+      );
+
+      // Gathered by scrolling the whole screen: an unscrolled `findsNothing` on
+      // a `ListView` passes whether or not the thing exists.
+      final Set<String> rendered = <String>{};
+      final Finder list = find.byType(Scrollable).last;
+      for (int i = 0; i < 30; i++) {
+        rendered.addAll(
+          tester
+              .widgetList<Text>(find.byType(Text))
+              .map((Text t) => t.data ?? '')
+              .where((String d) => d.isNotEmpty),
+        );
+        await tester.drag(list, const Offset(0, -240));
+        await tester.pumpAndSettle();
+      }
+
+      // A facial image is not revocable the way a password is, and a released
+      // build cannot be trusted to grade its own verification.
+      for (final String forbidden in <String>[
+        'selfie',
+        'Selfie',
+        'face',
+        'Face',
+        'liveness',
+      ]) {
+        expect(
+          rendered.where((String t) => t.contains(forbidden)),
+          isEmpty,
+          reason: forbidden,
+        );
+      }
+    });
+
+    testWidgets(
+      'a device that cannot pick a file says so instead of offering a dead button',
+      (tester) async {
+        await bootVerification(
+          tester,
+          detail: const VerificationStatusDetail(
+            stage: ResidentVerificationStage.inProgress,
+            rawState: 'draft',
+          ),
+        );
+
+        // The harness binds `UnavailableDocumentPicker`, which is also what any
+        // platform without a picker gets. A Send button that cannot work is the
+        // thing this app refuses to render.
+        await scrollToText(tester, find.textContaining('cannot choose a file'));
+        expect(find.textContaining('cannot choose a file'), findsOneWidget);
+        expect(find.textContaining('municipal hall'), findsWidgets);
+        expect(find.text('Send'), findsNothing);
+      },
+    );
+
+    testWidgets('a submitted case offers nothing to attach', (tester) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.pendingReview,
+          rawState: 'submitted',
+        ),
+      );
+
+      // A document arriving after submission changes what a reviewer already
+      // looked at without their knowing, and the server refuses it — so the app
+      // must not offer it either.
+      expect(find.text('Documents you can send'), findsNothing);
     });
   });
 
@@ -370,7 +508,9 @@ void main() {
       );
 
       expect(find.text('Could not be verified'), findsOneWidget);
+      await scrollToText(tester, find.text('Try again'));
       expect(find.text('Try again'), findsWidgets);
+      await scrollToText(tester, find.text('Finish at the municipal hall'));
       expect(find.text('Finish at the municipal hall'), findsOneWidget);
     });
 
@@ -384,6 +524,7 @@ void main() {
         ),
       );
 
+      await scrollToText(tester, find.text('Finish at the municipal hall'));
       expect(find.text('Finish at the municipal hall'), findsOneWidget);
       expect(
         find.textContaining('do not need anything from this app'),
@@ -403,6 +544,7 @@ void main() {
       );
 
       expect(find.text('Not started'), findsOneWidget);
+      await scrollToText(tester, find.text('Start verification'));
       expect(find.text('Start verification'), findsWidgets);
     });
   });

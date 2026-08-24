@@ -54,8 +54,9 @@ void main() {
 
   group('there is one page size, and this is what keeps it that way', () {
     Iterable<({String path, String source})> libFiles() sync* {
-      for (final FileSystemEntity entity
-          in Directory('lib').listSync(recursive: true)) {
+      for (final FileSystemEntity entity in Directory(
+        'lib',
+      ).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         if (entity.path.endsWith('core/api/page_policy.dart')) continue;
         yield (path: entity.path, source: entity.readAsStringSync());
@@ -129,20 +130,23 @@ void main() {
       expect(published?.source, PagePolicySource.served);
     });
 
-    test('and publishes the labelled fallback when it said nothing usable', () async {
-      PagePolicy? published;
+    test(
+      'and publishes the labelled fallback when it said nothing usable',
+      () async {
+        PagePolicy? published;
 
-      final controller = PlatformController(
-        repository: _BootstrapSaying(0),
-        onPagePolicy: (policy) => published = policy,
-      );
-      addTearDown(controller.dispose);
+        final controller = PlatformController(
+          repository: _BootstrapSaying(0),
+          onPagePolicy: (policy) => published = policy,
+        );
+        addTearDown(controller.dispose);
 
-      await controller.refresh();
+        await controller.refresh();
 
-      expect(published?.defaultPerPage, 25);
-      expect(published?.source, PagePolicySource.fallback);
-    });
+        expect(published?.defaultPerPage, 25);
+        expect(published?.source, PagePolicySource.fallback);
+      },
+    );
   });
 }
 

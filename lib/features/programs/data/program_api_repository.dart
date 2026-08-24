@@ -91,7 +91,8 @@ class ProgramApiRepository implements ProgramRepository {
     required int perPage,
   }) => <String, String>{
     'page': '${page < 1 ? 1 : page}',
-    'per_page': '${PagePolicy.maxPerPage < perPage ? PagePolicy.maxPerPage : perPage}',
+    'per_page':
+        '${PagePolicy.maxPerPage < perPage ? PagePolicy.maxPerPage : perPage}',
   };
 
   static Paginated<AssistanceProgram> _toPage(

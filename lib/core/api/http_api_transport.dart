@@ -102,8 +102,17 @@ class HttpApiTransport implements ApiTransport {
             ),
           );
         if (request.body is Map<String, dynamic>) {
+          // `value.toString()`, and it used to be `'\$value'` — a backslash-
+          // escaped dollar, so every text field alongside a file was sent as the
+          // literal five characters `$value`.
+          //
+          // Latent until now: no repository sent a body with a file, so nothing
+          // exercised this line. The first caller to do so was the KYC document
+          // upload, which would have sent `type=$value` and met a 422 the
+          // resident could do nothing about, on the screen that decides whether
+          // they ever become Verified.
           (request.body! as Map<String, dynamic>).forEach((key, value) {
-            if (value != null) multipart.fields[key] = '\$value';
+            if (value != null) multipart.fields[key] = value.toString();
           });
         }
         outgoing = multipart;

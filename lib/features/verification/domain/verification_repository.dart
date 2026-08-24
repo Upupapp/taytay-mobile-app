@@ -166,6 +166,34 @@ abstract interface class VerificationRepository {
     required String idempotencyKey,
   });
 
+  /// Attaches a document to the resident's open case (F28).
+  ///
+  /// **The bytes, not a reference.** There is no upload-then-reference dance
+  /// here because the server has no staging area: one request carries the file
+  /// and the slot it belongs in, and either the office has it or it does not.
+  ///
+  /// Accepted only while the case is the resident's to change — `draft`, or
+  /// `needs-more-information` when the office has asked for something. A
+  /// document sent after submission would change what a reviewer already looked
+  /// at without their knowing.
+  ///
+  /// [idempotencyKey] is required: an upload is the request most likely to be
+  /// retried, because it is long and runs on the worst connections.
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  });
+
+  /// What the office holds for this case, one row per type.
+  ///
+  /// Every type is reported whether or not something was sent, so a resident can
+  /// see that they have attached nothing — the state most easily mistaken for
+  /// having attached something.
+  Future<Result<List<KycDocument>>> loadDocuments();
+
   /// Submits captured evidence for review.
   ///
   /// [documentUploadIds] are references to material already uploaded, not the

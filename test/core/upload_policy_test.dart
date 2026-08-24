@@ -150,8 +150,9 @@ void main() {
         'uploadRequirementDocument',
       ];
 
-      for (final FileSystemEntity entity
-          in Directory('lib').listSync(recursive: true)) {
+      for (final FileSystemEntity entity in Directory(
+        'lib',
+      ).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
         if (entity.path.endsWith('core/documents/upload_policy.dart')) continue;
 
@@ -243,7 +244,8 @@ void main() {
       expect(
         shown,
         greaterThan(tenMegabytes.maxMegabytes),
-        reason: 'the refusal must not read as though the file were within the limit',
+        reason:
+            'the refusal must not read as though the file were within the limit',
       );
     });
 
@@ -263,7 +265,11 @@ void main() {
 
         final RegExp line = RegExp('"uploadRefusedTooLarge": "([^"]*)"');
         final RegExpMatch? match = line.firstMatch(text);
-        expect(match, isNotNull, reason: '$path has no uploadRefusedTooLarge value');
+        expect(
+          match,
+          isNotNull,
+          reason: '$path has no uploadRefusedTooLarge value',
+        );
 
         final String copy = match!.group(1)!;
         expect(copy, contains('{actual}'), reason: '$path drops the file size');

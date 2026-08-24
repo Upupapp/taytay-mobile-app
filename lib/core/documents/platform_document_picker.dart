@@ -41,7 +41,10 @@ class PlatformDocumentPicker implements DocumentPicker {
   }
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async {
+  Future<CapturedDocument?> pick(
+    DocumentSource source,
+    UploadPolicy policy,
+  ) async {
     return switch (source) {
       DocumentSource.camera => _pickImage(ImageSource.camera, source),
       DocumentSource.gallery => _pickImage(ImageSource.gallery, source),

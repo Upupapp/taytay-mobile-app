@@ -102,3 +102,79 @@ class KycClaim {
   @override
   String toString() => 'KycClaim(redacted)';
 }
+
+/// What a resident may attach to their own KYC case (F28).
+///
+/// ---
+///
+/// **Two, and there is deliberately no selfie.** A facial image is the most
+/// sensitive thing this app could hold: it is not revocable the way a password
+/// is, and a released mobile build cannot be trusted to grade its own
+/// verification (backend ADR 0002). Identity here is confirmed by a person
+/// comparing a document to the municipal registry, which is what the office
+/// already does at a counter. Adding a value to this enum is not a small change.
+///
+/// The [wireValue] is the server's slot key, so a case holds at most one live
+/// version of each — a clearer photo supersedes the blurred one rather than
+/// piling up beside it.
+enum KycDocumentType {
+  /// Any government-issued ID: PhilID, passport, driver's licence, postal or
+  /// voter's ID.
+  ///
+  /// Not narrowed to one issuer. A resident who holds only a voter's ID is
+  /// exactly the resident this service exists for, and a form accepting only a
+  /// PhilID excludes the people least likely to have one.
+  identityDocument(
+    'identity-document',
+    'Government-issued ID',
+    'A PhilID, passport, driver\'s licence, postal ID or voter\'s ID.',
+  ),
+
+  /// Something showing the claimed address.
+  ///
+  /// Optional in practice — the barangay office often knows the household
+  /// already, which is why the app never insists on it.
+  proofOfAddress(
+    'proof-of-address',
+    'Proof of address',
+    'A utility bill or barangay certificate showing where you live.',
+  );
+
+  const KycDocumentType(this.wireValue, this.label, this.description);
+
+  /// Sent as-is, and it is the server's slot key rather than a free label.
+  final String wireValue;
+
+  final String label;
+  final String description;
+}
+
+/// One document the office holds for this case, as the server reports it.
+///
+/// **Nothing about how it was judged.** The server deliberately withholds the
+/// reviewer's verification status and note from an applicant: a remark on a
+/// document is deliberation, and a resident is shown the decision on their case
+/// rather than the working that led to it. Nothing here has anywhere to put one.
+@immutable
+class KycDocument {
+  const KycDocument({
+    required this.type,
+    required this.isAttached,
+    this.receivedAt,
+    this.isAvailable = false,
+  });
+
+  final KycDocumentType type;
+
+  /// Whether anything has been sent for this slot at all.
+  final bool isAttached;
+
+  final DateTime? receivedAt;
+
+  /// False while the file is still being scanned.
+  ///
+  /// Carried so a screen can say "your ID is still being checked" instead of
+  /// offering something that will not open — the difference between a wait and
+  /// a failure.
+  final bool isAvailable;
+}

@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/documents/document_capture.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../l10n/app_localizations.dart';
@@ -13,6 +14,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../domain/correctable_field.dart';
+import '../domain/kyc_claim.dart';
 import '../domain/verification_status_detail.dart';
 import 'verification_controller.dart';
 
@@ -50,6 +52,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
     _controller = VerificationController(
       repository: dependencies.verificationRepository,
       session: dependencies.session,
+      picker: dependencies.documentPicker,
     )..addListener(_onChanged);
     _controller.refresh();
   }
@@ -121,6 +124,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         _CorrectionSection(controller: _controller),
                         const SizedBox(height: Spacing.xl),
                       ],
+                      // F28. Only while the case is the resident's to change:
+                      // a document sent after submission changes what a
+                      // reviewer already looked at, and the server refuses it.
+                      if (status.stage.needsResidentAction) ...<Widget>[
+                        _Documents(controller: _controller),
+                        const SizedBox(height: Spacing.xl),
+                      ],
                       if (status.submittedCategories.isNotEmpty) ...<Widget>[
                         _SubmittedItems(status: status),
                         const SizedBox(height: Spacing.xl),
@@ -189,6 +199,159 @@ class _StageHeader extends StatelessWidget {
 String _formatDate(DateTime date) =>
     '${date.day.toString().padLeft(2, '0')}/'
     '${date.month.toString().padLeft(2, '0')}/${date.year}';
+
+/// What the office holds for this case, and how to send it (F28).
+///
+/// ---
+///
+/// **Nothing here is required.** A KYC case is adjudicated first against the
+/// municipal registry, and most residents are already in it; documents settle
+/// the cases the match does not. Presenting them as a checklist would tell
+/// somebody their application is incomplete when the office may need nothing
+/// from them at all.
+///
+/// **No camera-first framing and no selfie.** The resident chooses the source,
+/// and there is no facial capture anywhere in this flow — see [KycDocumentType]
+/// for why that is a decision rather than an omission.
+class _Documents extends StatelessWidget {
+  const _Documents({required this.controller});
+
+  final VerificationController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(
+              'Documents you can send',
+              style: theme.textTheme.titleSmall,
+            ),
+          ),
+          const SizedBox(height: Spacing.sm),
+          Text(
+            'Taytay LGU checks your details against the municipal register '
+            'first. Send a document only if you are asked to, or if you want to '
+            'help them find you.',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: Spacing.md),
+
+          for (final KycDocumentType type in KycDocumentType.values)
+            _DocumentRow(
+              type: type,
+              document: controller.documents
+                  .where((KycDocument d) => d.type == type)
+                  .firstOrNull,
+              busy: controller.attaching == type,
+              onSend: controller.canAttach
+                  ? () =>
+                        controller.attachDocument(type, DocumentSource.gallery)
+                  : null,
+            ),
+
+          if (!controller.canAttach) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            // Honest rather than a button that cannot work. A resident on a
+            // device with no picker can still finish at the municipal hall, and
+            // the next-steps card below says so.
+            Text(
+              'This device cannot choose a file. You can still bring your ID to '
+              'the municipal hall.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DocumentRow extends StatelessWidget {
+  const _DocumentRow({
+    required this.type,
+    required this.document,
+    required this.busy,
+    required this.onSend,
+  });
+
+  final KycDocumentType type;
+  final KycDocument? document;
+  final bool busy;
+  final VoidCallback? onSend;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final bool attached = document?.isAttached ?? false;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(
+            attached ? Icons.check_circle_outline : Icons.upload_file_outlined,
+            size: IconSizes.sm,
+            color: attached
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: Spacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(type.label, style: theme.textTheme.bodyMedium),
+                Text(
+                  attached
+                      // Three states, not two. "Still being checked" is a wait;
+                      // saying "sent" while a scan is running would make a later
+                      // rejection look like the office losing it.
+                      ? (document!.isAvailable
+                            ? 'Sent to Taytay LGU.'
+                            : 'Sent. Still being checked.')
+                      : type.description,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: Spacing.sm),
+          if (busy)
+            const SizedBox(
+              width: IconSizes.sm,
+              height: IconSizes.sm,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          // Absent, not disabled, when this device cannot pick a file. A greyed
+          // control asks the resident to work out what is wrong with them; the
+          // card says plainly what is wrong with the device and where else they
+          // can go.
+          else if (onSend != null)
+            TextButton(
+              onPressed: onSend,
+              // "Replace" rather than "Send again": the server supersedes the
+              // previous version, and a resident should know the blurred photo
+              // stops being the one the office looks at.
+              child: Text(attached ? 'Replace' : 'Send'),
+            ),
+        ],
+      ),
+    );
+  }
+}
 
 /// The categories of information the LGU holds — never the values.
 class _SubmittedItems extends StatelessWidget {

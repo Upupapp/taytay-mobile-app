@@ -38,11 +38,7 @@ Future<SessionController> signedIn(
   String? deviceId,
 }) async {
   await store.write(
-    StoredSession(
-      resident: resident,
-      accessToken: 'tok',
-      deviceId: deviceId,
-    ),
+    StoredSession(resident: resident, accessToken: 'tok', deviceId: deviceId),
   );
   final controller = SessionController(store: store);
   if (withdrawal != null) controller.bindPushRegistration(withdrawal);
@@ -144,9 +140,13 @@ void main() {
       final store = InMemorySessionStore();
       late String? tokenDuringWithdrawal;
 
-      final controller = await signedIn(store, _Inspecting(() async {
-        tokenDuringWithdrawal = (await store.read())?.accessToken;
-      }), deviceId: 'device-abc');
+      final controller = await signedIn(
+        store,
+        _Inspecting(() async {
+          tokenDuringWithdrawal = (await store.read())?.accessToken;
+        }),
+        deviceId: 'device-abc',
+      );
 
       await controller.signOut();
 

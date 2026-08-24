@@ -116,7 +116,10 @@ class FakeDocumentPicker implements DocumentPicker {
   final List<UploadPolicy> policies = <UploadPolicy>[];
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async {
+  Future<CapturedDocument?> pick(
+    DocumentSource source,
+    UploadPolicy policy,
+  ) async {
     picked.add(source);
     policies.add(policy);
     return document;
@@ -325,7 +328,10 @@ void main() {
   group('what may be uploaded', () {
     test('an empty file is refused', () {
       expect(
-        DocumentCapturePolicy.inspect(captured(bytes: Uint8List(0)), servedPolicy),
+        DocumentCapturePolicy.inspect(
+          captured(bytes: Uint8List(0)),
+          servedPolicy,
+        ),
         DocumentRejection.empty,
       );
     });
@@ -346,7 +352,10 @@ void main() {
 
     test('a type the office does not accept is refused', () {
       expect(
-        DocumentCapturePolicy.inspect(captured(mimeType: 'application/zip'), servedPolicy),
+        DocumentCapturePolicy.inspect(
+          captured(mimeType: 'application/zip'),
+          servedPolicy,
+        ),
         DocumentRejection.unsupportedType,
       );
     });

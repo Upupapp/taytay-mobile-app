@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/api/request_context.dart';
+import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/session_controller.dart';
 import '../domain/correctable_field.dart';
+import '../domain/kyc_claim.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
 
@@ -32,11 +35,44 @@ class VerificationController extends ChangeNotifier {
   VerificationController({
     required VerificationRepository repository,
     required SessionController session,
+    DocumentPicker? picker,
   }) : _repository = repository,
-       _session = session;
+       _session = session,
+       _picker = picker ?? const UnavailableDocumentPicker();
 
   final VerificationRepository _repository;
   final SessionController _session;
+
+  /// The device seam for choosing a document (F28).
+  ///
+  /// Defaults to the unavailable one rather than being required, so a caller
+  /// that has nothing to pick with still gets a working status screen — the
+  /// screen's job is telling a resident where they stand, and it should not
+  /// stop doing that because a platform channel is missing.
+  final DocumentPicker _picker;
+
+  List<KycDocument> _documents = const <KycDocument>[];
+  KycDocumentType? _attaching;
+
+  /// Whether this controller has been thrown away.
+  ///
+  /// [_loadDocuments] is fired and not awaited, so it can land after a resident
+  /// has navigated off the screen — and `notifyListeners()` on a disposed
+  /// `ChangeNotifier` throws. Found by a test that had nothing to do with
+  /// documents, which is the usual way this class of bug is found.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  /// Notifies unless this controller is gone.
+  void _notify() {
+    if (_disposed) return;
+    notifyListeners();
+  }
 
   VerificationStatusDetail? _status;
   AppFailure? _failure;
@@ -47,7 +83,8 @@ class VerificationController extends ChangeNotifier {
 
   /// Corrections the resident has typed, keyed by the category the office
   /// flagged. Nothing can be entered for a category that was not flagged.
-  final Map<CorrectableField, String> _corrections = <CorrectableField, String>{};
+  final Map<CorrectableField, String> _corrections =
+      <CorrectableField, String>{};
 
   /// Which field the resident chose for each category that spans several.
   ///
@@ -61,6 +98,20 @@ class VerificationController extends ChangeNotifier {
   AppFailure? get failure => _failure;
   bool get loading => _loading;
   bool get submitting => _submitting;
+
+  /// What the office holds, one row per type. Empty until [refresh] has run.
+  List<KycDocument> get documents => _documents;
+
+  /// The type currently uploading, if any. Drives one spinner, not a global one.
+  KycDocumentType? get attaching => _attaching;
+
+  /// Whether this device can choose a file at all.
+  ///
+  /// A tablet with no picker should not show a Send button that cannot work —
+  /// the screen says so instead, and points at the municipal hall.
+  bool get canAttach =>
+      _picker.supports(DocumentSource.gallery) ||
+      _picker.supports(DocumentSource.camera);
 
   Map<CorrectableField, String> get corrections =>
       Map<CorrectableField, String>.unmodifiable(_corrections);
@@ -111,6 +162,10 @@ class VerificationController extends ChangeNotifier {
       onOk: (detail) {
         _status = detail;
         _syncSessionTier(detail);
+        // Read alongside the status rather than on demand: a resident opening
+        // this screen wants to know what the office has, and a second tap to
+        // find out is a second chance to conclude it has nothing.
+        unawaited(_loadDocuments());
       },
       onErr: (failure) {
         _failure = failure;
@@ -151,6 +206,82 @@ class VerificationController extends ChangeNotifier {
     _corrections[field] = value;
     _failure = null;
     notifyListeners();
+  }
+
+  Future<void> _loadDocuments() async {
+    final Result<List<KycDocument>> outcome = await _repository.loadDocuments();
+    outcome.fold(
+      onOk: (List<KycDocument> rows) {
+        _documents = rows;
+        _notify();
+      },
+      // Deliberately silent. A failure to list documents must not replace the
+      // status a resident came here to read, and the attach controls stay
+      // usable — the worst case is that they send something twice, which
+      // supersedes rather than duplicates.
+      onErr: (_) {},
+    );
+  }
+
+  /// Attaches one document to the open case (F28).
+  ///
+  /// ---
+  ///
+  /// **The bytes leave the device here and nowhere else.** There is no local
+  /// copy kept, no cache, and no retry queue holding a photograph of somebody's
+  /// PhilID: if the send fails the resident is told and chooses again, which
+  /// costs them a tap and costs nobody a stored identity document.
+  ///
+  /// Cancelling the picker is not a failure and is not reported as one — a
+  /// person backing out of a camera is exercising a choice.
+  Future<bool> attachDocument(
+    KycDocumentType type,
+    DocumentSource source,
+  ) async {
+    if (_attaching != null) return false;
+
+    final CapturedDocument? picked = await _picker.pick(
+      source,
+      // The server publishes no `accepts` block for KYC, so the app's single
+      // declared fallback applies. It is the only literal ceiling in `lib/`.
+      UploadPolicy.fallback,
+    );
+    if (picked == null) return false;
+
+    _attaching = type;
+    _failure = null;
+    notifyListeners();
+
+    final Result<KycDocument> outcome = await _repository.attachDocument(
+      type: type,
+      fileName: picked.fileName,
+      bytes: picked.bytes,
+      mimeType: picked.mimeType,
+      idempotencyKey: generateRequestId(),
+    );
+
+    _attaching = null;
+
+    return outcome.fold(
+      onOk: (KycDocument document) {
+        _documents =
+            <KycDocument>[
+              for (final KycDocument existing in _documents)
+                if (existing.type != document.type) existing,
+              document,
+            ]..sort(
+              (KycDocument a, KycDocument b) =>
+                  a.type.index.compareTo(b.type.index),
+            );
+        notifyListeners();
+        return true;
+      },
+      onErr: (AppFailure failure) {
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
   }
 
   /// Sends a saved draft to Taytay LGU for review.

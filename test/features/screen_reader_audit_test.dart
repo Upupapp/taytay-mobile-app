@@ -54,14 +54,8 @@ void main() {
       testWidgets('$level: every tappable thing carries a label', (
         tester,
       ) async {
-
         for (final String route in coreRoutes) {
-          await boot(
-            tester,
-            level: level,
-            device: _phone,
-            location: route,
-          );
+          await boot(tester, level: level, device: _phone, location: route);
           await expectLater(
             tester,
             meetsGuideline(labeledTapTargetGuideline),
@@ -85,12 +79,7 @@ void main() {
         tester,
       ) async {
         for (final String route in coreRoutes) {
-          await boot(
-            tester,
-            level: level,
-            device: _phone,
-            location: route,
-          );
+          await boot(tester, level: level, device: _phone, location: route);
           await expectLater(
             tester,
             meetsGuideline(androidTapTargetGuideline),

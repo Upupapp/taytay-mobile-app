@@ -167,4 +167,3 @@ String correctableFieldLabel(BuildContext context, CorrectableField field) {
     CorrectableField.email => strings.fieldEmail,
   };
 }
-

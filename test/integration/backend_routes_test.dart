@@ -24,8 +24,9 @@ void main() {
   Set<String> callsInSource() {
     final Set<String> found = <String>{};
 
-    for (final FileSystemEntity entity
-        in Directory('lib').listSync(recursive: true)) {
+    for (final FileSystemEntity entity in Directory(
+      'lib',
+    ).listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
 
       final String source = entity.readAsStringSync();

@@ -1,9 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
-import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/correctable_field.dart';
@@ -105,7 +105,8 @@ class KycApiRepository implements VerificationRepository {
     // category that spans several fields was resolved on the screen, and one
     // that spans none never reached an input.
     final Map<String, Object?> changes = <String, Object?>{
-      for (final MapEntry<CorrectableField, String> entry in corrections.entries)
+      for (final MapEntry<CorrectableField, String> entry
+          in corrections.entries)
         entry.key.wireValue: entry.value,
     };
 
@@ -203,17 +204,10 @@ class KycApiRepository implements VerificationRepository {
     required List<String> documentUploadIds,
     required String idempotencyKey,
   }) async {
-    if (documentUploadIds.isNotEmpty) {
-      // Nothing attaches a file to a KYC case (F28). Submitting anyway would
-      // tell a resident their identity document had reached the office when it
-      // never left the device — on the one screen where being wrong about that
-      // costs them the Verified state.
-      return backendGapFailure<void>(
-        BackendGap.kycDocumentUpload,
-        'submitForReview',
-      );
-    }
-
+    // Documents are attached before this, one request each, at
+    // `POST me/kyc/documents` — see [attachDocument]. Nothing rides along here,
+    // and `documentUploadIds` is kept on the contract only because the office
+    // may one day reference material it holds elsewhere.
     unawaited(
       _telemetry?.record(
         const FlowStep(
@@ -241,6 +235,98 @@ class KycApiRepository implements VerificationRepository {
       '${value.year.toString().padLeft(4, '0')}-'
       '${value.month.toString().padLeft(2, '0')}-'
       '${value.day.toString().padLeft(2, '0')}';
+
+  @override
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  }) async {
+    final response = await _apiClient.send<KycDocument>(
+      method: HttpMethod.post,
+      path: 'me/kyc/documents',
+      authenticated: true,
+      // An upload is the request most likely to be retried — long, and on the
+      // worst connections. Without the key a retry is a second version in the
+      // office's file.
+      idempotencyKey: idempotencyKey,
+      // Travels as a multipart text field beside the file. Until this call
+      // nothing in the app sent one, and the transport was writing the literal
+      // string `$value` for every field it was given.
+      body: <String, Object?>{'type': type.wireValue},
+      file: MultipartFile(
+        // The field name the server validates under. Not configurable: a
+        // mismatch is a 422 that reads like the resident's fault.
+        field: 'file',
+        filename: fileName,
+        bytes: bytes,
+        mimeType: mimeType,
+      ),
+      decode: (Object? data) => _decodeDocument(data) ?? _absent(type),
+    );
+    return response.map((ApiEnvelope<KycDocument> envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<List<KycDocument>>> loadDocuments() async {
+    final response = await _apiClient.send<List<KycDocument>>(
+      method: HttpMethod.get,
+      path: 'me/kyc/documents',
+      authenticated: true,
+      decode: _decodeDocuments,
+    );
+    return response.map(
+      (ApiEnvelope<List<KycDocument>> envelope) => envelope.data,
+    );
+  }
+
+  static KycDocument _absent(KycDocumentType type) =>
+      KycDocument(type: type, isAttached: false);
+
+  static List<KycDocument> _decodeDocuments(Object? data) {
+    final Object? rows = data is Map<String, dynamic>
+        ? data['documents']
+        : data;
+    if (rows is! List<dynamic>) return const <KycDocument>[];
+
+    final List<KycDocument> documents = <KycDocument>[];
+    for (final Object? row in rows) {
+      final KycDocument? decoded = _decodeDocument(row);
+      if (decoded != null) documents.add(decoded);
+    }
+    return List<KycDocument>.unmodifiable(documents);
+  }
+
+  /// Returns null for a type this build has never heard of.
+  ///
+  /// Dropped rather than guessed. A row the app cannot name is one it cannot
+  /// label either, and an unlabelled slot in a document list is something a
+  /// resident taps expecting it to do something.
+  static KycDocument? _decodeDocument(Object? row) {
+    if (row is! Map<String, dynamic>) return null;
+
+    final Object? wire = row['type'];
+    if (wire is! String) return null;
+
+    KycDocumentType? type;
+    for (final KycDocumentType candidate in KycDocumentType.values) {
+      if (candidate.wireValue == wire) type = candidate;
+    }
+    if (type == null) return null;
+
+    final Object? receivedAt = row['received_at'];
+
+    return KycDocument(
+      type: type,
+      isAttached: row['attached'] == true,
+      receivedAt: receivedAt is String
+          ? DateTime.tryParse(receivedAt)?.toUtc()
+          : null,
+      isAvailable: row['is_available'] == true,
+    );
+  }
 
   static VerificationStatus _decodeStatus(Object? data) {
     final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};

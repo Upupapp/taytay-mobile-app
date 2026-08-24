@@ -123,19 +123,22 @@ void main() {
   });
 
   group('no refresh is attempted, because none exists', () {
-    test('a coordinator with no refresher invalidates instead of retrying', () async {
-      // F22's recorded decision: there is no refresh endpoint on the server, and
-      // a client-side approximation — retry loops, speculative re-auth — is a
-      // fiction that fails differently on every connection.
-      int invalidations = 0;
-      final coordinator = AuthCoordinator(
-        onSessionInvalidated: () async => invalidations++,
-      );
+    test(
+      'a coordinator with no refresher invalidates instead of retrying',
+      () async {
+        // F22's recorded decision: there is no refresh endpoint on the server, and
+        // a client-side approximation — retry loops, speculative re-auth — is a
+        // fiction that fails differently on every connection.
+        int invalidations = 0;
+        final coordinator = AuthCoordinator(
+          onSessionInvalidated: () async => invalidations++,
+        );
 
-      expect(coordinator.canRefresh, isFalse);
-      expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
-      expect(invalidations, 1);
-    });
+        expect(coordinator.canRefresh, isFalse);
+        expect(await coordinator.handleUnauthenticated(), AuthRecovery.failed);
+        expect(invalidations, 1);
+      },
+    );
 
     test('concurrent 401s share one recovery attempt', () async {
       int invalidations = 0;
@@ -179,26 +182,29 @@ void main() {
   });
 
   group('the resident is told which of the three things happened', () {
-    test('expiry, deliberate sign-out and a network failure read differently', () async {
-      // A resident dropped on the sign-in screen with one generic sentence
-      // cannot tell whether something went wrong, whether they did it, or
-      // whether to try again.
-      final String en = await File('lib/l10n/app_en.arb').readAsString();
-      final Map<String, dynamic> strings =
-          jsonDecode(en) as Map<String, dynamic>;
+    test(
+      'expiry, deliberate sign-out and a network failure read differently',
+      () async {
+        // A resident dropped on the sign-in screen with one generic sentence
+        // cannot tell whether something went wrong, whether they did it, or
+        // whether to try again.
+        final String en = await File('lib/l10n/app_en.arb').readAsString();
+        final Map<String, dynamic> strings =
+            jsonDecode(en) as Map<String, dynamic>;
 
-      final List<String> variants = <String>[
-        strings['signInNoticeExpired'] as String,
-        strings['signInNoticeSignedOut'] as String,
-        strings['signInOffline'] as String,
-      ];
+        final List<String> variants = <String>[
+          strings['signInNoticeExpired'] as String,
+          strings['signInNoticeSignedOut'] as String,
+          strings['signInOffline'] as String,
+        ];
 
-      expect(
-        variants.toSet(),
-        hasLength(3),
-        reason: 'two of the three say the same thing',
-      );
-    });
+        expect(
+          variants.toSet(),
+          hasLength(3),
+          reason: 'two of the three say the same thing',
+        );
+      },
+    );
 
     test('the session-ended sheet does not claim work was kept', () async {
       // It used to say "Nothing you submitted has been lost." Narrowly true and
@@ -210,8 +216,7 @@ void main() {
         'lib/l10n/app_fil.arb',
       ]) {
         final Map<String, dynamic> strings =
-            jsonDecode(await File(path).readAsString())
-                as Map<String, dynamic>;
+            jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
         final String unsent = strings['sessionEndedUnsent'] as String;
 
         expect(
@@ -239,14 +244,9 @@ void main() {
         'lib/l10n/app_fil.arb',
       ]) {
         final Map<String, dynamic> strings =
-            jsonDecode(await File(path).readAsString())
-                as Map<String, dynamic>;
+            jsonDecode(await File(path).readAsString()) as Map<String, dynamic>;
         for (final String key in keys) {
-          expect(
-            strings[key],
-            isA<String>(),
-            reason: '$path is missing $key',
-          );
+          expect(strings[key], isA<String>(), reason: '$path is missing $key');
         }
       }
     });

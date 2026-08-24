@@ -11,7 +11,6 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 
-
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
   rawApiBaseUrl: 'https://example.test/api/v1',

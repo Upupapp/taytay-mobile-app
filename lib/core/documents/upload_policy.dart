@@ -105,9 +105,8 @@ final class UploadPolicy {
       'application/pdf': <String>['pdf'],
     };
 
-    return <String>[
-      for (final String type in mimeTypes) ...?byType[type],
-    ]..sort();
+    return <String>[for (final String type in mimeTypes) ...?byType[type]]
+      ..sort();
   }
 
   /// The ceiling in whole megabytes, for copy a resident reads.

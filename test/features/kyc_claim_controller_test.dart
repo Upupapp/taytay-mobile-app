@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
@@ -33,6 +35,19 @@ class _StubRepository implements VerificationRepository {
   );
   final List<KycClaim> claims = <KycClaim>[];
   final List<String> keys = <String>[];
+
+  @override
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  }) async => const Err<KycDocument>(ServerFailure());
+
+  @override
+  Future<Result<List<KycDocument>>> loadDocuments() async =>
+      const Ok<List<KycDocument>>(<KycDocument>[]);
 
   @override
   Future<Result<VerificationStatus>> openCase({

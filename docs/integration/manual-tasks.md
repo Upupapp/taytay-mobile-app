@@ -157,9 +157,9 @@ backend can publish it.
 
 ## Not on this list, deliberately
 
-**F26** (no content-reporting route), **F28** (a KYC case has nowhere to put a
-document) and the implementation of **F13** once the retention schedule exists
-are all code. They are tracked in `backend-baseline.md` and closed by writing it.
+The implementation of **F13**, once the retention schedule exists, is code.
+It is tracked in `backend-baseline.md` and closed by writing it. **F26** and
+**F28** were on this line and are now closed.
 
 **F16 was on this list for one revision and then split.** Its engineering half
 is closed; its procurement half is item 2. That split is the shape to look for

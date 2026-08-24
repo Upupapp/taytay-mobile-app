@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
@@ -47,6 +48,17 @@ Result<ApiHttpResponse> caseResponse({
       'meta': <String, Object?>{'request_id': 'req-1'},
     }),
     headers: const <String, String>{'x-request-id': 'req-1'},
+  ),
+);
+
+Result<ApiHttpResponse> ok(Object data) => Ok<ApiHttpResponse>(
+  ApiHttpResponse(
+    statusCode: 200,
+    body: jsonEncode(<String, Object?>{
+      'data': data,
+      'meta': <String, Object?>{'request_id': 'req-1'},
+    }),
+    headers: const <String, String>{},
   ),
 );
 
@@ -190,20 +202,121 @@ void main() {
       expect(request.body, isNull);
     });
 
+    test('documents are attached before submission, not carried on it', () async {
+      transport.responses.add(
+        caseResponse(status: 'submitted', statusCode: 200),
+      );
+
+      // F28 used to make this decline: nothing attached a file to a KYC case, so
+      // submitting with documents would have told a resident their PhilID had
+      // reached the office when it never left the device. Documents now go one
+      // per request to `me/kyc/documents`, and the submission carries none.
+      final Result<void> result = await repository.submitForReview(
+        documentUploadIds: const <String>['upload-1'],
+        idempotencyKey: 'key-2',
+      );
+
+      expect(result.isOk, isTrue);
+      expect(transport.requests.single.path, 'me/kyc/submit');
+      expect(transport.requests.single.body, isNull);
+    });
+  });
+
+  group('attaching a document — F28', () {
+    test('the file and its type travel together, in one request', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          ApiHttpResponse(
+            statusCode: 201,
+            body: jsonEncode(<String, Object?>{
+              'data': <String, Object?>{
+                'type': 'identity-document',
+                'attached': true,
+                'received_at': '2026-08-18T12:00:00Z',
+                'is_available': false,
+              },
+              'meta': <String, Object?>{'request_id': 'req-1'},
+            }),
+            headers: const <String, String>{},
+          ),
+        ),
+      );
+
+      final Result<KycDocument> result = await repository.attachDocument(
+        type: KycDocumentType.identityDocument,
+        fileName: 'philid.jpg',
+        bytes: Uint8List.fromList(<int>[1, 2, 3]),
+        mimeType: 'image/jpeg',
+        idempotencyKey: 'key-3',
+      );
+
+      final ApiRequest request = transport.requests.single;
+      expect(request.path, 'me/kyc/documents');
+      expect(request.file!.field, 'file');
+      expect(request.file!.mimeType, 'image/jpeg');
+
+      // The wire value, never the Dart name: `proof-of-address` would arrive as
+      // `proofOfAddress` if anybody reached for `.name`, and the server's slot
+      // key would silently become a slot nothing reads.
+      expect(
+        (request.body! as Map<String, Object?>)['type'],
+        'identity-document',
+      );
+
+      final KycDocument document = (result as Ok<KycDocument>).value;
+      expect(document.isAttached, isTrue);
+      // Still being scanned. A screen can say "we are checking it" rather than
+      // offering something that will not open.
+      expect(document.isAvailable, isFalse);
+    });
+
     test(
-      'a submission carrying documents declines rather than dropping them',
+      'a type this build has never heard of is dropped, not guessed',
       () async {
-        final Result<void> result = await repository.submitForReview(
-          documentUploadIds: const <String>['upload-1'],
-          idempotencyKey: 'key-2',
+        transport.responses.add(
+          ok(<String, Object?>{
+            'documents': <Object?>[
+              <String, Object?>{'type': 'identity-document', 'attached': true},
+              <String, Object?>{'type': 'retina-scan', 'attached': true},
+              'garbage',
+            ],
+          }),
         );
 
-        // F28: nothing attaches a file to a KYC case. Posting anyway would tell a
-        // resident who has just photographed their PhilID that the office has it.
-        expect(result.isErr, isTrue);
-        expect(transport.requests, isEmpty);
+        final Result<List<KycDocument>> result = await repository
+            .loadDocuments();
+        final List<KycDocument> documents =
+            (result as Ok<List<KycDocument>>).value;
+
+        // An unlabelled slot in a document list is one a resident taps expecting
+        // it to do something.
+        expect(documents, hasLength(1));
+        expect(documents.single.type, KycDocumentType.identityDocument);
       },
     );
+
+    test('there is no selfie or biometric type to send', () {
+      // A facial image is not revocable the way a password is, and a released
+      // build cannot be trusted to grade its own verification. Adding a value
+      // here is not a small change, so the absence is asserted rather than
+      // assumed.
+      expect(KycDocumentType.values, hasLength(2));
+      for (final KycDocumentType type in KycDocumentType.values) {
+        for (final String forbidden in <String>[
+          'selfie',
+          'face',
+          'live',
+          'biometric',
+        ]) {
+          expect(type.wireValue, isNot(contains(forbidden)), reason: forbidden);
+          expect(
+            type.label.toLowerCase(),
+            isNot(contains(forbidden)),
+            reason: forbidden,
+          );
+        }
+      }
+    });
   });
 
   group('reading the case', () {

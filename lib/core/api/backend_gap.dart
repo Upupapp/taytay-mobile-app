@@ -71,30 +71,6 @@ enum BackendGap {
     servedInstead: 'the code is persisted against the account and discarded',
   ),
 
-  /// **F28 — a KYC case has nowhere to put an identity document.**
-  ///
-  /// `POST me/kyc/submit` takes no body, and no route attaches a file to a KYC
-  /// case. The only document upload in the whole contract is
-  /// `POST me/cases/{case}/requirements/{requirement}/documents`, which belongs
-  /// to a `Welfare` assistance case: a different module, a different lifecycle,
-  /// and keyed by a requirement a KYC case does not have. Filing an identity
-  /// document there would attach a resident's ID to an assistance application
-  /// they never made.
-  ///
-  /// So a claim can be opened and submitted, and the reviewer adjudicates it
-  /// against the canonical registry — which is what `ResidentMatcher` does — but
-  /// a resident cannot send the document that settles a case the match does not.
-  /// Declining is the only honest option: an app that accepted a photograph of
-  /// somebody's PhilID and dropped it would have collected the most sensitive
-  /// thing it can hold, for nothing.
-  kycDocumentUpload(
-    finding: 'F28',
-    missing: 'any route that attaches a document to a KYC case',
-    servedInstead:
-        'POST me/cases/{case}/requirements/{requirement}/documents '
-        '(a Welfare assistance case, not a KYC one)',
-  ),
-
   /// **F23 — a KYC correction cannot be filed the way the office asks for it.**
   ///
   /// `POST me/profile/corrections` takes named fields. This app groups what a

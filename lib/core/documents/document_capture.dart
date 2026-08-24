@@ -149,7 +149,10 @@ abstract final class DocumentCapturePolicy {
   /// repository is a second description of a boundary the server owns, and it
   /// drifts the first time the server's changes — which is exactly what TAB 01
   /// found had already happened, twice, in two different files.
-  static DocumentRejection? inspect(CapturedDocument document, UploadPolicy policy) {
+  static DocumentRejection? inspect(
+    CapturedDocument document,
+    UploadPolicy policy,
+  ) {
     if (document.sizeBytes == 0) return DocumentRejection.empty;
     if (document.sizeBytes > policy.maxBytes) return DocumentRejection.tooLarge;
     if (!policy.mimeTypes.contains(document.mimeType)) {
@@ -222,7 +225,10 @@ class UnavailableDocumentPicker implements DocumentPicker {
   const UnavailableDocumentPicker();
 
   @override
-  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) async => null;
+  Future<CapturedDocument?> pick(
+    DocumentSource source,
+    UploadPolicy policy,
+  ) async => null;
 
   @override
   bool supports(DocumentSource source) => false;

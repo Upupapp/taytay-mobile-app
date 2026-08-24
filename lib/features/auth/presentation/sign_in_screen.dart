@@ -18,7 +18,6 @@ import '../../../shared/widgets/app_card.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
 
-
 /// Sign-in: a mobile number, then a one-time code.
 ///
 /// ---
@@ -539,7 +538,8 @@ class _OfficeOnboardingPanel extends StatelessWidget {
             ),
             // Rendered only when the server actually supplied them. A line
             // reading "Ask the office:  · " is worse than no line.
-            if (support.email.isNotEmpty || support.phone.isNotEmpty) ...<Widget>[
+            if (support.email.isNotEmpty ||
+                support.phone.isNotEmpty) ...<Widget>[
               const SizedBox(height: Spacing.sm),
               Text(
                 strings.onboardingOfficeContact(support.email, support.phone),
@@ -552,4 +552,3 @@ class _OfficeOnboardingPanel extends StatelessWidget {
     );
   }
 }
-

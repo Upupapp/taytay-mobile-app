@@ -61,9 +61,7 @@ Future<void> _bootToSignIn(
   );
   addTearDown(dependencies.dispose);
 
-  await tester.pumpWidget(
-    TaytayResidentApp(dependencies: dependencies),
-  );
+  await tester.pumpWidget(TaytayResidentApp(dependencies: dependencies));
   await tester.pump();
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
@@ -151,7 +149,10 @@ void main() {
       // The acceptance criterion is "not a disabled button". A control a
       // resident cannot use reads as a broken app; a sentence tells them where
       // to go.
-      expect(find.text('Accounts are made at the MSWDO office'), findsOneWidget);
+      expect(
+        find.text('Accounts are made at the MSWDO office'),
+        findsOneWidget,
+      );
       expect(find.text('Create an account'), findsNothing);
     });
 
@@ -211,10 +212,7 @@ void main() {
             location: route.path,
             onboarding: OnboardingMode.selfEnrolled,
           ),
-          resolveRedirect(
-            session: _verified,
-            location: route.path,
-          ),
+          resolveRedirect(session: _verified, location: route.path),
           reason: route.name,
         );
       }
@@ -259,4 +257,3 @@ class _BootstrapTransport implements ApiTransport {
     return const Err<ApiHttpResponse>(NetworkFailure());
   }
 }
-
