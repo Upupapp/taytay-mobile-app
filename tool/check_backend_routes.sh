@@ -77,9 +77,25 @@ backend_routes() {
        | sort -u
 }
 
+# NEWLINES ARE SQUEEZED OUT FIRST, AND THAT IS NOT A TIDINESS CHOICE.
+#
+# `dart format` wraps a constructor whose arguments do not fit, so half the rows
+# in the manifest look like
+#
+#     BackendRoute(
+#       'POST',
+#       'newsfeed-comments/{}/reports',
+#       'newsfeed_api_repository.dart',
+#     ),
+#
+# A line-oriented match silently sees 37 of 53 and reports the missing sixteen as
+# undeclared — which is exactly the drift this script exists to catch, produced
+# by the script itself. It happened, on the first commit somebody else made after
+# this guard was written.
 declared_routes() {
-  grep -oE "BackendRoute\('[A-Z]+', '[^']+'" "$MANIFEST" \
-    | sed -E "s/BackendRoute\('([A-Z]+)', '([^']+)'/\1 \2/" \
+  tr '\n' ' ' < "$MANIFEST" \
+    | grep -oE "BackendRoute\( *'[A-Z]+', *'[^']+'" \
+    | sed -E "s/BackendRoute\( *'([A-Z]+)', *'([^']+)'/\1 \2/" \
     | sort -u
 }
 
@@ -87,6 +103,24 @@ exceptions() {
   awk '/^const List<String> routesAheadOfBaseline/,/^\];/' "$MANIFEST" \
     | grep -oE "'[A-Z]+ [^']+'" | tr -d "'" | sort -u
 }
+
+# A declaration this parser cannot see is a route this guard cannot check, so the
+# count is asserted against the raw number of constructors. Without this the fix
+# above is one reformat away from silently regressing.
+assert_parser_sees_everything() {
+  local declared raw
+  declared="$(declared_routes | grep -c .)"
+  raw="$(grep -c 'BackendRoute(' "$MANIFEST")"
+  # One extra: the constructor's own declaration in the class body.
+  if [ "$declared" -lt "$((raw - 1))" ]; then
+    echo "FAIL: the manifest parser sees $declared of $((raw - 1)) declared routes." >&2
+    echo "      Formatting has outrun the parser again. Fix the parser; do not" >&2
+    echo "      lower this expectation." >&2
+    exit 2
+  fi
+}
+
+assert_parser_sees_everything
 
 SERVED="$(backend_routes)"
 DECLARED="$(declared_routes)"

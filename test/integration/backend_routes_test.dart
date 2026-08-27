@@ -161,14 +161,25 @@ void main() {
     );
   });
 
-  test('the exception list is exactly the two C-09 routes', () {
-    // Deliberately an equality rather than a ceiling. The count is two, both are
-    // named in docs/frontend/open-work.md, and both close the same way — by
-    // moving the baseline. A third entry is a different finding and must be
-    // argued in a report, not appended here.
+  test('the exception list is exactly the four C-09 routes', () {
+    // Deliberately an equality rather than a ceiling: every entry must be argued
+    // in a report before it can be added, and this test is what forces that.
+    //
+    // It has been earned once already. It went red on 2026-08-27 when F28's
+    // client half began calling `me/kyc/documents`, which the backend added on
+    // the 24th and the pinned baseline does not have — and it refused a push
+    // until somebody wrote down why. That is the whole purpose of an equality
+    // here rather than a `lessThan`.
+    //
+    // All four close the same way, by moving the pin. See C-09.
     expect(
       routesAheadOfBaseline.toSet(),
-      <String>{'GET barangays', 'POST newsfeed-comments/{}/reports'},
+      <String>{
+        'GET barangays',
+        'POST newsfeed-comments/{}/reports',
+        'GET me/kyc/documents',
+        'POST me/kyc/documents',
+      },
       reason:
           'The set of routes ahead of the baseline changed. If one closed, the '
           'baseline moved and backend_baseline.dart must move with it. If one '

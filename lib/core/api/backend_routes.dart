@@ -178,4 +178,23 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
 const List<String> routesAheadOfBaseline = <String>[
   'GET barangays',
   'POST newsfeed-comments/{}/reports',
+
+  // ── Added 2026-08-27, and argued rather than appended ──────────────────────
+  //
+  // F28's client half — an applicant sending their identity document — was
+  // built against `me/kyc/documents`, which the backend added on 24 August and
+  // the pinned baseline does not have. Verified both ways: absent at `eec71e6`,
+  // present at backend HEAD.
+  //
+  // That is the same condition as `GET barangays` and the comment-report route,
+  // not a new kind of problem: the client is ahead of the commit it declares
+  // itself built against. The resolution is unchanged and is still C-09 — move
+  // the pin, once that repository holds still long enough to tag.
+  //
+  // The guard refused the push until this was written down, which is what it is
+  // for. Two of these were a finding; four are a pattern, and the pattern is
+  // that this app's baseline has been stale for a fortnight while both sides
+  // kept building.
+  'GET me/kyc/documents',
+  'POST me/kyc/documents',
 ];

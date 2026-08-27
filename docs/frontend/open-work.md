@@ -40,7 +40,7 @@ Figures from the run, not from any document.
 | **C-06** | P1 | "One refresh is one sign-out" is decided but never proven under concurrency (F22) | **TAB 06 — CLOSED, and it was not holding** |
 | **C-07** | P1 | No TalkBack or VoiceOver session has ever been run | **TAB 07 — PARTIAL; still no screen reader** |
 | **C-08** | P1 | No physical device run; no iOS run of any kind | **TAB 08 — PARTIAL; iOS runs, Android has never run** |
-| **C-09** | **P1** | The app calls two routes that do not exist at its own pinned baseline | **TAB 00A — detected and guarded; resolution still blocked** |
+| **C-09** | **P1** | The app calls **four** routes that do not exist at its own pinned baseline | **detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
 
 C-01 through C-08 are the findings the front-end command was written from, each already carrying a
@@ -493,4 +493,46 @@ its right-hand column is claimed anywhere in this repository.
 **Also corrected here:** `docs/integration/performance-budgets.md` still said "a feed page is 25
 rows". TAB 05 made the page size the server's — 15 at the pinned baseline. Fixed rather than left
 as a document contradicting the code.
+
+---
+
+## C-09 grew to four, and the guard earned itself twice on one day — 2026-08-27
+
+The pre-push sweep ran the route guard and it went **red**. Both failures are worth recording,
+because only one of them was real.
+
+### The real one: two more routes ahead of the baseline
+
+F28's client half — an applicant sending their identity document — calls `GET me/kyc/documents` and
+`POST me/kyc/documents`. Verified both ways: **absent at `eec71e6`, present at backend HEAD**, added
+on 24 August. Same condition as `GET barangays` and the comment-report route.
+
+The ratchet refused the push until it was argued and written down, which is what an equality
+assertion rather than a ceiling is for. **C-09 is now four routes**, and four is a different
+statement from two: this app's baseline has been stale for a fortnight while both sides kept
+building. The resolution is unchanged — move the pin.
+
+### The false one: my own guard, defeated by a formatter
+
+The guard also reported `POST newsfeed-comments/{}/reports` as an exception the baseline now
+serves. **It does not.** `dart format` had wrapped the longer `BackendRoute(...)` constructors
+across lines, and the guard's line-oriented extractor saw **37 of 53** declarations — so a declared
+route looked undeclared, and the "stale exception" branch fired.
+
+Two defects in one, and both mine:
+
+* the extractor was line-oriented against a file a formatter owns;
+* the failure message named only one of the two conditions that reach it — "the baseline DOES
+  serve" — when "the app no longer declares it" reaches the same branch. It described the wrong
+  cause with total confidence.
+
+Fixed by squeezing newlines before matching, and by adding an assertion that the parser sees every
+`BackendRoute(` in the file. That assertion was proven red: with the fix reverted it reports
+`the manifest parser sees 37 of 52`. It would have caught the original bug on the day it appeared.
+
+**This is the fifth instance of the sequence's own pattern, and the first inside code written to
+prevent it.** A guard built to catch drift was silently defeated by a reformat, and reported a
+cause that was not the cause. The lesson holds and now has a sharper edge: *a passing check is not
+evidence until somebody has watched it fail* — and a **failing** check is not a diagnosis until
+somebody has checked which branch produced it.
 
