@@ -124,10 +124,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
                         _CorrectionSection(controller: _controller),
                         const SizedBox(height: Spacing.xl),
                       ],
-                      // F28. Only while the case is the resident's to change:
-                      // a document sent after submission changes what a
-                      // reviewer already looked at, and the server refuses it.
-                      if (status.stage.needsResidentAction) ...<Widget>[
+                      // F28, and now on the OFFICE'S answer rather than this
+                      // app's reading of it (C-11). `can_edit` is computed
+                      // server-side from the case status; the stage is a
+                      // client's inference from a status string. When they
+                      // disagree the office is right, and a resident offered an
+                      // upload the server will refuse has been invited to waste
+                      // their data.
+                      if (status.isEditableByApplicant) ...<Widget>[
                         _Documents(controller: _controller),
                         const SizedBox(height: Spacing.xl),
                       ],

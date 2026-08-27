@@ -271,6 +271,7 @@ class VerificationStatusDetail {
     this.residentGuidance,
     this.manualReviewAvailable = false,
     this.submittedAt,
+    this.canEdit,
   });
 
   /// Nothing known yet — the initial state before a load completes.
@@ -290,6 +291,26 @@ class VerificationStatusDetail {
 
   /// What needs fixing, when the office said so.
   final List<VerificationItemIssue> issues;
+
+  /// Whether the office says this case is still the applicant's to change.
+  ///
+  /// **Read, not derived** (C-11). `GET me/kyc` publishes `can_edit`, computed
+  /// server-side from `KycStatus::isEditableByApplicant()`, and this app used to
+  /// throw it away and infer the same thing from the stage instead. The stage is
+  /// a client's reading of a status string; `can_edit` is the office's own
+  /// answer, and when the two disagree the office is right.
+  ///
+  /// Null means the server did not say — an older build, or a response shaped by
+  /// something in the middle — and [isEditableByApplicant] falls back to the
+  /// inference rather than locking a resident out of their own application.
+  final bool? canEdit;
+
+  /// Whether to offer the resident a change, preferring what the server said.
+  ///
+  /// The fallback is the old behaviour exactly, so a response without `can_edit`
+  /// behaves as it always did. What is gone is *ignoring* the field when it is
+  /// present.
+  bool get isEditableByApplicant => canEdit ?? stage.needsResidentAction;
 
   /// Server-composed, resident-addressed guidance.
   ///

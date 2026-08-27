@@ -42,8 +42,8 @@ Figures from the run, not from any document.
 | **C-08** | P1 | No physical device run; no iOS run of any kind | **TAB 08 — PARTIAL; iOS runs, Android has never run** |
 | **C-09** | **P1** | The app calls **four** routes that do not exist at its own pinned baseline | **detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
-| **C-11** | **P1** | The verification correction flow cannot render against the real backend | **OPEN — needs a decision** |
-| **C-12** | P2 | Three privacy-critical decoders, ~29 tests, and no production caller | **OPEN** |
+| **C-11** | **P1** | The verification correction flow cannot render against the real backend | **CLOSED — the app now reads what the server sends** |
+| **C-12** | P2 | Three privacy-critical decoders, ~29 tests, and no production caller | **PARTIAL — one deleted and proven fiction; two remain** |
 
 C-01 through C-08 are the findings the front-end command was written from, each already carrying a
 TAB. **C-09 and C-10 were found by TAB 00 and the command did not anticipate them.** They were
@@ -602,4 +602,54 @@ Both were caught by re-checking with an independent method before anything was r
 because it is the same pattern this sequence has now hit six times, and because a stitch audit that
 reports orphans without verifying them produces exactly the confident wrong answer it exists to
 prevent.
+
+---
+
+## C-11 closed — and the defect was sharper than the finding
+
+The finding said the correction flow could not render. True, and the more consequential half was
+next to it: **`loadOwnStatusDetail` read three fields off an eight-field projection and dropped the
+rest.**
+
+* **`can_edit` is now read.** The office computes it from the case status
+  (`KycStatus::isEditableByApplicant()`); this app inferred the same thing from its own reading of
+  the stage and ignored the server's answer. `isEditableByApplicant` prefers the server and falls
+  back to the inference **only when the field is absent**, so a response that does not carry it
+  behaves exactly as before rather than locking a resident out of an open case.
+* **`submitted_at` is now read.** That is why *"Sent on …"* never appeared for anybody — the screen
+  had always known how to render it.
+* `id`, `resident_id` and `claimed` are named in the decoder as deliberately not carried, so they
+  read as considered rather than missed. `documents` is left to the endpoint that owns it, because
+  taking it from two places gives the screen two answers the moment one goes stale.
+* The document-upload affordance now gates on `status.isEditableByApplicant` rather than on the
+  stage — a resident offered an upload the server will refuse has been invited to waste their data.
+
+**Same class as the upload ceiling and the page size: a value the server publishes, derived locally
+rather than read.** Third time this sequence has found it.
+
+The `issues` question itself is untouched and stays with the backend: whether a reviewer's findings
+reach a resident in-app is a product decision, and the flow remains dead rather than wrong.
+
+## C-12 partial — and the three DTOs turned out not to be one case
+
+Porting the first changed what was known about the other two, so they were **not** treated alike.
+
+| DTO | Verdict | State |
+| --- | --- | --- |
+| `VerificationStatusDto` | **Fiction.** Read `state`, `in_progress`, `under_review`, `verified`. The server's `KycStatus` sends `draft`, `submitted`, `screening`, `manual-review`, `needs-more-information`, `approved`, `rejected`, `withdrawn`, `expired` — and **production's `VerificationAttemptState.parse` matches that list exactly**. | **Deleted**, its hostile-payload tests re-pointed at the repository |
+| `HouseholdDto` | **Partly fiction** — reads `label`, `barangay`, `role`; the server sends `name`, `barangay_id`, `is_head`/`relationship_to_me`. **2 of 5 keys exist.** Also carries an `encodeCorrection` path with no production equivalent. | **Left in place** |
+| `ResidentProfileDto` | **Unproven.** Its visible key constant (`verification_tier`) is one production also reads. | **Left in place** |
+
+**The port caught me being wrong, and that is the strongest evidence in this entry.** The new
+state-mapping assertions were written from the DTO's vocabulary; they failed, and the backend's own
+enum settled it — production right, DTO fiction. A decoder whose tests certify an imagined API is
+worse than no decoder, because the tests read as assurance.
+
+The remaining two are **not** deleted in this pass. Porting the first revealed a contract mismatch
+that needed care; `HouseholdDto` carries an encode path as well as a decode one; and rushing two
+more on a pattern that has already surprised me once would be the seventh instance of this
+sequence's own failure mode rather than a tidy finish.
+
+**What is proven and should be believed:** no leak. The production decoders for all three surfaces
+were read during this sweep and every one names its keys and walks past the rest.
 

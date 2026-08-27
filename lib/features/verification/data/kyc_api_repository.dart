@@ -80,14 +80,79 @@ class KycApiRepository implements VerificationRepository {
   }
 
   @override
+  /// The applicant's own view of their case, decoded from what the server
+  /// actually sends.
+  ///
+  /// ## Why this no longer goes through [loadOwnStatus] (C-11)
+  ///
+  /// It used to: it called that method, took the three fields the narrow
+  /// `VerificationStatus` carries, and built a detail from them. The projection
+  /// on the wire has eight — `id`, `status`, `can_edit`, `submitted_at`,
+  /// `message`, `claimed`, `resident_id`, `documents` — so **five were being
+  /// read off the socket and dropped**, including two the screen already knows
+  /// how to render.
+  ///
+  /// `submitted_at` is why "Sent on …" never appeared for anybody. `can_edit`
+  /// is the more consequential one: the office computes it from the case status
+  /// and this app inferred the same thing from its own reading of the stage
+  /// instead. Same class of defect as the upload ceiling and the page size —
+  /// a value the server publishes, derived locally rather than read.
+  ///
+  /// `id`, `resident_id` and `claimed` are read and deliberately not carried:
+  /// `claimed` is the resident's own submitted details, which this screen does
+  /// not re-display, and the two identifiers have nowhere to go. Naming them
+  /// here is the record that they were considered rather than missed.
+  ///
+  /// `documents` is left to `loadOwnDocuments`, which owns that list and is
+  /// refreshed on its own after an upload; taking it from two places would give
+  /// the screen two answers that disagree the moment one of them is stale.
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async {
-    final Result<VerificationStatus> status = await loadOwnStatus();
-    return status.map(
-      (VerificationStatus value) => VerificationStatusDetail(
-        stage: ResidentVerificationStage.fromAttemptState(value.state),
-        rawState: value.rawState,
-        residentGuidance: value.residentGuidance,
+    final response = await _apiClient.send<VerificationStatusDetail>(
+      method: HttpMethod.get,
+      path: 'me/kyc',
+      authenticated: true,
+      decode: _decodeDetail,
+    );
+
+    // The same 404-is-not-a-failure rule `loadOwnStatus` carries: a resident who
+    // has never started verification has not failed at anything.
+    return switch (response) {
+      Ok<dynamic>() => Ok<VerificationStatusDetail>(response.valueOrNull!.data),
+      Err<dynamic>(:final failure) when failure is NotFoundFailure =>
+        const Ok<VerificationStatusDetail>(VerificationStatusDetail.unknown),
+      Err<dynamic>(:final failure) => Err<VerificationStatusDetail>(failure),
+    };
+  }
+
+  /// Allow-list decoder for the applicant projection.
+  ///
+  /// Names every key it reads and walks past everything else, which is both the
+  /// house convention (unknown fields are ignored, never rejected) and the
+  /// privacy control: a reviewer's identity or an internal note cannot land in
+  /// a field nobody added a line for.
+  static VerificationStatusDetail _decodeDetail(Object? data) {
+    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
+
+    final Object? raw = map['status'];
+    final Object? message = map['message'];
+    final Object? submittedAt = map['submitted_at'];
+    final Object? canEdit = map['can_edit'];
+
+    return VerificationStatusDetail(
+      stage: ResidentVerificationStage.fromAttemptState(
+        VerificationAttemptState.parse(raw is String ? raw : null),
       ),
+      rawState: raw is String ? raw : '',
+      residentGuidance: message is String && message.trim().isNotEmpty
+          ? message.trim()
+          : null,
+      submittedAt: submittedAt is String
+          ? DateTime.tryParse(submittedAt)?.toUtc()
+          : null,
+      // Only a real boolean counts. A missing field means "the server did not
+      // say" and must stay null so the fallback applies; coercing it to false
+      // would lock a resident out of a case the office considers open.
+      canEdit: canEdit is bool ? canEdit : null,
     );
   }
 
