@@ -42,6 +42,8 @@ Figures from the run, not from any document.
 | **C-08** | P1 | No physical device run; no iOS run of any kind | **TAB 08 — PARTIAL; iOS runs, Android has never run** |
 | **C-09** | **P1** | The app calls **four** routes that do not exist at its own pinned baseline | **detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
+| **C-11** | **P1** | The verification correction flow cannot render against the real backend | **OPEN — needs a decision** |
+| **C-12** | P2 | Three privacy-critical decoders, ~29 tests, and no production caller | **OPEN** |
 
 C-01 through C-08 are the findings the front-end command was written from, each already carrying a
 TAB. **C-09 and C-10 were found by TAB 00 and the command did not anticipate them.** They were
@@ -535,4 +537,69 @@ prevent it.** A guard built to catch drift was silently defeated by a reformat, 
 cause that was not the cause. The lesson holds and now has a sharper edge: *a passing check is not
 evidence until somebody has watched it fail* — and a **failing** check is not a diagnosis until
 somebody has checked which branch produced it.
+
+---
+
+## C-11 — the correction flow cannot appear for a real resident (sweep, 2026-08-27)
+
+**Three decoders, three different contracts, and only one of them exists.**
+
+| | reads | |
+| --- | --- | --- |
+| **Server**, `GET me/kyc` → `applicantProjection` | `id`, `status`, `can_edit`, `submitted_at`, `message`, `claimed{}`, `resident_id`, `documents` | what is actually sent |
+| **Production**, `KycApiRepository._decodeStatus` | `status`, `message` — **2 of 8** | drops `submitted_at`, `can_edit`, `documents` |
+| **`VerificationStatusDto.fromJson`** — 145 lines, 12 tests | `state`, `issues`, `submitted_categories`, `resident_guidance`, `manual_review_available`, `submitted_at` | **the server sends none of these names** |
+
+`loadOwnStatusDetail` builds a `VerificationStatusDetail` from **three** fields — stage, rawState,
+residentGuidance — and never populates `issues`, `submittedCategories`, `manualReviewAvailable` or
+`submittedAt`.
+
+`verification_screen.dart:446` renders *"N things to fix"* from `status.issues`, and every input in
+the correction section is built by iterating it. **`issues` is empty in production and the backend
+has no `issues` key anywhere**, so that section renders for nobody.
+
+**This is recorded against TAB 04's own work.** That TAB rebuilt the category→field keying for this
+exact flow — modelled the server's twelve correctable fields, made the resident choose which detail,
+refused documents before the input, added two guards and proved them red. All of it correct, and all
+of it on a screen that cannot appear against the real backend. The mapping was traced meticulously;
+where `issues` came from was never traced at all.
+
+**It needs a decision, not a patch.** Either the backend publishes an `issues` projection for the
+applicant — which is a real product question about how a reviewer's findings reach a resident — or
+the correction UI comes out and the app tells a returned applicant to visit the office. Both are
+defensible; neither is the client's to take alone.
+
+**Until then the flow is dead, not broken.** Nothing misleads a resident today, because nothing
+renders. That is the only reason this is P1 and not P0.
+
+## C-12 — 403 lines of privacy decoder that nothing calls
+
+`VerificationStatusDto` (145 lines, 12 test references), `ResidentProfileDto` (123, 8) and
+`HouseholdDto` (135, 9) are **imported by no production file**. Each repository decodes inline with
+its own private `_decode` static instead.
+
+Their doc comments describe them as the privacy control — allow-list decoders whose tests feed
+hostile payloads carrying `reviewed_by`, `risk_score`, `internal_notes`, `audit_trail` and another
+resident's record, and assert none survives.
+
+**Those ~29 tests certify a control the app does not use.** The production decoders were checked
+during this sweep and are *also* allow-list — `_decodeStatus` names two keys and takes nothing else
+— so **no leak is being claimed here**. What is claimed is that the assurance and the code have
+come apart: the tests prove a property of a file, and the file is not on any path a resident's data
+travels.
+
+Same class as C-11 and found by the same scan. Closing it is a choice between adopting the DTOs in
+the repositories or deleting them and moving their hostile-payload tests onto the private decoders —
+the second is smaller and keeps the assurance where the data actually flows.
+
+## Method note — the scan that found these was wrong twice first
+
+The connectivity scan reported `app_lock_screen.dart` and `unwired_repository.dart` as orphans.
+Both are false: the first is mounted by `taytay_resident_app.dart:162` rather than routed, and the
+second **is** imported — the scan's import resolver missed it.
+
+Both were caught by re-checking with an independent method before anything was reported. Recorded
+because it is the same pattern this sequence has now hit six times, and because a stitch audit that
+reports orphans without verifying them produces exactly the confident wrong answer it exists to
+prevent.
 
