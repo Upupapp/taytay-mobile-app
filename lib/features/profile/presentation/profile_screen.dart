@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/intent/resident_intent.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -360,7 +361,7 @@ class _CapabilityTile extends StatelessWidget {
       session: dependencies.session.state,
       capability: capability,
     );
-    final requirement = CapabilityService.requirementLabel(verdict);
+    final requirement = capabilityRequirementLabel(context, verdict);
 
     return ListTile(
       contentPadding: EdgeInsets.zero,

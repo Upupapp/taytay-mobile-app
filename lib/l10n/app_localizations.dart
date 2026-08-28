@@ -1075,6 +1075,150 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Choose a file'**
   String get documentSourceFile;
+
+  /// Shown while the app is still deciding whether a capability is open.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking your account…'**
+  String get capabilityExplainPending;
+
+  /// Why a capability is locked: no account.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with your mobile number to use this. Browsing stays open to everyone.'**
+  String get capabilityExplainNeedsSignIn;
+
+  /// Why a capability is locked: not verified.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm your identity before you can use this.'**
+  String get capabilityExplainNeedsVerification;
+
+  /// Why a capability is locked: the LGU has not enabled it.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU has not switched this on yet. Nothing is wrong with your account, and you can still use everything else in the app.'**
+  String get capabilityExplainNotYetAvailable;
+
+  /// Short badge on a locked tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign-in required'**
+  String get capabilityRequirementSignIn;
+
+  /// Short badge on a locked tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification required'**
+  String get capabilityRequirementVerification;
+
+  /// Short badge on a locked tile.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available yet'**
+  String get capabilityRequirementNotAvailable;
+
+  /// Primary action on the locked view.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get gateActionSignIn;
+
+  /// Primary action on the locked view.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify my identity'**
+  String get gateActionVerify;
+
+  /// Primary action on the locked view.
+  ///
+  /// In en, this message translates to:
+  /// **'See what is available'**
+  String get gateActionSeeAvailable;
+
+  /// Fallback primary action on the locked view.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue'**
+  String get gateActionContinue;
+
+  /// Secondary action on the locked view.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Home'**
+  String get gateBackToHome;
+
+  /// Title of the not-yet-available gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available yet'**
+  String get gateSheetNotAvailableTitle;
+
+  /// Reassurance on the not-yet-available gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing has been sent, and nothing is wrong with your account.'**
+  String get gateSheetNotAvailablePrivacy;
+
+  /// Dismisses the not-yet-available gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get gateSheetClose;
+
+  /// Title of the sign-in gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue'**
+  String get gateSheetSignInTitle;
+
+  /// Reassurance on the sign-in gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Browsing stays open to everyone — you can keep reading without an account.'**
+  String get gateSheetSignInPrivacy;
+
+  /// Primary action on the sign-in gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get gateSheetSignInAction;
+
+  /// Secondary action on the sign-in gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Create an account'**
+  String get gateSheetCreateAccount;
+
+  /// Dismisses the sign-in gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep browsing'**
+  String get gateSheetKeepBrowsing;
+
+  /// Title of the verification gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your identity'**
+  String get gateSheetVerifyTitle;
+
+  /// Reassurance on the verification gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'The LGU asks only for what it needs to confirm your identity and residency, and tells you why.'**
+  String get gateSheetVerifyPrivacy;
+
+  /// Primary action on the verification gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Start verification'**
+  String get gateSheetStartVerification;
+
+  /// Dismisses the verification gate sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get gateSheetNotNow;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

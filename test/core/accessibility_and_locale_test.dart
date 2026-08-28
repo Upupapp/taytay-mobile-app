@@ -100,15 +100,70 @@ void main() {
       expect(jsonDecode(report.readAsStringSync()), isEmpty);
     });
 
-    test('the two locales actually differ', () {
+    test('the two locales actually differ — every key, not a spot check', () {
       final english = readArb('app_en.arb');
       final filipino = readArb('app_fil.arb');
 
       // A guard against a Filipino file that is an English copy: a translation
       // that ships untranslated is worse than no translation, because the
       // language picker then lies.
-      expect(filipino['actionTryAgain'], isNot(english['actionTryAgain']));
-      expect(filipino['unsentTitle'], isNot(english['unsentTitle']));
+      //
+      // WIDENED 2026-08-29. This asserted on two hand-picked keys out of 187
+      // and was named as though it covered the file. Two keys cannot detect an
+      // English copy, and 24 keys had just been added without it noticing
+      // anything either way. It now walks every key, which is the only version
+      // that earns the name.
+      //
+      // The allow-list is a ratchet: it may only ever shrink. Each entry is a
+      // claim that English and Filipino are *supposed* to be identical, and
+      // every one of those claims should be read with suspicion — that is
+      // exactly the shape of assumption this suite has been wrong about before.
+      const Map<String, String> identicalOnPurpose = <String, String>{
+        'appTitle': 'A proper name. Not translated in any language.',
+        'navHome':
+            'The word Filipino speakers use in app navigation. '
+            'Translating it would be less clear, not more.',
+        'navProfile': 'As navHome.',
+        'fieldBarangay': '"Barangay" is the Filipino word already.',
+        'profileFieldBarangay': 'As fieldBarangay.',
+        'fieldEmail': '"Email address" is used untranslated in Filipino UI.',
+        'profileFieldEmailAddress': 'As fieldEmail.',
+        // NOT a settled decision. Recorded honestly rather than dressed up:
+        // nobody who speaks Filipino has looked at this one, and "Suffix" may
+        // well want a Filipino gloss. It is here to hold the ratchet, not
+        // because the question was answered.
+        'fieldSuffix': 'UNREVIEWED — needs a native speaker, not a guess.',
+      };
+
+      final List<String> untranslated = <String>[
+        for (final String key in english.keys)
+          if (!key.startsWith('@') &&
+              english[key] == filipino[key] &&
+              !identicalOnPurpose.containsKey(key))
+            '$key: ${english[key]}',
+      ];
+      expect(
+        untranslated,
+        isEmpty,
+        reason:
+            'These keys read identically in both languages, which almost always '
+            'means the Filipino .arb still holds the English text:\n'
+            '${untranslated.join('\n')}',
+      );
+
+      // The other direction: an allow-list entry that has since been translated
+      // must be removed, or the list stops being a ratchet and becomes decor.
+      final List<String> nowTranslated = <String>[
+        for (final String key in identicalOnPurpose.keys)
+          if (english[key] != filipino[key]) key,
+      ];
+      expect(
+        nowTranslated,
+        isEmpty,
+        reason:
+            'These are listed as deliberately identical but now differ. Remove '
+            'them from identicalOnPurpose: ${nowTranslated.join(', ')}',
+      );
     });
 
     test('placeholders survive translation', () {

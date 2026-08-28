@@ -595,4 +595,82 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get documentSourceFile => 'Choose a file';
+
+  @override
+  String get capabilityExplainPending => 'Checking your account…';
+
+  @override
+  String get capabilityExplainNeedsSignIn =>
+      'Sign in with your mobile number to use this. Browsing stays open to everyone.';
+
+  @override
+  String get capabilityExplainNeedsVerification =>
+      'Taytay LGU needs to confirm your identity before you can use this.';
+
+  @override
+  String get capabilityExplainNotYetAvailable =>
+      'Taytay LGU has not switched this on yet. Nothing is wrong with your account, and you can still use everything else in the app.';
+
+  @override
+  String get capabilityRequirementSignIn => 'Sign-in required';
+
+  @override
+  String get capabilityRequirementVerification => 'Verification required';
+
+  @override
+  String get capabilityRequirementNotAvailable => 'Not available yet';
+
+  @override
+  String get gateActionSignIn => 'Sign in';
+
+  @override
+  String get gateActionVerify => 'Verify my identity';
+
+  @override
+  String get gateActionSeeAvailable => 'See what is available';
+
+  @override
+  String get gateActionContinue => 'Continue';
+
+  @override
+  String get gateBackToHome => 'Back to Home';
+
+  @override
+  String get gateSheetNotAvailableTitle => 'Not available yet';
+
+  @override
+  String get gateSheetNotAvailablePrivacy =>
+      'Nothing has been sent, and nothing is wrong with your account.';
+
+  @override
+  String get gateSheetClose => 'Close';
+
+  @override
+  String get gateSheetSignInTitle => 'Sign in to continue';
+
+  @override
+  String get gateSheetSignInPrivacy =>
+      'Browsing stays open to everyone — you can keep reading without an account.';
+
+  @override
+  String get gateSheetSignInAction => 'Sign in';
+
+  @override
+  String get gateSheetCreateAccount => 'Create an account';
+
+  @override
+  String get gateSheetKeepBrowsing => 'Keep browsing';
+
+  @override
+  String get gateSheetVerifyTitle => 'Verify your identity';
+
+  @override
+  String get gateSheetVerifyPrivacy =>
+      'The LGU asks only for what it needs to confirm your identity and residency, and tells you why.';
+
+  @override
+  String get gateSheetStartVerification => 'Start verification';
+
+  @override
+  String get gateSheetNotNow => 'Not now';
 }

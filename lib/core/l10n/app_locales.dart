@@ -459,3 +459,47 @@ String documentSourceLabel(BuildContext context, DocumentSource source) {
     DocumentSource.file => strings.documentSourceFile,
   };
 }
+
+/// Why a capability is locked, in the resident's language.
+///
+/// `CapabilityService.explain` keeps its English as the no-context fallback —
+/// the same arrangement [AppFailure.residentMessage] uses — and every surface a
+/// resident reads comes through here instead. It renders in two places that
+/// must not diverge: the locked view inside a route, and the gate sheet.
+String capabilityExplanation(BuildContext context, CapabilityVerdict verdict) {
+  final strings = AppStrings.of(context);
+  return switch (verdict) {
+    CapabilityUsable() => '',
+    CapabilityPending() => strings.capabilityExplainPending,
+    CapabilityNeedsSignIn() => strings.capabilityExplainNeedsSignIn,
+    CapabilityNeedsVerification() => strings.capabilityExplainNeedsVerification,
+    CapabilityNotYetAvailable() => strings.capabilityExplainNotYetAvailable,
+  };
+}
+
+/// The short badge on a locked tile — what is missing, in two or three words.
+///
+/// Null where nothing is missing, matching `CapabilityService.requirementLabel`.
+String? capabilityRequirementLabel(
+  BuildContext context,
+  CapabilityVerdict verdict,
+) {
+  final strings = AppStrings.of(context);
+  return switch (verdict) {
+    CapabilityUsable() || CapabilityPending() => null,
+    CapabilityNeedsSignIn() => strings.capabilityRequirementSignIn,
+    CapabilityNeedsVerification() => strings.capabilityRequirementVerification,
+    CapabilityNotYetAvailable() => strings.capabilityRequirementNotAvailable,
+  };
+}
+
+/// The one thing to do next, on the locked view's primary button.
+String capabilityActionLabel(BuildContext context, CapabilityVerdict verdict) {
+  final strings = AppStrings.of(context);
+  return switch (verdict) {
+    CapabilityNeedsSignIn() => strings.gateActionSignIn,
+    CapabilityNeedsVerification() => strings.gateActionVerify,
+    CapabilityNotYetAvailable() => strings.gateActionSeeAvailable,
+    _ => strings.gateActionContinue,
+  };
+}

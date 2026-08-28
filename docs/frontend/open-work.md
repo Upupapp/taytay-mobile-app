@@ -862,6 +862,39 @@ same failure as the `ConsentKind` entry above, and it is now the third time in t
   green. It now requires a real signature. Found only by red-proofing; the check had passed every
   run since it was written.
 
+### The gate screens are now Filipino end to end (2026-08-29)
+
+Fixing the enum copy left those two screens **half-localised** — a Filipino headline over English
+buttons, which is arguably worse than consistent English. The remaining 24 literals are now
+translated: `CapabilityService.explain` and `requirementLabel` (kept as no-context fallbacks, the
+`AppFailure.residentMessage` arrangement), the locked view's actions, and every title, reassurance
+and button on the gate sheet. 187 keys per locale, at parity.
+
+**A third guard was overstating itself.** `the two locales actually differ` claimed to catch "a
+Filipino file that is an English copy" and asserted on **two hand-picked keys out of 187** — it
+would not have noticed 24 new keys shipping untranslated. It now walks every key, with a
+ratchet allow-list of 8 that may only shrink, and fails in both directions. That is the third
+check in two days whose name promised more than its body delivered:
+
+| Check | Claimed | Actually did |
+|---|---|---|
+| `every enum called localised actually has a localiser` | a localiser exists | the enum is *mentioned* in the file |
+| `the two locales actually differ` | the files differ | 2 of 187 keys differ |
+| `notResidentFacing` entries | the string cannot render | the doc comment said so |
+
+`fieldSuffix` is on the allow-list marked **UNREVIEWED** rather than justified — nobody who
+speaks Filipino has looked at `'Suffix (Jr., III)'`, and recording that honestly is better than
+inventing a reason.
+
+### Newly found, not yet fixed
+
+* **`home_sections.dart:406` renders `ResidentVerificationStage.label` raw**, bypassing the
+  `verificationStageCopy` localiser that already exists. An enum can be *correctly classified as
+  localised* and still be rendered untranslated at a call site — a third blind spot, and neither
+  the coverage guard nor the .arb ratchet can see it. A render-site guard is the answer.
+* **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
+  unrelated to this work; they were reverted to keep this commit focused, and remain unformatted.
+
 ## Still open
 
 * **6 enums untranslated** (down from 8), two more gated behind TAB 03 and therefore not urgent.

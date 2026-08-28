@@ -6,6 +6,7 @@ import '../../core/intent/resident_intent.dart';
 import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/resident_capability.dart';
+import '../../l10n/app_localizations.dart';
 import 'app_button.dart';
 import 'status_view.dart';
 
@@ -117,11 +118,11 @@ class CapabilityLockedView extends StatelessWidget {
         CapabilityNotYetAvailable() => Icons.construction_outlined,
         _ => Icons.lock_outline,
       },
-      message: CapabilityService.explain(verdict),
+      message: capabilityExplanation(context, verdict),
       primaryAction: recovery == null
           ? null
           : AppButton(
-              label: _actionLabel(verdict),
+              label: capabilityActionLabel(context, verdict),
               fullWidth: false,
               onPressed: () {
                 // Held before navigating, so the resident lands back here.
@@ -137,15 +138,8 @@ class CapabilityLockedView extends StatelessWidget {
       // a screen with one button — public Taytay information stays open.
       secondaryAction: TextButton(
         onPressed: () => context.goNamed(AppRoute.home.routeName),
-        child: const Text('Back to Home'),
+        child: Text(AppStrings.of(context).gateBackToHome),
       ),
     );
   }
-
-  static String _actionLabel(CapabilityVerdict verdict) => switch (verdict) {
-    CapabilityNeedsSignIn() => 'Sign in',
-    CapabilityNeedsVerification() => 'Verify my identity',
-    CapabilityNotYetAvailable() => 'See what is available',
-    _ => 'Continue',
-  };
 }

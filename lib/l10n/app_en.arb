@@ -683,5 +683,101 @@
   "documentSourceFile": "Choose a file",
   "@documentSourceFile": {
     "description": "Button on the document upload sheet."
+  },
+  "capabilityExplainPending": "Checking your account…",
+  "@capabilityExplainPending": {
+    "description": "Shown while the app is still deciding whether a capability is open."
+  },
+  "capabilityExplainNeedsSignIn": "Sign in with your mobile number to use this. Browsing stays open to everyone.",
+  "@capabilityExplainNeedsSignIn": {
+    "description": "Why a capability is locked: no account."
+  },
+  "capabilityExplainNeedsVerification": "Taytay LGU needs to confirm your identity before you can use this.",
+  "@capabilityExplainNeedsVerification": {
+    "description": "Why a capability is locked: not verified."
+  },
+  "capabilityExplainNotYetAvailable": "Taytay LGU has not switched this on yet. Nothing is wrong with your account, and you can still use everything else in the app.",
+  "@capabilityExplainNotYetAvailable": {
+    "description": "Why a capability is locked: the LGU has not enabled it."
+  },
+  "capabilityRequirementSignIn": "Sign-in required",
+  "@capabilityRequirementSignIn": {
+    "description": "Short badge on a locked tile."
+  },
+  "capabilityRequirementVerification": "Verification required",
+  "@capabilityRequirementVerification": {
+    "description": "Short badge on a locked tile."
+  },
+  "capabilityRequirementNotAvailable": "Not available yet",
+  "@capabilityRequirementNotAvailable": {
+    "description": "Short badge on a locked tile."
+  },
+  "gateActionSignIn": "Sign in",
+  "@gateActionSignIn": {
+    "description": "Primary action on the locked view."
+  },
+  "gateActionVerify": "Verify my identity",
+  "@gateActionVerify": {
+    "description": "Primary action on the locked view."
+  },
+  "gateActionSeeAvailable": "See what is available",
+  "@gateActionSeeAvailable": {
+    "description": "Primary action on the locked view."
+  },
+  "gateActionContinue": "Continue",
+  "@gateActionContinue": {
+    "description": "Fallback primary action on the locked view."
+  },
+  "gateBackToHome": "Back to Home",
+  "@gateBackToHome": {
+    "description": "Secondary action on the locked view."
+  },
+  "gateSheetNotAvailableTitle": "Not available yet",
+  "@gateSheetNotAvailableTitle": {
+    "description": "Title of the not-yet-available gate sheet."
+  },
+  "gateSheetNotAvailablePrivacy": "Nothing has been sent, and nothing is wrong with your account.",
+  "@gateSheetNotAvailablePrivacy": {
+    "description": "Reassurance on the not-yet-available gate sheet."
+  },
+  "gateSheetClose": "Close",
+  "@gateSheetClose": {
+    "description": "Dismisses the not-yet-available gate sheet."
+  },
+  "gateSheetSignInTitle": "Sign in to continue",
+  "@gateSheetSignInTitle": {
+    "description": "Title of the sign-in gate sheet."
+  },
+  "gateSheetSignInPrivacy": "Browsing stays open to everyone — you can keep reading without an account.",
+  "@gateSheetSignInPrivacy": {
+    "description": "Reassurance on the sign-in gate sheet."
+  },
+  "gateSheetSignInAction": "Sign in",
+  "@gateSheetSignInAction": {
+    "description": "Primary action on the sign-in gate sheet."
+  },
+  "gateSheetCreateAccount": "Create an account",
+  "@gateSheetCreateAccount": {
+    "description": "Secondary action on the sign-in gate sheet."
+  },
+  "gateSheetKeepBrowsing": "Keep browsing",
+  "@gateSheetKeepBrowsing": {
+    "description": "Dismisses the sign-in gate sheet."
+  },
+  "gateSheetVerifyTitle": "Verify your identity",
+  "@gateSheetVerifyTitle": {
+    "description": "Title of the verification gate sheet."
+  },
+  "gateSheetVerifyPrivacy": "The LGU asks only for what it needs to confirm your identity and residency, and tells you why.",
+  "@gateSheetVerifyPrivacy": {
+    "description": "Reassurance on the verification gate sheet."
+  },
+  "gateSheetStartVerification": "Start verification",
+  "@gateSheetStartVerification": {
+    "description": "Primary action on the verification gate sheet."
+  },
+  "gateSheetNotNow": "Not now",
+  "@gateSheetNotNow": {
+    "description": "Dismisses the verification gate sheet."
   }
 }

@@ -602,4 +602,82 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get documentSourceFile => 'Pumili ng file';
+
+  @override
+  String get capabilityExplainPending => 'Sinusuri ang iyong account…';
+
+  @override
+  String get capabilityExplainNeedsSignIn =>
+      'Mag-sign in gamit ang iyong mobile number para magamit ito. Bukas pa rin sa lahat ang pagtingin.';
+
+  @override
+  String get capabilityExplainNeedsVerification =>
+      'Kailangang kumpirmahin ng Taytay LGU ang iyong pagkakakilanlan bago mo ito magamit.';
+
+  @override
+  String get capabilityExplainNotYetAvailable =>
+      'Hindi pa ito binubuksan ng Taytay LGU. Walang problema sa iyong account, at magagamit mo pa rin ang lahat ng iba pa sa app.';
+
+  @override
+  String get capabilityRequirementSignIn => 'Kailangang mag-sign in';
+
+  @override
+  String get capabilityRequirementVerification => 'Kailangan ng verification';
+
+  @override
+  String get capabilityRequirementNotAvailable => 'Hindi pa available';
+
+  @override
+  String get gateActionSignIn => 'Mag-sign in';
+
+  @override
+  String get gateActionVerify => 'I-verify ang aking pagkakakilanlan';
+
+  @override
+  String get gateActionSeeAvailable => 'Tingnan ang available';
+
+  @override
+  String get gateActionContinue => 'Magpatuloy';
+
+  @override
+  String get gateBackToHome => 'Bumalik sa Home';
+
+  @override
+  String get gateSheetNotAvailableTitle => 'Hindi pa available';
+
+  @override
+  String get gateSheetNotAvailablePrivacy =>
+      'Walang naipadala, at walang problema sa iyong account.';
+
+  @override
+  String get gateSheetClose => 'Isara';
+
+  @override
+  String get gateSheetSignInTitle => 'Mag-sign in para magpatuloy';
+
+  @override
+  String get gateSheetSignInPrivacy =>
+      'Bukas sa lahat ang pagtingin — maaari kang magbasa nang walang account.';
+
+  @override
+  String get gateSheetSignInAction => 'Mag-sign in';
+
+  @override
+  String get gateSheetCreateAccount => 'Gumawa ng account';
+
+  @override
+  String get gateSheetKeepBrowsing => 'Magpatuloy sa pagtingin';
+
+  @override
+  String get gateSheetVerifyTitle => 'I-verify ang iyong pagkakakilanlan';
+
+  @override
+  String get gateSheetVerifyPrivacy =>
+      'Ang hinihingi lang ng LGU ay ang kailangan para kumpirmahin ang iyong pagkakakilanlan at paninirahan, at sinasabi nila kung bakit.';
+
+  @override
+  String get gateSheetStartVerification => 'Simulan ang verification';
+
+  @override
+  String get gateSheetNotNow => 'Hindi muna';
 }

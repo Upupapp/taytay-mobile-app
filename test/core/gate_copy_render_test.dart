@@ -128,6 +128,77 @@ void main() {
     });
   });
 
+  group('the locked view is Filipino end to end', () {
+    testWidgets('heading, explanation and both actions', (tester) async {
+      await pump(
+        tester,
+        const CapabilityLockedView(
+          capability: ResidentCapability.holdDigitalId,
+          verdict: CapabilityNeedsVerification(),
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      // Heading, message and buttons all came from the .arb, so a resident sees
+      // one language rather than a Filipino headline over English controls.
+      expect(find.text('Magkaroon ng iyong Taytay digital ID'), findsOneWidget);
+      expect(
+        find.text(
+          'Kailangang kumpirmahin ng Taytay LGU ang iyong pagkakakilanlan '
+          'bago mo ito magamit.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('I-verify ang aking pagkakakilanlan'), findsOneWidget);
+      expect(find.text('Bumalik sa Home'), findsOneWidget);
+
+      // And none of the English fallbacks leaked through.
+      for (final String english in <String>[
+        'Hold your Taytay digital ID',
+        'Verify my identity',
+        'Back to Home',
+        CapabilityService.explain(const CapabilityNeedsVerification()),
+      ]) {
+        expect(
+          find.text(english),
+          findsNothing,
+          reason: '"$english" is the no-context fallback and must not render.',
+        );
+      }
+    });
+
+    testWidgets('every verdict has a Filipino explanation and action', (
+      tester,
+    ) async {
+      const verdicts = <CapabilityVerdict>[
+        CapabilityNeedsSignIn(),
+        CapabilityNeedsVerification(),
+        CapabilityNotYetAvailable(),
+      ];
+      for (final verdict in verdicts) {
+        late String explanation;
+        late String action;
+        late String? requirement;
+        await pump(
+          tester,
+          Builder(
+            builder: (context) {
+              explanation = capabilityExplanation(context, verdict);
+              action = capabilityActionLabel(context, verdict);
+              requirement = capabilityRequirementLabel(context, verdict);
+              return const SizedBox.shrink();
+            },
+          ),
+          locale: AppLocales.filipino,
+        );
+        expect(explanation, isNot(CapabilityService.explain(verdict)));
+        expect(requirement, isNot(CapabilityService.requirementLabel(verdict)));
+        expect(explanation, isNotEmpty);
+        expect(action, isNotEmpty);
+      }
+    });
+  });
+
   group('gate sheet sentences', () {
     testWidgets('are whole Filipino sentences, not an English fragment inside '
         'a Filipino frame', (tester) async {

@@ -8,6 +8,7 @@ import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/access_policy.dart';
 import '../../core/session/resident_capability.dart';
+import '../../l10n/app_localizations.dart';
 import '../../shared/illustrations/state_illustrations.dart';
 import 'app_button.dart';
 import 'app_sheet.dart';
@@ -58,19 +59,19 @@ abstract final class AccessGateSheet {
     required ResidentIntentKind intent,
     String? targetId,
   }) async {
+    final strings = AppStrings.of(context);
     if (verdict is CapabilityNotYetAvailable) {
       // No intent is held: there is nothing to resume, and holding one would
       // arm a resumption that could never fire.
       await AppSheet.show<void>(
         context: context,
-        title: 'Not available yet',
+        title: strings.gateSheetNotAvailableTitle,
         builder: (sheetContext) => _GateBody(
           illustration: StateIllustrations.empty(size: 96),
-          message: CapabilityService.explain(verdict),
-          privacyNote:
-              'Nothing has been sent, and nothing is wrong with your account.',
+          message: capabilityExplanation(context, verdict),
+          privacyNote: strings.gateSheetNotAvailablePrivacy,
           primary: AppButton(
-            label: 'Close',
+            label: strings.gateSheetClose,
             onPressed: () => Navigator.of(sheetContext).pop(),
           ),
           secondary: const SizedBox.shrink(),
@@ -139,17 +140,16 @@ abstract final class AccessGateSheet {
     GoRouter router,
     ResidentIntentKind intent,
   ) {
+    final strings = AppStrings.of(context);
     return AppSheet.show<GateOutcome>(
       context: context,
-      title: 'Sign in to continue',
+      title: strings.gateSheetSignInTitle,
       builder: (sheetContext) => _GateBody(
         illustration: StateIllustrations.empty(size: 96),
         message: gateSignInMessage(context, intent),
-        privacyNote:
-            'Browsing stays open to everyone — you can keep reading without an '
-            'account.',
+        privacyNote: strings.gateSheetSignInPrivacy,
         primary: AppButton(
-          label: 'Sign in',
+          label: strings.gateSheetSignInAction,
           icon: Icons.login,
           onPressed: () {
             Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
@@ -157,7 +157,7 @@ abstract final class AccessGateSheet {
           },
         ),
         secondary: AppButton(
-          label: 'Create an account',
+          label: strings.gateSheetCreateAccount,
           variant: AppButtonVariant.secondary,
           onPressed: () {
             Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
@@ -165,7 +165,7 @@ abstract final class AccessGateSheet {
           },
         ),
         tertiary: AppButton(
-          label: 'Keep browsing',
+          label: strings.gateSheetKeepBrowsing,
           variant: AppButtonVariant.text,
           onPressed: () =>
               Navigator.of(sheetContext).pop(GateOutcome.dismissed),
@@ -179,17 +179,16 @@ abstract final class AccessGateSheet {
     GoRouter router,
     ResidentIntentKind intent,
   ) {
+    final strings = AppStrings.of(context);
     return AppSheet.show<GateOutcome>(
       context: context,
-      title: 'Verify your identity',
+      title: strings.gateSheetVerifyTitle,
       builder: (sheetContext) => _GateBody(
         illustration: StateIllustrations.empty(size: 96),
         message: gateVerificationMessage(context, intent),
-        privacyNote:
-            'The LGU asks only for what it needs to confirm your identity and '
-            'residency, and tells you why.',
+        privacyNote: strings.gateSheetVerifyPrivacy,
         primary: AppButton(
-          label: 'Start verification',
+          label: strings.gateSheetStartVerification,
           icon: Icons.arrow_forward,
           iconTrailing: true,
           onPressed: () {
@@ -198,7 +197,7 @@ abstract final class AccessGateSheet {
           },
         ),
         secondary: AppButton(
-          label: 'Not now',
+          label: strings.gateSheetNotNow,
           variant: AppButtonVariant.text,
           onPressed: () =>
               Navigator.of(sheetContext).pop(GateOutcome.dismissed),
