@@ -1,12 +1,14 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
@@ -76,10 +78,16 @@ Future<AppDependencies> bootVerification(
   required VerificationStatusDetail detail,
   AccessLevel level = AccessLevel.unverified,
   TextScaler textScaler = TextScaler.noScaling,
+  Locale locale = AppLocales.english,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+
+  tester.platformDispatcher.localeTestValue = locale;
+  tester.platformDispatcher.localesTestValue = <Locale>[locale];
+  addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+  addTearDown(tester.platformDispatcher.clearLocalesTestValue);
 
   final secrets = InMemorySecretStore();
   await secrets.write(LaunchController.welcomeCompletedKey, 'true');
@@ -202,6 +210,7 @@ Future<void> scrollToText(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
+  _verificationLocalisation();
   group('the door out of Not started — F14 and F15', () {
     testWidgets(
       'Start verification opens the KYC form, not the blocked wizard',
@@ -724,6 +733,116 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
+    });
+  });
+}
+
+void _verificationLocalisation() {
+  group('the verification surface speaks Filipino too', () {
+    testWidgets('the stage headline and its explanation translate', (
+      tester,
+    ) async {
+      // The headline of this screen is how somebody learns whether they can
+      // hold a digital ID. It rendered `ResidentVerificationStage.label`
+      // directly — English for every resident — until the sweep that followed
+      // C-13.
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.pendingReview,
+          rawState: 'submitted',
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      expect(find.text('Naghihintay ng pagsusuri'), findsOneWidget);
+      expect(find.text('Waiting for review'), findsNothing);
+      expect(
+        find.textContaining('Nasa Taytay LGU na ang iyong mga detalye'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the document slots translate', (tester) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.inProgress,
+          rawState: 'draft',
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      expect(find.textContaining('ID na inisyu ng pamahalaan'), findsWidgets);
+      expect(find.text('Government-issued ID'), findsNothing);
+    });
+
+    test('every stage and document type has copy in both locales', () {
+      const keys = <String>[
+        'verifyStageNotStartedLabel',
+        'verifyStageNotStartedBody',
+        'verifyStageInProgressLabel',
+        'verifyStageInProgressBody',
+        'verifyStagePendingLabel',
+        'verifyStagePendingBody',
+        'verifyStageNeedsInfoLabel',
+        'verifyStageNeedsInfoBody',
+        'verifyStageVerifiedLabel',
+        'verifyStageVerifiedBody',
+        'verifyStageUnsuccessfulLabel',
+        'verifyStageUnsuccessfulBody',
+        'verifyStageManualReviewLabel',
+        'verifyStageManualReviewBody',
+        'kycDocIdentityLabel',
+        'kycDocIdentityBody',
+        'kycDocAddressLabel',
+        'kycDocAddressBody',
+        'kycDocSent',
+        'kycDocSentChecking',
+      ];
+
+      for (final path in <String>[
+        'lib/l10n/app_en.arb',
+        'lib/l10n/app_fil.arb',
+      ]) {
+        final strings =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+        for (final key in keys) {
+          expect(strings[key], isA<String>(), reason: '$path is missing $key');
+        }
+      }
+
+      // One pair of keys per stage. Adding a stage without copy would render
+      // its English fallback silently.
+      expect(
+        ResidentVerificationStage.values.length,
+        7,
+        reason: 'a stage was added or removed; add or remove its copy keys',
+      );
+      expect(KycDocumentType.values.length, 2);
+    });
+
+    testWidgets('no raw English survives on the screen in Filipino', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.verified,
+          rawState: 'approved',
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      for (final english in <String>[
+        'Verified',
+        'Not started',
+        'Waiting for review',
+        'Could not be verified',
+        'Needs a person to check',
+      ]) {
+        expect(find.text(english), findsNothing, reason: english);
+      }
     });
   });
 }

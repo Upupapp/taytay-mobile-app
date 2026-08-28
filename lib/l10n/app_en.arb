@@ -367,5 +367,85 @@
         "example": "Purok or sitio"
       }
     }
+  },
+  "verifyStageNotStartedLabel": "Not started",
+  "@verifyStageNotStartedLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageNotStartedBody": "You have not started verifying your identity yet.",
+  "@verifyStageNotStartedBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageInProgressLabel": "In progress",
+  "@verifyStageInProgressLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageInProgressBody": "You started verifying your identity but have not sent it yet.",
+  "@verifyStageInProgressBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStagePendingLabel": "Waiting for review",
+  "@verifyStagePendingLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStagePendingBody": "Taytay LGU has your details and is checking them.",
+  "@verifyStagePendingBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageNeedsInfoLabel": "More information needed",
+  "@verifyStageNeedsInfoLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageNeedsInfoBody": "Taytay LGU needs something corrected before it can finish checking.",
+  "@verifyStageNeedsInfoBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageVerifiedLabel": "Verified",
+  "@verifyStageVerifiedLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageVerifiedBody": "Taytay LGU has confirmed your identity.",
+  "@verifyStageVerifiedBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageUnsuccessfulLabel": "Could not be verified",
+  "@verifyStageUnsuccessfulLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageUnsuccessfulBody": "Taytay LGU could not confirm your identity from what was sent.",
+  "@verifyStageUnsuccessfulBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageManualReviewLabel": "Needs a person to check",
+  "@verifyStageManualReviewLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "verifyStageManualReviewBody": "This needs Taytay LGU staff to check it in person.",
+  "@verifyStageManualReviewBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "kycDocIdentityLabel": "Government-issued ID",
+  "@kycDocIdentityLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "kycDocIdentityBody": "A PhilID, passport, driver's licence, postal ID or voter's ID.",
+  "@kycDocIdentityBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "kycDocAddressLabel": "Proof of address",
+  "@kycDocAddressLabel": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "kycDocAddressBody": "A utility bill or barangay certificate showing where you live.",
+  "@kycDocAddressBody": {
+    "description": "Verification surface copy, localised in the C-13 follow-up sweep."
+  },
+  "kycDocSent": "Sent to Taytay LGU.",
+  "@kycDocSent": {
+    "description": "Verification document status, localised in the follow-up sweep."
+  },
+  "kycDocSentChecking": "Sent. Still being checked.",
+  "@kycDocSentChecking": {
+    "description": "Verification document status, localised in the follow-up sweep."
   }
 }

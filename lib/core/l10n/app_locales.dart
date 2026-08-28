@@ -3,6 +3,8 @@ import 'package:flutter/widgets.dart';
 import '../../features/auth/domain/sign_in_challenge.dart';
 import '../../features/profile/domain/profile_fields.dart';
 import '../../features/verification/domain/correctable_field.dart';
+import '../../features/verification/domain/kyc_claim.dart';
+import '../../features/verification/domain/verification_status_detail.dart';
 import '../../l10n/app_localizations.dart';
 import '../documents/document_capture.dart';
 import '../documents/upload_policy.dart';
@@ -231,6 +233,67 @@ String? profileFieldHint(BuildContext context, ResidentProfileField field) {
     FieldOwnership.lguVerified => (
       title: strings.profileSectionLguTitle,
       explanation: strings.profileSectionLguExplanation,
+    ),
+  };
+}
+
+/// Where a resident's verification stands, in their language.
+///
+/// The stage label is the **headline of the verification screen** — the single
+/// most consequential sentence this app renders, because it is how somebody
+/// learns whether they can hold a digital ID. It was English for everybody until
+/// this existed.
+({String label, String explanation}) verificationStageCopy(
+  BuildContext context,
+  ResidentVerificationStage stage,
+) {
+  final strings = AppStrings.of(context);
+  return switch (stage) {
+    ResidentVerificationStage.notStarted => (
+      label: strings.verifyStageNotStartedLabel,
+      explanation: strings.verifyStageNotStartedBody,
+    ),
+    ResidentVerificationStage.inProgress => (
+      label: strings.verifyStageInProgressLabel,
+      explanation: strings.verifyStageInProgressBody,
+    ),
+    ResidentVerificationStage.pendingReview => (
+      label: strings.verifyStagePendingLabel,
+      explanation: strings.verifyStagePendingBody,
+    ),
+    ResidentVerificationStage.needsMoreInformation => (
+      label: strings.verifyStageNeedsInfoLabel,
+      explanation: strings.verifyStageNeedsInfoBody,
+    ),
+    ResidentVerificationStage.verified => (
+      label: strings.verifyStageVerifiedLabel,
+      explanation: strings.verifyStageVerifiedBody,
+    ),
+    ResidentVerificationStage.unsuccessful => (
+      label: strings.verifyStageUnsuccessfulLabel,
+      explanation: strings.verifyStageUnsuccessfulBody,
+    ),
+    ResidentVerificationStage.manualReview => (
+      label: strings.verifyStageManualReviewLabel,
+      explanation: strings.verifyStageManualReviewBody,
+    ),
+  };
+}
+
+/// What a KYC document slot is called, and what counts as one.
+({String label, String description}) kycDocumentCopy(
+  BuildContext context,
+  KycDocumentType type,
+) {
+  final strings = AppStrings.of(context);
+  return switch (type) {
+    KycDocumentType.identityDocument => (
+      label: strings.kycDocIdentityLabel,
+      description: strings.kycDocIdentityBody,
+    ),
+    KycDocumentType.proofOfAddress => (
+      label: strings.kycDocAddressLabel,
+      description: strings.kycDocAddressBody,
     ),
   };
 }

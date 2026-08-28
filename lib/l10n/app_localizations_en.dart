@@ -355,4 +355,73 @@ class AppStringsEn extends AppStrings {
   String profileFieldOptionalSuffix(String label) {
     return '$label (optional)';
   }
+
+  @override
+  String get verifyStageNotStartedLabel => 'Not started';
+
+  @override
+  String get verifyStageNotStartedBody =>
+      'You have not started verifying your identity yet.';
+
+  @override
+  String get verifyStageInProgressLabel => 'In progress';
+
+  @override
+  String get verifyStageInProgressBody =>
+      'You started verifying your identity but have not sent it yet.';
+
+  @override
+  String get verifyStagePendingLabel => 'Waiting for review';
+
+  @override
+  String get verifyStagePendingBody =>
+      'Taytay LGU has your details and is checking them.';
+
+  @override
+  String get verifyStageNeedsInfoLabel => 'More information needed';
+
+  @override
+  String get verifyStageNeedsInfoBody =>
+      'Taytay LGU needs something corrected before it can finish checking.';
+
+  @override
+  String get verifyStageVerifiedLabel => 'Verified';
+
+  @override
+  String get verifyStageVerifiedBody =>
+      'Taytay LGU has confirmed your identity.';
+
+  @override
+  String get verifyStageUnsuccessfulLabel => 'Could not be verified';
+
+  @override
+  String get verifyStageUnsuccessfulBody =>
+      'Taytay LGU could not confirm your identity from what was sent.';
+
+  @override
+  String get verifyStageManualReviewLabel => 'Needs a person to check';
+
+  @override
+  String get verifyStageManualReviewBody =>
+      'This needs Taytay LGU staff to check it in person.';
+
+  @override
+  String get kycDocIdentityLabel => 'Government-issued ID';
+
+  @override
+  String get kycDocIdentityBody =>
+      'A PhilID, passport, driver\'s licence, postal ID or voter\'s ID.';
+
+  @override
+  String get kycDocAddressLabel => 'Proof of address';
+
+  @override
+  String get kycDocAddressBody =>
+      'A utility bill or barangay certificate showing where you live.';
+
+  @override
+  String get kycDocSent => 'Sent to Taytay LGU.';
+
+  @override
+  String get kycDocSentChecking => 'Sent. Still being checked.';
 }

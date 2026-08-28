@@ -358,4 +358,73 @@ class AppStringsFil extends AppStrings {
   String profileFieldOptionalSuffix(String label) {
     return '$label (opsyonal)';
   }
+
+  @override
+  String get verifyStageNotStartedLabel => 'Hindi pa nasisimulan';
+
+  @override
+  String get verifyStageNotStartedBody =>
+      'Hindi mo pa sinisimulan ang pagpapatunay ng iyong pagkakakilanlan.';
+
+  @override
+  String get verifyStageInProgressLabel => 'Isinasagawa';
+
+  @override
+  String get verifyStageInProgressBody =>
+      'Sinimulan mo na ang pagpapatunay ngunit hindi mo pa ito naipapadala.';
+
+  @override
+  String get verifyStagePendingLabel => 'Naghihintay ng pagsusuri';
+
+  @override
+  String get verifyStagePendingBody =>
+      'Nasa Taytay LGU na ang iyong mga detalye at sinusuri na ito.';
+
+  @override
+  String get verifyStageNeedsInfoLabel => 'May kailangan pang impormasyon';
+
+  @override
+  String get verifyStageNeedsInfoBody =>
+      'May kailangang itama bago matapos ng Taytay LGU ang pagsusuri.';
+
+  @override
+  String get verifyStageVerifiedLabel => 'Napatunayan na';
+
+  @override
+  String get verifyStageVerifiedBody =>
+      'Kinumpirma na ng Taytay LGU ang iyong pagkakakilanlan.';
+
+  @override
+  String get verifyStageUnsuccessfulLabel => 'Hindi napatunayan';
+
+  @override
+  String get verifyStageUnsuccessfulBody =>
+      'Hindi nakumpirma ng Taytay LGU ang iyong pagkakakilanlan mula sa ipinadala.';
+
+  @override
+  String get verifyStageManualReviewLabel => 'Kailangang suriin ng tao';
+
+  @override
+  String get verifyStageManualReviewBody =>
+      'Kailangan itong personal na suriin ng staff ng Taytay LGU.';
+
+  @override
+  String get kycDocIdentityLabel => 'ID na inisyu ng pamahalaan';
+
+  @override
+  String get kycDocIdentityBody =>
+      'PhilID, pasaporte, lisensya sa pagmamaneho, postal ID o voter\'s ID.';
+
+  @override
+  String get kycDocAddressLabel => 'Patunay ng tirahan';
+
+  @override
+  String get kycDocAddressBody =>
+      'Bill ng kuryente o tubig, o barangay certificate na nagpapakita kung saan ka nakatira.';
+
+  @override
+  String get kycDocSent => 'Naipadala na sa Taytay LGU.';
+
+  @override
+  String get kycDocSentChecking => 'Naipadala na. Sinusuri pa.';
 }

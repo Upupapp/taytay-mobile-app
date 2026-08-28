@@ -691,6 +691,126 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'{label} (optional)'**
   String profileFieldOptionalSuffix(String label);
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get verifyStageNotStartedLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'You have not started verifying your identity yet.'**
+  String get verifyStageNotStartedBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get verifyStageInProgressLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'You started verifying your identity but have not sent it yet.'**
+  String get verifyStageInProgressBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for review'**
+  String get verifyStagePendingLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU has your details and is checking them.'**
+  String get verifyStagePendingBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'More information needed'**
+  String get verifyStageNeedsInfoLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs something corrected before it can finish checking.'**
+  String get verifyStageNeedsInfoBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Verified'**
+  String get verifyStageVerifiedLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU has confirmed your identity.'**
+  String get verifyStageVerifiedBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not be verified'**
+  String get verifyStageUnsuccessfulLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU could not confirm your identity from what was sent.'**
+  String get verifyStageUnsuccessfulBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Needs a person to check'**
+  String get verifyStageManualReviewLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'This needs Taytay LGU staff to check it in person.'**
+  String get verifyStageManualReviewBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Government-issued ID'**
+  String get kycDocIdentityLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'A PhilID, passport, driver\'s licence, postal ID or voter\'s ID.'**
+  String get kycDocIdentityBody;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Proof of address'**
+  String get kycDocAddressLabel;
+
+  /// Verification surface copy, localised in the C-13 follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'A utility bill or barangay certificate showing where you live.'**
+  String get kycDocAddressBody;
+
+  /// Verification document status, localised in the follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent to Taytay LGU.'**
+  String get kycDocSent;
+
+  /// Verification document status, localised in the follow-up sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent. Still being checked.'**
+  String get kycDocSentChecking;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

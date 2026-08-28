@@ -177,10 +177,16 @@ class _StageHeader extends StatelessWidget {
             },
           ),
           const SizedBox(height: Spacing.lg),
-          Text(stage.label, style: theme.textTheme.headlineSmall),
+          // The headline of this screen, and the sentence that tells somebody
+          // whether they can hold a digital ID. It was English for every
+          // resident until the localisation sweep.
+          Text(
+            verificationStageCopy(context, stage).label,
+            style: theme.textTheme.headlineSmall,
+          ),
           const SizedBox(height: Spacing.sm),
           Text(
-            stage.summary,
+            verificationStageCopy(context, stage).explanation,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -315,16 +321,19 @@ class _DocumentRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(type.label, style: theme.textTheme.bodyMedium),
+                Text(
+                  kycDocumentCopy(context, type).label,
+                  style: theme.textTheme.bodyMedium,
+                ),
                 Text(
                   attached
                       // Three states, not two. "Still being checked" is a wait;
                       // saying "sent" while a scan is running would make a later
                       // rejection look like the office losing it.
                       ? (document!.isAvailable
-                            ? 'Sent to Taytay LGU.'
-                            : 'Sent. Still being checked.')
-                      : type.description,
+                            ? AppStrings.of(context).kycDocSent
+                            : AppStrings.of(context).kycDocSentChecking)
+                      : kycDocumentCopy(context, type).description,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

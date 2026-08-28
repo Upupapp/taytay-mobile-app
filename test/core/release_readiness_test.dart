@@ -330,8 +330,41 @@ void main() {
     test('the constitution is still the highest-authority document', () {
       final claudeMd = File('CLAUDE.md').readAsStringSync();
       expect(claudeMd, contains('highest-authority document'));
-      // Article 10 is the one that governs this whole run.
-      expect(claudeMd, contains('Never push, force-push, merge'));
+    });
+
+    test('Article 10 still forbids what it has always forbidden', () {
+      // ARTICLE 10 WAS AMENDED, AND THIS TEST CAUGHT IT.
+      //
+      // It used to assert the sentence "Never push, force-push, merge", which
+      // is gone: the owner authorised direct pushes to `main` and Article 10
+      // was rewritten to say so, matching taytay-backend and taytay-admin-web.
+      // The failure was correct — the constitution moved and something noticed,
+      // which is the whole point of asserting it at all.
+      //
+      // What is asserted now is the part that did NOT move. Pushing changed
+      // status; nothing else did, and a future amendment that quietly dropped
+      // one of these should go red here too.
+      final claudeMd = File('CLAUDE.md').readAsStringSync();
+
+      for (final prohibition in <String>[
+        'force-push',
+        'history rewriting',
+        'merging protected',
+        'deployment',
+        'credential rotation',
+        'production data',
+        'exposing secrets',
+      ]) {
+        expect(
+          claudeMd,
+          contains(prohibition),
+          reason: 'Article 10 no longer forbids $prohibition',
+        );
+      }
+
+      // The amendment's own qualifier, and the reason a push here is not a
+      // small act: this repository is public.
+      expect(claudeMd, contains('a push is a publication'));
     });
   });
 }
