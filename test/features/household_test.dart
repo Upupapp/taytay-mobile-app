@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
+import 'package:taytay_resident/core/api/api_client.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
@@ -16,7 +19,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/household/data/household_dto.dart';
+import 'package:taytay_resident/features/household/data/household_api_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_summary.dart';
 
@@ -263,178 +266,113 @@ void main() {
   });
 
   group('the decoder is an allow-list — acceptance 2', () {
-    /// Everything a resident must never receive about their household.
+    // C-12. These ran against a DTO no production file imports, and one whose
+    // contract was partly invented: it read `label`, `barangay` and `role`, where the server sends
+    // `name`, `barangay_id` and `is_head`/`relationship_to_me`. Production reads the server's names correctly.
+    //
+    // The privacy property is what mattered and it is kept — asserted twice, on
+    // the decoder that actually runs: once by putting a hostile payload on the
+    // wire and reading what survives, and once against the decoder's source, so
+    // a future edit that starts reading a staff field fails here rather than in
+    // front of a resident.
+
     Map<String, dynamic> hostilePayload() => <String, dynamic>{
-      'role': 'head',
-      'label': 'Dela Cruz household',
-      'barangay': 'San Juan',
-      'street_address': '12 Rizal Street',
+      'code': 'HH-1',
+      'street_address': '12 Rizal St',
       'member_count': 4,
-      // None of the following may survive.
-      // Deliberately chosen not to collide with any legitimate value above:
-      // "San Juan" is a real barangay and would make a naive substring check
-      // pass for the wrong reason.
+      // None of the following may reach a resident's screen. The client
+      // visibility matrix calls Household.members cross-resident data and its
+      // exposure a critical defect.
+      'head_name': 'Juan Dela Cruz',
       'members': <Object>[
-        <String, dynamic>{'name': 'Bayani Magsaysay', 'age': 12},
-        <String, dynamic>{
-          'name': 'Corazon Bonifacio',
-          'sectors': <String>['pwd'],
-        },
+        <String, dynamic>{'name': 'Maria Dela Cruz', 'resident_id': 'r-99'},
       ],
-      'residents': <String>['Bayani Magsaysay'],
-      'relatives': <String>['Emilio Aguinaldo'],
-      'dependents': 3,
-      'head_name': 'Corazon Bonifacio',
-      'sectors': <String>['vawc-survivor', 'cicl', 'indigent'],
-      'vulnerability_score': 0.82,
-      'risk_score': 12,
-      'is_indigent': true,
-      'monthly_income': 8000,
-      'caseworker_notes': 'Family visited twice',
-      'assessment': 'Eligible for AICS',
-      'internal_notes': 'Escalate to supervisor',
-      'remarks': 'Suspicious',
-      'assigned_to': 'staff-1',
-      'reviewed_by': 'Maria Santos',
-      'assistance_requests': <Object>[
-        <String, dynamic>{'id': 'req-9', 'programme': 'AICS'},
+      'residents': <Object>[
+        <String, dynamic>{'name': 'Juan Dela Cruz'},
       ],
-      'disbursements': <Object>[
-        <String, dynamic>{'amount': 5000},
+      'relatives': <String>['Maria'],
+      'dependents': <String>['Juan'],
+      'families': <Object>[
+        <String, dynamic>{'head_name': 'Juan Dela Cruz'},
       ],
-      'referrals': <String>['DSWD'],
-      'household_id': 'hh-7',
-      'id': 'hh-7',
-      'record_number': 'HH-0001',
-      'psgc_code': '045822000',
-      'audit_trail': <Object>[
-        <String, dynamic>{'actor_name': 'Maria Santos'},
-      ],
-      'created_by': 'staff-1',
-      'updated_by': 'staff-2',
-      'match_candidates': <String>['hh-8'],
     };
 
-    test('no vulnerability, casework, case or registry data survives', () {
-      final decoded = HouseholdDto.decode(hostilePayload());
-      final rendered = <String?>[
-        decoded.label,
-        decoded.barangay,
-        decoded.streetAddress,
-        decoded.memberCount?.toString(),
-        decoded.role.name,
-      ].whereType<String>().join(' ').toLowerCase();
-
-      for (final leak in <String>[
-        'bayani',
-        'magsaysay',
-        'corazon',
-        'bonifacio',
-        'emilio',
-        'aguinaldo',
-        'pwd',
-        'vawc',
-        'cicl',
-        'indigent',
-        '0.82',
-        '8000',
-        'visited',
-        'aics',
-        'escalate',
-        'suspicious',
-        'staff-1',
-        'req-9',
-        '5000',
-        'dswd',
-        'hh-7',
-        'hh-0001',
-        '045822000',
-      ]) {
-        expect(rendered, isNot(contains(leak)), reason: leak);
-      }
-
-      // What a resident is entitled to see did survive.
-      expect(decoded.role, HouseholdRole.head);
-      expect(decoded.label, 'Dela Cruz household');
-      expect(decoded.barangay, 'San Juan');
-      expect(decoded.memberCount, 4);
-    });
-
-    test('allowed and forbidden key sets are disjoint', () {
-      for (final key in HouseholdDto.allowedKeys) {
-        expect(HouseholdDto.forbiddenKeys, isNot(contains(key)), reason: key);
-      }
-    });
-
-    test('the forbidden set names every category the matrix protects', () {
-      // Documentation with teeth: the next person to add a field reads this.
-      for (final key in <String>[
-        'members',
-        'sectors',
-        'monthly_income',
-        'caseworker_notes',
-        'assigned_to',
-        'assistance_requests',
-        'household_id',
-        'audit_trail',
-      ]) {
-        expect(HouseholdDto.forbiddenKeys, contains(key), reason: key);
-      }
-    });
-
-    test('a nested object under an allowed key is dropped, not flattened', () {
-      // How a member list would otherwise arrive rendered as an address.
-      final decoded = HouseholdDto.decode(<String, dynamic>{
-        'street_address': <String, dynamic>{'occupant': 'Juan Dela Cruz'},
-        'barangay': <String>['San Juan', 'Santa Ana'],
-        'label': 42,
-      });
-      expect(decoded.streetAddress, isNull);
-      expect(decoded.barangay, isNull);
-      expect(decoded.label, isNull);
-    });
-
-    test('an implausible member count is refused', () {
-      // Rendering a zero or a thousand would tell a resident something false
-      // about their own record.
-      for (final raw in <Object>[0, -1, 61, 10000, '4', 4.5]) {
-        expect(
-          HouseholdDto.decode(<String, dynamic>{
-            'member_count': raw,
-          }).memberCount,
-          isNull,
-          reason: '$raw',
-        );
-      }
-      expect(
-        HouseholdDto.decode(<String, dynamic>{'member_count': 1}).memberCount,
-        1,
+    test('cross-resident data does not survive the real decoder', () async {
+      final repository = HouseholdApiRepository(
+        apiClient: ApiClient(
+          config: config(),
+          transport: _OneResponse(hostilePayload()),
+          accessTokenProvider: () async => 'tok',
+        ),
       );
+
+      final summary = (await repository.loadOwnHousehold()).valueOrNull;
+      final rendered = summary.toString().toLowerCase();
+
+      for (final forbidden in <String>[
+        'juan',
+        'maria',
+        'dela cruz',
+        'r-99',
+        'head_name',
+        'relatives',
+        'dependents',
+      ]) {
+        expect(rendered, isNot(contains(forbidden)), reason: forbidden);
+      }
     });
 
-    test('a non-object payload decodes to a safe default, never throws', () {
-      for (final payload in <Object?>[
-        null,
-        'x',
-        7,
-        <int>[1],
+    test('the production decoder names no cross-resident key', () {
+      const source =
+          'lib/features/household/data/household_api_repository.dart';
+      final decoder = File(source).readAsStringSync();
+
+      for (final forbidden in <String>[
+        'members',
+        'residents',
+        'relatives',
+        'dependents',
+        'head_name',
+        'families',
       ]) {
-        final decoded = HouseholdDto.decode(payload);
-        expect(decoded.role, HouseholdRole.member);
-        expect(decoded.memberCount, isNull);
+        expect(
+          decoder.contains("'$forbidden'"),
+          isFalse,
+          reason: '$source reads $forbidden',
+        );
       }
     });
   });
 
+
   group('a correction never rewrites the record — acceptance 3', () {
-    test('a request carries a category and nothing else', () {
-      final body = HouseholdDto.encodeCorrection(
-        const HouseholdCorrectionRequest(
-          kind: HouseholdCorrectionKind.addressWrong,
+    test('production declines rather than inventing a payload', () async {
+      // C-12. This asserted that `HouseholdDto.encodeCorrection` produced
+      // `{kind: ...}` — a body nothing sends, for a request production refuses
+      // to make at all.
+      //
+      // The real behaviour is better than the encoded one and is what is
+      // asserted now: `me/profile/corrections` needs a named field with a
+      // proposed value, a household correction carries a category and nothing
+      // else, and rather than inventing a field the repository declines and the
+      // screen sends the resident to the office. Reporting that the office's
+      // count is wrong is not the same as proposing what it should be.
+      final repository = HouseholdApiRepository(
+        apiClient: ApiClient(
+          config: config(),
+          transport: _OneResponse(const <String, dynamic>{}),
+          accessTokenProvider: () async => 'tok',
         ),
       );
-      expect(body.keys, <String>['kind']);
-      expect(body['kind'], 'addressWrong');
+
+      final outcome = await repository.submitCorrectionRequest(
+        request: const HouseholdCorrectionRequest(
+          kind: HouseholdCorrectionKind.addressWrong,
+        ),
+        idempotencyKey: 'key-1',
+      );
+
+      expect(outcome, isA<Err<void>>());
     });
 
     test('no correction category can move a person between households', () {
@@ -824,4 +762,22 @@ void main() {
       expect(find.text('Your family record'), findsOneWidget);
     });
   });
+}
+
+/// Answers every request with one JSON body, so a hostile payload can be put on
+/// the wire and the real decoder watched.
+class _OneResponse implements ApiTransport {
+  _OneResponse(this.body);
+
+  final Map<String, dynamic> body;
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async =>
+      Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: jsonEncode(<String, dynamic>{'data': body}),
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      );
 }

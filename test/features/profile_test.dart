@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
+import 'package:taytay_resident/core/api/api_client.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -13,7 +16,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
-import 'package:taytay_resident/features/profile/data/resident_profile_dto.dart';
+import 'package:taytay_resident/features/profile/data/resident_profile_api_repository.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
@@ -274,129 +277,104 @@ void main() {
   });
 
   group('the decoder is an allow-list', () {
-    /// A payload carrying everything a resident must never receive.
+    // C-12. These ran against `ResidentProfileDto`, which no production file
+    // imports and whose contract was partly invented: it read `full_name` and
+    // `barangay`, where the server sends the four name parts and `barangay_id`.
+    // Production reads the server's names correctly — it iterates
+    // `ResidentProfileField.values` and takes each field's own `wireName`, which
+    // makes it allow-list by construction rather than by care.
+    //
+    // The privacy property is what mattered and it is kept, asserted twice on
+    // the decoder that actually runs: once by putting a hostile payload on the
+    // wire, once against the decoder's source so a future edit that starts
+    // reading a staff field fails here rather than in front of a resident.
+
     Map<String, dynamic> hostilePayload() => <String, dynamic>{
-      'full_name': 'Ana Dela Cruz',
-      'barangay': 'San Juan',
+      'first_name': 'Ana',
+      'last_name': 'Reyes',
+      'mobile_number': '09171234567',
       'verification_tier': 'verified',
-      // None of the following may survive.
-      'resident_id': 'r-99',
-      'record_number': 'REC-0001',
-      'household_id': 'hh-7',
-      'psgc_code': '045822000',
+      // None of the following may reach a resident's screen.
+      'resident_id': 'r-1',
+      'record_number': 'REC-1',
+      'household_id': 'hh-1',
+      'psgc_code': '045822',
       'philsys_number': '1234-5678-9012',
-      'assessment': 'Eligible for AICS',
-      'internal_notes': 'Applicant seems suspicious',
-      'remarks': 'Escalate',
+      'assessment': 'eligible',
+      'internal_notes': 'Applicant looks suspicious',
+      'remarks': 'Escalate to supervisor',
       'reviewed_by': 'staff-1',
       'reviewer_name': 'Maria Santos',
-      'risk_score': 0.9,
+      'risk_score': 0.87,
       'fraud_score': 12,
-      'sector_flags': <String>['solo_parent'],
+      'sector_flags': <String>['vawc-survivor'],
       'household_members': <Object>[
-        <String, dynamic>{'name': 'Juan Dela Cruz', 'age': 12},
+        <String, dynamic>{'name': 'Juan Dela Cruz'},
       ],
-      'relatives': <String>['Juan Dela Cruz'],
-      'dependents': 3,
-      'audit_trail': <Object>[
-        <String, dynamic>{'actor_name': 'Maria Santos'},
-      ],
-      'created_by': 'staff-1',
-      'deactivation_reason': 'duplicate',
     };
 
-    test('nothing staff, registry, audit or third-party survives', () {
-      final decoded = ResidentProfileDto.decode(hostilePayload());
-      final rendered = decoded.values.values.join(' ').toLowerCase();
+    test('staff-only and third-party data does not survive the real decoder', () async {
+      final repository = ResidentProfileApiRepository(
+        apiClient: ApiClient(
+          config: config(),
+          transport: _OneResponse(hostilePayload()),
+          accessTokenProvider: () async => 'tok',
+        ),
+      );
 
-      for (final leak in <String>[
-        'r-99',
-        'rec-0001',
-        'hh-7',
-        '045822000',
+      final detail = (await repository.loadOwnDetail()).valueOrNull;
+      final rendered = <String>[
+        detail.toString(),
+        ...?detail?.values.values,
+        detail?.verificationTier ?? '',
+      ].join(' ').toLowerCase();
+
+      for (final forbidden in <String>[
+        'r-1',
+        'rec-1',
+        'hh-1',
+        '045822',
         '1234-5678-9012',
-        'aics',
         'suspicious',
         'escalate',
         'staff-1',
         'maria santos',
-        'solo_parent',
+        '0.87',
+        'vawc',
         'juan dela cruz',
-        'duplicate',
       ]) {
-        expect(rendered, isNot(contains(leak)), reason: leak);
+        expect(rendered, isNot(contains(forbidden)), reason: forbidden);
       }
-      // What a resident is entitled to see did survive.
-      expect(decoded.valueOf(ResidentProfileField.fullName), 'Ana Dela Cruz');
-      expect(decoded.valueOf(ResidentProfileField.barangay), 'San Juan');
-      expect(decoded.verificationTier, 'verified');
     });
 
-    test('another resident cannot arrive through an allowed key', () {
-      // A nested object under an allowed key is a shape this app never agreed
-      // to; flattening it is how a household list becomes an address.
-      final decoded = ResidentProfileDto.decode(<String, dynamic>{
-        'street_address': <String, dynamic>{'occupant': 'Juan Dela Cruz'},
-        'full_name': <String>['Ana', 'Juan'],
-      });
-      expect(decoded.values, isEmpty);
-    });
+    test('the production decoder names no staff-only key', () {
+      const source =
+          'lib/features/profile/data/resident_profile_api_repository.dart';
+      final decoder = File(source).readAsStringSync();
 
-    test('allowed and forbidden key sets are disjoint', () {
-      for (final key in ResidentProfileDto.allowedKeys.keys) {
+      for (final forbidden in <String>[
+        'resident_id',
+        'record_number',
+        'household_id',
+        'psgc_code',
+        'philsys_number',
+        'assessment',
+        'internal_notes',
+        'remarks',
+        'reviewed_by',
+        'risk_score',
+        'sector_flags',
+        'household_members',
+      ]) {
         expect(
-          ResidentProfileDto.forbiddenKeys,
-          isNot(contains(key)),
-          reason: key,
+          decoder.contains("'$forbidden'"),
+          isFalse,
+          reason: '$source reads $forbidden',
         );
       }
     });
-
-    test('every allowed key maps to a field this app names', () {
-      for (final field in ResidentProfileDto.allowedKeys.values) {
-        expect(ResidentProfileField.values, contains(field));
-      }
-    });
-
-    test('a non-object payload decodes to nothing, never throws', () {
-      for (final payload in <Object?>[
-        null,
-        'x',
-        42,
-        <int>[1, 2],
-      ]) {
-        expect(ResidentProfileDto.decode(payload).values, isEmpty);
-      }
-    });
-
-    test('an encoded update carries only contact keys', () {
-      final body = ResidentProfileDto.encodeContactUpdate(
-        const ContactDetailsUpdate(
-          mobileNumber: '09171234567',
-          emailAddress: 'ana@example.test',
-        ),
-      );
-      expect(body.keys, unorderedEquals(<String>['mobile_number', 'email']));
-
-      // Nothing canonical can appear, because nothing can express it.
-      for (final key in <String>[
-        'full_name',
-        'birth_date',
-        'barangay',
-        'street_address',
-        'civil_status',
-      ]) {
-        expect(body.containsKey(key), isFalse, reason: key);
-      }
-    });
-
-    test('an empty update sends nothing at all', () {
-      expect(
-        ResidentProfileDto.encodeContactUpdate(const ContactDetailsUpdate()),
-        isEmpty,
-      );
-    });
   });
+
 
   group('own-record scope — acceptance 3', () {
     test('no repository method takes a resident identifier', () {
@@ -872,4 +850,22 @@ void main() {
       expect(find.text('Confirmed by Taytay LGU'), findsOneWidget);
     });
   });
+}
+
+/// Answers every request with one JSON body, so a hostile payload can be put on
+/// the wire and the real decoder watched.
+class _OneResponse implements ApiTransport {
+  _OneResponse(this.body);
+
+  final Map<String, dynamic> body;
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async =>
+      Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: jsonEncode(<String, dynamic>{'data': body}),
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      );
 }
