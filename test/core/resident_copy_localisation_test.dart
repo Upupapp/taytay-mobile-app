@@ -58,6 +58,12 @@ void main() {
     'ResidentVerificationStage', // verificationStageCopy
     'KycDocumentType', // kycDocumentCopy
     'DocumentRejection', // localisedDocumentRejection
+    // Moved here from `notResidentFacing` on 2026-08-28. All three were claims
+    // that the copy could not reach a screen, and all three were false — see the
+    // block below for what each one actually rendered.
+    'ResidentCapability', // capabilityLabel
+    'ResidentIntentKind', // gateSignInMessage / gateVerificationMessage
+    'DocumentSource', // documentSourceLabel
   };
 
   /// Enums whose copy a resident never reads, each with the reason.
@@ -65,18 +71,37 @@ void main() {
   /// **Not a backlog.** An entry here is a claim that the string cannot reach a
   /// screen, and it is wrong the moment somebody renders it.
   const Map<String, String> notResidentFacing = <String, String>{
-    'ResidentCapability':
-        'Access-gate vocabulary. The label names a capability for the gate '
-            'sheet to look up; the sentence a resident reads is composed there.',
-    'ResidentIntentKind':
-        'A held navigation intent. The description is diagnostic and is never '
-            'rendered.',
+    // CORRECTED 2026-08-28. This list had four entries. Three were wrong, and
+    // the fourth was right for the wrong reason. They are recorded rather than
+    // quietly deleted, because the failure is the interesting part: every one
+    // was written by reading the enum's own doc comment instead of following
+    // the value to a widget, and every error pointed the same way — towards
+    // less work.
+    //
+    //  * `ResidentCapability` — WRONG. `capability_gate.dart:111` passes the
+    //    label to `StatusView(title:)`, rendered at `titleMedium`, and
+    //    `CapabilityGate` is mounted on twelve screens. The claim said the gate
+    //    sheet composed its own sentence; the gate sheet is a different widget.
+    //  * `ResidentIntentKind` — WRONG. The description is interpolated into
+    //    both gate sheets (`access_gate_sheet.dart:147` and `:190`). The claim
+    //    called it diagnostic because the doc comment did.
+    //  * `DocumentSource` — WRONG. `requirements_screen.dart:478` passes the
+    //    label to `AppButton(label:)`. The enum's own field comment reads
+    //    "Resident-facing action label", one line under the field, so the claim
+    //    contradicted the source it described.
+    //
+    // All three now have localisers and sit in `localised` above.
     'ServiceCategoryIcon':
-        'Icon selection. The label picks a glyph; the service name a resident '
-            'reads comes from the server.',
-    'DocumentSource':
-        'Camera, gallery or file. Rendered through the picker sheet, which '
-            'composes its own copy.',
+        'Right conclusion, wrong reason — and the reason matters. The label '
+        'does NOT pick a glyph (`icon` does); it is the semantic name a '
+        'screen reader announces, which is resident-facing in the sense '
+        'that counts most. It stays here only because `FeatureIcon` has no '
+        'production caller at all: both `FeatureIcon.category` and '
+        '`.categoryCode` are constructed solely from '
+        '`test/shared/illustrations_test.dart`. That is a weaker guarantee '
+        'than the old reason claimed and a defect signal in its own right — '
+        'a category-icon widget was built and never mounted. Localise this '
+        'the moment anything renders it.',
   };
 
   /// Enums that reach a resident and are **not** localised yet, each with what
@@ -99,14 +124,14 @@ void main() {
     // on the correction flow.
     'RegistrationStep':
         'registration_screen.dart:88 and :208 (:208 is a semantics label). '
-            'GATED — the wizard is unreachable while onboarding is '
-            'staff-mediated (TAB 03). Localise when F15 is answered.',
+        'GATED — the wizard is unreachable while onboarding is '
+        'staff-mediated (TAB 03). Localise when F15 is answered.',
     'ConsentKind':
         'registration_screen.dart:655. GATED behind the same wizard. Not '
-            'reached by the events or assistance flows, which use ServerConsent.',
+        'reached by the events or assistance flows, which use ServerConsent.',
     'VerificationItemCategory':
         'The correction flow, which C-11 established cannot render against the '
-            'real backend — dead, so lowest priority of these.',
+        'real backend — dead, so lowest priority of these.',
     'HouseholdCorrectionKind': 'The household correction sheet.',
     'HouseholdRole': 'The household summary card.',
     'ReportReason': 'The comment-reporting sheet.',
@@ -114,14 +139,18 @@ void main() {
     'InboxGroup': 'The inbox grouping headers.',
   };
 
-  Iterable<({String name, String file, Set<String> fields})> enumsWithCopy() sync* {
-    for (final FileSystemEntity entity
-        in Directory('lib').listSync(recursive: true)) {
+  Iterable<({String name, String file, Set<String> fields})>
+  enumsWithCopy() sync* {
+    for (final FileSystemEntity entity in Directory(
+      'lib',
+    ).listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final String source = entity.readAsStringSync();
 
-      for (final RegExpMatch m
-          in RegExp(r'enum (\w+) \{(.*?)\n\}', dotAll: true).allMatches(source)) {
+      for (final RegExpMatch m in RegExp(
+        r'enum (\w+) \{(.*?)\n\}',
+        dotAll: true,
+      ).allMatches(source)) {
         final String name = m.group(1)!;
         final String body = m.group(2)!;
         final Set<String> fields = RegExp(r'final String\??\s+(\w+);')
@@ -192,11 +221,23 @@ void main() {
   });
 
   test('every enum called localised actually has a localiser', () {
-    final String locales =
-        File('lib/core/l10n/app_locales.dart').readAsStringSync();
+    final String locales = File(
+      'lib/core/l10n/app_locales.dart',
+    ).readAsStringSync();
 
     for (final String name in localised) {
-      final bool viaAppLocales = locales.contains(name);
+      // CORRECTED 2026-08-28. This was `locales.contains(name)`, which asserts
+      // only that the enum is *mentioned* somewhere in the file — an import
+      // line satisfies it. Red-proofing the three entries added that day found
+      // it: `capabilityLabel` was renamed away and this test stayed green,
+      // because `ResidentCapability` still appeared in the import, the switch
+      // and a doc comment. A check named "actually has a localiser" that passes
+      // on a mention is the same defect as the classifications it was meant to
+      // police, so it now requires a real signature: a function taking a
+      // BuildContext and then the enum itself.
+      final bool viaAppLocales = RegExp(
+        'BuildContext\\s+context,\\s*$name\\s+\\w+',
+      ).hasMatch(locales);
       // Two shapes count, because the codebase legitimately has both:
       // a function in app_locales.dart taking a BuildContext, or an accessor on
       // the enum taking AppStrings. ShellDestination uses the second, and this

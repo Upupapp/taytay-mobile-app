@@ -482,4 +482,117 @@ class AppStringsEn extends AppStrings {
   String validateConsentRequiredToRegister(String subject) {
     return 'You need to accept \"$subject\" to register.';
   }
+
+  @override
+  String get capabilityBrowseServices => 'Browse municipal services';
+
+  @override
+  String get capabilityReadNews => 'Read Taytay announcements';
+
+  @override
+  String get capabilityBrowseEvents => 'See LGU events';
+
+  @override
+  String get capabilityManageAccount => 'Manage your account';
+
+  @override
+  String get capabilityManageSecurity => 'Manage sign-in and security';
+
+  @override
+  String get capabilityReadNotifications => 'See your notifications';
+
+  @override
+  String get capabilityBrowsePrograms => 'See assistance programmes';
+
+  @override
+  String get capabilityCompleteVerification => 'Verify your identity';
+
+  @override
+  String get capabilityHoldDigitalId => 'Hold your Taytay digital ID';
+
+  @override
+  String get capabilityTrackAssistanceRequests =>
+      'Track your assistance requests';
+
+  @override
+  String get capabilityApplyForAssistance => 'Apply for a municipal service';
+
+  @override
+  String get capabilitySubmitRequirements =>
+      'Send the documents Taytay LGU asked for';
+
+  @override
+  String get capabilityViewHouseholdSummary => 'See your household summary';
+
+  @override
+  String get gateSignInLikePost =>
+      'You need a Taytay LGU account to like this post.';
+
+  @override
+  String get gateSignInCommentOnPost =>
+      'You need a Taytay LGU account to comment.';
+
+  @override
+  String get gateSignInRegisterForEvent =>
+      'You need a Taytay LGU account to register for this event.';
+
+  @override
+  String get gateSignInSaveService =>
+      'You need a Taytay LGU account to save this service.';
+
+  @override
+  String get gateSignInManageNotifications =>
+      'You need a Taytay LGU account to manage your notifications.';
+
+  @override
+  String get gateSignInApplyForService =>
+      'You need a Taytay LGU account to apply for this service.';
+
+  @override
+  String get gateSignInViewDigitalId =>
+      'You need a Taytay LGU account to open your digital ID.';
+
+  @override
+  String get gateSignInTrailer =>
+      'Signing in also lets you track anything you apply for.';
+
+  @override
+  String get gateVerifyLikePost =>
+      'Taytay LGU needs to confirm who you are before you can like this post.';
+
+  @override
+  String get gateVerifyCommentOnPost =>
+      'Taytay LGU needs to confirm who you are before you can comment.';
+
+  @override
+  String get gateVerifyRegisterForEvent =>
+      'Taytay LGU needs to confirm who you are before you can register for this event.';
+
+  @override
+  String get gateVerifySaveService =>
+      'Taytay LGU needs to confirm who you are before you can save this service.';
+
+  @override
+  String get gateVerifyManageNotifications =>
+      'Taytay LGU needs to confirm who you are before you can manage your notifications.';
+
+  @override
+  String get gateVerifyApplyForService =>
+      'Taytay LGU needs to confirm who you are before you can apply for this service.';
+
+  @override
+  String get gateVerifyViewDigitalId =>
+      'Taytay LGU needs to confirm who you are before you can open your digital ID.';
+
+  @override
+  String get gateVerifyTrailer => 'Verification is a one-time step.';
+
+  @override
+  String get documentSourceCamera => 'Take a photo';
+
+  @override
+  String get documentSourceGallery => 'Choose a photo';
+
+  @override
+  String get documentSourceFile => 'Choose a file';
 }

@@ -825,11 +825,51 @@ separately rather than baked into the sentence, so a translation can place them 
 grammar wants them. A `FieldError` with a kind is this app's and is translated; one without is the
 server's and is shown as sent.
 
+### The 4 "not resident-facing" claims — checked, and 3 were wrong (2026-08-28)
+
+The line below predicted this was the likeliest place the guard was wrong. It was, and by a wider
+margin than the prediction: **three of the four claims were false, and the fourth was right for the
+wrong reason.**
+
+| Enum | Claim | Truth |
+|---|---|---|
+| `ResidentCapability` | "the gate sheet composes the sentence" | **Wrong.** `capability_gate.dart:111` → `StatusView(title:)`, rendered at `titleMedium`, on **12 mounted screens**. |
+| `ResidentIntentKind` | "diagnostic, never rendered" | **Wrong.** Interpolated into both gate sheets, `access_gate_sheet.dart:147` and `:190`. |
+| `DocumentSource` | "the picker sheet composes its own copy" | **Wrong.** `requirements_screen.dart:478` → `AppButton(label:)`. The field's own comment reads *"Resident-facing action label"*. |
+| `ServiceCategoryIcon` | "the label picks a glyph" | **Right conclusion, wrong reason.** `.icon` picks the glyph; `.label` is the screen-reader name. It is unrendered only because `FeatureIcon` has **no production caller at all**. |
+
+So the single largest heading on every gated screen in the app was English on a Filipino device,
+and the guard written to catch exactly that was asserting it could not happen.
+
+**Every one of the four was written by reading the enum's doc comment instead of following the
+value to a widget.** Two of them contradicted a comment sitting one line away in the same file.
+Reading tells you what a name suggests; only tracing tells you where a string lands. This is the
+same failure as the `ConsentKind` entry above, and it is now the third time in this programme.
+
+**What changed as a result:**
+
+* All three now have localisers — `capabilityLabel`, `gateSignInMessage` / `gateVerificationMessage`,
+  `documentSourceLabel` — and 32 new keys in both `.arb` files.
+* The gate sentences moved from **fragment substitution to whole sentences**. Translating
+  `intent.description` alone would not have worked: Filipino needs `mag-apply` after *para* and
+  `makapag-apply` after *bago ka*, so one fragment cannot serve both frames.
+* **`test/core/gate_copy_render_test.dart` is new**, and is the real lesson. A coverage guard can
+  only catch an enum nobody *classified*; it is structurally blind to one classified **wrongly**.
+  The new file pumps the widgets in Filipino and reads what comes out. `CapabilityGate` — on 12
+  screens — had **no test of any kind** before it, which is how this survived.
+* **The guard was lying about itself.** `every enum called localised actually has a localiser` was
+  `locales.contains(name)` — satisfied by an import line. Renaming `capabilityLabel` away left it
+  green. It now requires a real signature. Found only by red-proofing; the check had passed every
+  run since it was written.
+
 ## Still open
 
-* **8 enums untranslated**, two of them gated behind TAB 03 and therefore not urgent.
+* **6 enums untranslated** (down from 8), two more gated behind TAB 03 and therefore not urgent.
+* **`ServiceCategoryIcon` / `FeatureIcon` is built and never mounted** — a defect in its own right,
+  not just a localisation question.
+* **~20 hardcoded English literals on the access-gate screens** — `CapabilityService.explain`,
+  `requirementLabel`, and the sheet's own titles and buttons. These sit on the very screens just
+  fixed, and no enum-based guard can see them.
 * **The other 20 hardcoded validation sentences** — not audited for reachability.
 * **The guard cannot see hardcoded sentences at all.** Extending it is the honest next step.
-* **The 4 "not resident-facing" claims were written from reading, not testing** — the guard's own
-  weakest point, and the likeliest place it is wrong.
 

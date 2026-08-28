@@ -475,7 +475,7 @@ class _ChooseStage extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: Spacing.sm),
               child: AppButton(
-                label: source.label,
+                label: documentSourceLabel(context, source),
                 variant: source == DocumentSource.camera
                     ? AppButtonVariant.primary
                     : AppButtonVariant.secondary,

@@ -485,4 +485,121 @@ class AppStringsFil extends AppStrings {
   String validateConsentRequiredToRegister(String subject) {
     return 'Kailangan mong tanggapin ang \"$subject\" upang makapagparehistro.';
   }
+
+  @override
+  String get capabilityBrowseServices => 'Tingnan ang mga serbisyo ng bayan';
+
+  @override
+  String get capabilityReadNews => 'Basahin ang mga anunsyo ng Taytay';
+
+  @override
+  String get capabilityBrowseEvents => 'Tingnan ang mga kaganapan ng LGU';
+
+  @override
+  String get capabilityManageAccount => 'Pamahalaan ang iyong account';
+
+  @override
+  String get capabilityManageSecurity => 'Pamahalaan ang sign-in at seguridad';
+
+  @override
+  String get capabilityReadNotifications =>
+      'Tingnan ang iyong mga notification';
+
+  @override
+  String get capabilityBrowsePrograms => 'Tingnan ang mga programang pantulong';
+
+  @override
+  String get capabilityCompleteVerification =>
+      'I-verify ang iyong pagkakakilanlan';
+
+  @override
+  String get capabilityHoldDigitalId => 'Magkaroon ng iyong Taytay digital ID';
+
+  @override
+  String get capabilityTrackAssistanceRequests =>
+      'Subaybayan ang iyong mga hiling na tulong';
+
+  @override
+  String get capabilityApplyForAssistance =>
+      'Mag-apply para sa serbisyo ng bayan';
+
+  @override
+  String get capabilitySubmitRequirements =>
+      'Ipadala ang mga dokumentong hiniling ng Taytay LGU';
+
+  @override
+  String get capabilityViewHouseholdSummary =>
+      'Tingnan ang buod ng iyong sambahayan';
+
+  @override
+  String get gateSignInLikePost =>
+      'Kailangan mo ng Taytay LGU account para ma-like ang post na ito.';
+
+  @override
+  String get gateSignInCommentOnPost =>
+      'Kailangan mo ng Taytay LGU account para makapagkomento.';
+
+  @override
+  String get gateSignInRegisterForEvent =>
+      'Kailangan mo ng Taytay LGU account para makarehistro sa kaganapang ito.';
+
+  @override
+  String get gateSignInSaveService =>
+      'Kailangan mo ng Taytay LGU account para ma-save ang serbisyong ito.';
+
+  @override
+  String get gateSignInManageNotifications =>
+      'Kailangan mo ng Taytay LGU account para pamahalaan ang iyong mga notification.';
+
+  @override
+  String get gateSignInApplyForService =>
+      'Kailangan mo ng Taytay LGU account para mag-apply sa serbisyong ito.';
+
+  @override
+  String get gateSignInViewDigitalId =>
+      'Kailangan mo ng Taytay LGU account para buksan ang iyong digital ID.';
+
+  @override
+  String get gateSignInTrailer =>
+      'Sa pag-sign in, masusubaybayan mo rin ang anumang inaplayan mo.';
+
+  @override
+  String get gateVerifyLikePost =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago mo ma-like ang post na ito.';
+
+  @override
+  String get gateVerifyCommentOnPost =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka makapagkomento.';
+
+  @override
+  String get gateVerifyRegisterForEvent =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka makarehistro sa kaganapang ito.';
+
+  @override
+  String get gateVerifySaveService =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago mo ma-save ang serbisyong ito.';
+
+  @override
+  String get gateVerifyManageNotifications =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago mo pamahalaan ang iyong mga notification.';
+
+  @override
+  String get gateVerifyApplyForService =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka mag-apply sa serbisyong ito.';
+
+  @override
+  String get gateVerifyViewDigitalId =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago mo buksan ang iyong digital ID.';
+
+  @override
+  String get gateVerifyTrailer => 'Isang beses lang ang verification.';
+
+  @override
+  String get documentSourceCamera => 'Kumuha ng larawan';
+
+  @override
+  String get documentSourceGallery => 'Pumili ng larawan';
+
+  @override
+  String get documentSourceFile => 'Pumili ng file';
 }

@@ -883,6 +883,198 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'You need to accept \"{subject}\" to register.'**
   String validateConsentRequiredToRegister(String subject);
+
+  /// Heading on the gate shown when a resident cannot yet browse services.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse municipal services'**
+  String get capabilityBrowseServices;
+
+  /// Heading on the news gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Read Taytay announcements'**
+  String get capabilityReadNews;
+
+  /// Heading on the events gate.
+  ///
+  /// In en, this message translates to:
+  /// **'See LGU events'**
+  String get capabilityBrowseEvents;
+
+  /// Heading on the account gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage your account'**
+  String get capabilityManageAccount;
+
+  /// Heading on the security gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage sign-in and security'**
+  String get capabilityManageSecurity;
+
+  /// Heading on the notifications gate.
+  ///
+  /// In en, this message translates to:
+  /// **'See your notifications'**
+  String get capabilityReadNotifications;
+
+  /// Heading on the programmes gate.
+  ///
+  /// In en, this message translates to:
+  /// **'See assistance programmes'**
+  String get capabilityBrowsePrograms;
+
+  /// Heading on the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your identity'**
+  String get capabilityCompleteVerification;
+
+  /// Heading on the digital ID gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Hold your Taytay digital ID'**
+  String get capabilityHoldDigitalId;
+
+  /// Heading on the assistance requests gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Track your assistance requests'**
+  String get capabilityTrackAssistanceRequests;
+
+  /// Heading on the assistance application gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for a municipal service'**
+  String get capabilityApplyForAssistance;
+
+  /// Heading on the requirements gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Send the documents Taytay LGU asked for'**
+  String get capabilitySubmitRequirements;
+
+  /// Heading on the household gate.
+  ///
+  /// In en, this message translates to:
+  /// **'See your household summary'**
+  String get capabilityViewHouseholdSummary;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to like this post.'**
+  String get gateSignInLikePost;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to comment.'**
+  String get gateSignInCommentOnPost;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to register for this event.'**
+  String get gateSignInRegisterForEvent;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to save this service.'**
+  String get gateSignInSaveService;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to manage your notifications.'**
+  String get gateSignInManageNotifications;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to apply for this service.'**
+  String get gateSignInApplyForService;
+
+  /// First sentence of the sign-in gate.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to open your digital ID.'**
+  String get gateSignInViewDigitalId;
+
+  /// Second sentence of the sign-in gate, the same for every intent.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in also lets you track anything you apply for.'**
+  String get gateSignInTrailer;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can like this post.'**
+  String get gateVerifyLikePost;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can comment.'**
+  String get gateVerifyCommentOnPost;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can register for this event.'**
+  String get gateVerifyRegisterForEvent;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can save this service.'**
+  String get gateVerifySaveService;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can manage your notifications.'**
+  String get gateVerifyManageNotifications;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can apply for this service.'**
+  String get gateVerifyApplyForService;
+
+  /// First sentence of the verification gate.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can open your digital ID.'**
+  String get gateVerifyViewDigitalId;
+
+  /// Second sentence of the verification gate, the same for every intent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification is a one-time step.'**
+  String get gateVerifyTrailer;
+
+  /// Button on the document upload sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Take a photo'**
+  String get documentSourceCamera;
+
+  /// Button on the document upload sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a photo'**
+  String get documentSourceGallery;
+
+  /// Button on the document upload sheet.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a file'**
+  String get documentSourceFile;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

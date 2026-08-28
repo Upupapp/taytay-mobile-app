@@ -10,7 +10,9 @@ import '../documents/document_capture.dart';
 import '../documents/upload_policy.dart';
 import '../forms/field_error.dart';
 import '../forms/validation_message.dart';
+import '../intent/resident_intent.dart';
 import '../result/app_failure.dart';
+import '../session/resident_capability.dart';
 
 /// The languages this app speaks, and the rule for choosing between them.
 ///
@@ -216,8 +218,7 @@ String? profileFieldHint(BuildContext context, ResidentProfileField field) {
     // Sex and civil status carry no hint: the label is the whole of it, and an
     // invented sentence beneath a two-word field is noise a screen reader also
     // has to read out.
-    ResidentProfileField.sex ||
-    ResidentProfileField.civilStatus => null,
+    ResidentProfileField.sex || ResidentProfileField.civilStatus => null,
   };
 }
 
@@ -320,23 +321,141 @@ String localisedFieldError(BuildContext context, FieldError error) {
   return switch (kind) {
     ValidationMessage.confirmDetails => strings.validateConfirmDetails,
     ValidationMessage.narrativeMissing => strings.validateNarrativeMissing,
-    ValidationMessage.narrativeTooLong => strings.validateNarrativeTooLong(limit),
-    ValidationMessage.consentRequired => strings.validateConsentRequired(subject),
+    ValidationMessage.narrativeTooLong => strings.validateNarrativeTooLong(
+      limit,
+    ),
+    ValidationMessage.consentRequired => strings.validateConsentRequired(
+      subject,
+    ),
     ValidationMessage.consentRequiredToRegister =>
       strings.validateConsentRequiredToRegister(subject),
     ValidationMessage.answerMissingChoice =>
       strings.validateAnswerMissingChoice(subject),
-    ValidationMessage.answerMissingYesNo =>
-      strings.validateAnswerMissingYesNo(subject),
-    ValidationMessage.answerMissingDate =>
-      strings.validateAnswerMissingDate(subject),
+    ValidationMessage.answerMissingYesNo => strings.validateAnswerMissingYesNo(
+      subject,
+    ),
+    ValidationMessage.answerMissingDate => strings.validateAnswerMissingDate(
+      subject,
+    ),
     ValidationMessage.answerMissingNumber =>
       strings.validateAnswerMissingNumber(subject),
     ValidationMessage.answerMissingGeneric =>
       strings.validateAnswerMissingGeneric(subject),
-    ValidationMessage.answerNotANumber =>
-      strings.validateAnswerNotANumber(subject),
+    ValidationMessage.answerNotANumber => strings.validateAnswerNotANumber(
+      subject,
+    ),
     ValidationMessage.answerTooLong => strings.validateAnswerTooLong(limit),
   };
 }
 
+/// The heading a resident reads on a gate that names what they cannot yet do.
+///
+/// ## How this was found, and why the entry that hid it is worth remembering
+///
+/// `ResidentCapability` sat in the `notResidentFacing` list of
+/// `test/core/resident_copy_localisation_test.dart` under the claim that its
+/// label "names a capability for the gate sheet to look up; the sentence a
+/// resident reads is composed there". That was wrong.
+/// `capability_gate.dart:111` passes `capability.label` straight into
+/// `StatusView(title:)`, which renders it at `titleMedium` — and `CapabilityGate`
+/// is mounted on **twelve** screens. So the largest heading on every gated
+/// screen in the app was English on a Filipino device, and the guard written to
+/// catch exactly this was asserting it could not happen.
+///
+/// That claim was written by reading the code rather than following the value,
+/// which is the same mistake that put `ConsentKind` on the wrong list. Reading
+/// tells you what a name suggests; only tracing tells you where a string lands.
+String capabilityLabel(BuildContext context, ResidentCapability capability) {
+  final strings = AppStrings.of(context);
+  return switch (capability) {
+    ResidentCapability.browseServices => strings.capabilityBrowseServices,
+    ResidentCapability.readNews => strings.capabilityReadNews,
+    ResidentCapability.browseEvents => strings.capabilityBrowseEvents,
+    ResidentCapability.manageAccount => strings.capabilityManageAccount,
+    ResidentCapability.manageSecurity => strings.capabilityManageSecurity,
+    ResidentCapability.readNotifications => strings.capabilityReadNotifications,
+    ResidentCapability.browsePrograms => strings.capabilityBrowsePrograms,
+    ResidentCapability.completeVerification =>
+      strings.capabilityCompleteVerification,
+    ResidentCapability.holdDigitalId => strings.capabilityHoldDigitalId,
+    ResidentCapability.trackAssistanceRequests =>
+      strings.capabilityTrackAssistanceRequests,
+    ResidentCapability.applyForAssistance =>
+      strings.capabilityApplyForAssistance,
+    ResidentCapability.submitRequirements =>
+      strings.capabilitySubmitRequirements,
+    ResidentCapability.viewHouseholdSummary =>
+      strings.capabilityViewHouseholdSummary,
+  };
+}
+
+/// The sign-in gate's message, as a whole sentence rather than a fragment.
+///
+/// ## Why the fragment had to go
+///
+/// `access_gate_sheet.dart` built this sentence by interpolation:
+/// `'You need a Taytay LGU account to ${intent.description}.'`, where
+/// `description` is a lower-case English verb phrase like `like this post`.
+/// `ResidentIntentKind` was recorded as never rendered on the strength of a
+/// comment calling the field diagnostic. It is rendered, mid-sentence, on both
+/// gate sheets.
+///
+/// Translating the fragment alone would not have fixed it. Filipino needs a
+/// different verb form after `para` than after `bago ka`, so one fragment
+/// cannot serve both sentences: `mag-apply` in the first, `makapag-apply` in
+/// the second. Substituting a fragment into a sentence is a bug in any language
+/// whose morphology depends on the frame — so the frame moves into the `.arb`
+/// with the fragment inside it, and translators see a whole sentence.
+///
+/// The trailing sentence is separate because it genuinely does not vary, and
+/// two independent sentences concatenate safely where two clauses do not.
+String gateSignInMessage(BuildContext context, ResidentIntentKind intent) {
+  final strings = AppStrings.of(context);
+  final String lead = switch (intent) {
+    ResidentIntentKind.likePost => strings.gateSignInLikePost,
+    ResidentIntentKind.commentOnPost => strings.gateSignInCommentOnPost,
+    ResidentIntentKind.registerForEvent => strings.gateSignInRegisterForEvent,
+    ResidentIntentKind.saveService => strings.gateSignInSaveService,
+    ResidentIntentKind.manageNotifications =>
+      strings.gateSignInManageNotifications,
+    ResidentIntentKind.applyForService => strings.gateSignInApplyForService,
+    ResidentIntentKind.viewDigitalId => strings.gateSignInViewDigitalId,
+  };
+  return '$lead ${strings.gateSignInTrailer}';
+}
+
+/// The verification gate's message. See [gateSignInMessage] for why this is a
+/// whole sentence and not a frame plus a fragment.
+String gateVerificationMessage(
+  BuildContext context,
+  ResidentIntentKind intent,
+) {
+  final strings = AppStrings.of(context);
+  final String lead = switch (intent) {
+    ResidentIntentKind.likePost => strings.gateVerifyLikePost,
+    ResidentIntentKind.commentOnPost => strings.gateVerifyCommentOnPost,
+    ResidentIntentKind.registerForEvent => strings.gateVerifyRegisterForEvent,
+    ResidentIntentKind.saveService => strings.gateVerifySaveService,
+    ResidentIntentKind.manageNotifications =>
+      strings.gateVerifyManageNotifications,
+    ResidentIntentKind.applyForService => strings.gateVerifyApplyForService,
+    ResidentIntentKind.viewDigitalId => strings.gateVerifyViewDigitalId,
+  };
+  return '$lead ${strings.gateVerifyTrailer}';
+}
+
+/// The label on an upload button — camera, gallery or file.
+///
+/// `DocumentSource` was recorded as "rendered through the picker sheet, which
+/// composes its own copy". The picker sheet composes nothing:
+/// `requirements_screen.dart:478` passes `source.label` to `AppButton(label:)`.
+/// The enum's own doc comment says `Resident-facing action label` one line above
+/// the field, so the claim contradicted the source it was written about.
+String documentSourceLabel(BuildContext context, DocumentSource source) {
+  final strings = AppStrings.of(context);
+  return switch (source) {
+    DocumentSource.camera => strings.documentSourceCamera,
+    DocumentSource.gallery => strings.documentSourceGallery,
+    DocumentSource.file => strings.documentSourceFile,
+  };
+}

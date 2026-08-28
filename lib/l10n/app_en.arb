@@ -555,5 +555,133 @@
         "example": "Photo consent"
       }
     }
+  },
+  "capabilityBrowseServices": "Browse municipal services",
+  "@capabilityBrowseServices": {
+    "description": "Heading on the gate shown when a resident cannot yet browse services."
+  },
+  "capabilityReadNews": "Read Taytay announcements",
+  "@capabilityReadNews": {
+    "description": "Heading on the news gate."
+  },
+  "capabilityBrowseEvents": "See LGU events",
+  "@capabilityBrowseEvents": {
+    "description": "Heading on the events gate."
+  },
+  "capabilityManageAccount": "Manage your account",
+  "@capabilityManageAccount": {
+    "description": "Heading on the account gate."
+  },
+  "capabilityManageSecurity": "Manage sign-in and security",
+  "@capabilityManageSecurity": {
+    "description": "Heading on the security gate."
+  },
+  "capabilityReadNotifications": "See your notifications",
+  "@capabilityReadNotifications": {
+    "description": "Heading on the notifications gate."
+  },
+  "capabilityBrowsePrograms": "See assistance programmes",
+  "@capabilityBrowsePrograms": {
+    "description": "Heading on the programmes gate."
+  },
+  "capabilityCompleteVerification": "Verify your identity",
+  "@capabilityCompleteVerification": {
+    "description": "Heading on the verification gate."
+  },
+  "capabilityHoldDigitalId": "Hold your Taytay digital ID",
+  "@capabilityHoldDigitalId": {
+    "description": "Heading on the digital ID gate."
+  },
+  "capabilityTrackAssistanceRequests": "Track your assistance requests",
+  "@capabilityTrackAssistanceRequests": {
+    "description": "Heading on the assistance requests gate."
+  },
+  "capabilityApplyForAssistance": "Apply for a municipal service",
+  "@capabilityApplyForAssistance": {
+    "description": "Heading on the assistance application gate."
+  },
+  "capabilitySubmitRequirements": "Send the documents Taytay LGU asked for",
+  "@capabilitySubmitRequirements": {
+    "description": "Heading on the requirements gate."
+  },
+  "capabilityViewHouseholdSummary": "See your household summary",
+  "@capabilityViewHouseholdSummary": {
+    "description": "Heading on the household gate."
+  },
+  "gateSignInLikePost": "You need a Taytay LGU account to like this post.",
+  "@gateSignInLikePost": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInCommentOnPost": "You need a Taytay LGU account to comment.",
+  "@gateSignInCommentOnPost": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInRegisterForEvent": "You need a Taytay LGU account to register for this event.",
+  "@gateSignInRegisterForEvent": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInSaveService": "You need a Taytay LGU account to save this service.",
+  "@gateSignInSaveService": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInManageNotifications": "You need a Taytay LGU account to manage your notifications.",
+  "@gateSignInManageNotifications": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInApplyForService": "You need a Taytay LGU account to apply for this service.",
+  "@gateSignInApplyForService": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInViewDigitalId": "You need a Taytay LGU account to open your digital ID.",
+  "@gateSignInViewDigitalId": {
+    "description": "First sentence of the sign-in gate."
+  },
+  "gateSignInTrailer": "Signing in also lets you track anything you apply for.",
+  "@gateSignInTrailer": {
+    "description": "Second sentence of the sign-in gate, the same for every intent."
+  },
+  "gateVerifyLikePost": "Taytay LGU needs to confirm who you are before you can like this post.",
+  "@gateVerifyLikePost": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyCommentOnPost": "Taytay LGU needs to confirm who you are before you can comment.",
+  "@gateVerifyCommentOnPost": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyRegisterForEvent": "Taytay LGU needs to confirm who you are before you can register for this event.",
+  "@gateVerifyRegisterForEvent": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifySaveService": "Taytay LGU needs to confirm who you are before you can save this service.",
+  "@gateVerifySaveService": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyManageNotifications": "Taytay LGU needs to confirm who you are before you can manage your notifications.",
+  "@gateVerifyManageNotifications": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyApplyForService": "Taytay LGU needs to confirm who you are before you can apply for this service.",
+  "@gateVerifyApplyForService": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyViewDigitalId": "Taytay LGU needs to confirm who you are before you can open your digital ID.",
+  "@gateVerifyViewDigitalId": {
+    "description": "First sentence of the verification gate."
+  },
+  "gateVerifyTrailer": "Verification is a one-time step.",
+  "@gateVerifyTrailer": {
+    "description": "Second sentence of the verification gate, the same for every intent."
+  },
+  "documentSourceCamera": "Take a photo",
+  "@documentSourceCamera": {
+    "description": "Button on the document upload sheet."
+  },
+  "documentSourceGallery": "Choose a photo",
+  "@documentSourceGallery": {
+    "description": "Button on the document upload sheet."
+  },
+  "documentSourceFile": "Choose a file",
+  "@documentSourceFile": {
+    "description": "Button on the document upload sheet."
   }
 }

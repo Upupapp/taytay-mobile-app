@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../app/app_dependencies.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/intent/resident_intent.dart';
+import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/access_policy.dart';
 import '../../core/session/resident_capability.dart';
@@ -143,9 +144,7 @@ abstract final class AccessGateSheet {
       title: 'Sign in to continue',
       builder: (sheetContext) => _GateBody(
         illustration: StateIllustrations.empty(size: 96),
-        message:
-            'You need a Taytay LGU account to ${intent.description}. '
-            'Signing in also lets you track anything you apply for.',
+        message: gateSignInMessage(context, intent),
         privacyNote:
             'Browsing stays open to everyone — you can keep reading without an '
             'account.',
@@ -185,9 +184,7 @@ abstract final class AccessGateSheet {
       title: 'Verify your identity',
       builder: (sheetContext) => _GateBody(
         illustration: StateIllustrations.empty(size: 96),
-        message:
-            'Taytay LGU needs to confirm who you are before you can '
-            '${intent.description}. Verification is a one-time step.',
+        message: gateVerificationMessage(context, intent),
         privacyNote:
             'The LGU asks only for what it needs to confirm your identity and '
             'residency, and tells you why.',
