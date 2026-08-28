@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../../features/auth/domain/sign_in_challenge.dart';
+import '../../features/profile/domain/profile_fields.dart';
 import '../../features/verification/domain/correctable_field.dart';
 import '../../l10n/app_localizations.dart';
 import '../documents/document_capture.dart';
@@ -167,3 +168,70 @@ String correctableFieldLabel(BuildContext context, CorrectableField field) {
     CorrectableField.email => strings.fieldEmail,
   };
 }
+
+/// The resident-facing name of a profile field, in the device's language.
+///
+/// ## Why these are not on the enum
+///
+/// `ResidentProfileField` carries an English `label` and `hint` as enum
+/// constants, and until this was written the profile screen rendered them
+/// directly — so the one surface where a resident reads their own government
+/// record did not translate, while the rest of the app did. In a municipality
+/// where Filipino is the language the service is actually for, that is not a
+/// polish item.
+///
+/// The enum keeps its English as the no-context fallback, the same arrangement
+/// [AppFailure.residentMessage] uses: a log line or a test has something to
+/// print, and every surface a resident reads takes this door instead.
+String profileFieldLabel(BuildContext context, ResidentProfileField field) {
+  final strings = AppStrings.of(context);
+  return switch (field) {
+    ResidentProfileField.mobileNumber => strings.profileFieldMobileNumber,
+    ResidentProfileField.emailAddress => strings.profileFieldEmailAddress,
+    ResidentProfileField.streetAddress => strings.profileFieldStreetAddress,
+    ResidentProfileField.purokOrSitio => strings.profileFieldPurokOrSitio,
+    ResidentProfileField.fullName => strings.profileFieldFullName,
+    ResidentProfileField.birthDate => strings.profileFieldBirthDate,
+    ResidentProfileField.sex => strings.profileFieldSex,
+    ResidentProfileField.civilStatus => strings.profileFieldCivilStatus,
+    ResidentProfileField.barangay => strings.profileFieldBarangay,
+  };
+}
+
+/// The explanatory line under a profile field, or null where there is none.
+String? profileFieldHint(BuildContext context, ResidentProfileField field) {
+  final strings = AppStrings.of(context);
+  return switch (field) {
+    ResidentProfileField.mobileNumber => strings.profileHintMobileNumber,
+    ResidentProfileField.emailAddress => strings.profileHintEmailAddress,
+    ResidentProfileField.streetAddress => strings.profileHintStreetAddress,
+    ResidentProfileField.purokOrSitio => strings.profileHintPurokOrSitio,
+    ResidentProfileField.fullName => strings.profileHintFullName,
+    ResidentProfileField.birthDate => strings.profileHintBirthDate,
+    ResidentProfileField.barangay => strings.profileHintBarangay,
+    // Sex and civil status carry no hint: the label is the whole of it, and an
+    // invented sentence beneath a two-word field is noise a screen reader also
+    // has to read out.
+    ResidentProfileField.sex ||
+    ResidentProfileField.civilStatus => null,
+  };
+}
+
+/// The heading and explanation for an ownership group.
+({String title, String explanation}) profileSectionCopy(
+  BuildContext context,
+  FieldOwnership ownership,
+) {
+  final strings = AppStrings.of(context);
+  return switch (ownership) {
+    FieldOwnership.accountOwned => (
+      title: strings.profileSectionAccountTitle,
+      explanation: strings.profileSectionAccountExplanation,
+    ),
+    FieldOwnership.lguVerified => (
+      title: strings.profileSectionLguTitle,
+      explanation: strings.profileSectionLguExplanation,
+    ),
+  };
+}
+

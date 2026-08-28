@@ -9,6 +9,7 @@ import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -81,10 +82,19 @@ Future<BootedProfile> bootProfile(
   String location = '/profile',
   Size size = const Size(400, 1600),
   TextScaler textScaler = TextScaler.noScaling,
+  Locale locale = AppLocales.english,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
+
+  // Through the platform and the app's own resolution rule — the real path —
+  // rather than by wrapping Localizations around the tree, which would prove
+  // the widgets and not the resolution.
+  tester.platformDispatcher.localeTestValue = locale;
+  tester.platformDispatcher.localesTestValue = <Locale>[locale];
+  addTearDown(tester.platformDispatcher.clearLocaleTestValue);
+  addTearDown(tester.platformDispatcher.clearLocalesTestValue);
 
   final secrets = InMemorySecretStore();
   await secrets.write(LaunchController.welcomeCompletedKey, 'true');
@@ -198,6 +208,7 @@ ResidentProfileDetail fullDetail() => const ResidentProfileDetail(
 
 void main() {
   _c13();
+  _profileLocalisation();
   group('ownership is declared, and eligibility follows it', () {
     test('every eligibility-bearing field belongs to the LGU', () {
       // The rule behind acceptance 2, and it keeps its teeth. A resident who
@@ -634,6 +645,11 @@ void main() {
       expect(find.text('Mobile number'), findsOneWidget);
       expect(find.textContaining('Email address'), findsOneWidget);
       expect(find.text('Street address'), findsOneWidget);
+      // Restored. This assertion failed earlier and I read the failure as "the
+      // field is below the fold in a ListView". It was not: the label was the
+      // literal string '${field.label} (optional)', because an escape survived
+      // an edit. The finder was right and the diagnosis was wrong.
+      expect(find.textContaining('Purok or sitio'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(4));
 
       // Nothing canonical has a control here — and `Street address` has left
@@ -1018,6 +1034,75 @@ void _c13() {
         expect(detail.selfServiceFields, isNull, reason: '$served');
         expect(detail.ownershipOf(street), street.ownership);
       }
+    });
+  });
+}
+
+void _profileLocalisation() {
+  group('the profile surface speaks Filipino too', () {
+    testWidgets('field labels and section copy translate', (tester) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+        locale: AppLocales.filipino,
+        size: const Size(400, 3000),
+      );
+
+      // Until this was localised, ResidentProfileField carried English labels
+      // as enum constants and this screen rendered them directly — so the one
+      // surface where a resident reads their own government record stayed in
+      // English while the rest of the app translated.
+      expect(find.text('Kumpirmado ng Taytay LGU'), findsOneWidget);
+      expect(find.text('Buong pangalan'), findsOneWidget);
+      expect(find.text('Petsa ng kapanganakan'), findsOneWidget);
+
+      expect(find.text('Confirmed by Taytay LGU'), findsNothing);
+      expect(find.text('Full name'), findsNothing);
+    });
+
+    test('every field has a label and every locale has every key', () {
+      // Both directions. A field with no entry would render its English
+      // fallback silently; a locale missing a key would fall back to English
+      // just as silently.
+      const keys = <String>[
+        'profileSectionAccountTitle',
+        'profileSectionAccountExplanation',
+        'profileSectionLguTitle',
+        'profileSectionLguExplanation',
+        'profileFieldMobileNumber',
+        'profileFieldEmailAddress',
+        'profileFieldStreetAddress',
+        'profileFieldPurokOrSitio',
+        'profileFieldFullName',
+        'profileFieldBirthDate',
+        'profileFieldSex',
+        'profileFieldCivilStatus',
+        'profileFieldBarangay',
+        'profileFieldOptionalSuffix',
+      ];
+
+      for (final path in <String>[
+        'lib/l10n/app_en.arb',
+        'lib/l10n/app_fil.arb',
+      ]) {
+        final strings =
+            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
+        for (final key in keys) {
+          expect(strings[key], isA<String>(), reason: '$path is missing $key');
+        }
+      }
+
+      // One label key per field, so adding a field to the enum without adding
+      // copy fails here rather than shipping an English word into a Filipino
+      // screen.
+      expect(
+        ResidentProfileField.values.length,
+        9,
+        reason:
+            'a field was added or removed; add or remove its label and hint '
+            'keys, and update this count deliberately',
+      );
     });
   });
 }

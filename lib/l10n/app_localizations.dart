@@ -565,6 +565,132 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Sign in to continue to the page you opened. We will take you straight there.'**
   String get signInNoticeReturnTo;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account details'**
+  String get profileSectionAccountTitle;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change these yourself. They are how Taytay LGU contacts you.'**
+  String get profileSectionAccountExplanation;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirmed by Taytay LGU'**
+  String get profileSectionLguTitle;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU checked these against your documents. They decide what you are entitled to, so only the LGU can change them.'**
+  String get profileSectionLguExplanation;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Mobile number'**
+  String get profileFieldMobileNumber;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get profileFieldEmailAddress;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Street address'**
+  String get profileFieldStreetAddress;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Purok or sitio'**
+  String get profileFieldPurokOrSitio;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get profileFieldFullName;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Date of birth'**
+  String get profileFieldBirthDate;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Sex'**
+  String get profileFieldSex;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Civil status'**
+  String get profileFieldCivilStatus;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Barangay'**
+  String get profileFieldBarangay;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'How Taytay LGU sends your one-time codes and updates.'**
+  String get profileHintMobileNumber;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. Used for copies of what the LGU sends you.'**
+  String get profileHintEmailAddress;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Your house number and street, as Taytay LGU has it.'**
+  String get profileHintStreetAddress;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional. The purok or sitio within your barangay, if yours uses one.'**
+  String get profileHintPurokOrSitio;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'As it appears on the ID you presented.'**
+  String get profileHintFullName;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Decides age-based services such as senior citizen benefits.'**
+  String get profileHintBirthDate;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'Decides which barangay office serves you.'**
+  String get profileHintBarangay;
+
+  /// Profile surface copy, localised in the C-13 follow-up.
+  ///
+  /// In en, this message translates to:
+  /// **'{label} (optional)'**
+  String profileFieldOptionalSuffix(String label);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

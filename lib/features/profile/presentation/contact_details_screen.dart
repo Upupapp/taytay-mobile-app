@@ -4,9 +4,11 @@ import 'package:flutter/services.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/resident_capability.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/capability_gate.dart';
@@ -170,7 +172,10 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
                     padding: const EdgeInsets.all(Spacing.lg),
                     children: <Widget>[
                       Text(
-                        FieldOwnership.accountOwned.sectionExplanation,
+                        profileSectionCopy(
+                          context,
+                          FieldOwnership.accountOwned,
+                        ).explanation,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),
@@ -235,7 +240,7 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
         LengthLimitingTextInputFormatter(SignInIdentifier.length),
       ],
       decoration: InputDecoration(
-        labelText: field.label,
+        labelText: profileFieldLabel(context, field),
         hintText: '09XXXXXXXXX',
         // Stated before submission: changing this changes how they sign in.
         helperText: 'This is also how you sign in.',
@@ -252,8 +257,10 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       autofillHints: const <String>[AutofillHints.email],
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
-        labelText: '${field.label} (optional)',
-        helperText: field.hint,
+        labelText: AppStrings.of(context).profileFieldOptionalSuffix(
+          profileFieldLabel(context, field),
+        ),
+        helperText: profileFieldHint(context, field),
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.alternate_email),
       ),
@@ -264,8 +271,8 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       textCapitalization: TextCapitalization.words,
       textInputAction: TextInputAction.next,
       decoration: InputDecoration(
-        labelText: field.label,
-        helperText: field.hint,
+        labelText: profileFieldLabel(context, field),
+        helperText: profileFieldHint(context, field),
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.home_outlined),
       ),
@@ -275,8 +282,10 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       textCapitalization: TextCapitalization.words,
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
-        labelText: '\${field.label} (optional)',
-        helperText: field.hint,
+        labelText: AppStrings.of(context).profileFieldOptionalSuffix(
+          profileFieldLabel(context, field),
+        ),
+        helperText: profileFieldHint(context, field),
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.signpost_outlined),
       ),

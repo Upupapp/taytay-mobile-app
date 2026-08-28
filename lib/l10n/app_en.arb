@@ -277,5 +277,95 @@
   "signInNoticeReturnTo": "Sign in to continue to the page you opened. We will take you straight there.",
   "@signInNoticeReturnTo": {
     "description": "Session-ending copy (TAB 06 / F22)."
+  },
+  "profileSectionAccountTitle": "Your account details",
+  "@profileSectionAccountTitle": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileSectionAccountExplanation": "You can change these yourself. They are how Taytay LGU contacts you.",
+  "@profileSectionAccountExplanation": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileSectionLguTitle": "Confirmed by Taytay LGU",
+  "@profileSectionLguTitle": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileSectionLguExplanation": "Taytay LGU checked these against your documents. They decide what you are entitled to, so only the LGU can change them.",
+  "@profileSectionLguExplanation": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldMobileNumber": "Mobile number",
+  "@profileFieldMobileNumber": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldEmailAddress": "Email address",
+  "@profileFieldEmailAddress": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldStreetAddress": "Street address",
+  "@profileFieldStreetAddress": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldPurokOrSitio": "Purok or sitio",
+  "@profileFieldPurokOrSitio": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldFullName": "Full name",
+  "@profileFieldFullName": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldBirthDate": "Date of birth",
+  "@profileFieldBirthDate": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldSex": "Sex",
+  "@profileFieldSex": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldCivilStatus": "Civil status",
+  "@profileFieldCivilStatus": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldBarangay": "Barangay",
+  "@profileFieldBarangay": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintMobileNumber": "How Taytay LGU sends your one-time codes and updates.",
+  "@profileHintMobileNumber": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintEmailAddress": "Optional. Used for copies of what the LGU sends you.",
+  "@profileHintEmailAddress": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintStreetAddress": "Your house number and street, as Taytay LGU has it.",
+  "@profileHintStreetAddress": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintPurokOrSitio": "Optional. The purok or sitio within your barangay, if yours uses one.",
+  "@profileHintPurokOrSitio": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintFullName": "As it appears on the ID you presented.",
+  "@profileHintFullName": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintBirthDate": "Decides age-based services such as senior citizen benefits.",
+  "@profileHintBirthDate": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileHintBarangay": "Decides which barangay office serves you.",
+  "@profileHintBarangay": {
+    "description": "Profile surface copy, localised in the C-13 follow-up."
+  },
+  "profileFieldOptionalSuffix": "{label} (optional)",
+  "@profileFieldOptionalSuffix": {
+    "description": "Profile surface copy, localised in the C-13 follow-up.",
+    "placeholders": {
+      "label": {
+        "type": "String",
+        "example": "Purok or sitio"
+      }
+    }
   }
 }

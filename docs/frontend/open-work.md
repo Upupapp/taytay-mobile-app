@@ -734,7 +734,44 @@ comment described. Same shape as TAB 06's `Idempotent`, which was also false whe
 * **`check_correctable_fields.sh`'s future.** It can no longer catch "you will send a field the
   server refuses" — the runtime read does that. It can still catch "the office offers a field this
   build has no label for", which is exactly the `purok_or_sitio` gap. Owner decision.
-* **The profile field labels are not localised.** `ResidentProfileField` carries English labels and
-  hints as enum constants, so this surface does not translate while the rest of the app does.
-  Noticed here, not fixed here.
+* ~~**The profile field labels are not localised.**~~ **CLOSED 2026-08-28** — see below.
+
+---
+
+## The profile surface now speaks Filipino — 2026-08-28
+
+`ResidentProfileField` carried English labels and hints as enum constants and the screens rendered
+them directly, so **the one surface where a resident reads their own government record stayed in
+English while the rest of the app translated.** In a municipality where Filipino is the language the
+service is actually for, that is not a polish item.
+
+21 keys in both locales: nine field labels, seven hints, both section headings and their
+explanations, and the "(optional)" suffix. Every render on both profile screens goes through the
+localiser — a grep for hardcoded copy on those surfaces returns nothing. The enum keeps its English
+as the no-context fallback, the arrangement `AppFailure.residentMessage` already uses.
+
+Guards, both proven red: a screen reverted to the enum's English, and one Filipino key deleted.
+
+### A live bug, already caught, that I had explained away
+
+The `purok_or_sitio` control's label was the literal string `${field.label} (optional)` — an escape
+that survived an edit earlier the same evening, so the field rendered a raw Dart expression as its
+label.
+
+**It had already been caught.** `find.textContaining('Purok or sitio')` found nothing, and I read
+that as *"the field is below the fold in a lazily-built ListView"*, removed the assertion, and moved
+on. The finder was right, the diagnosis was wrong, and deleting the assertion deleted the evidence.
+
+The assertion is restored with that history written into it. **This is the seventh instance of this
+sequence's pattern and the first where a working check was actively removed** — the others were
+checks that never worked. A failing assertion is a fact; the explanation for it is a hypothesis, and
+they should not be given the same weight.
+
+## Still open
+
+* **`check_correctable_fields.sh`'s future** — owner decision, unchanged.
+* **Other enums may carry the same untranslated copy.** `KycDocumentType`,
+  `HouseholdCorrectionKind` and `VerificationItemCategory` all hold `label` constants.
+  `ResidentProfileField` was fixed because it was the surface in hand, not because it was shown to
+  be the only one. **Not yet swept.**
 

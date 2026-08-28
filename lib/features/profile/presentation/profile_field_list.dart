@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_button.dart';
@@ -77,7 +78,7 @@ class ProfileFieldList extends StatelessWidget {
               child: Semantics(
                 header: true,
                 child: Text(
-                  ownership.sectionTitle,
+                  profileSectionCopy(context, ownership).title,
                   style: theme.textTheme.titleMedium,
                 ),
               ),
@@ -86,7 +87,7 @@ class ProfileFieldList extends StatelessWidget {
         ),
         const SizedBox(height: Spacing.xs),
         Text(
-          ownership.sectionExplanation,
+          profileSectionCopy(context, ownership).explanation,
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -150,7 +151,7 @@ class _FieldRow extends StatelessWidget {
     final known = value != null && value!.isNotEmpty;
 
     return ListTile(
-      title: Text(field.label),
+      title: Text(profileFieldLabel(context, field)),
       subtitle: Text(
         known
             ? value!
@@ -220,11 +221,14 @@ abstract final class CanonicalFieldSheet {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
-            Text(field.label, style: theme.textTheme.titleMedium),
-            if (field.hint != null) ...<Widget>[
+            Text(
+              profileFieldLabel(context, field),
+              style: theme.textTheme.titleMedium,
+            ),
+            if (profileFieldHint(context, field) case final hint?) ...<Widget>[
               const SizedBox(height: Spacing.xs),
               Text(
-                field.hint!,
+                hint,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

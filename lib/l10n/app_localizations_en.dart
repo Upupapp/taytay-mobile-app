@@ -283,4 +283,76 @@ class AppStringsEn extends AppStrings {
   @override
   String get signInNoticeReturnTo =>
       'Sign in to continue to the page you opened. We will take you straight there.';
+
+  @override
+  String get profileSectionAccountTitle => 'Your account details';
+
+  @override
+  String get profileSectionAccountExplanation =>
+      'You can change these yourself. They are how Taytay LGU contacts you.';
+
+  @override
+  String get profileSectionLguTitle => 'Confirmed by Taytay LGU';
+
+  @override
+  String get profileSectionLguExplanation =>
+      'Taytay LGU checked these against your documents. They decide what you are entitled to, so only the LGU can change them.';
+
+  @override
+  String get profileFieldMobileNumber => 'Mobile number';
+
+  @override
+  String get profileFieldEmailAddress => 'Email address';
+
+  @override
+  String get profileFieldStreetAddress => 'Street address';
+
+  @override
+  String get profileFieldPurokOrSitio => 'Purok or sitio';
+
+  @override
+  String get profileFieldFullName => 'Full name';
+
+  @override
+  String get profileFieldBirthDate => 'Date of birth';
+
+  @override
+  String get profileFieldSex => 'Sex';
+
+  @override
+  String get profileFieldCivilStatus => 'Civil status';
+
+  @override
+  String get profileFieldBarangay => 'Barangay';
+
+  @override
+  String get profileHintMobileNumber =>
+      'How Taytay LGU sends your one-time codes and updates.';
+
+  @override
+  String get profileHintEmailAddress =>
+      'Optional. Used for copies of what the LGU sends you.';
+
+  @override
+  String get profileHintStreetAddress =>
+      'Your house number and street, as Taytay LGU has it.';
+
+  @override
+  String get profileHintPurokOrSitio =>
+      'Optional. The purok or sitio within your barangay, if yours uses one.';
+
+  @override
+  String get profileHintFullName => 'As it appears on the ID you presented.';
+
+  @override
+  String get profileHintBirthDate =>
+      'Decides age-based services such as senior citizen benefits.';
+
+  @override
+  String get profileHintBarangay => 'Decides which barangay office serves you.';
+
+  @override
+  String profileFieldOptionalSuffix(String label) {
+    return '$label (optional)';
+  }
 }

@@ -284,4 +284,78 @@ class AppStringsFil extends AppStrings {
   @override
   String get signInNoticeReturnTo =>
       'Mag-sign in upang magpatuloy sa pahinang binuksan mo. Dadalhin ka namin doon agad.';
+
+  @override
+  String get profileSectionAccountTitle => 'Ang iyong account details';
+
+  @override
+  String get profileSectionAccountExplanation =>
+      'Maaari mong baguhin ang mga ito nang mag-isa. Ito ang paraan ng pakikipag-ugnayan sa iyo ng Taytay LGU.';
+
+  @override
+  String get profileSectionLguTitle => 'Kumpirmado ng Taytay LGU';
+
+  @override
+  String get profileSectionLguExplanation =>
+      'Sinuri ng Taytay LGU ang mga ito laban sa iyong mga dokumento. Ito ang batayan ng mga benepisyong nararapat sa iyo, kaya ang LGU lamang ang makakapagbago nito.';
+
+  @override
+  String get profileFieldMobileNumber => 'Numero ng cellphone';
+
+  @override
+  String get profileFieldEmailAddress => 'Email address';
+
+  @override
+  String get profileFieldStreetAddress => 'Numero ng bahay at kalye';
+
+  @override
+  String get profileFieldPurokOrSitio => 'Purok o sitio';
+
+  @override
+  String get profileFieldFullName => 'Buong pangalan';
+
+  @override
+  String get profileFieldBirthDate => 'Petsa ng kapanganakan';
+
+  @override
+  String get profileFieldSex => 'Kasarian';
+
+  @override
+  String get profileFieldCivilStatus => 'Katayuang sibil';
+
+  @override
+  String get profileFieldBarangay => 'Barangay';
+
+  @override
+  String get profileHintMobileNumber =>
+      'Dito ipinapadala ng Taytay LGU ang iyong one-time code at mga update.';
+
+  @override
+  String get profileHintEmailAddress =>
+      'Opsyonal. Ginagamit para sa kopya ng mga ipinapadala sa iyo ng LGU.';
+
+  @override
+  String get profileHintStreetAddress =>
+      'Ang numero ng iyong bahay at kalye, ayon sa tala ng Taytay LGU.';
+
+  @override
+  String get profileHintPurokOrSitio =>
+      'Opsyonal. Ang purok o sitio sa loob ng iyong barangay, kung mayroon.';
+
+  @override
+  String get profileHintFullName =>
+      'Ayon sa nakasulat sa ID na iyong ipinakita.';
+
+  @override
+  String get profileHintBirthDate =>
+      'Batayan ng mga serbisyong nakadepende sa edad, tulad ng benepisyo para sa senior citizen.';
+
+  @override
+  String get profileHintBarangay =>
+      'Batayan kung aling tanggapan ng barangay ang naglilingkod sa iyo.';
+
+  @override
+  String profileFieldOptionalSuffix(String label) {
+    return '$label (opsyonal)';
+  }
 }
