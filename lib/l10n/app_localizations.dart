@@ -811,6 +811,72 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Sent. Still being checked.'**
   String get kycDocSentChecking;
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm these are your details before you continue, so the office files this against the right record.'**
+  String get validateConfirmDetails;
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what you need help with, in your own words.'**
+  String get validateNarrativeMissing;
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Shorten this to {limit} characters or fewer. The office can ask you for more detail later.'**
+  String validateNarrativeTooLong(int limit);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to accept \"{subject}\" to continue.'**
+  String validateConsentRequired(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose an answer for \"{subject}\".'**
+  String validateAnswerMissingChoice(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer yes or no to \"{subject}\".'**
+  String validateAnswerMissingYesNo(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a date for \"{subject}\".'**
+  String validateAnswerMissingDate(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a number for \"{subject}\".'**
+  String validateAnswerMissingNumber(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Answer \"{subject}\".'**
+  String validateAnswerMissingGeneric(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter \"{subject}\" as a number, with digits only.'**
+  String validateAnswerNotANumber(String subject);
+
+  /// Client-side validation message, localised in the copy sweep.
+  ///
+  /// In en, this message translates to:
+  /// **'Shorten this to {limit} characters or fewer.'**
+  String validateAnswerTooLong(int limit);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

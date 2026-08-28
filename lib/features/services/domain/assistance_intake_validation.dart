@@ -1,4 +1,5 @@
 import '../../../core/forms/field_error.dart';
+import '../../../core/forms/validation_message.dart';
 import 'assistance_intake.dart';
 
 /// Validation for the assistance intake wizard.
@@ -25,6 +26,7 @@ abstract final class AssistanceIntakeValidation {
     return const <FieldError>[
       FieldError(
         field: 'context_confirmed',
+        kind: ValidationMessage.confirmDetails,
         message:
             'Confirm these are your details before you continue, so the office '
             'files this against the right record.',
@@ -43,6 +45,7 @@ abstract final class AssistanceIntakeValidation {
       errors.add(
         const FieldError(
           field: 'narrative',
+          kind: ValidationMessage.narrativeMissing,
           message: 'Describe what you need help with, in your own words.',
         ),
       );
@@ -54,6 +57,8 @@ abstract final class AssistanceIntakeValidation {
       errors.add(
         FieldError(
           field: 'narrative',
+          kind: ValidationMessage.narrativeTooLong,
+          limit: maximum,
           message:
               'Shorten this to $maximum characters or fewer. The office can ask '
               'you for more detail later.',
@@ -81,7 +86,12 @@ abstract final class AssistanceIntakeValidation {
       if (_isBlank(answer)) {
         if (question.isRequired) {
           errors.add(
-            FieldError(field: question.key, message: _missingMessage(question)),
+            FieldError(
+              field: question.key,
+              kind: _missingKind(question),
+              subject: question.prompt,
+              message: _missingMessage(question),
+            ),
           );
         }
         continue;
@@ -107,6 +117,8 @@ abstract final class AssistanceIntakeValidation {
       if (!draft.hasConsent(consent.key))
         FieldError(
           field: 'consent_${consent.key}',
+          kind: ValidationMessage.consentRequired,
+          subject: consent.label,
           message: 'You need to accept "${consent.label}" to continue.',
         ),
   ];
@@ -155,6 +167,17 @@ abstract final class AssistanceIntakeValidation {
     _ => false,
   };
 
+  /// The kind that matches [_missingMessage], so the two cannot drift.
+  static ValidationMessage _missingKind(IntakeQuestion question) =>
+      switch (question.kind.known) {
+        IntakeAnswerKind.singleChoice ||
+        IntakeAnswerKind.multipleChoice => ValidationMessage.answerMissingChoice,
+        IntakeAnswerKind.yesNo => ValidationMessage.answerMissingYesNo,
+        IntakeAnswerKind.date => ValidationMessage.answerMissingDate,
+        IntakeAnswerKind.number => ValidationMessage.answerMissingNumber,
+        _ => ValidationMessage.answerMissingGeneric,
+      };
+
   static String _missingMessage(IntakeQuestion question) =>
       switch (question.kind.known) {
         IntakeAnswerKind.singleChoice || IntakeAnswerKind.multipleChoice =>
@@ -178,6 +201,8 @@ abstract final class AssistanceIntakeValidation {
 
     return FieldError(
       field: question.key,
+      kind: ValidationMessage.answerNotANumber,
+      subject: question.prompt,
       message: 'Enter "${question.prompt}" as a number, with digits only.',
     );
   }
@@ -189,6 +214,8 @@ abstract final class AssistanceIntakeValidation {
 
     return FieldError(
       field: question.key,
+      kind: ValidationMessage.answerTooLong,
+      limit: maximum,
       message: 'Shorten this to $maximum characters or fewer.',
     );
   }

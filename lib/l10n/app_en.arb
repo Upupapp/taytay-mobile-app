@@ -447,5 +447,103 @@
   "kycDocSentChecking": "Sent. Still being checked.",
   "@kycDocSentChecking": {
     "description": "Verification document status, localised in the follow-up sweep."
+  },
+  "validateConfirmDetails": "Confirm these are your details before you continue, so the office files this against the right record.",
+  "@validateConfirmDetails": {
+    "description": "Client-side validation message, localised in the copy sweep."
+  },
+  "validateNarrativeMissing": "Describe what you need help with, in your own words.",
+  "@validateNarrativeMissing": {
+    "description": "Client-side validation message, localised in the copy sweep."
+  },
+  "validateNarrativeTooLong": "Shorten this to {limit} characters or fewer. The office can ask you for more detail later.",
+  "@validateNarrativeTooLong": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "limit": {
+        "type": "int",
+        "example": "500"
+      }
+    }
+  },
+  "validateConsentRequired": "You need to accept \"{subject}\" to continue.",
+  "@validateConsentRequired": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerMissingChoice": "Choose an answer for \"{subject}\".",
+  "@validateAnswerMissingChoice": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerMissingYesNo": "Answer yes or no to \"{subject}\".",
+  "@validateAnswerMissingYesNo": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerMissingDate": "Enter a date for \"{subject}\".",
+  "@validateAnswerMissingDate": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerMissingNumber": "Enter a number for \"{subject}\".",
+  "@validateAnswerMissingNumber": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerMissingGeneric": "Answer \"{subject}\".",
+  "@validateAnswerMissingGeneric": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerNotANumber": "Enter \"{subject}\" as a number, with digits only.",
+  "@validateAnswerNotANumber": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Monthly income"
+      }
+    }
+  },
+  "validateAnswerTooLong": "Shorten this to {limit} characters or fewer.",
+  "@validateAnswerTooLong": {
+    "description": "Client-side validation message, localised in the copy sweep.",
+    "placeholders": {
+      "limit": {
+        "type": "int",
+        "example": "500"
+      }
+    }
   }
 }

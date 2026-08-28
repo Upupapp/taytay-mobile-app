@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'validation_message.dart';
 
 /// One field that needs fixing, named so an error summary can link to it.
 ///
@@ -19,7 +20,13 @@ import 'package:flutter/foundation.dart';
 /// re-exports it, so nothing that already imported it had to change.
 @immutable
 class FieldError {
-  const FieldError({required this.field, required this.message});
+  const FieldError({
+    required this.field,
+    required this.message,
+    this.kind,
+    this.subject,
+    this.limit,
+  });
 
   /// Stable key matching the field's own identifier, e.g. `family_name`.
   ///
@@ -27,6 +34,22 @@ class FieldError {
   /// error the server returns against that key lands on the right control
   /// without the app maintaining a translation table.
   final String field;
+
+  /// What this error is, when this app composed it.
+  ///
+  /// Null means the message came from the server and is shown as sent — the
+  /// deliberate exception in Article 5.5. Non-null means the screen should
+  /// render the reader's language instead of [message]. See [ValidationMessage].
+  final ValidationMessage? kind;
+
+  /// The thing the message names — a question's prompt, a consent's label.
+  ///
+  /// Carried separately rather than baked into [message] so a translation can
+  /// put it where its own grammar wants it, instead of where English put it.
+  final String? subject;
+
+  /// A number the message quotes, such as a maximum length.
+  final int? limit;
 
   /// Resident-facing. Says what to do, not what went wrong internally.
   final String message;

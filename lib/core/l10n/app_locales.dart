@@ -8,6 +8,8 @@ import '../../features/verification/domain/verification_status_detail.dart';
 import '../../l10n/app_localizations.dart';
 import '../documents/document_capture.dart';
 import '../documents/upload_policy.dart';
+import '../forms/field_error.dart';
+import '../forms/validation_message.dart';
 import '../result/app_failure.dart';
 
 /// The languages this app speaks, and the rule for choosing between them.
@@ -295,6 +297,44 @@ String? profileFieldHint(BuildContext context, ResidentProfileField field) {
       label: strings.kycDocAddressLabel,
       description: strings.kycDocAddressBody,
     ),
+  };
+}
+
+/// The words for a validation error, in the reader's language.
+///
+/// **Only for errors this app composed.** A [FieldError] with a null
+/// [FieldError.kind] came from the server, and its text is shown exactly as
+/// sent — the deliberate exception in Article 5.5, because only the server knows
+/// what was wrong with a particular value.
+///
+/// [FieldError.message] stays as the English fallback for the places with no
+/// `BuildContext`, and for the server's own text.
+String localisedFieldError(BuildContext context, FieldError error) {
+  final ValidationMessage? kind = error.kind;
+  if (kind == null) return error.message;
+
+  final strings = AppStrings.of(context);
+  final String subject = error.subject ?? '';
+  final int limit = error.limit ?? 0;
+
+  return switch (kind) {
+    ValidationMessage.confirmDetails => strings.validateConfirmDetails,
+    ValidationMessage.narrativeMissing => strings.validateNarrativeMissing,
+    ValidationMessage.narrativeTooLong => strings.validateNarrativeTooLong(limit),
+    ValidationMessage.consentRequired => strings.validateConsentRequired(subject),
+    ValidationMessage.answerMissingChoice =>
+      strings.validateAnswerMissingChoice(subject),
+    ValidationMessage.answerMissingYesNo =>
+      strings.validateAnswerMissingYesNo(subject),
+    ValidationMessage.answerMissingDate =>
+      strings.validateAnswerMissingDate(subject),
+    ValidationMessage.answerMissingNumber =>
+      strings.validateAnswerMissingNumber(subject),
+    ValidationMessage.answerMissingGeneric =>
+      strings.validateAnswerMissingGeneric(subject),
+    ValidationMessage.answerNotANumber =>
+      strings.validateAnswerNotANumber(subject),
+    ValidationMessage.answerTooLong => strings.validateAnswerTooLong(limit),
   };
 }
 

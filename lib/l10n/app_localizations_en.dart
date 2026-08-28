@@ -424,4 +424,57 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get kycDocSentChecking => 'Sent. Still being checked.';
+
+  @override
+  String get validateConfirmDetails =>
+      'Confirm these are your details before you continue, so the office files this against the right record.';
+
+  @override
+  String get validateNarrativeMissing =>
+      'Describe what you need help with, in your own words.';
+
+  @override
+  String validateNarrativeTooLong(int limit) {
+    return 'Shorten this to $limit characters or fewer. The office can ask you for more detail later.';
+  }
+
+  @override
+  String validateConsentRequired(String subject) {
+    return 'You need to accept \"$subject\" to continue.';
+  }
+
+  @override
+  String validateAnswerMissingChoice(String subject) {
+    return 'Choose an answer for \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingYesNo(String subject) {
+    return 'Answer yes or no to \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingDate(String subject) {
+    return 'Enter a date for \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingNumber(String subject) {
+    return 'Enter a number for \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingGeneric(String subject) {
+    return 'Answer \"$subject\".';
+  }
+
+  @override
+  String validateAnswerNotANumber(String subject) {
+    return 'Enter \"$subject\" as a number, with digits only.';
+  }
+
+  @override
+  String validateAnswerTooLong(int limit) {
+    return 'Shorten this to $limit characters or fewer.';
+  }
 }

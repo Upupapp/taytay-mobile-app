@@ -8,6 +8,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/forms/field_error.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
@@ -469,7 +470,7 @@ class _DescribeStep extends StatelessWidget {
           ),
           decoration: InputDecoration(
             border: const OutlineInputBorder(),
-            errorText: _errorFor(controller.errors, 'narrative'),
+            errorText: _errorFor(context, controller.errors, 'narrative'),
           ),
         ),
         const SizedBox(height: Spacing.sm),
@@ -502,7 +503,7 @@ class _QuestionsStep extends StatelessWidget {
             child: _QuestionField(
               question: question,
               controller: controller,
-              error: _errorFor(controller.errors, question.key),
+              error: _errorFor(context, controller.errors, question.key),
             ),
           ),
       ],
@@ -826,10 +827,10 @@ class _ConsentStep extends StatelessWidget {
                   // authored, not a paraphrase.
                   subtitle: Text(consent.statement),
                 ),
-                if (_errorFor(controller.errors, 'consent_${consent.key}') !=
+                if (_errorFor(context, controller.errors, 'consent_${consent.key}') !=
                     null)
                   Text(
-                    _errorFor(controller.errors, 'consent_${consent.key}')!,
+                    _errorFor(context, controller.errors, 'consent_${consent.key}')!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.error,
                     ),
@@ -1109,9 +1110,20 @@ class _CannotApply extends StatelessWidget {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-String? _errorFor(List<FieldError> errors, String field) {
+/// The error for [field], in the reader's language.
+///
+/// Takes a `BuildContext` because this app's own validation messages are
+/// localised and the server's are not — `localisedFieldError` is what tells them
+/// apart. Before the copy sweep this returned `error.message` directly, so every
+/// client-composed sentence on the assistance intake form reached a Filipino
+/// reader in English, on the screen they use to ask for help.
+String? _errorFor(
+  BuildContext context,
+  List<FieldError> errors,
+  String field,
+) {
   for (final error in errors) {
-    if (error.field == field) return error.message;
+    if (error.field == field) return localisedFieldError(context, error);
   }
   return null;
 }

@@ -427,4 +427,57 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get kycDocSentChecking => 'Naipadala na. Sinusuri pa.';
+
+  @override
+  String get validateConfirmDetails =>
+      'Kumpirmahin na ito ang iyong mga detalye bago magpatuloy, para maitala ito ng tanggapan sa tamang rekord.';
+
+  @override
+  String get validateNarrativeMissing =>
+      'Ilarawan sa sarili mong pananalita kung ano ang kailangan mong tulong.';
+
+  @override
+  String validateNarrativeTooLong(int limit) {
+    return 'Paikliin ito sa $limit karakter o mas maikli. Maaaring humingi ng mas detalyadong paliwanag ang tanggapan mamaya.';
+  }
+
+  @override
+  String validateConsentRequired(String subject) {
+    return 'Kailangan mong tanggapin ang \"$subject\" upang magpatuloy.';
+  }
+
+  @override
+  String validateAnswerMissingChoice(String subject) {
+    return 'Pumili ng sagot para sa \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingYesNo(String subject) {
+    return 'Sagutin ng oo o hindi ang \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingDate(String subject) {
+    return 'Maglagay ng petsa para sa \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingNumber(String subject) {
+    return 'Maglagay ng numero para sa \"$subject\".';
+  }
+
+  @override
+  String validateAnswerMissingGeneric(String subject) {
+    return 'Sagutin ang \"$subject\".';
+  }
+
+  @override
+  String validateAnswerNotANumber(String subject) {
+    return 'Ilagay ang \"$subject\" bilang numero, mga digit lamang.';
+  }
+
+  @override
+  String validateAnswerTooLong(int limit) {
+    return 'Paikliin ito sa $limit karakter o mas maikli.';
+  }
 }

@@ -775,3 +775,61 @@ they should not be given the same weight.
   `ResidentProfileField` was fixed because it was the surface in hand, not because it was shown to
   be the only one. **Not yet swept.**
 
+---
+
+## The copy sweep — what it measured, and what it missed — 2026-08-28
+
+Started as "localise the profile labels" and turned into three findings, two of them about my own
+scanning rather than about the app.
+
+**Localised in this pass:** the profile surface (21 keys), the verification surface (20 keys,
+including the screen's **headline** — the sentence by which somebody learns whether they can hold a
+digital ID), and the assistance-intake validation messages (11 keys).
+
+**A guard now classifies every enum carrying resident-facing copy** —
+`test/core/resident_copy_localisation_test.dart`. Eighteen of them: **6 localised, 4 argued as
+never rendered, 8 recorded as untranslated debt on a ceiling that only shrinks.** A new enum with
+copy fails the suite until somebody says which it is.
+
+It is a **coverage** guard rather than a render-site scan, and the reason is written into it: a
+`.label` scan cannot be honest without type information, and the ad-hoc version written during this
+sweep reported every enum as rendered in thirty files. That result was discarded rather than acted
+on.
+
+### Two corrections to my own record
+
+**The guard's first two entries were wrong.** `ConsentKind` was recorded as reaching
+`event_registration_controller.dart`. It does not — that code operates on `ServerConsent`, whose
+label comes from the server. And both `ConsentKind` and `RegistrationStep` render only in the
+registration wizard, which **TAB 03 made unreachable**. I was one command from spending a TAB
+translating a screen no resident can open, which is precisely the mistake TAB 04 made on the
+correction flow and which this ledger criticises at length.
+
+Caught by checking the type before editing. The corrections are kept in the guard rather than
+edited out.
+
+**The guard measures one class of the problem and I reported its number as the whole.** There are
+**21 hardcoded English sentences in domain and controller code** — validation messages, not enum
+copy — and no enum-based guard can see them. `assistance_intake_validation.dart` was live and
+untranslated on the screen a resident uses to ask for help; it is fixed. The rest are not yet
+audited.
+
+### The design the validation fix needed
+
+`FieldError.message` is a mixed carrier: some of it this app's prose, the rest the server's
+validation text, which Article 5.5 deliberately allows through. That mix is *why* the client half
+stayed English — a localiser cannot translate a `String` without knowing which half it came from.
+
+So the client half now carries a `ValidationMessage` kind, with `subject` and `limit` held
+separately rather than baked into the sentence, so a translation can place them where its own
+grammar wants them. A `FieldError` with a kind is this app's and is translated; one without is the
+server's and is shown as sent.
+
+## Still open
+
+* **8 enums untranslated**, two of them gated behind TAB 03 and therefore not urgent.
+* **The other 20 hardcoded validation sentences** — not audited for reachability.
+* **The guard cannot see hardcoded sentences at all.** Extending it is the honest next step.
+* **The 4 "not resident-facing" claims were written from reading, not testing** — the guard's own
+  weakest point, and the likeliest place it is wrong.
+

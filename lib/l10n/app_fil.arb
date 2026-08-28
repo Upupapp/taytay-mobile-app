@@ -118,5 +118,16 @@
   "kycDocAddressBody": "Bill ng kuryente o tubig, o barangay certificate na nagpapakita kung saan ka nakatira.",
   "kycDocSent": "Naipadala na sa Taytay LGU.",
   "kycDocSentChecking": "Naipadala na. Sinusuri pa.",
-  "kycDocIdentityLabel": "ID na inisyu ng pamahalaan"
+  "kycDocIdentityLabel": "ID na inisyu ng pamahalaan",
+  "validateConfirmDetails": "Kumpirmahin na ito ang iyong mga detalye bago magpatuloy, para maitala ito ng tanggapan sa tamang rekord.",
+  "validateNarrativeMissing": "Ilarawan sa sarili mong pananalita kung ano ang kailangan mong tulong.",
+  "validateNarrativeTooLong": "Paikliin ito sa {limit} karakter o mas maikli. Maaaring humingi ng mas detalyadong paliwanag ang tanggapan mamaya.",
+  "validateConsentRequired": "Kailangan mong tanggapin ang \"{subject}\" upang magpatuloy.",
+  "validateAnswerMissingChoice": "Pumili ng sagot para sa \"{subject}\".",
+  "validateAnswerMissingYesNo": "Sagutin ng oo o hindi ang \"{subject}\".",
+  "validateAnswerMissingDate": "Maglagay ng petsa para sa \"{subject}\".",
+  "validateAnswerMissingNumber": "Maglagay ng numero para sa \"{subject}\".",
+  "validateAnswerMissingGeneric": "Sagutin ang \"{subject}\".",
+  "validateAnswerNotANumber": "Ilagay ang \"{subject}\" bilang numero, mga digit lamang.",
+  "validateAnswerTooLong": "Paikliin ito sa {limit} karakter o mas maikli."
 }
