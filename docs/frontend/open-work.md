@@ -698,3 +698,43 @@ copy in sync. The list is on the wire. The guard exists because the app does not
 those is a content decision rather than a decode fix. Recorded as open — a resident currently cannot
 see or correct part of their own address.
 
+---
+
+## `purok_or_sitio` added, and an authorization rule corrected — 2026-08-28
+
+Recorded as its own entry because what looked like adding a missing field turned into a conflict
+between two rules, and the server settled it.
+
+**The conflict.** This app holds a rule — *every eligibility-bearing field belongs to the LGU* —
+with a sound reason: a resident who could edit their own birth date could grant themselves a senior
+citizen benefit. It marked `street_address` eligibility-bearing. The server marks `street_address`
+**self-service**.
+
+**The server's own split resolves it.** `CorrectableField::isSelfService()` returns
+`street_address`, `purok_or_sitio`, `mobile_number` and `email` — and **not** `barangay_id`. The
+office distinguishes *which barangay serves you* from *where in it you live*. This app conflated the
+two and put the eligibility flag on the wrong one.
+
+So the rule keeps its teeth and the field wearing the flag wrongly was corrected. Birth date, sex,
+civil status and **barangay** stay LGU-owned and eligibility-bearing — barangay is the case the rule
+exists for, and it must never gain a control on the contact editor.
+
+**The editable set is four because the office says four.** Changed across four layers: the field
+enum, `ContactDetailsUpdate`, the repository's change map, and the editor's controls. The
+declaration was corrected as well as the runtime read, so the **fallback** is right too — a response
+that stops publishing `editable_fields` must not reintroduce the wrong sentence.
+
+**A false comment found on the way.** The editor's field switch claimed *"adding an account-owned
+field is a compile error until it has a control"*. The `_ =>` catch-all meant it never was: a new
+editable field would have rendered as an **empty row**. Replaced with a test that asserts what the
+comment described. Same shape as TAB 06's `Idempotent`, which was also false when checked.
+
+## Still open
+
+* **`check_correctable_fields.sh`'s future.** It can no longer catch "you will send a field the
+  server refuses" — the runtime read does that. It can still catch "the office offers a field this
+  build has no label for", which is exactly the `purok_or_sitio` gap. Owner decision.
+* **The profile field labels are not localised.** `ResidentProfileField` carries English labels and
+  hints as enum constants, so this surface does not translate while the rest of the app does.
+  Noticed here, not fixed here.
+

@@ -74,6 +74,14 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
         ResidentProfileField.mobileNumber: update.mobileNumber!,
       if (update.emailAddress != null && update.emailAddress!.isNotEmpty)
         ResidentProfileField.emailAddress: update.emailAddress!,
+      // The address parts the office lists as self-service (C-13). `barangay_id`
+      // is not among them and must not be added here: which barangay serves
+      // somebody is the LGU's decision, and this method is the one place a
+      // resident's own edit becomes a request.
+      if (update.streetAddress != null && update.streetAddress!.isNotEmpty)
+        ResidentProfileField.streetAddress: update.streetAddress!,
+      if (update.purokOrSitio != null && update.purokOrSitio!.isNotEmpty)
+        ResidentProfileField.purokOrSitio: update.purokOrSitio!,
     },
     idempotencyKey: idempotencyKey,
   );

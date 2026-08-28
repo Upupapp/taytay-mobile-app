@@ -96,21 +96,40 @@ class ResidentProfileDetail {
 /// is a worse experience than a form that never offered the field.
 @immutable
 class ContactDetailsUpdate {
-  const ContactDetailsUpdate({this.mobileNumber, this.emailAddress});
+  const ContactDetailsUpdate({
+    this.mobileNumber,
+    this.emailAddress,
+    this.streetAddress,
+    this.purokOrSitio,
+  });
 
   /// `null` means "leave unchanged"; an empty string is not sent.
   final String? mobileNumber;
   final String? emailAddress;
 
+  /// The address parts the office lets a resident maintain (C-13).
+  ///
+  /// `barangay_id` is deliberately absent and must stay absent: which barangay
+  /// serves somebody is the LGU's to decide, and the server does not list it as
+  /// self-service.
+  final String? streetAddress;
+  final String? purokOrSitio;
+
   bool get isEmpty =>
       (mobileNumber == null || mobileNumber!.isEmpty) &&
-      (emailAddress == null || emailAddress!.isEmpty);
+      (emailAddress == null || emailAddress!.isEmpty) &&
+      (streetAddress == null || streetAddress!.isEmpty) &&
+      (purokOrSitio == null || purokOrSitio!.isEmpty);
 
   /// The fields this update touches. Used to prove, in a test, that it can
   /// never carry anything the resident does not own.
   Set<ResidentProfileField> get touchedFields => <ResidentProfileField>{
     if (mobileNumber != null && mobileNumber!.isNotEmpty)
       ResidentProfileField.mobileNumber,
+    if (streetAddress != null && streetAddress!.isNotEmpty)
+      ResidentProfileField.streetAddress,
+    if (purokOrSitio != null && purokOrSitio!.isNotEmpty)
+      ResidentProfileField.purokOrSitio,
     if (emailAddress != null && emailAddress!.isNotEmpty)
       ResidentProfileField.emailAddress,
   };

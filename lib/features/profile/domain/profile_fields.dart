@@ -55,7 +55,13 @@ enum FieldOwnership {
 /// links") and which the registration wizard already collects. When the module
 /// ships, the data layer maps wire keys onto these; this list does not move.
 enum ResidentProfileField {
-  // --- Account-owned: the two things `PATCH /me/profile` authorises. ---------
+  // --- Account-owned: what the office lets a resident change themselves. -----
+  //
+  // FOUR, NOT TWO, AND THE OFFICE DECIDED WHICH (C-13).
+  //
+  // `CorrectableField::isSelfService()` returns street_address, purok_or_sitio,
+  // mobile_number and email. This list said two, and the profile screen told a
+  // resident that only the LGU could change their own street address.
   mobileNumber(
     'Mobile number',
     FieldOwnership.accountOwned,
@@ -67,6 +73,30 @@ enum ResidentProfileField {
     FieldOwnership.accountOwned,
     hint: 'Optional. Used for copies of what the LGU sends you.',
     wireName: 'email',
+  ),
+
+  // WHY THIS IS NOT ELIGIBILITY-BEARING, AND BARANGAY STILL IS.
+  //
+  // The rule below — an eligibility-bearing field belongs to the LGU — is right
+  // and stays. What was wrong was calling a street address eligibility-bearing:
+  // it conflated *which barangay serves you* with *where in it you live*, and
+  // the office draws exactly that line itself. `barangay_id` is not
+  // self-service; `street_address` and `purok_or_sitio` are.
+  //
+  // A resident who could edit their barangay could move into another office's
+  // caseload. A resident correcting their house number cannot, and making them
+  // file a request for it is friction with nothing behind it.
+  streetAddress(
+    'Street address',
+    FieldOwnership.accountOwned,
+    hint: 'Your house number and street, as Taytay LGU has it.',
+    wireName: 'street_address',
+  ),
+  purokOrSitio(
+    'Purok or sitio',
+    FieldOwnership.accountOwned,
+    hint: 'Optional. The purok or sitio within your barangay, if yours uses one.',
+    wireName: 'purok_or_sitio',
   ),
 
   // --- LGU-verified: everything a benefit or a credential rests on. ---------
@@ -101,13 +131,6 @@ enum ResidentProfileField {
     isEligibilityBearing: true,
     hint: 'Decides which barangay office serves you.',
     wireName: 'barangay_id',
-  ),
-  streetAddress(
-    'Street address',
-    FieldOwnership.lguVerified,
-    isEligibilityBearing: true,
-    hint: 'Your registered address in Taytay.',
-    wireName: 'street_address',
   );
 
   const ResidentProfileField(

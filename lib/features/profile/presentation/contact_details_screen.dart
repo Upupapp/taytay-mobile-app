@@ -40,6 +40,8 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _mobile = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  final TextEditingController _street = TextEditingController();
+  final TextEditingController _purok = TextEditingController();
 
   bool _started = false;
   bool _loading = false;
@@ -62,6 +64,8 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
   @override
   void dispose() {
     _mobile.dispose();
+    _street.dispose();
+    _purok.dispose();
     _email.dispose();
     super.dispose();
   }
@@ -86,6 +90,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
           _mobile.text =
               detail.valueOf(ResidentProfileField.mobileNumber) ?? '';
           _email.text = detail.valueOf(ResidentProfileField.emailAddress) ?? '';
+          _street.text =
+              detail.valueOf(ResidentProfileField.streetAddress) ?? '';
+          _purok.text = detail.valueOf(ResidentProfileField.purokOrSitio) ?? '';
         },
         onErr: (failure) => _failure = failure,
       );
@@ -99,6 +106,8 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
     final reduced = Motion.reduced(context);
     final update = ContactDetailsUpdate(
       mobileNumber: _mobile.text.trim(),
+      streetAddress: _street.text.trim(),
+      purokOrSitio: _purok.text.trim(),
       emailAddress: _email.text.trim(),
     );
 
@@ -250,9 +259,32 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       ),
       validator: _validateOptionalEmail,
     ),
-    // Unreachable: the list is filtered on ownership. Kept exhaustive so that
-    // adding an account-owned field is a compile error until it has a control,
-    // rather than a silently missing input.
+    ResidentProfileField.streetAddress => TextFormField(
+      controller: _street,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.next,
+      decoration: InputDecoration(
+        labelText: field.label,
+        helperText: field.hint,
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.home_outlined),
+      ),
+    ),
+    ResidentProfileField.purokOrSitio => TextFormField(
+      controller: _purok,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.done,
+      decoration: InputDecoration(
+        labelText: '\${field.label} (optional)',
+        helperText: field.hint,
+        helperMaxLines: 2,
+        prefixIcon: const Icon(Icons.signpost_outlined),
+      ),
+    ),
+    // A field with no control here renders as nothing at all — the old comment
+    // claimed adding one would be a compile error, and this catch-all is why it
+    // never was. `profile_test.dart` asserts every account-owned field has a
+    // control, which is the check that comment described.
     _ => const SizedBox.shrink(),
   };
 

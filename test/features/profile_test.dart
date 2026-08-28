@@ -200,9 +200,17 @@ void main() {
   _c13();
   group('ownership is declared, and eligibility follows it', () {
     test('every eligibility-bearing field belongs to the LGU', () {
-      // The rule behind acceptance 2. A resident who could edit their own birth
-      // date could grant themselves a senior citizen benefit; one who could edit
-      // their barangay could move into another office's caseload.
+      // The rule behind acceptance 2, and it keeps its teeth. A resident who
+      // could edit their own birth date could grant themselves a senior citizen
+      // benefit; one who could edit their barangay could move into another
+      // office's caseload.
+      //
+      // C-13 did not weaken this rule — it corrected a field that was wearing
+      // the flag wrongly. A street address was marked eligibility-bearing, which
+      // conflated *which barangay serves you* with *where in it you live*. The
+      // office itself draws that line: barangay_id is not self-service,
+      // street_address and purok_or_sitio are. barangay stays LGU-owned and
+      // eligibility-bearing, which is what this test is really protecting.
       for (final field in ResidentProfileField.values) {
         if (!field.isEligibilityBearing) continue;
         expect(field.ownership, FieldOwnership.lguVerified, reason: field.name);
@@ -223,16 +231,49 @@ void main() {
       }
     });
 
-    test('the editable set is exactly what the contract authorises', () {
-      // `PATCH /api/v1/me/profile` is "contact fields only". Widening this set
-      // must be a deliberate act with a contract behind it.
+    test('the editable set is exactly what the office authorises', () {
+      // Widening this set must be a deliberate act with a contract behind it,
+      // and this is the deliberate act: `CorrectableField::isSelfService()`
+      // returns street_address, purok_or_sitio, mobile_number and email. The
+      // set is now four because the office says four — not because it was
+      // convenient.
+      //
+      // barangay_id is the one that must never appear here. Which barangay
+      // serves somebody decides whose caseload they are in, and the server does
+      // not list it as self-service either.
       expect(
         ResidentProfileField.ownedBy(FieldOwnership.accountOwned),
         unorderedEquals(<ResidentProfileField>[
           ResidentProfileField.mobileNumber,
           ResidentProfileField.emailAddress,
+          ResidentProfileField.streetAddress,
+          ResidentProfileField.purokOrSitio,
         ]),
       );
+      expect(
+        ResidentProfileField.barangay.ownership,
+        FieldOwnership.lguVerified,
+      );
+    });
+
+    test('every account-owned field has a control on the editor', () {
+      // The check the old catch-all comment claimed to be. It said adding an
+      // account-owned field would be "a compile error until it has a control";
+      // the `_ =>` branch meant it never was, and such a field would have
+      // rendered as an empty row.
+      final source = File(
+        'lib/features/profile/presentation/contact_details_screen.dart',
+      ).readAsStringSync();
+
+      for (final field in ResidentProfileField.ownedBy(
+        FieldOwnership.accountOwned,
+      )) {
+        expect(
+          source,
+          contains('ResidentProfileField.${field.name} =>'),
+          reason: '${field.name} is editable and has no control',
+        );
+      }
     });
 
     test('both groups are non-empty and every field is classified', () {
@@ -575,7 +616,7 @@ void main() {
       expect(find.text('Check my verification'), findsOneWidget);
     });
 
-    testWidgets('the editor offers only the two fields the contract allows', (
+    testWidgets('the editor offers exactly what the office authorises', (
       tester,
     ) async {
       await bootProfile(
@@ -583,18 +624,28 @@ void main() {
         level: AccessLevel.verified,
         detail: fullDetail(),
         location: '/profile/contact',
+        // Tall enough that every control is built. The editor is a ListView, so
+        // on a phone-sized surface the last field is below the fold and simply
+        // does not exist in the tree — which would make this test pass or fail
+        // on layout rather than on what the editor offers.
+        size: const Size(400, 3000),
       );
 
       expect(find.text('Mobile number'), findsOneWidget);
       expect(find.textContaining('Email address'), findsOneWidget);
-      expect(find.byType(TextFormField), findsNWidgets(2));
+      expect(find.text('Street address'), findsOneWidget);
+      expect(find.byType(TextFormField), findsNWidgets(4));
 
-      // Nothing canonical has a control here.
+      // Nothing canonical has a control here — and `Street address` has left
+      // this list because the office says it is the resident's (C-13), not
+      // because the rule softened. `Barangay` is the case the rule exists for:
+      // which barangay serves somebody decides whose caseload they are in, the
+      // server does not list it as self-service, and it must never gain a
+      // control on this screen.
       for (final label in <String>[
         'Full name',
         'Date of birth',
         'Barangay',
-        'Street address',
         'Civil status',
       ]) {
         expect(find.text(label), findsNothing, reason: label);
@@ -833,7 +884,10 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(TextFormField), findsNWidgets(2));
+      // Four since C-13: the office lists street_address and purok_or_sitio as
+      // self-service alongside mobile and email, so the editor carries four
+      // controls. The surface here is 3000 tall, so all four are built.
+      expect(find.byType(TextFormField), findsNWidgets(4));
     });
 
     testWidgets('Profile renders on a wide surface beside the rail', (
@@ -876,12 +930,15 @@ void _c13() {
     const street = ResidentProfileField.streetAddress;
     const mobile = ResidentProfileField.mobileNumber;
 
-    test('the declared ownership disagreed with the server, and it was live', () {
-      // The defect this closes, stated as a fact rather than a story. The server
-      // marks street_address self-service; the enum declared it lguVerified, and
-      // the screen told a resident "only the LGU can change them" about a field
-      // the office lets them edit.
-      expect(street.ownership, FieldOwnership.lguVerified);
+    test('the declaration now matches the office, and the served list still wins', () {
+      // The defect this closed: the server marks street_address self-service,
+      // the enum declared it lguVerified, and the screen told a resident "only
+      // the LGU can change them" about a field the office lets them edit.
+      //
+      // The declaration is corrected so the FALLBACK is right too — a response
+      // that stops publishing editable_fields must not reintroduce the wrong
+      // sentence.
+      expect(street.ownership, FieldOwnership.accountOwned);
 
       const served = ResidentProfileDetail(
         selfServiceFields: <String>{
