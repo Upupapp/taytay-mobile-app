@@ -477,4 +477,9 @@ class AppStringsEn extends AppStrings {
   String validateAnswerTooLong(int limit) {
     return 'Shorten this to $limit characters or fewer.';
   }
+
+  @override
+  String validateConsentRequiredToRegister(String subject) {
+    return 'You need to accept \"$subject\" to register.';
+  }
 }

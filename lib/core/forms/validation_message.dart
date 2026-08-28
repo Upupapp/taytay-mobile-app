@@ -33,6 +33,14 @@ enum ValidationMessage {
   /// A required consent has not been given.
   consentRequired,
 
+  /// The same, on a form whose act is registering rather than continuing.
+  ///
+  /// Kept apart from [consentRequired] rather than folded into it: the two
+  /// differ only in a final verb in English, and in Filipino they do not — the
+  /// sentence is built around the act, so one string cannot serve both without
+  /// reading as a translation of English rather than as Filipino.
+  consentRequiredToRegister,
+
   /// A required question has no answer, phrased for the kind of question.
   answerMissingChoice,
   answerMissingYesNo,

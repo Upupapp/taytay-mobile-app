@@ -877,6 +877,12 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Shorten this to {limit} characters or fewer.'**
   String validateAnswerTooLong(int limit);
+
+  /// Consent gate on an event registration form.
+  ///
+  /// In en, this message translates to:
+  /// **'You need to accept \"{subject}\" to register.'**
+  String validateConsentRequiredToRegister(String subject);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

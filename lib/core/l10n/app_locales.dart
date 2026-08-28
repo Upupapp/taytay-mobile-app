@@ -322,6 +322,8 @@ String localisedFieldError(BuildContext context, FieldError error) {
     ValidationMessage.narrativeMissing => strings.validateNarrativeMissing,
     ValidationMessage.narrativeTooLong => strings.validateNarrativeTooLong(limit),
     ValidationMessage.consentRequired => strings.validateConsentRequired(subject),
+    ValidationMessage.consentRequiredToRegister =>
+      strings.validateConsentRequiredToRegister(subject),
     ValidationMessage.answerMissingChoice =>
       strings.validateAnswerMissingChoice(subject),
     ValidationMessage.answerMissingYesNo =>

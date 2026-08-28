@@ -545,5 +545,15 @@
         "example": "500"
       }
     }
+  },
+  "validateConsentRequiredToRegister": "You need to accept \"{subject}\" to register.",
+  "@validateConsentRequiredToRegister": {
+    "description": "Consent gate on an event registration form.",
+    "placeholders": {
+      "subject": {
+        "type": "String",
+        "example": "Photo consent"
+      }
+    }
   }
 }

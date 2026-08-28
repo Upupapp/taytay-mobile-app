@@ -129,5 +129,6 @@
   "validateAnswerMissingNumber": "Maglagay ng numero para sa \"{subject}\".",
   "validateAnswerMissingGeneric": "Sagutin ang \"{subject}\".",
   "validateAnswerNotANumber": "Ilagay ang \"{subject}\" bilang numero, mga digit lamang.",
-  "validateAnswerTooLong": "Paikliin ito sa {limit} karakter o mas maikli."
+  "validateAnswerTooLong": "Paikliin ito sa {limit} karakter o mas maikli.",
+  "validateConsentRequiredToRegister": "Kailangan mong tanggapin ang \"{subject}\" upang makapagparehistro."
 }

@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/api/request_context.dart';
 import '../../../core/forms/field_error.dart';
+import '../../../core/forms/validation_message.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/access_level.dart';
 import '../domain/event_repository.dart';
@@ -350,7 +351,12 @@ class EventRegistrationController extends ChangeNotifier {
       if (_isBlank(answer)) {
         if (field.isRequired) {
           errors.add(
-            FieldError(field: field.key, message: 'Answer "${field.prompt}".'),
+            FieldError(
+              field: field.key,
+              kind: ValidationMessage.answerMissingGeneric,
+              subject: field.prompt,
+              message: 'Answer "${field.prompt}".',
+            ),
           );
         }
         continue;
@@ -360,6 +366,12 @@ class EventRegistrationController extends ChangeNotifier {
         errors.add(
           FieldError(
             field: field.key,
+            // Shares the intake form's wording deliberately. Two sentences for
+            // one condition is two things to translate and two things to keep
+            // consistent; the intake's is the fuller of the two and says what
+            // to do about it.
+            kind: ValidationMessage.answerNotANumber,
+            subject: field.prompt,
             message: 'Enter "${field.prompt}" as a number.',
           ),
         );
@@ -373,6 +385,8 @@ class EventRegistrationController extends ChangeNotifier {
         errors.add(
           FieldError(
             field: field.key,
+            kind: ValidationMessage.answerTooLong,
+            limit: maximum,
             message: 'Shorten this to $maximum characters or fewer.',
           ),
         );
@@ -387,6 +401,10 @@ class EventRegistrationController extends ChangeNotifier {
           if (!_consents.contains(consent.key))
             FieldError(
               field: 'consent_${consent.key}',
+              kind: ValidationMessage.consentRequiredToRegister,
+              // The consent's own label comes from the server and is already in
+              // the office's language — it is carried, not translated.
+              subject: consent.label,
               message: 'You need to accept "${consent.label}" to register.',
             ),
       ];

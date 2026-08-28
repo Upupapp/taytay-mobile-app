@@ -480,4 +480,9 @@ class AppStringsFil extends AppStrings {
   String validateAnswerTooLong(int limit) {
     return 'Paikliin ito sa $limit karakter o mas maikli.';
   }
+
+  @override
+  String validateConsentRequiredToRegister(String subject) {
+    return 'Kailangan mong tanggapin ang \"$subject\" upang makapagparehistro.';
+  }
 }
