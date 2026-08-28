@@ -48,7 +48,18 @@ class ProfileFieldList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fields = ResidentProfileField.ownedBy(ownership);
+    // THE OFFICE'S GROUPING, NOT THIS APP'S (C-13).
+    //
+    // `ResidentProfileField.ownedBy` is a declaration written into the enum;
+    // `detail.fieldsOwnedBy` is what the server published on this response. They
+    // disagreed on `street_address` — the office lets a resident change it and
+    // this heading told them "only the LGU can change them", which is a wrong
+    // statement about their own rights rather than a cosmetic mismatch.
+    //
+    // The static list remains the fallback for a response that did not say.
+    final fields =
+        detail?.fieldsOwnedBy(ownership) ??
+        ResidentProfileField.ownedBy(ownership);
     final editable = ownership.isEditableInApp;
 
     return Column(

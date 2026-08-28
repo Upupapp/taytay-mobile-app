@@ -82,6 +82,7 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       _loading = false;
       result.fold(
         onOk: (detail) {
+          _detail = detail;
           _mobile.text =
               detail.valueOf(ResidentProfileField.mobileNumber) ?? '';
           _email.text = detail.valueOf(ResidentProfileField.emailAddress) ?? '';
@@ -130,12 +131,22 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
     );
   }
 
+  /// The last loaded profile, kept so the editable list follows the office's
+  /// answer rather than this app's declaration (C-13).
+  ResidentProfileDetail? _detail;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // Built from the ownership filter, not from a hand-written list: a field
     // that is not account-owned cannot appear on this screen.
-    final editable = ResidentProfileField.ownedBy(FieldOwnership.accountOwned);
+    // The office's list when it published one; this app's declaration only as
+    // a fallback (C-13). A field the server calls self-service belongs on this
+    // screen even if the enum says otherwise — that disagreement was live for
+    // `street_address`.
+    final editable =
+        _detail?.fieldsOwnedBy(FieldOwnership.accountOwned) ??
+        ResidentProfileField.ownedBy(FieldOwnership.accountOwned);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Your account details')),

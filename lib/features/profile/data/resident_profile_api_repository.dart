@@ -171,9 +171,31 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     if (fullName.isNotEmpty) values[ResidentProfileField.fullName] = fullName;
 
     final Object? tier = map['verification_tier'];
+
+    // WHO MAY CHANGE WHAT IS THE OFFICE'S ANSWER, AND IT IS ON THE WIRE (C-13).
+    //
+    // The server publishes `editable_fields` from
+    // `CorrectableField::selfServiceValues()` and says in its own comment that
+    // it is told explicitly rather than left for each client to infer. This app
+    // inferred it anyway, from a `FieldOwnership` written into
+    // `ResidentProfileField` — and the two disagreed: the office lets a resident
+    // change `street_address` themselves, and the screen said only the LGU
+    // could.
+    //
+    // A malformed or absent list stays null rather than becoming an empty set:
+    // empty would mean "the resident may change nothing", which is the wrong
+    // way to fail.
+    final Object? editable = map['editable_fields'];
+    final Set<String>? selfService = editable is List<dynamic>
+        ? editable.whereType<String>().toSet()
+        : null;
+
     return ResidentProfileDetail(
       values: Map<ResidentProfileField, String>.unmodifiable(values),
       verificationTier: tier is String ? tier : null,
+      selfServiceFields: selfService != null && selfService.isNotEmpty
+          ? Set<String>.unmodifiable(selfService)
+          : null,
     );
   }
 }

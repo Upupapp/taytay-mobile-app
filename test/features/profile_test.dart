@@ -197,6 +197,7 @@ ResidentProfileDetail fullDetail() => const ResidentProfileDetail(
 );
 
 void main() {
+  _c13();
   group('ownership is declared, and eligibility follows it', () {
     test('every eligibility-bearing field belongs to the LGU', () {
       // The rule behind acceptance 2. A resident who could edit their own birth
@@ -868,4 +869,98 @@ class _OneResponse implements ApiTransport {
           headers: const <String, String>{'content-type': 'application/json'},
         ),
       );
+}
+
+void _c13() {
+  group('who may change what is the office’s answer — C-13', () {
+    const street = ResidentProfileField.streetAddress;
+    const mobile = ResidentProfileField.mobileNumber;
+
+    test('the declared ownership disagreed with the server, and it was live', () {
+      // The defect this closes, stated as a fact rather than a story. The server
+      // marks street_address self-service; the enum declared it lguVerified, and
+      // the screen told a resident "only the LGU can change them" about a field
+      // the office lets them edit.
+      expect(street.ownership, FieldOwnership.lguVerified);
+
+      const served = ResidentProfileDetail(
+        selfServiceFields: <String>{
+          'street_address',
+          'purok_or_sitio',
+          'mobile_number',
+          'email',
+        },
+      );
+
+      expect(
+        served.ownershipOf(street),
+        FieldOwnership.accountOwned,
+        reason: 'the office says the resident may change it',
+      );
+    });
+
+    test('a field the office does not list becomes the LGU’s', () {
+      const served = ResidentProfileDetail(
+        selfServiceFields: <String>{'mobile_number'},
+      );
+
+      expect(served.ownershipOf(mobile), FieldOwnership.accountOwned);
+      expect(
+        served.ownershipOf(ResidentProfileField.birthDate),
+        FieldOwnership.lguVerified,
+      );
+    });
+
+    test('an absent list falls back to the declaration, not to nothing', () {
+      // The wrong way to fail is to decide the resident may change nothing.
+      const silent = ResidentProfileDetail();
+
+      expect(silent.selfServiceFields, isNull);
+      expect(silent.ownershipOf(mobile), mobile.ownership);
+      expect(silent.ownershipOf(street), street.ownership);
+      expect(silent.fieldsOwnedBy(FieldOwnership.accountOwned), isNotEmpty);
+    });
+
+    test('the repository reads editable_fields off the wire', () async {
+      final repository = ResidentProfileApiRepository(
+        apiClient: ApiClient(
+          config: config(),
+          transport: _OneResponse(const <String, dynamic>{
+            'first_name': 'Ana',
+            'street_address': '12 Rizal St',
+            'editable_fields': <String>[
+              'street_address',
+              'mobile_number',
+              'email',
+            ],
+          }),
+          accessTokenProvider: () async => 'tok',
+        ),
+      );
+
+      final detail = (await repository.loadOwnDetail()).valueOrNull!;
+
+      expect(detail.selfServiceFields, contains('street_address'));
+      expect(detail.ownershipOf(street), FieldOwnership.accountOwned);
+    });
+
+    test('an empty or malformed list is treated as "the server did not say"', () async {
+      for (final Object? served in <Object?>[<String>[], 'nonsense', null]) {
+        final repository = ResidentProfileApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: _OneResponse(<String, dynamic>{
+              'first_name': 'Ana',
+              'editable_fields': ?served,
+            }),
+            accessTokenProvider: () async => 'tok',
+          ),
+        );
+
+        final detail = (await repository.loadOwnDetail()).valueOrNull!;
+        expect(detail.selfServiceFields, isNull, reason: '$served');
+        expect(detail.ownershipOf(street), street.ownership);
+      }
+    });
+  });
 }

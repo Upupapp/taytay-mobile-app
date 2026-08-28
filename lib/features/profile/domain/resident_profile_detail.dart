@@ -27,6 +27,7 @@ class ResidentProfileDetail {
   const ResidentProfileDetail({
     this.values = const <ResidentProfileField, String>{},
     this.verificationTier,
+    this.selfServiceFields,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -36,6 +37,40 @@ class ResidentProfileDetail {
   /// is the only thing that interprets it, and it fails closed.
   final String? verificationTier;
 
+  /// Wire names the office says the resident may change themselves.
+  ///
+  /// **Read, not hardcoded** (C-13). `GET me/profile` publishes `editable_fields`
+  /// from `CorrectableField::selfServiceValues()`, with the server's own comment
+  /// saying it is told explicitly rather than left for each client to infer.
+  /// This app inferred it anyway, from a `FieldOwnership` written into
+  /// `ResidentProfileField` — and the two disagreed: the office lets a resident
+  /// change `street_address` directly, and the screen told them only the LGU
+  /// could.
+  ///
+  /// Null means the server did not say, and [ownershipOf] falls back to the
+  /// declared value so an older response behaves exactly as before.
+  final Set<String>? selfServiceFields;
+
+  /// Who may change [field], preferring the office's answer.
+  ///
+  /// A field the server lists is the resident's to edit; one it does not list is
+  /// the LGU's. When the list is absent the field's own declaration stands.
+  FieldOwnership ownershipOf(ResidentProfileField field) {
+    final Set<String>? served = selfServiceFields;
+    final String? wire = field.wireName;
+    if (served == null || wire == null) return field.ownership;
+
+    return served.contains(wire)
+        ? FieldOwnership.accountOwned
+        : FieldOwnership.lguVerified;
+  }
+
+  /// The fields in [ownership], as the office currently has it.
+  List<ResidentProfileField> fieldsOwnedBy(FieldOwnership ownership) =>
+      ResidentProfileField.values
+          .where((ResidentProfileField f) => ownershipOf(f) == ownership)
+          .toList(growable: false);
+
   String? valueOf(ResidentProfileField field) => values[field];
 
   bool has(ResidentProfileField field) {
@@ -44,8 +79,7 @@ class ResidentProfileDetail {
   }
 
   /// Whether the LGU holds anything at all under [ownership].
-  bool hasAny(FieldOwnership ownership) =>
-      ResidentProfileField.ownedBy(ownership).any(has);
+  bool hasAny(FieldOwnership ownership) => fieldsOwnedBy(ownership).any(has);
 
   /// Redacted in full. Every value in here is personal data about a named
   /// resident, and this is exactly the object that reaches a crash report.

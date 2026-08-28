@@ -43,7 +43,8 @@ Figures from the run, not from any document.
 | **C-09** | **P1** | The app calls **four** routes that do not exist at its own pinned baseline | **detected and guarded; resolution still blocked** |
 | **C-10** | P3 | The baseline guard's network path cannot work in this programme | **TAB 00A — CLOSED** |
 | **C-11** | **P1** | The verification correction flow cannot render against the real backend | **CLOSED — the app now reads what the server sends** |
-| **C-12** | P2 | Three privacy-critical decoders, ~29 tests, and no production caller | **PARTIAL — one deleted and proven fiction; two remain** |
+| **C-12** | P2 | Three privacy-critical decoders, ~29 tests, and no production caller | **CLOSED — all three deleted, assurance moved onto the real decoders** |
+| **C-13** | **P1** | The app told residents only the LGU could change a field the office lets them edit | **CLOSED** |
 
 C-01 through C-08 are the findings the front-end command was written from, each already carrying a
 TAB. **C-09 and C-10 were found by TAB 00 and the command did not anticipate them.** They were
@@ -652,4 +653,48 @@ sequence's own failure mode rather than a tidy finish.
 
 **What is proven and should be believed:** no leak. The production decoders for all three surfaces
 were read during this sweep and every one names its keys and walks past the rest.
+
+---
+
+## C-13 closed — a wrong statement about a resident's own rights
+
+Found while establishing the profile contract for C-12, and the worst of the three because **it was
+live on a screen that renders today**, unlike C-11's dead flow.
+
+`GET me/profile` publishes `editable_fields` from `CorrectableField::selfServiceValues()`, and the
+server's own comment says it is *"told explicitly rather than left for the client to infer from
+which fields happen to be editable — an inference every client would implement slightly
+differently."* **This app inferred it anyway**, from a `FieldOwnership` hardcoded into
+`ResidentProfileField`, and named neither published field anywhere except a comment.
+
+| Field | Server `isSelfService()` | App's declaration | |
+| --- | --- | --- | --- |
+| `mobile_number` | self-service | `accountOwned` | agrees |
+| `email` | self-service | `accountOwned` | agrees |
+| **`street_address`** | **self-service** | **`lguVerified`** | **wrong** |
+| **`purok_or_sitio`** | **self-service** | **absent from the app entirely** | **wrong** |
+
+So the profile screen told a resident *"Taytay LGU checked these against your documents. They decide
+what you are entitled to, so only the LGU can change them"* about their own street address — which
+the office lets them change themselves. That is not a cosmetic mismatch; it is the app misinforming
+somebody about what they are allowed to do with their own record.
+
+**Fixed by reading the list.** `ResidentProfileDetail.selfServiceFields` carries what the server
+published; `ownershipOf` prefers it and falls back to the declaration only when the field is absent,
+so an older response behaves exactly as before. An empty or malformed list stays **null** rather
+than becoming an empty set — "the resident may change nothing" is the wrong way to fail. Both
+surfaces follow it: the profile grouping and the contact editor's field list.
+
+**Fourth instance of one pattern, and the clearest.** The upload ceiling (TAB 01), the page size
+(TAB 05), `can_edit` (C-11) and now `editable_fields` — every time, a value the server publishes,
+derived locally instead. Three of the four were found by reading the server rather than by any test
+failing.
+
+**And it lands on TAB 04.** That TAB hardcoded the twelve correctable fields into `CorrectableField`
+and built `tool/check_correctable_fields.sh` — a guard requiring a local backend clone — to keep the
+copy in sync. The list is on the wire. The guard exists because the app does not read it.
+
+`purok_or_sitio` is **not** added here: the app has no label, hint or section for it, and inventing
+those is a content decision rather than a decode fix. Recorded as open — a resident currently cannot
+see or correct part of their own address.
 
