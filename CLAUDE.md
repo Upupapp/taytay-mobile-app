@@ -256,8 +256,22 @@ A change is done when:
 
 ## Article 10 — Operational prohibitions for agents
 
-Never push, force-push, merge protected branches, deploy, rotate credentials, touch
-production infrastructure or production data, or expose secrets. Local commits only, and
-only when explicitly authorized. Preserve existing uncommitted work — inspect and
-reconcile the working tree before editing; never reset, clean or revert someone else's
-changes for convenience.
+**Pushing to `main` is authorised by the owner; production is not.** Direct pushes to
+`main`, no pull request and no required review — the owner asked for that explicitly. The
+same rule stands in `taytay-backend` (Article 9) and `taytay-admin-web` (section 2, rule 9),
+so all three repositories in this programme now agree. Do not infer a rule for one from
+another regardless: read the `CLAUDE.md` of the repository you are in.
+
+**This repository is public, so a push is a publication.** Article 9's gate — `flutter
+analyze` clean and `flutter test` passing — runs before one, and anything committed is
+publishable from the moment it is committed.
+
+Still forbidden, without exception: **force-push, history rewriting, merging protected
+branches, deployment, credential rotation, any production infrastructure or production data
+operation, and exposing secrets.** Store submission is not a push: the Play and App Store
+lanes are owned by their own machines and are not an agent's to trigger.
+
+Preserve existing uncommitted work — inspect and reconcile the working tree before editing;
+never reset, clean or revert someone else's changes for convenience. `git reset --hard` and
+`git clean` remain denied in `.claude/settings.json`; see `.claude/README.md` for why that
+file is the only thing guarding them, and when it does and does not apply.
