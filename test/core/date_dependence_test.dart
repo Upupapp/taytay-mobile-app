@@ -83,25 +83,68 @@ void main() {
       final List<String> offenders = <String>[];
 
       for (final File file in dartFilesIn('lib')) {
-        final String source = file
-            .readAsStringSync()
+        final String raw = file.readAsStringSync();
+
+        // Generated `flutter gen-l10n` output is a string table and decides
+        // nothing. Skipped 2026-08-29, when translating `InboxGroup` put
+        // 'Today' and 'Earlier this week' into app_localizations_en.dart and
+        // this guard fired on a file that cannot read a clock at all.
+        //
+        // Keyed off the generator's own marker rather than a path list, so a
+        // hand-written file cannot quietly opt itself out by moving into
+        // lib/l10n/. The enum that actually *decides* the label,
+        // `InboxGroup.of`, still carries its `now` seam and is still checked.
+        if (raw.contains('ignore_for_file: type=lint')) continue;
+
+        final String source = raw
             .split('\n')
             .where((String l) => !l.trimLeft().startsWith('//'))
             .where((String l) => !l.trimLeft().startsWith('///'))
             .join('\n');
 
-        final bool labelsByRecency = recencyLabels.any(
-          (String label) => source.contains("'$label'"),
-        );
-        if (!labelsByRecency) continue;
+        // Per DECLARATION, not per file.
+        //
+        // TIGHTENED 2026-08-29, and it could not fail before. This asked
+        // whether the *file* mentioned a clock anywhere.
+        // `notification_inbox_controller.dart` holds both `InboxGroup`, which
+        // labels by recency, and a controller carrying an injected
+        // `DateTime Function()` — so the file passed however `InboxGroup.of`
+        // was written. Deleting that enum's `now` parameter outright left this
+        // test green, which is how the weakness was found: a red-proof that
+        // produced no red.
+        //
+        // Top-level declarations start at column zero in formatted Dart, so
+        // splitting on them scopes the question to the thing that actually
+        // decides the label.
+        final List<String> bodies = <String>[];
+        final Iterable<RegExpMatch> declarations = RegExp(
+          r'^(?:enum|class|mixin|extension|abstract)\b',
+          multiLine: true,
+        ).allMatches(source);
+        int previous = 0;
+        for (final RegExpMatch declaration in declarations) {
+          bodies.add(source.substring(previous, declaration.start));
+          previous = declaration.start;
+        }
+        bodies.add(source.substring(previous));
 
-        // Either it takes a clock, or it takes the `now` it compares against.
-        final bool hasSeam =
-            source.contains('DateTime Function()') ||
-            source.contains('DateTime? now') ||
-            source.contains('required DateTime now');
+        for (final String body in bodies) {
+          final bool labelsByRecency = recencyLabels.any(
+            (String label) => body.contains("'$label'"),
+          );
+          if (!labelsByRecency) continue;
 
-        if (!hasSeam) offenders.add(file.path.replaceAll(r'\', '/'));
+          // Either it takes a clock, or it takes the `now` it compares against.
+          final bool hasSeam =
+              body.contains('DateTime Function()') ||
+              body.contains('DateTime? now') ||
+              body.contains('required DateTime now');
+
+          if (!hasSeam) {
+            offenders.add(file.path.replaceAll(r'\', '/'));
+            break;
+          }
+        }
       }
 
       expect(offenders, isEmpty, reason: offenders.join('\n'));

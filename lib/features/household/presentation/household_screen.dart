@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../shared/widgets/app_banner.dart';
@@ -203,7 +204,7 @@ class _FamilySection extends StatelessWidget {
                   const SizedBox(width: Spacing.md),
                   Expanded(
                     child: Text(
-                      summary.role.label,
+                      householdRoleLabel(context, summary.role),
                       style: theme.textTheme.titleSmall,
                     ),
                   ),

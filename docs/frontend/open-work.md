@@ -917,6 +917,42 @@ It also flagged its own explanatory comment on the first run, which named `s.lab
 describing the bug it had just fixed. Comments are now blanked before scanning, newlines preserved
 so line numbers stay true — rather than rewording the prose to satisfy the regex.
 
+### The reachable copy debt is closed (2026-08-29)
+
+Five enums localised — `HouseholdCorrectionKind`, `HouseholdRole`, `ReportReason`,
+`NotificationCategory`, `InboxGroup` — 36 keys, 233 per locale, at parity. That is the last of the
+resident-facing enum copy that a person can actually reach.
+
+**`InboxGroup` uses the accessor shape, not a function in `app_locales.dart`.** It had to: the enum
+lives in a presentation file, and `core/l10n` importing `features/**/presentation` is a layering
+violation that only `app_router.dart` is permitted. The first attempt did exactly that and it went
+unnoticed until the import list was read — no guard covers the layering rule.
+
+**`VerificationItemCategory` stays untranslated, and the recorded reason was wrong.** It said the
+correction flow "cannot render against the real backend". True, but the real reason is worse:
+**nothing populates `submittedCategories` or `issues`.** `_decodeDetail` decodes five fields and
+neither is among them, so both lists are always empty and **two whole sections of the verification
+screen are dead on every device** — the "What Taytay LGU has from you" card and the issues list.
+`verification_screen_test.dart` constructs those lists directly and passes, so the widgets are
+proven to work and nothing proves they are ever reached.
+
+### A fourth guard could not fail
+
+`date_dependence_test.dart` — "anything that groups or labels by recency takes a clock" — asked
+whether the **file** mentioned a clock, not whether the code that labels by recency took one.
+`notification_inbox_controller.dart` holds both `InboxGroup` and a controller with an injected
+`DateTime Function()`, so the file passed however `InboxGroup.of` was written. Deleting that enum's
+`now` parameter outright left the test **green**.
+
+Found by red-proofing: the proof produced no red. It is now scoped per top-level declaration and
+fails as it should. That is the fourth check in three days whose name promised more than its body
+delivered — the pattern is now the finding, not the individual bugs.
+
+It also fired a false positive first: translating `InboxGroup` put 'Today' and 'Earlier this week'
+into the **generated** `app_localizations_en.dart`, a string table that cannot read a clock at all.
+Generated output is now skipped, keyed off `gen-l10n`'s own marker rather than a path, so a
+hand-written file cannot opt out by moving into `lib/l10n/`.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files

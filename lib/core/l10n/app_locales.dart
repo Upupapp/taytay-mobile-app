@@ -1,6 +1,9 @@
 import 'package:flutter/widgets.dart';
 
 import '../../features/auth/domain/sign_in_challenge.dart';
+import '../../features/household/domain/household_summary.dart';
+import '../../features/news/domain/post_interaction.dart';
+import '../../features/notifications/domain/notification_repository.dart';
 import '../../features/profile/domain/profile_fields.dart';
 import '../../features/verification/domain/correctable_field.dart';
 import '../../features/verification/domain/kyc_claim.dart';
@@ -524,5 +527,97 @@ String? verificationStageActionLabel(
     ResidentVerificationStage.pendingReview => null,
     ResidentVerificationStage.verified => null,
     ResidentVerificationStage.manualReview => null,
+  };
+}
+
+/// What a resident says is wrong with their household record.
+({String label, String description}) householdCorrectionCopy(
+  BuildContext context,
+  HouseholdCorrectionKind kind,
+) {
+  final strings = AppStrings.of(context);
+  return switch (kind) {
+    HouseholdCorrectionKind.addressWrong => (
+      label: strings.householdFixAddressLabel,
+      description: strings.householdFixAddressBody,
+    ),
+    HouseholdCorrectionKind.roleWrong => (
+      label: strings.householdFixRoleLabel,
+      description: strings.householdFixRoleBody,
+    ),
+    HouseholdCorrectionKind.sizeWrong => (
+      label: strings.householdFixSizeLabel,
+      description: strings.householdFixSizeBody,
+    ),
+    HouseholdCorrectionKind.notMyHousehold => (
+      label: strings.householdFixNotMineLabel,
+      description: strings.householdFixNotMineBody,
+    ),
+    HouseholdCorrectionKind.somethingElse => (
+      label: strings.householdFixOtherLabel,
+      description: strings.householdFixOtherBody,
+    ),
+  };
+}
+
+/// Head or member, as the resident's own household card names it.
+String householdRoleLabel(BuildContext context, HouseholdRole role) {
+  final strings = AppStrings.of(context);
+  return switch (role) {
+    HouseholdRole.head => strings.householdRoleHead,
+    HouseholdRole.member => strings.householdRoleMember,
+  };
+}
+
+/// Why a resident is reporting a comment.
+///
+/// The wire value is deliberately untouched: the server's vocabulary and the
+/// resident's are different things, and only one of them translates.
+({String label, String description}) reportReasonCopy(
+  BuildContext context,
+  ReportReason reason,
+) {
+  final strings = AppStrings.of(context);
+  return switch (reason) {
+    ReportReason.abusive => (
+      label: strings.reportAbusiveLabel,
+      description: strings.reportAbusiveBody,
+    ),
+    ReportReason.harassment => (
+      label: strings.reportHarassmentLabel,
+      description: strings.reportHarassmentBody,
+    ),
+    ReportReason.falseInformation => (
+      label: strings.reportFalseInfoLabel,
+      description: strings.reportFalseInfoBody,
+    ),
+    ReportReason.spam => (
+      label: strings.reportSpamLabel,
+      description: strings.reportSpamBody,
+    ),
+    ReportReason.personalInformation => (
+      label: strings.reportPersonalInfoLabel,
+      description: strings.reportPersonalInfoBody,
+    ),
+  };
+}
+
+/// The kind of message, as the notification inbox groups them.
+String notificationCategoryLabel(
+  BuildContext context,
+  NotificationCategory category,
+) {
+  final strings = AppStrings.of(context);
+  return switch (category) {
+    NotificationCategory.verificationUpdate => strings.notifCatVerification,
+    NotificationCategory.assistanceStatus => strings.notifCatAssistance,
+    NotificationCategory.missingRequirement =>
+      strings.notifCatMissingRequirement,
+    NotificationCategory.releaseInstruction => strings.notifCatRelease,
+    NotificationCategory.referralUpdate => strings.notifCatReferral,
+    NotificationCategory.eventRegistration => strings.notifCatEventRegistration,
+    NotificationCategory.eventReminder => strings.notifCatEventReminder,
+    NotificationCategory.publicAdvisory => strings.notifCatPublicAdvisory,
+    NotificationCategory.accountSecurity => strings.notifCatAccountSecurity,
   };
 }

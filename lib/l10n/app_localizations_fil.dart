@@ -712,4 +712,121 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get homeCheckStatus => 'Tingnan ang aking status';
+
+  @override
+  String get householdFixAddressLabel => 'Mali ang address';
+
+  @override
+  String get householdFixAddressBody =>
+      'Hindi tama ang street address o barangay na nakatala sa Taytay LGU para sa sambahayang ito.';
+
+  @override
+  String get householdFixRoleLabel => 'Mali ang papel ko sa sambahayan';
+
+  @override
+  String get householdFixRoleBody =>
+      'Iba ang nakatala sa Taytay LGU kaysa sa totoong takbo ng sambahayan.';
+
+  @override
+  String get householdFixSizeLabel => 'Mali ang bilang ng tao';
+
+  @override
+  String get householdFixSizeBody =>
+      'May kulang sa talaan ng sambahayan, o may nakatala na hindi na dito nakatira.';
+
+  @override
+  String get householdFixNotMineLabel => 'Hindi ito ang aking sambahayan';
+
+  @override
+  String get householdFixNotMineBody =>
+      'Naitala ka sa sambahayang hindi mo kinabibilangan.';
+
+  @override
+  String get householdFixOtherLabel => 'May iba pang mali';
+
+  @override
+  String get householdFixOtherBody =>
+      'Tatanungin ka tungkol dito sa munisipyo.';
+
+  @override
+  String get householdRoleHead => 'Puno ng sambahayan';
+
+  @override
+  String get householdRoleMember => 'Miyembro ng sambahayan';
+
+  @override
+  String get reportAbusiveLabel => 'Mapang-abuso o nananakot';
+
+  @override
+  String get reportAbusiveBody =>
+      'Panlalait, pagbabanta, o mapoot na pananalita.';
+
+  @override
+  String get reportHarassmentLabel => 'May tinutukoy na tao';
+
+  @override
+  String get reportHarassmentBody => 'Nakatuon sa isang partikular na tao.';
+
+  @override
+  String get reportFalseInfoLabel => 'Maling impormasyon tungkol sa serbisyo';
+
+  @override
+  String get reportFalseInfoBody =>
+      'Maling pahayag tungkol sa mga serbisyo o iskedyul ng Taytay LGU.';
+
+  @override
+  String get reportSpamLabel => 'Spam o patalastas';
+
+  @override
+  String get reportSpamBody =>
+      'Nagbebenta ng kung ano, o paulit-ulit na na-post.';
+
+  @override
+  String get reportPersonalInfoLabel => 'Personal na impormasyon ng iba';
+
+  @override
+  String get reportPersonalInfoBody =>
+      'Numero ng telepono, address, o iba pang pribadong detalyeng na-post nang walang pahintulot.';
+
+  @override
+  String get notifCatVerification => 'Pag-verify ng pagkakakilanlan';
+
+  @override
+  String get notifCatAssistance => 'Mga update sa tulong';
+
+  @override
+  String get notifCatMissingRequirement => 'Kailangang dokumento';
+
+  @override
+  String get notifCatRelease => 'Pagkuha ng tulong';
+
+  @override
+  String get notifCatReferral => 'Mga referral';
+
+  @override
+  String get notifCatEventRegistration => 'Mga rehistro sa kaganapan';
+
+  @override
+  String get notifCatEventReminder => 'Mga paalala sa kaganapan';
+
+  @override
+  String get notifCatPublicAdvisory => 'Mga pampublikong abiso';
+
+  @override
+  String get notifCatAccountSecurity => 'Account at seguridad';
+
+  @override
+  String get inboxGroupToday => 'Ngayong araw';
+
+  @override
+  String get inboxGroupThisWeek => 'Mas maaga ngayong linggo';
+
+  @override
+  String get inboxGroupThisMonth => 'Mas maaga ngayong buwan';
+
+  @override
+  String get inboxGroupOlder => 'Mas luma';
+
+  @override
+  String get inboxGroupUndated => 'Walang petsa';
 }

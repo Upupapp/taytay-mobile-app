@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
@@ -180,7 +182,7 @@ class _Inbox extends StatelessWidget {
             Semantics(
               header: true,
               child: Text(
-                section.group.label,
+                section.group.labelIn(AppStrings.of(context)),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -296,7 +298,10 @@ class _NotificationTile extends StatelessWidget {
             Text(
               <String>[
                 if (notification.category?.known != null)
-                  notification.category!.known!.label,
+                  notificationCategoryLabel(
+                    context,
+                    notification.category!.known!,
+                  ),
                 if (notification.sentAt != null)
                   ManilaTime.formatDateTime(notification.sentAt!),
               ].join(' · '),
@@ -423,7 +428,7 @@ class _NotificationPreferencesScreenState
                     value: loaded.isEnabled(category),
                     onChanged: (on) => _set(category, on: on),
                     contentPadding: EdgeInsets.zero,
-                    title: Text(category.label),
+                    title: Text(notificationCategoryLabel(context, category)),
                   ),
 
                 const SizedBox(height: Spacing.lg),

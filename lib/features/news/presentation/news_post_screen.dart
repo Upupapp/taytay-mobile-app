@@ -7,6 +7,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/intent/resident_intent.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
@@ -643,8 +644,8 @@ class _CommentTile extends StatelessWidget {
           ),
           for (final ReportReason option in ReportReason.values)
             ListTile(
-              title: Text(option.label),
-              subtitle: Text(option.description),
+              title: Text(reportReasonCopy(context, option).label),
+              subtitle: Text(reportReasonCopy(context, option).description),
               onTap: () => Navigator.of(sheetContext).pop(option),
             ),
         ],

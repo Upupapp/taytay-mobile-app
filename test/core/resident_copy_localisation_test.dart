@@ -69,6 +69,12 @@ void main() {
     'ResidentCapability', // capabilityLabel
     'ResidentIntentKind', // gateSignInMessage / gateVerificationMessage
     'DocumentSource', // documentSourceLabel
+    // Localised 2026-08-29. The last of the reachable copy debt.
+    'HouseholdCorrectionKind', // householdCorrectionCopy
+    'HouseholdRole', // householdRoleLabel
+    'ReportReason', // reportReasonCopy
+    'NotificationCategory', // notificationCategoryLabel
+    'InboxGroup', // labelIn(AppStrings) — see below for why this shape
   };
 
   /// Enums whose copy a resident never reads, each with the reason.
@@ -134,14 +140,24 @@ void main() {
     'ConsentKind':
         'registration_screen.dart:655. GATED behind the same wizard. Not '
         'reached by the events or assistance flows, which use ServerConsent.',
+    // CORRECTED 2026-08-29. The old reason said the correction flow "cannot
+    // render against the real backend". True, but not the reason, and the real
+    // one is worse: NO PRODUCTION CODE POPULATES `submittedCategories` OR
+    // `issues`. `_decodeDetail` in `kyc_api_repository.dart` decodes five
+    // fields and neither of those is among them, so both lists are always
+    // empty and two whole sections of the verification screen — the "What
+    // Taytay LGU has from you" card at `verification_screen.dart:370` and the
+    // issues list at `:466` — are dead on every device.
+    //
+    // `verification_screen_test.dart` constructs those lists directly and
+    // passes, which is why nothing noticed: the widgets work, and nothing
+    // proves they are ever reached. Localising this enum would translate copy
+    // no resident can currently see, so it stays here — but the entry is now a
+    // statement about a decoder gap, not about the correction flow.
     'VerificationItemCategory':
-        'The correction flow, which C-11 established cannot render against the '
-        'real backend — dead, so lowest priority of these.',
-    'HouseholdCorrectionKind': 'The household correction sheet.',
-    'HouseholdRole': 'The household summary card.',
-    'ReportReason': 'The comment-reporting sheet.',
-    'NotificationCategory': 'The notification inbox.',
-    'InboxGroup': 'The inbox grouping headers.',
+        'DEAD BY DECODER GAP, not by design. Nothing populates '
+        'VerificationStatusDetail.submittedCategories or .issues, so both '
+        'render paths are unreachable. Localise when the decoder does.',
   };
 
   Iterable<({String name, String file, Set<String> fields})>

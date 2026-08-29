@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/resident_capability.dart';
@@ -131,8 +132,10 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
                       ? null
                       : (value) => setState(() => _selected = value),
                   contentPadding: EdgeInsets.zero,
-                  title: Text(kind.label),
-                  subtitle: Text(kind.description),
+                  title: Text(householdCorrectionCopy(context, kind).label),
+                  subtitle: Text(
+                    householdCorrectionCopy(context, kind).description,
+                  ),
                   isThreeLine: false,
                 ),
 

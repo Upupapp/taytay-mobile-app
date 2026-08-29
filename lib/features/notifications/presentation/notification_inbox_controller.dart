@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../domain/notification_repository.dart';
 
 /// How the inbox groups a message by when it arrived.
@@ -17,6 +18,21 @@ enum InboxGroup {
   undated('No date');
 
   const InboxGroup(this.label);
+
+  /// The heading in the resident's language.
+  ///
+  /// An accessor rather than a function in `app_locales.dart` — the second of
+  /// the two shapes `resident_copy_localisation_test.dart` accepts, and the one
+  /// `ShellDestination` uses. It has to be this shape here: `InboxGroup` lives
+  /// in a presentation file, and `core/l10n` importing `features/**/presentation`
+  /// would be a layering violation that only `app_router.dart` is allowed.
+  String labelIn(AppStrings strings) => switch (this) {
+    InboxGroup.today => strings.inboxGroupToday,
+    InboxGroup.thisWeek => strings.inboxGroupThisWeek,
+    InboxGroup.thisMonth => strings.inboxGroupThisMonth,
+    InboxGroup.older => strings.inboxGroupOlder,
+    InboxGroup.undated => strings.inboxGroupUndated,
+  };
 
   final String label;
 

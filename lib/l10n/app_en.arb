@@ -819,5 +819,149 @@
   "homeCheckStatus": "Check my status",
   "@homeCheckStatus": {
     "description": "Home next-action fallback button."
+  },
+  "householdFixAddressLabel": "The address is wrong",
+  "@householdFixAddressLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixAddressBody": "The street address or barangay Taytay LGU has for this household is not correct.",
+  "@householdFixAddressBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixRoleLabel": "My role in the household is wrong",
+  "@householdFixRoleLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixRoleBody": "Taytay LGU records you differently from how the household actually works.",
+  "@householdFixRoleBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixSizeLabel": "The number of people is wrong",
+  "@householdFixSizeLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixSizeBody": "Someone is missing from the household record, or someone is listed who no longer lives here.",
+  "@householdFixSizeBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixNotMineLabel": "This is not my household",
+  "@householdFixNotMineLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixNotMineBody": "You have been recorded in a household you do not belong to.",
+  "@householdFixNotMineBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixOtherLabel": "Something else is wrong",
+  "@householdFixOtherLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdFixOtherBody": "You will be asked about it at the municipal hall.",
+  "@householdFixOtherBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdRoleHead": "Household head",
+  "@householdRoleHead": {
+    "description": "Resident-facing enum copy."
+  },
+  "householdRoleMember": "Household member",
+  "@householdRoleMember": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportAbusiveLabel": "Abusive or threatening",
+  "@reportAbusiveLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportAbusiveBody": "Insults, threats, or hateful language.",
+  "@reportAbusiveBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportHarassmentLabel": "Targeting someone",
+  "@reportHarassmentLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportHarassmentBody": "Aimed at a particular person.",
+  "@reportHarassmentBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportFalseInfoLabel": "False information about services",
+  "@reportFalseInfoLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportFalseInfoBody": "Wrong claims about Taytay LGU services or schedules.",
+  "@reportFalseInfoBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportSpamLabel": "Spam or advertising",
+  "@reportSpamLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportSpamBody": "Selling something, or posted repeatedly.",
+  "@reportSpamBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportPersonalInfoLabel": "Someone's personal information",
+  "@reportPersonalInfoLabel": {
+    "description": "Resident-facing enum copy."
+  },
+  "reportPersonalInfoBody": "A phone number, address, or other private detail posted without consent.",
+  "@reportPersonalInfoBody": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatVerification": "Identity verification",
+  "@notifCatVerification": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatAssistance": "Assistance updates",
+  "@notifCatAssistance": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatMissingRequirement": "Documents needed",
+  "@notifCatMissingRequirement": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatRelease": "Collecting assistance",
+  "@notifCatRelease": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatReferral": "Referrals",
+  "@notifCatReferral": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatEventRegistration": "Event registrations",
+  "@notifCatEventRegistration": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatEventReminder": "Event reminders",
+  "@notifCatEventReminder": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatPublicAdvisory": "Public advisories",
+  "@notifCatPublicAdvisory": {
+    "description": "Resident-facing enum copy."
+  },
+  "notifCatAccountSecurity": "Account and security",
+  "@notifCatAccountSecurity": {
+    "description": "Resident-facing enum copy."
+  },
+  "inboxGroupToday": "Today",
+  "@inboxGroupToday": {
+    "description": "Resident-facing enum copy."
+  },
+  "inboxGroupThisWeek": "Earlier this week",
+  "@inboxGroupThisWeek": {
+    "description": "Resident-facing enum copy."
+  },
+  "inboxGroupThisMonth": "Earlier this month",
+  "@inboxGroupThisMonth": {
+    "description": "Resident-facing enum copy."
+  },
+  "inboxGroupOlder": "Older",
+  "@inboxGroupOlder": {
+    "description": "Resident-facing enum copy."
+  },
+  "inboxGroupUndated": "No date",
+  "@inboxGroupUndated": {
+    "description": "Resident-facing enum copy."
   }
 }

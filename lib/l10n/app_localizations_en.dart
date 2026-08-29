@@ -705,4 +705,119 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get homeCheckStatus => 'Check my status';
+
+  @override
+  String get householdFixAddressLabel => 'The address is wrong';
+
+  @override
+  String get householdFixAddressBody =>
+      'The street address or barangay Taytay LGU has for this household is not correct.';
+
+  @override
+  String get householdFixRoleLabel => 'My role in the household is wrong';
+
+  @override
+  String get householdFixRoleBody =>
+      'Taytay LGU records you differently from how the household actually works.';
+
+  @override
+  String get householdFixSizeLabel => 'The number of people is wrong';
+
+  @override
+  String get householdFixSizeBody =>
+      'Someone is missing from the household record, or someone is listed who no longer lives here.';
+
+  @override
+  String get householdFixNotMineLabel => 'This is not my household';
+
+  @override
+  String get householdFixNotMineBody =>
+      'You have been recorded in a household you do not belong to.';
+
+  @override
+  String get householdFixOtherLabel => 'Something else is wrong';
+
+  @override
+  String get householdFixOtherBody =>
+      'You will be asked about it at the municipal hall.';
+
+  @override
+  String get householdRoleHead => 'Household head';
+
+  @override
+  String get householdRoleMember => 'Household member';
+
+  @override
+  String get reportAbusiveLabel => 'Abusive or threatening';
+
+  @override
+  String get reportAbusiveBody => 'Insults, threats, or hateful language.';
+
+  @override
+  String get reportHarassmentLabel => 'Targeting someone';
+
+  @override
+  String get reportHarassmentBody => 'Aimed at a particular person.';
+
+  @override
+  String get reportFalseInfoLabel => 'False information about services';
+
+  @override
+  String get reportFalseInfoBody =>
+      'Wrong claims about Taytay LGU services or schedules.';
+
+  @override
+  String get reportSpamLabel => 'Spam or advertising';
+
+  @override
+  String get reportSpamBody => 'Selling something, or posted repeatedly.';
+
+  @override
+  String get reportPersonalInfoLabel => 'Someone\'s personal information';
+
+  @override
+  String get reportPersonalInfoBody =>
+      'A phone number, address, or other private detail posted without consent.';
+
+  @override
+  String get notifCatVerification => 'Identity verification';
+
+  @override
+  String get notifCatAssistance => 'Assistance updates';
+
+  @override
+  String get notifCatMissingRequirement => 'Documents needed';
+
+  @override
+  String get notifCatRelease => 'Collecting assistance';
+
+  @override
+  String get notifCatReferral => 'Referrals';
+
+  @override
+  String get notifCatEventRegistration => 'Event registrations';
+
+  @override
+  String get notifCatEventReminder => 'Event reminders';
+
+  @override
+  String get notifCatPublicAdvisory => 'Public advisories';
+
+  @override
+  String get notifCatAccountSecurity => 'Account and security';
+
+  @override
+  String get inboxGroupToday => 'Today';
+
+  @override
+  String get inboxGroupThisWeek => 'Earlier this week';
+
+  @override
+  String get inboxGroupThisMonth => 'Earlier this month';
+
+  @override
+  String get inboxGroupOlder => 'Older';
+
+  @override
+  String get inboxGroupUndated => 'No date';
 }

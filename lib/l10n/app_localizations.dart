@@ -1279,6 +1279,222 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Check my status'**
   String get homeCheckStatus;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The address is wrong'**
+  String get householdFixAddressLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The street address or barangay Taytay LGU has for this household is not correct.'**
+  String get householdFixAddressBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'My role in the household is wrong'**
+  String get householdFixRoleLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU records you differently from how the household actually works.'**
+  String get householdFixRoleBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'The number of people is wrong'**
+  String get householdFixSizeLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone is missing from the household record, or someone is listed who no longer lives here.'**
+  String get householdFixSizeBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'This is not my household'**
+  String get householdFixNotMineLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been recorded in a household you do not belong to.'**
+  String get householdFixNotMineBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Something else is wrong'**
+  String get householdFixOtherLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be asked about it at the municipal hall.'**
+  String get householdFixOtherBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Household head'**
+  String get householdRoleHead;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Household member'**
+  String get householdRoleMember;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Abusive or threatening'**
+  String get reportAbusiveLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Insults, threats, or hateful language.'**
+  String get reportAbusiveBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Targeting someone'**
+  String get reportHarassmentLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Aimed at a particular person.'**
+  String get reportHarassmentBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'False information about services'**
+  String get reportFalseInfoLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Wrong claims about Taytay LGU services or schedules.'**
+  String get reportFalseInfoBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Spam or advertising'**
+  String get reportSpamLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Selling something, or posted repeatedly.'**
+  String get reportSpamBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Someone\'s personal information'**
+  String get reportPersonalInfoLabel;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'A phone number, address, or other private detail posted without consent.'**
+  String get reportPersonalInfoBody;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Identity verification'**
+  String get notifCatVerification;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistance updates'**
+  String get notifCatAssistance;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents needed'**
+  String get notifCatMissingRequirement;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Collecting assistance'**
+  String get notifCatRelease;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Referrals'**
+  String get notifCatReferral;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Event registrations'**
+  String get notifCatEventRegistration;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Event reminders'**
+  String get notifCatEventReminder;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Public advisories'**
+  String get notifCatPublicAdvisory;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and security'**
+  String get notifCatAccountSecurity;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get inboxGroupToday;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier this week'**
+  String get inboxGroupThisWeek;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Earlier this month'**
+  String get inboxGroupThisMonth;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'Older'**
+  String get inboxGroupOlder;
+
+  /// Resident-facing enum copy.
+  ///
+  /// In en, this message translates to:
+  /// **'No date'**
+  String get inboxGroupUndated;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

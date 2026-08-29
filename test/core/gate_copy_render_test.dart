@@ -9,6 +9,10 @@ import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/resident_capability.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/household/domain/household_summary.dart';
+import 'package:taytay_resident/features/news/domain/post_interaction.dart';
+import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
+import 'package:taytay_resident/features/notifications/presentation/notification_inbox_controller.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/capability_gate.dart';
@@ -277,6 +281,105 @@ void main() {
         labels[ResidentVerificationStage.notStarted],
         'Simulan ang verification',
       );
+    });
+  });
+
+  group('the last five enums', () {
+    testWidgets('every constant returns Filipino, not the English fallback', (
+      tester,
+    ) async {
+      // The other three guards cover the other three failure modes: the
+      // classification guard proves a localiser exists, the .arb ratchet proves
+      // every key is translated, and the raw-render guard proves screens call
+      // the localiser. None of them can catch a localiser wired to the WRONG
+      // key — only reading the output can.
+      final wrong = <String>[];
+      await pump(
+        tester,
+        Builder(
+          builder: (context) {
+            final strings = AppStrings.of(context);
+            for (final kind in HouseholdCorrectionKind.values) {
+              final copy = householdCorrectionCopy(context, kind);
+              if (copy.label == kind.label) wrong.add('${kind.name}.label');
+              if (copy.description == kind.description) {
+                wrong.add('${kind.name}.description');
+              }
+            }
+            for (final role in HouseholdRole.values) {
+              if (householdRoleLabel(context, role) == role.label) {
+                wrong.add('${role.name}.label');
+              }
+            }
+            for (final reason in ReportReason.values) {
+              final copy = reportReasonCopy(context, reason);
+              if (copy.label == reason.label) wrong.add('${reason.name}.label');
+              if (copy.description == reason.description) {
+                wrong.add('${reason.name}.description');
+              }
+            }
+            for (final category in NotificationCategory.values) {
+              if (notificationCategoryLabel(context, category) ==
+                  category.label) {
+                wrong.add('${category.name}.label');
+              }
+            }
+            for (final group in InboxGroup.values) {
+              if (group.labelIn(strings) == group.label) {
+                wrong.add('${group.name}.label');
+              }
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      expect(
+        wrong,
+        isEmpty,
+        reason:
+            'These returned the English constant on a Filipino device, '
+            'which means the localiser is missing them or mapped to the wrong '
+            'key: ${wrong.join(', ')}',
+      );
+    });
+
+    testWidgets('and the copy is the copy it should be', (tester) async {
+      // Spot checks against a mis-mapped switch: a localiser can return
+      // Filipino and still return the WRONG Filipino, which nothing above
+      // detects. One representative per enum.
+      late String correction;
+      late String role;
+      late String reason;
+      late String category;
+      late String group;
+      await pump(
+        tester,
+        Builder(
+          builder: (context) {
+            correction = householdCorrectionCopy(
+              context,
+              HouseholdCorrectionKind.notMyHousehold,
+            ).label;
+            role = householdRoleLabel(context, HouseholdRole.head);
+            reason = reportReasonCopy(context, ReportReason.spam).label;
+            category = notificationCategoryLabel(
+              context,
+              NotificationCategory.accountSecurity,
+            );
+            group = InboxGroup.thisWeek.labelIn(AppStrings.of(context));
+            return const SizedBox.shrink();
+          },
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      expect(correction, 'Hindi ito ang aking sambahayan');
+      expect(role, 'Puno ng sambahayan');
+      expect(reason, 'Spam o patalastas');
+      expect(category, 'Account at seguridad');
+      expect(group, 'Mas maaga ngayong linggo');
     });
   });
 
