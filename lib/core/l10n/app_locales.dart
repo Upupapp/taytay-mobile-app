@@ -5,6 +5,7 @@ import '../../features/household/domain/household_summary.dart';
 import '../../features/news/domain/post_interaction.dart';
 import '../../features/notifications/domain/notification_repository.dart';
 import '../../features/profile/domain/profile_fields.dart';
+import '../../features/services/domain/lgu_service.dart';
 import '../../features/verification/domain/correctable_field.dart';
 import '../../features/verification/domain/kyc_claim.dart';
 import '../../features/verification/domain/verification_status_detail.dart';
@@ -619,5 +620,34 @@ String notificationCategoryLabel(
     NotificationCategory.eventReminder => strings.notifCatEventReminder,
     NotificationCategory.publicAdvisory => strings.notifCatPublicAdvisory,
     NotificationCategory.accountSecurity => strings.notifCatAccountSecurity,
+  };
+}
+
+/// The name a resident reads for a service category.
+///
+/// ## The defect this closes
+///
+/// `services_screen.dart` rendered `service.category.raw` on the category tag
+/// and `category.wireValue` on the filter chips — the **backend's own codes**,
+/// so residents read `dokumento`, `buwis`, `ids` and `national` where a name
+/// belongs. Four of the six happen to be Filipino words, which is why it
+/// survived: it looked like copy on a Filipino device and like nothing much on
+/// an English one. `ids` and `national` are not words in either language, and a
+/// lower-case wire code is not presentation copy in any of them.
+///
+/// The labels already existed, on `ServiceCategoryIcon` in
+/// `shared/illustrations/feature_icons.dart`, and nothing rendered them because
+/// nothing mounts `FeatureIcon`. That enum is now icon-only: two sources of
+/// truth for the same six names is the thing this codebase forbids, and the one
+/// that could not be translated is the one that went.
+String serviceCategoryLabel(BuildContext context, ServiceCategory category) {
+  final strings = AppStrings.of(context);
+  return switch (category) {
+    ServiceCategory.dokumento => strings.serviceCategoryDokumento,
+    ServiceCategory.buwis => strings.serviceCategoryBuwis,
+    ServiceCategory.kalusugan => strings.serviceCategoryKalusugan,
+    ServiceCategory.trabaho => strings.serviceCategoryTrabaho,
+    ServiceCategory.ids => strings.serviceCategoryIds,
+    ServiceCategory.national => strings.serviceCategoryNational,
   };
 }

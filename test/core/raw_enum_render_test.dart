@@ -171,6 +171,44 @@ void main() {
     expect(RegExp(r'\bs\??\.(label)\b').hasMatch(sample), isTrue);
   });
 
+  test('no screen renders a wire value as copy', () {
+    // A different shape of the same defect, and the one that actually shipped.
+    // `services_screen.dart` passed `service.category.raw` to the category tag
+    // and `category.wireValue` to the filter chips, so residents read the
+    // backend's own codes — `dokumento`, `buwis`, `ids`, `national` — where a
+    // name belongs. Four of six are Filipino words by coincidence, which is how
+    // it survived: it looked like copy on a Filipino device.
+    //
+    // `wireValue` and `raw` are correct everywhere else — they are what the API
+    // is called with. What is banned is one reaching a Text or a label.
+    final offenders = <String>[];
+    final pattern = RegExp(
+      r'(Text\(|label: *(Text\()?)[A-Za-z_.!\[\]]*\.(wireValue|raw)\b',
+    );
+
+    for (final entity in Directory('lib').listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      if (!isScreen(entity.path)) continue;
+      final source = withoutComments(entity.readAsStringSync());
+      for (final m in pattern.allMatches(source)) {
+        offenders.add(
+          '${entity.path}:'
+          '${'\n'.allMatches(source.substring(0, m.start)).length + 1}  '
+          '${m.group(0)}',
+        );
+      }
+    }
+
+    expect(
+      offenders,
+      isEmpty,
+      reason:
+          'These render a server wire value as resident-facing copy. The wire '
+          'value names a thing to the API, not to a person:\n'
+          '${offenders.join('\n')}',
+    );
+  });
+
   test('no screen renders a localised enum constant directly', () {
     final offenders = rawRenders();
     expect(

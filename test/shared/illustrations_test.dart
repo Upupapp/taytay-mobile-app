@@ -312,11 +312,21 @@ void main() {
       expect(ServiceCategoryIcon.fromCode(null), isNull);
     });
 
-    test('every category has a distinct icon and a label', () {
+    test('every category has a distinct icon, and no copy of its own', () {
       final icons = ServiceCategoryIcon.values.map((v) => v.icon).toSet();
       expect(icons, hasLength(ServiceCategoryIcon.values.length));
+
+      // The `label` assertion that used to sit here was deleted with the field
+      // on 2026-08-29. It asserted that six English strings were non-empty,
+      // which was true and worthless: nothing rendered them, and their being
+      // stranded on an unmounted widget is why `services_screen.dart` showed
+      // residents the backend's wire codes instead. The names now live in
+      // `serviceCategoryLabel`, where they can be translated.
+      //
+      // Every wire code still has to reach an icon, which is what this enum is
+      // now for.
       for (final value in ServiceCategoryIcon.values) {
-        expect(value.label, isNotEmpty, reason: value.name);
+        expect(ServiceCategoryIcon.fromCode(value.categoryCode), value);
       }
     });
 
@@ -340,7 +350,12 @@ void main() {
     testWidgets('a labelled category icon announces its category', (
       tester,
     ) async {
-      final icon = FeatureIcon.category(ServiceCategoryIcon.kalusugan);
+      // The caller supplies the accessible name now, because the caller is the
+      // one with a BuildContext and can therefore translate it.
+      final icon = FeatureIcon.category(
+        ServiceCategoryIcon.kalusugan,
+        semanticLabel: 'Health',
+      );
       await tester.pumpWidget(host(icon));
       expect(declaredLabels(tester, find.byWidget(icon)), contains('Health'));
     });

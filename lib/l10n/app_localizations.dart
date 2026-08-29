@@ -1495,6 +1495,42 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'No date'**
   String get inboxGroupUndated;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get serviceCategoryDokumento;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'Taxes and fees'**
+  String get serviceCategoryBuwis;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get serviceCategoryKalusugan;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'Employment'**
+  String get serviceCategoryTrabaho;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'Identification'**
+  String get serviceCategoryIds;
+
+  /// Service category name shown to residents.
+  ///
+  /// In en, this message translates to:
+  /// **'National services'**
+  String get serviceCategoryNational;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

@@ -963,5 +963,29 @@
   "inboxGroupUndated": "No date",
   "@inboxGroupUndated": {
     "description": "Resident-facing enum copy."
+  },
+  "serviceCategoryDokumento": "Documents",
+  "@serviceCategoryDokumento": {
+    "description": "Service category name shown to residents."
+  },
+  "serviceCategoryBuwis": "Taxes and fees",
+  "@serviceCategoryBuwis": {
+    "description": "Service category name shown to residents."
+  },
+  "serviceCategoryKalusugan": "Health",
+  "@serviceCategoryKalusugan": {
+    "description": "Service category name shown to residents."
+  },
+  "serviceCategoryTrabaho": "Employment",
+  "@serviceCategoryTrabaho": {
+    "description": "Service category name shown to residents."
+  },
+  "serviceCategoryIds": "Identification",
+  "@serviceCategoryIds": {
+    "description": "Service category name shown to residents."
+  },
+  "serviceCategoryNational": "National services",
+  "@serviceCategoryNational": {
+    "description": "Service category name shown to residents."
   }
 }

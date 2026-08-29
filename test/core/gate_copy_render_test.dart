@@ -13,6 +13,7 @@ import 'package:taytay_resident/features/household/domain/household_summary.dart
 import 'package:taytay_resident/features/news/domain/post_interaction.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/notifications/presentation/notification_inbox_controller.dart';
+import 'package:taytay_resident/features/services/domain/lgu_service.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/capability_gate.dart';
@@ -380,6 +381,38 @@ void main() {
       expect(reason, 'Spam o patalastas');
       expect(category, 'Account at seguridad');
       expect(group, 'Mas maaga ngayong linggo');
+    });
+  });
+
+  group('service categories', () {
+    testWidgets('read as names, not as the backend\'s codes', (tester) async {
+      final labels = <ServiceCategory, String>{};
+      await pump(
+        tester,
+        Builder(
+          builder: (context) {
+            for (final category in ServiceCategory.values) {
+              labels[category] = serviceCategoryLabel(context, category);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      for (final category in ServiceCategory.values) {
+        expect(
+          labels[category],
+          isNot(category.wireValue),
+          reason:
+              '${category.name} still reads as its wire code. Four of these '
+              'are Filipino words by coincidence, which is how the original '
+              'defect survived — so this compares against the code itself, '
+              'not against whether the result looks Filipino.',
+        );
+      }
+      expect(labels[ServiceCategory.ids], 'Pagkakakilanlan');
+      expect(labels[ServiceCategory.national], 'Mga serbisyong pambansa');
     });
   });
 

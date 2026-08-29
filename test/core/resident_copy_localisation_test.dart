@@ -75,6 +75,7 @@ void main() {
     'ReportReason', // reportReasonCopy
     'NotificationCategory', // notificationCategoryLabel
     'InboxGroup', // labelIn(AppStrings) — see below for why this shape
+    'ServiceCategory', // serviceCategoryLabel
   };
 
   /// Enums whose copy a resident never reads, each with the reason.
@@ -102,17 +103,16 @@ void main() {
     //    contradicted the source it described.
     //
     // All three now have localisers and sit in `localised` above.
-    'ServiceCategoryIcon':
-        'Right conclusion, wrong reason — and the reason matters. The label '
-        'does NOT pick a glyph (`icon` does); it is the semantic name a '
-        'screen reader announces, which is resident-facing in the sense '
-        'that counts most. It stays here only because `FeatureIcon` has no '
-        'production caller at all: both `FeatureIcon.category` and '
-        '`.categoryCode` are constructed solely from '
-        '`test/shared/illustrations_test.dart`. That is a weaker guarantee '
-        'than the old reason claimed and a defect signal in its own right — '
-        'a category-icon widget was built and never mounted. Localise this '
-        'the moment anything renders it.',
+    // `ServiceCategoryIcon` was here until 2026-08-29, on the claim that its
+    // label "picks a glyph". It did not — `icon` picks the glyph — and the
+    // label was the screen-reader name. The entry is gone because the FIELD is
+    // gone: it was a second, untranslatable source of truth for six names, and
+    // the fact that it was stranded on an unmounted widget is exactly why
+    // `services_screen.dart` rendered the backend's wire codes to residents.
+    // `serviceCategoryLabel` owns those names now.
+    //
+    // Nothing is left in this list. That is the honest state, not an
+    // achievement: every entry that was ever in it turned out to be wrong.
   };
 
   /// Enums that reach a resident and are **not** localised yet, each with what

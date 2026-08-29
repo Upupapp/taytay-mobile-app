@@ -232,5 +232,11 @@
   "inboxGroupThisWeek": "Mas maaga ngayong linggo",
   "inboxGroupThisMonth": "Mas maaga ngayong buwan",
   "inboxGroupOlder": "Mas luma",
-  "inboxGroupUndated": "Walang petsa"
+  "inboxGroupUndated": "Walang petsa",
+  "serviceCategoryDokumento": "Mga Dokumento",
+  "serviceCategoryBuwis": "Buwis at bayarin",
+  "serviceCategoryKalusugan": "Kalusugan",
+  "serviceCategoryTrabaho": "Trabaho",
+  "serviceCategoryIds": "Pagkakakilanlan",
+  "serviceCategoryNational": "Mga serbisyong pambansa"
 }

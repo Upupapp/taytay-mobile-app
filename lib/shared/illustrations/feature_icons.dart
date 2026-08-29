@@ -17,23 +17,29 @@ import '../../core/design/design_tokens.dart';
 /// `kalusugan`, `trabaho`, `ids`, `national` — so an unknown category coming
 /// from the server falls back rather than crashing a released app.
 enum ServiceCategoryIcon {
-  dokumento('dokumento', Icons.description_outlined, 'Documents'),
-  buwis('buwis', Icons.receipt_long_outlined, 'Taxes and fees'),
-  kalusugan('kalusugan', Icons.local_hospital_outlined, 'Health'),
-  trabaho('trabaho', Icons.work_outline, 'Employment'),
-  ids('ids', Icons.badge_outlined, 'Identification'),
-  national('national', Icons.account_balance_outlined, 'National services');
+  dokumento('dokumento', Icons.description_outlined),
+  buwis('buwis', Icons.receipt_long_outlined),
+  kalusugan('kalusugan', Icons.local_hospital_outlined),
+  trabaho('trabaho', Icons.work_outline),
+  ids('ids', Icons.badge_outlined),
+  national('national', Icons.account_balance_outlined);
 
-  const ServiceCategoryIcon(this.categoryCode, this.icon, this.label);
+  const ServiceCategoryIcon(this.categoryCode, this.icon);
 
   /// Wire value from the backend's `ServiceCategory` enum.
   final String categoryCode;
 
   final IconData icon;
 
-  /// English label, used as the accessible name where no other text names the
-  /// category.
-  final String label;
+  // The English `label` that used to live here was deleted on 2026-08-29. It
+  // was a second source of truth for six names that `serviceCategoryLabel` now
+  // owns, it could not be translated because an enum constant has no
+  // BuildContext, and nothing ever rendered it — `FeatureIcon` has no
+  // production caller. Meanwhile `services_screen.dart` was showing the
+  // backend's wire codes because the labels it needed were stranded here.
+  //
+  // This enum now selects a glyph and nothing else. Callers that need an
+  // accessible name pass one in, from a place that can translate it.
 
   /// Resolves a server-supplied category code.
   ///
@@ -66,20 +72,20 @@ class FeatureIcon extends StatelessWidget {
   /// Convenience for a known service category.
   FeatureIcon.category(
     ServiceCategoryIcon category, {
+    required this.semanticLabel,
     this.size = IconSizes.lg,
     this.tone,
     super.key,
-  }) : icon = category.icon,
-       semanticLabel = category.label;
+  }) : icon = category.icon;
 
   /// Falls back to a neutral mark for a category this build does not know.
   FeatureIcon.categoryCode(
     String? code, {
+    this.semanticLabel,
     this.size = IconSizes.lg,
     this.tone,
     super.key,
-  }) : icon = ServiceCategoryIcon.fromCode(code)?.icon ?? Icons.apps_outlined,
-       semanticLabel = ServiceCategoryIcon.fromCode(code)?.label;
+  }) : icon = ServiceCategoryIcon.fromCode(code)?.icon ?? Icons.apps_outlined;
 
   final IconData icon;
   final double size;

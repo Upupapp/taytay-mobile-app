@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
@@ -234,7 +235,9 @@ class _ServiceCard extends StatelessWidget {
           ),
           if (service.category.isRecognised) ...<Widget>[
             const SizedBox(height: Spacing.sm),
-            _CategoryTag(label: service.category.raw),
+            _CategoryTag(
+              label: serviceCategoryLabel(context, service.category.known!),
+            ),
           ],
         ],
       ),
@@ -332,7 +335,7 @@ class _CategoryChips extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(right: Spacing.sm),
               child: FilterChip(
-                label: Text(category.wireValue),
+                label: Text(serviceCategoryLabel(context, category)),
                 selected: controller.category == category,
                 onSelected: (_) => controller.filterByCategory(category),
               ),

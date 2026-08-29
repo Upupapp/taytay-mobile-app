@@ -829,4 +829,22 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get inboxGroupUndated => 'Walang petsa';
+
+  @override
+  String get serviceCategoryDokumento => 'Mga Dokumento';
+
+  @override
+  String get serviceCategoryBuwis => 'Buwis at bayarin';
+
+  @override
+  String get serviceCategoryKalusugan => 'Kalusugan';
+
+  @override
+  String get serviceCategoryTrabaho => 'Trabaho';
+
+  @override
+  String get serviceCategoryIds => 'Pagkakakilanlan';
+
+  @override
+  String get serviceCategoryNational => 'Mga serbisyong pambansa';
 }

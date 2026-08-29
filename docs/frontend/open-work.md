@@ -982,6 +982,34 @@ keys and walks past unknown ones by design. That is `check_fixture_drift.sh`'s j
 is unproven while `TAYTAY_STAGING` is unset. Stated because the first draft of the test claimed
 otherwise and red-proofing caught it.
 
+### Residents were reading the backend's wire codes (2026-08-29)
+
+`services_screen.dart` passed `service.category.raw` to the category tag and `category.wireValue`
+to the filter chips, so the service catalogue labelled its categories **`dokumento`, `buwis`,
+`kalusugan`, `trabaho`, `ids`, `national`** — the backend's own enum codes.
+
+**Why it survived a whole programme.** Four of the six are Filipino words by coincidence, so on a
+Filipino device it looked like copy. `ids` and `national` are not words in either language, and a
+lower-case wire code is not presentation copy in any of them.
+
+**The labels already existed and were stranded.** `ServiceCategoryIcon` in
+`shared/illustrations/feature_icons.dart` carried "Documents", "Taxes and fees", "Health"… and
+nothing rendered them, because nothing mounts `FeatureIcon`. So the unmounted-widget item and this
+defect were the same item: the names the screen needed were sitting on a widget no screen used.
+
+**Resolved by having one source of truth, not three.** `serviceCategoryLabel` owns the six names
+and translates them. `ServiceCategoryIcon` is now **icon-only** — its `label` field is deleted,
+because a second source of truth that could never be translated (an enum constant has no
+`BuildContext`) is exactly what caused this. `FeatureIcon.category` takes its accessible name from
+the caller, who has a context and can translate it.
+
+That also empties `notResidentFacing` in `resident_copy_localisation_test.dart`. Worth stating
+plainly: **every entry that list ever held turned out to be wrong.**
+
+**New guard: no screen renders a wire value as copy.** `wireValue` and `raw` are correct
+everywhere else — they are what the API is called with — so the check bans one reaching a `Text` or
+a `label:` in presentation code. Red-proofed against both original sites.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files

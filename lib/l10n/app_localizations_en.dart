@@ -820,4 +820,22 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get inboxGroupUndated => 'No date';
+
+  @override
+  String get serviceCategoryDokumento => 'Documents';
+
+  @override
+  String get serviceCategoryBuwis => 'Taxes and fees';
+
+  @override
+  String get serviceCategoryKalusugan => 'Health';
+
+  @override
+  String get serviceCategoryTrabaho => 'Employment';
+
+  @override
+  String get serviceCategoryIds => 'Identification';
+
+  @override
+  String get serviceCategoryNational => 'National services';
 }
