@@ -680,4 +680,36 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get gateSheetNotNow => 'Hindi muna';
+
+  @override
+  String get verifyActionStart => 'Simulan ang verification';
+
+  @override
+  String get verifyActionContinue => 'Ipagpatuloy ang verification';
+
+  @override
+  String get verifyActionFixResend => 'Ayusin at ipadala muli';
+
+  @override
+  String get verifyActionTryAgain => 'Subukang muli';
+
+  @override
+  String get homeVerifiedTitle => 'Verified ka na';
+
+  @override
+  String get homeVerifiedBody =>
+      'Bukas na sa iyo ang iyong Taytay digital ID at mga aplikasyon sa serbisyo.';
+
+  @override
+  String get homeOneStepTitle => 'Isang hakbang na lang';
+
+  @override
+  String get homeOneStepBody =>
+      'I-verify ang iyong pagkakakilanlan sa Taytay LGU para mabuksan ang iyong digital ID at mga aplikasyon sa serbisyo.';
+
+  @override
+  String get homeOpenDigitalId => 'Buksan ang aking digital ID';
+
+  @override
+  String get homeCheckStatus => 'Tingnan ang aking status';
 }

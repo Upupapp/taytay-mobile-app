@@ -3,9 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/next_action_card.dart';
@@ -387,24 +389,28 @@ class _HomeVerificationSectionState extends State<HomeVerificationSection> {
 
     // No status yet — still loading, or the module is not built. The card falls
     // back to what the session already knows, which is true regardless.
+    final strings = AppStrings.of(context);
     final (NextActionTone tone, String title, String body) = switch (stage) {
       null when verified => (
         NextActionTone.inProgress,
-        'You are verified',
-        'Your Taytay digital ID and service applications are open to you.',
+        strings.homeVerifiedTitle,
+        strings.homeVerifiedBody,
       ),
       null => (
         NextActionTone.needsYou,
-        'One step to go',
-        'Verify your identity with Taytay LGU to unlock your digital ID and '
-            'service applications.',
+        strings.homeOneStepTitle,
+        strings.homeOneStepBody,
       ),
+      // Through the localiser, not the raw constants. `s.label` and `s.summary`
+      // rendered here untranslated until 2026-08-29 even though
+      // `verificationStageCopy` already existed and the verification screen
+      // used it — a localised enum rendered raw at one call site.
       final ResidentVerificationStage s => (
         s.needsResidentAction
             ? NextActionTone.needsYou
             : NextActionTone.inProgress,
-        s.label,
-        s.summary,
+        verificationStageCopy(context, s).label,
+        verificationStageCopy(context, s).explanation,
       ),
     };
 
@@ -416,12 +422,15 @@ class _HomeVerificationSectionState extends State<HomeVerificationSection> {
       // at a status that says "verified" — whether or not the status loaded.
       primaryAction: verified
           ? AppButton(
-              label: 'Open my digital ID',
+              label: strings.homeOpenDigitalId,
               fullWidth: false,
               onPressed: () => context.goNamed(AppRoute.digitalId.routeName),
             )
           : AppButton(
-              label: stage?.nextActionLabel ?? 'Check my status',
+              label: stage == null
+                  ? strings.homeCheckStatus
+                  : verificationStageActionLabel(context, stage) ??
+                        strings.homeCheckStatus,
               fullWidth: false,
               onPressed: () => context.goNamed(AppRoute.verification.routeName),
             ),

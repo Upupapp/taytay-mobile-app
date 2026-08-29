@@ -673,4 +673,36 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get gateSheetNotNow => 'Not now';
+
+  @override
+  String get verifyActionStart => 'Start verification';
+
+  @override
+  String get verifyActionContinue => 'Continue verification';
+
+  @override
+  String get verifyActionFixResend => 'Fix and resend';
+
+  @override
+  String get verifyActionTryAgain => 'Try again';
+
+  @override
+  String get homeVerifiedTitle => 'You are verified';
+
+  @override
+  String get homeVerifiedBody =>
+      'Your Taytay digital ID and service applications are open to you.';
+
+  @override
+  String get homeOneStepTitle => 'One step to go';
+
+  @override
+  String get homeOneStepBody =>
+      'Verify your identity with Taytay LGU to unlock your digital ID and service applications.';
+
+  @override
+  String get homeOpenDigitalId => 'Open my digital ID';
+
+  @override
+  String get homeCheckStatus => 'Check my status';
 }

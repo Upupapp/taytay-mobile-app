@@ -44,6 +44,11 @@ void main() {
     'residentMessage',
     'hint',
     'instruction',
+    // Added 2026-08-29. Its absence is why `ResidentVerificationStage`'s button
+    // label rendered untranslated on two screens with no guard objecting: the
+    // enum was correctly listed as localised, so this file was satisfied, and
+    // the field holding the copy was not in the list it checks.
+    'nextActionLabel',
   };
 
   /// Enums whose copy reaches a resident and therefore has a localiser.

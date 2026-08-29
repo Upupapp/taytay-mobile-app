@@ -886,14 +886,41 @@ check in two days whose name promised more than its body delivered:
 speaks Filipino has looked at `'Suffix (Jr., III)'`, and recording that honestly is better than
 inventing a reason.
 
-### Newly found, not yet fixed
+### The third blind spot is closed (2026-08-29)
 
-* **`home_sections.dart:406` renders `ResidentVerificationStage.label` raw**, bypassing the
-  `verificationStageCopy` localiser that already exists. An enum can be *correctly classified as
-  localised* and still be rendered untranslated at a call site — a third blind spot, and neither
-  the coverage guard nor the .arb ratchet can see it. A render-site guard is the answer.
+An enum could be correctly classified, correctly localised, fully translated — and still render in
+English, because nothing checked the call sites. `test/core/raw_enum_render_test.dart` now does.
+
+**Its first run found four raw renders, three of them unknown:**
+
+| Site | What rendered in English |
+|---|---|
+| `home_sections.dart:406-407` | `s.label`, `s.summary` — the first card a resident sees after signing in |
+| `profile_screen.dart:369` | `capability.label` — **one line below** an edit made the day before; the subtitle was localised, the title was not |
+| `verification_screen.dart:558` | `stage.nextActionLabel` |
+
+`verificationStageCopy` had existed all along and the verification screen used it. The home card
+did not.
+
+**Why no guard objected.** `nextActionLabel` was missing from the copy-field list in
+`resident_copy_localisation_test.dart`, so a button label holding resident copy was invisible to
+it. The field is a getter rather than a `final String`, so that scanner would not have matched it
+regardless — the addition there is defensive; the new guard is what actually catches it.
+
+**What the new guard can and cannot see**, stated because three checks in this suite have now
+promised more than they delivered. It sees copy fields read from a variable whose type is *written
+down*, and constants accessed directly. It does **not** see a variable whose type is inferred —
+`final stage = _status?.stage;` then `stage.nextActionLabel` is invisible. Closing that needs the
+analyzer package and a custom lint. It is a floor, not a ceiling.
+
+It also flagged its own explanatory comment on the first run, which named `s.label` while
+describing the bug it had just fixed. Comments are now blanked before scanning, newlines preserved
+so line numbers stay true — rather than rewording the prose to satisfy the regex.
+
+### Still not fixed
+
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
-  unrelated to this work; they were reverted to keep this commit focused, and remain unformatted.
+  unrelated to this work; they were reverted to keep those commits focused, and remain unformatted.
 
 ## Still open
 

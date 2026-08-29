@@ -9,6 +9,7 @@ import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/resident_capability.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/capability_gate.dart';
 
@@ -237,6 +238,45 @@ void main() {
         expect(signIn, startsWith('Kailangan mo ng Taytay LGU account'));
         expect(verify, startsWith('Kailangang kumpirmahin ng Taytay LGU'));
       }
+    });
+  });
+
+  group('verification stage actions', () {
+    testWidgets('are Filipino, and still null where there is nothing to press', (
+      tester,
+    ) async {
+      final labels = <ResidentVerificationStage, String?>{};
+      await pump(
+        tester,
+        Builder(
+          builder: (context) {
+            for (final stage in ResidentVerificationStage.values) {
+              labels[stage] = verificationStageActionLabel(context, stage);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+        locale: AppLocales.filipino,
+      );
+
+      // The null cases are the point: a stage with nothing to do must not grow
+      // a button just because it now has a localiser.
+      for (final stage in ResidentVerificationStage.values) {
+        expect(
+          labels[stage] == null,
+          stage.nextActionLabel == null,
+          reason:
+              '${stage.name} disagrees with the fallback about whether '
+              'there is an action.',
+        );
+        if (labels[stage] != null) {
+          expect(labels[stage], isNot(stage.nextActionLabel));
+        }
+      }
+      expect(
+        labels[ResidentVerificationStage.notStarted],
+        'Simulan ang verification',
+      );
     });
   });
 

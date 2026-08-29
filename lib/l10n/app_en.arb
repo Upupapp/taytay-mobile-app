@@ -779,5 +779,45 @@
   "gateSheetNotNow": "Not now",
   "@gateSheetNotNow": {
     "description": "Dismisses the verification gate sheet."
+  },
+  "verifyActionStart": "Start verification",
+  "@verifyActionStart": {
+    "description": "Button on the verification card when nothing has been sent."
+  },
+  "verifyActionContinue": "Continue verification",
+  "@verifyActionContinue": {
+    "description": "Button when verification was started but not sent."
+  },
+  "verifyActionFixResend": "Fix and resend",
+  "@verifyActionFixResend": {
+    "description": "Button when the LGU asked for a correction."
+  },
+  "verifyActionTryAgain": "Try again",
+  "@verifyActionTryAgain": {
+    "description": "Button after an unsuccessful verification."
+  },
+  "homeVerifiedTitle": "You are verified",
+  "@homeVerifiedTitle": {
+    "description": "Home next-action card headline for a verified resident."
+  },
+  "homeVerifiedBody": "Your Taytay digital ID and service applications are open to you.",
+  "@homeVerifiedBody": {
+    "description": "Home next-action card body for a verified resident."
+  },
+  "homeOneStepTitle": "One step to go",
+  "@homeOneStepTitle": {
+    "description": "Home next-action card headline before verification."
+  },
+  "homeOneStepBody": "Verify your identity with Taytay LGU to unlock your digital ID and service applications.",
+  "@homeOneStepBody": {
+    "description": "Home next-action card body before verification."
+  },
+  "homeOpenDigitalId": "Open my digital ID",
+  "@homeOpenDigitalId": {
+    "description": "Home next-action button for a verified resident."
+  },
+  "homeCheckStatus": "Check my status",
+  "@homeCheckStatus": {
+    "description": "Home next-action fallback button."
   }
 }

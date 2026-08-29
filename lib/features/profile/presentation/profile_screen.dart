@@ -366,7 +366,7 @@ class _CapabilityTile extends StatelessWidget {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(capability.label),
+      title: Text(capabilityLabel(context, capability)),
       // States the requirement instead of hiding the row. A resident can see
       // what the app offers and what it would take to reach it.
       subtitle: requirement == null ? null : Text(requirement),

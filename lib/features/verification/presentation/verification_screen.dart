@@ -555,7 +555,7 @@ class _NextSteps extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final stage = status.stage;
-    final actionLabel = stage.nextActionLabel;
+    final actionLabel = verificationStageActionLabel(context, stage);
 
     return AppCard(
       child: Column(

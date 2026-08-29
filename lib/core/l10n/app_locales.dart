@@ -503,3 +503,26 @@ String capabilityActionLabel(BuildContext context, CapabilityVerdict verdict) {
     _ => strings.gateActionContinue,
   };
 }
+
+/// The button on the verification card, or null where there is nothing to press.
+///
+/// Mirrors `ResidentVerificationStage.nextActionLabel`, which stays as the
+/// no-context fallback. Added 2026-08-29 after a render-site scan found the raw
+/// getter rendering on two screens: `nextActionLabel` was not in the coverage
+/// guard's list of copy-bearing field names, so no guard was looking at it.
+String? verificationStageActionLabel(
+  BuildContext context,
+  ResidentVerificationStage stage,
+) {
+  final strings = AppStrings.of(context);
+  return switch (stage) {
+    ResidentVerificationStage.notStarted => strings.verifyActionStart,
+    ResidentVerificationStage.inProgress => strings.verifyActionContinue,
+    ResidentVerificationStage.needsMoreInformation =>
+      strings.verifyActionFixResend,
+    ResidentVerificationStage.unsuccessful => strings.verifyActionTryAgain,
+    ResidentVerificationStage.pendingReview => null,
+    ResidentVerificationStage.verified => null,
+    ResidentVerificationStage.manualReview => null,
+  };
+}

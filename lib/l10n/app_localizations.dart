@@ -1219,6 +1219,66 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Not now'**
   String get gateSheetNotNow;
+
+  /// Button on the verification card when nothing has been sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Start verification'**
+  String get verifyActionStart;
+
+  /// Button when verification was started but not sent.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue verification'**
+  String get verifyActionContinue;
+
+  /// Button when the LGU asked for a correction.
+  ///
+  /// In en, this message translates to:
+  /// **'Fix and resend'**
+  String get verifyActionFixResend;
+
+  /// Button after an unsuccessful verification.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get verifyActionTryAgain;
+
+  /// Home next-action card headline for a verified resident.
+  ///
+  /// In en, this message translates to:
+  /// **'You are verified'**
+  String get homeVerifiedTitle;
+
+  /// Home next-action card body for a verified resident.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Taytay digital ID and service applications are open to you.'**
+  String get homeVerifiedBody;
+
+  /// Home next-action card headline before verification.
+  ///
+  /// In en, this message translates to:
+  /// **'One step to go'**
+  String get homeOneStepTitle;
+
+  /// Home next-action card body before verification.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your identity with Taytay LGU to unlock your digital ID and service applications.'**
+  String get homeOneStepBody;
+
+  /// Home next-action button for a verified resident.
+  ///
+  /// In en, this message translates to:
+  /// **'Open my digital ID'**
+  String get homeOpenDigitalId;
+
+  /// Home next-action fallback button.
+  ///
+  /// In en, this message translates to:
+  /// **'Check my status'**
+  String get homeCheckStatus;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

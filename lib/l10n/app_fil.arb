@@ -186,5 +186,15 @@
   "gateSheetVerifyTitle": "I-verify ang iyong pagkakakilanlan",
   "gateSheetVerifyPrivacy": "Ang hinihingi lang ng LGU ay ang kailangan para kumpirmahin ang iyong pagkakakilanlan at paninirahan, at sinasabi nila kung bakit.",
   "gateSheetStartVerification": "Simulan ang verification",
-  "gateSheetNotNow": "Hindi muna"
+  "gateSheetNotNow": "Hindi muna",
+  "verifyActionStart": "Simulan ang verification",
+  "verifyActionContinue": "Ipagpatuloy ang verification",
+  "verifyActionFixResend": "Ayusin at ipadala muli",
+  "verifyActionTryAgain": "Subukang muli",
+  "homeVerifiedTitle": "Verified ka na",
+  "homeVerifiedBody": "Bukas na sa iyo ang iyong Taytay digital ID at mga aplikasyon sa serbisyo.",
+  "homeOneStepTitle": "Isang hakbang na lang",
+  "homeOneStepBody": "I-verify ang iyong pagkakakilanlan sa Taytay LGU para mabuksan ang iyong digital ID at mga aplikasyon sa serbisyo.",
+  "homeOpenDigitalId": "Buksan ang aking digital ID",
+  "homeCheckStatus": "Tingnan ang aking status"
 }
