@@ -103,6 +103,22 @@ class KycApiRepository implements VerificationRepository {
   /// not re-display, and the two identifiers have nowhere to go. Naming them
   /// here is the record that they were considered rather than missed.
   ///
+  /// **That decision was re-examined on 2026-08-29 and stands, for a reason
+  /// worth writing down.** The screen *does* have a card titled "What Taytay
+  /// LGU has from you", which looks like exactly the thing `claimed` could
+  /// fill — so the note above reads as a contradiction. It is not. That card
+  /// draws `submittedCategories`, a privacy-safe summary of the *kinds* of
+  /// information held; `claimed` carries the actual *values*. Filling the card
+  /// from `claimed` would quietly convert a category summary into a
+  /// re-display of the resident's name and birth date — a more exposing
+  /// feature wearing the same heading.
+  ///
+  /// The categories cannot be derived from anything on the wire, so the card
+  /// stays dark until the server publishes them. See
+  /// `test/features/verification_dead_sections_test.dart`, which holds that
+  /// gap open rather than letting a passing widget test imply the section
+  /// renders.
+  ///
   /// `documents` is left to `loadOwnDocuments`, which owns that list and is
   /// refreshed on its own after an upload; taking it from two places would give
   /// the screen two answers that disagree the moment one of them is stale.

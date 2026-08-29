@@ -953,6 +953,35 @@ into the **generated** `app_localizations_en.dart`, a string table that cannot r
 Generated output is now skipped, keyed off `gen-l10n`'s own marker rather than a path, so a
 hand-written file cannot opt out by moving into `lib/l10n/`.
 
+### C-14 — two sections of the verification screen are dead, and it is backend-owed (2026-08-29)
+
+`verification_screen.dart` draws a "What Taytay LGU has from you" card from `submittedCategories`
+and a corrections list from `issues`. **Neither list is populated by any production code**, so both
+sit behind an `isNotEmpty` check that is always false, on every device.
+
+**Checked against the backend before writing a line of client code.** `applicantProjection` in
+`KycController` serves exactly seven things at `backend@api-baseline-2026-08` — `id`, `status`,
+`can_edit`, `submitted_at`, `message`, `claimed`, `resident_id`. No category list, no issue list.
+**This is not a client decoder gap and cannot be fixed here.**
+
+**Why `claimed` is not the answer, though it looks like it.** `claimed` carries the resident's
+actual submitted *values* — names, birth date. `submittedCategories` is a privacy-safe summary of
+the *kinds* of information held. Filling that card from `claimed` would convert a category summary
+into a re-display of personal data under the same heading — a more exposing feature, not the one
+that was designed. The categories cannot be derived from anything on the wire.
+
+**The trap this exposes.** `verification_screen_test.dart` constructs both lists directly and
+passes. The widgets are proven to work and **nothing was proving they are ever reached**. A green
+suite meant "renders correctly when given data" and was read as "renders". That is the same shape
+as every other finding this week, in a different disguise.
+
+`test/features/verification_dead_sections_test.dart` now holds the gap open: it documents the
+decode and ratchets on any client-side producer appearing, at which point `VerificationItemCategory`
+needs localising. **It does not detect the server growing the field** — the decoder allow-lists its
+keys and walks past unknown ones by design. That is `check_fixture_drift.sh`'s job, and that guard
+is unproven while `TAYTAY_STAGING` is unset. Stated because the first draft of the test claimed
+otherwise and red-proofing caught it.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
