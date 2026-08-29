@@ -1045,6 +1045,46 @@ what it itself wrote — it is its own data layer, with no repository beneath it
 `upload_policy.dart` type-guards the server's `accepts` block, inspecting and discarding the map
 rather than carrying it up. Both are named with reasons rather than allowed by a pattern.
 
+### The release-hardening gate was broken, and its red was accidentally protective (2026-08-29)
+
+`tool/check_release_hardening.sh` had reported **"the artifact has no readable signature"** for
+eleven days. The artifact was fine. **The gate was not.**
+
+`apksigner` is a shell wrapper around a JAR and needs a JRE. This Mac has no working Java on
+`PATH`, so it printed *"Unable to locate a Java Runtime"*, `2>/dev/null` swallowed that, `CERT` came
+back empty, and the script reported a finding about the APK. That is the exact failure the file
+warns about thirty lines earlier — cannot-read reported as a fact about the artifact.
+
+**The part worth stopping on.** The artifact is signed
+`CN=THROWAWAY DO NOT USE, O=Verification Only, C=PH`. The gate only recognised `CN=Android Debug`
+as an unpublishable signer, so **fixing the Java fault alone would have turned this gate GREEN on
+an artifact whose own certificate says it must not be used.** The red was noise, and it was also
+the only thing standing in front of that. A broken check and a passing check can hide the same
+defect.
+
+**Three fixes:**
+
+* Resolve a JRE — Android Studio ships a JBR at a known path — and **distinguish "could not read"
+  from "no signature"**, printing what `apksigner` actually said instead of swallowing it.
+* Reject self-declared non-production certificates (`do not use`, `throwaway`, `verification only`,
+  `test key`), not just the Android debug key.
+* Check signer **identity**, not merely "not obviously bad": `TAYTAY_RELEASE_CERT_SHA256` is
+  compared when set, and when unset the script prints **NOT PROVEN** with the fingerprint it saw,
+  rather than an `OK` that would overstate what was checked.
+
+**`command -v java` is not the test.** macOS ships a `/usr/bin/java` **stub** that exists, is
+executable, and only prints an error — so the first version of this fix passed its own existence
+check and fixed nothing. The script now runs `java -version`. Existence is not function; that is
+the same lesson as *trace the operation, not the file*.
+
+Red-proofed: debug key (against a real `app-debug.apk`), wrong fingerprint, matching fingerprint
+staying quiet, and the throwaway certificate. **The no-Java branch is NOT red-proven** — Android
+Studio is installed, so the fallback always succeeds and that branch is unreachable here. It is
+reasoned, not demonstrated, and the script says so.
+
+**The gate is still red, correctly:** the local release APK cannot be published. That is now a true
+statement about the artifact instead of a false one about its signature.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files

@@ -90,14 +90,91 @@ if [ -z "$APKSIGNER" ]; then
   exit 2
 fi
 
-CERT="$("$APKSIGNER" verify --print-certs "$APK" 2>/dev/null || true)"
+# apksigner is a shell wrapper around a JAR and needs a JRE. This Mac has no
+# Java on PATH and no /Library/Java, so `apksigner` printed "Unable to locate a
+# Java Runtime", the `2>/dev/null` below swallowed it, CERT came back empty, and
+# this gate reported "the artifact has no readable signature" for eleven days.
+#
+# THAT IS THE BUG THIS BLOCK FIXES, and it is the same bug the file warns about
+# thirty lines up: cannot-read was being reported as a finding about the
+# artifact. Android Studio ships a JBR, so there is a runtime here; it just is
+# not on PATH.
+#
+# `command -v java` is NOT the test. macOS ships a /usr/bin/java STUB that
+# exists, is executable, and does nothing but print "Unable to locate a Java
+# Runtime" — so the obvious existence check passes on a machine with no Java,
+# which is how the first version of this fix failed to fix anything. Run it.
+java_works() { java -version >/dev/null 2>&1; }
+
+if ! java_works; then
+  JBR="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+  if [ -x "$JBR/bin/java" ]; then
+    export JAVA_HOME="$JBR"
+    PATH="$JBR/bin:$PATH"
+    export PATH
+  fi
+fi
+# NOT RED-PROVEN on this machine: Android Studio is installed, so the fallback
+# above always succeeds and this branch cannot be reached here. It is reasoned,
+# not demonstrated, and that distinction is worth the two lines it costs.
+if ! java_works; then
+  echo "FAIL: no working Java runtime; apksigner cannot read the certificate." >&2
+  echo "      This is NOT a statement about the artifact. Install a JDK or set" >&2
+  echo "      JAVA_HOME, then run this again before believing anything." >&2
+  exit 2
+fi
+
+CERT_ERR="$(mktemp)"
+CERT="$("$APKSIGNER" verify --print-certs "$APK" 2>"$CERT_ERR" || true)"
+CERT="$(echo "$CERT" | grep -v '^WARNING:' || true)"
 if [ -z "$CERT" ]; then
-  echo "FAIL: the artifact has no readable signature." >&2
+  # Distinguish "unsigned" from "could not look". Conflating them is what put
+  # this gate in the ignored pile.
+  echo "FAIL: could not read a certificate from the artifact." >&2
+  echo "      apksigner said:" >&2
+  sed 's/^/        /' "$CERT_ERR" >&2
+  rm -f "$CERT_ERR"
   fail=1
-elif echo "$CERT" | grep -qi 'CN=Android Debug'; then
-  echo "FAIL: signed with the ANDROID DEBUG KEY. This can never be published (F03)." >&2
-  echo "      $(echo "$CERT" | grep -i 'certificate DN' | head -1)" >&2
-  fail=1
+else
+  rm -f "$CERT_ERR"
+  DN="$(echo "$CERT" | grep -i 'certificate DN' | head -1)"
+
+  # A debug key is not the only unpublishable signer, and the artifact on this
+  # machine proves it: it is signed `CN=THROWAWAY DO NOT USE, O=Verification
+  # Only, C=PH`, which sails past a check that only looks for Android Debug.
+  # Fixing the Java fault alone would therefore have turned this gate GREEN on
+  # an artifact that says, in its own certificate, that it must not be used.
+  if echo "$CERT" | grep -qi 'CN=Android Debug'; then
+    echo "FAIL: signed with the ANDROID DEBUG KEY. This can never be published (F03)." >&2
+    echo "      $DN" >&2
+    fail=1
+  elif echo "$CERT" | grep -qiE 'do not use|throwaway|verification only|test *key'; then
+    echo "FAIL: signed with a self-declared non-production certificate." >&2
+    echo "      $DN" >&2
+    echo "      The certificate says what it is. Publishing it is F03 in a" >&2
+    echo "      different hat." >&2
+    fail=1
+  fi
+
+  # Identity, not just "not obviously bad". Without a recorded fingerprint this
+  # gate can only reject the signers it has heard of, which is a much weaker
+  # claim than the OK line implies.
+  ACTUAL_SHA="$(echo "$CERT" | sed -n 's/.*certificate SHA-256 digest: *//p' | head -1)"
+  if [ -n "${TAYTAY_RELEASE_CERT_SHA256:-}" ]; then
+    if [ "$ACTUAL_SHA" != "$TAYTAY_RELEASE_CERT_SHA256" ]; then
+      echo "FAIL: signed by an unexpected certificate." >&2
+      echo "      expected $TAYTAY_RELEASE_CERT_SHA256" >&2
+      echo "      actual   $ACTUAL_SHA" >&2
+      fail=1
+    fi
+  else
+    echo "NOT PROVEN: signer identity is unchecked." >&2
+    echo "            TAYTAY_RELEASE_CERT_SHA256 is unset, so this run can only" >&2
+    echo "            reject signers it recognises as bad — it cannot confirm" >&2
+    echo "            the artifact carries the RIGHT key. Set it to:" >&2
+    echo "            $ACTUAL_SHA" >&2
+    echo "            once that is known to be the real release certificate." >&2
+  fi
 fi
 
 # 4. No secret-shaped dart-define baked in. They ship in clear text.
