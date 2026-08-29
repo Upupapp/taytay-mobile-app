@@ -332,6 +332,35 @@ void main() {
       expect(claudeMd, contains('highest-authority document'));
     });
 
+    test('Article 2.3 still bans core reaching data or presentation', () {
+      // ARTICLE 2.3 WAS AMENDED ON 2026-08-29, deliberately and by the owner.
+      // It used to say `core/` never imports `features/`, full stop; the code
+      // had never obeyed that, in thirteen places, all pointing at `domain/`.
+      // The owner ruled that `core/ -> features/**/domain/` is allowed.
+      //
+      // What must NOT move is the half that was actually being broken: `core/`
+      // reaching a feature's `data/` or `presentation/`. That is enforced by
+      // `test/core/architecture_test.dart`; this asserts the rule it enforces
+      // is still written down, so an amendment cannot quietly delete the
+      // clause and leave a guard citing a rule that no longer exists.
+      final claudeMd = File('CLAUDE.md').readAsStringSync();
+
+      expect(
+        claudeMd,
+        contains(
+          "`core/` never imports a feature's `data/` or `presentation/`",
+        ),
+        reason:
+            'Article 2.3 no longer states the prohibition that '
+            'architecture_test.dart enforces.',
+      );
+      expect(
+        claudeMd,
+        contains('app_router.dart'),
+        reason: 'The single sanctioned exception is no longer named.',
+      );
+    });
+
     test('Article 10 still forbids what it has always forbidden', () {
       // ARTICLE 10 WAS AMENDED, AND THIS TEST CAUGHT IT.
       //

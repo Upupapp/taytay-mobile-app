@@ -18,26 +18,24 @@ import 'package:flutter_test/flutter_test.dart';
 /// worth saying, because a guard adopted with a long list of exemptions is
 /// usually a guard that will never go red.
 ///
-/// ## An open discrepancy this guard does NOT paper over
+/// ## The discrepancy that was here is resolved
 ///
-/// Article 2.3 says `core/` never imports `features/`, full stop, with
-/// `app_router.dart` as the only exception. **The code has never obeyed that**:
-/// thirteen imports cross from `core/` into `features/**/domain/`, and they are
-/// not accidents — a localiser cannot translate an enum it may not name, and
+/// Article 2.3 used to say `core/` never imports `features/`, full stop. **The code had
+/// never obeyed that**: thirteen imports crossed from `core/` into `features/**/domain/`,
+/// and they were not accidents — a localiser cannot translate an enum it may not name, and
 /// `platform_controller` cannot drive a bootstrap contract it may not see.
-/// Every one of them points at `domain/`, which is the layer with no Flutter
-/// and no JSON in it, so none of them is the coupling the rule was written to
-/// prevent.
 ///
-/// So this file enforces the part that is absolute and was actually broken —
-/// **`core/` must not reach a feature's `data/` or `presentation/`** — and
-/// admits `core/ -> features/**/domain/` from a named list of files. It is
-/// recorded here rather than quietly widened, because a test that redefines the
-/// rule it claims to enforce is worse than no test.
+/// This file previously enforced the absolute half of the rule and held the deviation still
+/// behind a named list of three files, recording the contradiction rather than widening the
+/// rule to match my own code. **The owner ruled on 2026-08-29: allow it.** Article 2.3 now
+/// says `core/` must not reach a feature's `data/` or `presentation/`, and `domain/` is
+/// permitted.
 ///
-/// **Somebody has to decide** whether Article 2.3 is amended to match the code
-/// or the thirteen imports are removed. Until then this is a deviation held
-/// still, not a settled design.
+/// So the three-file list is gone. It enforced something stricter than the constitution now
+/// says, and a test that fails on permitted behaviour is worse than no test — the same
+/// mistake, pointed the other way, as a test that passes on forbidden behaviour.
+///
+/// What remains is the half that was actually broken, and it is absolute.
 void main() {
   final List<File> dartFiles = Directory('lib')
       .listSync(recursive: true)
@@ -151,47 +149,6 @@ void main() {
           'core/ reached into a feature\'s data or presentation layer. Move the '
           'type into core/, or publish it as a domain contract:\n'
           '${offenders.join('\n')}',
-    );
-  });
-
-  test('Article 2.3 — only three core files reach feature domain at all', () {
-    // The documented deviation, held still. New IMPORTS inside these files are
-    // routine — every localiser needs the enum it translates. A new FILE in
-    // this list is a decision somebody should make deliberately, which is the
-    // granularity that makes this a ratchet rather than a rubber stamp.
-    const Set<String> allowed = <String>{
-      'lib/core/l10n/app_locales.dart',
-      'lib/core/router/route_guard.dart',
-      'lib/core/startup/platform_controller.dart',
-    };
-
-    final reaching = <String>{};
-    for (final file in dartFiles) {
-      final from = path(file);
-      if (!from.startsWith('lib/core/')) continue;
-      if (from.endsWith('core/router/app_router.dart')) continue;
-      for (final import in importsOf(file)) {
-        final target = resolve(file, import);
-        if (target != null && target.startsWith('lib/features/')) {
-          reaching.add(from);
-        }
-      }
-    }
-
-    expect(
-      reaching.difference(allowed),
-      isEmpty,
-      reason:
-          'A new core/ file reaches into features/. Article 2.3 forbids this '
-          'outright; the three on the list are a recorded deviation, not a '
-          'precedent: ${reaching.difference(allowed).join(', ')}',
-    );
-    expect(
-      allowed.difference(reaching),
-      isEmpty,
-      reason:
-          'These no longer reach into features/ — remove them from the list so '
-          'it keeps shrinking: ${allowed.difference(reaching).join(', ')}',
     );
   });
 

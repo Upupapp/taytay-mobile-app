@@ -97,8 +97,18 @@ Rules:
    imports `package:flutter/material.dart`, is a defect.
 2. **A feature never imports another feature's `data/` or `presentation/`.** Cross-feature
    needs go through `core/` or a published `domain` contract.
-3. **`core/` never imports `features/`** — except `core/router/app_router.dart`, which
-   exists precisely to bind routes to screens and is the single sanctioned exception.
+3. **`core/` never imports a feature's `data/` or `presentation/`** — except
+   `core/router/app_router.dart`, which exists precisely to bind routes to screens and is
+   the single sanctioned exception. `core/ -> features/**/domain/` **is allowed**: a
+   localiser cannot translate an enum it may not name, and a controller cannot drive a
+   contract it may not see. `domain/` is the layer with no Flutter and no JSON in it, so
+   importing it couples `core/` to a type, never to a screen or a wire format.
+
+   *Amended 2026-08-29 by the owner.* This clause used to read "`core/` never imports
+   `features/`", full stop — which the code had never obeyed, in thirteen places, all of
+   them deliberate and all of them pointing at `domain/`. `test/core/architecture_test.dart`
+   enforces the rule as it now stands; it previously held the deviation still and named the
+   contradiction rather than quietly widening the rule to match the code.
 4. **No `Map<String, dynamic>` above `data/`.** The wire format stops at the data layer.
 5. New features follow the same shape. A feature with no `domain` is a feature whose rules
    are hiding in its widgets.

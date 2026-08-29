@@ -1029,9 +1029,16 @@ against.
 So the guard enforces the absolute half — **`core/` must not reach a feature's `data/` or
 `presentation/`**, which is exactly what was broken on 2026-08-29 — and admits `core/ ->
 features/**/domain/` from a named list of three files. New imports inside those files are routine;
-a new file on the list is a decision. **Somebody has to choose** whether Article 2.3 is amended to
-match the code or the thirteen imports are removed; until then this is a deviation held still, not
-a settled design. It is not the client's call to rewrite the constitution silently.
+a new file on the list is a decision. **RESOLVED the same day: the owner ruled "allow core".** Article 2.3 is amended
+to say `core/` must not reach a feature's `data/` or `presentation/`, with `domain/` permitted and
+the reasoning written into the clause. The three-file allow-list in the guard is **deleted** — it
+enforced something stricter than the constitution now says, and a test that fails on permitted
+behaviour is the same mistake as one that passes on forbidden behaviour, pointed the other way.
+
+Following the Article 10 precedent, `release_readiness_test.dart` now asserts that Article 2.3
+still *states* the prohibition the guard enforces, so a later amendment cannot delete the clause
+and leave a test citing a rule that no longer exists. Red-proofed three ways: deleting the clause,
+importing a presentation file, and adding a new `core -> domain` import (which must stay green).
 
 **Article 2.4 needed two documented decode boundaries.** `keystore_session_store.dart` type-guards
 what it itself wrote — it is its own data layer, with no repository beneath it — and
