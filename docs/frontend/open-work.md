@@ -1010,6 +1010,34 @@ plainly: **every entry that list ever held turned out to be wrong.**
 everywhere else — they are what the API is called with — so the check bans one reaching a `Text` or
 a `label:` in presentation code. Red-proofed against both original sites.
 
+### Article 2 is enforced now, and one clause of it is not true (2026-08-29)
+
+The layering rules had no test. `test/core/architecture_test.dart` covers all four, each
+red-proofed by breaking it and watching the suite go red — six checks, six proofs.
+
+**Rules 2.1 and 2.2 were clean on first measurement** — zero violations — so they are enforced
+outright with no exception list. Worth recording: a guard adopted with a long list of exemptions is
+usually a guard that will never go red.
+
+**Article 2.3 as written is not true, and the test says so rather than papering over it.** The
+constitution says `core/` never imports `features/`, with `app_router.dart` the only exception.
+**The code has never obeyed that**: thirteen imports cross from `core/` into `features/**/domain/`,
+and they are deliberate — a localiser cannot translate an enum it may not name. Every one points at
+`domain/`, the layer with no Flutter and no JSON in it, so none is the coupling the rule guards
+against.
+
+So the guard enforces the absolute half — **`core/` must not reach a feature's `data/` or
+`presentation/`**, which is exactly what was broken on 2026-08-29 — and admits `core/ ->
+features/**/domain/` from a named list of three files. New imports inside those files are routine;
+a new file on the list is a decision. **Somebody has to choose** whether Article 2.3 is amended to
+match the code or the thirteen imports are removed; until then this is a deviation held still, not
+a settled design. It is not the client's call to rewrite the constitution silently.
+
+**Article 2.4 needed two documented decode boundaries.** `keystore_session_store.dart` type-guards
+what it itself wrote — it is its own data layer, with no repository beneath it — and
+`upload_policy.dart` type-guards the server's `accepts` block, inspecting and discarding the map
+rather than carrying it up. Both are named with reasons rather than allowed by a pattern.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
