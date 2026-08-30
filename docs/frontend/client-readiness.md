@@ -5,6 +5,36 @@ document, not carried from TAB 00.
 
 ---
 
+## Re-read on 30 August 2026, after twenty-two commits. THE VERDICT IS UNCHANGED.
+
+**That is the finding, and it is not a disappointment — it is the point of writing a verdict down.**
+A week of work happened between these two dates: every reachable piece of resident-facing enum copy
+was localised, four classes of guard were built and red-proofed, an architecture clause was found
+untrue and amended by the owner, a certification script was written, and a release gate that had
+been confidently wrong for eleven days was fixed. **None of it touched any of the three reasons
+below.** Activity is not progress toward readiness, and a reader arriving at a busy changelog
+should be told so plainly rather than left to infer it.
+
+| | Then (`efa74d1`, 23 Aug) | Now (`b6957e0`, 30 Aug) |
+|---|---|---|
+| `flutter test` | 1,464 passing | **1,513 passing** |
+| Ahead of `origin/main` | 71 commits, nothing ever pushed | **0 — everything pushed** |
+| Route guard | 50 declared, 48 served, **2 ahead** | 52 declared, 48 served, **4 ahead** |
+| Gates run from | the working tree | **a detached worktree, SHA stamped** |
+| Android journeys | never driven | **never driven** |
+| Screen reader | never run | **never run** |
+
+**The "2 ahead" figure in reason 3 below is wrong now: C-09 is four routes.** It has been four since
+27 August, and it is corrected here rather than edited silently in place, because the wrongness is
+the useful part — a verdict document with a stale number in its own reasoning is exactly the failure
+audited across `docs/` on 30 August.
+
+Current state is stamped in `docs/frontend/gate-certification.md` against a named SHA and produced
+by `tool/certify.sh`. **This document is a dated verdict, not a live dashboard**, and the two
+figures above are here to show what did and did not move — not to turn it into one.
+
+---
+
 ## Verdict
 
 # NOT READY — on the client's own scope
