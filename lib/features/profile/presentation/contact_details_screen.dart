@@ -257,9 +257,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       autofillHints: const <String>[AutofillHints.email],
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
-        labelText: AppStrings.of(context).profileFieldOptionalSuffix(
-          profileFieldLabel(context, field),
-        ),
+        labelText: AppStrings.of(
+          context,
+        ).profileFieldOptionalSuffix(profileFieldLabel(context, field)),
         helperText: profileFieldHint(context, field),
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.alternate_email),
@@ -282,9 +282,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       textCapitalization: TextCapitalization.words,
       textInputAction: TextInputAction.done,
       decoration: InputDecoration(
-        labelText: AppStrings.of(context).profileFieldOptionalSuffix(
-          profileFieldLabel(context, field),
-        ),
+        labelText: AppStrings.of(
+          context,
+        ).profileFieldOptionalSuffix(profileFieldLabel(context, field)),
         helperText: profileFieldHint(context, field),
         helperMaxLines: 2,
         prefixIcon: const Icon(Icons.signpost_outlined),

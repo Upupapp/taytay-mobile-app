@@ -827,10 +827,18 @@ class _ConsentStep extends StatelessWidget {
                   // authored, not a paraphrase.
                   subtitle: Text(consent.statement),
                 ),
-                if (_errorFor(context, controller.errors, 'consent_${consent.key}') !=
+                if (_errorFor(
+                      context,
+                      controller.errors,
+                      'consent_${consent.key}',
+                    ) !=
                     null)
                   Text(
-                    _errorFor(context, controller.errors, 'consent_${consent.key}')!,
+                    _errorFor(
+                      context,
+                      controller.errors,
+                      'consent_${consent.key}',
+                    )!,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.error,
                     ),
@@ -1117,11 +1125,7 @@ class _CannotApply extends StatelessWidget {
 /// apart. Before the copy sweep this returned `error.message` directly, so every
 /// client-composed sentence on the assistance intake form reached a Filipino
 /// reader in English, on the screen they use to ask for help.
-String? _errorFor(
-  BuildContext context,
-  List<FieldError> errors,
-  String field,
-) {
+String? _errorFor(BuildContext context, List<FieldError> errors, String field) {
   for (final error in errors) {
     if (error.field == field) return localisedFieldError(context, error);
   }

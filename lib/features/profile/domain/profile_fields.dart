@@ -95,7 +95,8 @@ enum ResidentProfileField {
   purokOrSitio(
     'Purok or sitio',
     FieldOwnership.accountOwned,
-    hint: 'Optional. The purok or sitio within your barangay, if yours uses one.',
+    hint:
+        'Optional. The purok or sitio within your barangay, if yours uses one.',
     wireName: 'purok_or_sitio',
   ),
 

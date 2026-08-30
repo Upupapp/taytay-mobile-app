@@ -29,8 +29,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   /// Every `FieldError(...)` invocation in `lib/`, with its file and line.
   Iterable<({String file, int line, String body})> fieldErrors() sync* {
-    for (final FileSystemEntity entity
-        in Directory('lib').listSync(recursive: true)) {
+    for (final FileSystemEntity entity in Directory(
+      'lib',
+    ).listSync(recursive: true)) {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final String source = entity.readAsStringSync();
       if (!source.contains('FieldError(')) continue;

@@ -366,39 +366,42 @@ void main() {
       ],
     };
 
-    test('staff-only and third-party data does not survive the real decoder', () async {
-      final repository = ResidentProfileApiRepository(
-        apiClient: ApiClient(
-          config: config(),
-          transport: _OneResponse(hostilePayload()),
-          accessTokenProvider: () async => 'tok',
-        ),
-      );
+    test(
+      'staff-only and third-party data does not survive the real decoder',
+      () async {
+        final repository = ResidentProfileApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: _OneResponse(hostilePayload()),
+            accessTokenProvider: () async => 'tok',
+          ),
+        );
 
-      final detail = (await repository.loadOwnDetail()).valueOrNull;
-      final rendered = <String>[
-        detail.toString(),
-        ...?detail?.values.values,
-        detail?.verificationTier ?? '',
-      ].join(' ').toLowerCase();
+        final detail = (await repository.loadOwnDetail()).valueOrNull;
+        final rendered = <String>[
+          detail.toString(),
+          ...?detail?.values.values,
+          detail?.verificationTier ?? '',
+        ].join(' ').toLowerCase();
 
-      for (final forbidden in <String>[
-        'r-1',
-        'rec-1',
-        'hh-1',
-        '045822',
-        '1234-5678-9012',
-        'suspicious',
-        'escalate',
-        'staff-1',
-        'maria santos',
-        '0.87',
-        'vawc',
-        'juan dela cruz',
-      ]) {
-        expect(rendered, isNot(contains(forbidden)), reason: forbidden);
-      }
-    });
+        for (final forbidden in <String>[
+          'r-1',
+          'rec-1',
+          'hh-1',
+          '045822',
+          '1234-5678-9012',
+          'suspicious',
+          'escalate',
+          'staff-1',
+          'maria santos',
+          '0.87',
+          'vawc',
+          'juan dela cruz',
+        ]) {
+          expect(rendered, isNot(contains(forbidden)), reason: forbidden);
+        }
+      },
+    );
 
     test('the production decoder names no staff-only key', () {
       const source =
@@ -427,7 +430,6 @@ void main() {
       }
     });
   });
-
 
   group('own-record scope — acceptance 3', () {
     test('no repository method takes a resident identifier', () {
@@ -946,31 +948,34 @@ void _c13() {
     const street = ResidentProfileField.streetAddress;
     const mobile = ResidentProfileField.mobileNumber;
 
-    test('the declaration now matches the office, and the served list still wins', () {
-      // The defect this closed: the server marks street_address self-service,
-      // the enum declared it lguVerified, and the screen told a resident "only
-      // the LGU can change them" about a field the office lets them edit.
-      //
-      // The declaration is corrected so the FALLBACK is right too — a response
-      // that stops publishing editable_fields must not reintroduce the wrong
-      // sentence.
-      expect(street.ownership, FieldOwnership.accountOwned);
+    test(
+      'the declaration now matches the office, and the served list still wins',
+      () {
+        // The defect this closed: the server marks street_address self-service,
+        // the enum declared it lguVerified, and the screen told a resident "only
+        // the LGU can change them" about a field the office lets them edit.
+        //
+        // The declaration is corrected so the FALLBACK is right too — a response
+        // that stops publishing editable_fields must not reintroduce the wrong
+        // sentence.
+        expect(street.ownership, FieldOwnership.accountOwned);
 
-      const served = ResidentProfileDetail(
-        selfServiceFields: <String>{
-          'street_address',
-          'purok_or_sitio',
-          'mobile_number',
-          'email',
-        },
-      );
+        const served = ResidentProfileDetail(
+          selfServiceFields: <String>{
+            'street_address',
+            'purok_or_sitio',
+            'mobile_number',
+            'email',
+          },
+        );
 
-      expect(
-        served.ownershipOf(street),
-        FieldOwnership.accountOwned,
-        reason: 'the office says the resident may change it',
-      );
-    });
+        expect(
+          served.ownershipOf(street),
+          FieldOwnership.accountOwned,
+          reason: 'the office says the resident may change it',
+        );
+      },
+    );
 
     test('a field the office does not list becomes the LGU’s', () {
       const served = ResidentProfileDetail(
@@ -1017,24 +1022,27 @@ void _c13() {
       expect(detail.ownershipOf(street), FieldOwnership.accountOwned);
     });
 
-    test('an empty or malformed list is treated as "the server did not say"', () async {
-      for (final Object? served in <Object?>[<String>[], 'nonsense', null]) {
-        final repository = ResidentProfileApiRepository(
-          apiClient: ApiClient(
-            config: config(),
-            transport: _OneResponse(<String, dynamic>{
-              'first_name': 'Ana',
-              'editable_fields': ?served,
-            }),
-            accessTokenProvider: () async => 'tok',
-          ),
-        );
+    test(
+      'an empty or malformed list is treated as "the server did not say"',
+      () async {
+        for (final Object? served in <Object?>[<String>[], 'nonsense', null]) {
+          final repository = ResidentProfileApiRepository(
+            apiClient: ApiClient(
+              config: config(),
+              transport: _OneResponse(<String, dynamic>{
+                'first_name': 'Ana',
+                'editable_fields': ?served,
+              }),
+              accessTokenProvider: () async => 'tok',
+            ),
+          );
 
-        final detail = (await repository.loadOwnDetail()).valueOrNull!;
-        expect(detail.selfServiceFields, isNull, reason: '$served');
-        expect(detail.ownershipOf(street), street.ownership);
-      }
-    });
+          final detail = (await repository.loadOwnDetail()).valueOrNull!;
+          expect(detail.selfServiceFields, isNull, reason: '$served');
+          expect(detail.ownershipOf(street), street.ownership);
+        }
+      },
+    );
   });
 }
 

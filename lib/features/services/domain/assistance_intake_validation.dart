@@ -170,8 +170,8 @@ abstract final class AssistanceIntakeValidation {
   /// The kind that matches [_missingMessage], so the two cannot drift.
   static ValidationMessage _missingKind(IntakeQuestion question) =>
       switch (question.kind.known) {
-        IntakeAnswerKind.singleChoice ||
-        IntakeAnswerKind.multipleChoice => ValidationMessage.answerMissingChoice,
+        IntakeAnswerKind.singleChoice || IntakeAnswerKind.multipleChoice =>
+          ValidationMessage.answerMissingChoice,
         IntakeAnswerKind.yesNo => ValidationMessage.answerMissingYesNo,
         IntakeAnswerKind.date => ValidationMessage.answerMissingDate,
         IntakeAnswerKind.number => ValidationMessage.answerMissingNumber,

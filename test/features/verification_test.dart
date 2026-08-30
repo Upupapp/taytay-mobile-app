@@ -274,7 +274,12 @@ void main() {
       const source = 'lib/features/verification/data/kyc_api_repository.dart';
       final decoder = File(source).readAsStringSync();
 
-      for (final key in <String>['status', 'message', 'submitted_at', 'can_edit']) {
+      for (final key in <String>[
+        'status',
+        'message',
+        'submitted_at',
+        'can_edit',
+      ]) {
         expect(
           decoder,
           contains("'$key'"),
@@ -336,7 +341,9 @@ void main() {
     // gap they represented is C-11, and it is recorded there rather than papered
     // over here.
 
-    Future<VerificationStatusDetail> decodeVia(Map<String, dynamic> body) async {
+    Future<VerificationStatusDetail> decodeVia(
+      Map<String, dynamic> body,
+    ) async {
       final repository = KycApiRepository(
         apiClient: ApiClient(
           config: config(),
@@ -376,53 +383,62 @@ void main() {
       }
     });
 
-    test('an unknown state degrades and keeps the raw value for support', () async {
-      final detail = await decodeVia(<String, dynamic>{
-        'status': 'awaiting_barangay_endorsement',
-      });
+    test(
+      'an unknown state degrades and keeps the raw value for support',
+      () async {
+        final detail = await decodeVia(<String, dynamic>{
+          'status': 'awaiting_barangay_endorsement',
+        });
 
-      // Unknown lands on review, never on verified, and the server's own word
-      // is preserved so a support desk and a resident see the same thing.
-      expect(detail.stage, ResidentVerificationStage.pendingReview);
-      expect(detail.rawState, 'awaiting_barangay_endorsement');
-    });
+        // Unknown lands on review, never on verified, and the server's own word
+        // is preserved so a support desk and a resident see the same thing.
+        expect(detail.stage, ResidentVerificationStage.pendingReview);
+        expect(detail.rawState, 'awaiting_barangay_endorsement');
+      },
+    );
 
-    test('can_edit is read, and its absence falls back rather than locking out', () async {
-      // C-11. The office computes this; the app used to infer it.
-      final open = await decodeVia(<String, dynamic>{
-        'status': 'draft',
-        'can_edit': true,
-      });
-      expect(open.canEdit, isTrue);
-      expect(open.isEditableByApplicant, isTrue);
+    test(
+      'can_edit is read, and its absence falls back rather than locking out',
+      () async {
+        // C-11. The office computes this; the app used to infer it.
+        final open = await decodeVia(<String, dynamic>{
+          'status': 'draft',
+          'can_edit': true,
+        });
+        expect(open.canEdit, isTrue);
+        expect(open.isEditableByApplicant, isTrue);
 
-      final closed = await decodeVia(<String, dynamic>{
-        'status': 'draft',
-        'can_edit': false,
-      });
-      expect(closed.canEdit, isFalse);
-      expect(
-        closed.isEditableByApplicant,
-        isFalse,
-        reason: 'the office said no; the stage does not get to overrule it',
-      );
+        final closed = await decodeVia(<String, dynamic>{
+          'status': 'draft',
+          'can_edit': false,
+        });
+        expect(closed.canEdit, isFalse);
+        expect(
+          closed.isEditableByApplicant,
+          isFalse,
+          reason: 'the office said no; the stage does not get to overrule it',
+        );
 
-      // Absent: fall back to the old inference rather than locking a resident
-      // out of a case the office may well consider open.
-      final silent = await decodeVia(<String, dynamic>{'status': 'draft'});
-      expect(silent.canEdit, isNull);
-      expect(silent.isEditableByApplicant, isTrue);
-    });
+        // Absent: fall back to the old inference rather than locking a resident
+        // out of a case the office may well consider open.
+        final silent = await decodeVia(<String, dynamic>{'status': 'draft'});
+        expect(silent.canEdit, isNull);
+        expect(silent.isEditableByApplicant, isTrue);
+      },
+    );
 
-    test('submitted_at is read — this is why "Sent on" never appeared', () async {
-      final detail = await decodeVia(<String, dynamic>{
-        'status': 'submitted',
-        'submitted_at': '2026-08-01T09:30:00Z',
-      });
+    test(
+      'submitted_at is read — this is why "Sent on" never appeared',
+      () async {
+        final detail = await decodeVia(<String, dynamic>{
+          'status': 'submitted',
+          'submitted_at': '2026-08-01T09:30:00Z',
+        });
 
-      expect(detail.submittedAt, isNotNull);
-      expect(detail.submittedAt!.toUtc().year, 2026);
-    });
+        expect(detail.submittedAt, isNotNull);
+        expect(detail.submittedAt!.toUtc().year, 2026);
+      },
+    );
 
     test('an empty payload decodes to not-started, not to a failure', () async {
       // A resident who has never applied is in an ordinary state with a next

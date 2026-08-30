@@ -344,7 +344,6 @@ void main() {
     });
   });
 
-
   group('a correction never rewrites the record — acceptance 3', () {
     test('production declines rather than inventing a payload', () async {
       // C-12. This asserted that `HouseholdDto.encodeCorrection` produced
