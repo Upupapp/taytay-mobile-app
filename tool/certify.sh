@@ -81,7 +81,23 @@ fail=0
 unproven=0
 declare -a ROWS=()
 
-row() { ROWS+=("$1|$2"); }
+# A row with an empty result is not a row. It renders as a blank table cell,
+# which reads as "did not run" — the one thing this script exists to
+# distinguish from "ran and passed". The typed-render gate produced exactly that
+# on its first certification: it passed, exited 0, and reported nothing, because
+# its output was scraped with an anchored pattern that `dart run`'s
+# "Running build hooks..." prefix defeated.
+#
+# So an empty result is a fault in this script, and it says so loudly rather
+# than printing a blank and letting the reader supply the meaning.
+row() {
+  if [ -z "$2" ]; then
+    ROWS+=("$1|**REPORTED NOTHING** — certify.sh could not read this gate's result")
+    fail=1
+  else
+    ROWS+=("$1|$2")
+  fi
+}
 
 # --- formatting -----------------------------------------------------------
 # Added 2026-08-30, straight after eight files that had NEVER been formatted
@@ -156,7 +172,14 @@ set +e
 typed="$(dart run tool/check_typed_renders.dart 2>&1)"; typed_code=$?
 set -e
 case $typed_code in
-  0) row "\`check_typed_renders.dart\`" "$(printf '%s' "$typed" | grep '^OK:' | sed 's/^OK: //')" ;;
+  # `grep -o 'OK:.*'`, not `grep '^OK:'`. `dart run` prints "Running build
+  # hooks..." with NO trailing newline, so the tool's own first line is not at
+  # the start of a line and an anchored match finds nothing. The first version
+  # of this row was therefore EMPTY on a passing run — the gate worked, the
+  # exit code was right, and the table said nothing where a reader looks for a
+  # result. A blank cell reads as "did not run", which is the one thing this
+  # script exists to distinguish from "ran and passed".
+  0) row "\`check_typed_renders.dart\`" "$(printf '%s' "$typed" | grep -o 'OK:.*' | head -1 | sed 's/^OK: //')" ;;
   1) row "\`check_typed_renders.dart\`" "**FAILED**" ; printf '%s\n' "$typed" | tail -8 >&2 ; fail=1 ;;
   *) row "\`check_typed_renders.dart\`" "**could not run**" ; printf '%s\n' "$typed" | tail -8 >&2 ; exit 2 ;;
 esac
@@ -166,7 +189,7 @@ for guard in check_backend_baseline check_backend_routes check_correctable_field
   out="$(bash "tool/$guard.sh" 2>&1)"; code=$?
   set -e
   case $code in
-    0) row "\`$guard.sh\`" "$(printf '%s' "$out" | grep '^OK:' | head -1 | sed 's/^OK: //')" ;;
+    0) row "\`$guard.sh\`" "$(printf '%s' "$out" | grep -o 'OK:.*' | head -1 | sed 's/^OK: //')" ;;
     3) row "\`$guard.sh\`" "**SKIP** — not proven" ; unproven=1 ;;
     *) row "\`$guard.sh\`" "**FAILED**" ; echo "$out" | tail -10 >&2 ; fail=1 ;;
   esac

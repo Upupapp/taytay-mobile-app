@@ -32,6 +32,34 @@ that produces no output (exit 2, the floor), and the real run below (exit 3).
 
 ---
 
+## `2380e21` — 2026-08-30
+
+Produced by `tool/certify.sh`. Exit 3 — certified with gaps.
+
+| Gate | Result |
+|---|---|
+| `dart format` | **clean** |
+| `flutter analyze` | **clean** |
+| `flutter test` | **1,513 passing** |
+| `tool/check_typed_renders.dart` | 77 screen files resolved; no localised enum constant rendered directly |
+| `tool/check_backend_baseline.sh` | 17 modules agree at `api-baseline-2026-08` |
+| `tool/check_backend_routes.sh` | 52 declared, 48 served, 4 recorded ahead (C-09) |
+| `tool/check_correctable_fields.sh` | 12 correctable fields agree |
+| `tool/check_fixture_drift.sh` | **SKIP (exit 3)** — `TAYTAY_STAGING` unset |
+| `tool/check_release_hardening.sh` | **SKIP (exit 3)** — no artifact in a clean tree |
+
+### The first run of this table had a blank cell
+
+`check_typed_renders.dart` **passed, exited 0, and reported nothing.** `dart run` prints
+`Running build hooks...` with no trailing newline, so the tool's own first line is not at the start
+of a line and the anchored `grep '^OK:'` scraping it matched nothing.
+
+Nothing was broken — the gate ran, the exit code was correct — and the table still said nothing
+where a reader looks for a result. **A blank cell reads as "did not run", which is the single
+distinction this script exists to make.** It is now impossible: `row()` treats an empty result as a
+fault in `certify.sh` itself, says so in the cell, and fails the certification. The shell guards'
+rows were scraped the same fragile way and worked only by luck; both are robust now.
+
 ## `3088112` — 2026-08-30
 
 Produced by `tool/certify.sh`. Exit 3 — certified with gaps.
