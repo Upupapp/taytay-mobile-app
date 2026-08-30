@@ -1,7 +1,19 @@
-# QA — what 1,381 passing tests do and do not evidence
+# QA — what the suite does and does not evidence
 
 TAB 24 consumes this. Its whole job is to refuse to launch on anything but
 evidence, so it needs to know exactly what kind of evidence this suite is.
+
+> **The count was removed from this title on 2026-08-30, and the document was
+> disagreeing with itself.** The title said *1,381 passing tests* while the
+> section below said *1,346*, and the live figure was **1,511** — three numbers,
+> one document, none of them checked. A title reads as a current claim no matter
+> how old the file is.
+>
+> That is the same failure this file argues against two screens down: the count
+> is not the evidence. It is now stated nowhere in this document as a current
+> fact. The live figure lives in `docs/frontend/gate-certification.md`, against a
+> named SHA, produced by `tool/certify.sh`; the figures kept below are dated
+> history and are labelled as such.
 
 ## What is proven
 
@@ -105,11 +117,15 @@ Specifically absent:
 
 ## The number is not the evidence
 
-1,346 tests is a fact about this repository, not about the platform. The suite
-count **fell** during the wiring phase — from 1,296 to 1,276 — because each TAB
-removed an "absent backend explains itself" test as it replaced the stub that
-test asserted. A count going up is not progress and a count going down is not
+A test count is a fact about this repository, not about the platform. During the
+wiring phase the suite **fell** — from 1,296 to 1,276 — because each TAB removed
+an "absent backend explains itself" test as it replaced the stub that test
+asserted. A count going up is not progress and a count going down is not
 regression; what changed is what is being asserted.
+
+*(Those two figures are historical and stay. The absolute that used to open this
+paragraph did not: it was a snapshot presented as a fact, and it had drifted by
+165 while sitting inside the argument for why the number does not matter.)*
 
 That is the specific failure this programme was created to correct. The original
 build reported release readiness on 1,204 passing tests **while one was failing**,

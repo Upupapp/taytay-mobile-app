@@ -1210,10 +1210,22 @@ the manifest**. A number transcribed into prose has no relationship to the numbe
 from; a number a test derives does. Red-proofed by adding a route and watching the ledger assertion
 go red.
 
-**Not fixed, and named rather than quietly left:** test counts in prose (`1,381`, `1,346`, `1,204`
-across `qa-and-evidence.md` and `launch-dossier.md`) will always drift. They are historical
-statements in dated reports, and the honest answer is that living documents should not assert them
-at all — `gate-certification.md` carries the current figure against a stamped SHA.
+**Followed up on 2026-08-30, and half of that paragraph was wrong.** `launch-dossier.md` is
+**properly stamped** — *"Recorded 18 August 2026 … every figure below was re-measured at decision
+time"* — so its `1,346` is a dated measurement, not drift. Calling it stale was a misreading of a
+document that had done the right thing.
+
+`qa-and-evidence.md` was the real problem, and worse than "stale": **it disagreed with itself.**
+The title said *1,381 passing tests*, a section below said *1,346*, and the live figure was
+**1,511** — three numbers, one document, none of them checked, and no stamp anywhere. The 1,346 sat
+inside the paragraph arguing that *the count is not the evidence*, having drifted by 165 while
+making that argument.
+
+Fixed by removing the count from the title — a title reads as a current claim however old the file
+is — and from that paragraph, which only ever needed the *direction* of change (1,296 → 1,276) to
+make its point. The historical `1,204` stays: it is a fact about the original build that reported
+readiness while a test was failing, and it must not move. The live figure is stated in exactly one
+place, `gate-certification.md`, against a named SHA.
 
 ### Still not fixed
 
