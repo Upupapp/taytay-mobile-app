@@ -847,4 +847,35 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get serviceCategoryNational => 'Mga serbisyong pambansa';
+
+  @override
+  String uploadRefusedTooLargeUnknown(int limit) {
+    return 'Masyadong malaki ang file na iyon. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Kadalasan ay sapat na maliit ang larawang kinuha sa app na ito.';
+  }
+
+  @override
+  String get intentResumedLikePost => 'Maaari mo nang i-like ang post na ito.';
+
+  @override
+  String get intentResumedCommentOnPost => 'Maaari ka nang magkomento.';
+
+  @override
+  String get intentResumedRegisterForEvent =>
+      'Maaari ka nang magrehistro sa kaganapang ito.';
+
+  @override
+  String get intentResumedSaveService =>
+      'Maaari mo nang i-save ang serbisyong ito.';
+
+  @override
+  String get intentResumedManageNotifications =>
+      'Maaari mo nang pamahalaan ang iyong mga notification.';
+
+  @override
+  String get intentResumedApplyForService =>
+      'Maaari ka nang mag-apply sa serbisyong ito.';
+
+  @override
+  String get intentResumedViewDigitalId =>
+      'Maaari mo nang buksan ang iyong digital ID.';
 }

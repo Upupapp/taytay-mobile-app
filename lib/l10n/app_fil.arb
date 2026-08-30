@@ -238,5 +238,13 @@
   "serviceCategoryKalusugan": "Kalusugan",
   "serviceCategoryTrabaho": "Trabaho",
   "serviceCategoryIds": "Pagkakakilanlan",
-  "serviceCategoryNational": "Mga serbisyong pambansa"
+  "serviceCategoryNational": "Mga serbisyong pambansa",
+  "uploadRefusedTooLargeUnknown": "Masyadong malaki ang file na iyon. Hanggang {limit} MB lang ang tinatanggap ng Taytay LGU. Kadalasan ay sapat na maliit ang larawang kinuha sa app na ito.",
+  "intentResumedLikePost": "Maaari mo nang i-like ang post na ito.",
+  "intentResumedCommentOnPost": "Maaari ka nang magkomento.",
+  "intentResumedRegisterForEvent": "Maaari ka nang magrehistro sa kaganapang ito.",
+  "intentResumedSaveService": "Maaari mo nang i-save ang serbisyong ito.",
+  "intentResumedManageNotifications": "Maaari mo nang pamahalaan ang iyong mga notification.",
+  "intentResumedApplyForService": "Maaari ka nang mag-apply sa serbisyong ito.",
+  "intentResumedViewDigitalId": "Maaari mo nang buksan ang iyong digital ID."
 }

@@ -134,20 +134,32 @@ String localisedResidentMessage(BuildContext context, AppFailure failure) {
 ///
 /// The limit is whatever the server published on this response — never a
 /// constant in this repository. See [UploadPolicy].
+/// [actualBytes] is nullable because the screen does not always have it.
+///
+/// It used to be required, and `requirements_screen.dart` handled that by
+/// rendering the RAW ENGLISH `rejection.residentMessage` whenever the size was
+/// unknown and the localiser otherwise — so the same banner appeared in
+/// Filipino or English depending on whether a size had been captured. Making
+/// the parameter honest is what removes the branch: there is no longer a case
+/// the localiser cannot answer, so no reason for a caller to go around it.
 String localisedDocumentRejection(
   BuildContext context,
   DocumentRejection rejection, {
-  required int actualBytes,
+  required int? actualBytes,
   required UploadPolicy policy,
 }) {
   final strings = AppStrings.of(context);
 
   return switch (rejection) {
     DocumentRejection.empty => strings.uploadRefusedEmpty,
+    DocumentRejection.tooLarge when actualBytes == null =>
+      // The limit is still worth stating; the file's own size is not knowable
+      // here, and inventing a number would be worse than omitting one.
+      strings.uploadRefusedTooLargeUnknown(policy.maxMegabytes),
     DocumentRejection.tooLarge => strings.uploadRefusedTooLarge(
       // Rounded up, and never below 1: a 400 KB file refused by a 0 MB policy
       // would otherwise read as "that file is 0 MB".
-      (actualBytes / (1024 * 1024)).ceil().clamp(1, 1 << 30),
+      (actualBytes! / (1024 * 1024)).ceil().clamp(1, 1 << 30),
       policy.maxMegabytes,
     ),
     DocumentRejection.unsupportedType => strings.uploadRefusedType,
@@ -649,5 +661,33 @@ String serviceCategoryLabel(BuildContext context, ServiceCategory category) {
     ServiceCategory.trabaho => strings.serviceCategoryTrabaho,
     ServiceCategory.ids => strings.serviceCategoryIds,
     ServiceCategory.national => strings.serviceCategoryNational,
+  };
+}
+
+/// What a resident is told after a gate they have just satisfied.
+///
+/// ## Found by type resolution, not by reading
+///
+/// `intent_resumer.dart:78` said `'You can now ${intent.kind.description}.'` —
+/// an English sentence with an English enum fragment interpolated into it, the
+/// same shape as the gate sheets before they were fixed, in a third place
+/// nobody had found. The regex guard could not see it: `intent.kind` is a
+/// property access whose type is never written down, and guessing types from
+/// names is what the guard deliberately refuses to do.
+///
+/// It took the analyzer, with real type information, to find it. That is the
+/// argument for `test/core/typed_render_test.dart` in one line.
+String intentResumedMessage(BuildContext context, ResidentIntentKind intent) {
+  final strings = AppStrings.of(context);
+  return switch (intent) {
+    ResidentIntentKind.likePost => strings.intentResumedLikePost,
+    ResidentIntentKind.commentOnPost => strings.intentResumedCommentOnPost,
+    ResidentIntentKind.registerForEvent =>
+      strings.intentResumedRegisterForEvent,
+    ResidentIntentKind.saveService => strings.intentResumedSaveService,
+    ResidentIntentKind.manageNotifications =>
+      strings.intentResumedManageNotifications,
+    ResidentIntentKind.applyForService => strings.intentResumedApplyForService,
+    ResidentIntentKind.viewDigitalId => strings.intentResumedViewDigitalId,
   };
 }

@@ -182,6 +182,28 @@ dev_dependencies:
   # channels and no network access. Deliberately a dev dependency: it is never
   # linked into the shipped app.
   crypto: ^3.0.7
+  # Test-only, and the reason is a defect it found on its first run.
+  #
+  # Three guards already watched resident-facing enum copy: one checks every
+  # copy-bearing enum is classified, one checks every .arb key is translated,
+  # one checks screens call the localiser. All three are regex over source, and
+  # `test/core/raw_enum_render_test.dart` states its own limit plainly — it sees
+  # a copy field read from a variable whose type is WRITTEN DOWN, and cannot see
+  # `final stage = _status?.stage;` then `stage.label`. Guessing a type from a
+  # variable's name is what produced a discarded thirty-file scan earlier in
+  # this programme.
+  #
+  # `tool/check_typed_renders.dart` resolves real types instead, and found two
+  # live defects immediately: a banner rendering in Filipino or English
+  # depending on whether a file size had been captured, and an English sentence
+  # with an English enum fragment interpolated into it — the exact shape fixed
+  # in the gate sheets days earlier, in a third place nobody had found.
+  #
+  # Dart-team maintained, pure Dart, no platform channels and no network access.
+  # A dev dependency only: it is never linked into the shipped app, and it runs
+  # from `tool/certify.sh` rather than from `flutter test`, where the analyzer
+  # cannot locate the Dart SDK.
+  analyzer: ^14.1.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

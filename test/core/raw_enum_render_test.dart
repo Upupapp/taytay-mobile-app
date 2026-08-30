@@ -57,6 +57,19 @@ void main() {
     'ResidentCapability',
     'ResidentIntentKind',
     'DocumentSource',
+    // ADDED 2026-08-30, and they should have been here hours earlier. All six
+    // were localised the same day and added to `localised` in
+    // `resident_copy_localisation_test.dart` — and not here, so this guard was
+    // watching NINE OF FIFTEEN enums while reporting clean. Nothing noticed
+    // until `tool/check_typed_renders.dart` arrived with its own copy of the
+    // list and the two were compared. A guard that silently narrows is worse
+    // than one that was never written, because its green is believed.
+    'ServiceCategory',
+    'HouseholdCorrectionKind',
+    'HouseholdRole',
+    'ReportReason',
+    'NotificationCategory',
+    'InboxGroup',
   };
 
   /// Field names that hold copy a resident could read.
@@ -169,6 +182,33 @@ void main() {
     ).allMatches(sample).map((m) => m.group(1)!).toSet();
     expect(names, contains('s'));
     expect(RegExp(r'\bs\??\.(label)\b').hasMatch(sample), isTrue);
+  });
+
+  test('the typed guard watches the same enums this file does', () {
+    // `tool/check_typed_renders.dart` keeps its own copy of the localised-enum
+    // list, because it runs under `dart run` and cannot import a test. Two
+    // hand-maintained lists of the same thing is how one of them goes stale and
+    // quietly starts watching less than its name says — so they are compared
+    // here rather than trusted to stay in step.
+    final String typed = File(
+      'tool/check_typed_renders.dart',
+    ).readAsStringSync();
+    final String block = typed.substring(
+      typed.indexOf('const Set<String> localisedEnums'),
+      typed.indexOf('};', typed.indexOf('const Set<String> localisedEnums')),
+    );
+    final Set<String> theirs = RegExp(
+      r"'(\w+)'",
+    ).allMatches(block).map((RegExpMatch m) => m.group(1)!).toSet();
+
+    expect(
+      theirs,
+      localisedEnums,
+      reason:
+          'tool/check_typed_renders.dart and this file disagree about which '
+          'enums are localised. The type-aware guard is the one with real type '
+          'information; a stale list there is the more expensive mistake.',
+    );
   });
 
   test('no screen renders a wire value as copy', () {

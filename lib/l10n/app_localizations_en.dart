@@ -838,4 +838,33 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get serviceCategoryNational => 'National services';
+
+  @override
+  String uploadRefusedTooLargeUnknown(int limit) {
+    return 'That file is too large. Taytay LGU accepts up to $limit MB. A photo taken in this app is usually small enough.';
+  }
+
+  @override
+  String get intentResumedLikePost => 'You can now like this post.';
+
+  @override
+  String get intentResumedCommentOnPost => 'You can now comment.';
+
+  @override
+  String get intentResumedRegisterForEvent =>
+      'You can now register for this event.';
+
+  @override
+  String get intentResumedSaveService => 'You can now save this service.';
+
+  @override
+  String get intentResumedManageNotifications =>
+      'You can now manage your notifications.';
+
+  @override
+  String get intentResumedApplyForService =>
+      'You can now apply for this service.';
+
+  @override
+  String get intentResumedViewDigitalId => 'You can now open your digital ID.';
 }

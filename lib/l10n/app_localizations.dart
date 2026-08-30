@@ -1531,6 +1531,54 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'National services'**
   String get serviceCategoryNational;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'That file is too large. Taytay LGU accepts up to {limit} MB. A photo taken in this app is usually small enough.'**
+  String uploadRefusedTooLargeUnknown(int limit);
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now like this post.'**
+  String get intentResumedLikePost;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now comment.'**
+  String get intentResumedCommentOnPost;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now register for this event.'**
+  String get intentResumedRegisterForEvent;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now save this service.'**
+  String get intentResumedSaveService;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now manage your notifications.'**
+  String get intentResumedManageNotifications;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now apply for this service.'**
+  String get intentResumedApplyForService;
+
+  /// Resident-facing copy.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now open your digital ID.'**
+  String get intentResumedViewDigitalId;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

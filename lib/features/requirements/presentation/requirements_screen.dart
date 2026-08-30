@@ -448,14 +448,12 @@ class _ChooseStage extends StatelessWidget {
           AppBanner(
             tone: BannerTone.error,
             title: AppStrings.of(context).uploadRefusedTitle,
-            message: refusedSize == null
-                ? rejection.residentMessage
-                : localisedDocumentRejection(
-                    context,
-                    rejection,
-                    actualBytes: refusedSize,
-                    policy: policy,
-                  ),
+            message: localisedDocumentRejection(
+              context,
+              rejection,
+              actualBytes: refusedSize,
+              policy: policy,
+            ),
           ),
           const SizedBox(height: Spacing.lg),
         ],

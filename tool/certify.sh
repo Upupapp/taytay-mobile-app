@@ -149,6 +149,18 @@ else
   echo "  backend source: raw.githubusercontent at the pinned tag"
 fi
 
+# The type-aware render guard. A `dart run` rather than a shell script: inside
+# `flutter test` the analyzer cannot find the Dart SDK, so this is the only
+# place it runs. It resolves the whole of lib/ and costs about eight seconds.
+set +e
+typed="$(dart run tool/check_typed_renders.dart 2>&1)"; typed_code=$?
+set -e
+case $typed_code in
+  0) row "\`check_typed_renders.dart\`" "$(printf '%s' "$typed" | grep '^OK:' | sed 's/^OK: //')" ;;
+  1) row "\`check_typed_renders.dart\`" "**FAILED**" ; printf '%s\n' "$typed" | tail -8 >&2 ; fail=1 ;;
+  *) row "\`check_typed_renders.dart\`" "**could not run**" ; printf '%s\n' "$typed" | tail -8 >&2 ; exit 2 ;;
+esac
+
 for guard in check_backend_baseline check_backend_routes check_correctable_fields; do
   set +e
   out="$(bash "tool/$guard.sh" 2>&1)"; code=$?

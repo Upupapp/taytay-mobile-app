@@ -987,5 +987,42 @@
   "serviceCategoryNational": "National services",
   "@serviceCategoryNational": {
     "description": "Service category name shown to residents."
+  },
+  "uploadRefusedTooLargeUnknown": "That file is too large. Taytay LGU accepts up to {limit} MB. A photo taken in this app is usually small enough.",
+  "@uploadRefusedTooLargeUnknown": {
+    "description": "Resident-facing copy.",
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "intentResumedLikePost": "You can now like this post.",
+  "@intentResumedLikePost": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedCommentOnPost": "You can now comment.",
+  "@intentResumedCommentOnPost": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedRegisterForEvent": "You can now register for this event.",
+  "@intentResumedRegisterForEvent": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedSaveService": "You can now save this service.",
+  "@intentResumedSaveService": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedManageNotifications": "You can now manage your notifications.",
+  "@intentResumedManageNotifications": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedApplyForService": "You can now apply for this service.",
+  "@intentResumedApplyForService": {
+    "description": "Resident-facing copy."
+  },
+  "intentResumedViewDigitalId": "You can now open your digital ID.",
+  "@intentResumedViewDigitalId": {
+    "description": "Resident-facing copy."
   }
 }

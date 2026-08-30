@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_dependencies.dart';
+import '../../core/l10n/app_locales.dart';
 import 'outcome_feedback.dart';
 
 /// Resumes what a resident was doing, once the session can support it.
@@ -75,7 +76,7 @@ class _IntentResumerState extends State<IntentResumer> {
 
     // No screen for this intent yet. Confirm rather than navigate, so the
     // resident learns the gate is behind them.
-    Outcome.succeeded(context, 'You can now ${intent.kind.description}.');
+    Outcome.succeeded(context, intentResumedMessage(context, intent.kind));
   }
 
   @override

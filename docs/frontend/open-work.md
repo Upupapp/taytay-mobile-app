@@ -1227,6 +1227,39 @@ make its point. The historical `1,204` stays: it is a fact about the original bu
 readiness while a test was failing, and it must not move. The live figure is stated in exactly one
 place, `gate-certification.md`, against a named SHA.
 
+### The last hole in the copy guards, closed with real types (2026-08-30)
+
+`raw_enum_render_test.dart` stated its own limit: it sees a copy field read from a variable whose
+type is **written down**, and cannot see `final stage = _status?.stage;` then `stage.label`.
+`tool/check_typed_renders.dart` resolves real types with `package:analyzer`, and **found two live
+defects on its first run**:
+
+* **`requirements_screen.dart:452`** rendered the raw English `rejection.residentMessage` when the
+  refused file's size was unknown, and the localiser otherwise — **the same banner in Filipino or
+  English depending on whether a size had been captured.** Fixed by making `actualBytes` nullable,
+  which removes the case the localiser could not answer and so removes the caller's reason to go
+  around it.
+* **`intent_resumer.dart:78`** said `'You can now ${intent.kind.description}.'` — an English
+  sentence with an English enum fragment interpolated, the **exact shape fixed in the gate sheets
+  days earlier**, in a third place nobody had found. `intent.kind` is a property access whose type
+  is never written down.
+
+**Then it found that my own guard had gone stale within hours.** The typed guard keeps its own copy
+of the localised-enum list, so the two are compared by a test — which failed immediately:
+`raw_enum_render_test.dart` was watching **nine of fifteen** enums. The six localised earlier the
+same day were added to `localised` in the classification guard and never here, so the render guard
+reported clean while watching 60% of what its name implied. **A guard that silently narrows is
+worse than one never written, because its green is believed.**
+
+**And the typed guard itself shipped a false PASS, caught only by checking an exit code.**
+`Future<int> main()` does **not** set Dart's exit code. The first version printed `FAIL`, named the
+offending line, and exited **0** — `certify.sh` would have recorded a pass. The output looked
+right; only the red-proof's `echo $?` disagreed. A false OK in the guard written to catch false OKs.
+
+It is a `dart run` from `tool/certify.sh`, not a test: inside `flutter test` the analyzer cannot
+locate the Dart SDK. That trade is stated in the file rather than left to be discovered — it does
+not run on a bare `flutter test`.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
