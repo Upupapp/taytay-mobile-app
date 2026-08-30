@@ -1082,8 +1082,33 @@ staying quiet, and the throwaway certificate. **The no-Java branch is NOT red-pr
 Studio is installed, so the fallback always succeeds and that branch is unreachable here. It is
 reasoned, not demonstrated, and the script says so.
 
-**The gate is still red, correctly:** the local release APK cannot be published. That is now a true
-statement about the artifact instead of a false one about its signature.
+**Then two corrections to that same fix, within the hour.**
+
+**1. My own NOT PROVEN message handed over the wrong value to copy.** It printed the observed
+fingerprint and said "set it to this once that is known to be the real release certificate" — on
+the only artifact here, that invites pinning `CN=THROWAWAY DO NOT USE` as the production key.
+`docs/integration/release-engineering.md` is explicit that the production key is **the LGU's to
+hold** and "a keystore generated here would be a credential in the wrong hands from the moment it
+existed". There is no `android/key.properties` and no keystore on this machine, so the fingerprint
+cannot come from here at all. The message now says that instead of offering a value. A gate that
+hands you the wrong thing to copy is worse than one that stays quiet.
+
+**2. The gate was reporting on a stale artifact as though it described the code.** That, more than
+the Java fault, is why it sat ignored: every artifact in `build/` dates from 18 August. Three of the
+four release APKs are signed with the **Android debug key**, which reads as F03 unfixed — they were
+built at 15:47 and the F03 fix landed in `3de3f80` at 16:12 the same day. **They are stale, not
+evidence, and F03 is not reopened.** The gate now compares the artifact against
+`android/app/build.gradle.kts` and exits 3 (NOT PROVEN) rather than pass or fail, because a finding
+about a nine-day-old build output is not a finding about this repository.
+
+The final line is no longer a bare `OK` when the signer was not verified: it says `OK (PARTIAL)`
+and points at the note. Saying only the half that passed is how a gate comes to mean less than its
+reader thinks.
+
+**Current state: exit 3, NOT PROVEN — stale artifact.** Rebuild with
+`flutter build apk --release --dart-define=TAYTAY_ENV=prod` to get a real answer. Red-proofed by
+touching copies: a fresh throwaway-signed artifact fails on the certificate, a fresh debug-signed
+one fails on the key, and neither is called stale.
 
 ### Still not fixed
 

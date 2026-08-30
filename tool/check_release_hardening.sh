@@ -32,6 +32,26 @@ if [ -z "$AAPT" ]; then
 fi
 
 echo "Reading $(basename "$APK")"
+
+# IS THIS ARTIFACT EVEN CURRENT?
+#
+# The reason this gate went ignored for eleven days is not only that it was
+# wrong — it is that it was reporting on a build output from 18 August as
+# though it described the code. Three of the release APKs sitting in this tree
+# are signed with the debug key, which reads as F03 unfixed; they were built at
+# 15:47 and the fix landed at 16:12 the same day. They are stale, not evidence.
+#
+# A gate that reads a stale artifact and says nothing about its age invites
+# exactly that misreading, so it says something now.
+CONFIG="$REPO_ROOT/android/app/build.gradle.kts"
+if [ -f "$CONFIG" ] && [ "$CONFIG" -nt "$APK" ]; then
+  echo "STALE: this artifact is older than android/app/build.gradle.kts." >&2
+  echo "       It was built before the current signing configuration existed," >&2
+  echo "       so anything below describes an old build, not this code." >&2
+  echo "       Rebuild before believing the result:" >&2
+  echo "         flutter build apk --release --dart-define=TAYTAY_ENV=prod" >&2
+  stale=1
+fi
 DUMP="$("$AAPT" dump badging "$APK" 2>/dev/null || true)"
 MANIFEST="$("$AAPT" dump xmltree --file AndroidManifest.xml "$APK" 2>/dev/null || true)"
 
@@ -168,12 +188,27 @@ else
       fail=1
     fi
   else
+    # CORRECTED within the hour it was written. The first version of this
+    # message printed the observed fingerprint and said "set it to this once
+    # that is known to be the real release certificate" — which, on the only
+    # artifact anybody has here, invites pinning
+    # `CN=THROWAWAY DO NOT USE` as the production key. A gate that hands you
+    # the wrong value to copy is worse than one that stays quiet.
+    #
+    # docs/integration/release-engineering.md is explicit: the production key
+    # is the LGU's to hold, and "a keystore generated here would be a
+    # credential in the wrong hands from the moment it existed". So the
+    # fingerprint cannot come from this machine at all, and the message says
+    # that instead of offering one.
+    unproven=1
     echo "NOT PROVEN: signer identity is unchecked." >&2
     echo "            TAYTAY_RELEASE_CERT_SHA256 is unset, so this run can only" >&2
-    echo "            reject signers it recognises as bad — it cannot confirm" >&2
-    echo "            the artifact carries the RIGHT key. Set it to:" >&2
-    echo "            $ACTUAL_SHA" >&2
-    echo "            once that is known to be the real release certificate." >&2
+    echo "            reject signers it recognises as bad. It cannot confirm the" >&2
+    echo "            artifact carries the RIGHT key." >&2
+    echo "            The value must come from the LGU's production keystore," >&2
+    echo "            which is not on this machine and must not be generated" >&2
+    echo "            here — see docs/integration/release-engineering.md." >&2
+    echo "            Observed on this artifact (NOT a value to pin): $ACTUAL_SHA" >&2
   fi
 fi
 
@@ -185,4 +220,19 @@ if unzip -p "$APK" 'assets/flutter_assets/*' 2>/dev/null | \
   fail=1
 fi
 
-[ $fail -eq 0 ] && echo "OK: release hardening holds on the artifact." || exit 1
+if [ "${stale:-0}" -ne 0 ]; then
+  # A finding about a stale artifact is not a finding about this repository.
+  # Reporting it as pass or fail would be a claim the evidence cannot support.
+  echo "NOT PROVEN: the artifact is stale — see the STALE note above." >&2
+  exit 3
+elif [ $fail -ne 0 ]; then
+  exit 1
+elif [ "${unproven:-0}" -ne 0 ]; then
+  # Not a bare OK. Everything checked passed, and one thing was not checked;
+  # saying only the first half is how a gate comes to mean less than its reader
+  # thinks it does.
+  echo "OK (PARTIAL): every check that could run passed, but signer identity"
+  echo "              was not verified. See the NOT PROVEN note above."
+else
+  echo "OK: release hardening holds on the artifact."
+fi
