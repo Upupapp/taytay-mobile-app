@@ -32,6 +32,35 @@ that produces no output (exit 2, the floor), and the real run below (exit 3).
 
 ---
 
+## `3088112` — 2026-08-30
+
+Produced by `tool/certify.sh`. Exit 3 — certified with gaps.
+
+| Gate | Result |
+|---|---|
+| `dart format` | **clean** |
+| `flutter analyze` | **clean** |
+| `flutter test` | **1,511 passing** |
+| `tool/check_backend_baseline.sh` | 17 modules agree at `api-baseline-2026-08` |
+| `tool/check_backend_routes.sh` | 52 declared, 48 served, 4 recorded ahead (C-09) |
+| `tool/check_correctable_fields.sh` | 12 correctable fields agree |
+| `tool/check_fixture_drift.sh` | **SKIP (exit 3)** — `TAYTAY_STAGING` unset |
+| `tool/check_release_hardening.sh` | **SKIP (exit 3)** — no artifact in a clean tree |
+
+The first run in which `certify.sh` gated a commit containing its own formatting gate.
+
+### The one-commit lag is structural, not drift
+
+**The newest entry here always names the commit *before* the one that records it.** Writing a
+certification changes the tree, so the commit carrying this table cannot be the commit the table
+describes. That is arithmetic, not staleness.
+
+It matters because this file is now exposed to exactly the failure it was written to catch. The
+C-09 route counts sat wrong in `open-work.md` for days while a later section of the same file
+carried the right number, and nothing noticed. So: **a certification is a statement about a named
+SHA and about nothing else.** If HEAD is not that SHA, the honest reading is "not certified yet",
+never "probably still fine" — re-run `tool/certify.sh` rather than assume.
+
 ## `56b466b` — 2026-08-30
 
 Produced by `tool/certify.sh`. Exit 3 — certified with gaps.
