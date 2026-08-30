@@ -8,6 +8,28 @@ that HEAD does not. A gate can pass because of something that is not committed.
 So the gates are run from a **detached worktree at a named SHA**, and the SHA is stamped here.
 A certification without a SHA certifies nothing.
 
+**Run `tool/certify.sh [ref]`.** The first certification below was done by hand and left as a
+procedure only its author knew — which is how most of this week's findings came to exist: a rule
+stated in a document and enforced by nobody. The script creates the worktree outside the repository
+(a worktree *inside* it would be picked up by the very scans being certified — `Directory('lib')`
+does not know it is looking at a copy of itself), resolves dependencies from the committed
+`pubspec.lock`, runs every gate, prints the table below ready to paste, and removes the worktree on
+any exit.
+
+It distinguishes **four** outcomes, because collapsing them is the defect this repository kept
+finding in its own gates:
+
+| exit | meaning |
+|---|---|
+| 0 | certified — every gate ran and passed |
+| 1 | a gate ran and **failed** |
+| 2 | a gate **could not run** — nothing is claimed either way |
+| 3 | certified, with gates that honestly skipped (**NOT PROVEN**) |
+
+*Could not look* is not *looked and found nothing*, and neither is a pass. All four paths are
+red-proofed: a commit with a failing test (exit 1), a ref that is not a commit (exit 2), a suite
+that produces no output (exit 2, the floor), and the real run below (exit 3).
+
 ---
 
 ## `8039245` — 2026-08-29
