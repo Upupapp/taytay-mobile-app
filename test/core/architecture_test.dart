@@ -186,5 +186,32 @@ void main() {
       reason:
           'The wire format escaped the data layer:\n${offenders.join('\n')}',
     );
+
+    // AND THE OTHER DIRECTION, added 2026-08-30 after an audit of every
+    // hand-maintained list in this suite.
+    //
+    // `decodeBoundaries` is an EXEMPTION list: each entry permits a file to do
+    // the thing this rule forbids. Without a staleness check an entry outlives
+    // its reason — the file stops carrying a wire type, nothing notices, and
+    // the exemption sits there permanently widening what is allowed. That is
+    // how `raw_enum_render_test.dart` came to watch nine of fifteen enums
+    // while reporting clean.
+    final List<String> unnecessary = <String>[
+      for (final String path in decodeBoundaries.keys)
+        if (!File(path).existsSync() ||
+            !File(path)
+                .readAsLinesSync()
+                .where((String l) => !l.trimLeft().startsWith('//'))
+                .any((String l) => l.contains('Map<String, dynamic>')))
+          path,
+    ];
+    expect(
+      unnecessary,
+      isEmpty,
+      reason:
+          'These are exempted from Article 2.4 and no longer need to be — the '
+          'file is gone, or no longer names a wire type. Remove them, so the '
+          'list keeps shrinking: ${unnecessary.join(', ')}',
+    );
   });
 }

@@ -1260,6 +1260,39 @@ It is a `dart run` from `tool/certify.sh`, not a test: inside `flutter test` the
 locate the Dart SDK. That trade is stated in the file rather than left to be discovered — it does
 not run on a bare `flutter test`.
 
+### Auditing every hand-maintained list in the suite (2026-08-30)
+
+`raw_enum_render_test.dart` was found watching **nine of fifteen** enums while reporting clean. That
+is not a bug in one file; it is a property of any list a human maintains, so every list in the suite
+was checked for the same shape. The dangerous kind is an **exemption list** — entries that permit
+something the rule forbids — because an entry outliving its reason silently widens what is allowed.
+
+| List | Kind | Before |
+|---|---|---|
+| `identicalOnPurpose` | exemption | shrink-checked |
+| `knownUntranslated` | exemption | shrink-checked |
+| `knownLiteralErrors` | exemption | union-checked |
+| `routesAheadOfBaseline` | exemption | asserted exactly |
+| `decodeBoundaries` | exemption | **nothing** |
+| `copyFields` ×3 | detection | **nothing** |
+
+**Two gaps, both now closed and red-proofed.**
+
+`decodeBoundaries` in `architecture_test.dart` exempts files from Article 2.4. Nothing checked that
+an exempted file still *needs* the exemption, so an entry would outlive the wire type it was granted
+for and permanently widen the rule. It now fails when a listed file is gone or no longer names a
+`Map<String, dynamic>`.
+
+`copyFields` exists in **three** places — this suite twice and `tool/check_typed_renders.dart` once,
+none able to import the others because one runs under `dart run`. They were identical, and nothing
+kept them that way: precisely the state `localisedEnums` was in the morning it turned out to be
+watching 60% of its own name. They are compared now.
+
+**Not closed, and named:** `recencyLabels` in `date_dependence_test.dart` is a *detection* list — a
+recency word nobody thought of ("Last week", "Just now") is simply not detected. That cannot be
+solved by cross-checking two lists, because there is no second list to check against. It is a floor,
+like the typed guard's, and saying so is better than pretending the enumeration is complete.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files

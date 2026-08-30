@@ -184,6 +184,41 @@ void main() {
     expect(RegExp(r'\bs\??\.(label)\b').hasMatch(sample), isTrue);
   });
 
+  test('the three copy-field lists have not drifted apart', () {
+    // `copyFields` exists in THREE places: here, in
+    // resident_copy_localisation_test.dart, and in
+    // tool/check_typed_renders.dart. None can import the others — one is a
+    // tool run under `dart run`, and tests do not export.
+    //
+    // They are identical today and nothing kept them that way. That is exactly
+    // the state `localisedEnums` was in on 2026-08-30, when this guard turned
+    // out to be watching nine of fifteen enums while reporting clean. A list
+    // that can silently narrow will.
+    Set<String> listIn(String path, String marker) {
+      final String source = File(path).readAsStringSync();
+      final int start = source.indexOf(marker);
+      expect(
+        start,
+        isNot(-1),
+        reason: '$marker no longer appears in $path — this check is blind.',
+      );
+      final String block = source.substring(start, source.indexOf('};', start));
+      return RegExp(
+        r"'(\w+)'",
+      ).allMatches(block).map((RegExpMatch m) => m.group(1)!).toSet();
+    }
+
+    const String marker = 'const Set<String> copyFields';
+    final Set<String> classifier = listIn(
+      'test/core/resident_copy_localisation_test.dart',
+      marker,
+    );
+    final Set<String> typed = listIn('tool/check_typed_renders.dart', marker);
+
+    expect(classifier, copyFields, reason: 'classification guard has drifted');
+    expect(typed, copyFields, reason: 'typed guard has drifted');
+  });
+
   test('the typed guard watches the same enums this file does', () {
     // `tool/check_typed_renders.dart` keeps its own copy of the localised-enum
     // list, because it runs under `dart run` and cannot import a test. Two
