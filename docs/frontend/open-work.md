@@ -1110,6 +1110,45 @@ reader thinks.
 touching copies: a fresh throwaway-signed artifact fails on the certificate, a fresh debug-signed
 one fails on the key, and neither is called stale.
 
+### The gate sweep: two false-PASS faults, and two regressions I nearly shipped fixing them (2026-08-29)
+
+After `check_release_hardening` turned out to be confidently wrong for eleven days, the other five
+scripts in `tool/` were swept for the same idiom — a tool error swallowed by `2>/dev/null || true`
+and reported as a finding, or as nothing at all.
+
+**The three cross-repo guards were already sound.** Each has a "parsed to nothing" floor. Nothing
+to do, and worth recording as a measurement rather than an assumption.
+
+**Two genuine false-PASS faults, which are worse than the false-FAIL that started this.** A false
+FAIL gets investigated; a false OK gets believed.
+
+* `check_release_hardening.sh` read the manifest with `aapt2 … 2>/dev/null || true`. If aapt2 ever
+  failed, `DUMP` and `MANIFEST` came back empty, the cleartext greps matched nothing and passed, and
+  the permission loop iterated an empty list and passed — **a silent OK on an artifact nobody
+  managed to open.** aapt2 is native and works here, so it never fired; *never fired* and *cannot
+  fire* are different claims. Now floored on a real badging dump.
+* `check_fixture_drift.sh` computed both sides as `jq … || echo '{}'`. An unparseable fixture gave
+  `{}`, an unparseable reply gave `{}`, and `{}` equals `{}` — so it printed
+  **"OK: N fixtures still match staging" having compared nothing to nothing.** No sentinels now: a
+  side that cannot be read is an error.
+
+**Two regressions I nearly shipped while hardening.** Both came from inferring a defect from a
+pattern without checking how the thing is used, which is the mistake this whole week has been about.
+
+* I added `curl -f` so HTTP errors would fail. **Three fixtures are deliberate error envelopes** —
+  `me` and `newsfeed` at 401, `no-such-endpoint` at 404 — because the shape of `error.code` and
+  `request_id` is part of the contract, and `golden_fixture_test.dart:226` depends on it. `-f` would
+  have broken drift-checking for three of ten fixtures *while looking stricter*. Replaced with a
+  status comparison: transport failure is fatal, and a **status change is drift** — `me` answering
+  200 where 401 was recorded is a contract change that body-shape comparison alone would miss.
+* I made `record_fixtures.sh` reject non-2xx replies. Same three fixtures; the script's own line
+  reads `capture "me" yes  # 401 when the token is absent or expired`. **Reverted in full.**
+
+**One fault found by red-proofing rather than by reading.** `endpoint="$(jq -r '.endpoint' "$f")"`
+was unguarded, so `set -e` aborted with **exit 1 — which in that script means DRIFT FOUND** — and
+printed only jq's parse error. A malformed fixture reported itself as a contract change. It was in
+the line next to the one being proofed, which is the argument for red-proofing.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files

@@ -52,8 +52,36 @@ if [ -f "$CONFIG" ] && [ "$CONFIG" -nt "$APK" ]; then
   echo "         flutter build apk --release --dart-define=TAYTAY_ENV=prod" >&2
   stale=1
 fi
-DUMP="$("$AAPT" dump badging "$APK" 2>/dev/null || true)"
-MANIFEST="$("$AAPT" dump xmltree --file AndroidManifest.xml "$APK" 2>/dev/null || true)"
+AAPT_ERR="$(mktemp)"
+DUMP="$("$AAPT" dump badging "$APK" 2>"$AAPT_ERR" || true)"
+MANIFEST="$("$AAPT" dump xmltree --file AndroidManifest.xml "$APK" 2>>"$AAPT_ERR" || true)"
+
+# THE SAME FAULT THAT BROKE THE SIGNATURE CHECK, one layer up — and this one
+# fails the other way, which is worse.
+#
+# If aapt2 cannot read the APK, DUMP and MANIFEST come back empty and every
+# check below finds nothing: the cleartext greps match nothing and pass, and the
+# permission loop iterates an empty list and passes. A silent OK on an artifact
+# nobody managed to open. aapt2 is a native binary and works on this machine, so
+# this has never fired — "has never fired" and "cannot fire" are different
+# claims, and only one of them was true.
+if [ -z "$DUMP" ] || [ -z "$MANIFEST" ]; then
+  echo "FAIL: aapt2 read nothing from the artifact." >&2
+  echo "      This is NOT a statement about the APK's contents — nothing was" >&2
+  echo "      inspected. Every check below would have passed on an empty read." >&2
+  echo "      aapt2 said:" >&2
+  sed 's/^/        /' "$AAPT_ERR" >&2
+  rm -f "$AAPT_ERR"
+  exit 2
+fi
+# And a floor: a real badging dump always names the package.
+if ! echo "$DUMP" | grep -q "^package: name="; then
+  echo "FAIL: aapt2 produced output that is not a badging dump." >&2
+  echo "      The parser below would read nothing from it and pass." >&2
+  rm -f "$AAPT_ERR"
+  exit 2
+fi
+rm -f "$AAPT_ERR"
 
 fail=0
 
