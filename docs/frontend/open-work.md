@@ -977,7 +977,22 @@ as every other finding this week, in a different disguise.
 
 `test/features/verification_dead_sections_test.dart` now holds the gap open: it documents the
 decode and ratchets on any client-side producer appearing, at which point `VerificationItemCategory`
-needs localising. **It does not detect the server growing the field** — the decoder allow-lists its
+needs localising.
+
+**Handed off 2026-08-29.** Written up in `docs/integration/backend-baseline.md` under
+*C-14*, with an owner, alongside the two genuine module gaps — that file is where findings closable
+by code belong, per `manual-tasks.md`'s own rule. The request is grounded in the server's schema
+rather than in what the client wishes existed: `kyc_cases.claimed_*` and `kyc_documents.document_type`
+already carry everything `submitted_categories` needs, so it is a projection change, not a schema
+question. Two things are deliberately left to the backend to decide — the **wire vocabulary** (the
+client's enum has English labels and no wire values, and guessing them here would fork the contract)
+and whether a `contact` category exists at all, since `kyc_cases` has no contact column and that
+member may be the client's invention.
+
+`issues` was **not** requested as a field. The server stores `review_note` per *document* and one
+`applicant_message` per case; the client's list wants per-*field* items. That is a design decision
+somebody has to make, not a value to publish, and the client is not blocked on it — `message`
+renders today. **It does not detect the server growing the field** — the decoder allow-lists its
 keys and walks past unknown ones by design. That is `check_fixture_drift.sh`'s job, and that guard
 is unproven while `TAYTAY_STAGING` is unset. Stated because the first draft of the test claimed
 otherwise and red-proofing caught it.

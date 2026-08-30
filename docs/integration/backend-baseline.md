@@ -117,6 +117,81 @@ kalusugan, trabaho, national referrals — their state machines and attachments.
 * **Note:** three of this app's repositories were filed under this module and none of them
   belongs to it. See F17.
 
+## C-14 — two live screens depend on fields the applicant projection does not serve
+
+**Owner: backend. Raised by the client on 2026-08-29. Closable by code, which is why it is
+here and not in `manual-tasks.md`.**
+
+### What is broken, from a resident's side
+
+`verification_screen.dart` draws two sections that **render on no device**:
+
+* the card headed *"What Taytay LGU has from you"* (`:370`), from `status.submittedCategories`
+* the corrections list (`:466`), from `status.issues`
+
+Both sit behind an `isNotEmpty` check that is always false, because nothing populates either
+list. A resident who has submitted a verification case is shown nothing about what the LGU
+holds, and a resident asked to correct something sees only the free-text `message`.
+
+### The evidence
+
+`KycController::applicantProjection()` at `api-baseline-2026-08` returns exactly seven things:
+
+```
+id · status · can_edit · submitted_at · message · claimed{…} · resident_id
+```
+
+No category list and no issue list. **This is not a client decoder gap** —
+`_decodeDetail` in `kyc_api_repository.dart` reads every field that arrives, and
+`test/features/verification_dead_sections_test.dart` holds the gap open and ratchets the day a
+client-side producer appears.
+
+### What NOT to do
+
+**Do not point the client at `claimed`.** It carries the resident's actual submitted *values*
+— names, birth date — whereas `submittedCategories` is a privacy-safe summary of the *kinds*
+of information held. Filling that card from `claimed` converts a category summary into a
+re-display of personal data under the same heading: a more exposing feature wearing the same
+title. The client has already considered and rejected this.
+
+### What is being asked for — `submitted_categories`
+
+A list of the kinds of information this case holds. **The server already has everything needed
+to compute it**, which is why this is a small change rather than a schema question:
+
+| category | already derivable from |
+|---|---|
+| personal details | `kyc_cases.claimed_first_name` / `claimed_last_name` / `claimed_birth_date` — always present once a case exists |
+| address | `kyc_cases.claimed_barangay_id` + `claimed_street_address` — likewise |
+| identity document | a `kyc_documents` row whose `document_type` is an ID |
+| photo | a `kyc_documents` row whose `document_type` is a portrait |
+
+The client's `VerificationItemCategory` also has a `contact` member. **`kyc_cases` has no
+contact column**, so unless a case does hold a mobile number or email, that member is the
+client's invention and the client should drop it rather than the server invent a category to
+match. Please say which.
+
+**The wire vocabulary is the backend's to choose**, and the client currently has none — its
+enum carries English labels and no wire values. Name the strings and the client will map them;
+do not match the client's constant names by guesswork.
+
+### `issues` — a design question, not a missing field
+
+The client's `issues` list wants **per-field** correction items. The server stores
+`kyc_documents.review_note` with `review_status`, which is **per-document**, plus a single
+`kyc_cases.applicant_message` the client already renders. So this one cannot simply be
+published; somebody has to decide whether corrections are per-field, per-document, or remain
+one free-text message. **The client is not blocked on it** — `message` is rendered today — so
+`submitted_categories` is the useful half to ship first.
+
+### How to know it landed
+
+`tool/check_backend_routes.sh` and the fixture recorder both run against the pinned tag, so
+move the pin and re-record. On the client side
+`test/features/verification_dead_sections_test.dart` turns red the moment the client starts
+decoding either list, which is the prompt to localise `VerificationItemCategory` — it is
+currently excused from translation only because no resident can read it.
+
 ## Findings raised by this re-baseline
 
 The Master Command carries F01–F12. These are additional, found while re-deriving. F13–F16
