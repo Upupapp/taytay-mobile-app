@@ -83,6 +83,33 @@ declare -a ROWS=()
 
 row() { ROWS+=("$1|$2"); }
 
+# --- formatting -----------------------------------------------------------
+# Added 2026-08-30, straight after eight files that had NEVER been formatted
+# were finally formatted. Nothing had kept the tree tidy, and the drift was not
+# harmless: a blanket `dart format` during unrelated work swept those files into
+# two diffs they did not belong in and had to be reverted both times, and the
+# formatter re-wrapping a constructor is the same mechanism that once made the
+# backend-route parser see 37 of 53 routes and pass.
+#
+# `--output=none` so this never edits the worktree it is certifying.
+set +e
+fmt="$(dart format --output=none --set-exit-if-changed lib test 2>&1)"; fmt_code=$?
+set -e
+case $fmt_code in
+  0) row "\`dart format\`" "**clean**" ;;
+  1)
+    row "\`dart format\`" "**FAILED** — $(printf '%s' "$fmt" | grep -c '^Changed') file(s) unformatted"
+    printf '%s\n' "$fmt" | grep '^Changed' >&2
+    fail=1
+    ;;
+  *)
+    # Distinguish "the formatter says no" from "the formatter did not run".
+    echo "FAIL: dart format could not run." >&2
+    printf '%s\n' "$fmt" | tail -10 >&2
+    exit 2
+    ;;
+esac
+
 # --- analyzer -------------------------------------------------------------
 if analyze="$(flutter analyze 2>&1)"; then
   row "flutter analyze" "**clean**"

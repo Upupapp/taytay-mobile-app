@@ -32,6 +32,28 @@ that produces no output (exit 2, the floor), and the real run below (exit 3).
 
 ---
 
+## `56b466b` — 2026-08-30
+
+Produced by `tool/certify.sh`. Exit 3 — certified with gaps.
+
+| Gate | Result |
+|---|---|
+| `dart format` | **clean** |
+| `flutter analyze` | **clean** |
+| `flutter test` | **1,511 passing** |
+| `tool/check_backend_baseline.sh` | 17 modules agree at `api-baseline-2026-08` |
+| `tool/check_backend_routes.sh` | 52 declared, 48 served, 4 recorded ahead (C-09) |
+| `tool/check_correctable_fields.sh` | 12 correctable fields agree |
+| `tool/check_fixture_drift.sh` | **SKIP (exit 3)** — `TAYTAY_STAGING` unset |
+| `tool/check_release_hardening.sh` | **SKIP (exit 3)** — no artifact in a clean tree |
+
+The formatting row is new. It was added the day after eight files that had **never** been
+formatted finally were: nothing had kept the tree tidy, and the drift was not cosmetic — a blanket
+`dart format` during unrelated work swept those files into two diffs they did not belong in, and a
+formatter re-wrapping a constructor is the mechanism that once made the backend-route parser see
+37 of 53 routes and pass. Red-proofed on a throwaway commit with one deliberately mis-spaced line:
+**exit 1, NOT CERTIFIED**, naming the file.
+
 ## `8039245` — 2026-08-29
 
 Worktree: `git worktree add --detach <path> 8039245`, clean on creation (`git status` empty),
