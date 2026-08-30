@@ -1293,6 +1293,33 @@ recency word nobody thought of ("Last week", "Just now") is simply not detected.
 solved by cross-checking two lists, because there is no second list to check against. It is a floor,
 like the typed guard's, and saying so is better than pretending the enumeration is complete.
 
+### The release-hardening gate can never return a verdict here, and that is correct (2026-08-30)
+
+`flutter build apk --release --dart-define=TAYTAY_ENV=prod` was run to turn the hardening gate's
+**SKIP** into an answer. It produced the opposite result, and a better one.
+
+**The build fails, by design:** `SigningConfig "release" is missing required property "storeFile"`.
+That is **F03 proven closed by a build** rather than asserted by a document — the dossier recorded it
+on 18 August and nothing had re-run it since. Twelve days on, the release build still refuses to
+sign itself instead of quietly using the debug key.
+
+**So there is no artifact, and there cannot be one on this machine.** The production keystore is the
+LGU's to hold and must never be generated here. It follows that
+`tool/check_release_hardening.sh` **cannot reach a verdict in this repository at all** — not today,
+not after any amount of work by an agent. Its honest states here are:
+
+* **exit 3, STALE** — what it says now, judging an 18 August artifact
+* **exit 3, SKIP** — what it says in a clean tree, which is what `certify.sh` sees
+
+Both are already correct. **This retires the item rather than leaving "rebuild the APK" on a
+to-do list where it reads as achievable work.** The gate becomes useful the day somebody with the
+keystore builds a signed artifact; until then its skip is the finding.
+
+**Also measured, since a push was involved:** this repository has **no `.github` and no Netlify
+configuration**. A push here triggers nothing. That answers the open question of whether
+`certify.sh` could be wired into CI: there is no CI to wire it into, and creating one is not a
+front-end decision.
+
 ### Still not fixed
 
 * **The repo was not fully formatted at `ce8f54d`.** `dart format lib/ test/` changed 8 files
