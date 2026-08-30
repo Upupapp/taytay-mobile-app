@@ -145,6 +145,39 @@ void main() {
     );
   });
 
+  test('the ledger states the counts this manifest actually has', () {
+    // WHY A TEST ASSERTS PROSE.
+    //
+    // `docs/frontend/open-work.md` said the manifest declared 49 routes and
+    // that C-09 was two routes ahead. It declared 52 and C-09 had been four
+    // since 2026-08-27 — and the same file said "C-09 is now four routes" a few
+    // hundred lines further down. The document contradicted itself about a live
+    // P1, and nothing noticed, because a number transcribed into prose has no
+    // relationship to the number it was copied from.
+    //
+    // So the counts are derived here and the ledger has to contain them. The
+    // ledger is the artefact people read when deciding whether C-09 matters;
+    // being wrong there costs more than being wrong in a comment.
+    final String ledger = File('docs/frontend/open-work.md').readAsStringSync();
+
+    expect(
+      ledger,
+      contains('${backendRoutes.length} declared'),
+      reason:
+          'open-work.md does not state the live declared-route count '
+          '(${backendRoutes.length}). Update it, or the next reader will act on '
+          'a number nothing checks.',
+    );
+    expect(
+      ledger,
+      contains('${routesAheadOfBaseline.length} recorded ahead'),
+      reason:
+          'open-work.md does not state the live C-09 count '
+          '(${routesAheadOfBaseline.length} recorded ahead). C-09 is a live P1; '
+          'a stale figure here is what this guard exists to stop.',
+    );
+  });
+
   test('every exception names a route this app really calls', () {
     final Set<String> phantom = routesAheadOfBaseline.toSet().difference(
       declared,

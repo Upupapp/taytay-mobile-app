@@ -52,10 +52,22 @@ recorded here rather than quietly folded into a neighbouring TAB, and then taken
 **TAB 00A** on the owner's instruction.
 
 **TAB 00A closed C-10 and closed the part of C-09 that a repository can close.** The app can now
-*see* route-level drift — `lib/core/api/backend_routes.dart` declares all 49 routes it calls, a Dart
+*see* route-level drift — `lib/core/api/backend_routes.dart` declares every route it calls, a Dart
 test keeps that declaration honest against the source, and `tool/check_backend_routes.sh` checks
-each one against the pinned baseline. What remains open in C-09 is the resolution: two routes are
-still ahead of the pin, and moving the pin needs the backend repository to be still.
+each one against the pinned baseline. What remains open in C-09 is the resolution: routes are still
+ahead of the pin, and moving the pin needs the backend repository to be still.
+
+> **The counts that used to sit in this paragraph were wrong and contradicted the rest of the
+> file.** It said "all 49 routes" and "two routes are still ahead"; the manifest declares **52** and
+> C-09 has been **four** since 2026-08-27 — which the section at *"C-09 is now four routes"* below
+> already said. A document disagreeing with itself about a live P1 count is worse than one that
+> never gave the number.
+>
+> The counts now live in one place in this file, immediately below, and
+> `test/integration/backend_routes_test.dart` asserts they match the manifest — derived there, not
+> transcribed here. If the manifest changes and this line does not, the suite goes red.
+
+**C-09, current: 52 declared routes, 48 served at the pin, 4 recorded ahead.**
 
 ---
 
@@ -1163,6 +1175,45 @@ pattern without checking how the thing is used, which is the mistake this whole 
 was unguarded, so `set -e` aborted with **exit 1 — which in that script means DRIFT FOUND** — and
 printed only jq's parse error. A malformed fixture reported itself as a contract change. It was in
 the line next to the one being proofed, which is the argument for red-proofing.
+
+### Documentation audit — what nothing was checking (2026-08-29)
+
+Four guards and one constitution clause turned out this week to claim more than was true. The
+documentation had never had the equivalent sweep, so it got one.
+
+**Mechanically checkable references are sound.** Every `*_test.dart` and `tool/*.sh` named across
+`docs/` was resolved: **88 of 89 exist**, and the one that does not — `test/core/startup_test.dart`
+— is cited precisely *because* it does not exist, as the record of a red-proof that proved nothing.
+Correct usage.
+
+**My first scan reported 51 broken paths and was wrong.** It assumed every backticked path was a
+path in this repository. All six backend documents cited (`docs/api/conventions.md`,
+`docs/contracts/*`, ADR 0005) **exist in `taytay-backend` at the pinned tag**, and
+`esperanza-mobile-feature-audit.md` / `servana-client-design-audit.md` are deliberate comparative
+audits citing *those* products' source trees. Checked before reporting, which is the only reason
+this paragraph is not a list of imaginary defects.
+
+**Two numeric claims looked wrong and were not.** `backend-baseline.md` says *15 module
+directories* while the guard says *17 modules* — different quantities, both correct: two planned
+modules have no directory. `client-readiness.md` states `1,464 passing` under an explicit `HEAD
+efa74d1` row, which makes it a stamped snapshot rather than a stale claim.
+
+**One was genuinely wrong, and it contradicted the same file.** The C-09 paragraph said the manifest
+declared **49 routes** and that **two** were ahead of the pin. It declares **52**, and C-09 has been
+**four** since 2026-08-27 — which a later section of the same document already said. **A ledger
+disagreeing with itself about a live P1 is worse than one that never gave the number**, because the
+earlier paragraph is the one a reader meets first.
+
+Fixed by removing the figures from the prose and stating them once, with
+`test/integration/backend_routes_test.dart` asserting the ledger contains the counts **derived from
+the manifest**. A number transcribed into prose has no relationship to the number it was copied
+from; a number a test derives does. Red-proofed by adding a route and watching the ledger assertion
+go red.
+
+**Not fixed, and named rather than quietly left:** test counts in prose (`1,381`, `1,346`, `1,204`
+across `qa-and-evidence.md` and `launch-dossier.md`) will always drift. They are historical
+statements in dated reports, and the honest answer is that living documents should not assert them
+at all — `gate-certification.md` carries the current figure against a stamped SHA.
 
 ### Still not fixed
 
