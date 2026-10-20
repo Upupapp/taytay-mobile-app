@@ -6,7 +6,7 @@ This file records that the words were looked for. It does not invent them.
 | Sprint | Status | Pull request | Commit | Approval |
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
-| S1 Welcome | In review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | c8862e2f662ba311b90190278caf6432238948c1 | Waiting for "S1 approved". Paul merges. |
+| S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 
 ## S0 pixel match
 
@@ -52,6 +52,8 @@ Exceptions, recorded rather than forced under 2%:
 - Photographs and the OS status bar are excluded by the pixel-match method.
 
 ## S1 Welcome
+
+The design reviewer Ui/Ux Taytay approved S1 on 2026-10-21 at `2ecacd054f7c27ff59c88f4789b7bc25d6a7221f`. Paul merges. Pull request #2 stays a draft until that merge. This file does not record Paul as having written "S1 approved".
 
 S1 renders welcome scenes `01-01`, `01-02`, and `01-03`. Comparison uses `tool/golden_compare` at 1170×2532, which is 390×844 at 3×. The side-by-side is design | build | diff. The photograph is masked to the rounded arch interior, so the white rim stays in the count. The design PNGs have no status bar, so the top of the frame stays in the count. A pixel differs when CIE76 ΔE is above 6.
 
