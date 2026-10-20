@@ -105,6 +105,17 @@ class PlatformController extends ChangeNotifier {
   OnboardingMode get onboardingMode =>
       OnboardingMode.fromFlag(_bootstrap.features.selfRegistration);
 
+  /// Publishes a bootstrap a test already knows, without waiting for the network.
+  ///
+  /// Production never calls this. The register route stays closed until the
+  /// server sets `self_registration`.
+  @visibleForTesting
+  void replaceBootstrapForTesting(AppBootstrap value) {
+    _bootstrap = value;
+    _hasAnswered = true;
+    notifyListeners();
+  }
+
   /// Takes the page size the server published for this channel, and says so
   /// when it could not.
   ///

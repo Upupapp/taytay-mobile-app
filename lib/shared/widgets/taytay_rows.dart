@@ -68,23 +68,30 @@ class SampleTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CSS border-box: the 1 px dashed border takes space outside the 2 px pad.
+    // CSS border-box: padding is 2 × 7 inside a 1 px dashed border. The stroke
+    // is painted after the fill and inset by half its width, so it sits in
+    // that 1 px ring instead of under the fill.
     return CustomPaint(
-      painter: const _DashedRRectPainter(
+      foregroundPainter: const _DashedRRectPainter(
         color: BrandColors.sampleBorder,
         radius: 6,
       ),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(7, 3, 7, 3),
-        decoration: BoxDecoration(
-          color: BrandColors.chipAmberBg,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(
-          label,
-          style: AppTypography.labelStrong.copyWith(
-            color: BrandColors.warning,
-            letterSpacing: 0.6,
+      child: Padding(
+        padding: const EdgeInsets.all(1),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: BrandColors.chipAmberBg,
+            borderRadius: BorderRadius.circular(5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+            child: Text(
+              label,
+              style: AppTypography.labelStrong.copyWith(
+                color: BrandColors.warning,
+                letterSpacing: 0.6,
+              ),
+            ),
           ),
         ),
       ),
@@ -171,6 +178,7 @@ class ListRow extends StatelessWidget {
                     ],
                   ),
                 ),
+                const SizedBox(width: 12),
                 trailing ??
                     const TaytayIcon(
                       icon: TaytayIcons.chevronRight,
@@ -293,12 +301,18 @@ class _DashedRRectPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
+    // Inset by half the stroke so the 1 px dash is not clipped, and so it
+    // sits on top of the fill rather than underneath it.
+    final rect = Rect.fromLTWH(0.5, 0.5, size.width - 1, size.height - 1);
     final path = Path()
       ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+        RRect.fromRectAndRadius(
+          rect,
+          Radius.circular(math.max(0, radius - 0.5)),
+        ),
       );
     const dash = 3.0;
-    const gap = 2.0;
+    const gap = 3.0;
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {

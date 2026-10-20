@@ -60,9 +60,12 @@ class ComponentGalleryScreen extends StatelessWidget {
             ),
             if (behavior != null) _MockSwitch(behavior: behavior!),
             const _Heading('Headers'),
+            // The page's own back button is the route control. This specimen
+            // shows the bar without a second one.
             const InAppHeader(
               title: 'Emergency hotlines',
               subtitle: 'Bayan ng Taytay · Rizal',
+              showBack: false,
               showBell: true,
               bellCount: 2,
             ),
