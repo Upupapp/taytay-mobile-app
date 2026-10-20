@@ -53,7 +53,19 @@ class TaytayTextField extends StatelessWidget {
       TaytayFieldState.error => BrandColors.danger,
       TaytayFieldState.success => BrandColors.success,
       TaytayFieldState.focused => BrandColors.taytayBlue,
-      TaytayFieldState.normal => BrandColors.textMuted,
+      TaytayFieldState.normal => BrandColors.fieldBorder,
+    };
+    final fill = switch (state) {
+      TaytayFieldState.error => BrandColors.fieldErrorFill,
+      TaytayFieldState.focused => BrandColors.surfaceCard,
+      _ => BrandColors.fieldFill,
+    };
+    final ring = switch (state) {
+      TaytayFieldState.focused => BrandColors.taytayBlue.withValues(
+        alpha: 0.12,
+      ),
+      TaytayFieldState.error => BrandColors.danger.withValues(alpha: 0.10),
+      _ => const Color(0x00000000),
     };
     final message = this.message;
     return Column(
@@ -61,35 +73,46 @@ class TaytayTextField extends StatelessWidget {
       children: <Widget>[
         Text(
           label,
-          style: AppTypography.label.copyWith(color: BrandColors.textPrimary),
+          style: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
         ),
-        const SizedBox(height: Spacing.xs),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          onChanged: onChanged,
-          keyboardType: keyboardType,
-          style: AppTypography.bodyStyle.copyWith(
-            color: BrandColors.textPrimary,
+        const SizedBox(height: 5),
+        DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(Radii.md),
+            boxShadow: <BoxShadow>[BoxShadow(color: ring, spreadRadius: 3)],
           ),
-          cursorColor: BrandColors.taytayBlue,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: BrandColors.surfaceCard,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: Spacing.lg,
-              vertical: Spacing.md,
+          child: TextField(
+            controller: controller,
+            obscureText: obscureText,
+            onChanged: onChanged,
+            keyboardType: keyboardType,
+            style: AppTypography.fieldValue.copyWith(
+              color: BrandColors.textPrimary,
             ),
-            enabledBorder: _border(tone),
-            focusedBorder: _border(BrandColors.taytayBlue),
-            errorBorder: _border(BrandColors.danger),
-            focusedErrorBorder: _border(BrandColors.danger),
+            cursorColor: BrandColors.taytayBlue,
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: AppTypography.fieldValue.copyWith(
+                fontWeight: AppTypography.body,
+                color: BrandColors.fieldHint,
+              ),
+              filled: true,
+              fillColor: fill,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 13,
+              ),
+              enabledBorder: _border(tone),
+              focusedBorder: _border(BrandColors.taytayBlue),
+              errorBorder: _border(BrandColors.danger),
+              focusedErrorBorder: _border(BrandColors.danger),
+            ),
           ),
         ),
         if (message != null && message.isNotEmpty) ...<Widget>[
-          const SizedBox(height: Spacing.xs),
-          Text(message, style: AppTypography.bodyCompact.copyWith(color: tone)),
+          const SizedBox(height: 5),
+          Text(message, style: AppTypography.label.copyWith(color: tone)),
         ],
       ],
     );
@@ -98,7 +121,7 @@ class TaytayTextField extends StatelessWidget {
   OutlineInputBorder _border(Color color) {
     return OutlineInputBorder(
       borderRadius: BorderRadius.circular(Radii.md),
-      borderSide: BorderSide(color: color, width: 1.5),
+      borderSide: BorderSide(color: color, width: 1.4),
     );
   }
 }

@@ -17,6 +17,7 @@ class _TaytayButton extends StatelessWidget {
     this.borderColor,
     this.icon,
     this.expand = true,
+    this.shadows,
   });
 
   final String label;
@@ -26,6 +27,10 @@ class _TaytayButton extends StatelessWidget {
   final Color? borderColor;
   final TaytayIcon? icon;
   final bool expand;
+
+  /// Sign-in `.pri` shadow. Welcome uses a slightly larger one; this is the
+  /// shared primary.
+  final List<BoxShadow>? shadows;
 
   @override
   Widget build(BuildContext context) {
@@ -38,7 +43,7 @@ class _TaytayButton extends StatelessWidget {
         borderRadius: radius,
         side: borderColor == null
             ? BorderSide.none
-            : BorderSide(color: borderColor!, width: 1.5),
+            : BorderSide(color: borderColor!, width: 1.6),
       ),
       child: InkWell(
         borderRadius: radius,
@@ -51,7 +56,7 @@ class _TaytayButton extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(
             minWidth: A11y.minTapTarget,
-            minHeight: A11y.minTapTarget,
+            minHeight: 50,
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(
@@ -70,11 +75,7 @@ class _TaytayButton extends StatelessWidget {
                   child: Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: AppTypography.label.copyWith(
-                      color: foreground,
-                      fontSize: 16,
-                      fontWeight: AppTypography.medium,
-                    ),
+                    style: AppTypography.button.copyWith(color: foreground),
                   ),
                 ),
               ],
@@ -83,7 +84,13 @@ class _TaytayButton extends StatelessWidget {
         ),
       ),
     );
-    return Semantics(button: true, label: label, child: child);
+    final painted = shadows == null
+        ? child
+        : DecoratedBox(
+            decoration: BoxDecoration(borderRadius: radius, boxShadow: shadows),
+            child: child,
+          );
+    return Semantics(button: true, label: label, child: painted);
   }
 }
 
@@ -111,6 +118,13 @@ class PrimaryButton extends StatelessWidget {
       foreground: Colors.white,
       icon: icon,
       expand: expand,
+      shadows: const <BoxShadow>[
+        BoxShadow(
+          color: Color(0x470B3D91),
+          blurRadius: 20,
+          offset: Offset(0, 8),
+        ),
+      ],
     );
   }
 }
@@ -136,7 +150,7 @@ class SecondaryButton extends StatelessWidget {
       label: label,
       onPressed: onPressed,
       background: BrandColors.surfaceCard,
-      foreground: BrandColors.taytayBlueDark,
+      foreground: BrandColors.taytayBlue,
       borderColor: BrandColors.taytayBlue,
       icon: icon,
       expand: expand,

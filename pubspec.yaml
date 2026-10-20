@@ -228,6 +228,9 @@ flutter:
     # Synthetic fixtures. Bundled so a dev mock can load them from the asset
     # bundle; staging and production refuse to start when mocks are selected.
     - test/fixtures/mock/
+    # Official municipal seal. Byte-identical to the design source. Downscaled
+    # only; see BrandAssets.
+    - assets/brand/taytay_seal.png
 
   fonts:
     - family: Plus Jakarta Sans

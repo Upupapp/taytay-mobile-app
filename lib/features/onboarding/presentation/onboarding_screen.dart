@@ -5,11 +5,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/illustrations/taytay_scenes.dart';
-import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_headers.dart';
 
 /// The welcome experience: three scenes, then into the app.
 ///
@@ -111,18 +113,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        actions: <Widget>[
-          TextButton(onPressed: _finish, child: const Text('Skip')),
-        ],
-      ),
       body: SafeArea(
         child: Column(
           children: <Widget>[
+            WovenHeader(
+              welcome: true,
+              trailing: TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: BrandColors.taytayBlue,
+                  backgroundColor: BrandColors.surfaceCard,
+                  minimumSize: const Size(48, 44),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: const StadiumBorder(),
+                  textStyle: AppTypography.link.copyWith(fontSize: 14),
+                ),
+                onPressed: _finish,
+                child: const Text('Skip'),
+              ),
+            ),
             Expanded(
               child: PageView.builder(
                 controller: _controller,
@@ -141,25 +150,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               child: Column(
                 children: <Widget>[
-                  AppButton(
+                  PrimaryButton(
                     label: _isLastScene ? 'Get started' : 'Next',
-                    icon: _isLastScene ? null : Icons.arrow_forward,
-                    iconTrailing: true,
                     onPressed: _next,
                   ),
                   if (_isLastScene) ...<Widget>[
                     const SizedBox(height: Spacing.sm),
-                    AppButton(
+                    SecondaryButton(
                       label: 'Continue as guest',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: _finish,
+                      onPressed: () {
+                        unawaited(_finish());
+                      },
                     ),
                     const SizedBox(height: Spacing.md),
                     Text(
                       'You can browse municipal services without an account.',
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                      style: AppTypography.listMeta.copyWith(
+                        color: BrandColors.textMuted,
                       ),
                     ),
                   ],
@@ -239,7 +247,6 @@ class _WelcomeScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     // Scrollable so the content survives a 200% system text scale instead of
     // overflowing.
     return SingleChildScrollView(
@@ -254,13 +261,18 @@ class _WelcomeScene extends StatelessWidget {
           const SizedBox(height: Spacing.xl),
           Semantics(
             header: true,
-            child: Text(title, style: theme.textTheme.headlineSmall),
+            child: Text(
+              title,
+              style: AppTypography.h1.copyWith(
+                color: BrandColors.taytayBlueDark,
+              ),
+            ),
           ),
           const SizedBox(height: Spacing.md),
           Text(
             body,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: AppTypography.bodyStyle.copyWith(
+              color: BrandColors.sheetBody,
             ),
           ),
         ],

@@ -376,6 +376,7 @@ GoRouter buildAppRouter({
         name: AppRoute.forgotPassword.routeName,
         builder: (context, state) => const FoundationPlaceholderScreen(
           title: 'Reset your password',
+          sealHeader: true,
           body:
               'Password help arrives with the sign-in flow in a later sprint. '
               'This page is here so the route and its back button can be checked.',

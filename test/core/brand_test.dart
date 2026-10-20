@@ -131,18 +131,17 @@ void main() {
       }
     });
 
-    test('the seal is absent until verified artwork is supplied', () {
-      // Guards the decision recorded in brand_assets.dart. If someone registers
-      // a seal, this test fails and forces them to read that file, delete this
-      // expectation deliberately, and record the approval.
+    test('the official seal is the design-source PNG', () {
+      expect(BrandAssets.hasVerifiedSeal, isTrue);
+      const seal = BrandAssets.municipalSeal;
+      expect(seal.assetPath, 'assets/brand/taytay_seal.png');
+      expect(seal.format, BrandAssetFormat.png);
       expect(
-        BrandAssets.hasVerifiedSeal,
-        isFalse,
-        reason:
-            'A seal was registered. Confirm it is losslessly encoded, carries '
-            'alpha, and that its approvalReference points at real LGU '
-            'permission — then update this test.',
+        seal.sha256,
+        '8541609af1ece1833cc9a03f326603315641bd8f44dc98b442c99545d529de8b',
       );
+      expect(seal.semanticLabel, contains('Taytay'));
+      expect(seal.approvalReference, isNotEmpty);
     });
 
     test('lossy formats are not expressible in the registry', () {

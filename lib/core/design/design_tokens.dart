@@ -62,6 +62,39 @@ abstract final class BrandColors {
   /// accent-only: it is about 1.6:1 on white. This value is the eyebrow gold
   /// measured on the welcome and sign-in screens (5.6:1 on [surface]).
   static const Color inkGold = Color(0xFF7A5E0C);
+
+  /// Sign-in sheet body. CSS `.sub` is `#4a5470`.
+  static const Color sheetBody = Color(0xFF4A5470);
+
+  /// Field label. CSS `.f label` is `#3a4560`.
+  static const Color fieldLabel = Color(0xFF3A4560);
+
+  /// Resting field fill and border. CSS `.in` is `#FBF8F0` / `#E3DCC6`.
+  static const Color fieldFill = Color(0xFFFBF8F0);
+  static const Color fieldBorder = Color(0xFFE3DCC6);
+
+  /// Error field fill. CSS `.in.bad` background is `#FFF7F7`.
+  static const Color fieldErrorFill = Color(0xFFFFF7F7);
+
+  /// Placeholder ink. Polished from `#9aa0ad`.
+  static const Color fieldHint = Color(0xFF6B7186);
+
+  /// Card hairline. CSS `.card` border is `#E7EBF3`.
+  static const Color cardLine = Color(0xFFE7EBF3);
+
+  /// List meta. Polished from `#6b7590`.
+  static const Color listMeta = Color(0xFF5A6480);
+
+  /// SAMPLE dashed stroke. CSS `.sample` border is `#E0A400`.
+  static const Color sampleBorder = Color(0xFFE0A400);
+
+  /// Status chip fills from `.bdg` / `.tag` in the mockup CSS.
+  static const Color chipAmberBg = Color(0xFFFFF4D6);
+  static const Color chipGreenBg = Color(0xFFE6F4EC);
+  static const Color chipRedBg = Color(0xFFFDECEC);
+  static const Color chipBlueBg = Color(0xFFEAF0FB);
+  static const Color chipGreyBg = Color(0xFFEEF1F6);
+  static const Color chipGoldBg = Color(0xFFFFF6CC);
 }
 
 /// Soft shadows for surfaces that float. The colour is the brand navy at low
@@ -71,7 +104,8 @@ abstract final class BrandColors {
 /// for the cards and the raised centre tab, where the mockups show a shadow.
 abstract final class TaytayShadows {
   static const List<BoxShadow> card = <BoxShadow>[
-    BoxShadow(color: Color(0x14062358), blurRadius: 18, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x0D101828), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0A101828), blurRadius: 10, offset: Offset(0, 2)),
   ];
 
   static const List<BoxShadow> raised = <BoxShadow>[

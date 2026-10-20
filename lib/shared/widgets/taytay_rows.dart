@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
@@ -39,18 +41,15 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color fg, Color bg) = switch (tone) {
-      StatusTone.amber => (BrandColors.warning, const Color(0xFFFFF3D6)),
-      StatusTone.green => (BrandColors.success, const Color(0xFFE5F6EE)),
-      StatusTone.red => (BrandColors.danger, const Color(0xFFFDECEA)),
-      StatusTone.blue => (BrandColors.taytayBlue, const Color(0xFFE7EEF8)),
-      StatusTone.grey => (BrandColors.textSecondary, const Color(0xFFEEF1F6)),
-      StatusTone.gold => (BrandColors.inkGold, const Color(0xFFFFF6D8)),
+      StatusTone.amber => (BrandColors.warning, BrandColors.chipAmberBg),
+      StatusTone.green => (BrandColors.success, BrandColors.chipGreenBg),
+      StatusTone.red => (BrandColors.danger, BrandColors.chipRedBg),
+      StatusTone.blue => (BrandColors.taytayBlue, BrandColors.chipBlueBg),
+      StatusTone.grey => (BrandColors.textSecondary, BrandColors.chipGreyBg),
+      StatusTone.gold => (BrandColors.inkGold, BrandColors.chipGoldBg),
     };
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Spacing.sm,
-        vertical: Spacing.xs,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(Radii.pill),
@@ -69,21 +68,23 @@ class SampleTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Spacing.sm,
-        vertical: Spacing.xxs,
+    return CustomPaint(
+      painter: const _DashedRRectPainter(
+        color: BrandColors.sampleBorder,
+        radius: 6,
       ),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF6D8),
-        borderRadius: BorderRadius.circular(Radii.pill),
-        border: Border.all(color: BrandColors.inkGold),
-      ),
-      child: Text(
-        label,
-        style: AppTypography.labelStrong.copyWith(
-          color: BrandColors.inkGold,
-          letterSpacing: 1.2,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        decoration: BoxDecoration(
+          color: BrandColors.chipAmberBg,
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelStrong.copyWith(
+            color: BrandColors.warning,
+            letterSpacing: 0.6,
+          ),
         ),
       ),
     );
@@ -132,8 +133,8 @@ class ListRow extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Container(
-                  width: 40,
-                  height: 40,
+                  width: 44,
+                  height: 44,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: bg,
@@ -153,16 +154,15 @@ class ListRow extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         title,
-                        style: AppTypography.titleCompact.copyWith(
-                          fontSize: 15,
+                        style: AppTypography.cardTitle.copyWith(
                           color: BrandColors.textPrimary,
                         ),
                       ),
                       if (subtitle != null)
                         Text(
                           subtitle!,
-                          style: AppTypography.bodyCompact.copyWith(
-                            color: BrandColors.textSecondary,
+                          style: AppTypography.listMeta.copyWith(
+                            color: BrandColors.listMeta,
                           ),
                         ),
                     ],
@@ -276,5 +276,40 @@ class _Action extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// CSS `.sample` uses a 1px dashed stroke. Flutter has no dashed [Border].
+class _DashedRRectPainter extends CustomPainter {
+  const _DashedRRectPainter({required this.color, required this.radius});
+
+  final Color color;
+  final double radius;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius)),
+      );
+    const dash = 3.0;
+    const gap = 2.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dash, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
+    return oldDelegate.color != color || oldDelegate.radius != radius;
   }
 }

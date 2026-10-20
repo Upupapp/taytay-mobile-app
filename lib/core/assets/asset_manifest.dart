@@ -190,19 +190,29 @@ abstract final class AssetPolicy {
 
 /// Every asset file this build ships.
 ///
-/// **Currently empty, deliberately.** TAB 04's illustrations, scenes, state art
-/// and placeholders are implemented as Flutter-painted compositions
-/// (`lib/shared/illustrations/`) rather than as image files, because for flat
-/// geometric artwork that is strictly better: zero install bytes, no density
-/// variants to keep in sync, exact colour from the theme in both light and dark
-/// mode, and no licence surface at all.
-///
-/// A raster file earns its place only when it is *materially* better — a
-/// photographic or hand-painted texture that cannot be expressed as geometry.
-/// This registry, its budgets and its tests exist so that the day such a file
-/// arrives it is checked rather than merely dropped in.
+/// Illustrations, scenes and placeholders stay Flutter-painted compositions
+/// (`lib/shared/illustrations/`). The one raster file is the municipal seal:
+/// official artwork that cannot be redrawn as geometry.
 abstract final class AppAssets {
-  static const List<AssetEntry> all = <AssetEntry>[];
+  static const List<AssetEntry> all = <AssetEntry>[
+    AssetEntry(
+      key: 'taytay_seal',
+      path: 'assets/brand/taytay_seal.png',
+      kind: AssetKind.officialArtwork,
+      format: AssetFormat.png,
+      licence: AssetLicence.lguSupplied,
+      provenance:
+          'S0 design source src/taytay_seal.png, the official Municipality '
+          'of Taytay seal. Shipped unaltered at 560 px, which is already '
+          'sharper than a 3× render of the header mark. The 200 KB kind '
+          'budget is overridden because recompressing it would change the '
+          'artwork. No density copies: Flutter downscales this one file.',
+      semanticLabel: 'Seal of the Municipality of Taytay, Rizal',
+      sha256:
+          '8541609af1ece1833cc9a03f326603315641bd8f44dc98b442c99545d529de8b',
+      maxBytes: 357301,
+    ),
+  ];
 
   /// Assets warmed before the first screen needs them.
   ///

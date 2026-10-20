@@ -16,7 +16,7 @@ import '../../core/design/design_tokens.dart';
 /// `BoxFit.contain` — preserving its aspect ratio exactly — inside its required
 /// clear space.
 ///
-/// When it is not registered (the current state — see [BrandAssets]), a
+/// When it is not registered, a
 /// **typographic wordmark** is drawn instead. The fallback is deliberately not
 /// seal-like: it is a rounded rectangle with the letter T and the municipality's
 /// name, which nobody could mistake for an official seal. An approximated seal
@@ -41,7 +41,7 @@ class BrandMark extends StatelessWidget {
     const seal = BrandAssets.municipalSeal;
 
     return Semantics(
-      label: seal?.semanticLabel ?? 'Municipality of Taytay, Rizal',
+      label: seal.semanticLabel,
       image: true,
       excludeSemantics: true,
       child: Padding(
@@ -52,53 +52,15 @@ class BrandMark extends StatelessWidget {
             SizedBox(
               width: size,
               height: size,
-              child: seal == null
-                  ? _WordmarkFallback(size: size)
-                  // Exact reproduction: contain preserves the intrinsic aspect
-                  // ratio, and no colour filter is applied.
-                  : Image.asset(seal.assetPath, fit: BoxFit.contain),
+              // Exact reproduction: contain preserves the intrinsic aspect
+              // ratio, and no colour filter is applied.
+              child: Image.asset(seal.assetPath, fit: BoxFit.contain),
             ),
             if (showWordmark) ...<Widget>[
               SizedBox(height: clearSpace + Spacing.xs),
               _Wordmark(compact: size < 64),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Non-official placeholder used until verified artwork is supplied.
-///
-/// Kept visibly typographic — a monogram on a rounded square — so it reads as an
-/// app icon rather than as a municipal seal.
-class _WordmarkFallback extends StatelessWidget {
-  const _WordmarkFallback({required this.size});
-
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.taytayBlue,
-        borderRadius: BorderRadius.circular(size * 0.22),
-      ),
-      child: Center(
-        child: Text(
-          'T',
-          // Not scaled by the OS text setting: this is a graphic mark, not
-          // copy, and scaling it would burst its container. The accessible name
-          // is carried by the Semantics wrapper above.
-          textScaler: TextScaler.noScaling,
-          style: theme.textTheme.headlineLarge?.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.w800,
-            fontSize: size * 0.46,
-            height: 1,
-          ),
         ),
       ),
     );

@@ -24,6 +24,7 @@ class SectionCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: BrandColors.surfaceCard,
         borderRadius: BorderRadius.circular(Radii.lg),
+        border: Border.all(color: BrandColors.cardLine),
         boxShadow: TaytayShadows.card,
       ),
       child: Padding(padding: padding, child: child),
@@ -117,22 +118,32 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(Spacing.xl),
+      // gen2 `.empty` is 28×18. The icon disc is 72; the glyph inside is 32.
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          const TaytayIcon(
-            icon: TaytayIcons.inbox,
-            semanticLabel: '',
-            excludeSemantics: true,
-            size: IconSizes.xl,
-            color: BrandColors.textMuted,
+          Container(
+            width: 72,
+            height: 72,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: BrandColors.chipGreyBg,
+              shape: BoxShape.circle,
+            ),
+            child: const TaytayIcon(
+              icon: TaytayIcons.inbox,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: 32,
+              color: BrandColors.listMeta,
+            ),
           ),
-          const SizedBox(height: Spacing.md),
+          const SizedBox(height: 14),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: AppTypography.titleCompact.copyWith(
+            style: AppTypography.emptyTitle.copyWith(
               color: BrandColors.textPrimary,
             ),
           ),
@@ -140,7 +151,7 @@ class EmptyState extends StatelessWidget {
           Text(
             message,
             textAlign: TextAlign.center,
-            style: AppTypography.bodyStyle.copyWith(
+            style: AppTypography.bodyCompact.copyWith(
               color: BrandColors.textSecondary,
             ),
           ),

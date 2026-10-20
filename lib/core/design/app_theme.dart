@@ -105,38 +105,79 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(A11y.minTapTarget + Spacing.sm),
+          minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
-          textStyle: base.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: AppTypography.button,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(A11y.minTapTarget + Spacing.sm),
+          minimumSize: const Size.fromHeight(50),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
+          textStyle: AppTypography.button,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+          foregroundColor: BrandColors.taytayBlue,
+          textStyle: AppTypography.link,
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        labelStyle: AppTypography.label.copyWith(
+          color: brightness == Brightness.light
+              ? BrandColors.textPrimary
+              : scheme.onSurface,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest,
+        fillColor: brightness == Brightness.light
+            ? BrandColors.fieldFill
+            : scheme.surfaceContainerHighest,
+        hintStyle: AppTypography.fieldValue.copyWith(
+          fontWeight: AppTypography.body,
+          color: BrandColors.fieldHint,
+        ),
+        labelStyle: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
+        errorStyle: AppTypography.label.copyWith(color: BrandColors.danger),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.md),
-          borderSide: BorderSide(color: scheme.outline),
+          borderSide: const BorderSide(
+            color: BrandColors.fieldBorder,
+            width: 1.4,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(
+            color: BrandColors.fieldBorder,
+            width: 1.4,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(
+            color: BrandColors.taytayBlue,
+            width: 1.4,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(color: BrandColors.danger, width: 1.4),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(color: BrandColors.danger, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.lg,
-          vertical: Spacing.lg,
+          horizontal: Spacing.md,
+          vertical: 14,
         ),
       ),
       snackBarTheme: SnackBarThemeData(

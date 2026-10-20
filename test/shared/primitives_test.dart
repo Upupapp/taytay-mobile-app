@@ -453,15 +453,14 @@ void main() {
   });
 
   group('BrandMark', () {
-    testWidgets('renders a non-seal wordmark while no artwork is verified', (
+    testWidgets('renders the official seal and not the wordmark', (
       tester,
     ) async {
-      expect(BrandAssets.hasVerifiedSeal, isFalse);
+      expect(BrandAssets.hasVerifiedSeal, isTrue);
       await tester.pumpWidget(host(const BrandMark(size: 96)));
 
-      // No image is loaded, because no official artwork is registered.
-      expect(find.byType(Image), findsNothing);
-      expect(find.text('T'), findsOneWidget);
+      expect(find.byType(Image), findsOneWidget);
+      expect(find.text('T'), findsNothing);
     });
 
     testWidgets('carries an accessible name and hides its internals', (

@@ -122,6 +122,8 @@ abstract final class BrandGradients {
       BrandColors.taytayBlueDark,
       BrandColors.taytayBlue,
     ],
+    // gen.py welcome/sign-in field: the mid navy sits at 55%, not halfway.
+    stops: <double>[0, 0.55, 1],
     onColor: Colors.white,
   );
 

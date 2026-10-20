@@ -54,14 +54,16 @@ class InAppHeader extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     title,
-                    style: AppTypography.title.copyWith(color: Colors.white),
+                    style: AppTypography.headerTitle.copyWith(
+                      color: Colors.white,
+                    ),
                   ),
                   if (subtitle != null) ...<Widget>[
                     const SizedBox(height: Spacing.xxs),
                     Text(
                       subtitle,
-                      style: AppTypography.bodyCompact.copyWith(
-                        color: Colors.white.withValues(alpha: 0.88),
+                      style: AppTypography.headerSubtitle.copyWith(
+                        color: Colors.white.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -106,14 +108,33 @@ class _Bell extends StatelessWidget {
   }
 }
 
-/// Welcome and sign-in header: wordmark on the deep gradient, with the gold
-/// glow. The municipal seal is not drawn here — no verified seal file has been
-/// supplied, and [BrandMark] is the stand-in the brand rules allow.
+/// Welcome and sign-in header: the official seal and the municipal wordmark
+/// on the deep gradient, with the gold glow.
+///
+/// The seal is the registered municipal PNG, drawn by [BrandMark]. That widget
+/// downscales the file with [BoxFit.contain]. It does not recolour, mask, or
+/// redraw it.
 class WovenHeader extends StatelessWidget {
-  const WovenHeader({this.showBack = false, this.onBack, super.key});
+  const WovenHeader({
+    this.showBack = false,
+    this.onBack,
+    this.backEnabled = true,
+    this.welcome = false,
+    this.trailing,
+    super.key,
+  });
 
   final bool showBack;
   final VoidCallback? onBack;
+
+  /// Passed through to [TaytayBackButton]. False while a step is busy.
+  final bool backEnabled;
+
+  /// Welcome uses the larger seal and the 15 / 800 wordmark from gen1.py.
+  /// Sign-in uses 14 / 800 from gen.py.
+  final bool welcome;
+
+  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -131,30 +152,39 @@ class WovenHeader extends StatelessWidget {
             ),
             child: Row(
               children: <Widget>[
-                if (showBack) TaytayBackButton(onPressed: onBack, light: true),
+                if (showBack)
+                  TaytayBackButton(
+                    onPressed: onBack,
+                    enabled: backEnabled,
+                    light: true,
+                  ),
                 if (!showBack) const SizedBox(width: Spacing.md),
-                const BrandMark(size: 40),
-                const SizedBox(width: Spacing.md),
+                BrandMark(size: welcome ? 52 : 46),
+                const SizedBox(width: Spacing.sm),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
                         'Bayan ng Taytay',
-                        style: AppTypography.titleCompact.copyWith(
-                          color: Colors.white,
-                        ),
+                        style:
+                            (welcome
+                                    ? AppTypography.brandTitleWelcome
+                                    : AppTypography.brandTitle)
+                                .copyWith(color: Colors.white),
                       ),
                       Text(
                         'Lalawigan ng Rizal',
-                        style: AppTypography.label.copyWith(
-                          color: BrandColors.sealGold,
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style:
+                            (welcome
+                                    ? AppTypography.brandSubtitleWelcome
+                                    : AppTypography.brandSubtitle)
+                                .copyWith(color: BrandColors.sealGold),
                       ),
                     ],
                   ),
                 ),
+                ?trailing,
               ],
             ),
           ),

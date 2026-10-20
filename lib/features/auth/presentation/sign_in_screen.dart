@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
@@ -15,7 +16,8 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_headers.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
 
@@ -135,92 +137,103 @@ class _SignInScreenState extends State<SignInScreen> {
         : SessionEndedReason.none;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sign in'),
-        automaticallyImplyLeading: false,
-        leading: TaytayBackButton(
-          enabled: !(controller.step == SignInStep.code && controller.busy),
-          onPressed: controller.step == SignInStep.code
-              ? controller.changeNumber
-              : null,
-        ),
-      ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(Spacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              // Three distinct notices, and the distinction is the point of
-              // TAB 06 step 2. An expiry is not a sign-out and neither is a
-              // network failure; a resident dropped on this screen with one
-              // generic sentence cannot tell whether something went wrong,
-              // whether they did it, or whether to try again.
-              if (endedReason == SessionEndedReason.expired)
-                _Notice(
-                  icon: Icons.lock_clock_outlined,
-                  text: AppStrings.of(context).signInNoticeExpired,
-                )
-              else if (endedReason == SessionEndedReason.signedOut)
-                _Notice(
-                  icon: Icons.check_circle_outline,
-                  text: AppStrings.of(context).signInNoticeSignedOut,
-                )
-              else if (widget.returnTo != null)
-                _Notice(
-                  icon: Icons.login_outlined,
-                  text: AppStrings.of(context).signInNoticeReturnTo,
+        child: Column(
+          children: <Widget>[
+            WovenHeader(
+              showBack: true,
+              backEnabled:
+                  !(controller.step == SignInStep.code && controller.busy),
+              onBack: controller.step == SignInStep.code
+                  ? controller.changeNumber
+                  : null,
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Spacing.xl),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // Three distinct notices, and the distinction is the point of
+                    // TAB 06 step 2. An expiry is not a sign-out and neither is a
+                    // network failure; a resident dropped on this screen with one
+                    // generic sentence cannot tell whether something went wrong,
+                    // whether they did it, or whether to try again.
+                    if (endedReason == SessionEndedReason.expired)
+                      _Notice(
+                        icon: Icons.lock_clock_outlined,
+                        text: AppStrings.of(context).signInNoticeExpired,
+                      )
+                    else if (endedReason == SessionEndedReason.signedOut)
+                      _Notice(
+                        icon: Icons.check_circle_outline,
+                        text: AppStrings.of(context).signInNoticeSignedOut,
+                      )
+                    else if (widget.returnTo != null)
+                      _Notice(
+                        icon: Icons.login_outlined,
+                        text: AppStrings.of(context).signInNoticeReturnTo,
+                      ),
+                    switch (controller.step) {
+                      SignInStep.identifier => _IdentifierStep(
+                        formKey: _identifierForm,
+                        controller: _mobileController,
+                        busy: controller.busy,
+                        onSubmit: _requestCode,
+                      ),
+                      SignInStep.code => _CodeStep(
+                        formKey: _codeForm,
+                        controller: _codeController,
+                        signIn: controller,
+                        onSubmit: _verifyCode,
+                        onResend: _resend,
+                      ),
+                    },
+                    if (controller.message != null) ...<Widget>[
+                      const SizedBox(height: Spacing.lg),
+                      _MessageBanner(message: controller.message!),
+                    ],
+                    const SizedBox(height: Spacing.xl),
+                    TextButton(
+                      onPressed: () =>
+                          context.goNamed(AppRoute.signInHelp.routeName),
+                      child: const Text('Trouble signing in?'),
+                    ),
+                    if (controller.step == SignInStep.identifier) ...<Widget>[
+                      const SizedBox(height: Spacing.sm),
+                      // TAB 03 / F15. Two states in one build, chosen by the server.
+                      //
+                      // Under staff-mediated onboarding this is NOT a disabled
+                      // button. A control a resident cannot use tells them the app is
+                      // broken; a sentence tells them where to go. There is no
+                      // self-registration route on the server, so offering the wizard
+                      // here would be a promise the platform cannot keep.
+                      if (dependencies
+                          .platform
+                          .onboardingMode
+                          .allowsSelfRegistration)
+                        SecondaryButton(
+                          onPressed: () =>
+                              context.goNamed(AppRoute.register.routeName),
+                          label: 'Create an account',
+                        )
+                      else
+                        const _OfficeOnboardingPanel(),
+                    ],
+                    const SizedBox(height: Spacing.sm),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        textStyle: AppTypography.link.copyWith(fontSize: 12),
+                      ),
+                      onPressed: () => context.goNamed(AppRoute.home.routeName),
+                      child: const Text('Continue as guest'),
+                    ),
+                    if (kDebugMode) const _DebugSessionSimulator(),
+                  ],
                 ),
-              switch (controller.step) {
-                SignInStep.identifier => _IdentifierStep(
-                  formKey: _identifierForm,
-                  controller: _mobileController,
-                  busy: controller.busy,
-                  onSubmit: _requestCode,
-                ),
-                SignInStep.code => _CodeStep(
-                  formKey: _codeForm,
-                  controller: _codeController,
-                  signIn: controller,
-                  onSubmit: _verifyCode,
-                  onResend: _resend,
-                ),
-              },
-              if (controller.message != null) ...<Widget>[
-                const SizedBox(height: Spacing.lg),
-                _MessageBanner(message: controller.message!),
-              ],
-              const SizedBox(height: Spacing.xl),
-              TextButton(
-                onPressed: () => context.goNamed(AppRoute.signInHelp.routeName),
-                child: const Text('Trouble signing in?'),
               ),
-              if (controller.step == SignInStep.identifier) ...<Widget>[
-                const SizedBox(height: Spacing.sm),
-                // TAB 03 / F15. Two states in one build, chosen by the server.
-                //
-                // Under staff-mediated onboarding this is NOT a disabled
-                // button. A control a resident cannot use tells them the app is
-                // broken; a sentence tells them where to go. There is no
-                // self-registration route on the server, so offering the wizard
-                // here would be a promise the platform cannot keep.
-                if (dependencies.platform.onboardingMode.allowsSelfRegistration)
-                  OutlinedButton(
-                    onPressed: () =>
-                        context.goNamed(AppRoute.register.routeName),
-                    child: const Text('Create an account'),
-                  )
-                else
-                  const _OfficeOnboardingPanel(),
-              ],
-              const SizedBox(height: Spacing.sm),
-              TextButton(
-                onPressed: () => context.goNamed(AppRoute.home.routeName),
-                child: const Text('Continue as guest'),
-              ),
-              if (kDebugMode) const _DebugSessionSimulator(),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -243,7 +256,6 @@ class _IdentifierStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Form(
       key: formKey,
       child: Column(
@@ -251,19 +263,22 @@ class _IdentifierStep extends StatelessWidget {
         children: <Widget>[
           Text(
             'Welcome to Taytay LGU IDS',
-            style: theme.textTheme.headlineSmall,
+            style: AppTypography.h1SignIn.copyWith(
+              color: BrandColors.taytayBlueDark,
+            ),
           ),
           const SizedBox(height: Spacing.sm),
           Text(
             'Enter your mobile number and we will send you a one-time code. '
             'There is no password to remember.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: AppTypography.bodyCompact.copyWith(
+              color: BrandColors.sheetBody,
             ),
           ),
           const SizedBox(height: Spacing.xl),
           TextFormField(
             controller: controller,
+            style: AppTypography.fieldValue,
             keyboardType: TextInputType.phone,
             autofillHints: const <String>[AutofillHints.telephoneNumber],
             enabled: !busy,
@@ -289,8 +304,9 @@ class _IdentifierStep extends StatelessWidget {
           Text(
             'Taytay LGU uses your mobile number to sign you in and to contact '
             'you about your requests. It is never shared for advertising.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: AppTypography.listMeta.copyWith(
+              fontSize: 11,
+              color: BrandColors.textMuted,
             ),
           ),
         ],
@@ -317,7 +333,6 @@ class _CodeStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final cooldown = signIn.resendCooldownSeconds;
 
     return Form(
@@ -325,20 +340,26 @@ class _CodeStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text('Enter your code', style: theme.textTheme.headlineSmall),
+          Text(
+            'Enter your code',
+            style: AppTypography.h1SignIn.copyWith(
+              color: BrandColors.taytayBlueDark,
+            ),
+          ),
           const SizedBox(height: Spacing.sm),
           Text(
             // Masked: a resident can confirm the number without their full
             // number sitting on a screen readable over a shoulder in a queue.
             'We sent a ${OneTimeCodeRules.length}-digit code to '
             '${signIn.maskedMobileNumber}.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+            style: AppTypography.bodyCompact.copyWith(
+              color: BrandColors.sheetBody,
             ),
           ),
           const SizedBox(height: Spacing.xl),
           TextFormField(
             controller: controller,
+            style: AppTypography.fieldValue,
             keyboardType: TextInputType.number,
             autofocus: true,
             enabled: !signIn.busy,

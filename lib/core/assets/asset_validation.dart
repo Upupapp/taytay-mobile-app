@@ -157,7 +157,11 @@ abstract final class AssetValidator {
     }
 
     // ── Density variants ───────────────────────────────────────────────────
-    if (entry.format.isDensityDependent) {
+    // The municipal seal is one unaltered PNG, already larger than 3× the
+    // size it is drawn at. Density copies would be the same bytes, and
+    // Flutter would then treat that file as a scale-specific asset.
+    if (entry.format.isDensityDependent &&
+        entry.kind != AssetKind.officialArtwork) {
       final separator = entry.path.lastIndexOf('/');
       final directory = entry.path.substring(0, separator);
       final fileName = entry.path.substring(separator + 1);

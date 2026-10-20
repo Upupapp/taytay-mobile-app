@@ -37,15 +37,78 @@ abstract final class AppTypography {
   /// anything but timestamps and legal footnotes.
   static const double minFontSize = 11;
 
-  /// Screen title. Mockup H1 is 28 / extra-bold.
+  /// Welcome screen title. CSS `h1` in gen1.py, after polish: 28 / 800,
+  /// line-height 1.13, letter-spacing -0.6.
   static const TextStyle h1 = TextStyle(
     fontFamily: fontFamily,
     fontSize: 28,
     fontWeight: black,
-    height: 1.15,
+    height: 1.13,
+    letterSpacing: -0.6,
   );
 
-  /// Card and page titles, 20 / extra-bold. [titleCompact] is the 18 step.
+  /// Sign-in sheet title. CSS `h1` is 25px; polish maps 25 → 24.
+  /// Line-height 1.15, letter-spacing -0.5, weight 800.
+  static const TextStyle h1SignIn = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 24,
+    fontWeight: black,
+    height: 1.15,
+    letterSpacing: -0.5,
+  );
+
+  /// In-app header title. CSS `.hd .t b` is 16 / 800.
+  static const TextStyle headerTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: black,
+    height: 1.2,
+  );
+
+  /// In-app header subtitle. CSS `.hd .t small` is 11 / 600.
+  static const TextStyle headerSubtitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: medium,
+    height: 1.2,
+  );
+
+  /// Sign-in wordmark. CSS `.brand b` is 14 / 800.
+  static const TextStyle brandTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: black,
+    height: 1.2,
+  );
+
+  /// Welcome wordmark. CSS `.brand b` in gen1.py is 15 / 800,
+  /// letter-spacing -0.1.
+  static const TextStyle brandTitleWelcome = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 15,
+    fontWeight: black,
+    height: 1.2,
+    letterSpacing: -0.1,
+  );
+
+  /// Wordmark subtitle. CSS `.brand small` is 11 / 700, gold.
+  static const TextStyle brandSubtitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: strong,
+    height: 1.2,
+  );
+
+  /// Welcome wordmark subtitle. Same size and weight, letter-spacing 0.3.
+  static const TextStyle brandSubtitleWelcome = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 11,
+    fontWeight: strong,
+    height: 1.2,
+    letterSpacing: 0.3,
+  );
+
+  /// Page titles that are not the welcome H1. 20 / 800.
   static const TextStyle title = TextStyle(
     fontFamily: fontFamily,
     fontSize: 20,
@@ -53,6 +116,7 @@ abstract final class AppTypography {
     height: 1.2,
   );
 
+  /// 18 / 800. Polish maps 17px to 18. Not the list-row title.
   static const TextStyle titleCompact = TextStyle(
     fontFamily: fontFamily,
     fontSize: 18,
@@ -60,22 +124,56 @@ abstract final class AppTypography {
     height: 1.25,
   );
 
-  /// Body, 14 / medium. [bodyCompact] is the 13.5 step used in dense rows.
+  /// Card and list titles. CSS `.ct` is 14 / 800. `.lt` polishes 13.5 → 14 / 800.
+  static const TextStyle cardTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: black,
+    height: 1.25,
+  );
+
+  /// Empty-state title. gen2 `empty()` keeps the `.ct` weight and sets 16 px.
+  static const TextStyle emptyTitle = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: black,
+    height: 1.25,
+  );
+
+  /// Welcome body. CSS `.body` is 14 / 500, line-height 1.55.
   static const TextStyle bodyStyle = TextStyle(
     fontFamily: fontFamily,
     fontSize: 14,
     fontWeight: body,
-    height: 1.45,
+    height: 1.55,
   );
 
+  /// Sheet and card supporting copy. `.sub` is 13 / 500 / 1.5.
+  /// `.cs` polishes 12.5 → 13 / 500 / 1.5.
   static const TextStyle bodyCompact = TextStyle(
     fontFamily: fontFamily,
-    fontSize: 13.5,
+    fontSize: 13,
+    fontWeight: body,
+    height: 1.5,
+  );
+
+  /// List meta. `.ls` polishes 11.5 → 12 / 500.
+  static const TextStyle listMeta = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 12,
     fontWeight: body,
     height: 1.4,
   );
 
-  /// Buttons and chips, 12 / bold.
+  /// Field value. CSS `.in` polishes 13.5 → 14 / 600.
+  static const TextStyle fieldValue = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 14,
+    fontWeight: medium,
+    height: 1.2,
+  );
+
+  /// Field labels. CSS label polishes 11.5 → 12 / 700.
   static const TextStyle label = TextStyle(
     fontFamily: fontFamily,
     fontSize: 12,
@@ -83,7 +181,7 @@ abstract final class AppTypography {
     height: 1.2,
   );
 
-  /// The smallest action label, 11 / extra-bold.
+  /// Chips and badges. CSS `.bdg` / `.pill` is 11 / 800.
   static const TextStyle labelStrong = TextStyle(
     fontFamily: fontFamily,
     fontSize: 11,
@@ -91,7 +189,25 @@ abstract final class AppTypography {
     height: 1.2,
   );
 
-  /// Eyebrow above a title: 11 / extra-bold, tracked out.
+  /// Button label. Size follows the sign-in pill (15.5 → 16). Weight is 700:
+  /// the design review set that over the CSS value of 800.
+  static const TextStyle button = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 16,
+    fontWeight: strong,
+    height: 1,
+  );
+
+  /// Text button. CSS `.link` is 13 / 800.
+  static const TextStyle link = TextStyle(
+    fontFamily: fontFamily,
+    fontSize: 13,
+    fontWeight: black,
+    height: 1.2,
+  );
+
+  /// Eyebrow. Welcome `.en` is 11 / 800, letter-spacing 1.6.
+  /// Sign-in `.en` uses 1.5; the shared token keeps the welcome value.
   static const TextStyle eyebrow = TextStyle(
     fontFamily: fontFamily,
     fontSize: 11,
@@ -102,37 +218,47 @@ abstract final class AppTypography {
 
   /// Applies the app's weight and size adjustments to a base Material scale.
   static TextTheme apply(TextTheme base) {
-    TextStyle? role(TextStyle? style, FontWeight weight, {double? size}) {
+    TextStyle? role(
+      TextStyle? style,
+      FontWeight weight, {
+      double? size,
+      double? height,
+      double? letterSpacing,
+    }) {
       return style?.copyWith(
         fontFamily: fontFamily,
         fontWeight: weight,
         fontSize: size,
+        height: height,
+        letterSpacing: letterSpacing,
       );
     }
 
     return base.copyWith(
-      // Display/headline: a screen title. 28 matches the mockup H1.
-      headlineLarge: role(base.headlineLarge, black, size: 28),
-      headlineMedium: role(base.headlineMedium, black, size: 24),
-      headlineSmall: role(base.headlineSmall, black, size: 20),
-
-      // Titles: card and section headings, 20 and 18.
-      titleLarge: role(base.titleLarge, black, size: 20),
-      titleMedium: role(base.titleMedium, black, size: 18),
-      titleSmall: role(base.titleSmall, strong, size: 14),
-
-      // Body: the default for everything a resident reads.
-      bodyLarge: role(base.bodyLarge, body, size: 14)?.copyWith(height: 1.45),
-      bodyMedium: role(
-        base.bodyMedium,
-        body,
-        size: 13.5,
-      )?.copyWith(height: 1.45),
-      bodySmall: role(base.bodySmall, body, size: 12)?.copyWith(height: 1.40),
-
-      labelLarge: role(base.labelLarge, strong, size: 14),
-      labelMedium: role(base.labelMedium, strong, size: 12),
-      labelSmall: role(base.labelSmall, black, size: 11),
+      headlineLarge: role(
+        base.headlineLarge,
+        black,
+        size: 28,
+        height: 1.13,
+        letterSpacing: -0.6,
+      ),
+      headlineMedium: role(
+        base.headlineMedium,
+        black,
+        size: 24,
+        height: 1.15,
+        letterSpacing: -0.5,
+      ),
+      headlineSmall: role(base.headlineSmall, black, size: 20, height: 1.2),
+      titleLarge: role(base.titleLarge, black, size: 20, height: 1.2),
+      titleMedium: role(base.titleMedium, black, size: 18, height: 1.25),
+      titleSmall: role(base.titleSmall, black, size: 14, height: 1.25),
+      bodyLarge: role(base.bodyLarge, body, size: 14, height: 1.55),
+      bodyMedium: role(base.bodyMedium, body, size: 13, height: 1.5),
+      bodySmall: role(base.bodySmall, body, size: 12, height: 1.4),
+      labelLarge: role(base.labelLarge, strong, size: 16, height: 1),
+      labelMedium: role(base.labelMedium, strong, size: 12, height: 1.2),
+      labelSmall: role(base.labelSmall, black, size: 11, height: 1.2),
     );
   }
 }

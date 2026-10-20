@@ -87,6 +87,12 @@ class ComponentGalleryScreen extends StatelessWidget {
                   TaytayTextField(label: 'Mobile number', hint: '09XX'),
                   SizedBox(height: Spacing.sm),
                   TaytayTextField(
+                    label: 'Email or mobile number',
+                    hint: 'name@example.com',
+                    state: TaytayFieldState.focused,
+                  ),
+                  SizedBox(height: Spacing.sm),
+                  TaytayTextField(
                     label: 'Code',
                     state: TaytayFieldState.error,
                     message: 'That code does not match.',

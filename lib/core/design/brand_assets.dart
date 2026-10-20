@@ -4,8 +4,6 @@ import 'package:flutter/foundation.dart';
 ///
 /// ---
 ///
-/// ## Why this file exists and why it is currently empty
-///
 /// The official seal of a Philippine local government unit is a government
 /// symbol. It identifies acts of the municipality, and a resident who sees it on
 /// a screen is entitled to read it as "this is the LGU speaking". Two duties
@@ -18,36 +16,17 @@ import 'package:flutter/foundation.dart';
 ///    rendered in a government app is worse than no seal, because it is
 ///    indistinguishable from the real thing to the person looking at it.
 ///
-/// **No verified official asset has been supplied to this project.** The only
-/// candidate found in the workspace is
-/// `Desktop/lgu_ids_taytay/assets/logos/taytay_logo.png`, and it fails the policy
-/// below on inspection:
+/// The registered file is `assets/brand/taytay_seal.png`, copied byte for byte
+/// from the S0 design source `src/taytay_seal.png`. It is a PNG with an alpha
+/// channel. The mark widget draws it with `BoxFit.contain` and nothing else: no
+/// colour filter, no mask, no border. There is no wordmark stand-in: the
+/// registry always holds this file.
 ///
-/// | Check | Result |
-/// | --- | --- |
-/// | Container format | **JPEG** (`FF D8 FF E0 … JFIF`) despite the `.png` extension |
-/// | Compression | **Lossy** — the fine seal lettering and star points carry visible artifacts |
-/// | Alpha channel | **None** — the artwork is flattened onto opaque black, so it renders as a black square on any surface |
-/// | Provenance | An earlier prototype application, not an LGU-issued file |
+/// An earlier prototype file named `taytay_logo.png` was a JPEG flattened onto
+/// black. That file is not this asset and is not registered.
 ///
-/// A lossily-recompressed seal flattened onto black is an altered seal. Adopting
-/// it would put a degraded government symbol in front of residents and would make
-/// every later "is this the official mark?" question unanswerable. So this
-/// registry ships empty, `BrandMark` renders a plainly non-official wordmark
-/// instead, and the app makes no claim it cannot support.
-///
-/// ## How to add the real asset
-///
-/// 1. Obtain the seal from the Municipality of Taytay in a **lossless** form —
-///    SVG preferred, otherwise PNG with an alpha channel — together with written
-///    permission to reproduce it in this application.
-/// 2. Place it at `assets/brand/`, add the directory to `pubspec.yaml`, and
-///    register a [BrandAsset] here with its SHA-256.
-/// 3. `flutter test test/core/brand_test.dart` then verifies, mechanically, that
-///    the bytes on disk are exactly the bytes that were approved.
-///
-/// The checksum is the point: it converts "someone swapped the logo for a
-/// re-exported copy" from an unnoticed regression into a failing test.
+/// `flutter test test/core/brand_test.dart` checks that the bytes on disk match
+/// the SHA-256 recorded here. Re-encoding the seal fails that test.
 @immutable
 class BrandAsset {
   const BrandAsset({
@@ -102,20 +81,23 @@ enum BrandAssetFormat {
 
 /// The official artwork this build is authorised to render.
 abstract final class BrandAssets {
-  /// The municipal seal.
-  ///
-  /// `null` until a verified, losslessly-encoded, alpha-preserving asset is
-  /// supplied by the LGU together with permission to use it. See the file
-  /// doc comment.
-  static const BrandAsset? municipalSeal = null;
+  /// The municipal seal, byte-identical to the S0 design source.
+  static const BrandAsset municipalSeal = BrandAsset(
+    key: 'municipal_seal',
+    assetPath: 'assets/brand/taytay_seal.png',
+    sha256: '8541609af1ece1833cc9a03f326603315641bd8f44dc98b442c99545d529de8b',
+    format: BrandAssetFormat.png,
+    semanticLabel: 'Seal of the Municipality of Taytay, Rizal',
+    approvalReference:
+        'S0 design source src/taytay_seal.png, supplied as the official '
+        'Municipality of Taytay seal',
+  );
 
   /// Every registered asset. Used by the integrity test.
-  static List<BrandAsset> get all => <BrandAsset>[
-    if (municipalSeal case final BrandAsset seal) seal,
-  ];
+  static List<BrandAsset> get all => <BrandAsset>[municipalSeal];
 
   /// Whether this build may render the official seal.
-  static bool get hasVerifiedSeal => municipalSeal != null;
+  static bool get hasVerifiedSeal => true;
 }
 
 /// Presentation rules for official artwork.

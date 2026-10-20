@@ -15,6 +15,10 @@ import 'taytay_icon.dart';
 /// [A11y.minTapTarget] (48 dp), which is the floor in Article 6. The circle is
 /// centred in that target so the mockup's 44 dp mark and the tap-size rule are
 /// both true (decision D3).
+///
+/// Welcome and sign-in mockups draw this same solid white circle. In-app
+/// mockups draw a 44 px disc at 14% white with a white chevron, which reads as
+/// a bare chevron on the navy header. Those screens still use this circle.
 class TaytayBackButton extends StatelessWidget {
   const TaytayBackButton({
     this.onPressed,
