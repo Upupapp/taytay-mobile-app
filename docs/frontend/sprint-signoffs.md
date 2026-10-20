@@ -4,12 +4,12 @@ A sprint is approved only when Paul writes the words below on its pull request.
 This file records that the words were looked for. It does not invent them.
 
 | Sprint | Status | Pull request | Commit | Approval |
-| --- | --- | --- | --- | --- |
-| S0 Foundations | In review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | 92577b55885658f58ac716d6817ea6aa2028dcd3 | Waiting for "S0 approved" |
+| --- | --- | --- | --- | --- | --- |
+| S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 
 ## S0 pixel match
 
-S0 renders shared components and the dev gallery. It does not render the 84 resident screens (those are S1–S8). Comparison uses `tool/golden_compare`. Button crops are taken from `02-01`. The other rows are the same components painted by the gallery harness against HTML rendered from `gen*.py` / `polish.py` (Plus Jakarta Sans, 3×). The side-by-side is design | build | diff. S0 is **not** approved.
+S0 renders shared components and the dev gallery. It does not render the 84 resident screens (those are S1–S8). Comparison uses `tool/golden_compare`. Button crops are taken from `02-01`. The other rows are the same components painted by the gallery harness against HTML rendered from `gen*.py` / `polish.py` (Plus Jakarta Sans, 3×). The side-by-side is design | build | diff. The design reviewer Ui/Ux Taytay approved S0 on 2026-10-21 at `bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f`. The remaining diff is glyph and edge antialiasing, and layout is within 1 px. Paul merges. Pull request #1 stays a draft until that merge. This file does not record Paul as having written "S0 approved".
 
 | Component | Design source | Mismatch | What the diff is |
 | --- | --- | --- | --- |
