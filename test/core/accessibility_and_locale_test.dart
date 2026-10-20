@@ -133,6 +133,16 @@ void main() {
         // well want a Filipino gloss. It is here to hold the ratchet, not
         // because the question was answered.
         'fieldSuffix': 'UNREVIEWED — needs a native speaker, not a guess.',
+        // The welcome headlines are already Filipino on the English screen.
+        // 01-01..01-03 draw one bilingual composition, and both locales keep
+        // those three lines. The English eyebrows, bodies, and controls are
+        // translated in app_fil.arb.
+        'welcomeServicesTitle':
+            'The design headline is Filipino and is shown in both locales.',
+        'welcomeIdTitle':
+            'The design headline is Filipino and is shown in both locales.',
+        'welcomePrivacyTitle':
+            'The design headline is Filipino and is shown in both locales.',
       };
 
       final List<String> untranslated = <String>[

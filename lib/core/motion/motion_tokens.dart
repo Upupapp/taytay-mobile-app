@@ -37,6 +37,15 @@ abstract final class MotionTokens {
   /// Splash duration when reduced motion is requested.
   static const Duration splashReduced = Duration(milliseconds: 300);
 
+  /// The welcome speck. The prototype runs `spk` for 7s.
+  static const Duration welcomeLight = Duration(seconds: 7);
+
+  /// One welcome page of that loop, used when the speck carries into Sign-in.
+  static const Duration welcomeCarry = Duration(milliseconds: 2333);
+
+  /// `cubic-bezier(.45, 0, .55, 1)` from the prototype's speck animation.
+  static const Curve welcomeLightCurve = Cubic(0.45, 0, 0.55, 1);
+
   /// Standard easing for changes that both begin and end on screen.
   static const Curve standardEase = Curves.easeInOut;
 
@@ -116,4 +125,24 @@ abstract final class Motion {
   /// decorative animation that should disappear rather than shrink.
   static Duration decorative(BuildContext context, Duration full) =>
       reduced(context) ? MotionTokens.instant : full;
+
+  /// Whether a repeating decorative loop may run.
+  ///
+  /// Reduced motion never runs it. Widget tests also leave it off: a repeating
+  /// ticker never goes idle, so `pumpAndSettle` would not return. A test that
+  /// needs the loop sets [WelcomeMotion.animateInTests] and pumps frames itself.
+  static bool decorativeLoop(BuildContext context) {
+    if (reduced(context)) return false;
+    final testing = WidgetsBinding.instance.runtimeType.toString().contains(
+      'TestWidgetsFlutterBinding',
+    );
+    if (testing && !WelcomeMotion.animateInTests) return false;
+    return true;
+  }
+}
+
+/// Opt-in for the welcome speck inside a widget test.
+abstract final class WelcomeMotion {
+  @visibleForTesting
+  static bool animateInTests = false;
 }

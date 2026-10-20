@@ -11,6 +11,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -158,8 +159,14 @@ const StoredSession unverifiedSession = StoredSession(
 );
 
 void main() {
-  setUp(MotionPreference.reset);
-  tearDown(MotionPreference.reset);
+  setUp(() {
+    MotionPreference.reset();
+    WelcomeMotion.animateInTests = false;
+  });
+  tearDown(() {
+    MotionPreference.reset();
+    WelcomeMotion.animateInTests = false;
+  });
 
   group('startup routing', () {
     testWidgets('a first launch lands on the welcome scenes', (tester) async {
@@ -167,7 +174,7 @@ void main() {
       await settle(tester);
 
       expect(dependencies.launch.state, LaunchState.firstLaunch);
-      expect(find.text('Municipal services in one place'), findsOneWidget);
+      expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
     });
 
@@ -175,7 +182,7 @@ void main() {
       await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      expect(find.text('Municipal services in one place'), findsNothing);
+      expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsNothing);
       expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
@@ -311,7 +318,7 @@ void main() {
       await settle(tester);
 
       final semantics = tester.getSemantics(
-        find.text('Municipal services in one place'),
+        find.text('Serbisyong bayan,\nnasa isang app.'),
       );
       expect(semantics.flagsCollection.isHeader, isTrue);
     });
@@ -326,6 +333,43 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the travelling light runs unless motion is reduced', (
+      tester,
+    ) async {
+      WelcomeMotion.animateInTests = true;
+      await boot(tester);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      expect(find.text('Skip'), findsOneWidget);
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+
+      WelcomeMotion.animateInTests = false;
+      MotionPreference.set(MotionPreference.reduced);
+      await tester.pump();
+      expect(find.byKey(TravellingLight.mark), findsNothing);
+    });
+
+    testWidgets('get started opens sign-in and carries the light', (
+      tester,
+    ) async {
+      final dependencies = await boot(tester);
+      await settle(tester);
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.text('Get started'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Send one-time code'), findsOneWidget);
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+      expect(dependencies.launch.state, LaunchState.returning);
+      await tester.pump(MotionTokens.welcomeCarry);
+      await tester.pump();
+      expect(find.byKey(TravellingLight.mark), findsNothing);
+    });
+
     testWidgets('scene transitions work under reduced motion', (tester) async {
       await boot(tester, disableAnimations: true);
       await settle(tester);
@@ -334,7 +378,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Your Taytay ID, on your phone'), findsOneWidget);
+      expect(find.text('YOUR TAYTAY ID, ON YOUR PHONE'), findsOneWidget);
     });
 
     testWidgets('the in-app reduced-motion preference also applies', (

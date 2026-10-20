@@ -120,6 +120,9 @@ class WovenHeader extends StatelessWidget {
     this.backEnabled = true,
     this.welcome = false,
     this.trailing,
+    this.paintField = true,
+    this.includeSafeArea = true,
+    this.padding,
     super.key,
   });
 
@@ -135,6 +138,16 @@ class WovenHeader extends StatelessWidget {
 
   final Widget? trailing;
 
+  /// Welcome pages paint their own field behind this row. Sign-in keeps the
+  /// default, which paints the field inside the header.
+  final bool paintField;
+
+  /// Welcome pages position the row themselves. Sign-in keeps the safe area.
+  final bool includeSafeArea;
+
+  /// Replaces the default padding when the row is placed on a full-page canvas.
+  final EdgeInsetsGeometry? padding;
+
   @override
   Widget build(BuildContext context) {
     // The back control is 48 dp with a 44 dp circle. A 10 dp spacer after it
@@ -145,67 +158,66 @@ class WovenHeader extends StatelessWidget {
     // Flutter's line box insets the wordmark below the mockup's half-leading.
     // These two corrections put the ink on the crop; they follow the text scale.
     final typeScale = MediaQuery.textScalerOf(context).scale(1);
-    return Stack(
-      children: <Widget>[
-        Positioned.fill(
-          child: CustomPaint(
-            painter: welcome
-                ? const WovenFieldPainter.welcome()
-                : const WovenFieldPainter.signIn(),
+    final row = Padding(
+      padding: padding ?? EdgeInsets.fromLTRB(showBack ? 18 : 20, 4, 20, 16),
+      child: Row(
+        children: <Widget>[
+          if (showBack)
+            TaytayBackButton(
+              onPressed: onBack,
+              enabled: backEnabled,
+              light: true,
+            ),
+          if (showBack) SizedBox(width: afterBack),
+          FramedSeal(
+            diameter: seal,
+            shadowBlur: welcome ? 14 : 12,
+            shadowOffsetY: welcome ? 4 : 3,
           ),
-        ),
-        SafeArea(
-          bottom: false,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(showBack ? 18 : 20, 4, 20, 16),
-            child: Row(
+          SizedBox(width: brandGap),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                if (showBack)
-                  TaytayBackButton(
-                    onPressed: onBack,
-                    enabled: backEnabled,
-                    light: true,
-                  ),
-                if (showBack) SizedBox(width: afterBack),
-                FramedSeal(
-                  diameter: seal,
-                  shadowBlur: welcome ? 14 : 12,
-                  shadowOffsetY: welcome ? 4 : 3,
-                ),
-                SizedBox(width: brandGap),
-                Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Transform.translate(
-                        offset: Offset(0, -5 / 3 * typeScale),
-                        child: Text(
-                          'Bayan ng Taytay',
-                          style:
-                              (welcome
-                                      ? AppTypography.brandTitleWelcome
-                                      : AppTypography.brandTitle)
-                                  .copyWith(color: Colors.white),
-                        ),
-                      ),
-                      SizedBox(height: 4 * typeScale),
-                      Text(
-                        'Lalawigan ng Rizal',
-                        style:
-                            (welcome
-                                    ? AppTypography.brandSubtitleWelcome
-                                    : AppTypography.brandSubtitle)
-                                .copyWith(color: BrandColors.sealGold),
-                      ),
-                    ],
+                Transform.translate(
+                  offset: Offset(0, -5 / 3 * typeScale),
+                  child: Text(
+                    'Bayan ng Taytay',
+                    style:
+                        (welcome
+                                ? AppTypography.brandTitleWelcome
+                                : AppTypography.brandTitle)
+                            .copyWith(color: Colors.white),
                   ),
                 ),
-                ?trailing,
+                SizedBox(height: 4 * typeScale),
+                Text(
+                  'Lalawigan ng Rizal',
+                  style:
+                      (welcome
+                              ? AppTypography.brandSubtitleWelcome
+                              : AppTypography.brandSubtitle)
+                          .copyWith(color: BrandColors.sealGold),
+                ),
               ],
             ),
           ),
-        ),
+          ?trailing,
+        ],
+      ),
+    );
+    return Stack(
+      children: <Widget>[
+        if (paintField)
+          Positioned.fill(
+            child: CustomPaint(
+              painter: welcome
+                  ? const WovenFieldPainter.welcome()
+                  : const WovenFieldPainter.signIn(),
+            ),
+          ),
+        if (includeSafeArea) SafeArea(bottom: false, child: row) else row,
       ],
     );
   }

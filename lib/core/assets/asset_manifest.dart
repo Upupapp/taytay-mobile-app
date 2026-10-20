@@ -20,7 +20,11 @@ enum AssetKind {
 
   /// Official artwork supplied by the LGU. Governed additionally by
   /// `BrandAssets` and `SealIntegrityRules`; never generated, never redrawn.
-  officialArtwork('assets/brand');
+  officialArtwork('assets/brand'),
+
+  /// A photograph the design ships with a credit. JPEG is allowed only here.
+  /// One file, no density copies: the source is already wider than a 3× arch.
+  photograph('assets/photos');
 
   const AssetKind(this.directory);
 
@@ -32,11 +36,9 @@ enum AssetKind {
 
 /// Permitted container formats.
 ///
-/// JPEG is deliberately absent. Every asset in this app is flat-colour artwork
-/// with transparency: JPEG carries no alpha, and its ringing artifacts are worst
-/// exactly where this artwork is strongest — hard edges between flat fills. The
-/// one case JPEG suits, a photograph, is a case this app does not have (see
-/// [AssetLicence.originalWork] and the no-photography rule).
+/// Flat-colour artwork stays lossless: JPEG carries no alpha, and its ringing
+/// is worst on hard edges. A photograph is the exception, and only
+/// [AssetKind.photograph] may use [AssetFormat.jpeg].
 enum AssetFormat {
   /// Preferred for anything geometric. One file, every density.
   svg('image/svg+xml'),
@@ -45,14 +47,18 @@ enum AssetFormat {
   png('image/png'),
 
   /// Lossless-mode raster with alpha. Smaller than PNG at equal quality.
-  webp('image/webp');
+  webp('image/webp'),
+
+  /// A photograph. Not density-dependent: one source file is downscaled.
+  jpeg('image/jpeg');
 
   const AssetFormat(this.mimeType);
 
   final String mimeType;
 
   /// Whether this format needs `2.0x` / `3.0x` variants alongside it.
-  bool get isDensityDependent => this != AssetFormat.svg;
+  bool get isDensityDependent =>
+      this != AssetFormat.svg && this != AssetFormat.jpeg;
 }
 
 /// How the app came to have the right to ship an asset.
@@ -137,9 +143,8 @@ abstract final class AssetPolicy {
   /// Every illustration's accessible name starts with this.
   static const String illustrationLabelPrefix = 'Illustration:';
 
-  /// Words that would claim an image is a photograph of a real place, event or
-  /// person. None of this app's artwork is photographic, and a label implying
-  /// otherwise is a factual claim the app cannot support.
+  /// Words that would claim drawn artwork is a photograph. A
+  /// [AssetKind.photograph] label is the exception: it must start with "Photo:".
   static const List<String> forbiddenLabelClaims = <String>[
     'photo',
     'photograph',
@@ -158,6 +163,9 @@ abstract final class AssetPolicy {
     AssetKind.icon: 12 * 1024,
     AssetKind.placeholder: 40 * 1024,
     AssetKind.officialArtwork: 200 * 1024,
+    // Three welcome photographs. Each file stays under 1 MB. They are not
+    // precached: the largest is well over the 256 KB startup budget.
+    AssetKind.photograph: 1024 * 1024,
   };
 
   static int budgetFor(AssetKind kind) => budgets[kind]!;
@@ -191,8 +199,9 @@ abstract final class AssetPolicy {
 /// Every asset file this build ships.
 ///
 /// Illustrations, scenes and placeholders stay Flutter-painted compositions
-/// (`lib/shared/illustrations/`). The one raster file is the municipal seal:
-/// official artwork that cannot be redrawn as geometry.
+/// (`lib/shared/illustrations/`). Raster files are the municipal seal and the
+/// three welcome photographs. The seal is never redrawn. The photographs are
+/// the design JPEGs, with the credits in `docs/frontend/PHOTO_CREDITS.md`.
 abstract final class AppAssets {
   static const List<AssetEntry> all = <AssetEntry>[
     AssetEntry(
@@ -211,6 +220,48 @@ abstract final class AppAssets {
       sha256:
           '8541609af1ece1833cc9a03f326603315641bd8f44dc98b442c99545d529de8b',
       maxBytes: 357301,
+    ),
+    AssetEntry(
+      key: 'municipal_hall',
+      path: 'assets/photos/municipal_hall.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/1_municipal_hall.jpg. Ramon FVelasquez, '
+          'CC BY-SA 3.0. Credit is shown on the welcome scene. Not precached.',
+      semanticLabel: 'Photo: Taytay Municipal Hall',
+      sha256:
+          '97c0e6665a346d4dcc0ee40cdcace2434cb2ba6e04dbb4190e3acc3199bdaaf4',
+      maxBytes: 521406,
+    ),
+    AssetEntry(
+      key: 'tiangge',
+      path: 'assets/photos/tiangge.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/2_tiangge.jpg. Ralff Nestor Nacor, '
+          'CC BY-SA 4.0. Credit is shown on the welcome scene. Not precached.',
+      semanticLabel: 'Photo: Taytay Tiangge',
+      sha256:
+          '158de5b27048b7f21a2069b2b27775437755e69135de4a54073cb4594f56b893',
+      maxBytes: 975246,
+    ),
+    AssetEntry(
+      key: 'parish_church',
+      path: 'assets/photos/parish_church.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/3_church.jpg. Urbanroamer, CC BY-SA 3.0. '
+          'Credit is shown on the welcome scene. Not precached.',
+      semanticLabel: 'Photo: St. John the Baptist Parish Church',
+      sha256:
+          'a3c5512973fc1b88395ec4a777a6f5e8ecedd1c6a8880cc2284be18fa06a64e4',
+      maxBytes: 673736,
     ),
   ];
 

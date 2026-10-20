@@ -231,6 +231,8 @@ flutter:
     # Official municipal seal. Byte-identical to the design source. Downscaled
     # only; see BrandAssets.
     - assets/brand/taytay_seal.png
+    # Welcome photographs. The design JPEGs, credited on screen.
+    - assets/photos/
 
   fonts:
     - family: Plus Jakarta Sans

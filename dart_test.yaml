@@ -16,3 +16,7 @@ tags:
   live:
     # Overridden on the command line by `--tags live`.
     skip: "needs a running API; run with --tags live and TAYTAY_LIVE_* set"
+  recording:
+    # Opt-in frame capture for the welcome thread. Not part of `flutter test`.
+    # `--tags` does not clear this skip; add `--run-skipped`.
+    skip: "screen recording; run with --tags recording --run-skipped"

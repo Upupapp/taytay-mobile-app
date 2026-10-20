@@ -18,6 +18,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_headers.dart';
+import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
 
@@ -40,9 +41,12 @@ import 'sign_in_controller.dart';
 /// redirected them, so a deep link into a protected screen resumes after
 /// sign-in instead of dumping them on the home screen.
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({this.returnTo, super.key});
+  const SignInScreen({this.returnTo, this.threadArrival = false, super.key});
 
   final String? returnTo;
+
+  /// Draws the welcome thread once across the top, then removes it.
+  final bool threadArrival;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -55,6 +59,13 @@ class _SignInScreenState extends State<SignInScreen> {
   final GlobalKey<FormState> _codeForm = GlobalKey<FormState>();
 
   SignInController? _controller;
+  late bool _showThread;
+
+  @override
+  void initState() {
+    super.initState();
+    _showThread = widget.threadArrival;
+  }
 
   @override
   void didChangeDependencies() {
@@ -136,106 +147,123 @@ class _SignInScreenState extends State<SignInScreen> {
         ? session.endedReason
         : SessionEndedReason.none;
 
+    final showThread = _showThread && !Motion.reduced(context);
     return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            WovenHeader(
-              showBack: true,
-              backEnabled:
-                  !(controller.step == SignInStep.code && controller.busy),
-              onBack: controller.step == SignInStep.code
-                  ? controller.changeNumber
-                  : null,
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(Spacing.xl),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    // Three distinct notices, and the distinction is the point of
-                    // TAB 06 step 2. An expiry is not a sign-out and neither is a
-                    // network failure; a resident dropped on this screen with one
-                    // generic sentence cannot tell whether something went wrong,
-                    // whether they did it, or whether to try again.
-                    if (endedReason == SessionEndedReason.expired)
-                      _Notice(
-                        icon: Icons.lock_clock_outlined,
-                        text: AppStrings.of(context).signInNoticeExpired,
-                      )
-                    else if (endedReason == SessionEndedReason.signedOut)
-                      _Notice(
-                        icon: Icons.check_circle_outline,
-                        text: AppStrings.of(context).signInNoticeSignedOut,
-                      )
-                    else if (widget.returnTo != null)
-                      _Notice(
-                        icon: Icons.login_outlined,
-                        text: AppStrings.of(context).signInNoticeReturnTo,
-                      ),
-                    switch (controller.step) {
-                      SignInStep.identifier => _IdentifierStep(
-                        formKey: _identifierForm,
-                        controller: _mobileController,
-                        busy: controller.busy,
-                        onSubmit: _requestCode,
-                      ),
-                      SignInStep.code => _CodeStep(
-                        formKey: _codeForm,
-                        controller: _codeController,
-                        signIn: controller,
-                        onSubmit: _verifyCode,
-                        onResend: _resend,
-                      ),
-                    },
-                    if (controller.message != null) ...<Widget>[
-                      const SizedBox(height: Spacing.lg),
-                      _MessageBanner(message: controller.message!),
-                    ],
-                    const SizedBox(height: Spacing.xl),
-                    TextButton(
-                      onPressed: () =>
-                          context.goNamed(AppRoute.signInHelp.routeName),
-                      child: const Text('Trouble signing in?'),
-                    ),
-                    if (controller.step == SignInStep.identifier) ...<Widget>[
-                      const SizedBox(height: Spacing.sm),
-                      // TAB 03 / F15. Two states in one build, chosen by the server.
-                      //
-                      // Under staff-mediated onboarding this is NOT a disabled
-                      // button. A control a resident cannot use tells them the app is
-                      // broken; a sentence tells them where to go. There is no
-                      // self-registration route on the server, so offering the wizard
-                      // here would be a promise the platform cannot keep.
-                      if (dependencies
-                          .platform
-                          .onboardingMode
-                          .allowsSelfRegistration)
-                        SecondaryButton(
-                          kind: TaytayButtonKind.signIn,
+      body: Stack(
+        children: <Widget>[
+          SafeArea(
+            child: Column(
+              children: <Widget>[
+                WovenHeader(
+                  showBack: true,
+                  backEnabled:
+                      !(controller.step == SignInStep.code && controller.busy),
+                  onBack: controller.step == SignInStep.code
+                      ? controller.changeNumber
+                      : null,
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(Spacing.xl),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        // Three distinct notices, and the distinction is the point of
+                        // TAB 06 step 2. An expiry is not a sign-out and neither is a
+                        // network failure; a resident dropped on this screen with one
+                        // generic sentence cannot tell whether something went wrong,
+                        // whether they did it, or whether to try again.
+                        if (endedReason == SessionEndedReason.expired)
+                          _Notice(
+                            icon: Icons.lock_clock_outlined,
+                            text: AppStrings.of(context).signInNoticeExpired,
+                          )
+                        else if (endedReason == SessionEndedReason.signedOut)
+                          _Notice(
+                            icon: Icons.check_circle_outline,
+                            text: AppStrings.of(context).signInNoticeSignedOut,
+                          )
+                        else if (widget.returnTo != null)
+                          _Notice(
+                            icon: Icons.login_outlined,
+                            text: AppStrings.of(context).signInNoticeReturnTo,
+                          ),
+                        switch (controller.step) {
+                          SignInStep.identifier => _IdentifierStep(
+                            formKey: _identifierForm,
+                            controller: _mobileController,
+                            busy: controller.busy,
+                            onSubmit: _requestCode,
+                          ),
+                          SignInStep.code => _CodeStep(
+                            formKey: _codeForm,
+                            controller: _codeController,
+                            signIn: controller,
+                            onSubmit: _verifyCode,
+                            onResend: _resend,
+                          ),
+                        },
+                        if (controller.message != null) ...<Widget>[
+                          const SizedBox(height: Spacing.lg),
+                          _MessageBanner(message: controller.message!),
+                        ],
+                        const SizedBox(height: Spacing.xl),
+                        TextButton(
                           onPressed: () =>
-                              context.goNamed(AppRoute.register.routeName),
-                          label: 'Create an account',
-                        )
-                      else
-                        const _OfficeOnboardingPanel(),
-                    ],
-                    const SizedBox(height: Spacing.sm),
-                    TextButton(
-                      style: TextButton.styleFrom(
-                        textStyle: AppTypography.linkGuest,
-                      ),
-                      onPressed: () => context.goNamed(AppRoute.home.routeName),
-                      child: const Text('Continue as guest'),
+                              context.goNamed(AppRoute.signInHelp.routeName),
+                          child: const Text('Trouble signing in?'),
+                        ),
+                        if (controller.step ==
+                            SignInStep.identifier) ...<Widget>[
+                          const SizedBox(height: Spacing.sm),
+                          // TAB 03 / F15. Two states in one build, chosen by the server.
+                          //
+                          // Under staff-mediated onboarding this is NOT a disabled
+                          // button. A control a resident cannot use tells them the app is
+                          // broken; a sentence tells them where to go. There is no
+                          // self-registration route on the server, so offering the wizard
+                          // here would be a promise the platform cannot keep.
+                          if (dependencies
+                              .platform
+                              .onboardingMode
+                              .allowsSelfRegistration)
+                            SecondaryButton(
+                              kind: TaytayButtonKind.signIn,
+                              onPressed: () =>
+                                  context.goNamed(AppRoute.register.routeName),
+                              label: 'Create an account',
+                            )
+                          else
+                            const _OfficeOnboardingPanel(),
+                        ],
+                        const SizedBox(height: Spacing.sm),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            textStyle: AppTypography.linkGuest,
+                          ),
+                          onPressed: () =>
+                              context.goNamed(AppRoute.home.routeName),
+                          child: const Text('Continue as guest'),
+                        ),
+                        if (kDebugMode) const _DebugSessionSimulator(),
+                      ],
                     ),
-                    if (kDebugMode) const _DebugSessionSimulator(),
-                  ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (showThread)
+            Positioned.fill(
+              child: IgnorePointer(
+                child: SignInThreadOverlay(
+                  onFinished: () {
+                    if (mounted) setState(() => _showThread = false);
+                  },
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
