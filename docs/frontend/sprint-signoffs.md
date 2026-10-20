@@ -6,7 +6,7 @@ This file records that the words were looked for. It does not invent them.
 | Sprint | Status | Pull request | Commit | Approval |
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
-| S1 Welcome | In review |  | e4c30047bc7a2746adc759f1954f9bad104def17 | Waiting for "S1 approved". Paul merges. |
+| S1 Welcome | In review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | e4c30047bc7a2746adc759f1954f9bad104def17 | Waiting for "S1 approved". Paul merges. |
 
 ## S0 pixel match
 
