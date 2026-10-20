@@ -5,7 +5,7 @@ This file records that the words were looked for. It does not invent them.
 
 | Sprint | Status | Pull request | Commit | Approval |
 | --- | --- | --- | --- | --- |
-| S0 Foundations | In review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | 87c697d9d883b31a1476ade4d46e865303699254 | Waiting for "S0 approved" |
+| S0 Foundations | In review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | 92577b55885658f58ac716d6817ea6aa2028dcd3 | Waiting for "S0 approved" |
 
 ## S0 pixel match
 
