@@ -20,6 +20,9 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CSS `.card` is border-box. The 1px stroke sits outside the padding;
+    // painting it on top of the child shortens the card by 2px and shifts
+    // the content up and left by 1px.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: BrandColors.surfaceCard,
@@ -27,7 +30,10 @@ class SectionCard extends StatelessWidget {
         border: Border.all(color: BrandColors.cardLine),
         boxShadow: TaytayShadows.card,
       ),
-      child: Padding(padding: padding, child: child),
+      child: Padding(
+        padding: const EdgeInsets.all(1),
+        child: Padding(padding: padding, child: child),
+      ),
     );
   }
 }

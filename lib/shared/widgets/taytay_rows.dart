@@ -99,6 +99,23 @@ class SampleTag extends StatelessWidget {
   }
 }
 
+/// CSS half-leading. The line box keeps the extra space above the first
+/// ascent and below the last descent, split evenly, which is how a unitless
+/// CSS `line-height` is applied.
+///
+/// `.lt` is 14/800 and `.ls` is 12/500. drive/src does not set a line-height
+/// on either; the card specimen that the 227px row is measured against sets
+/// both to 1.2. Passing this behavior without [TextLeadingDistribution.even]
+/// would replace that even split with the proportional default.
+const TextHeightBehavior _cssHalfLeading = TextHeightBehavior(
+  applyHeightToFirstAscent: true,
+  applyHeightToLastDescent: true,
+  leadingDistribution: TextLeadingDistribution.even,
+);
+
+/// Unitless line-height on `.lt` and `.ls` in the card specimen.
+const double _listLineHeight = 1.2;
+
 /// Icon tile, title, subtitle, and a trailing control. Default trailing is a
 /// chevron.
 class ListRow extends StatelessWidget {
@@ -161,17 +178,23 @@ class ListRow extends StatelessWidget {
                     children: <Widget>[
                       Text(
                         title,
+                        textHeightBehavior: _cssHalfLeading,
                         style: AppTypography.cardTitle.copyWith(
                           color: BrandColors.textPrimary,
+                          height: _listLineHeight,
                         ),
                       ),
                       if (subtitle != null)
                         Padding(
+                          // `.ls` margin-top is 2px. `.li` vertical padding
+                          // stays 12px; the gap is not part of that padding.
                           padding: const EdgeInsets.only(top: 2),
                           child: Text(
                             subtitle!,
+                            textHeightBehavior: _cssHalfLeading,
                             style: AppTypography.listMeta.copyWith(
                               color: BrandColors.listMeta,
+                              height: _listLineHeight,
                             ),
                           ),
                         ),
