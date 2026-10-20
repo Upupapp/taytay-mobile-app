@@ -57,18 +57,19 @@ S1 renders welcome scenes `01-01`, `01-02`, and `01-03`. Comparison uses `tool/g
 
 | Screen | Design source | Mismatch | Layout |
 | --- | --- | --- | --- |
-| 01-01 Municipal services | `01-01_Welcome_Municipal-Services.png` | 7.27% (154995/2132448) | Copy-block origin within 1 device px. Next pill origin within 1 device px. Seal gold ring shares the design origin. `test/goldens/compare/welcome_01-01.png` |
-| 01-02 Taytay ID | `01-02_Welcome_Taytay-ID.png` | 6.18% (131706/2132448) | Copy-block origin within 1 device px. Next pill origin within 1 device px. `test/goldens/compare/welcome_01-02.png` |
-| 01-03 Privacy | `01-03_Welcome_Privacy-Get-Started.png` | 7.18% (167968/2339862) | Copy block starts 1 device px higher and is 2 device px taller. Get started pill is within 1 device px. `test/goldens/compare/welcome_01-03.png` |
+| 01-01 Municipal services | `01-01_Welcome_Municipal-Services.png` | 4.08% (87043/2132448) | Copy-block origin within 1 device px. Next pill origin within 1 device px. Seal ring samples `(214, 181, 29)`. Arch rim samples `#FFFFFF`. `test/goldens/compare/welcome_01-01.png` |
+| 01-02 Taytay ID | `01-02_Welcome_Taytay-ID.png` | 3.25% (69368/2132448) | Copy-block origin within 1 device px. Next pill origin within 1 device px. `test/goldens/compare/welcome_01-02.png` |
+| 01-03 Privacy | `01-03_Welcome_Privacy-Get-Started.png` | 4.30% (100596/2339862) | Knot row sits 28 px under the body. Get started pill is within 1 device px. `test/goldens/compare/welcome_01-03.png` |
 
-On `01-01`, the gradient outside the seal, wordmark, and arch is 0.17% at the top and 0.02% beside the arch. Sampled field pixels match, including `(4, 26, 68)` at the top left and `#F3F5FA` on the lower field. The copy band is 10.85%, 7.99%, and 8.42% on the three scenes. That is Plus Jakarta Sans rasterization, the same class S0 recorded for the type scale at 5.81%. The seal downscale and the dashed chip edges sit in the same remainder. Layout is inside the 4 device-px allowance.
+On `01-01`, the gradient outside the seal and wordmark is 0.17%. The arch band outside the photograph is 1.43%. The copy band is 7.71%, 5.25%, and 5.89%. That is Plus Jakarta Sans rasterization, the same class S0 recorded for the type scale at 5.81%. The welcome golden host is a `Material`, so the text is not Flutter's missing-`Material` underline. S0 goldens already sat in a `Scaffold` or a transparent `Material`. The woven-header and gallery-frame goldens were regenerated because the shared seal ring now paints above its drop shadow.
 
-The speck runs for 7s on `cubic-bezier(.45, 0, .55, 1)`, the prototype's `spk` timing. It travels the stitch `Y=[200, 300, 170, 260]`. Reduced motion hides it (`Motion.reduced`) and jumps between pages. Get started carries the stitch onto Sign-in for 2333ms, then removes it.
+The speck runs for 7s on `cubic-bezier(.45, 0, .55, 1)`. Its position on the welcome pages is `PageController.page` along the joined stitch `Y=[200, 300, 170, 260]`, so the exit of page *n* is the entry of page *n+1*. Get started hands the live cycle to Sign-in. The thread and the 7s loop stay on the sign-in screen. Reduced motion hides the speck and keeps the thread still.
 
 ### S1 deviations
 
 - The full-frame mismatch is above 2%. The gradient field matches. The remainder is glyph antialiasing, the downscaled seal, dashed chip edges, and button-label edges. Layout is within 2 device px.
-- The prototype `spk` keyframes are one 7s loop positioned in percentages. These scenes follow the SVG stitch in `w1.html`, `w2.html`, and `w3.html`, on that same duration and curve. Sign-in plays the continuation once for 2333ms. The prototype keeps `spk` looping on every `02-*` screen.
+- The prototype `spk` keyframes are one 7s loop positioned in percentages. These scenes follow the SVG stitch in `w1.html`, `w2.html`, and `w3.html`, on that same duration and curve, and Sign-in keeps that loop.
+- Skip's painted pill is 44 dp inside a 48 dp target.
 - The English locale is the design: Filipino headlines, English eyebrows and bodies, English controls. Filipino translates the English lines. The three headlines stay shared, because they are already the design's Filipino.
 - Photographs are the design JPEGs, with the credits in `docs/frontend/PHOTO_CREDITS.md`. The seal is the existing asset, unaltered.
 - No new package.

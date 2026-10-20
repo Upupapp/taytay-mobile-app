@@ -37,8 +37,8 @@ import 'welcome_scene.dart';
 ///
 /// Get started marks the welcome done and opens Sign-in. Self-registration stays
 /// off, so Sign-in is the destination the guard already uses for that step. The
-/// travelling light is handed across as [WelcomeThreadArrival]. Skip and
-/// Continue as guest mark the welcome done and enter the app.
+/// speck's live cycle position is handed across as [WelcomeThreadArrival]. Skip
+/// and Continue as guest mark the welcome done and enter the app.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -50,6 +50,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     with TickerProviderStateMixin {
   final PageController _pages = PageController();
   late final AnimationController _light;
+
+  /// Page the swipe started on. The speck is measured from here so a gesture
+  /// does not throw it back to the entry.
+  int _anchor = 0;
+
+  /// Eased phase frozen at the start of a swipe. Null while the page is still.
+  double? _heldPhase;
+
+  /// Raw cycle position frozen with [_heldPhase], handed to Sign-in.
+  double _heldCycle = 0;
 
   @override
   void initState() {
@@ -72,6 +82,32 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   void _onPageTick() {
+    if (!mounted) return;
+    if (!Motion.decorativeLoop(context)) {
+      _heldPhase = null;
+      if (mounted) setState(() {});
+      return;
+    }
+    final current = _page;
+    final settled = (current - current.roundToDouble()).abs() <= 0.001;
+    if (settled) {
+      final landed = current.round();
+      if (_heldPhase != null) {
+        final forward = landed >= _anchor;
+        _anchor = landed;
+        _heldPhase = null;
+        // Forward lands on the next entry (t = 0). Backward lands on the
+        // previous exit, which is the end of that page's curve.
+        _light.value = forward ? 0 : 0.999;
+        if (!_light.isAnimating) _light.repeat();
+      } else {
+        _anchor = landed;
+      }
+    } else if (_heldPhase == null) {
+      _heldCycle = _light.value;
+      _heldPhase = MotionTokens.welcomeLightCurve.transform(_light.value);
+      _light.stop();
+    }
     if (mounted) setState(() {});
   }
 
@@ -89,20 +125,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return _pages.page ?? _pages.initialPage.toDouble();
   }
 
-  /// Ambient travel on the settled page. During a swipe the speck rides the
-  /// outgoing curve so the stitch stays one line.
+  /// The speck on the joined stitch. Null hides it (reduced motion, or this
+  /// page is not the one currently carrying the light).
   double? _lightT(int page) {
+    if (Motion.reduced(context)) return null;
     if (!Motion.decorativeLoop(context)) return null;
-    final current = _page;
-    final travelling = (current - current.roundToDouble()).abs() > 0.001;
-    if (travelling) {
-      final from = current.floor();
-      if (page != from) return null;
-      return current - from;
-    }
-    if (page != current.round()) return null;
-    return MotionTokens.welcomeLightCurve.transform(_light.value);
+    final phase =
+        _heldPhase ?? MotionTokens.welcomeLightCurve.transform(_light.value);
+    final placement = placeSpeck(page: _page, phase: phase, anchor: _anchor);
+    if (placement.page != page) return null;
+    return placement.t;
   }
+
+  double get _cycle => _heldPhase != null ? _heldCycle : _light.value;
 
   Duration get _turn => MotionTokens.standard;
 
@@ -115,7 +150,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (signIn) {
       router.goNamed(
         AppRoute.signIn.routeName,
-        extra: reduced ? null : const WelcomeThreadArrival(),
+        extra: reduced ? null : WelcomeThreadArrival(_cycle),
       );
       return;
     }

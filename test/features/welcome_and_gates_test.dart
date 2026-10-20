@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -11,6 +12,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/onboarding/presentation/welcome_scene.dart';
 import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 AppConfig config() => AppConfig.from(
@@ -161,11 +163,11 @@ const StoredSession unverifiedSession = StoredSession(
 void main() {
   setUp(() {
     MotionPreference.reset();
-    WelcomeMotion.animateInTests = false;
+    WelcomeMotion.enabled = false;
   });
   tearDown(() {
     MotionPreference.reset();
-    WelcomeMotion.animateInTests = false;
+    WelcomeMotion.enabled = false;
   });
 
   group('startup routing', () {
@@ -248,6 +250,32 @@ void main() {
   });
 
   group('welcome scenes — no trap', () {
+    testWidgets('Skip fires from 23 dp above the centre of its 48 dp target', (
+      tester,
+    ) async {
+      final dependencies = await boot(tester);
+      await settle(tester);
+
+      expect(
+        tester.getSize(find.byKey(welcomeSkipTargetKey)).height,
+        A11y.minTapTarget,
+      );
+      final pill = tester.getSize(
+        find.descendant(
+          of: find.byKey(welcomeSkipTargetKey),
+          matching: find.byType(SizedBox),
+        ),
+      );
+      expect(pill.height, A11y.backButtonVisual);
+
+      final centre = tester.getCenter(find.byKey(welcomeSkipTargetKey));
+      await tester.tapAt(centre + const Offset(0, -23));
+      await tester.pumpAndSettle();
+
+      expect(dependencies.launch.state, LaunchState.returning);
+      expect(find.textContaining('no account needed'), findsOneWidget);
+    });
+
     testWidgets('skip marks the welcome done and enters the app', (
       tester,
     ) async {
@@ -336,7 +364,7 @@ void main() {
     testWidgets('the travelling light runs unless motion is reduced', (
       tester,
     ) async {
-      WelcomeMotion.animateInTests = true;
+      WelcomeMotion.enabled = true;
       await boot(tester);
       await tester.pump();
       await tester.pump(const Duration(seconds: 2));
@@ -344,7 +372,7 @@ void main() {
       expect(find.text('Skip'), findsOneWidget);
       expect(find.byKey(TravellingLight.mark), findsOneWidget);
 
-      WelcomeMotion.animateInTests = false;
+      WelcomeMotion.enabled = false;
       MotionPreference.set(MotionPreference.reduced);
       await tester.pump();
       expect(find.byKey(TravellingLight.mark), findsNothing);
@@ -359,15 +387,19 @@ void main() {
         await tester.tap(find.text('Next'));
         await tester.pumpAndSettle();
       }
+      WelcomeMotion.enabled = true;
       await tester.tap(find.text('Get started'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
       expect(find.text('Send one-time code'), findsOneWidget);
       expect(find.byKey(TravellingLight.mark), findsOneWidget);
       expect(dependencies.launch.state, LaunchState.returning);
-      await tester.pump(MotionTokens.welcomeCarry);
+      // The speck stays. A 7s loop does not remove the thread.
+      await tester.pump(MotionTokens.welcomeLight);
       await tester.pump();
-      expect(find.byKey(TravellingLight.mark), findsNothing);
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+      expect(find.byType(SignInThreadOverlay), findsOneWidget);
+      WelcomeMotion.enabled = false;
     });
 
     testWidgets('scene transitions work under reduced motion', (tester) async {

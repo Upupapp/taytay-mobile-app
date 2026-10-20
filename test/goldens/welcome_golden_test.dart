@@ -117,14 +117,17 @@ Future<void> _paint(WidgetTester tester, int page, String golden) async {
           child: SizedBox(
             width: _pixels.width / dpr,
             height: _pixels.height / dpr,
-            child: WelcomeCanvas(
-              page: page,
-              copy: _copy(page),
-              onSkip: () {},
-              onNext: () {},
-              onBack: () {},
-              onGetStarted: () {},
-              onGuest: () {},
+            child: Material(
+              type: MaterialType.transparency,
+              child: WelcomeCanvas(
+                page: page,
+                copy: _copy(page),
+                onSkip: () {},
+                onNext: () {},
+                onBack: () {},
+                onGetStarted: () {},
+                onGuest: () {},
+              ),
             ),
           ),
         ),

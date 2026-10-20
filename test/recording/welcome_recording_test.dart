@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
@@ -19,14 +20,36 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 /// `flutter test --tags recording --run-skipped test/recording/welcome_recording_test.dart`
 ///
 /// Writes `/tmp/welcome_frames/f_####.png` at 2× of the 390×844 canvas.
+/// Plus Jakarta Sans is loaded and the three photographs are precached
+/// before the first frame, so the capture is not a fallback font or a
+/// blank arch.
+Future<void> _loadFonts() async {
+  final jakarta = FontLoader('Plus Jakarta Sans');
+  for (final file in <String>[
+    'assets/fonts/plus_jakarta_sans/PlusJakartaSans-Regular.ttf',
+    'assets/fonts/plus_jakarta_sans/PlusJakartaSans-Medium.ttf',
+    'assets/fonts/plus_jakarta_sans/PlusJakartaSans-SemiBold.ttf',
+    'assets/fonts/plus_jakarta_sans/PlusJakartaSans-Bold.ttf',
+    'assets/fonts/plus_jakarta_sans/PlusJakartaSans-ExtraBold.ttf',
+  ]) {
+    jakarta.addFont(rootBundle.load(file));
+  }
+  await jakarta.load();
+  final lucide = FontLoader('Lucide')
+    ..addFont(rootBundle.load('assets/fonts/lucide/lucide.ttf'));
+  await lucide.load();
+}
+
 void main() {
+  setUpAll(_loadFonts);
+
   testWidgets('thread and light across welcome into sign-in', (tester) async {
     final out = Directory('/tmp/welcome_frames');
     if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);
 
-    WelcomeMotion.animateInTests = true;
-    addTearDown(() => WelcomeMotion.animateInTests = false);
+    WelcomeMotion.enabled = true;
+    addTearDown(() => WelcomeMotion.enabled = false);
 
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -58,6 +81,18 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pump();
     expect(find.text('Skip'), findsOneWidget);
+    final context = tester.element(find.text('Skip'));
+    await tester.runAsync(() async {
+      for (final path in <String>[
+        'assets/photos/municipal_hall.jpg',
+        'assets/photos/tiangge.jpg',
+        'assets/photos/parish_church.jpg',
+        'assets/brand/taytay_seal.png',
+      ]) {
+        await precacheImage(AssetImage(path), context);
+      }
+    });
+    await tester.pump();
 
     var frame = 0;
     Future<void> shot() async {

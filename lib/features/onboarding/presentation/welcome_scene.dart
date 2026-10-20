@@ -397,13 +397,15 @@ class _ArchPhoto extends StatelessWidget {
       child: DecoratedBox(
         decoration: const BoxDecoration(
           borderRadius: _archRadius,
+          // CSS paints the first shadow on top. Flutter paints the last one
+          // on top, so the white rim is last. `0 0 0 5px #fff`.
           boxShadow: <BoxShadow>[
-            BoxShadow(color: Colors.white, spreadRadius: 5),
             BoxShadow(
               color: Color(0x47062358),
               blurRadius: 44,
               offset: Offset(0, 22),
             ),
+            BoxShadow(color: Colors.white, spreadRadius: 5),
           ],
         ),
         child: ClipRRect(
@@ -528,7 +530,9 @@ class _Copy extends StatelessWidget {
           ),
         ],
         if (_arches[page].knotsInCopy) ...<Widget>[
-          const SizedBox(height: 14),
+          // w3.html keeps an empty `.chips` (margin-top 14) and then the knot
+          // svg (margin-top 14). The row sits 28 px under the body.
+          const SizedBox(height: 28),
           KnotIndicator(active: page, label: copy.stepLabel, inline: true),
         ],
       ],
@@ -633,13 +637,15 @@ class _PhotoTag extends StatelessWidget {
       decoration: BoxDecoration(
         color: BrandColors.sealGold,
         borderRadius: BorderRadius.circular(999),
+        // CSS paints the first shadow on top. The white ring is last so it
+        // is not covered by the drop shadow. `0 0 0 2px #fff`.
         boxShadow: const <BoxShadow>[
-          BoxShadow(color: Colors.white, spreadRadius: 2),
           BoxShadow(
             color: Color(0x33062358),
             blurRadius: 14,
             offset: Offset(0, 6),
           ),
+          BoxShadow(color: Colors.white, spreadRadius: 2),
         ],
       ),
       child: Padding(
@@ -685,6 +691,10 @@ class _Credit extends StatelessWidget {
   }
 }
 
+/// Hit target for Skip. The painted pill is 44 dp, centred in this 48 dp box,
+/// the same split as the back control.
+const Key welcomeSkipTargetKey = Key('welcome-skip-target');
+
 class _SkipButton extends StatelessWidget {
   const _SkipButton({required this.label, required this.onPressed});
 
@@ -693,30 +703,45 @@ class _SkipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
-          BoxShadow(
-            color: Color(0x1A062358),
-            blurRadius: 10,
-            offset: Offset(0, 3),
+    return SizedBox(
+      key: welcomeSkipTargetKey,
+      height: A11y.minTapTarget,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onPressed,
+          customBorder: const StadiumBorder(),
+          child: Center(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                boxShadow: const <BoxShadow>[
+                  BoxShadow(
+                    color: Color(0x1A062358),
+                    blurRadius: 10,
+                    offset: Offset(0, 3),
+                  ),
+                  BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
+                ],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: SizedBox(
+                  height: A11y.backButtonVisual,
+                  child: Center(
+                    child: Text(
+                      label,
+                      style: AppTypography.linkSkip.copyWith(
+                        color: BrandColors.taytayBlue,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
-      child: TextButton(
-        style: TextButton.styleFrom(
-          foregroundColor: BrandColors.taytayBlue,
-          backgroundColor: Colors.white,
-          minimumSize: const Size(48, 44),
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          shape: const StadiumBorder(),
-          textStyle: AppTypography.linkSkip,
         ),
-        onPressed: onPressed,
-        child: Text(label),
       ),
     );
   }
@@ -850,7 +875,8 @@ class _DashPainter extends CustomPainter {
     final path = Path()
       ..moveTo(0, size.height / 2)
       ..lineTo(size.width, size.height / 2);
-    _dash(canvas, path, paint, dash: 3, gap: 2);
+    // Chrome's 2px dashed border on an 18px rule: three dashes, dash/gap 4/3.
+    _dash(canvas, path, paint, dash: 4, gap: 3);
   }
 
   @override

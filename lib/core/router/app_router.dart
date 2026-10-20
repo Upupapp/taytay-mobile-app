@@ -140,10 +140,13 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.signIn.path,
         name: AppRoute.signIn.routeName,
-        builder: (context, state) => SignInScreen(
-          returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
-          threadArrival: state.extra is WelcomeThreadArrival,
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          return SignInScreen(
+            returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
+            threadCycle: extra is WelcomeThreadArrival ? extra.cycle : 0,
+          );
+        },
       ),
       GoRoute(
         path: AppRoute.signInHelp.path,

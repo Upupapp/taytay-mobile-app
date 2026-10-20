@@ -33,11 +33,55 @@ class ThreadCurve {
 
 /// Passed as `go_router` extra when Get started opens Sign-in.
 ///
-/// The sign-in screen draws this once, then drops it. Reduced motion does not
-/// send it.
+/// [cycle] is the live 0–1 position of the 7s loop, before easing, so the
+/// speck on Sign-in continues from the same moment instead of restarting.
+/// Reduced motion does not send it. The thread itself stays on the sign-in
+/// screen either way; only the speck is hidden when motion is reduced.
 @immutable
 class WelcomeThreadArrival {
-  const WelcomeThreadArrival();
+  const WelcomeThreadArrival(this.cycle);
+
+  final double cycle;
+}
+
+/// Where the speck sits on the joined welcome stitch.
+@immutable
+class SpeckPlacement {
+  const SpeckPlacement({required this.page, required this.t});
+
+  /// Zero-based welcome page that should paint the speck.
+  final int page;
+
+  /// 0 at that page's entry, 1 at its exit.
+  final double t;
+}
+
+/// Places the speck on the three welcome curves treated as one path.
+///
+/// [page] is [PageController.page]. [phase] is the eased 7s loop, 0 at the
+/// entry of the settled page and 1 at its exit. [anchor] is the page the
+/// resident was on when the swipe began.
+///
+/// While the page is still, the speck walks that page's curve. While it is
+/// moving, the parameter eases from the live phase to the shared boundary, so
+/// the exit of page *n* and the entry of page *n+1* are the same point in the
+/// scrollable (the curves meet: x 392 on one page, x −2 on the next, same y).
+SpeckPlacement placeSpeck({
+  required double page,
+  required double phase,
+  required int anchor,
+}) {
+  final count = ThreadCurve.pages.length;
+  final frac = (page - anchor).clamp(-1.0, 1.0);
+  final held = phase.clamp(0.0, 1.0);
+  final double along = frac >= 0
+      ? anchor + held + frac * (1 - held)
+      : anchor + held * (1 + frac);
+  if (along >= count) {
+    return SpeckPlacement(page: count - 1, t: 1);
+  }
+  final index = along.floor().clamp(0, count - 1);
+  return SpeckPlacement(page: index, t: (along - index).clamp(0.0, 1.0));
 }
 
 /// Stitched gold thread: shadow, gold, and a thin highlight.
@@ -254,11 +298,17 @@ class _KnotPainter extends CustomPainter {
       oldDelegate.active != active || oldDelegate.inline != inline;
 }
 
-/// Draws the sign-in continuation, then removes itself.
+/// The sign-in stitch and its speck.
+///
+/// The thread stays for as long as the screen is up. The speck loops on the
+/// same 7s cycle as the welcome pages, starting at [cycle] so a hand-off from
+/// Get started does not jump. Reduced motion keeps the thread and hides the
+/// speck.
 class SignInThreadOverlay extends StatefulWidget {
-  const SignInThreadOverlay({required this.onFinished, super.key});
+  const SignInThreadOverlay({this.cycle = 0, super.key});
 
-  final VoidCallback onFinished;
+  /// Raw 0–1 position on the 7s loop, before easing.
+  final double cycle;
 
   @override
   State<SignInThreadOverlay> createState() => _SignInThreadOverlayState();
@@ -271,12 +321,21 @@ class _SignInThreadOverlayState extends State<SignInThreadOverlay>
   @override
   void initState() {
     super.initState();
-    _controller =
-        AnimationController(vsync: this, duration: MotionTokens.welcomeCarry)
-          ..addStatusListener((status) {
-            if (status == AnimationStatus.completed) widget.onFinished();
-          })
-          ..forward();
+    _controller = AnimationController(
+      vsync: this,
+      duration: MotionTokens.welcomeLight,
+      value: widget.cycle.clamp(0.0, 1.0),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (Motion.decorativeLoop(context)) {
+      if (!_controller.isAnimating) _controller.repeat();
+    } else {
+      _controller.stop();
+    }
   }
 
   @override
@@ -303,6 +362,7 @@ class _SignInThreadOverlayState extends State<SignInThreadOverlay>
                 child: AnimatedBuilder(
                   animation: _controller,
                   builder: (context, _) {
+                    final showSpeck = Motion.decorativeLoop(context);
                     final t = MotionTokens.welcomeLightCurve.transform(
                       _controller.value,
                     );
@@ -312,7 +372,8 @@ class _SignInThreadOverlayState extends State<SignInThreadOverlay>
                           painter: ThreadPainter(ThreadCurve.signIn),
                           child: SizedBox.expand(),
                         ),
-                        TravellingLight(curve: ThreadCurve.signIn, t: t),
+                        if (showSpeck)
+                          TravellingLight(curve: ThreadCurve.signIn, t: t),
                       ],
                     );
                   },

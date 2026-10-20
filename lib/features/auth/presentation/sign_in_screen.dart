@@ -41,12 +41,14 @@ import 'sign_in_controller.dart';
 /// redirected them, so a deep link into a protected screen resumes after
 /// sign-in instead of dumping them on the home screen.
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({this.returnTo, this.threadArrival = false, super.key});
+  const SignInScreen({this.returnTo, this.threadCycle = 0, super.key});
 
   final String? returnTo;
 
-  /// Draws the welcome thread once across the top, then removes it.
-  final bool threadArrival;
+  /// Where the 7s speck loop starts. Get started passes the live welcome
+  /// cycle. Any other entry starts at the beginning of the loop. The thread
+  /// stays on this screen; it is not a one-shot overlay.
+  final double threadCycle;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -59,13 +61,6 @@ class _SignInScreenState extends State<SignInScreen> {
   final GlobalKey<FormState> _codeForm = GlobalKey<FormState>();
 
   SignInController? _controller;
-  late bool _showThread;
-
-  @override
-  void initState() {
-    super.initState();
-    _showThread = widget.threadArrival;
-  }
 
   @override
   void didChangeDependencies() {
@@ -147,7 +142,6 @@ class _SignInScreenState extends State<SignInScreen> {
         ? session.endedReason
         : SessionEndedReason.none;
 
-    final showThread = _showThread && !Motion.reduced(context);
     return Scaffold(
       body: Stack(
         children: <Widget>[
@@ -253,16 +247,11 @@ class _SignInScreenState extends State<SignInScreen> {
               ],
             ),
           ),
-          if (showThread)
-            Positioned.fill(
-              child: IgnorePointer(
-                child: SignInThreadOverlay(
-                  onFinished: () {
-                    if (mounted) setState(() => _showThread = false);
-                  },
-                ),
-              ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: SignInThreadOverlay(cycle: widget.threadCycle),
             ),
+          ),
         ],
       ),
     );

@@ -257,13 +257,16 @@ class FramedSeal extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
+          // CSS paints the first shadow on top. Flutter paints the last one
+          // on top, so the gold ring is last: `0 0 0 2px rgba(252,209,22,.85)`.
+          // On the welcome navy that ring reads about (214, 181, 29).
           boxShadow: <BoxShadow>[
-            const BoxShadow(color: Color(0xD9FCD116), spreadRadius: 2),
             BoxShadow(
               color: const Color(0x4D000000),
               blurRadius: shadowBlur,
               offset: Offset(0, shadowOffsetY),
             ),
+            const BoxShadow(color: Color(0xD9FCD116), spreadRadius: 2),
           ],
         ),
         child: Image.asset(
