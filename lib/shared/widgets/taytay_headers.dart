@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/brand_assets.dart';
 import '../../core/design/brand_gradients.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
-import 'brand_mark.dart';
 import 'taytay_back_button.dart';
 import 'taytay_icon.dart';
 
@@ -109,11 +109,10 @@ class _Bell extends StatelessWidget {
 }
 
 /// Welcome and sign-in header: the official seal and the municipal wordmark
-/// on the deep gradient, with the gold glow.
+/// on the page field from the mockup.
 ///
-/// The seal is the registered municipal PNG, drawn by [BrandMark]. That widget
-/// downscales the file with [BoxFit.contain]. It does not recolour, mask, or
-/// redraw it.
+/// The seal file is drawn unaltered inside the mockup's circle: a white pad,
+/// then a gold ring on the container. The PNG is only downscaled.
 class WovenHeader extends StatelessWidget {
   const WovenHeader({
     this.showBack = false,
@@ -130,26 +129,35 @@ class WovenHeader extends StatelessWidget {
   /// Passed through to [TaytayBackButton]. False while a step is busy.
   final bool backEnabled;
 
-  /// Welcome uses the larger seal and the 15 / 800 wordmark from gen1.py.
-  /// Sign-in uses 14 / 800 from gen.py.
+  /// Welcome uses the 58 px seal and the 15 / 800 wordmark from gen1.py.
+  /// Sign-in uses the 46 px seal and 14 / 800 from gen.py.
   final bool welcome;
 
   final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
-    return BrandGradientSurface(
-      gradient: BrandGradients.woven,
-      child: WovenGoldGlow(
-        child: SafeArea(
+    // The back control is 48 dp with a 44 dp circle. A 10 dp spacer after it
+    // leaves the CSS gap of 12 between the circle's edge and the seal.
+    final seal = welcome ? 58.0 : 46.0;
+    final afterBack = showBack ? 10.0 : 0.0;
+    final brandGap = welcome ? 11.0 : 10.0;
+    // Flutter's line box insets the wordmark below the mockup's half-leading.
+    // These two corrections put the ink on the crop; they follow the text scale.
+    final typeScale = MediaQuery.textScalerOf(context).scale(1);
+    return Stack(
+      children: <Widget>[
+        Positioned.fill(
+          child: CustomPaint(
+            painter: welcome
+                ? const WovenFieldPainter.welcome()
+                : const WovenFieldPainter.signIn(),
+          ),
+        ),
+        SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Spacing.xs,
-              Spacing.sm,
-              Spacing.lg,
-              Spacing.lg,
-            ),
+            padding: EdgeInsets.fromLTRB(showBack ? 18 : 20, 4, 20, 16),
             child: Row(
               children: <Widget>[
                 if (showBack)
@@ -158,21 +166,30 @@ class WovenHeader extends StatelessWidget {
                     enabled: backEnabled,
                     light: true,
                   ),
-                if (!showBack) const SizedBox(width: Spacing.md),
-                BrandMark(size: welcome ? 52 : 46),
-                const SizedBox(width: Spacing.sm),
+                if (showBack) SizedBox(width: afterBack),
+                FramedSeal(
+                  diameter: seal,
+                  shadowBlur: welcome ? 14 : 12,
+                  shadowOffsetY: welcome ? 4 : 3,
+                ),
+                SizedBox(width: brandGap),
                 Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(
-                        'Bayan ng Taytay',
-                        style:
-                            (welcome
-                                    ? AppTypography.brandTitleWelcome
-                                    : AppTypography.brandTitle)
-                                .copyWith(color: Colors.white),
+                      Transform.translate(
+                        offset: Offset(0, -5 / 3 * typeScale),
+                        child: Text(
+                          'Bayan ng Taytay',
+                          style:
+                              (welcome
+                                      ? AppTypography.brandTitleWelcome
+                                      : AppTypography.brandTitle)
+                                  .copyWith(color: Colors.white),
+                        ),
                       ),
+                      SizedBox(height: 4 * typeScale),
                       Text(
                         'Lalawigan ng Rizal',
                         style:
@@ -188,6 +205,59 @@ class WovenHeader extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The mockup's circular frame around the official seal.
+///
+/// The artwork is [BrandAssets.municipalSeal], drawn with [BoxFit.contain] and
+/// no colour filter. The circle, the 2 px white pad and the gold ring belong
+/// to this container. They are not painted into the file.
+class FramedSeal extends StatelessWidget {
+  const FramedSeal({
+    required this.diameter,
+    this.shadowBlur = 12,
+    this.shadowOffsetY = 3,
+    super.key,
+  });
+
+  /// Outer diameter of the white circle, before the ring. Sign-in is 46.
+  /// Welcome is 58.
+  final double diameter;
+
+  final double shadowBlur;
+  final double shadowOffsetY;
+
+  @override
+  Widget build(BuildContext context) {
+    const seal = BrandAssets.municipalSeal;
+    return Semantics(
+      label: seal.semanticLabel,
+      image: true,
+      child: Container(
+        width: diameter,
+        height: diameter,
+        clipBehavior: Clip.antiAlias,
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: <BoxShadow>[
+            const BoxShadow(color: Color(0xD9FCD116), spreadRadius: 2),
+            BoxShadow(
+              color: const Color(0x4D000000),
+              blurRadius: shadowBlur,
+              offset: Offset(0, shadowOffsetY),
+            ),
+          ],
+        ),
+        child: Image.asset(
+          seal.assetPath,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
         ),
       ),
     );

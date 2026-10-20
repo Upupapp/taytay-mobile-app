@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import 'taytay_icon.dart';
 
 /// Visual state of a field. The resident always gets text, not colour alone.
 ///
@@ -68,6 +70,7 @@ class TaytayTextField extends StatelessWidget {
       _ => const Color(0x00000000),
     };
     final message = this.message;
+    final showAlert = state == TaytayFieldState.error && message != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -78,50 +81,68 @@ class TaytayTextField extends StatelessWidget {
         const SizedBox(height: 5),
         DecoratedBox(
           decoration: BoxDecoration(
+            color: fill,
             borderRadius: BorderRadius.circular(Radii.md),
+            border: Border.all(color: tone, width: 1.4),
             boxShadow: <BoxShadow>[BoxShadow(color: ring, spreadRadius: 3)],
           ),
-          child: TextField(
-            controller: controller,
-            obscureText: obscureText,
-            onChanged: onChanged,
-            keyboardType: keyboardType,
-            style: AppTypography.fieldValue.copyWith(
-              color: BrandColors.textPrimary,
-            ),
-            cursorColor: BrandColors.taytayBlue,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: AppTypography.fieldValue.copyWith(
-                fontWeight: AppTypography.body,
-                color: BrandColors.fieldHint,
+          child: SizedBox(
+            height: 44,
+            child: TextField(
+              controller: controller,
+              obscureText: obscureText,
+              onChanged: onChanged,
+              keyboardType: keyboardType,
+              expands: true,
+              maxLines: null,
+              textAlignVertical: TextAlignVertical.center,
+              style: AppTypography.fieldValue.copyWith(
+                color: BrandColors.fieldInk,
               ),
-              filled: true,
-              fillColor: fill,
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 12,
-                vertical: 13,
+              cursorColor: BrandColors.taytayBlue,
+              decoration: InputDecoration(
+                hintText: hint,
+                hintStyle: AppTypography.fieldValue.copyWith(
+                  fontWeight: AppTypography.body,
+                  color: BrandColors.fieldHint,
+                ),
+                filled: false,
+                isCollapsed: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
               ),
-              enabledBorder: _border(tone),
-              focusedBorder: _border(BrandColors.taytayBlue),
-              errorBorder: _border(BrandColors.danger),
-              focusedErrorBorder: _border(BrandColors.danger),
             ),
           ),
         ),
         if (message != null && message.isNotEmpty) ...<Widget>[
           const SizedBox(height: 5),
-          Text(message, style: AppTypography.label.copyWith(color: tone)),
+          Row(
+            children: <Widget>[
+              if (showAlert) ...<Widget>[
+                TaytayIcon(
+                  icon: TaytayIcons.circleAlert,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: 14,
+                  color: tone,
+                ),
+                const SizedBox(width: 5),
+              ],
+              Flexible(
+                child: Text(
+                  message,
+                  style: AppTypography.label.copyWith(color: tone),
+                ),
+              ),
+            ],
+          ),
         ],
       ],
-    );
-  }
-
-  OutlineInputBorder _border(Color color) {
-    return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(Radii.md),
-      borderSide: BorderSide(color: color, width: 1.4),
     );
   }
 }

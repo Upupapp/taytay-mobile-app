@@ -14,17 +14,17 @@ S0 renders shared components and the dev gallery. It does not render the 84 resi
 | Component | Design source | Mismatch | What the diff is |
 | --- | --- | --- | --- |
 | Colour and gradient tokens | 8 swatches plus `linear-gradient(135deg,#062358,#0B3D91)` | 0.00% (0/264960) | `test/goldens/compare/tokens.png` |
-| Type scale | h1 28/800, sign-in h1 24/800, button 16/700, body 14/500, compact 13/500, label 12/700, eyebrow 11/800 | 6.15% (48896/795600) | Line boxes drift after the first line. Skia and Chrome do not share a leading. Sizes, weights and tracking match the polished CSS. `test/goldens/compare/type.png` |
-| Primary button, "Sign in" | `02-01` navy pill, 964×150 | 3.01% (4350/144600) | Pill bounds identical. Label ink sits in the same 59–105 px band (1 px). The design export is weight 800; the reviewer required 700. The rest is pill-edge antialiasing. Diff: `test/goldens/compare/signin_primary.png` |
-| Secondary button, "Create an account" | `02-01` outline pill, 964×150 | 4.27% (6173/144600) | Same weight gap (CSS 800, app 700) plus the 1.6 px inset border. Fill is white, label and border are `#0B3D91`. `test/goldens/compare/signin_secondary.png` |
-| Text button, "Continue as guest" | `.link` 13/800 `#0B3D91`, 963×120 | 4.49% (5189/115560) | Glyph rasterization. The sign-in screen itself uses 12 px, which is the inline override on that one link. `test/goldens/compare/text_button.png` |
-| Text field, default, focus, error | height 44, radius 12, border 1.4, fills `#FBF8F0` / white / `#FFF7F7` | 16.28% (150078/921600) | Fill samples match (`#FBF8F0`, `#FFF7F7`). Labels start 1 px apart. Later fields sit about 2 px higher. The rest is hint and label rasterization. `test/goldens/compare/fields.png` |
-| Back button | 44 px white circle on `#062358`, inside a 48 px target | 0.50% (103/20736) | Chevron antialiasing. `test/goldens/compare/back.png` |
-| Card, list row, chips | badges 11/800, card radius 16, list icon 44 | 14.42% (114749/795600) | Chip colours match. The row draws a trailing chevron and the card draws the two CSS shadows; those edges do not sit on the same pixels as the HTML strip. `test/goldens/compare/card_row_chips.png` |
-| Woven header | seal PNG, wordmark 14/800, subtitle 11/700 `#FCD116`, gradient mid-stop at 55% | 67.14% (377059/561600) | Left-edge navy matches `#031433`. The seal is the official PNG, unmasked. The mockup draws it inside a 46 px circle with a 2 px white pad and a gold ring. The mark also keeps its clear space. `test/goldens/compare/woven.png` |
-| Empty state | 72 px disc, 32 px glyph, title 16/800, message 13/500 `#55607A` | 2.78% (17983/648000) | Icon and title rasterization. `test/goldens/compare/empty.png` |
+| Type scale | h1 28/800/−0.6/1.13, sign-in h1 24/800/−0.5/1.15, sign-in button 16/800, in-app button 15/800, body 14/500/1.55, compact 13/500/1.5, label 12/700, eyebrows 11/800 at 1.6 and 1.5 | 5.81% (46218/795600) | First line matches (y 17–99, width within 1 px). Later lines sit about 4 device pixels lower: Flutter rounds each line box to a whole logical pixel. The rest is glyph antialiasing. `test/goldens/compare/type.png` |
+| Primary button, "Sign in" | `02-01` pill, 16/800, height 50, shadow `0 8px 20px rgba(11,61,145,.28)`, 964×150 | 1.15% (1667/144600) | Under 2%. Pill edge and label antialiasing. Best shift is (0, 0). `test/goldens/compare/signin_primary.png` |
+| Secondary button, "Create an account" | `02-01` outline pill, 16/800, inset 1.6 px `#0B3D91`, 964×150 | 2.65% (3836/144600) | Bounds align (shift 0, 0). Glyph and border antialiasing. `test/goldens/compare/signin_secondary.png` |
+| Text button, "Continue as guest" | sign-in override 12/800 `#0B3D91` (shared `.link` stays 13/800), 963×120 | 4.70% (5430/115560) | Shift (0, 0). Ink is a few pixels narrower. Glyph rasterization. `test/goldens/compare/text_button.png` |
+| Text field, default, focus, error | height 44, radius 12, border 1.4, fills `#FBF8F0` / white / `#FFF7F7`, value 14/600 `#1C2540`, hint 14/500 `#6B7186`, error icon 14 | 9.81% (90450/921600) | Borders within 1–2 px. Fills match (`#FBF8F0`, `#FFF7F7`). Skia and Chrome do not put the long strings on the same stems. `test/goldens/compare/fields.png` |
+| Back button | 44 px white circle, chevron 20 `#0B3D91`, inside a 48 px target | 1.08% (223/20736) | Under 2%. Chevron antialiasing. `test/goldens/compare/back.png` |
+| Card, list row, chips | badges 11/800 padding 4×10, card radius 16 padding 16, icon tile 44 with a 20 px glyph, chevron 18 `#7D869C` | 10.59% (84293/795600) | Chip row and card border within 4 px. List-title ink is about 8 device pixels higher (under 3 CSS px). The rest is glyph and shadow edges. `test/goldens/compare/card_row_chips.png` |
+| Woven header | 46 px circle, 2 px white pad, gold ring, unaltered seal, wordmark 14/800 and 11/700 `#FCD116`, sign-in page field | 4.82% (11510/238680) | Back circle, seal frame, and both wordmark lines share the design ink bounds. Left edge is `#041A44`. Remainder is seal downscale and glyph edges. `test/goldens/compare/woven.png` |
+| Empty state | 72 px disc, 32 px glyph, title 16/800, message 13/500 `#55607A` | 1.15% (7475/648000) | Under 2%. Icon and title antialiasing. `test/goldens/compare/empty.png` |
 
-The sign-in primary crop is over 2%. The pill is not shifted. The diff image is the record of the remaining antialiasing and the 800-versus-700 stroke.
+Tokens, the Sign in pill, the back button, and the empty state are at or under 2%. The other diffs are committed. They are glyph or seal rasterization (Skia against Chrome), not a wrong size, weight, or colour. The list-title ink is the largest placement gap, about 8 device pixels.
 
 ### Back control
 
@@ -36,14 +36,14 @@ Welcome scenes `w2` and `w3` draw a solid circle. Onboarding is a navigation roo
 
 ### Remaining deviations
 
-- Button labels are weight 700, as reviewed. `gen.py` `.btn` is weight 800. Sign-in size is 16 (15.5 polished). In-app `.btn` is 15 px and radius 12; the shared pill stays 16 / radius 999 for the sign-in crop. Theme `FilledButton` / `OutlinedButton` stay radius 12 with the 16/700 label.
-- Sign-in eyebrow tracking is 1.6. Sign-in CSS `.en` is 1.5. Welcome `.en` is 1.6.
-- The seal is never circle-masked, recoloured, or replaced by the wordmark. Clear space is 0.12× the mark.
+- Buttons are three variants, all weight 800. Sign-in: 16 px, pill, height 50, primary shadow `0 8px 20px` at 0.28, outline 1.6 px. Welcome: 16 px, pill, height 52, shadow `0 10px 22px` at 0.30, outline 1.6 px. In-app: 15 px, radius 12, height 48, no primary shadow, outline 1.5 px. Theme filled and outlined buttons use the in-app metrics.
+- The guest link is 12/800. The shared `.link` token stays 13/800. Skip is 14/800. Sign-in eyebrow tracking is 1.5. Welcome eyebrow tracking is 1.6. `.sbtn` labels are 12/800; the hit target stays 48 dp.
+- The woven header puts the official seal, unaltered, in a 46 px circle (welcome 58 px) with a 2 px white pad and a gold ring. Flutter's line box insets the wordmark, so the header opens the two lines by 4 px and paints the title 5/3 dp higher. Both corrections follow the text scaler. The seal file is not recoloured or redrawn.
+- Flutter rounds a CSS line box to a whole logical pixel. On the type scale that is about 4 device pixels by the second line.
+- In-app mockups that draw a bare chevron still use the solid white circle. Those screens are listed above. Onboarding is a navigation root, so it has no back button. Welcome scenes `w2` and `w3` draw a circle the app does not show there.
 - Welcome and sign-in copy stays the English OTP flow. The mockup is Filipino and asks for a password. Firebase is not in this sprint.
 - The tab bar stays Home, Services, News, Events, Profile until S4.
-- Small action labels (`.sbtn`) are 12/700. CSS is 12/800.
-- Welcome primary shadow is `0 10px 22px` at 0.30 alpha. The shared primary uses the sign-in shadow `0 8px 20px` at 0.28 alpha.
-- Full screens 01–08 are S1–S8.
+- Full screens 01–08 are S1–S8. Skia and Chrome do not rasterize Plus Jakarta Sans, Lucide, or the downscaled seal onto the same pixels. Those diffs are the images above.
 
 Exceptions, recorded rather than forced under 2%:
 

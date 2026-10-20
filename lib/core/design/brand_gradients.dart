@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
@@ -135,6 +137,110 @@ abstract final class BrandGradients {
     verified,
     woven,
   ];
+}
+
+/// The sign-in and welcome page field, as `wbg()` paints it.
+///
+/// The header is a short strip. This painter draws the full 844 px field and
+/// shows the slice that sits behind the brand row (the row is at 44 px in the
+/// mockup, under the status bar). A gold stop is not added to
+/// [BrandGradients.woven]: the glows are the same radial layers as the CSS.
+class WovenFieldPainter extends CustomPainter {
+  const WovenFieldPainter.signIn() : welcome = false;
+
+  const WovenFieldPainter.welcome() : welcome = true;
+
+  final bool welcome;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const pageHeight = 844.0;
+    // The brand row starts at CSS top 44. y = 0 of this strip is that line.
+    const originY = 44.0;
+    canvas.save();
+    canvas.translate(0, -originY);
+    final page = Rect.fromLTWH(0, 0, size.width, pageHeight);
+    final angle = (welcome ? 115 : 100) * math.pi / 180;
+    // CSS 90deg is left-to-right, which is Flutter's unrotated linear gradient.
+    final linear = LinearGradient(
+      colors: const <Color>[
+        Color(0xFF041A44),
+        BrandColors.taytayBlueDark,
+        BrandColors.taytayBlue,
+      ],
+      stops: const <double>[0, 0.4, 1],
+      transform: GradientRotation(angle - math.pi / 2),
+    );
+    canvas.drawRect(page, Paint()..shader = linear.createShader(page));
+    if (welcome) {
+      _glow(
+        canvas: canvas,
+        page: page,
+        cx: 0.82,
+        cy: 0.24,
+        rx: 240,
+        ry: 240,
+        color: BrandColors.sealGold.withValues(alpha: 0.5),
+      );
+      _glow(
+        canvas: canvas,
+        page: page,
+        cx: 0.10,
+        cy: 0.52,
+        rx: 300,
+        ry: 260,
+        color: const Color(0xFF1E5BC6).withValues(alpha: 0.85),
+      );
+    } else {
+      _glow(
+        canvas: canvas,
+        page: page,
+        cx: 0.80,
+        cy: 0.20,
+        rx: 220,
+        ry: 200,
+        color: BrandColors.sealGold.withValues(alpha: 0.42),
+      );
+      _glow(
+        canvas: canvas,
+        page: page,
+        cx: 0.20,
+        cy: 0.36,
+        rx: 260,
+        ry: 240,
+        color: const Color(0xFF2E70E0).withValues(alpha: 0.75),
+      );
+    }
+    canvas.restore();
+  }
+
+  void _glow({
+    required Canvas canvas,
+    required Rect page,
+    required double cx,
+    required double cy,
+    required double rx,
+    required double ry,
+    required Color color,
+  }) {
+    final center = Offset(page.width * cx, page.height * cy);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.scale(rx, ry);
+    final bounds = Rect.fromCircle(center: Offset.zero, radius: 1);
+    final paint = Paint()
+      ..shader = RadialGradient(
+        radius: 0.5,
+        colors: <Color>[color, color.withValues(alpha: 0)],
+        stops: const <double>[0, 0.7],
+      ).createShader(bounds);
+    canvas.drawRect(bounds.inflate(0.2), paint);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant WovenFieldPainter oldDelegate) =>
+      oldDelegate.welcome != welcome;
 }
 
 /// Decorative gold glow over a [BrandGradients.woven] field.

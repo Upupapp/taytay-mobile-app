@@ -85,6 +85,12 @@ abstract final class BrandColors {
   /// List meta. Polished from `#6b7590`.
   static const Color listMeta = Color(0xFF5A6480);
 
+  /// Field value. CSS `.in` is `#1c2540`.
+  static const Color fieldInk = Color(0xFF1C2540);
+
+  /// Trailing chevron. Polished from `#9aa3b8`.
+  static const Color chevron = Color(0xFF7D869C);
+
   /// SAMPLE dashed stroke. CSS `.sample` border is `#E0A400`.
   static const Color sampleBorder = Color(0xFFE0A400);
 

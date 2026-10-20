@@ -313,7 +313,7 @@ class _EmphasisChip extends StatelessWidget {
         Icon(icon, size: IconSizes.sm, color: colour),
         const SizedBox(width: Spacing.xs),
         // Never colour alone — the word carries the meaning.
-        // labelLarge is the 16/700 button role, so a status label uses
+        // labelLarge is the in-app button role, so a status label uses
         // labelMedium and may wrap inside the card.
         Expanded(
           child: Text(

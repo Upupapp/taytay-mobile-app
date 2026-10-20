@@ -213,6 +213,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           .onboardingMode
                           .allowsSelfRegistration)
                         SecondaryButton(
+                          kind: TaytayButtonKind.signIn,
                           onPressed: () =>
                               context.goNamed(AppRoute.register.routeName),
                           label: 'Create an account',
@@ -223,7 +224,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     const SizedBox(height: Spacing.sm),
                     TextButton(
                       style: TextButton.styleFrom(
-                        textStyle: AppTypography.link.copyWith(fontSize: 12),
+                        textStyle: AppTypography.linkGuest,
                       ),
                       onPressed: () => context.goNamed(AppRoute.home.routeName),
                       child: const Text('Continue as guest'),
@@ -296,6 +297,7 @@ class _IdentifierStep extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xl),
           AppButton(
+            kind: TaytayButtonKind.signIn,
             label: 'Send one-time code',
             loading: busy,
             onPressed: busy ? null : onSubmit,
@@ -377,6 +379,7 @@ class _CodeStep extends StatelessWidget {
           ),
           const SizedBox(height: Spacing.xl),
           AppButton(
+            kind: TaytayButtonKind.signIn,
             label: 'Sign in',
             loading: signIn.busy,
             onPressed: signIn.busy ? null : onSubmit,

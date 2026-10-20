@@ -2,18 +2,22 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/design/button_styles.dart';
 import '../../core/design/design_tokens.dart';
-import '../../core/design/typography.dart';
 import '../../core/haptics/app_haptics.dart';
 import 'taytay_icon.dart';
 
-/// Shared shape for the three resident buttons. Height is at least 48 dp.
+export '../../core/design/button_styles.dart';
+
+/// Shared paint for the resident buttons. Metrics come from
+/// [TaytayButtonKind], so a sign-in pill and an in-app button stay distinct.
 class _TaytayButton extends StatelessWidget {
   const _TaytayButton({
     required this.label,
     required this.onPressed,
     required this.background,
     required this.foreground,
+    required this.kind,
     this.borderColor,
     this.icon,
     this.expand = true,
@@ -24,17 +28,16 @@ class _TaytayButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final Color background;
   final Color foreground;
+  final TaytayButtonKind kind;
   final Color? borderColor;
   final TaytayIcon? icon;
   final bool expand;
-
-  /// Sign-in `.pri` shadow. Welcome uses a slightly larger one; this is the
-  /// shared primary.
   final List<BoxShadow>? shadows;
 
   @override
   Widget build(BuildContext context) {
-    final radius = BorderRadius.circular(Radii.pill);
+    final metrics = TaytayButtonMetrics.of(kind);
+    final radius = BorderRadius.circular(metrics.radius);
     final child = Material(
       color: onPressed == null
           ? background.withValues(alpha: Opacities.disabled)
@@ -43,7 +46,7 @@ class _TaytayButton extends StatelessWidget {
         borderRadius: radius,
         side: borderColor == null
             ? BorderSide.none
-            : BorderSide(color: borderColor!, width: 1.6),
+            : BorderSide(color: borderColor!, width: metrics.borderWidth),
       ),
       child: InkWell(
         borderRadius: radius,
@@ -54,15 +57,12 @@ class _TaytayButton extends StatelessWidget {
                 onPressed!();
               },
         child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            minWidth: A11y.minTapTarget,
-            minHeight: 50,
+          constraints: BoxConstraints(
+            minWidth: expand ? double.infinity : A11y.minTapTarget,
+            minHeight: metrics.height,
           ),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.lg,
-              vertical: Spacing.md,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
               mainAxisAlignment: MainAxisAlignment.center,
@@ -71,13 +71,20 @@ class _TaytayButton extends StatelessWidget {
                   icon!,
                   const SizedBox(width: Spacing.sm),
                 ],
-                Flexible(
-                  child: Text(
+                if (expand)
+                  Flexible(
+                    child: Text(
+                      label,
+                      textAlign: TextAlign.center,
+                      style: metrics.label.copyWith(color: foreground),
+                    ),
+                  )
+                else
+                  Text(
                     label,
                     textAlign: TextAlign.center,
-                    style: AppTypography.button.copyWith(color: foreground),
+                    style: metrics.label.copyWith(color: foreground),
                   ),
-                ),
               ],
             ),
           ),
@@ -94,11 +101,12 @@ class _TaytayButton extends StatelessWidget {
   }
 }
 
-/// The one filled action on a light surface. Navy, white label.
+/// The one filled action. Navy, white label.
 class PrimaryButton extends StatelessWidget {
   const PrimaryButton({
     required this.label,
     required this.onPressed,
+    this.kind = TaytayButtonKind.inApp,
     this.icon,
     this.expand = true,
     super.key,
@@ -106,6 +114,7 @@ class PrimaryButton extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
+  final TaytayButtonKind kind;
   final TaytayIcon? icon;
   final bool expand;
 
@@ -114,17 +123,12 @@ class PrimaryButton extends StatelessWidget {
     return _TaytayButton(
       label: label,
       onPressed: onPressed,
+      kind: kind,
       background: BrandColors.taytayBlue,
       foreground: Colors.white,
       icon: icon,
       expand: expand,
-      shadows: const <BoxShadow>[
-        BoxShadow(
-          color: Color(0x470B3D91),
-          blurRadius: 20,
-          offset: Offset(0, 8),
-        ),
-      ],
+      shadows: TaytayButtonMetrics.of(kind).primaryShadow,
     );
   }
 }
@@ -134,6 +138,7 @@ class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
     required this.label,
     required this.onPressed,
+    this.kind = TaytayButtonKind.inApp,
     this.icon,
     this.expand = true,
     super.key,
@@ -141,6 +146,7 @@ class SecondaryButton extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
+  final TaytayButtonKind kind;
   final TaytayIcon? icon;
   final bool expand;
 
@@ -149,6 +155,7 @@ class SecondaryButton extends StatelessWidget {
     return _TaytayButton(
       label: label,
       onPressed: onPressed,
+      kind: kind,
       background: BrandColors.surfaceCard,
       foreground: BrandColors.taytayBlue,
       borderColor: BrandColors.taytayBlue,
@@ -158,11 +165,13 @@ class SecondaryButton extends StatelessWidget {
   }
 }
 
-/// Accent action. Gold fill, navy label — the pair that clears AA.
+/// Accent action. Gold fill, navy label. CSS `.gold` sits on the sign-in
+/// pill, so the default kind is [TaytayButtonKind.signIn].
 class GoldButton extends StatelessWidget {
   const GoldButton({
     required this.label,
     required this.onPressed,
+    this.kind = TaytayButtonKind.signIn,
     this.icon,
     this.expand = true,
     super.key,
@@ -170,6 +179,7 @@ class GoldButton extends StatelessWidget {
 
   final String label;
   final VoidCallback? onPressed;
+  final TaytayButtonKind kind;
   final TaytayIcon? icon;
   final bool expand;
 
@@ -178,6 +188,7 @@ class GoldButton extends StatelessWidget {
     return _TaytayButton(
       label: label,
       onPressed: onPressed,
+      kind: kind,
       background: BrandColors.sealGold,
       foreground: BrandColors.taytayBlueDark,
       icon: icon,

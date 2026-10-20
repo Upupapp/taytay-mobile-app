@@ -8,9 +8,8 @@ import '../../core/design/design_tokens.dart';
 /// **This is the only widget permitted to render official artwork**, and it is
 /// deliberately hard to misuse: it exposes a size and nothing else. There is no
 /// `color`, no `colorBlendMode`, no `fit`, no `borderRadius`, no `shape` and no
-/// `transform` parameter, because [SealIntegrityRules] forbids every one of
-/// those operations on a government seal and an API that cannot express a
-/// violation is stronger than a code-review convention that can be forgotten.
+/// `transform` parameter. The woven header's circle is a separate container
+/// around this same file. The PNG is not recoloured, cropped or recompressed.
 ///
 /// When [BrandAssets.municipalSeal] is registered, that artwork is drawn with
 /// `BoxFit.contain` — preserving its aspect ratio exactly — inside its required

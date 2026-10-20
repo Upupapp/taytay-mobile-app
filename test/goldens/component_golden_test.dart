@@ -74,7 +74,8 @@ void main() {
     );
     expect(tester.getSize(boxes.first), const Size(48, 48));
     expect(tester.getSize(boxes.at(1)), const Size(44, 44));
-    await expectLater(
+    await _match(
+      tester,
       find.byType(TaytayBackButton),
       matchesGoldenFile('components/back_button.png'),
     );
@@ -95,7 +96,8 @@ void main() {
       ),
       logical: const Size(360, 220),
     );
-    await expectLater(
+    await _match(
+      tester,
       find.byType(Column),
       matchesGoldenFile('components/buttons.png'),
     );
@@ -114,7 +116,8 @@ void main() {
       ),
       logical: const Size(360, 80),
     );
-    await expectLater(
+    await _match(
+      tester,
       find.byType(Wrap),
       matchesGoldenFile('components/chips.png'),
     );
@@ -133,40 +136,15 @@ void main() {
   });
 
   testWidgets('primary button matches the sign-in crop', (tester) async {
-    // The crop is 964×150 device pixels. The golden captures logical pixels,
-    // so the frame is that size at a pixel ratio of 1 and the button is
-    // painted at 3× to match the design file.
-    tester.view.physicalSize = const Size(964, 150);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
-    await tester.pumpWidget(
-      MediaQuery(
-        data: const MediaQueryData(
-          size: Size(964, 150),
-          textScaler: TextScaler.noScaling,
-        ),
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.light(),
-          home: const ColoredBox(
-            color: Color(0xFFFDFDFE),
-            child: FittedBox(
-              fit: BoxFit.fill,
-              child: SizedBox(
-                width: 964 / 3,
-                height: 150 / 3,
-                child: PrimaryButton(label: 'Sign in', onPressed: _noop),
-              ),
-            ),
-          ),
-        ),
+    await _paintPixels(
+      tester,
+      const PrimaryButton(
+        kind: TaytayButtonKind.signIn,
+        label: 'Sign in',
+        onPressed: _noop,
       ),
-    );
-    await tester.pump();
-    await expectLater(
-      find.byType(ColoredBox),
-      matchesGoldenFile('components/signin_primary_render.png'),
+      const Size(964, 150),
+      'components/signin_primary_render.png',
     );
   });
 
@@ -183,7 +161,8 @@ void main() {
     );
     expect(find.text('Components'), findsOneWidget);
     expect(find.text('SAMPLE'), findsWidgets);
-    await expectLater(
+    await _match(
+      tester,
       find.byType(MaterialApp),
       matchesGoldenFile('components/gallery_frame.png'),
     );
@@ -249,7 +228,11 @@ void main() {
             'Mag-sign in',
             style: AppTypography.h1SignIn.copyWith(color: ink),
           ),
-          Text('Sign in', style: AppTypography.button.copyWith(color: ink)),
+          Text(
+            'Sign in',
+            style: AppTypography.buttonSignIn.copyWith(color: ink),
+          ),
+          Text('Read Balita', style: AppTypography.button.copyWith(color: ink)),
           Text(
             'Sign in to your Taytay resident account.',
             style: AppTypography.bodyStyle.copyWith(
@@ -270,6 +253,12 @@ void main() {
             'PENDING REVIEW',
             style: AppTypography.eyebrow.copyWith(color: BrandColors.inkGold),
           ),
+          Text(
+            'MAG-SIGN IN',
+            style: AppTypography.eyebrowSignIn.copyWith(
+              color: BrandColors.inkGold,
+            ),
+          ),
         ],
       ),
       const Size(1020, 780),
@@ -283,7 +272,11 @@ void main() {
       tester,
       const Column(
         children: <Widget>[
-          SecondaryButton(label: 'Create an account', onPressed: _noop),
+          SecondaryButton(
+            kind: TaytayButtonKind.signIn,
+            label: 'Create an account',
+            onPressed: _noop,
+          ),
           SizedBox(height: 8),
           Text(
             'Continue as guest',
@@ -301,7 +294,11 @@ void main() {
   testWidgets('secondary button matches the sign-in crop', (tester) async {
     await _paintPixels(
       tester,
-      const SecondaryButton(label: 'Create an account', onPressed: _noop),
+      const SecondaryButton(
+        kind: TaytayButtonKind.signIn,
+        label: 'Create an account',
+        onPressed: _noop,
+      ),
       const Size(964, 150),
       'components/signin_secondary_render.png',
       background: Colors.white,
@@ -315,7 +312,9 @@ void main() {
         child: Text(
           'Continue as guest',
           textAlign: TextAlign.center,
-          style: AppTypography.link.copyWith(color: BrandColors.taytayBlue),
+          style: AppTypography.linkGuest.copyWith(
+            color: BrandColors.taytayBlue,
+          ),
         ),
       ),
       const Size(963, 120),
@@ -325,8 +324,10 @@ void main() {
   });
 
   testWidgets('text fields', (tester) async {
-    final focused = TextEditingController(text: 'name@example.com');
+    final focused = TextEditingController(text: 'juana.delacruz@example.com');
+    final invalid = TextEditingController(text: 'juana.delacruz@example');
     addTearDown(focused.dispose);
+    addTearDown(invalid.dispose);
     await _paintPixels(
       tester,
       Column(
@@ -343,10 +344,11 @@ void main() {
             state: TaytayFieldState.focused,
           ),
           const SizedBox(height: 8),
-          const TaytayTextField(
-            label: 'Email or mobile number',
+          TaytayTextField(
+            label: 'Email address',
+            controller: invalid,
             state: TaytayFieldState.error,
-            message: 'Enter a valid email or mobile number.',
+            message: 'Enter a valid email, e.g. name@example.com',
           ),
         ],
       ),
@@ -369,10 +371,10 @@ void main() {
   testWidgets('card, list row and chips', (tester) async {
     await _paintPixels(
       tester,
-      const Column(
+      Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Wrap(
+          const Wrap(
             spacing: 8,
             runSpacing: 8,
             children: <Widget>[
@@ -382,19 +384,36 @@ void main() {
               SampleTag(),
             ],
           ),
-          SizedBox(height: 12),
+          const SizedBox(height: 12),
           SectionCard(
-            child: Text(
-              'Business Permits and Licensing Office',
-              style: AppTypography.cardTitle,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Business Permits and Licensing Office',
+                  style: AppTypography.cardTitle.copyWith(
+                    color: BrandColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Business · Ground Floor, Municipal Hall',
+                  style: AppTypography.bodyCompact.copyWith(
+                    color: BrandColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
-          SizedBox(height: 8),
-          ListRow(
-            title: 'Municipal Treasurer\'s Office',
-            subtitle: 'Community tax certificate',
-            icon: TaytayIcons.landmark,
-            iconLabel: 'Office',
+          const SizedBox(height: 8),
+          const SectionCard(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: ListRow(
+              title: 'Municipal Treasurer\'s Office',
+              subtitle: 'Taxes & payments · 2nd Floor, Municipal Hall',
+              icon: TaytayIcons.landmark,
+              iconLabel: 'Office',
+            ),
           ),
         ],
       ),
@@ -408,7 +427,7 @@ void main() {
     await _paintPixels(
       tester,
       const WovenHeader(showBack: true),
-      const Size(1170, 480),
+      const Size(1170, 204),
       'components/evidence_woven.png',
     );
   });
@@ -429,9 +448,12 @@ void main() {
   });
 }
 
-/// Paints [child] at [pixels] device pixels. The child is laid out at one
-/// third of that size and scaled by 3, which is how the design PNGs were
-/// exported (390×844 at 3x).
+/// Paints [child] at [pixels] device pixels.
+///
+/// The design PNGs are 3× exports. The child is laid out at the CSS size with
+/// a device pixel ratio of 3, so line boxes snap to a device pixel, then drawn
+/// into a frame of [pixels] logical pixels. [matchesGoldenFile] records that
+/// frame 1:1.
 Future<void> _paintPixels(
   WidgetTester tester,
   Widget child,
@@ -439,26 +461,33 @@ Future<void> _paintPixels(
   String golden, {
   Color background = const Color(0xFFFDFDFE),
 }) async {
-  tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = pixels;
+  debugDisableShadows = false;
+  const dpr = 3.0;
+  tester.view.devicePixelRatio = dpr;
+  tester.view.physicalSize = pixels * dpr;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
   await tester.pumpWidget(
-    MediaQuery(
-      data: MediaQueryData(size: pixels, textScaler: TextScaler.noScaling),
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.light(),
-        home: ColoredBox(
-          key: const ValueKey<String>('evidence-root'),
-          color: background,
-          child: FittedBox(
-            fit: BoxFit.fill,
-            child: SizedBox(
-              width: pixels.width / 3,
-              height: pixels.height / 3,
-              child: Material(type: MaterialType.transparency, child: child),
-            ),
+    MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      builder: (context, widget) {
+        return MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.noScaling),
+          child: widget ?? const SizedBox.shrink(),
+        );
+      },
+      home: ColoredBox(
+        key: const ValueKey<String>('evidence-root'),
+        color: background,
+        child: FittedBox(
+          fit: BoxFit.fill,
+          child: SizedBox(
+            width: pixels.width / dpr,
+            height: pixels.height / dpr,
+            child: Material(type: MaterialType.transparency, child: child),
           ),
         ),
       ),
@@ -482,10 +511,25 @@ Future<void> _paintPixels(
     tester.getSize(find.byKey(const ValueKey<String>('evidence-root'))),
     pixels,
   );
-  await expectLater(
+  await _match(
+    tester,
     find.byKey(const ValueKey<String>('evidence-root')),
     matchesGoldenFile(golden),
   );
+}
+
+Future<void> _match(
+  WidgetTester tester,
+  dynamic finder,
+  dynamic matcher,
+) async {
+  debugDisableShadows = false;
+  try {
+    await tester.pump();
+    await expectLater(finder, matcher);
+  } finally {
+    debugDisableShadows = true;
+  }
 }
 
 void _noop() {}

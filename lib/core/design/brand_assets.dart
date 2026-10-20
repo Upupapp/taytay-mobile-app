@@ -19,8 +19,9 @@ import 'package:flutter/foundation.dart';
 /// The registered file is `assets/brand/taytay_seal.png`, copied byte for byte
 /// from the S0 design source `src/taytay_seal.png`. It is a PNG with an alpha
 /// channel. The mark widget draws it with `BoxFit.contain` and nothing else: no
-/// colour filter, no mask, no border. There is no wordmark stand-in: the
-/// registry always holds this file.
+/// colour filter and no recompression. The woven header may place that same
+/// file in the mockup's circular container (white pad, gold ring). The file
+/// itself is not redrawn. There is no wordmark stand-in.
 ///
 /// An earlier prototype file named `taytay_logo.png` was a JPEG flattened onto
 /// black. That file is not this asset and is not registered.
@@ -120,9 +121,9 @@ abstract final class SealIntegrityRules {
     'Reproduce the artwork exactly as supplied — never redraw or trace it.',
     'Never recolour, tint, apply a colour filter, or convert to monochrome.',
     'Never stretch: preserve the intrinsic aspect ratio (BoxFit.contain only).',
-    'Never crop, mask to a shape, or round its corners.',
+    'Never crop or redraw the artwork. A circular container may frame it.',
     'Never rotate, skew, mirror or animate the mark itself.',
-    'Never add a drop shadow, glow, outline or border to it.',
+    'Never paint a shadow, glow or border onto the artwork. A ring may sit on the container around it.',
     'Never overlay text or graphics on it, and never use it as a background.',
     'Never render it below ${minRenderedSize}dp.',
     'Keep clear space of at least ${clearSpaceRatio}x its size on every side.',

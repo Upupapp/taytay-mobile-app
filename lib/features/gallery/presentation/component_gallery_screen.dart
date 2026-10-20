@@ -123,11 +123,14 @@ class ComponentGalleryScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: Spacing.md),
-            const ListRow(
-              title: 'Sagip Taytay Command Center',
-              subtitle: 'SAMPLE · 0900-000-0000',
-              icon: TaytayIcons.siren,
-              iconLabel: 'Hotline',
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: Spacing.lg),
+              child: ListRow(
+                title: 'Sagip Taytay Command Center',
+                subtitle: 'SAMPLE · 0900-000-0000',
+                icon: TaytayIcons.siren,
+                iconLabel: 'Hotline',
+              ),
             ),
             const Padding(
               padding: EdgeInsets.all(Spacing.lg),

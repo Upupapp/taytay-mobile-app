@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../motion/motion_tokens.dart';
+import 'button_styles.dart';
 import 'design_tokens.dart';
 import 'typography.dart';
 
@@ -105,20 +106,22 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
+          minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
-          textStyle: AppTypography.button,
+          textStyle: TaytayButtonMetrics.inApp.label,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(50),
+          minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
-          textStyle: AppTypography.button,
+          side: const BorderSide(color: BrandColors.taytayBlue, width: 1.5),
+          foregroundColor: BrandColors.taytayBlue,
+          textStyle: TaytayButtonMetrics.inApp.label,
         ),
       ),
       textButtonTheme: TextButtonThemeData(

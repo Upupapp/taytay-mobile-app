@@ -126,7 +126,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   minimumSize: const Size(48, 44),
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   shape: const StadiumBorder(),
-                  textStyle: AppTypography.link.copyWith(fontSize: 14),
+                  textStyle: AppTypography.linkSkip,
                 ),
                 onPressed: _finish,
                 child: const Text('Skip'),
@@ -151,12 +151,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               child: Column(
                 children: <Widget>[
                   PrimaryButton(
+                    kind: TaytayButtonKind.welcome,
                     label: _isLastScene ? 'Get started' : 'Next',
                     onPressed: _next,
                   ),
                   if (_isLastScene) ...<Widget>[
                     const SizedBox(height: Spacing.sm),
                     SecondaryButton(
+                      kind: TaytayButtonKind.welcome,
                       label: 'Continue as guest',
                       onPressed: () {
                         unawaited(_finish());

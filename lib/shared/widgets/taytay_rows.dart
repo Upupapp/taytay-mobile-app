@@ -68,13 +68,14 @@ class SampleTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CSS border-box: the 1 px dashed border takes space outside the 2 px pad.
     return CustomPaint(
       painter: const _DashedRRectPainter(
         color: BrandColors.sampleBorder,
         radius: 6,
       ),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+        padding: const EdgeInsets.fromLTRB(7, 3, 7, 3),
         decoration: BoxDecoration(
           color: BrandColors.chipAmberBg,
           borderRadius: BorderRadius.circular(6),
@@ -117,7 +118,7 @@ class ListRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = iconBackground ?? const Color(0xFFE7EEF8);
+    final bg = iconBackground ?? BrandColors.chipBlueBg;
     final fg = iconColor ?? BrandColors.taytayBlue;
     return Material(
       color: BrandColors.surfaceCard,
@@ -126,10 +127,9 @@ class ListRow extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.lg,
-              vertical: Spacing.md,
-            ),
+            // gen2 `.li` is padding 12px 0 and gap 12. Horizontal inset belongs
+            // to the card that holds the row.
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               children: <Widget>[
                 Container(
@@ -144,10 +144,10 @@ class ListRow extends StatelessWidget {
                     icon: icon,
                     semanticLabel: iconLabel,
                     color: fg,
-                    size: IconSizes.sm,
+                    size: 20,
                   ),
                 ),
-                const SizedBox(width: Spacing.md),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,10 +159,13 @@ class ListRow extends StatelessWidget {
                         ),
                       ),
                       if (subtitle != null)
-                        Text(
-                          subtitle!,
-                          style: AppTypography.listMeta.copyWith(
-                            color: BrandColors.listMeta,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            subtitle!,
+                            style: AppTypography.listMeta.copyWith(
+                              color: BrandColors.listMeta,
+                            ),
                           ),
                         ),
                     ],
@@ -173,8 +176,8 @@ class ListRow extends StatelessWidget {
                       icon: TaytayIcons.chevronRight,
                       semanticLabel: '',
                       excludeSemantics: true,
-                      color: BrandColors.textMuted,
-                      size: IconSizes.sm,
+                      color: BrandColors.chevron,
+                      size: 18,
                     ),
               ],
             ),
@@ -268,9 +271,7 @@ class _Action extends StatelessWidget {
           Flexible(
             child: Text(
               label,
-              style: AppTypography.label.copyWith(
-                color: BrandColors.taytayBlue,
-              ),
+              style: AppTypography.sbtn.copyWith(color: BrandColors.taytayBlue),
             ),
           ),
         ],

@@ -42,7 +42,8 @@ class TaytayBackButton extends StatelessWidget {
     final fill = light
         ? BrandColors.surfaceCard
         : scheme.surfaceContainerLowest;
-    final glyph = light ? BrandColors.taytayBlueDark : scheme.onSurface;
+    // Sign-in `.back` strokes the chevron in `#0B3D91` at 20 px.
+    final glyph = light ? BrandColors.taytayBlue : scheme.onSurface;
 
     // The ink well is the 48 dp target. A circle centred inside it is only
     // paint; putting the well on the circle made screen readers measure 44.
@@ -71,15 +72,26 @@ class TaytayBackButton extends StatelessWidget {
             child: SizedBox(
               width: A11y.backButtonVisual,
               height: A11y.backButtonVisual,
-              child: Material(
-                color: fill,
-                shape: const CircleBorder(),
-                elevation: 0,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: fill,
+                  shape: BoxShape.circle,
+                  boxShadow: light
+                      ? const <BoxShadow>[
+                          BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
+                          BoxShadow(
+                            color: Color(0x1A062358),
+                            blurRadius: 10,
+                            offset: Offset(0, 3),
+                          ),
+                        ]
+                      : null,
+                ),
                 child: Center(
                   child: TaytayIcon(
                     icon: TaytayIcons.arrowLeft,
                     semanticLabel: 'Back',
-                    size: IconSizes.sm,
+                    size: light ? 20 : IconSizes.sm,
                     color: glyph,
                   ),
                 ),
