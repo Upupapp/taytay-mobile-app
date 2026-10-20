@@ -17,6 +17,18 @@ const TextHeightBehavior _cssHalfLeading = TextHeightBehavior(
   leadingDistribution: TextLeadingDistribution.even,
 );
 
+/// CSS `.body` is 14 × 1.55 = 21.7. Without a forced strut, the line box
+/// rounds up to a whole logical pixel (22), and by the third line the ink
+/// is about 4 device pixels low at 3×.
+const StrutStyle _welcomeBodyStrut = StrutStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 14,
+  fontWeight: AppTypography.body,
+  height: 1.55,
+  leadingDistribution: TextLeadingDistribution.even,
+  forceStrutHeight: true,
+);
+
 /// Copy for one welcome page. The screen builds it from l10n. Goldens pass
 /// the same design strings.
 @immutable
@@ -512,13 +524,7 @@ class _Copy extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Text(
-          copy.body,
-          textHeightBehavior: _cssHalfLeading,
-          style: AppTypography.bodyStyle.copyWith(
-            color: BrandColors.welcomeCopy,
-          ),
-        ),
+        _WelcomeBody(copy.body),
         if (copy.chips.isNotEmpty) ...<Widget>[
           const SizedBox(height: 14),
           Wrap(
@@ -536,6 +542,80 @@ class _Copy extends StatelessWidget {
           KnotIndicator(active: page, label: copy.stepLabel, inline: true),
         ],
       ],
+    );
+  }
+}
+
+/// Welcome body at CSS `14 × 1.55`.
+///
+/// The strut asks for that leading. The engine still rounds the line box to
+/// a whole logical pixel (22), which is about 4 device pixels low by line 3
+/// at 3×. Each line keeps the strut, and the line tops are placed `14 × 1.55`
+/// apart so they follow the design instead of the rounded box.
+class _WelcomeBody extends StatelessWidget {
+  const _WelcomeBody(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.welcomeCopy,
+      height: 1.55,
+    );
+    return Semantics(
+      label: text,
+      child: ExcludeSemantics(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final scaler = MediaQuery.textScalerOf(context);
+            final painter = TextPainter(
+              text: TextSpan(text: text, style: style),
+              textDirection: Directionality.of(context),
+              textScaler: scaler,
+              textHeightBehavior: _cssHalfLeading,
+              strutStyle: _welcomeBodyStrut,
+            )..layout(maxWidth: constraints.maxWidth);
+            final lines = <String>[];
+            var start = 0;
+            while (start < text.length) {
+              final range = painter.getLineBoundary(
+                TextPosition(offset: start),
+              );
+              if (range.end <= start) break;
+              lines.add(text.substring(range.start, range.end).trimRight());
+              start = range.end;
+            }
+            final metrics = painter.computeLineMetrics();
+            final step = 14 * scaler.scale(1) * 1.55;
+            final lineBox = metrics.isEmpty ? step : metrics.first.height;
+            painter.dispose();
+            return SizedBox(
+              width: constraints.maxWidth,
+              height: lines.isEmpty ? 0 : step * (lines.length - 1) + lineBox,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  for (var i = 0; i < lines.length; i++)
+                    Positioned(
+                      top: i * step,
+                      left: 0,
+                      right: 0,
+                      child: Text(
+                        lines[i],
+                        maxLines: 1,
+                        softWrap: false,
+                        textHeightBehavior: _cssHalfLeading,
+                        strutStyle: _welcomeBodyStrut,
+                        style: style,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

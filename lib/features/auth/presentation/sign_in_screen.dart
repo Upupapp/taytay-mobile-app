@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/sign_in_field.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
@@ -21,6 +24,9 @@ import '../../../shared/widgets/taytay_headers.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
+
+/// The white form sheet. Tests look for this to prove the copy sits on it.
+const Key signInFormSheetKey = Key('sign-in-form-sheet');
 
 /// Sign-in: a mobile number, then a one-time code.
 ///
@@ -143,119 +149,248 @@ class _SignInScreenState extends State<SignInScreen> {
         : SessionEndedReason.none;
 
     return Scaffold(
-      body: Stack(
-        children: <Widget>[
-          SafeArea(
-            child: Column(
+      backgroundColor: BrandColors.surface,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          return _SignInFrame(
+            height: constraints.maxHeight,
+            threadCycle: widget.threadCycle,
+            header: WovenHeader(
+              showBack: true,
+              backEnabled:
+                  !(controller.step == SignInStep.code && controller.busy),
+              onBack: controller.step == SignInStep.code
+                  ? controller.changeNumber
+                  : null,
+              // The page paints the field. The header painter draws an
+              // 844-tall ramp and would put navy behind the form.
+              paintField: false,
+              includeSafeArea: false,
+              padding: const EdgeInsets.fromLTRB(18, 0, 20, 0),
+            ),
+            form: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                WovenHeader(
-                  showBack: true,
-                  backEnabled:
-                      !(controller.step == SignInStep.code && controller.busy),
-                  onBack: controller.step == SignInStep.code
-                      ? controller.changeNumber
-                      : null,
-                ),
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(Spacing.xl),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: <Widget>[
-                        // Three distinct notices, and the distinction is the point of
-                        // TAB 06 step 2. An expiry is not a sign-out and neither is a
-                        // network failure; a resident dropped on this screen with one
-                        // generic sentence cannot tell whether something went wrong,
-                        // whether they did it, or whether to try again.
-                        if (endedReason == SessionEndedReason.expired)
-                          _Notice(
-                            icon: Icons.lock_clock_outlined,
-                            text: AppStrings.of(context).signInNoticeExpired,
-                          )
-                        else if (endedReason == SessionEndedReason.signedOut)
-                          _Notice(
-                            icon: Icons.check_circle_outline,
-                            text: AppStrings.of(context).signInNoticeSignedOut,
-                          )
-                        else if (widget.returnTo != null)
-                          _Notice(
-                            icon: Icons.login_outlined,
-                            text: AppStrings.of(context).signInNoticeReturnTo,
-                          ),
-                        switch (controller.step) {
-                          SignInStep.identifier => _IdentifierStep(
-                            formKey: _identifierForm,
-                            controller: _mobileController,
-                            busy: controller.busy,
-                            onSubmit: _requestCode,
-                          ),
-                          SignInStep.code => _CodeStep(
-                            formKey: _codeForm,
-                            controller: _codeController,
-                            signIn: controller,
-                            onSubmit: _verifyCode,
-                            onResend: _resend,
-                          ),
-                        },
-                        if (controller.message != null) ...<Widget>[
-                          const SizedBox(height: Spacing.lg),
-                          _MessageBanner(message: controller.message!),
-                        ],
-                        const SizedBox(height: Spacing.xl),
-                        TextButton(
-                          onPressed: () =>
-                              context.goNamed(AppRoute.signInHelp.routeName),
-                          child: const Text('Trouble signing in?'),
-                        ),
-                        if (controller.step ==
-                            SignInStep.identifier) ...<Widget>[
-                          const SizedBox(height: Spacing.sm),
-                          // TAB 03 / F15. Two states in one build, chosen by the server.
-                          //
-                          // Under staff-mediated onboarding this is NOT a disabled
-                          // button. A control a resident cannot use tells them the app is
-                          // broken; a sentence tells them where to go. There is no
-                          // self-registration route on the server, so offering the wizard
-                          // here would be a promise the platform cannot keep.
-                          if (dependencies
-                              .platform
-                              .onboardingMode
-                              .allowsSelfRegistration)
-                            SecondaryButton(
-                              kind: TaytayButtonKind.signIn,
-                              onPressed: () =>
-                                  context.goNamed(AppRoute.register.routeName),
-                              label: 'Create an account',
-                            )
-                          else
-                            const _OfficeOnboardingPanel(),
-                        ],
-                        const SizedBox(height: Spacing.sm),
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            textStyle: AppTypography.linkGuest,
-                          ),
-                          onPressed: () =>
-                              context.goNamed(AppRoute.home.routeName),
-                          child: const Text('Continue as guest'),
-                        ),
-                        if (kDebugMode) const _DebugSessionSimulator(),
-                      ],
-                    ),
+                // Three distinct notices, and the distinction is the point of
+                // TAB 06 step 2. An expiry is not a sign-out and neither is a
+                // network failure; a resident dropped on this screen with one
+                // generic sentence cannot tell whether something went wrong,
+                // whether they did it, or whether to try again.
+                if (endedReason == SessionEndedReason.expired)
+                  _Notice(
+                    icon: Icons.lock_clock_outlined,
+                    text: AppStrings.of(context).signInNoticeExpired,
+                  )
+                else if (endedReason == SessionEndedReason.signedOut)
+                  _Notice(
+                    icon: Icons.check_circle_outline,
+                    text: AppStrings.of(context).signInNoticeSignedOut,
+                  )
+                else if (widget.returnTo != null)
+                  _Notice(
+                    icon: Icons.login_outlined,
+                    text: AppStrings.of(context).signInNoticeReturnTo,
                   ),
+                switch (controller.step) {
+                  SignInStep.identifier => _IdentifierStep(
+                    formKey: _identifierForm,
+                    controller: _mobileController,
+                    busy: controller.busy,
+                    onSubmit: _requestCode,
+                  ),
+                  SignInStep.code => _CodeStep(
+                    formKey: _codeForm,
+                    controller: _codeController,
+                    signIn: controller,
+                    onSubmit: _verifyCode,
+                    onResend: _resend,
+                  ),
+                },
+                if (controller.message != null) ...<Widget>[
+                  const SizedBox(height: Spacing.lg),
+                  _MessageBanner(message: controller.message!),
+                ],
+                const SizedBox(height: Spacing.xl),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    foregroundColor: BrandColors.taytayBlue,
+                  ),
+                  onPressed: () =>
+                      context.goNamed(AppRoute.signInHelp.routeName),
+                  child: const Text('Trouble signing in?'),
                 ),
+                if (controller.step == SignInStep.identifier) ...<Widget>[
+                  const SizedBox(height: Spacing.sm),
+                  // TAB 03 / F15. Two states in one build, chosen by the server.
+                  //
+                  // Under staff-mediated onboarding this is NOT a disabled
+                  // button. A control a resident cannot use tells them the app is
+                  // broken; a sentence tells them where to go. There is no
+                  // self-registration route on the server, so offering the wizard
+                  // here would be a promise the platform cannot keep.
+                  if (dependencies
+                      .platform
+                      .onboardingMode
+                      .allowsSelfRegistration)
+                    SecondaryButton(
+                      kind: TaytayButtonKind.signIn,
+                      onPressed: () =>
+                          context.goNamed(AppRoute.register.routeName),
+                      label: 'Create an account',
+                    )
+                  else
+                    const _OfficeOnboardingPanel(),
+                ],
+                const SizedBox(height: Spacing.sm),
+                TextButton(
+                  style: TextButton.styleFrom(
+                    textStyle: AppTypography.linkGuest,
+                    foregroundColor: BrandColors.taytayBlue,
+                  ),
+                  onPressed: () => context.goNamed(AppRoute.home.routeName),
+                  child: const Text('Continue as guest'),
+                ),
+                if (kDebugMode) const _DebugSessionSimulator(),
               ],
             ),
-          ),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: SignInThreadOverlay(cycle: widget.threadCycle),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
+}
+
+/// 02-01's frame: the field fades to the page colour around y = 330, the
+/// stitch sits on that field, and the form sits on the white sheet in front
+/// of the stitch.
+class _SignInFrame extends StatelessWidget {
+  const _SignInFrame({
+    required this.height,
+    required this.threadCycle,
+    required this.header,
+    required this.form,
+  });
+
+  /// The scaffold body, already shrunk for the keyboard.
+  final double height;
+  final double threadCycle;
+  final Widget header;
+  final Widget form;
+
+  /// `.sheet { top: 332px; left/right: 14px; bottom: 20px }`.
+  static const double designSheetTop = 332;
+  static const double sheetSide = 14;
+  static const double sheetBottom = 20;
+
+  @override
+  Widget build(BuildContext context) {
+    final padding = MediaQuery.paddingOf(context);
+    final headerTop = padding.top > 44 ? padding.top : 44.0;
+    final type = MediaQuery.textScalerOf(context).scale(1);
+    final belowHeader = headerTop + math.max(56.0, 48 * type);
+    final bottom = math.max(sheetBottom, padding.bottom);
+    final side = math.max(sheetSide, math.max(padding.left, padding.right));
+    // On the 844 frame the sheet starts at 332. A short window (landscape,
+    // a small phone) keeps enough sheet to scroll instead of a 38 dp sliver.
+    var sheetTop = designSheetTop;
+    const minSheet = 160.0;
+    if (height - bottom - sheetTop < minSheet) {
+      sheetTop = math.max(belowHeader, height - bottom - minSheet);
+    }
+    if (sheetTop < belowHeader && belowHeader < height - bottom - 48) {
+      sheetTop = belowHeader;
+    }
+    final maxTop = math.max(0.0, height - bottom - 48);
+    if (sheetTop > maxTop) sheetTop = maxTop;
+
+    return Stack(
+      key: const Key('sign-in-stack'),
+      children: <Widget>[
+        const Positioned.fill(child: SignInBackdrop()),
+        Positioned.fill(
+          child: IgnorePointer(child: SignInThreadOverlay(cycle: threadCycle)),
+        ),
+        Positioned(
+          top: headerTop,
+          left: padding.left,
+          right: padding.right,
+          child: header,
+        ),
+        Positioned(
+          top: sheetTop,
+          left: side,
+          right: side,
+          bottom: bottom,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x1F062358),
+                  blurRadius: 30,
+                  offset: Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Material(
+              key: signInFormSheetKey,
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(26),
+              clipBehavior: Clip.antiAlias,
+              child: Stack(
+                children: <Widget>[
+                  const Positioned.fill(
+                    child: IgnorePointer(
+                      child: Padding(
+                        padding: EdgeInsets.all(7),
+                        child: CustomPaint(painter: _SheetSeamPainter()),
+                      ),
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+                      child: form,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// `.sheet:before` — a 1.4 px gold dash, inset 7, radius 20.
+class _SheetSeamPainter extends CustomPainter {
+  const _SheetSeamPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(20)),
+      );
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.4
+      ..color = const Color(0x8CC9A227);
+    const dash = 5.0;
+    const gap = 4.0;
+    for (final metric in path.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        final next = math.min(distance + dash, metric.length);
+        canvas.drawPath(metric.extractPath(distance, next), paint);
+        distance = next + gap;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SheetSeamPainter oldDelegate) => false;
 }
 
 /// Step 1 — the only identifier a citizen has.
