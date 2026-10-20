@@ -1,0 +1,4398 @@
+{
+ "openapi": "3.1.0",
+ "info": {
+  "title": "Taytay LGU IDS API",
+  "version": "1.0.0",
+  "summary": "Backend for the official app of the LGU of Taytay, Rizal."
+ },
+ "servers": [
+  {
+   "url": "/"
+  }
+ ],
+ "paths": {
+  "/docs": {
+   "get": {
+    "operationId": "getOpenApi",
+    "summary": "OpenAPI document",
+    "description": "The OpenAPI document itself, not the API envelope.",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "OpenAPI 3.1 document.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/health": {
+   "get": {
+    "operationId": "getHealth",
+    "summary": "Liveness probe",
+    "description": "Reports that the process is up. It does not check PostgreSQL, Firebase, or object storage.",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "The process is up.",
+      "headers": {
+       "X-Request-Id": {
+        "description": "Correlation id echoed on every response.",
+        "schema": {
+         "type": "string"
+        }
+       }
+      },
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HealthResponse"
+        },
+        "example": {
+         "data": {
+          "service": "taytay-lgu-ids",
+          "status": "ok",
+          "api_version": "v1"
+         },
+         "meta": {}
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/barangays": {
+   "get": {
+    "operationId": "listBarangays",
+    "summary": "List barangays",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "Barangay lookup.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "data",
+          "meta"
+         ],
+         "properties": {
+          "data": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/Barangay"
+           }
+          },
+          "meta": {
+           "type": "object"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/me": {
+   "get": {
+    "operationId": "getMe",
+    "summary": "Get the signed-in profile",
+    "description": "Creates the user on first sight. The role is stored on the row after that.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "The caller profile.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserProfileEnvelope"
+        }
+       }
+      }
+     },
+     "401": {
+      "description": "Authentication is required.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "operationId": "patchMe",
+    "summary": "Update the signed-in profile",
+    "description": "Null clears an optional field. Role and verification status cannot be patched.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ProfilePatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated profile.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserProfileEnvelope"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation failed.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/me/avatar": {
+   "post": {
+    "operationId": "uploadAvatar",
+    "summary": "Upload an avatar",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "file"
+        ],
+        "properties": {
+         "file": {
+          "type": "string",
+          "format": "binary"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Avatar stored.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "data",
+          "meta"
+         ],
+         "properties": {
+          "data": {
+           "type": "object",
+           "required": [
+            "avatar_media_id"
+           ],
+           "properties": {
+            "avatar_media_id": {
+             "type": "string",
+             "format": "uuid"
+            }
+           }
+          },
+          "meta": {
+           "type": "object"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/me/consents": {
+   "get": {
+    "operationId": "listConsents",
+    "summary": "List privacy consents",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Consent history, newest first, capped at 100.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "type": "object",
+         "required": [
+          "data",
+          "meta"
+         ],
+         "properties": {
+          "data": {
+           "type": "array",
+           "items": {
+            "$ref": "#/components/schemas/PrivacyConsent"
+           }
+          },
+          "meta": {
+           "type": "object"
+          }
+         }
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "acceptConsent",
+    "summary": "Record a privacy consent version",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConsentRequest"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Consent recorded.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConsentEnvelope"
+        }
+       }
+      }
+     },
+     "200": {
+      "description": "That version was already recorded.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ConsentEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/users": {
+   "get": {
+    "operationId": "listUsers",
+    "summary": "List users",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Admin user list. Address and birthdate are omitted.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserListEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Admin role required.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/users/{id}/role": {
+   "patch": {
+    "operationId": "changeUserRole",
+    "summary": "Change a user's role",
+    "description": "Cannot target the caller. verified and registered also update verification_status.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RoleChange"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Role updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserListItemEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Forbidden.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "User not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/me/verification-requests": {
+   "post": {
+    "operationId": "submitVerification",
+    "summary": "Submit an identity verification request",
+    "description": "Registered residents only. One pending request per user. JPEG, PNG, or WebP, 5 MB each.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/VerificationSubmit"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Request opened.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerificationEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "A request is already pending, or the account is already verified.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Validation failed.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/me/verification-requests/current": {
+   "get": {
+    "operationId": "currentVerification",
+    "summary": "Latest verification request for the caller",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Latest request.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerificationEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "None yet.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/verification-requests": {
+   "get": {
+    "operationId": "listVerificationRequests",
+    "summary": "List verification requests",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "status",
+      "in": "query",
+      "schema": {
+       "type": "string",
+       "enum": [
+        "pending",
+        "approved",
+        "rejected"
+       ]
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Cursor page of requests.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerificationListEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Admin role required.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/verification-requests/{id}/approve": {
+   "post": {
+    "operationId": "approveVerification",
+    "summary": "Approve a verification request",
+    "description": "Sets the resident to verified. A registered role becomes verified. Staff and admin roles are left unchanged.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReviewNotes"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Approved.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerificationEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Not pending.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/verification-requests/{id}/reject": {
+   "post": {
+    "operationId": "rejectVerification",
+    "summary": "Reject a verification request",
+    "description": "Notes are required. The account stays registered and may submit again.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/RejectNotes"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Rejected.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/VerificationEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Not pending.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/offices": {
+   "get": {
+    "operationId": "listOffices",
+    "summary": "List or search offices",
+    "security": [],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "category",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Office page.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/offices/{slug}": {
+   "get": {
+    "operationId": "getOffice",
+    "summary": "Office detail by slug",
+    "security": [],
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/offices": {
+   "post": {
+    "operationId": "createOffice",
+    "summary": "Create an office",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/OfficeWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Created.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Slug already used.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/offices/{id}": {
+   "patch": {
+    "operationId": "updateOffice",
+    "summary": "Update an office",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/OfficePatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/OfficeEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteOffice",
+    "summary": "Delete an office",
+    "description": "Refused while staff or later records still reference the office.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Deleted.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeletedEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Still referenced.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/users/{id}/office": {
+   "patch": {
+    "operationId": "assignUserOffice",
+    "summary": "Link a staff account to an office",
+    "description": "office_id null clears the link. A non-staff account cannot be assigned an office.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/OfficeAssignment"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Assignment saved.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UserListItemEnvelope"
+        }
+       }
+      }
+     },
+     "422": {
+      "description": "Target is not staff, or the office does not exist.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/news": {
+   "get": {
+    "operationId": "listNews",
+    "summary": "List published Balita",
+    "security": [],
+    "parameters": [
+     {
+      "name": "category",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "office",
+      "in": "query",
+      "description": "Office slug.",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Published articles, newest first.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "createNews",
+    "summary": "Post a Balita article",
+    "description": "Staff may post only for their own office. Admins choose the office. Drafts are hidden from the public list.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/NewsWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Created.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Staff posting outside their office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/news/{id}": {
+   "get": {
+    "operationId": "getNews",
+    "summary": "Balita detail",
+    "description": "Published articles are public. Drafts are visible to the office's staff and to admins.",
+    "security": [],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Article.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found, or a draft the caller cannot see.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "patch": {
+    "operationId": "updateNews",
+    "summary": "Edit a Balita article",
+    "description": "Staff can edit only articles of their own office. Publishing sets published_at the first time.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/NewsPatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Outside the staff member's office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/services": {
+   "get": {
+    "operationId": "listServices",
+    "summary": "List Tulong services",
+    "description": "Information only. There is no application endpoint.",
+    "security": [],
+    "parameters": [
+     {
+      "name": "q",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "category",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "office",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Service page.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ServiceListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/services/{slug}": {
+   "get": {
+    "operationId": "getService",
+    "summary": "Service detail",
+    "security": [],
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Service.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ServiceEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/services": {
+   "post": {
+    "operationId": "createService",
+    "summary": "Create a Tulong service",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ServiceWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Created.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ServiceEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Slug already used.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/services/{id}": {
+   "patch": {
+    "operationId": "updateService",
+    "summary": "Update a Tulong service",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ServicePatch"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ServiceEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteService",
+    "summary": "Delete a Tulong service",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Deleted.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeletedEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/services/{id}/media": {
+   "post": {
+    "operationId": "uploadServiceMedia",
+    "summary": "Attach an image to a service",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "file"
+        ],
+        "properties": {
+         "file": {
+          "type": "string",
+          "format": "binary"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Image stored.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ServiceEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/threads": {
+   "get": {
+    "operationId": "listThreads",
+    "summary": "List message threads",
+    "description": "A verified resident sees their threads. Staff see their office inbox. Admins see every thread.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Thread page.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "startThread",
+    "summary": "Start or continue a thread with an office",
+    "description": "Verified residents only. An open thread for the same resident and office is reused. A closed thread starts a new one.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ThreadStart"
+       }
+      },
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/ThreadStartFile"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "New thread.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadMessageEnvelope"
+        }
+       }
+      }
+     },
+     "200": {
+      "description": "Message added to the open thread.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadMessageEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/threads/{id}": {
+   "get": {
+    "operationId": "getThread",
+    "summary": "Thread detail",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Thread.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not visible to the caller.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/threads/{id}/messages": {
+   "get": {
+    "operationId": "listMessages",
+    "summary": "List messages in a thread",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     },
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Message page, newest first.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MessageListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "replyToThread",
+    "summary": "Reply in a thread",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ThreadReply"
+       }
+      },
+      "multipart/form-data": {
+       "schema": {
+        "$ref": "#/components/schemas/ThreadReplyFile"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Reply stored.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadMessageEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Thread is closed.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/threads/{id}/read": {
+   "post": {
+    "operationId": "markThreadRead",
+    "summary": "Mark a thread read for the caller",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Read timestamp updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/threads/{id}/close": {
+   "post": {
+    "operationId": "closeThread",
+    "summary": "Close a thread",
+    "description": "Staff of that office, or an admin. The resident can start a new thread afterwards.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Closed.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ThreadEnvelope"
+        }
+       }
+      }
+     },
+     "409": {
+      "description": "Already closed.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notifications": {
+   "get": {
+    "operationId": "listNotifications",
+    "summary": "List notifications for the caller",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Notification page.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notifications/unread-count": {
+   "get": {
+    "operationId": "unreadNotificationCount",
+    "summary": "Unread notification count",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Count.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UnreadEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notifications/read": {
+   "post": {
+    "operationId": "markAllNotificationsRead",
+    "summary": "Mark every notification read",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Updated count.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/UpdatedEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/notifications/{id}/read": {
+   "post": {
+    "operationId": "markNotificationRead",
+    "summary": "Mark one notification read",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Notification.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NotificationEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found for this caller.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/media": {
+   "post": {
+    "operationId": "uploadMedia",
+    "summary": "Upload an image and return metadata",
+    "description": "Bytes go through MediaStore. The response does not include the storage key.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "multipart/form-data": {
+       "schema": {
+        "type": "object",
+        "required": [
+         "file"
+        ],
+        "properties": {
+         "file": {
+          "type": "string",
+          "format": "binary"
+         }
+        }
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Stored.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MediaEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/media/{id}": {
+   "get": {
+    "operationId": "getMedia",
+    "summary": "Media metadata",
+    "description": "The owner, staff, and admins can read metadata. Another resident receives 404.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Metadata.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MediaEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not visible.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/home": {
+   "get": {
+    "operationId": "getHome",
+    "summary": "Home screen",
+    "description": "Active banners, quick links, the latest published Balita, and featured Tulong services.",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "Home payload.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HomeEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/home/banners": {
+   "get": {
+    "operationId": "listBanners",
+    "summary": "List banners, including inactive ones",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Banners.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BannerListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "createBanner",
+    "summary": "Create a home banner",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BannerWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Created.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BannerEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/home/banners/{id}": {
+   "patch": {
+    "operationId": "updateBanner",
+    "summary": "Update a home banner",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/BannerWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/BannerEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteBanner",
+    "summary": "Delete a home banner",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Deleted.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeletedEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/home/links": {
+   "get": {
+    "operationId": "listQuickLinks",
+    "summary": "List quick links",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Links.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "post": {
+    "operationId": "createQuickLink",
+    "summary": "Create a quick link",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "201": {
+      "description": "Created.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/home/links/{id}": {
+   "patch": {
+    "operationId": "updateQuickLink",
+    "summary": "Update a quick link",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "requestBody": {
+     "required": true,
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/LinkWrite"
+       }
+      }
+     }
+    },
+    "responses": {
+     "200": {
+      "description": "Updated.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/LinkEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "deleteQuickLink",
+    "summary": "Delete a quick link",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Deleted.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/DeletedEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/admin/audit": {
+   "get": {
+    "operationId": "listAudit",
+    "summary": "List privileged actions",
+    "description": "Admin only. Rows store actor, action code, and subject id. They do not store addresses, notes, or message text.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "limit",
+      "in": "query",
+      "schema": {
+       "type": "integer",
+       "minimum": 1,
+       "maximum": 50,
+       "default": 20
+      }
+     },
+     {
+      "name": "cursor",
+      "in": "query",
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Audit page.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/AuditListEnvelope"
+        },
+        "example": {
+         "data": [
+          {
+           "id": "6b1e1c3a-1d2e-4f5a-8b9c-0d1e2f3a4b5c",
+           "actor_id": "11111111-1111-4111-8111-111111111111",
+           "action": "user.role_changed",
+           "subject_type": "user",
+           "subject_id": "22222222-2222-4222-8222-222222222222",
+           "created_at": "2026-10-20T08:00:00.000Z"
+          }
+         ],
+         "meta": {
+          "pagination": {
+           "has_more": false,
+           "next_cursor": null
+          }
+         }
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Admin role required.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ },
+ "components": {
+  "securitySchemes": {
+   "firebaseIdToken": {
+    "type": "http",
+    "scheme": "bearer",
+    "bearerFormat": "Firebase ID token",
+    "description": "Firebase is the identity provider and nothing else. The API verifies the ID token and reads the role from that token. The local mock accepts `Bearer mock:<role>:<subjectId>` and does not call Firebase. Firestore is not used."
+   }
+  },
+  "schemas": {
+   "Role": {
+    "type": "string",
+    "enum": [
+     "guest",
+     "registered",
+     "verified",
+     "staff",
+     "admin"
+    ]
+   },
+   "ErrorEnvelope": {
+    "type": "object",
+    "example": {
+     "error": {
+      "code": "VALIDATION_FAILED",
+      "message": "The request could not be validated.",
+      "details": {
+       "name": [
+        "String must contain at least 1 character(s)"
+       ]
+      },
+      "request_id": "req_example"
+     }
+    },
+    "required": [
+     "error"
+    ],
+    "properties": {
+     "error": {
+      "type": "object",
+      "required": [
+       "code",
+       "message",
+       "details",
+       "request_id"
+      ],
+      "properties": {
+       "code": {
+        "type": "string",
+        "description": "Stable machine-readable code.",
+        "enum": [
+         "INVALID_JSON",
+         "UNAUTHENTICATED",
+         "FORBIDDEN",
+         "NOT_FOUND",
+         "CONFLICT",
+         "PAYLOAD_TOO_LARGE",
+         "VALIDATION_FAILED",
+         "RATE_LIMITED",
+         "INTERNAL_ERROR",
+         "SERVICE_UNAVAILABLE"
+        ]
+       },
+       "message": {
+        "type": "string"
+       },
+       "details": {
+        "type": "object",
+        "additionalProperties": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         }
+        }
+       },
+       "request_id": {
+        "type": "string"
+       }
+      }
+     }
+    }
+   },
+   "HealthResponse": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "service",
+       "status",
+       "api_version"
+      ],
+      "properties": {
+       "service": {
+        "type": "string"
+       },
+       "status": {
+        "type": "string",
+        "const": "ok"
+       },
+       "api_version": {
+        "type": "string"
+       }
+      }
+     },
+     "meta": {
+      "type": "object",
+      "additionalProperties": true
+     }
+    }
+   },
+   "Barangay": {
+    "type": "object",
+    "required": [
+     "id",
+     "code",
+     "name"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "code": {
+      "type": "string"
+     },
+     "name": {
+      "type": "string"
+     }
+    }
+   },
+   "UserProfile": {
+    "type": "object",
+    "example": {
+     "id": "22222222-2222-4222-8222-222222222222",
+     "firebase_uid": "resident-ana",
+     "name": "Ana Reyes",
+     "birthdate": "1994-04-02",
+     "sex": "female",
+     "mobile": "09171234567",
+     "email": "ana@example.com",
+     "barangay_id": null,
+     "address": null,
+     "avatar_media_id": null,
+     "verification_status": "unverified",
+     "role": "registered",
+     "office_id": null,
+     "created_at": "2026-10-20T08:00:00.000Z",
+     "updated_at": "2026-10-20T08:00:00.000Z"
+    },
+    "required": [
+     "id",
+     "firebase_uid",
+     "verification_status",
+     "role",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "firebase_uid": {
+      "type": "string"
+     },
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "birthdate": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date"
+     },
+     "sex": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "male",
+       "female",
+       "unspecified",
+       null
+      ]
+     },
+     "mobile": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "barangay_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "avatar_media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "verification_status": {
+      "type": "string",
+      "enum": [
+       "unverified",
+       "pending",
+       "verified",
+       "rejected"
+      ]
+     },
+     "role": {
+      "type": "string",
+      "enum": [
+       "registered",
+       "verified",
+       "staff",
+       "admin"
+      ]
+     },
+     "office_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "UserProfileEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/UserProfile"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "ProfilePatch": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "birthdate": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "sex": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "enum": [
+       "male",
+       "female",
+       "unspecified",
+       null
+      ]
+     },
+     "mobile": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "barangay_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "PrivacyConsent": {
+    "type": "object",
+    "required": [
+     "id",
+     "version",
+     "accepted_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "version": {
+      "type": "string"
+     },
+     "accepted_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ConsentRequest": {
+    "type": "object",
+    "required": [
+     "version"
+    ],
+    "properties": {
+     "version": {
+      "type": "string"
+     }
+    }
+   },
+   "ConsentEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/PrivacyConsent"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "UserListItem": {
+    "type": "object",
+    "required": [
+     "id",
+     "verification_status",
+     "role",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "mobile": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "barangay_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "verification_status": {
+      "type": "string"
+     },
+     "role": {
+      "type": "string"
+     },
+     "office_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "Pagination": {
+    "type": "object",
+    "required": [
+     "has_more",
+     "next_cursor"
+    ],
+    "properties": {
+     "has_more": {
+      "type": "boolean"
+     },
+     "next_cursor": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   },
+   "UserListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/UserListItem"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "UserListItemEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/UserListItem"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "RoleChange": {
+    "type": "object",
+    "required": [
+     "role"
+    ],
+    "properties": {
+     "role": {
+      "type": "string",
+      "enum": [
+       "registered",
+       "verified",
+       "staff",
+       "admin"
+      ]
+     }
+    }
+   },
+   "VerificationSubmit": {
+    "type": "object",
+    "required": [
+     "id_type",
+     "id_front",
+     "selfie"
+    ],
+    "properties": {
+     "id_type": {
+      "type": "string",
+      "enum": [
+       "philid",
+       "drivers_license",
+       "passport",
+       "umid",
+       "postal",
+       "voters",
+       "sss",
+       "other"
+      ]
+     },
+     "id_front": {
+      "type": "string",
+      "format": "binary"
+     },
+     "id_back": {
+      "type": "string",
+      "format": "binary"
+     },
+     "selfie": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "VerificationRequest": {
+    "type": "object",
+    "required": [
+     "id",
+     "user_id",
+     "id_type",
+     "id_front_media_id",
+     "selfie_media_id",
+     "status",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "user_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "id_type": {
+      "type": "string"
+     },
+     "id_front_media_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "id_back_media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "selfie_media_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "pending",
+       "approved",
+       "rejected"
+      ]
+     },
+     "reviewer_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "notes": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "reviewed_at": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     }
+    }
+   },
+   "VerificationEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/VerificationRequest"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "VerificationListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/VerificationRequest"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "ReviewNotes": {
+    "type": "object",
+    "properties": {
+     "notes": {
+      "type": "string",
+      "maxLength": 1000
+     }
+    }
+   },
+   "RejectNotes": {
+    "type": "object",
+    "required": [
+     "notes"
+    ],
+    "properties": {
+     "notes": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1000
+     }
+    }
+   },
+   "Office": {
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "slug",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "name": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "description": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "head": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "hours": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "phone": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "email": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "latitude": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "longitude": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "address": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "banner_media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "category": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "OfficeEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/Office"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "OfficeListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Office"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "OfficeWrite": {
+    "type": "object",
+    "required": [
+     "name",
+     "slug"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "description": {
+      "type": "string"
+     },
+     "head": {
+      "type": "string"
+     },
+     "hours": {
+      "type": "string"
+     },
+     "phone": {
+      "type": "string"
+     },
+     "email": {
+      "type": "string"
+     },
+     "latitude": {
+      "type": "number"
+     },
+     "longitude": {
+      "type": "number"
+     },
+     "address": {
+      "type": "string"
+     },
+     "category": {
+      "type": "string"
+     },
+     "banner": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "OfficePatch": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "category": {
+      "type": "string"
+     },
+     "banner": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "OfficeAssignment": {
+    "type": "object",
+    "required": [
+     "office_id"
+    ],
+    "properties": {
+     "office_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     }
+    }
+   },
+   "NewsItem": {
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "body",
+     "office_id",
+     "office_slug",
+     "status",
+     "author_id",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "title": {
+      "type": "string"
+     },
+     "body": {
+      "type": "string"
+     },
+     "cover_media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "category": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "office_slug": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "draft",
+       "published"
+      ]
+     },
+     "published_at": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "author_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "NewsEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/NewsItem"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "NewsListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/NewsItem"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "Notification": {
+    "type": "object",
+    "required": [
+     "id",
+     "type",
+     "title",
+     "body",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "type": {
+      "type": "string",
+      "enum": [
+       "verification_decided",
+       "message_received"
+      ]
+     },
+     "title": {
+      "type": "string"
+     },
+     "body": {
+      "type": "string"
+     },
+     "subject_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "read_at": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "NotificationEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/Notification"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "NotificationListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Notification"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "UnreadEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "unread"
+      ],
+      "properties": {
+       "unread": {
+        "type": "integer"
+       }
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "UpdatedEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "updated"
+      ],
+      "properties": {
+       "updated": {
+        "type": "integer"
+       }
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "MediaMeta": {
+    "type": "object",
+    "required": [
+     "id",
+     "content_type",
+     "byte_size",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "content_type": {
+      "type": "string"
+     },
+     "byte_size": {
+      "type": "integer"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "MediaEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/MediaMeta"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "Banner": {
+    "type": "object",
+    "required": [
+     "id",
+     "title",
+     "sort_order",
+     "active",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "title": {
+      "type": "string"
+     },
+     "media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "href": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "sort_order": {
+      "type": "integer"
+     },
+     "active": {
+      "type": "boolean"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "BannerWrite": {
+    "type": "object",
+    "required": [
+     "title"
+    ],
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "href": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "sort_order": {
+      "type": "integer"
+     },
+     "active": {
+      "type": "boolean"
+     }
+    }
+   },
+   "BannerEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/Banner"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "BannerListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Banner"
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "QuickLink": {
+    "type": "object",
+    "required": [
+     "id",
+     "label",
+     "href",
+     "sort_order",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "label": {
+      "type": "string"
+     },
+     "href": {
+      "type": "string"
+     },
+     "sort_order": {
+      "type": "integer"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "LinkWrite": {
+    "type": "object",
+    "properties": {
+     "label": {
+      "type": "string"
+     },
+     "href": {
+      "type": "string"
+     },
+     "sort_order": {
+      "type": "integer"
+     }
+    }
+   },
+   "LinkEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/QuickLink"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "LinkListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/QuickLink"
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "HomeEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "banners",
+       "quick_links",
+       "news",
+       "services"
+      ],
+      "properties": {
+       "banners": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/Banner"
+        }
+       },
+       "quick_links": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/QuickLink"
+        }
+       },
+       "news": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/NewsItem"
+        }
+       },
+       "services": {
+        "type": "array",
+        "items": {
+         "$ref": "#/components/schemas/Service"
+        }
+       }
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "AuditEntry": {
+    "type": "object",
+    "required": [
+     "id",
+     "action",
+     "subject_type",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "actor_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "action": {
+      "type": "string",
+      "example": "user.role_changed"
+     },
+     "subject_type": {
+      "type": "string",
+      "example": "user"
+     },
+     "subject_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "AuditListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/AuditEntry"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "Thread": {
+    "type": "object",
+    "required": [
+     "id",
+     "resident_id",
+     "office_id",
+     "office_slug",
+     "status",
+     "unread",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "resident_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "office_slug": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "open",
+       "closed"
+      ]
+     },
+     "unread": {
+      "type": "boolean"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "Message": {
+    "type": "object",
+    "required": [
+     "id",
+     "thread_id",
+     "sender_id",
+     "body",
+     "attachments",
+     "created_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "thread_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "sender_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "body": {
+      "type": "string"
+     },
+     "attachments": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "media_id"
+       ],
+       "properties": {
+        "media_id": {
+         "type": "string",
+         "format": "uuid"
+        }
+       }
+      }
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ThreadEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/Thread"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "ThreadListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Thread"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "ThreadMessageEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "thread",
+       "message"
+      ],
+      "properties": {
+       "thread": {
+        "$ref": "#/components/schemas/Thread"
+       },
+       "message": {
+        "$ref": "#/components/schemas/Message"
+       }
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "MessageListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Message"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "ThreadStart": {
+    "type": "object",
+    "required": [
+     "office_id",
+     "body"
+    ],
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "body": {
+      "type": "string"
+     }
+    }
+   },
+   "ThreadStartFile": {
+    "type": "object",
+    "required": [
+     "office_id",
+     "body"
+    ],
+    "properties": {
+     "office_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "body": {
+      "type": "string"
+     },
+     "file": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "ThreadReply": {
+    "type": "object",
+    "required": [
+     "body"
+    ],
+    "properties": {
+     "body": {
+      "type": "string"
+     }
+    }
+   },
+   "ThreadReplyFile": {
+    "type": "object",
+    "required": [
+     "body"
+    ],
+    "properties": {
+     "body": {
+      "type": "string"
+     },
+     "file": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "ServiceContact": {
+    "type": "object",
+    "required": [
+     "label",
+     "value"
+    ],
+    "properties": {
+     "label": {
+      "type": "string"
+     },
+     "value": {
+      "type": "string"
+     }
+    }
+   },
+   "ServiceLocation": {
+    "type": "object",
+    "required": [
+     "name",
+     "address"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "address": {
+      "type": "string"
+     }
+    }
+   },
+   "Service": {
+    "type": "object",
+    "required": [
+     "id",
+     "name",
+     "slug",
+     "summary",
+     "details",
+     "requirements",
+     "contacts",
+     "locations",
+     "created_at",
+     "updated_at"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "name": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "category": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "summary": {
+      "type": "string"
+     },
+     "details": {
+      "type": "string"
+     },
+     "eligibility": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "requirements": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "contacts": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ServiceContact"
+      }
+     },
+     "locations": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ServiceLocation"
+      }
+     },
+     "office_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "office_slug": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "media_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     },
+     "featured": {
+      "type": "boolean"
+     },
+     "created_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     }
+    }
+   },
+   "ServiceEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "$ref": "#/components/schemas/Service"
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   },
+   "ServiceListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/Service"
+      }
+     },
+     "meta": {
+      "type": "object",
+      "properties": {
+       "pagination": {
+        "$ref": "#/components/schemas/Pagination"
+       }
+      }
+     }
+    }
+   },
+   "ServiceWrite": {
+    "type": "object",
+    "required": [
+     "name",
+     "slug",
+     "summary",
+     "details"
+    ],
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "slug": {
+      "type": "string"
+     },
+     "category": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "string"
+     },
+     "details": {
+      "type": "string"
+     },
+     "eligibility": {
+      "type": "string"
+     },
+     "requirements": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "contacts": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ServiceContact"
+      }
+     },
+     "locations": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ServiceLocation"
+      }
+     },
+     "office_id": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "uuid"
+     }
+    }
+   },
+   "ServicePatch": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "string"
+     },
+     "details": {
+      "type": "string"
+     },
+     "requirements": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "featured": {
+      "type": "boolean"
+     }
+    }
+   },
+   "NewsWrite": {
+    "type": "object",
+    "required": [
+     "title",
+     "body"
+    ],
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "body": {
+      "type": "string"
+     },
+     "category": {
+      "type": "string"
+     },
+     "office_id": {
+      "type": "string",
+      "format": "uuid"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "draft",
+       "published"
+      ],
+      "default": "draft"
+     },
+     "cover": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "NewsPatch": {
+    "type": "object",
+    "properties": {
+     "title": {
+      "type": "string"
+     },
+     "body": {
+      "type": "string"
+     },
+     "category": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "draft",
+       "published"
+      ]
+     },
+     "cover": {
+      "type": "string",
+      "format": "binary"
+     }
+    }
+   },
+   "DeletedEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "object",
+      "required": [
+       "id",
+       "deleted"
+      ],
+      "properties": {
+       "id": {
+        "type": "string",
+        "format": "uuid"
+       },
+       "deleted": {
+        "type": "boolean"
+       }
+      }
+     },
+     "meta": {
+      "type": "object"
+     }
+    }
+   }
+  }
+ }
+}

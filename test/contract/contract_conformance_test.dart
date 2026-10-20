@@ -76,7 +76,34 @@ void main() {
       final Map<String, dynamic> code =
           (inner['properties'] as Map<String, dynamic>)['code']
               as Map<String, dynamic>;
-      return (code['enum'] as List<dynamic>).cast<String>();
+      final List<String> historical = (code['enum'] as List<dynamic>)
+          .cast<String>();
+
+      // The forward contract. Historical PHP codes stay, because this file
+      // still pins that baseline; the Node envelope adds the codes this app
+      // now decodes.
+      final Map<String, dynamic> node =
+          jsonDecode(
+                File(
+                  'docs/integration/taytay-node-openapi.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      final Map<String, dynamic> nodeSchemas =
+          (node['components'] as Map<String, dynamic>)['schemas']
+              as Map<String, dynamic>;
+      final Map<String, dynamic> envelope =
+          nodeSchemas['ErrorEnvelope'] as Map<String, dynamic>;
+      final Map<String, dynamic> nodeError =
+          (envelope['properties'] as Map<String, dynamic>)['error']
+              as Map<String, dynamic>;
+      final Map<String, dynamic> nodeCode =
+          (nodeError['properties'] as Map<String, dynamic>)['code']
+              as Map<String, dynamic>;
+      return <String>{
+        ...historical,
+        ...(nodeCode['enum'] as List<dynamic>).cast<String>(),
+      }.toList();
     }
 
     test('the app knows every code the backend publishes', () {
@@ -133,6 +160,8 @@ void main() {
       const Set<String> deliberatelyUnexpected = <String>{
         'BAD_REQUEST',
         'METHOD_NOT_ALLOWED',
+        // A body that is not JSON has no field to put next to a message.
+        'INVALID_JSON',
       };
 
       for (final String wire in publishedCodes()) {

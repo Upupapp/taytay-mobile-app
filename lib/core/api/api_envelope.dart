@@ -14,6 +14,7 @@ class PageMeta {
     required this.total,
     required this.totalPages,
     required this.hasMore,
+    this.nextCursor,
   });
 
   // The page size and its ceiling moved to `PagePolicy` in TAB 05. They were
@@ -27,18 +28,36 @@ class PageMeta {
   final int totalPages;
   final bool hasMore;
 
+  /// Node lists page with `next_cursor` instead of page numbers.
+  final String? nextCursor;
+
   static PageMeta? tryParse(Object? raw) {
     if (raw is! Map<String, dynamic>) return null;
     final page = _asInt(raw['page']);
     final perPage = _asInt(raw['per_page']);
-    if (page == null || perPage == null) return null;
-    return PageMeta(
-      page: page,
-      perPage: perPage,
-      total: _asInt(raw['total']) ?? 0,
-      totalPages: _asInt(raw['total_pages']) ?? 0,
-      hasMore: raw['has_more'] == true,
-    );
+    final Object? cursor = raw['next_cursor'];
+    final String? next = cursor is String && cursor.isNotEmpty ? cursor : null;
+    if (page != null && perPage != null) {
+      return PageMeta(
+        page: page,
+        perPage: perPage,
+        total: _asInt(raw['total']) ?? 0,
+        totalPages: _asInt(raw['total_pages']) ?? 0,
+        hasMore: raw['has_more'] == true,
+        nextCursor: next,
+      );
+    }
+    if (raw.containsKey('has_more') || next != null) {
+      return PageMeta(
+        page: page ?? 1,
+        perPage: perPage ?? _asInt(raw['limit']) ?? 0,
+        total: _asInt(raw['total']) ?? 0,
+        totalPages: _asInt(raw['total_pages']) ?? 0,
+        hasMore: raw['has_more'] == true,
+        nextCursor: next,
+      );
+    }
+    return null;
   }
 }
 

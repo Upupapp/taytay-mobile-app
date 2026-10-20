@@ -1,5 +1,4 @@
 import '../../../core/api/api_client.dart';
-import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../domain/household_repository.dart';
@@ -39,13 +38,11 @@ class HouseholdApiRepository implements HouseholdRepository {
 
   @override
   Future<Result<HouseholdSummary>> loadOwnHousehold() async {
-    final response = await _apiClient.send<HouseholdSummary>(
-      method: HttpMethod.get,
-      path: path,
-      authenticated: true,
-      decode: _decode,
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<HouseholdSummary>(
+      BackendGap.absentOnNodeContract,
+      'loadOwnHousehold',
     );
-    return response.map((envelope) => envelope.data);
   }
 
   @override
@@ -73,45 +70,4 @@ class HouseholdApiRepository implements HouseholdRepository {
     );
   }
 
-  static HouseholdSummary _decode(Object? data) {
-    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
-
-    // THE MEMBER ARRAY IS NOT READ AT ALL, and the first version of this
-    // decoder did read it — for one field.
-    //
-    // `is_head` is only published inside `members`, so learning whether the
-    // resident is the household head means walking a list of their relatives.
-    // The feature's own acceptance is deliberately stronger than "we do not
-    // render members": it is that nothing here could hold one, and a test
-    // enforces it over the whole directory. Walking the array to take one
-    // boolean out of it satisfies the letter and gives up the guarantee — the
-    // list would be in memory, in a decoder somebody later extends.
-    //
-    // So the role is left to fail closed, which it already does. What that costs
-    // is a label: a household head sees "Household member". What it buys is that
-    // the strongest privacy claim this feature makes stays true by construction
-    // rather than by care. The head/member distinction is also, exactly, a fact
-    // about this resident's standing relative to the others — the surface being
-    // avoided — and the office can say it out loud where a caseworker can
-    // explain it.
-    final Object? street = map['street_address'];
-    final Object? label = map['code'];
-    final Object? count = map['member_count'];
-
-    return HouseholdSummary(
-      // Fails closed to member: being shown as the head when you are not is a
-      // claim about authority over other people's records. See above for why it
-      // is never anything else.
-      role: HouseholdRole.member,
-      label: label is String && label.trim().isNotEmpty ? label.trim() : null,
-      // `barangay_id` is an integer key, and no route publishes the directory
-      // that would turn it into a name (F14). A raw id on this screen tells a
-      // resident nothing and invites them to believe it is meaningful, so it is
-      // left absent until there is something readable to put there.
-      streetAddress: street is String && street.trim().isNotEmpty
-          ? street.trim()
-          : null,
-      memberCount: count is int ? count : null,
-    );
-  }
 }

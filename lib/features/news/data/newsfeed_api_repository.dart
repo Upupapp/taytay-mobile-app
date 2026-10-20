@@ -1,7 +1,7 @@
 import '../../../core/api/api_client.dart';
-
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/backend_gap.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../domain/announcement_repository.dart';
@@ -27,13 +27,14 @@ class NewsfeedApiRepository implements AnnouncementRepository {
 
   final ApiClient _apiClient;
 
-  static const String path = 'newsfeed';
+  static const String path = 'news';
 
   @override
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int? perPage,
   }) async {
+    assert(page >= 1);
     final response = await _apiClient.send<List<Announcement>>(
       method: HttpMethod.get,
       path: path,
@@ -49,12 +50,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       authenticated: false,
       attachTokenIfAvailable: true,
       query: <String, String>{
-        'page': '${page < 1 ? 1 : page}',
-        // Resolved from what the server chose for this channel (TAB 05). A null
-        // request means "whatever the office publishes", which is what every
-        // caller here actually meant — the four different hardcoded defaults
-        // this replaced were 20 and 25, and the server had said 15 all along.
-        'per_page':
+        'limit':
             '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
       },
       decode: (Object? data) => data is List<dynamic>
@@ -94,29 +90,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     int page = 1,
     int? perPage,
   }) async {
-    final response = await _apiClient.send<List<PostComment>>(
-      method: HttpMethod.get,
-      path: '$path/$postId/comments',
-      // Reading comments needs an account: the server puts this route behind
-      // auth:sanctum while the post itself is public.
-      authenticated: true,
-      query: <String, String>{
-        'page': '${page < 1 ? 1 : page}',
-        // Resolved from what the server chose for this channel (TAB 05). A null
-        // request means "whatever the office publishes", which is what every
-        // caller here actually meant — the four different hardcoded defaults
-        // this replaced were 20 and 25, and the server had said 15 all along.
-        'per_page':
-            '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
-      },
-      decode: (Object? data) => data is List<dynamic>
-          ? data
-                .map(_decodeComment)
-                .whereType<PostComment>()
-                .toList(growable: false)
-          : const <PostComment>[],
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<Paginated<PostComment>>(
+      BackendGap.absentOnNodeContract,
+      'listComments',
     );
-    return response.map(_toCommentPage);
   }
 
   @override
@@ -125,15 +103,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     required ReactionKind reaction,
     required String idempotencyKey,
   }) async {
-    final response = await _apiClient.send<ReactionOutcome>(
-      method: HttpMethod.post,
-      path: '$path/$postId/reaction',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{'kind': reaction.wireValue},
-      decode: _decodeReaction,
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<ReactionOutcome>(
+      BackendGap.absentOnNodeContract,
+      'setReaction',
     );
-    return response.map((envelope) => envelope.data);
   }
 
   @override
@@ -141,14 +115,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     required String postId,
     required String idempotencyKey,
   }) async {
-    final response = await _apiClient.send<ReactionOutcome>(
-      method: HttpMethod.delete,
-      path: '$path/$postId/reaction',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      decode: _decodeReaction,
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<ReactionOutcome>(
+      BackendGap.absentOnNodeContract,
+      'clearReaction',
     );
-    return response.map((envelope) => envelope.data);
   }
 
   @override
@@ -158,20 +129,10 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     String? parentId,
     required String idempotencyKey,
   }) async {
-    final response = await _apiClient.send<PostComment?>(
-      method: HttpMethod.post,
-      path: '$path/$postId/comments',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{'body': body, 'parent_id': ?parentId},
-      decode: _decodeComment,
-    );
-    return response.flatMap(
-      (envelope) => envelope.data == null
-          ? const Err<PostComment>(
-              ContractFailure(debugMessage: 'No readable comment in the body.'),
-            )
-          : Ok<PostComment>(envelope.data!),
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<PostComment>(
+      BackendGap.absentOnNodeContract,
+      'addComment',
     );
   }
 
@@ -181,17 +142,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     required String commentId,
     required String idempotencyKey,
   }) async {
-    // `newsfeed-comments/{comment}`, not nested under the post: the server
-    // addresses a comment by its own id and decides ownership itself. The app
-    // never compares author names to work out whether something is deletable.
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.delete,
-      path: 'newsfeed-comments/$commentId',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'deleteOwnComment',
     );
-    return response.map((_) {});
   }
 
   @override
@@ -201,28 +156,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     required ReportReason reason,
     required String idempotencyKey,
   }) async {
-    // F26, and it was a store-submission blocker: both stores require a way to
-    // report objectionable user-generated content, and the newsfeed's comments
-    // are the only user-generated content this app has.
-    //
-    // This used to decline, because the only moderation surface was
-    // `admin/newsfeed-comments/{comment}/moderation` — staff-only, and calling
-    // it from here would breach Article 0 twice: a staff route, and a resident
-    // acting on somebody else's comment. The backend now publishes a resident
-    // surface that records an objection and changes nothing about the comment.
-    //
-    // Addressed by comment id alone. There is no post in the path and none is
-    // sent: the server resolves the comment itself, so there is no second
-    // identifier for a caller to get wrong or to tamper with.
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: 'newsfeed-comments/$commentId/reports',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{'reason': reason.wireValue},
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'reportComment',
     );
-    return response.map((_) {});
   }
 
   static Announcement? _decodePost(Object? entry) {
@@ -230,7 +168,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     final Object? id = entry['id'];
     if (id is! String || id.isEmpty) return null;
 
-    final Object? headline = entry['headline'];
+    final Object? headline = entry['title'] ?? entry['headline'];
     final Object? body = entry['body'];
 
     return Announcement(
@@ -297,51 +235,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     return null;
   }
 
-  static PostComment? _decodeComment(Object? entry) {
-    if (entry is! Map<String, dynamic>) return null;
-    final Object? id = entry['id'];
-    final Object? body = entry['body'];
-    if (id is! String || id.isEmpty || body is! String) return null;
 
-    return PostComment(
-      id: id,
-      body: body,
-      authorName: entry['author_name'] is String
-          ? entry['author_name'] as String
-          : '',
-      authorKind: ServerValue.parse<CommentAuthorKind>(
-        entry['author_kind'] is String ? entry['author_kind'] as String : null,
-        CommentAuthorKind.values,
-        (CommentAuthorKind k) => k.wireValue,
-      ),
-      createdAt: DateTime.tryParse(
-        entry['created_at'] is String ? entry['created_at'] as String : '',
-      )?.toUtc(),
-      // The server's answer, never a comparison against a display name — two
-      // residents can share one.
-      isMine: entry['is_mine'] == true,
-      parentId: entry['parent_id'] is String
-          ? entry['parent_id'] as String
-          : null,
-      isHiddenByModerator: entry['is_hidden'] == true,
-    );
-  }
-
-  static ReactionOutcome _decodeReaction(Object? data) {
-    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
-    final Object? count = map['reactions'] ?? map['count'];
-    final Object? mine = map['my_reaction'];
-    return ReactionOutcome(
-      reactions: count is int ? count : 0,
-      myReaction: mine is String
-          ? ServerValue.parse<ReactionKind>(
-              mine,
-              ReactionKind.values,
-              (ReactionKind k) => k.wireValue,
-            )
-          : null,
-    );
-  }
 
   static Paginated<Announcement> _toPage(
     ApiEnvelope<List<Announcement>> envelope,
@@ -360,20 +254,4 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     );
   }
 
-  static Paginated<PostComment> _toCommentPage(
-    ApiEnvelope<List<PostComment>> envelope,
-  ) {
-    final pagination = envelope.pagination;
-    if (pagination == null) {
-      return Paginated<PostComment>.single(envelope.data);
-    }
-    return Paginated<PostComment>(
-      items: envelope.data,
-      page: pagination.page,
-      perPage: pagination.perPage,
-      total: pagination.total,
-      totalPages: pagination.totalPages,
-      hasMore: pagination.hasMore,
-    );
-  }
 }

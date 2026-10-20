@@ -45,121 +45,71 @@ final class BackendRoute {
   String toString() => '$method $path';
 }
 
-/// The routes this app calls, sorted by path then method.
+/// The citizen routes this app calls on the Taytay LGU IDS API, sorted by path
+/// then method. Admin paths are absent. Historical PHP paths that the Node
+/// contract does not publish are not called.
 const List<BackendRoute> backendRoutes = <BackendRoute>[
-  BackendRoute('GET', 'app/bootstrap', 'platform_api_repository.dart'),
-  BackendRoute('POST', 'auth/otp', 'auth_api_repository.dart'),
-  BackendRoute('POST', 'auth/otp/verify', 'auth_api_repository.dart'),
-  BackendRoute('DELETE', 'auth/tokens/current', 'auth_api_repository.dart'),
   BackendRoute('GET', 'barangays', 'barangay_api_repository.dart'),
-  BackendRoute('GET', 'events', 'event_api_repository.dart'),
-  BackendRoute('GET', 'events/{}', 'event_api_repository.dart'),
-  BackendRoute('DELETE', 'events/{}/registration', 'event_api_repository.dart'),
-  BackendRoute('POST', 'events/{}/registration', 'event_api_repository.dart'),
   BackendRoute('GET', 'health', 'platform_api_repository.dart'),
-  BackendRoute('GET', 'me', 'auth_api_repository.dart'),
+  BackendRoute('GET', 'home', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
+  BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
+  BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),
+  BackendRoute('GET', 'me/consents', 'privacy_api_repository.dart'),
+  BackendRoute('POST', 'me/consents', 'privacy_api_repository.dart'),
+  BackendRoute('POST', 'me/verification-requests', 'kyc_api_repository.dart'),
   BackendRoute(
     'GET',
-    'me/assistance-history',
-    'assistance_api_repository.dart',
+    'me/verification-requests/current',
+    'kyc_api_repository.dart',
   ),
-  BackendRoute('GET', 'me/assistance/drafts', 'assistance_api_repository.dart'),
+  BackendRoute('POST', 'media', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'media/{}', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'news', 'newsfeed_api_repository.dart'),
+  BackendRoute('GET', 'news/{}', 'newsfeed_api_repository.dart'),
+  BackendRoute('GET', 'notifications', 'notification_api_repository.dart'),
   BackendRoute(
     'POST',
-    'me/assistance/drafts',
-    'assistance_api_repository.dart',
+    'notifications/read',
+    'notification_api_repository.dart',
   ),
-  BackendRoute(
-    'DELETE',
-    'me/assistance/drafts/{}',
-    'assistance_api_repository.dart',
-  ),
-  BackendRoute(
-    'POST',
-    'me/assistance/drafts/{}/submit',
-    'assistance_api_repository.dart',
-  ),
-  BackendRoute('GET', 'me/cases/{}', 'assistance_api_repository.dart'),
   BackendRoute(
     'GET',
-    'me/cases/{}/requirements',
-    'requirement_api_repository.dart',
-  ),
-  BackendRoute(
-    'POST',
-    'me/cases/{}/requirements/{}/documents',
-    'requirement_api_repository.dart',
-  ),
-  BackendRoute('GET', 'me/credential', 'credential_api_repository.dart'),
-  BackendRoute('POST', 'me/credential/qr', 'credential_api_repository.dart'),
-  BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
-  BackendRoute('DELETE', 'me/devices/{}', 'notification_api_repository.dart'),
-  BackendRoute('GET', 'me/household', 'household_api_repository.dart'),
-  BackendRoute('GET', 'me/kyc', 'kyc_api_repository.dart'),
-  BackendRoute('POST', 'me/kyc', 'kyc_api_repository.dart'),
-  BackendRoute('POST', 'me/kyc/submit', 'kyc_api_repository.dart'),
-  // F28 — the documents a KYC case had nowhere to put.
-  BackendRoute('POST', 'me/kyc/documents', 'kyc_api_repository.dart'),
-  BackendRoute('GET', 'me/kyc/documents', 'kyc_api_repository.dart'),
-  BackendRoute(
-    'GET',
-    'me/notification-preferences',
-    'notification_api_repository.dart',
-  ),
-  BackendRoute(
-    'PUT',
-    'me/notification-preferences',
-    'notification_api_repository.dart',
-  ),
-  BackendRoute('GET', 'me/notifications', 'notification_api_repository.dart'),
-  BackendRoute(
-    'POST',
-    'me/notifications/read-all',
+    'notifications/unread-count',
     'notification_api_repository.dart',
   ),
   BackendRoute(
     'POST',
-    'me/notifications/{}/read',
+    'notifications/{}/read',
     'notification_api_repository.dart',
   ),
-  BackendRoute('GET', 'me/privacy/consents', 'privacy_api_repository.dart'),
-  BackendRoute(
-    'DELETE',
-    'me/privacy/consents/{}',
-    'privacy_api_repository.dart',
-  ),
-  BackendRoute('GET', 'me/profile', 'auth_api_repository.dart'),
-  BackendRoute(
-    'POST',
-    'me/profile/corrections',
-    'resident_profile_api_repository.dart',
-  ),
-  BackendRoute('GET', 'me/sessions', 'session_api_repository.dart'),
-  BackendRoute('POST', 'me/sessions/revoke-all', 'session_api_repository.dart'),
-  BackendRoute('DELETE', 'me/sessions/{}', 'session_api_repository.dart'),
-  BackendRoute('GET', 'newsfeed', 'newsfeed_api_repository.dart'),
-  BackendRoute(
-    'DELETE',
-    'newsfeed-comments/{}',
-    'newsfeed_api_repository.dart',
-  ),
-  BackendRoute(
-    'POST',
-    'newsfeed-comments/{}/reports',
-    'newsfeed_api_repository.dart',
-  ),
-  BackendRoute('GET', 'newsfeed/{}', 'newsfeed_api_repository.dart'),
-  BackendRoute('GET', 'newsfeed/{}/comments', 'newsfeed_api_repository.dart'),
-  BackendRoute('POST', 'newsfeed/{}/comments', 'newsfeed_api_repository.dart'),
-  BackendRoute(
-    'DELETE',
-    'newsfeed/{}/reaction',
-    'newsfeed_api_repository.dart',
-  ),
-  BackendRoute('POST', 'newsfeed/{}/reaction', 'newsfeed_api_repository.dart'),
-  BackendRoute('GET', 'programs', 'program_api_repository.dart'),
-  BackendRoute('GET', 'programs/{}', 'program_api_repository.dart'),
+  BackendRoute('GET', 'offices', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'offices/{}', 'node_citizen_api.dart'),
   BackendRoute('GET', 'services', 'service_catalog_api_repository.dart'),
+  BackendRoute('GET', 'services/{}', 'service_catalog_api_repository.dart'),
+  BackendRoute('GET', 'threads', 'office_messaging_gap_repository.dart'),
+  BackendRoute('POST', 'threads', 'office_messaging_gap_repository.dart'),
+  BackendRoute('GET', 'threads/{}', 'office_messaging_gap_repository.dart'),
+  BackendRoute(
+    'POST',
+    'threads/{}/close',
+    'office_messaging_gap_repository.dart',
+  ),
+  BackendRoute(
+    'GET',
+    'threads/{}/messages',
+    'office_messaging_gap_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'threads/{}/messages',
+    'office_messaging_gap_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'threads/{}/read',
+    'office_messaging_gap_repository.dart',
+  ),
 ];
 
 /// Routes this app calls that do **not** exist at the pinned baseline.
@@ -175,26 +125,6 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
 /// by moving the baseline forward to a tag that includes them, which is blocked
 /// on the backend repository being still long enough to tag — not by editing
 /// this list.
-const List<String> routesAheadOfBaseline = <String>[
-  'GET barangays',
-  'POST newsfeed-comments/{}/reports',
-
-  // ── Added 2026-08-27, and argued rather than appended ──────────────────────
-  //
-  // F28's client half — an applicant sending their identity document — was
-  // built against `me/kyc/documents`, which the backend added on 24 August and
-  // the pinned baseline does not have. Verified both ways: absent at `eec71e6`,
-  // present at backend HEAD.
-  //
-  // That is the same condition as `GET barangays` and the comment-report route,
-  // not a new kind of problem: the client is ahead of the commit it declares
-  // itself built against. The resolution is unchanged and is still C-09 — move
-  // the pin, once that repository holds still long enough to tag.
-  //
-  // The guard refused the push until this was written down, which is what it is
-  // for. Two of these were a finding; four are a pattern, and the pattern is
-  // that this app's baseline has been stale for a fortnight while both sides
-  // kept building.
-  'GET me/kyc/documents',
-  'POST me/kyc/documents',
-];
+/// Empty. The live contract is the vendored Node OpenAPI, not the PHP pin.
+/// The four historical C-09 paths are no longer called.
+const List<String> routesAheadOfBaseline = <String>[];

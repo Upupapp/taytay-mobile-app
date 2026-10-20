@@ -1,15 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
-import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
-import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/registration/presentation/registration_screen.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -17,40 +15,12 @@ AppConfig config() => AppConfig.from(
   isReleaseBuild: false,
 );
 
-/// Boots the app straight into the registration wizard.
-/// Answers `app/bootstrap` with self-registration switched ON, and nothing else.
+/// Pumps the registration wizard on its own.
 ///
-/// TAB 03 made the wizard reachable only when the server says residents may
-/// enrol themselves. These tests are the wizard's own, so they run in the mode
-/// where the wizard exists — the staff-mediated behaviour has its own tests in
-/// `test/core/router_test.dart` and `test/features/onboarding_mode_test.dart`.
-class _SelfEnrolledTransport implements ApiTransport {
-  @override
-  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
-    if (request.path == 'app/bootstrap') {
-      return Ok<ApiHttpResponse>(
-        ApiHttpResponse(
-          statusCode: 200,
-          body: jsonEncode(<String, Object?>{
-            'data': <String, Object?>{
-              'service': 'taytay',
-              'api_version': 'v1',
-              'client': <String, Object?>{
-                'channel': 'citizen-mobile',
-                'default_page_size': 15,
-                'minimum_version': '0.0.0',
-              },
-              'features': <String, Object?>{'self_registration': true},
-            },
-          }),
-          headers: const <String, String>{'content-type': 'application/json'},
-        ),
-      );
-    }
-    return const Err<ApiHttpResponse>(NetworkFailure());
-  }
-}
-
+/// The Node API publishes no `app/bootstrap` and no self-registration flag, so
+/// the router keeps `/register` on the sign-in screen. These tests are the
+/// wizard's own; the staff-mediated gate is covered in
+/// `test/features/onboarding_mode_test.dart`.
 Future<AppDependencies> bootRegistration(
   WidgetTester tester, {
   TextScaler textScaler = TextScaler.noScaling,
@@ -64,28 +34,27 @@ Future<AppDependencies> bootRegistration(
 
   final dependencies = AppDependencies.build(
     config: config(),
-    transport: _SelfEnrolledTransport(),
     secrets: secrets,
     sessionStore: InMemorySessionStore(),
   );
   addTearDown(dependencies.dispose);
 
   await tester.pumpWidget(
-    MediaQuery(
-      data: MediaQueryData.fromView(
-        tester.view,
-      ).copyWith(textScaler: textScaler),
-      child: TaytayResidentApp(dependencies: dependencies),
+    AppDependenciesScope(
+      dependencies: dependencies,
+      child: MediaQuery(
+        data: MediaQueryData.fromView(
+          tester.view,
+        ).copyWith(textScaler: textScaler),
+        child: MaterialApp(
+          theme: AppTheme.light(),
+          home: const RegistrationScreen(),
+        ),
+      ),
     ),
   );
   await tester.pump();
-  await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
-
-  // Home → Sign in → Create an account. TAB 11's Home offers "Sign in" in both
-  // the hero and the next-action card; either reaches the same screen.
-  await tapAfterScrolling(tester, find.text('Sign in').first);
-  await tapAfterScrolling(tester, find.text('Create an account'));
 
   return dependencies;
 }

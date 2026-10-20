@@ -28,6 +28,7 @@ import '../features/auth/data/auth_api_repository.dart';
 import '../features/auth/data/session_api_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
+import '../features/citizen_api/data/node_citizen_api.dart';
 import '../features/credential/data/credential_api_repository.dart';
 import '../features/credential/domain/credential_repository.dart';
 import '../features/events/data/event_api_repository.dart';
@@ -104,7 +105,9 @@ class AppDependencies {
     this.clock = DateTime.now,
     this.onDispose,
   }) : officeMessagingRepository =
-           officeMessaging ?? const OfficeMessagingGapRepository();
+           officeMessaging ??
+           OfficeMessagingApiRepository(apiClient: apiClient),
+       citizenApi = NodeCitizenApi(apiClient: apiClient);
 
   /// Builds the production graph.
   ///
@@ -323,7 +326,7 @@ class AppDependencies {
           : MockAccountControlsRepository(mock),
       mockBehavior: mock,
       officeMessaging: mock == null
-          ? const OfficeMessagingGapRepository()
+          ? OfficeMessagingApiRepository(apiClient: apiClient)
           : MockOfficeMessagingRepository(mock),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
@@ -448,9 +451,12 @@ class AppDependencies {
   /// and it is not this client's to make.
   final AccountControlsRepository accountControlsRepository;
 
-  /// Resident-to-office messages. The live implementation declines (F31).
+  /// Resident-to-office messages. Live calls are the thread routes (F31 closed).
   /// A dev mock build supplies synthetic threads.
   final OfficeMessagingRepository officeMessagingRepository;
+
+  /// Home, offices, and media on the Node contract.
+  final NodeCitizenApi citizenApi;
 
   /// Latency and failure for dev mocks. Null on a live build.
   final MockBehaviorController? mockBehavior;

@@ -130,17 +130,17 @@ enum BackendGap {
     servedInstead: 'nothing',
   ),
 
-  /// **F31 — a resident cannot message a municipal office.**
+  /// **F32 — the operation is not in the Taytay LGU IDS OpenAPI.**
   ///
-  /// The designs let a verified resident write to an office and read the
-  /// thread. Neither the previous PHP baseline nor Clarence's Node API publishes
-  /// that module. The UI and a dev mock exist so the flow can be reviewed.
-  /// They are not a claim that a message reached the LGU. This is a backend
-  /// conversation (Article 3.7, decision D7).
-  officeMessaging(
-    finding: 'F31',
-    missing: 'resident-to-office messaging',
-    servedInstead: 'nothing; dev builds may use a synthetic mock',
+  /// The forward contract is the Node API vendored at
+  /// `docs/integration/taytay-node-openapi.json`. Routes that the historical
+  /// PHP pin served and this spec does not — OTP, sessions, events, programmes,
+  /// credentials, assistance intake, household, notification devices — decline
+  /// here. The screen says the office cannot do that from the app yet.
+  absentOnNodeContract(
+    finding: 'F32',
+    missing: 'a citizen route in the Taytay LGU IDS OpenAPI',
+    servedInstead: 'the citizen routes declared in backend_routes.dart',
   );
 
   const BackendGap({

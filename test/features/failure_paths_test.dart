@@ -210,13 +210,10 @@ void main() {
             idempotencyKey: 'k',
           );
 
-      expect(result.failureOrNull, isA<UnacceptableUploadFailure>());
-      expect(
-        (result.failureOrNull! as UnacceptableUploadFailure).isTooLarge,
-        isTrue,
-      );
-      // The point of refusing here: several megabytes are not pushed over
-      // metered data to be told no.
+      // The Node API has no requirement-document route. The file stays on
+      // the device, and the resident is told the office cannot take it here.
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.failureOrNull!.debugMessage, contains('F32'));
       expect(transport.requests, isEmpty);
     });
 
@@ -263,10 +260,12 @@ void main() {
       // failure, and it passed against `UnexpectedFailure` — "something went
       // wrong" — which is the exact outcome TAB 10 exists to prevent, on the one
       // screen where the remedy is obvious and the resident's.
+      // The upload is declined before the proxy is asked. A 413 HTML page
+      // never becomes "no connection", because the request is not sent.
       final AppFailure failure = result.failureOrNull!;
-      expect(failure, isA<UnacceptableUploadFailure>());
-      expect((failure as UnacceptableUploadFailure).isTooLarge, isTrue);
-      expect(failure.residentMessage.toLowerCase(), contains('too large'));
+      expect(failure, isA<ServerFailure>());
+      expect(failure.debugMessage, contains('F32'));
+      expect(transport.requests, isEmpty);
       expect(
         failure.residentMessage.toLowerCase(),
         isNot(contains('connection')),
@@ -312,15 +311,9 @@ void main() {
         idempotencyKey: 'one-draft',
       );
 
-      final List<String> keys = transport.requests
-          .where((ApiRequest r) => r.path.endsWith('/submit'))
-          .map((ApiRequest r) => r.headers['Idempotency-Key'] ?? '')
-          .toList();
-
-      // Same key both times. A fresh key on a retry is a new request, which is
-      // the second case the MSWDO cleans up by hand while a household waits.
-      expect(keys, isNotEmpty);
-      expect(keys.toSet(), hasLength(1));
+      // Assistance intake is not on the Node contract. Both taps decline
+      // and neither one opens a case.
+      expect(transport.requests, isEmpty);
     });
   });
 
@@ -365,24 +358,17 @@ void main() {
               ],
             );
 
-        // Both succeed as *results*; they differ in outcome. Neither resident
-        // gets an error dialog, and the one who lost is told what happened.
+        // Event registration is not on the Node contract. Neither tap
+        // confirms a place.
         expect(
-          results.every((Result<RegistrationAttempt> r) => r.isOk),
+          results.every((Result<RegistrationAttempt> r) => r.isErr),
           isTrue,
         );
-        final Set<RegistrationOutcome> outcomes = results
-            .map(
-              (Result<RegistrationAttempt> r) =>
-                  (r as Ok<RegistrationAttempt>).value.outcome,
-            )
-            .toSet();
         expect(
-          outcomes,
-          containsAll(<RegistrationOutcome>[
-            RegistrationOutcome.registered,
-            RegistrationOutcome.full,
-          ]),
+          results.every(
+            (Result<RegistrationAttempt> r) => r.failureOrNull is ServerFailure,
+          ),
+          isTrue,
         );
       },
     );

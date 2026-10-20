@@ -55,3 +55,6 @@ app.*.map.json
 /android/key.properties
 /ios/Runner/GoogleService-Info.plist
 /android/app/google-services.json
+
+# Local design PNGs for golden comparison. Not shipped.
+/design-refs/

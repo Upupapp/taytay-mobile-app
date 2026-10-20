@@ -3,17 +3,23 @@
 /// In dev the server accepts `Authorization: Bearer mock:<role>:<id>` in place
 /// of a Firebase ID token. The role segment is part of that credential string.
 /// It is not a permission field: Article 3 still forbids a role, tier, or scope
-/// of its own. This client mints only [residentRole].
+/// of its own.
 ///
-/// The spelling of the role is the resident word. The OpenAPI enum on
-/// `cursor/sprint-0-foundation-b3f2` was not readable from this environment, so
-/// a different spelling in that file would replace this constant.
+/// The Role enum on the Taytay LGU IDS API is `guest`, `registered`,
+/// `verified`, `staff`, and `admin`. This resident app mints only
+/// [registeredRole] and [verifiedRole]. `guest` has no bearer. `staff` and
+/// `admin` are other channels.
 abstract final class DevMockAccess {
-  static const String residentRole = 'resident';
+  static const String registeredRole = 'registered';
+  static const String verifiedRole = 'verified';
 
-  /// `mock:<role>:<id>`, or null when [id] cannot be one token segment.
-  static String? tryToken({required String id}) {
+  static const Set<String> mintedRoles = <String>{registeredRole, verifiedRole};
+
+  /// `mock:<role>:<id>`, or null when [id] cannot be one token segment or
+  /// [role] is not a role this app mints.
+  static String? tryToken({required String id, String role = verifiedRole}) {
     if (id.isEmpty || id.contains(':')) return null;
-    return 'mock:$residentRole:$id';
+    if (!mintedRoles.contains(role)) return null;
+    return 'mock:$role:$id';
   }
 }

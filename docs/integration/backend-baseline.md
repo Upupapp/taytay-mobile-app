@@ -13,12 +13,12 @@ request 1, branch `cursor/sprint-0-foundation-b3f2`.
 That document describes the envelope this client already decodes in `ApiEnvelopeDecoder`:
 success `{ data, meta }`, failure `{ error: { code, message, details, request_id } }`.
 The resident copy is never `error.message`. In dev the credential is
-`Authorization: Bearer mock:<role>:<id>`; this app mints the resident role only.
+`Authorization: Bearer mock:<role>:<id>`. The Role enum is `guest`, `registered`,
+`verified`, `staff`, `admin`. This app mints only `registered` and `verified`.
 
-`backend_routes.dart` still names the paths the repositories call today. Those paths were
-not rewritten from the Node document. The GitHub credential in this environment receives
-404 for `Upupapp/taytay-backend`, so `openapi/openapi.json` was not read. Replacing the
-route list from memory would publish a contract the server has not shown this client.
+The file was read. It is vendored at `docs/integration/taytay-node-openapi.json`.
+`backend_routes.dart` names the citizen routes this app calls. Admin paths are not
+called. Decision D-184 is closed.
 
 The tables below stay. They are the historical contract the staleness check still pins
 (tag, commit, and date). They are not the forward authority.
@@ -235,7 +235,8 @@ likely to be planned around by both sides and closed by neither.
 | **F19** | P1 | **The programme contract was wrong on three axes, and one of them locked a door.** `ProgramRepository` declared programmes bearer-authenticated at `GET programs?status=active`; the route carries no `auth:sanctum`, there is no `status` parameter anywhere in the contract, and `programs/{program}` resolves by **UUID** rather than by the code the app was sending. The auth error was the expensive one: `/programs` required an account, so a guest could not read what the municipality had deliberately published for everyone — withheld from exactly the residents least likely to already have an account. The projection was also modelled from a "visibility matrix §5" the server no longer follows, which would have rendered every programme with a name and nothing else. | this repo · TAB 07 (closed) |
 | **F18** | P2 | **`app/bootstrap` publishes no maintenance state.** The payload carries `service`, `api_version`, `server_time`, `timezone`, `client`, `features`, `support` and `conventions` — TAB 01 asks for a maintenance screen driven by it and there is no field. **Recorded with a decision rather than a request: the app infers maintenance from a live `503 SERVICE_UNAVAILABLE` instead.** Maintenance changes minute to minute; a flag read once at startup would announce it after it ended and miss one that began, and a client caching it to survive a cold start caches the most perishable fact the server has. A 503 is the server saying so, at the moment it is true. Do not "fix" this by adding the field. | decided · TAB 01 (closed) |
 | **F17** | P1 | **Four repositories name the wrong module, and shrinking `PlannedModule` cannot catch them.** Removing the four shipped members made the compiler point at six files. It could not point at these, because the names they reference still exist and still mean something real — just not this. See the table below. | this repo · TAB 00 (closed) |
-| **F31** | P1 | **No resident-to-office messaging endpoint.** A verified resident can be shown a compose screen, and a dev build can answer it with a synthetic thread. Nothing in the pinned API receives that message. The live repository declines. Office pages themselves are public resident information and are not this gap. | backend |
+| **F31** | **CLOSED** | **Resident-to-office messaging is on the Node API.** `GET/POST /threads`, the message list and reply, mark-read, and close are citizen routes. The live repository calls them. Office pages stay public. | closed |
+| **F32** | P1 | **Several resident screens still need routes the Node OpenAPI does not publish.** OTP sign-in, token revocation, events, programmes, the digital ID, household, assistance intake, notification devices and preferences, news comments, and account closure are absent. Those calls decline. The designs that need them are listed in the sprint sign-off. | backend |
 
 ### F17 in detail — the mis-attributions
 

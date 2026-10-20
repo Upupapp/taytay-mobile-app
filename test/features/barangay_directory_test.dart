@@ -84,11 +84,9 @@ void main() {
       isNot(contains('authorization')),
     );
 
-    // One page, explicitly. The server's default for this channel is 15, which
-    // would silently truncate an address picker to the first fifteen barangays —
-    // and a resident whose own barangay is missing has no way to tell that from
-    // it not existing.
-    expect(request.query['per_page'], '100');
+    // The Node `GET barangays` takes no query. A page size here would invent
+    // a filter the contract does not publish, and could hide a barangay.
+    expect(request.query, isEmpty);
   });
 
   test(

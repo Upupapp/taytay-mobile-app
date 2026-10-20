@@ -15,6 +15,9 @@ class OfficeThread {
     required this.topic,
     required this.preview,
     required this.updatedAt,
+    this.officeSlug = '',
+    this.status = 'open',
+    this.unread = false,
     this.sample = true,
   });
 
@@ -24,6 +27,9 @@ class OfficeThread {
   final String topic;
   final String preview;
   final DateTime updatedAt;
+  final String officeSlug;
+  final String status;
+  final bool unread;
 
   /// True while the fact is a fixture, not an LGU record.
   final bool sample;
@@ -42,6 +48,7 @@ class OfficeMessage {
     required this.body,
     required this.sentAt,
     required this.fromResident,
+    this.senderId = '',
   });
 
   final String id;
@@ -49,6 +56,7 @@ class OfficeMessage {
   final String body;
   final DateTime sentAt;
   final bool fromResident;
+  final String senderId;
 
   @override
   String toString() => 'OfficeMessage($id)';
@@ -56,17 +64,29 @@ class OfficeMessage {
 
 /// Messages a verified resident sends to a municipal office.
 ///
-/// Decision D7: the pinned backend has no messaging module. The live
-/// implementation declines. The mock exists only in a dev build. This contract
-/// does not grant permission to message; the server will, when it exists.
+/// Threads are `GET/POST /threads` on the Taytay LGU IDS API. F31 is closed.
+/// A thread has no topic and no preview; those stay on the model for the
+/// screens that already show them, filled from the office slug and the latest
+/// message when the server sent neither.
 abstract interface class OfficeMessagingRepository {
   Future<Result<List<OfficeThread>>> listThreads();
 
   Future<Result<OfficeThread>> loadThread(String threadId);
+
+  Future<Result<List<OfficeMessage>>> listMessages(String threadId);
 
   Future<Result<OfficeMessage>> send({
     required String officeId,
     required String topic,
     required String body,
   });
+
+  Future<Result<OfficeMessage>> reply({
+    required String threadId,
+    required String body,
+  });
+
+  Future<Result<void>> closeThread(String threadId);
+
+  Future<Result<void>> markThreadRead(String threadId);
 }

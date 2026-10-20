@@ -127,6 +127,44 @@ void main() {
     expect(find.bySemanticsLabel('Municipal hall'), findsOneWidget);
   });
 
+  testWidgets('primary button matches the sign-in crop', (tester) async {
+    // The crop is 964×150 device pixels. The golden captures logical pixels,
+    // so the frame is that size at a pixel ratio of 1 and the button is
+    // painted at 3× to match the design file.
+    tester.view.physicalSize = const Size(964, 150);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(964, 150),
+          textScaler: TextScaler.noScaling,
+        ),
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
+          home: const ColoredBox(
+            color: Color(0xFFFDFDFE),
+            child: FittedBox(
+              fit: BoxFit.fill,
+              child: SizedBox(
+                width: 964 / 3,
+                height: 150 / 3,
+                child: PrimaryButton(label: 'Sign in', onPressed: _noop),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await expectLater(
+      find.byType(ColoredBox),
+      matchesGoldenFile('components/signin_primary_render.png'),
+    );
+  });
+
   testWidgets('gallery harness is the 390 by 844 light frame', (tester) async {
     final behavior = MockBehaviorController(
       latency: Duration.zero,

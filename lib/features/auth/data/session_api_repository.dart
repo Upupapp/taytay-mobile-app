@@ -1,5 +1,5 @@
 import '../../../core/api/api_client.dart';
-import '../../../core/api/api_transport.dart';
+import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../domain/device_session_repository.dart';
 
@@ -30,65 +30,29 @@ class SessionApiRepository implements DeviceSessionRepository {
 
   @override
   Future<Result<List<DeviceSessionSummary>>> listActiveSessions() async {
-    final response = await _apiClient.send<List<DeviceSessionSummary>>(
-      method: HttpMethod.get,
-      path: path,
-      authenticated: true,
-      decode: _decodeAll,
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<List<DeviceSessionSummary>>(
+      BackendGap.absentOnNodeContract,
+      'listActiveSessions',
     );
-    return response.map((envelope) => envelope.data);
   }
 
   @override
   Future<Result<void>> revokeSession({required String sessionId}) async {
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.delete,
-      path: '$path/$sessionId',
-      authenticated: true,
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'revokeSession',
     );
-    return response.map((_) {});
   }
 
   @override
   Future<Result<void>> revokeAllOtherSessions() async {
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: '$path/revoke-all',
-      authenticated: true,
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'revokeAllOtherSessions',
     );
-    return response.map((_) {});
   }
 
-  static List<DeviceSessionSummary> _decodeAll(Object? data) {
-    if (data is! List<dynamic>) return const <DeviceSessionSummary>[];
-
-    final List<DeviceSessionSummary> sessions = <DeviceSessionSummary>[];
-    for (final Object? entry in data) {
-      if (entry is! Map<String, dynamic>) continue;
-      final Object? id = entry['id'];
-      if (id is! String || id.isEmpty) continue;
-
-      final Object? name = entry['name'];
-      sessions.add(
-        DeviceSessionSummary(
-          id: id,
-          // A session the resident cannot recognise is one they dare not
-          // revoke, so an unnamed token gets a plain, honest placeholder rather
-          // than an empty row or an invented device model.
-          label: name is String && name.trim().isNotEmpty
-              ? name.trim()
-              : 'Unnamed sign-in',
-          isCurrentDevice: entry['current'] == true,
-          lastSeenAt: DateTime.tryParse(
-            entry['last_used_at'] is String
-                ? entry['last_used_at'] as String
-                : '',
-          )?.toUtc(),
-        ),
-      );
-    }
-    return List<DeviceSessionSummary>.unmodifiable(sessions);
-  }
 }

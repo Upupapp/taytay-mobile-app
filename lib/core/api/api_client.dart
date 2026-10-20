@@ -103,6 +103,7 @@ class ApiClient {
     Duration? timeout,
     String? bearerOverride,
     MultipartFile? file,
+    List<MultipartFile> files = const <MultipartFile>[],
     bool attachTokenIfAvailable = false,
   }) async {
     // A token that exists but is not yet the session's.
@@ -149,6 +150,7 @@ class ApiClient {
       token: token,
       decode: decode,
       file: file,
+      files: files,
     );
 
     // `401` is the single signal that ends a session, handled once here rather
@@ -180,6 +182,8 @@ class ApiClient {
         timeout: timeout,
         token: refreshedToken,
         decode: decode,
+        file: file,
+        files: files,
       );
       if (decoded.failureOrNull?.requiresReauthentication ?? false) {
         await _onUnauthenticated?.call();
@@ -213,6 +217,7 @@ class ApiClient {
     required Duration? timeout,
     required String? token,
     MultipartFile? file,
+    List<MultipartFile> files = const <MultipartFile>[],
     required T Function(Object? data) decode,
   }) async {
     // A fresh correlation id per attempt: a replay is a different request and
@@ -232,11 +237,12 @@ class ApiClient {
           // A multipart request's Content-Type is generated with its boundary by
           // the transport; declaring JSON here would produce a body the server
           // cannot parse and a 400 that reads like a validation failure.
-          hasJsonBody: body != null && file == null,
+          hasJsonBody: body != null && file == null && files.isEmpty,
           idempotencyKey: idempotencyKey,
         ),
         timeout: timeout ?? _config.requestTimeout,
         file: file,
+        files: files,
       ),
     );
 

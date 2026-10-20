@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/correctable_field.dart';
@@ -57,7 +58,7 @@ class KycApiRepository implements VerificationRepository {
   Future<Result<VerificationStatus>> loadOwnStatus() async {
     final response = await _apiClient.send<VerificationStatus>(
       method: HttpMethod.get,
-      path: 'me/kyc',
+      path: 'me/verification-requests/current',
       authenticated: true,
       decode: _decodeStatus,
     );
@@ -125,7 +126,7 @@ class KycApiRepository implements VerificationRepository {
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async {
     final response = await _apiClient.send<VerificationStatusDetail>(
       method: HttpMethod.get,
-      path: 'me/kyc',
+      path: 'me/verification-requests/current',
       authenticated: true,
       decode: _decodeDetail,
     );
@@ -151,7 +152,7 @@ class KycApiRepository implements VerificationRepository {
 
     final Object? raw = map['status'];
     final Object? message = map['message'];
-    final Object? submittedAt = map['submitted_at'];
+    final Object? submittedAt = map['submitted_at'] ?? map['created_at'];
     final Object? canEdit = map['can_edit'];
 
     return VerificationStatusDetail(
@@ -177,49 +178,12 @@ class KycApiRepository implements VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
   }) async {
-    // A correction to a claimed detail is a correction request against the
-    // record, not a second KYC submission. `POST me/profile/corrections` is
-    // where the office already adjudicates them, and routing it anywhere else
-    // would build the second editing path TAB 05 warns against.
-    // Keyed by the field the SERVER adjudicates, decided by the resident rather
-    // than by this repository (TAB 04). Nothing is inferred here any more: a
-    // category that spans several fields was resolved on the screen, and one
-    // that spans none never reached an input.
-    final Map<String, Object?> changes = <String, Object?>{
-      for (final MapEntry<CorrectableField, String> entry
-          in corrections.entries)
-        entry.key.wireValue: entry.value,
-    };
-
-    if (changes.isEmpty) {
-      // The server requires `changes` to hold at least one entry, so an empty
-      // map is refused here rather than sent to collect a 422 whose field names
-      // a resident has never seen.
-      return const Err<void>(
-        ValidationFailure(
-          debugMessage: 'submitCorrections called with nothing to correct.',
-        ),
-      );
-    }
-
-    unawaited(
-      _telemetry?.record(
-        const FlowStep(
-          flow: TelemetryFlow.verification,
-          stage: TelemetryStage.advanced,
-        ),
-      ),
+    final Object _ = _apiClient.runtimeType;
+    final Object? _ = _telemetry;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'submitCorrections',
     );
-
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: 'me/profile/corrections',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{'changes': changes},
-      decode: (_) {},
-    );
-    return response.map((_) {});
   }
 
   @override
@@ -227,56 +191,19 @@ class KycApiRepository implements VerificationRepository {
     required KycClaim claim,
     required String idempotencyKey,
   }) async {
-    // Refused here rather than at the server. A 422 on this screen is a dead end
-    // for a resident — the server's field errors are keyed by wire names they
-    // have never seen — and this is the screen that decides whether they ever
-    // become Verified.
-    if (!claim.isComplete) {
-      return const Err<VerificationStatus>(
-        ValidationFailure(
-          fieldErrors: <String, List<String>>{},
-          debugMessage: 'openCase called with an incomplete claim',
-        ),
-      );
-    }
-
+    final Object _ = _apiClient.runtimeType;
     unawaited(
       _telemetry?.record(
-        const FlowStep(
-          flow: TelemetryFlow.verification,
-          stage: TelemetryStage.started,
-        ),
-      ),
+            const FlowStep(
+              flow: TelemetryFlow.verification,
+              stage: TelemetryStage.blocked,
+            ),
+          ) ??
+          Future<bool>.value(false),
     );
-
-    final response = await _apiClient.send<VerificationStatus>(
-      method: HttpMethod.post,
-      path: 'me/kyc',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{
-        'first_name': claim.givenName.trim(),
-        // Omitted entirely when absent rather than sent as an empty string: the
-        // server's rule is `nullable`, and a blank middle name written to a
-        // claimed_* column is a value a reviewer has to interpret.
-        if (claim.middleName.trim().isNotEmpty)
-          'middle_name': claim.middleName.trim(),
-        'last_name': claim.familyName.trim(),
-        if (claim.suffix.trim().isNotEmpty) 'suffix': claim.suffix.trim(),
-        // Date only, in the server's own format. Sending an ISO instant would
-        // put a timezone on a birthday, and a birthday that moves across
-        // midnight fails a registry match.
-        'birth_date': _dateOnly(claim.birthDate),
-        'sex': claim.sex.wireValue,
-        // The slug, never the integer. See F14 and `BarangayDirectory`.
-        'barangay_code': claim.barangayCode,
-        'street_address': claim.streetAddress.trim(),
-      },
-      decode: _decodeStatus,
-    );
-
-    return response.map(
-      (ApiEnvelope<VerificationStatus> envelope) => envelope.data,
+    return backendGapFailure<VerificationStatus>(
+      BackendGap.absentOnNodeContract,
+      'openCase',
     );
   }
 
@@ -285,37 +212,13 @@ class KycApiRepository implements VerificationRepository {
     required List<String> documentUploadIds,
     required String idempotencyKey,
   }) async {
-    // Documents are attached before this, one request each, at
-    // `POST me/kyc/documents` — see [attachDocument]. Nothing rides along here,
-    // and `documentUploadIds` is kept on the contract only because the office
-    // may one day reference material it holds elsewhere.
-    unawaited(
-      _telemetry?.record(
-        const FlowStep(
-          flow: TelemetryFlow.verification,
-          stage: TelemetryStage.completed,
-        ),
-      ),
+    final Object _ = _apiClient.runtimeType;
+    final Object? _ = _telemetry;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'submitForReview',
     );
-
-    // Takes no body: the case is resolved from the authenticated account, so
-    // there is no identifier to tamper with and nothing to send. Rate limited
-    // server-side, because each submission puts a case in front of a human.
-    final response = await _apiClient.send<VerificationStatus>(
-      method: HttpMethod.post,
-      path: 'me/kyc/submit',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      decode: _decodeStatus,
-    );
-    return response.map((_) {});
   }
-
-  /// `YYYY-MM-DD`, built from the local date the resident picked.
-  static String _dateOnly(DateTime value) =>
-      '${value.year.toString().padLeft(4, '0')}-'
-      '${value.month.toString().padLeft(2, '0')}-'
-      '${value.day.toString().padLeft(2, '0')}';
 
   @override
   Future<Result<KycDocument>> attachDocument({
@@ -325,87 +228,69 @@ class KycApiRepository implements VerificationRepository {
     required String mimeType,
     required String idempotencyKey,
   }) async {
-    final response = await _apiClient.send<KycDocument>(
-      method: HttpMethod.post,
-      path: 'me/kyc/documents',
-      authenticated: true,
-      // An upload is the request most likely to be retried — long, and on the
-      // worst connections. Without the key a retry is a second version in the
-      // office's file.
-      idempotencyKey: idempotencyKey,
-      // Travels as a multipart text field beside the file. Until this call
-      // nothing in the app sent one, and the transport was writing the literal
-      // string `$value` for every field it was given.
-      body: <String, Object?>{'type': type.wireValue},
-      file: MultipartFile(
-        // The field name the server validates under. Not configurable: a
-        // mismatch is a 422 that reads like the resident's fault.
-        field: 'file',
-        filename: fileName,
-        bytes: bytes,
-        mimeType: mimeType,
-      ),
-      decode: (Object? data) => _decodeDocument(data) ?? _absent(type),
+    final Object _ = _apiClient.runtimeType;
+    final Object? _ = _telemetry;
+    return backendGapFailure<KycDocument>(
+      BackendGap.absentOnNodeContract,
+      'attachDocument',
     );
-    return response.map((ApiEnvelope<KycDocument> envelope) => envelope.data);
   }
 
   @override
   Future<Result<List<KycDocument>>> loadDocuments() async {
-    final response = await _apiClient.send<List<KycDocument>>(
-      method: HttpMethod.get,
-      path: 'me/kyc/documents',
+    final Object _ = _apiClient.runtimeType;
+    final Object? _ = _telemetry;
+    return backendGapFailure<List<KycDocument>>(
+      BackendGap.absentOnNodeContract,
+      'loadDocuments',
+    );
+  }
+
+  /// `POST me/verification-requests`.
+  ///
+  /// One multipart body: id type, front, optional back, and a selfie.
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required Uint8List frontBytes,
+    required String frontName,
+    required String frontMime,
+    Uint8List? backBytes,
+    String? backName,
+    String? backMime,
+    required Uint8List selfieBytes,
+    required String selfieName,
+    required String selfieMime,
+  }) async {
+    final response = await _apiClient.send<VerificationStatus>(
+      method: HttpMethod.post,
+      path: 'me/verification-requests',
       authenticated: true,
-      decode: _decodeDocuments,
+      body: <String, Object?>{'id_type': idType},
+      files: <MultipartFile>[
+        MultipartFile(
+          field: 'id_front',
+          filename: frontName,
+          bytes: frontBytes,
+          mimeType: frontMime,
+        ),
+        if (backBytes != null && backName != null && backMime != null)
+          MultipartFile(
+            field: 'id_back',
+            filename: backName,
+            bytes: backBytes,
+            mimeType: backMime,
+          ),
+        MultipartFile(
+          field: 'selfie',
+          filename: selfieName,
+          bytes: selfieBytes,
+          mimeType: selfieMime,
+        ),
+      ],
+      decode: _decodeStatus,
     );
     return response.map(
-      (ApiEnvelope<List<KycDocument>> envelope) => envelope.data,
-    );
-  }
-
-  static KycDocument _absent(KycDocumentType type) =>
-      KycDocument(type: type, isAttached: false);
-
-  static List<KycDocument> _decodeDocuments(Object? data) {
-    final Object? rows = data is Map<String, dynamic>
-        ? data['documents']
-        : data;
-    if (rows is! List<dynamic>) return const <KycDocument>[];
-
-    final List<KycDocument> documents = <KycDocument>[];
-    for (final Object? row in rows) {
-      final KycDocument? decoded = _decodeDocument(row);
-      if (decoded != null) documents.add(decoded);
-    }
-    return List<KycDocument>.unmodifiable(documents);
-  }
-
-  /// Returns null for a type this build has never heard of.
-  ///
-  /// Dropped rather than guessed. A row the app cannot name is one it cannot
-  /// label either, and an unlabelled slot in a document list is something a
-  /// resident taps expecting it to do something.
-  static KycDocument? _decodeDocument(Object? row) {
-    if (row is! Map<String, dynamic>) return null;
-
-    final Object? wire = row['type'];
-    if (wire is! String) return null;
-
-    KycDocumentType? type;
-    for (final KycDocumentType candidate in KycDocumentType.values) {
-      if (candidate.wireValue == wire) type = candidate;
-    }
-    if (type == null) return null;
-
-    final Object? receivedAt = row['received_at'];
-
-    return KycDocument(
-      type: type,
-      isAttached: row['attached'] == true,
-      receivedAt: receivedAt is String
-          ? DateTime.tryParse(receivedAt)?.toUtc()
-          : null,
-      isAvailable: row['is_available'] == true,
+      (ApiEnvelope<VerificationStatus> envelope) => envelope.data,
     );
   }
 

@@ -1939,11 +1939,11 @@ result they cannot explain.
 | D-176 | Roadmap D4. Plus Jakarta Sans is bundled (400–800, SIL OFL). No runtime download and no `google_fonts` | design / privacy | settled |
 | D-177 | Roadmap D5. Lucide is a vendored font (ISC; packaging notes MIT), drawn through `TaytayIcon` with a required semantic label | design / accessibility | settled |
 | D-178 | Roadmap D6. The approved tabs are Home, Directory, Balita (raised centre), Tulong, My Account. Events leaves the bar in S4. Until then the live shell stays Home, Services, News, Events, Profile | navigation | settled |
-| D-179 | Roadmap D7. Office messaging is a domain contract plus a dev mock. The live path declines. Logged as backend gap F31 | contract | settled |
+| D-179 | Roadmap D7. Office messaging is a domain contract plus a dev mock. D-184 closed F31: the live repository calls `/threads`. | contract | settled |
 | D-180 | Roadmap D8. Tulong is information. New Tulong pages do not grow an apply button. Existing assistance screens stay, unlinked from those pages | product | settled |
 | D-181 | Roadmap D9. The running app is light mode. Colour still comes from `ColorScheme`. Dark `ThemeData` stays for contrast tests and the later dark pass | accessibility | settled |
 | D-182 | Roadmap D10. No direct push to `main` and no merge without Paul's written approval. This narrows the earlier authorisation of direct pushes. Recorded in Article 10 | process | settled |
 | D-183 | Roadmap D11. A Directory office page is public resident information: contact, hours, services. It is not a staff or role selector | product / privacy | settled |
-| D-184 | The Node contract is `openapi/openapi.json` on `Upupapp/taytay-backend` PR 1 (`cursor/sprint-0-foundation-b3f2`). Envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }` already matches `ApiEnvelopeDecoder`; residents do not see `message`. Dev auth is `Bearer mock:<role>:<id>`, resident role only. Field-level models and `backend_routes.dart` stay until that file can be read — the checkout credential gets 404 | contract | provisional |
+| D-184 | The Node contract is vendored at `docs/integration/taytay-node-openapi.json` (taytay-backend PR 1). Envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }` matches `ApiEnvelopeDecoder`; residents do not see `message`. Role enum is `guest`, `registered`, `verified`, `staff`, `admin`. This app mints only `registered` and `verified`. `backend_routes.dart` calls the citizen surface. F31 is closed by `/threads` | contract | settled |
 
-**184 decisions — 179 settled, 5 provisional.**
+**184 decisions — 180 settled, 4 provisional.**

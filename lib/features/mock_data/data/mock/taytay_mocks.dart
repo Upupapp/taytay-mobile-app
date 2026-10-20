@@ -962,6 +962,19 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
   }
 
   @override
+  Future<Result<List<OfficeMessage>>> listMessages(String threadId) {
+    return _gate.respond(<OfficeMessage>[
+      OfficeMessage(
+        id: 'msg-sample-1',
+        threadId: threadId,
+        body: 'A synthetic message from Juana Dela Cruz.',
+        sentAt: mockNow,
+        fromResident: true,
+      ),
+    ]);
+  }
+
+  @override
   Future<Result<OfficeMessage>> send({
     required String officeId,
     required String topic,
@@ -977,4 +990,28 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
       ),
     );
   }
+
+  @override
+  Future<Result<OfficeMessage>> reply({
+    required String threadId,
+    required String body,
+  }) {
+    return _gate.respond(
+      OfficeMessage(
+        id: 'msg-sample-2',
+        threadId: threadId,
+        body: body,
+        sentAt: mockNow,
+        fromResident: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> closeThread(String threadId) =>
+      _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> markThreadRead(String threadId) =>
+      _gate.respond<void>(null);
 }

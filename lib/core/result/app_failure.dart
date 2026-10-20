@@ -413,6 +413,7 @@ AppFailure failureFromApiError({
         debugMessage: message,
       );
     case ApiErrorCode.serverError:
+    case ApiErrorCode.internalError:
       return ServerFailure(requestId: requestId, debugMessage: message);
     case ApiErrorCode.payloadTooLarge:
       return UnacceptableUploadFailure(
@@ -427,6 +428,7 @@ AppFailure failureFromApiError({
         debugMessage: message,
       );
     case ApiErrorCode.badRequest:
+    case ApiErrorCode.invalidJson:
     case ApiErrorCode.methodNotAllowed:
       // A malformed request or wrong verb is a client defect the resident can do
       // nothing about; surface it as unexpected rather than blaming their input.

@@ -130,7 +130,7 @@ These mirror the backend constitution (Article 3) and ADR 0002, from the client 
    design; sending them invites a future reader to believe they matter. The Node API's
    development credential is the single string `mock:<role>:<id>` inside
    `Authorization: Bearer`. That segment is the credential the server defined, and this
-   app mints only the resident role. Staging and production do not mint it.
+   app mints only `registered` and `verified`. Staging and production do not mint it.
 4. **`X-Client-Channel: citizen-mobile` is telemetry only.** It is sent for audit and
    presentation defaults. It grants nothing.
 5. **Session expiry is a server verdict.** A `401` is the single signal that ends a

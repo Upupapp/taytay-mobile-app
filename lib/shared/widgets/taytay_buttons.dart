@@ -72,7 +72,8 @@ class _TaytayButton extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: AppTypography.label.copyWith(
                       color: foreground,
-                      fontSize: 15,
+                      fontSize: 16,
+                      fontWeight: AppTypography.medium,
                     ),
                   ),
                 ),

@@ -30,6 +30,7 @@ class ApiRequest {
     this.headers = const <String, String>{},
     this.timeout,
     this.file,
+    this.files = const <MultipartFile>[],
   });
 
   final HttpMethod method;
@@ -57,6 +58,10 @@ class ApiRequest {
   /// working identically for an upload, which is the request most likely to be
   /// retried and therefore the one that needs those rules most.
   final MultipartFile? file;
+
+  /// Further named parts. Verification submit sends a front, an optional back,
+  /// and a selfie on one request. [file] stays for the single-part callers.
+  final List<MultipartFile> files;
 
   @override
   String toString() => 'ApiRequest(${method.wireValue} $path)';
