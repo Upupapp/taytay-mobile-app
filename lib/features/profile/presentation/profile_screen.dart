@@ -99,7 +99,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final session = dependencies.session.state;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Profile')),
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            title: const Text('Profile'),
+          ),
           body: SafeArea(
             child: RefreshIndicator(
               onRefresh: _load,

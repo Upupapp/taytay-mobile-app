@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/account_controls.dart';
 
 /// What a resident agreed to, and what they may ask the office to change.
@@ -146,7 +147,11 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Consents and account requests')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Consents and account requests'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.manageAccount,
@@ -358,7 +363,11 @@ class HelpScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Help')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Help'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Spacing.lg),

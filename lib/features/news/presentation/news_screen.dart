@@ -87,7 +87,10 @@ class _NewsScreenState extends State<NewsScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('News')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('News'),
+      ),
       body: SafeArea(
         child: controller == null
             ? const _FeedSkeleton()

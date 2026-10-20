@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/lgu_service.dart';
 import 'service_directory_controller.dart';
 
@@ -124,7 +125,11 @@ class _ServiceDetailScreenState extends State<ServiceDetailScreen> {
     final service = controller?.byCode(widget.serviceCode);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Service')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Service'),
+      ),
       body: SafeArea(
         child: switch ((_codeIsValid, controller, service)) {
           (false, _, _) => const _NotAvailable(),

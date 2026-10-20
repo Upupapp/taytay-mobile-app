@@ -75,15 +75,23 @@ class BrandGradient {
 /// its colour system with decoration — every additional one is another surface
 /// whose contrast has to be re-proved.
 abstract final class BrandGradients {
-  /// The primary brand surface: the splash mark backdrop and the home hero.
+  /// In-app header. 135° from [BrandColors.taytayBlueDark] to
+  /// [BrandColors.taytayBlue] — CSS 135deg is top-left toward bottom-right.
   ///
-  /// Runs dark → mid blue. White text clears AA across the whole range because
-  /// even the lightest stop is a deep blue.
-  static const BrandGradient brand = BrandGradient(
-    name: 'brand',
+  /// White text clears AA across the whole range. [BrandColors.sealGold] does
+  /// too, which is why eyebrows on this header may be gold. Gold on a *light*
+  /// surface is a different question and is still forbidden.
+  static const BrandGradient inAppHeader = BrandGradient(
+    name: 'inAppHeader',
     colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
     onColor: Colors.white,
   );
+
+  /// The primary brand surface: the splash mark backdrop and the home hero.
+  ///
+  /// Same ramp as [inAppHeader]. Kept under the original name so existing
+  /// callers do not move.
+  static const BrandGradient brand = inAppHeader;
 
   /// A deeper variant for large areas, where the mid blue would be heavy.
   static const BrandGradient brandDeep = BrandGradient(
@@ -100,12 +108,70 @@ abstract final class BrandGradients {
     onColor: Colors.white,
   );
 
+  /// Welcome and sign-in field. Same navy ramp as the header, deep enough that
+  /// both white and [BrandColors.sealGold] clear 4.5:1 at every stop.
+  ///
+  /// The gold glow is **not** a stop on this gradient. A gold stop would pull
+  /// the worst-case sample through a mid-tone and fail white text. The glow is
+  /// painted separately by [WovenGoldGlow], at an opacity that leaves the
+  /// underlying navy in charge of contrast.
+  static const BrandGradient woven = BrandGradient(
+    name: 'woven',
+    colors: <Color>[
+      Color(0xFF031433),
+      BrandColors.taytayBlueDark,
+      BrandColors.taytayBlue,
+    ],
+    onColor: Colors.white,
+  );
+
   /// Every gradient, for the contrast test.
   static const List<BrandGradient> all = <BrandGradient>[
     brand,
+    inAppHeader,
     brandDeep,
     verified,
+    woven,
   ];
+}
+
+/// Decorative gold glow over a [BrandGradients.woven] field.
+///
+/// Opacity stays low on purpose: the glow is atmosphere, and the text behind
+/// it is still contrasted against the navy ramp, not against a gold disc.
+class WovenGoldGlow extends StatelessWidget {
+  const WovenGoldGlow({
+    required this.child,
+    this.alignment = const Alignment(0.8, -0.6),
+    this.radius = 0.9,
+    super.key,
+  });
+
+  final Widget child;
+  final Alignment alignment;
+  final double radius;
+
+  /// Gold mixed over a stop at the opacity this glow uses. Tests sample this
+  /// so a future opacity change cannot quietly drop white text below AA.
+  static Color blendOver(Color stop) =>
+      Color.alphaBlend(BrandColors.sealGold.withValues(alpha: 0.22), stop);
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: alignment,
+          radius: radius,
+          colors: <Color>[
+            BrandColors.sealGold.withValues(alpha: 0.22),
+            BrandColors.sealGold.withValues(alpha: 0),
+          ],
+        ),
+      ),
+      child: child,
+    );
+  }
 }
 
 /// Paints a [BrandGradient] and supplies its [BrandGradient.onColor] to

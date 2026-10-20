@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/notification_repository.dart';
 import 'notification_inbox_controller.dart';
 
@@ -96,6 +97,8 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
         title: const Text('Notifications'),
         actions: <Widget>[
           if ((controller?.unreadCount ?? 0) > 0)
@@ -387,7 +390,11 @@ class _NotificationPreferencesScreenState
     final preferences = _preferences;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notification settings')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Notification settings'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.readNotifications,

@@ -19,6 +19,7 @@ import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/event_repository.dart';
 import 'events_screen.dart' show EventCover, registrationStateLabel;
 
@@ -204,7 +205,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final event = _event;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Event')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Event'),
+      ),
       body: SafeArea(
         child: switch ((_idIsValid, _loading, event)) {
           (false, _, _) => _NotAvailable(

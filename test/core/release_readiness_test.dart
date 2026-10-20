@@ -364,15 +364,11 @@ void main() {
     test('Article 10 still forbids what it has always forbidden', () {
       // ARTICLE 10 WAS AMENDED, AND THIS TEST CAUGHT IT.
       //
-      // It used to assert the sentence "Never push, force-push, merge", which
-      // is gone: the owner authorised direct pushes to `main` and Article 10
-      // was rewritten to say so, matching taytay-backend and taytay-admin-web.
-      // The failure was correct — the constitution moved and something noticed,
-      // which is the whole point of asserting it at all.
-      //
-      // What is asserted now is the part that did NOT move. Pushing changed
-      // status; nothing else did, and a future amendment that quietly dropped
-      // one of these should go red here too.
+      // It used to assert the sentence "Never push, force-push, merge". The
+      // owner then authorised direct pushes to `main`. Decision D10 (2026-10-20)
+      // narrowed that again: no direct push and no merge without Paul's written
+      // approval. What is asserted here is the part that did not move. A future
+      // amendment that quietly dropped one of these should go red here too.
       final claudeMd = File('CLAUDE.md').readAsStringSync();
 
       for (final prohibition in <String>[

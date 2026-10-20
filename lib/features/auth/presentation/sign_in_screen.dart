@@ -15,6 +15,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/sign_in_challenge.dart';
 import 'sign_in_controller.dart';
 
@@ -136,13 +137,13 @@ class _SignInScreenState extends State<SignInScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sign in'),
-        leading: controller.step == SignInStep.code
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back),
-                tooltip: 'Change number',
-                onPressed: controller.busy ? null : controller.changeNumber,
-              )
-            : null,
+        automaticallyImplyLeading: false,
+        leading: TaytayBackButton(
+          enabled: !(controller.step == SignInStep.code && controller.busy),
+          onPressed: controller.step == SignInStep.code
+              ? controller.changeNumber
+              : null,
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(

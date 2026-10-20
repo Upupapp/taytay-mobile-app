@@ -128,6 +128,19 @@ enum BackendGap {
     finding: 'F13',
     missing: 'account closure / erasure request',
     servedInstead: 'nothing',
+  ),
+
+  /// **F31 — a resident cannot message a municipal office.**
+  ///
+  /// The designs let a verified resident write to an office and read the
+  /// thread. Neither the previous PHP baseline nor Clarence's Node API publishes
+  /// that module. The UI and a dev mock exist so the flow can be reviewed.
+  /// They are not a claim that a message reached the LGU. This is a backend
+  /// conversation (Article 3.7, decision D7).
+  officeMessaging(
+    finding: 'F31',
+    missing: 'resident-to-office messaging',
+    servedInstead: 'nothing; dev builds may use a synthetic mock',
   );
 
   const BackendGap({

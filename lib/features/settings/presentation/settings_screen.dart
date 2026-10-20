@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/config/app_environment.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
@@ -11,6 +12,7 @@ import '../../../core/telemetry/telemetry.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 
 /// The build's version, supplied by the release pipeline.
 ///
@@ -59,7 +61,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 is AccessAllowed;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Settings')),
+          appBar: AppBar(
+            automaticallyImplyLeading: false,
+            leading: const TaytayBackButton(),
+            title: const Text('Settings'),
+          ),
           body: SafeArea(
             child: ListView(
               padding: const EdgeInsets.all(Spacing.lg),
@@ -116,6 +122,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: 'Questions, and where to go in person',
                   route: AppRoute.help,
                 ),
+
+                if (dependencies.config.environment ==
+                    AppEnvironment.dev) ...<Widget>[
+                  const SizedBox(height: Spacing.lg),
+                  const _SectionHeading('Development'),
+                  const _Row(
+                    icon: Icons.widgets_outlined,
+                    title: 'Component gallery',
+                    subtitle: 'Shared components, in this dev build only',
+                    route: AppRoute.componentGallery,
+                  ),
+                ],
 
                 const SizedBox(height: Spacing.lg),
                 const _SectionHeading('About'),

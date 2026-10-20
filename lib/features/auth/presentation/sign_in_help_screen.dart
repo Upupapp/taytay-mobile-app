@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 
 /// "Trouble signing in?" — account recovery, as far as it honestly goes.
 ///
@@ -35,7 +36,11 @@ class SignInHelpScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Trouble signing in?')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Trouble signing in?'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Spacing.lg),

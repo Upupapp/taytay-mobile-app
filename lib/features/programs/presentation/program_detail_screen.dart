@@ -15,6 +15,7 @@ import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_program.dart';
 import 'programs_screen.dart';
 
@@ -116,7 +117,11 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     final program = _program;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Programme')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Programme'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.browsePrograms,

@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_case.dart';
 import '../domain/request_status_copy.dart';
 import '../domain/service_request_repository.dart';
@@ -80,7 +81,11 @@ class _AssistanceCaseScreenState extends State<AssistanceCaseScreen> {
     final detail = _detail;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Request status')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Request status'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.trackAssistanceRequests,

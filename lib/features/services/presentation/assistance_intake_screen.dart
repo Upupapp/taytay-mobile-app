@@ -20,6 +20,7 @@ import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_intake.dart';
 import 'assistance_intake_controller.dart';
 
@@ -115,7 +116,11 @@ class _AssistanceIntakeScreenState extends State<AssistanceIntakeScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Apply')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Apply'),
+      ),
       body: SafeArea(
         // Belt and braces with the route guard, which is verified-only. A
         // screen that also states its own requirement keeps telling the truth

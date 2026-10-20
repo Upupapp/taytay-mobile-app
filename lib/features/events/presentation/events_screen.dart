@@ -78,7 +78,10 @@ class _EventsScreenState extends State<EventsScreen> {
             is AccessAllowed;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Events')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Events'),
+      ),
       body: SafeArea(
         child: controller == null
             ? const Center(child: CircularProgressIndicator())

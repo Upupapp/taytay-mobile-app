@@ -77,7 +77,10 @@ class _ServicesScreenState extends State<ServicesScreen> {
     final controller = _controller!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Services')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('Services'),
+      ),
       body: SafeArea(
         child: Column(
           children: <Widget>[

@@ -122,12 +122,12 @@ colour that was proved is the colour that gets used.
 Material 3's scale, adjusted rather than replaced: every Material component reads
 these roles, so a component the app has not customised still lands on the scale.
 
-- Headlines and titles at **w700**; secondary labels at **w600**.
-- Body line height raised to **1.45** — Filipino and English service copy runs
-  long, and tighter leading slows reading of multi-line paragraphs.
+- The face is **Plus Jakarta Sans**, bundled at weights 400, 500, 600, 700 and 800
+  (SIL OFL 1.1). It is an asset. Nothing is fetched at runtime.
+- Screen title (H1) **28 / 800**. Card and section titles **18–20 / 800**.
+- Body **13.5–14 / 500**, line height **1.45**.
+- Labels **11–12 / 700–800**. Eyebrows **11 / 800** with 1.6 letter-spacing.
 - **11 sp** floor (`minFontSize`), matching Material's `labelSmall`.
-- Platform font only. No runtime font download: that is a third-party CDN call on
-  first launch and unstyled text on a weak connection.
 
 Sizes are floors that the OS setting multiplies up from. Text is never scaled
 down to fit — a layout that does not fit at 200% scrolls.

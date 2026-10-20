@@ -1,0 +1,980 @@
+import 'dart:typed_data';
+
+import '../../../../core/api/dev_mock_access.dart';
+import '../../../../core/documents/document_capture.dart';
+import '../../../../core/documents/upload_policy.dart';
+import '../../../../core/mock/mock_behavior.dart';
+import '../../../../core/mock/mock_fixtures.dart';
+import '../../../../core/result/result.dart';
+import '../../../../core/session/access_level.dart';
+import '../../../../core/session/push_registration.dart';
+import '../../../../core/session/session_state.dart';
+import '../../../../core/storage/public_cache.dart';
+import '../../../auth/domain/auth_repository.dart';
+import '../../../auth/domain/device_session_repository.dart';
+import '../../../credential/domain/credential_repository.dart';
+import '../../../events/domain/event_registration.dart'
+    as event_outcome
+    show RegistrationOutcome;
+import '../../../events/domain/event_repository.dart' hide RegistrationOutcome;
+import '../../../household/domain/household_repository.dart';
+import '../../../household/domain/household_summary.dart';
+import '../../../messaging/domain/office_messaging_repository.dart';
+import '../../../news/domain/announcement_repository.dart';
+import '../../../notifications/domain/notification_repository.dart';
+import '../../../platform/domain/app_bootstrap.dart';
+import '../../../platform/domain/platform_repository.dart';
+import '../../../profile/domain/profile_fields.dart';
+import '../../../profile/domain/resident_profile_detail.dart';
+import '../../../profile/domain/resident_profile_repository.dart';
+import '../../../programs/domain/assistance_program.dart'
+    hide RequirementObligation;
+import '../../../programs/domain/program_repository.dart';
+import '../../../registration/domain/registration_domain.dart';
+import '../../../requirements/domain/resident_requirement.dart';
+import '../../../services/domain/assistance_case.dart';
+import '../../../services/domain/assistance_history.dart';
+import '../../../services/domain/assistance_intake.dart';
+import '../../../services/domain/lgu_service.dart';
+import '../../../services/domain/service_catalog_repository.dart';
+import '../../../services/domain/service_request_repository.dart';
+import '../../../settings/domain/account_controls.dart';
+import '../../../verification/domain/correctable_field.dart';
+import '../../../verification/domain/kyc_claim.dart';
+import '../../../verification/domain/verification_repository.dart';
+import '../../../verification/domain/verification_status_detail.dart';
+
+/// Frozen instant for fixtures and goldens: 20 Oct 2026, 09:05 in Manila.
+final DateTime mockNow = DateTime.utc(2026, 10, 20, 1, 5);
+
+Map<String, Object?>? _asMap(Object? entry) {
+  if (entry is! Map) return null;
+  final raw = Map<Object?, Object?>.from(entry);
+  return <String, Object?>{
+    for (final MapEntry<Object?, Object?> item in raw.entries)
+      if (item.key != null) item.key.toString(): item.value,
+  };
+}
+
+Paginated<T> _page<T>(List<T> items) => Paginated<T>(
+  items: items,
+  page: 1,
+  perPage: items.length,
+  total: items.length,
+  totalPages: 1,
+  hasMore: false,
+);
+
+/// Shared synthetic resident. Loaded from JSON so the app and the tests read
+/// the same fixture.
+class MockResident {
+  const MockResident({
+    required this.displayName,
+    required this.email,
+    required this.mobile,
+    required this.accountId,
+    required this.barangay,
+  });
+
+  final String displayName;
+  final String email;
+  final String mobile;
+  final String accountId;
+  final String barangay;
+
+  static Future<MockResident> load() async {
+    final json = await MockFixtures.object('resident');
+    return MockResident(
+      displayName: json['displayName']! as String,
+      email: json['email']! as String,
+      mobile: json['mobile']! as String,
+      accountId: json['accountId']! as String,
+      barangay: json['barangay']! as String,
+    );
+  }
+}
+
+class MockAuthRepository implements AuthRepository {
+  MockAuthRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<void>> requestOneTimeCode({required String mobileNumber}) {
+    return _gate.respond<void>(null);
+  }
+
+  @override
+  Future<Result<AuthOutcome>> verifyOneTimeCode({
+    required String mobileNumber,
+    required String code,
+  }) async {
+    final resident = await MockResident.load();
+    final token = DevMockAccess.tryToken(id: resident.accountId);
+    if (token == null) {
+      return const Err<AuthOutcome>(
+        ContractFailure(
+          debugMessage: 'Dev mock account id cannot form a bearer segment.',
+        ),
+      );
+    }
+    return _gate.respond(
+      AuthOutcome(
+        resident: ResidentSession(
+          accountId: resident.accountId,
+          accessLevel: AccessLevel.verified,
+          displayName: 'Juana',
+        ),
+        accessToken: token,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> signOut() => _gate.respond<void>(null);
+}
+
+class MockDeviceSessionRepository implements DeviceSessionRepository {
+  MockDeviceSessionRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<List<DeviceSessionSummary>>> listActiveSessions() {
+    return _gate.respond(<DeviceSessionSummary>[
+      DeviceSessionSummary(
+        id: 'session-sample-1',
+        label: 'This phone',
+        isCurrentDevice: true,
+        lastSeenAt: mockNow,
+      ),
+    ]);
+  }
+
+  @override
+  Future<Result<void>> revokeSession({required String sessionId}) =>
+      _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> revokeAllOtherSessions() => _gate.respond<void>(null);
+}
+
+class MockAnnouncementRepository implements AnnouncementRepository {
+  MockAnnouncementRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  Future<List<Announcement>> _items() async {
+    final raw = await MockFixtures.list('announcements');
+    return <Announcement>[
+      for (final entry in raw)
+        if (_asMap(entry) case final Map<String, Object?> map)
+          Announcement(
+            id: map['id']! as String,
+            title: map['title']! as String,
+            body: map['body']! as String,
+            summary: map['summary'] as String?,
+            publishedAt: mockNow,
+            advisoryLevel: const ServerValue<AdvisoryLevel>(
+              raw: 'advisory',
+              known: AdvisoryLevel.advisory,
+            ),
+            publicationState: const ServerValue<PublicationState>(
+              raw: 'published',
+              known: PublicationState.published,
+            ),
+          ),
+    ];
+  }
+
+  @override
+  Future<Result<Paginated<Announcement>>> listAnnouncements({
+    int page = 1,
+    int perPage = 15,
+  }) async {
+    return _gate.respond(_page(await _items()));
+  }
+
+  @override
+  Future<Result<Announcement>> loadAnnouncement(String id) async {
+    final items = await _items();
+    final match = items.where((item) => item.id == id);
+    if (match.isEmpty) {
+      return const Err<Announcement>(
+        NotFoundFailure(debugMessage: 'No sample post with that id.'),
+      );
+    }
+    return _gate.respond(match.first);
+  }
+
+  @override
+  Future<Result<Paginated<PostComment>>> listComments(
+    String postId, {
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(
+      _page(<PostComment>[
+        PostComment(
+          id: 'comment-sample-1',
+          body: 'SAMPLE comment from Juana Dela Cruz.',
+          authorName: 'Juana Dela Cruz',
+          authorKind: const ServerValue<CommentAuthorKind>(
+            raw: 'resident',
+            known: CommentAuthorKind.resident,
+          ),
+          createdAt: mockNow,
+          isMine: true,
+        ),
+      ]),
+    );
+  }
+
+  @override
+  Future<Result<ReactionOutcome>> setReaction({
+    required String postId,
+    required ReactionKind reaction,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      ReactionOutcome(
+        reactions: 1,
+        myReaction: ServerValue<ReactionKind>(
+          raw: reaction.wireValue,
+          known: reaction,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ReactionOutcome>> clearReaction({
+    required String postId,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(const ReactionOutcome(reactions: 0));
+  }
+
+  @override
+  Future<Result<PostComment>> addComment({
+    required String postId,
+    required String body,
+    required String idempotencyKey,
+    String? parentId,
+  }) {
+    return _gate.respond(
+      PostComment(
+        id: 'comment-sample-new',
+        body: body,
+        authorName: 'Juana Dela Cruz',
+        authorKind: const ServerValue<CommentAuthorKind>(
+          raw: 'resident',
+          known: CommentAuthorKind.resident,
+        ),
+        createdAt: mockNow,
+        isMine: true,
+        parentId: parentId,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> deleteOwnComment({
+    required String postId,
+    required String commentId,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> reportComment({
+    required String postId,
+    required String commentId,
+    required ReportReason reason,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockServiceCatalogRepository implements ServiceCatalogRepository {
+  MockServiceCatalogRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<Paginated<LguService>>> listServices({
+    ServiceChannel? channel,
+    ServiceCategory? category,
+    int page = 1,
+    int perPage = 15,
+  }) async {
+    final raw = await MockFixtures.list('services');
+    final items = <LguService>[
+      for (final entry in raw)
+        if (_asMap(entry) case final Map<String, Object?> map)
+          LguService(
+            id: map['id']! as String,
+            code: map['code']! as String,
+            name: map['name']! as String,
+            description: map['description']! as String,
+            category: ServerValue<ServiceCategory>(
+              raw: map['category']! as String,
+              known: ServiceCategory.values
+                  .where((value) => value.wireValue == map['category'])
+                  .firstOrNull,
+            ),
+            status: const ServerValue<ServicePublicationStatus>(
+              raw: 'published',
+              known: ServicePublicationStatus.published,
+            ),
+            availableChannels: const <ServerValue<ServiceChannel>>[
+              ServerValue<ServiceChannel>(
+                raw: 'citizen-mobile',
+                known: ServiceChannel.citizenMobile,
+              ),
+            ],
+          ),
+    ];
+    return _gate.respond(_page(items));
+  }
+
+  @override
+  CachedRead<Paginated<LguService>>? lastKnownServices({
+    ServiceChannel? channel,
+    ServiceCategory? category,
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return null;
+  }
+}
+
+class MockProgramRepository implements ProgramRepository {
+  MockProgramRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  AssistanceProgram _program(String id) => AssistanceProgram(
+    id: id,
+    code: 'PWD-CASH-GIFT',
+    name: 'SAMPLE PWD Cash Gift',
+    description:
+        'Illustrative programme for Juana Dela Cruz. Not an LGU offer.',
+    acceptsApplications: false,
+    ownerOffice: 'MSWDO',
+  );
+
+  @override
+  Future<Result<Paginated<AssistanceProgram>>> listActivePrograms({
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(_page(<AssistanceProgram>[_program('prog-sample-1')]));
+  }
+
+  @override
+  Future<Result<AssistanceProgram>> loadProgram(String id) {
+    return _gate.respond(_program(id));
+  }
+}
+
+class MockEventRepository implements EventRepository {
+  MockEventRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  LguEvent _event(String id) => LguEvent(
+    id: id,
+    title: 'SAMPLE community clean-up',
+    description: 'An illustrative event. Not a published LGU schedule.',
+    startsAt: mockNow,
+    venue: const EventVenue(name: 'SAMPLE plaza'),
+  );
+
+  @override
+  Future<Result<Paginated<LguEvent>>> listEvents({
+    EventScope scope = EventScope.upcoming,
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(_page(<LguEvent>[_event('event-sample-1')]));
+  }
+
+  @override
+  Future<Result<LguEvent>> loadEvent(String id) => _gate.respond(_event(id));
+
+  @override
+  Future<Result<EventRegistrationForm>> loadRegistrationForm(String eventId) {
+    return _gate.respond(
+      EventRegistrationForm(
+        eventId: eventId,
+        eventTitle: 'SAMPLE community clean-up',
+        allowsUnverifiedResidents: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<RegistrationAttempt>> register({
+    required String eventId,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      RegistrationAttempt(
+        outcome: event_outcome.RegistrationOutcome.registered,
+        residentMessage: 'SAMPLE registration recorded on this device only.',
+        registration: EventRegistration(
+          eventId: eventId,
+          id: 'reg-sample-1',
+          state: const ServerValue<EventRegistrationState>(
+            raw: 'registered',
+            known: EventRegistrationState.registered,
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<EventRegistration>> cancelRegistration({
+    required String eventId,
+    required String registrationId,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      EventRegistration(
+        eventId: eventId,
+        id: registrationId,
+        state: const ServerValue<EventRegistrationState>(
+          raw: 'cancelled',
+          known: EventRegistrationState.cancelled,
+        ),
+      ),
+    );
+  }
+}
+
+class MockNotificationRepository
+    implements NotificationRepository, PushRegistrationWithdrawal {
+  MockNotificationRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<Paginated<ResidentNotification>>> listOwn({
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(
+      _page(<ResidentNotification>[
+        ResidentNotification(
+          id: 'note-sample-1',
+          title: 'SAMPLE advisory',
+          body: 'A synthetic notice for Juana Dela Cruz.',
+          sentAt: mockNow,
+          readAt: null,
+          category: const ServerValue<NotificationCategory>(
+            raw: 'public_advisory',
+            known: NotificationCategory.publicAdvisory,
+          ),
+        ),
+      ]),
+    );
+  }
+
+  @override
+  Future<Result<void>> markRead(String id) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> markAllRead() => _gate.respond<void>(null);
+
+  @override
+  Future<Result<NotificationPreferences>> loadPreferences() {
+    return _gate.respond(
+      const NotificationPreferences(push: true, sms: false, email: false),
+    );
+  }
+
+  @override
+  Future<Result<void>> updatePreferences(NotificationPreferences preferences) =>
+      _gate.respond<void>(null);
+
+  @override
+  Future<Result<String>> registerPushToken(String token) {
+    return _gate.respond('device-sample-1');
+  }
+
+  @override
+  Future<bool> withdraw(String deviceId) async {
+    final result = await _gate.respond<bool>(true);
+    return switch (result) {
+      Ok<bool>() => true,
+      Err<bool>() => false,
+    };
+  }
+}
+
+class MockPlatformRepository implements PlatformRepository {
+  MockPlatformRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<ServiceHealth>> checkHealth() {
+    return _gate.respond(
+      const ServiceHealth(
+        service: 'taytay-sample',
+        status: 'ok',
+        apiVersion: 'sample',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<AppBootstrap>> loadBootstrap() {
+    return _gate.respond(
+      const AppBootstrap(
+        service: 'taytay-sample',
+        apiVersion: 'sample',
+        timezone: 'Asia/Manila',
+        channel: 'citizen-mobile',
+        defaultPageSize: 15,
+        minimumVersion: '',
+        features: FeatureFlags.none,
+        support: SupportContact.none,
+        serverTime: null,
+      ),
+    );
+  }
+}
+
+class MockProfileRepository implements ResidentProfileRepository {
+  MockProfileRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<ResidentProfileSummary>> loadOwnSummary() {
+    return _gate.respond(
+      const ResidentProfileSummary(verificationTier: 'verified'),
+    );
+  }
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async {
+    final resident = await MockResident.load();
+    return _gate.respond(
+      ResidentProfileDetail(
+        verificationTier: 'verified',
+        values: <ResidentProfileField, String>{
+          ResidentProfileField.emailAddress: resident.email,
+        },
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> updateContactDetails({
+    required ContactDetailsUpdate update,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> submitOwnUpdate({
+    required Map<String, Object?> changes,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockHouseholdRepository implements HouseholdRepository {
+  MockHouseholdRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<HouseholdSummary>> loadOwnHousehold() async {
+    final resident = await MockResident.load();
+    return _gate.respond(
+      HouseholdSummary(
+        role: HouseholdRole.member,
+        label: 'SAMPLE household',
+        barangay: resident.barangay,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> submitCorrectionRequest({
+    required HouseholdCorrectionRequest request,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockCredentialRepository implements CredentialRepository {
+  MockCredentialRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<ResidentCredential?>> loadOwnCredential() {
+    return _gate.respond(
+      const ResidentCredential(
+        id: 'credential-sample-1',
+        state: CredentialLifecycleState.active,
+        rawState: 'active',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<PresentationArtifact>> requestPresentationArtifact() {
+    return _gate.respond(
+      const PresentationArtifact(payload: 'SAMPLE-PRESENTATION'),
+    );
+  }
+}
+
+class MockVerificationRepository implements VerificationRepository {
+  MockVerificationRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<VerificationStatus>> loadOwnStatus() {
+    return _gate.respond(
+      const VerificationStatus(
+        state: VerificationAttemptState.approved,
+        rawState: 'approved',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() {
+    return _gate.respond(
+      const VerificationStatusDetail(
+        stage: ResidentVerificationStage.verified,
+        rawState: 'approved',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatus>> openCase({
+    required KycClaim claim,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      const VerificationStatus(
+        state: VerificationAttemptState.draft,
+        rawState: 'draft',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> submitCorrections({
+    required Map<CorrectableField, String> corrections,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<KycDocument>> attachDocument({
+    required KycDocumentType type,
+    required String fileName,
+    required Uint8List bytes,
+    required String mimeType,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      KycDocument(type: type, isAttached: true, receivedAt: mockNow),
+    );
+  }
+
+  @override
+  Future<Result<List<KycDocument>>> loadDocuments() {
+    return _gate.respond(const <KycDocument>[]);
+  }
+
+  @override
+  Future<Result<void>> submitForReview({
+    required List<String> documentUploadIds,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockRegistrationRepository implements RegistrationRepository {
+  MockRegistrationRepository(this._gate, this._directory);
+
+  final MockBehaviorController _gate;
+  final BarangayDirectory _directory;
+
+  @override
+  Future<Result<void>> requestOneTimeCode({required String mobileNumber}) =>
+      _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> verifyOneTimeCode({
+    required String mobileNumber,
+    required String code,
+  }) => _gate.respond<void>(null);
+
+  @override
+  Future<RegistrationCapabilities> loadCapabilities() async =>
+      const RegistrationCapabilities(acceptsSubmissions: true);
+
+  @override
+  Future<Result<List<Barangay>>> listBarangays() => _directory.listBarangays();
+
+  @override
+  Future<Result<RegistrationResult>> submitRegistration({
+    required RegistrationDraft draft,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      const RegistrationResult(
+        outcome: RegistrationOutcome.submitted,
+        residentMessage: 'SAMPLE submission. Nothing was sent to the LGU.',
+        referenceId: 'reg-sample-juana',
+      ),
+    );
+  }
+}
+
+class MockBarangayDirectory implements BarangayDirectory {
+  MockBarangayDirectory(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<List<Barangay>>> listBarangays() {
+    return _gate.respond(const <Barangay>[
+      Barangay(id: 'brgy-sample-san-juan', name: 'San Juan', code: 'SAMPLE'),
+      Barangay(id: 'brgy-sample-dolores', name: 'Dolores', code: 'SAMPLE'),
+    ]);
+  }
+}
+
+class MockRequirementRepository implements RequirementRepository {
+  MockRequirementRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<RequirementChecklist>> listRequirements(String requestId) {
+    return _gate.respond(
+      RequirementChecklist(
+        requestId: requestId,
+        uploadPolicy: UploadPolicy.fallback,
+        items: const <ResidentRequirement>[
+          ResidentRequirement(
+            code: 'id-sample',
+            label: 'SAMPLE government ID',
+            obligation: ServerValue<RequirementObligation>(
+              raw: 'required',
+              known: RequirementObligation.required,
+            ),
+            status: ServerValue<RequirementStatus>(
+              raw: 'missing',
+              known: RequirementStatus.missing,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<Result<UploadedDocumentReference>> uploadRequirementDocument({
+    required String requestId,
+    required String requirementCode,
+    required CapturedDocument document,
+    required String idempotencyKey,
+    required UploadPolicy policy,
+    void Function(double fraction)? onProgress,
+    UploadCancellation? cancellation,
+  }) {
+    onProgress?.call(1);
+    return _gate.respond(
+      UploadedDocumentReference(
+        id: 'upload-sample-1',
+        requirementCode: requirementCode,
+        rawStatus: 'submitted',
+      ),
+    );
+  }
+}
+
+class MockServiceRequestRepository implements ServiceRequestRepository {
+  MockServiceRequestRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  ServiceRequest _request(String id) => ServiceRequest(
+    id: id,
+    serviceCode: 'PWD-CASH-GIFT',
+    state: ServiceRequestState.submitted,
+    rawState: 'submitted',
+    submittedAt: mockNow,
+    referenceNumber: 'SAMPLE-0001',
+  );
+
+  @override
+  Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(_page(<ServiceRequest>[_request('req-sample-1')]));
+  }
+
+  @override
+  Future<Result<ServiceRequest>> loadOwnRequest(String id) =>
+      _gate.respond(_request(id));
+
+  @override
+  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) {
+    return _gate.respond(AssistanceCaseDetail(request: _request(id)));
+  }
+
+  @override
+  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
+    required HistoryScope scope,
+    int page = 1,
+    int perPage = 15,
+  }) {
+    return _gate.respond(
+      _page(<AssistanceHistoryEntry>[
+        AssistanceHistoryEntry(
+          requestId: 'req-sample-1',
+          serviceCode: 'PWD-CASH-GIFT',
+          serviceName: 'SAMPLE PWD Cash Gift',
+          status: const ServerValue<ServiceRequestState>(
+            raw: 'submitted',
+            known: ServiceRequestState.submitted,
+          ),
+          submittedAt: mockNow,
+        ),
+      ]),
+    );
+  }
+
+  @override
+  Future<Result<AssistanceIntakeForm>> loadIntakeForm(String serviceCode) {
+    return _gate.respond(
+      AssistanceIntakeForm(
+        serviceCode: serviceCode,
+        serviceName: 'SAMPLE service',
+        narrativePrompt: 'SAMPLE. This form is not sent to the LGU.',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ServiceRequest>> submitRequest({
+    required String serviceCode,
+    required String narrative,
+    required Map<String, Object?> answers,
+    required List<String> consentKeys,
+    required List<String> attachmentIds,
+    required String idempotencyKey,
+  }) => _gate.respond(_request('req-sample-new'));
+
+  @override
+  Future<Result<void>> cancelOwnRequest({
+    required String id,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockAccountControlsRepository implements AccountControlsRepository {
+  MockAccountControlsRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  @override
+  Future<Result<AccountControls>> loadControls() {
+    return _gate.respond(const AccountControls());
+  }
+
+  @override
+  Future<Result<List<ConsentRecord>>> listConsents() {
+    return _gate.respond(<ConsentRecord>[
+      ConsentRecord(
+        key: 'privacy-notice',
+        label: 'Privacy notice',
+        statement: 'SAMPLE consent for Juana Dela Cruz.',
+        grantedAt: mockNow,
+      ),
+    ]);
+  }
+
+  @override
+  Future<Result<ConsentRecord>> withdrawConsent({
+    required String key,
+    required String idempotencyKey,
+  }) {
+    return _gate.respond(
+      ConsentRecord(
+        key: key,
+        label: 'Privacy notice',
+        statement: 'SAMPLE',
+        withdrawnAt: mockNow,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> requestDataCorrection({
+    required String detail,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<void>> requestAccountClosure({
+    required bool permanent,
+    required String reason,
+    required String idempotencyKey,
+  }) => _gate.respond<void>(null);
+}
+
+class MockOfficeMessagingRepository implements OfficeMessagingRepository {
+  MockOfficeMessagingRepository(this._gate);
+
+  final MockBehaviorController _gate;
+
+  OfficeThread _thread(String id) => OfficeThread(
+    id: id,
+    officeId: 'mswdo',
+    officeName: 'MSWDO',
+    topic: 'SAMPLE inquiry',
+    preview: 'A synthetic message from Juana Dela Cruz.',
+    updatedAt: mockNow,
+  );
+
+  @override
+  Future<Result<List<OfficeThread>>> listThreads() {
+    return _gate.respond(<OfficeThread>[_thread('thread-sample-1')]);
+  }
+
+  @override
+  Future<Result<OfficeThread>> loadThread(String threadId) {
+    return _gate.respond(_thread(threadId));
+  }
+
+  @override
+  Future<Result<OfficeMessage>> send({
+    required String officeId,
+    required String topic,
+    required String body,
+  }) {
+    return _gate.respond(
+      OfficeMessage(
+        id: 'msg-sample-1',
+        threadId: 'thread-sample-1',
+        body: body,
+        sentAt: mockNow,
+        fromResident: true,
+      ),
+    );
+  }
+}

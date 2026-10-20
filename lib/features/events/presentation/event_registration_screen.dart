@@ -16,6 +16,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/event_repository.dart';
 import 'event_registration_controller.dart';
 
@@ -103,7 +104,11 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Register'),
+      ),
       body: SafeArea(
         child: switch ((_idIsValid, controller)) {
           (false, _) => _Unavailable(

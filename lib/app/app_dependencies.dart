@@ -10,6 +10,7 @@ import '../core/documents/platform_document_picker.dart';
 import '../core/intent/intent_controller.dart';
 import '../core/links/external_link_service.dart';
 import '../core/links/platform_external_link_service.dart';
+import '../core/mock/mock_behavior.dart';
 import '../core/network/network_monitor.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
@@ -33,6 +34,9 @@ import '../features/events/data/event_api_repository.dart';
 import '../features/events/domain/event_repository.dart';
 import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
+import '../features/messaging/data/office_messaging_gap_repository.dart';
+import '../features/messaging/domain/office_messaging_repository.dart';
+import '../features/mock_data/data/mock/taytay_mocks.dart';
 import '../features/news/data/newsfeed_api_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
 import '../features/notifications/data/notification_api_repository.dart';
@@ -95,9 +99,12 @@ class AppDependencies {
     required this.externalLinks,
     required this.accountControlsRepository,
     required this.platform,
+    this.mockBehavior,
+    OfficeMessagingRepository? officeMessaging,
     this.clock = DateTime.now,
     this.onDispose,
-  });
+  }) : officeMessagingRepository =
+           officeMessaging ?? const OfficeMessagingGapRepository();
 
   /// Builds the production graph.
   ///
@@ -209,8 +216,18 @@ class AppDependencies {
       onOutcome: (failure) => platform.observe(failure),
     );
 
-    final platformRepository = PlatformApiRepository(apiClient: apiClient);
-    final barangayDirectory = BarangayApiRepository(apiClient: apiClient);
+    // Dev mocks stand in only when AppConfig has already accepted the flag.
+    // Staging and production never reach this branch: they refuse to start.
+    final mock = config.usesMockData
+        ? MockBehaviorController.fromConfig(config)
+        : null;
+
+    final PlatformRepository platformRepository = mock == null
+        ? PlatformApiRepository(apiClient: apiClient)
+        : MockPlatformRepository(mock);
+    final BarangayDirectory barangayDirectory = mock == null
+        ? BarangayApiRepository(apiClient: apiClient)
+        : MockBarangayDirectory(mock);
     platform = PlatformController(
       repository: platformRepository,
       telemetry: telemetry,
@@ -225,8 +242,16 @@ class AppDependencies {
     // be broken somewhere: this repository needs `apiClient`, `apiClient` needs
     // `session` for its bearer token, and `session` needs this to withdraw a
     // registration before it discards that token.
-    final notifications = NotificationApiRepository(apiClient: apiClient);
-    session.bindPushRegistration(notifications);
+    late final NotificationRepository notifications;
+    if (mock == null) {
+      final api = NotificationApiRepository(apiClient: apiClient);
+      notifications = api;
+      session.bindPushRegistration(api);
+    } else {
+      final mocked = MockNotificationRepository(mock);
+      notifications = mocked;
+      session.bindPushRegistration(mocked);
+    }
 
     return AppDependencies(
       config: config,
@@ -238,45 +263,50 @@ class AppDependencies {
       cache: publicCache,
       network: network,
       telemetry: telemetry,
-      authRepository: AuthApiRepository(
-        apiClient: apiClient,
-        telemetry: telemetry,
-      ),
-      deviceSessionRepository: SessionApiRepository(apiClient: apiClient),
+      authRepository: mock == null
+          ? AuthApiRepository(apiClient: apiClient, telemetry: telemetry)
+          : MockAuthRepository(mock),
+      deviceSessionRepository: mock == null
+          ? SessionApiRepository(apiClient: apiClient)
+          : MockDeviceSessionRepository(mock),
       platformRepository: platformRepository,
       platform: platform,
-      serviceCatalogRepository: ServiceCatalogApiRepository(
-        apiClient: apiClient,
-      ),
-      programRepository: ProgramApiRepository(apiClient: apiClient),
-      announcementRepository: NewsfeedApiRepository(apiClient: apiClient),
-      eventRepository: EventApiRepository(
-        apiClient: apiClient,
-        telemetry: telemetry,
-      ),
-      // Backed by modules the committed boundary map lists as planned. Each
-      // declines honestly rather than mocking a response.
-      residentProfileRepository: ResidentProfileApiRepository(
-        apiClient: apiClient,
-      ),
-      householdRepository: HouseholdApiRepository(apiClient: apiClient),
-      registrationRepository: PlannedRegistrationRepository(
-        directory: barangayDirectory,
-      ),
+      serviceCatalogRepository: mock == null
+          ? ServiceCatalogApiRepository(apiClient: apiClient)
+          : MockServiceCatalogRepository(mock),
+      programRepository: mock == null
+          ? ProgramApiRepository(apiClient: apiClient)
+          : MockProgramRepository(mock),
+      announcementRepository: mock == null
+          ? NewsfeedApiRepository(apiClient: apiClient)
+          : MockAnnouncementRepository(mock),
+      eventRepository: mock == null
+          ? EventApiRepository(apiClient: apiClient, telemetry: telemetry)
+          : MockEventRepository(mock),
+      // Live builds decline where the contract has no endpoint. A dev mock
+      // build substitutes synthetic fixtures behind the same interfaces.
+      residentProfileRepository: mock == null
+          ? ResidentProfileApiRepository(apiClient: apiClient)
+          : MockProfileRepository(mock),
+      householdRepository: mock == null
+          ? HouseholdApiRepository(apiClient: apiClient)
+          : MockHouseholdRepository(mock),
+      registrationRepository: mock == null
+          ? PlannedRegistrationRepository(directory: barangayDirectory)
+          : MockRegistrationRepository(mock, barangayDirectory),
       barangayDirectory: barangayDirectory,
-      credentialRepository: CredentialApiRepository(apiClient: apiClient),
-      verificationRepository: KycApiRepository(
-        apiClient: apiClient,
-        telemetry: telemetry,
-      ),
-      serviceRequestRepository: AssistanceApiRepository(
-        apiClient: apiClient,
-        telemetry: telemetry,
-      ),
-      requirementRepository: RequirementApiRepository(
-        apiClient: apiClient,
-        telemetry: telemetry,
-      ),
+      credentialRepository: mock == null
+          ? CredentialApiRepository(apiClient: apiClient)
+          : MockCredentialRepository(mock),
+      verificationRepository: mock == null
+          ? KycApiRepository(apiClient: apiClient, telemetry: telemetry)
+          : MockVerificationRepository(mock),
+      serviceRequestRepository: mock == null
+          ? AssistanceApiRepository(apiClient: apiClient, telemetry: telemetry)
+          : MockServiceRequestRepository(mock),
+      requirementRepository: mock == null
+          ? RequirementApiRepository(apiClient: apiClient, telemetry: telemetry)
+          : MockRequirementRepository(mock),
       notificationRepository: notifications,
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent
@@ -288,7 +318,13 @@ class AppDependencies {
       // Defaults to the OS launcher, which refuses anything that is not https.
       // Tests inject `UnavailableExternalLinkService`.
       externalLinks: externalLinks ?? const PlatformExternalLinkService(),
-      accountControlsRepository: PrivacyApiRepository(apiClient: apiClient),
+      accountControlsRepository: mock == null
+          ? PrivacyApiRepository(apiClient: apiClient)
+          : MockAccountControlsRepository(mock),
+      mockBehavior: mock,
+      officeMessaging: mock == null
+          ? const OfficeMessagingGapRepository()
+          : MockOfficeMessagingRepository(mock),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -412,10 +448,18 @@ class AppDependencies {
   /// and it is not this client's to make.
   final AccountControlsRepository accountControlsRepository;
 
+  /// Resident-to-office messages. The live implementation declines (F31).
+  /// A dev mock build supplies synthetic threads.
+  final OfficeMessagingRepository officeMessagingRepository;
+
+  /// Latency and failure for dev mocks. Null on a live build.
+  final MockBehaviorController? mockBehavior;
+
   /// Releases the transport's connection pool, when it owns one.
   final void Function()? onDispose;
 
   void dispose() {
+    mockBehavior?.dispose();
     appLock.dispose();
     session.dispose();
     launch.dispose();

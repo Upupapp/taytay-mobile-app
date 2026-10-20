@@ -19,6 +19,7 @@ import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../../services/domain/lgu_service.dart' show ServerValue;
 import '../domain/resident_requirement.dart';
 import 'requirements_controller.dart';
@@ -99,7 +100,11 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Documents needed')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Documents needed'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.submitRequirements,

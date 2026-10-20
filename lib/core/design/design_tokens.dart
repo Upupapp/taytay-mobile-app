@@ -1,5 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
+
+import 'package:flutter/painting.dart';
 
 /// The Taytay brand palette — the single source of colour truth.
 ///
@@ -44,6 +45,38 @@ abstract final class BrandColors {
   static const Color warning = Color(0xFF8A5A00);
   static const Color danger = Color(0xFFB3261E);
   static const Color info = Color(0xFF1B5EA8);
+
+  /// Light surfaces from the resident mockups. The page is [surface]; cards and
+  /// the welcome sheet sit on [surfaceMuted] or white.
+  static const Color surface = Color(0xFFF3F5FA);
+  static const Color surfaceMuted = Color(0xFFEAF0FB);
+  static const Color surfaceCard = Color(0xFFFFFFFF);
+
+  /// Text greys. [textPrimary] is body and titles. [textSecondary] and
+  /// [textMuted] are supporting copy. All three clear 4.5:1 on [surface].
+  static const Color textPrimary = Color(0xFF0F1A33);
+  static const Color textSecondary = Color(0xFF55607A);
+  static const Color textMuted = Color(0xFF5B6680);
+
+  /// Gold darkened so it can be *text* on a light surface. [sealGold] stays
+  /// accent-only: it is about 1.6:1 on white. This value is the eyebrow gold
+  /// measured on the welcome and sign-in screens (5.6:1 on [surface]).
+  static const Color inkGold = Color(0xFF7A5E0C);
+}
+
+/// Soft shadows for surfaces that float. The colour is the brand navy at low
+/// opacity so a card does not cast a neutral grey that fights the palette.
+///
+/// Depth in Material 3 is still mostly surface tone ([Elevation]). These exist
+/// for the cards and the raised centre tab, where the mockups show a shadow.
+abstract final class TaytayShadows {
+  static const List<BoxShadow> card = <BoxShadow>[
+    BoxShadow(color: Color(0x14062358), blurRadius: 18, offset: Offset(0, 8)),
+  ];
+
+  static const List<BoxShadow> raised = <BoxShadow>[
+    BoxShadow(color: Color(0x24062358), blurRadius: 28, offset: Offset(0, 12)),
+  ];
 }
 
 /// Spacing scale, in logical pixels.
@@ -71,6 +104,14 @@ abstract final class Radii {
   static const double md = 12;
   static const double lg = 16;
   static const double xl = 24;
+
+  /// Bottom sheets. The mockups sit between 22 and 28.
+  static const double sheet = 24;
+  static const double sheetLarge = 28;
+
+  /// The welcome arch. A large continuous corner, not a card radius.
+  static const double arch = 120;
+
   static const double pill = 999;
 }
 
@@ -155,6 +196,11 @@ abstract final class A11y {
   /// and is the floor for every tappable element in this app, including icon
   /// buttons in dense rows.
   static const double minTapTarget = 48;
+
+  /// Visible diameter of the back button. The hit target stays
+  /// [minTapTarget]; the circle is the smaller mark from the mockups, centred
+  /// inside that target (decision D3).
+  static const double backButtonVisual = 44;
 
   /// The app honours the OS text size all the way to this multiplier without
   /// clipping or truncating. Layouts must scroll rather than shrink text; a

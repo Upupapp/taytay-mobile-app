@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 
 /// The resident's Taytay digital ID.
 ///
@@ -25,7 +26,11 @@ class DigitalIdScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Taytay ID')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('My Taytay ID'),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(Spacing.xl),

@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/form_support.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/correctable_field.dart';
 import '../domain/kyc_claim.dart';
 import '../domain/verification_status_detail.dart';
@@ -75,6 +76,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
         title: const Text('Identity verification'),
         actions: <Widget>[
           IconButton(

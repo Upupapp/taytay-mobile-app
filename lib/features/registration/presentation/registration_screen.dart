@@ -12,6 +12,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/form_support.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../data/planned_registration_repository.dart';
 import '../domain/registration_domain.dart';
 import '../domain/registration_validation.dart';
@@ -86,13 +87,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(step.title),
-          leading: _controller.canGoBack
-              ? IconButton(
-                  onPressed: _controller.back,
-                  icon: const Icon(Icons.arrow_back),
-                  tooltip: 'Back',
-                )
-              : null,
+          automaticallyImplyLeading: false,
+          leading: TaytayBackButton(
+            onPressed: _controller.canGoBack ? _controller.back : null,
+          ),
           actions: <Widget>[
             if (step != RegistrationStep.submitting)
               TextButton(

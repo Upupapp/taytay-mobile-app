@@ -12,6 +12,46 @@ import 'app_environment.dart';
 /// base URL, and timeout budgets.
 ///
 /// See CLAUDE.md Article 7.
+/// Where repository data comes from.
+///
+/// `live` talks to the API. `mock` is synthetic fixtures, and only a dev build
+/// may select it (decision D2).
+enum AppDataMode {
+  live('live'),
+  mock('mock');
+
+  const AppDataMode(this.wireValue);
+
+  final String wireValue;
+
+  static AppDataMode? tryParse(String? value) {
+    if (value == null || value.isEmpty) return AppDataMode.live;
+    for (final mode in AppDataMode.values) {
+      if (mode.wireValue == value) return mode;
+    }
+    return null;
+  }
+}
+
+/// How a dev mock responds, so loading and offline states can be shown.
+enum MockFailureMode {
+  none('none'),
+  offline('offline'),
+  server('server');
+
+  const MockFailureMode(this.wireValue);
+
+  final String wireValue;
+
+  static MockFailureMode? tryParse(String? value) {
+    if (value == null || value.isEmpty) return MockFailureMode.none;
+    for (final mode in MockFailureMode.values) {
+      if (mode.wireValue == value) return mode;
+    }
+    return null;
+  }
+}
+
 @immutable
 class AppConfig {
   const AppConfig({
@@ -20,6 +60,9 @@ class AppConfig {
     required this.connectTimeout,
     required this.requestTimeout,
     required this.uploadTimeout,
+    this.dataMode = AppDataMode.live,
+    this.mockFailure = MockFailureMode.none,
+    this.mockLatency = const Duration(milliseconds: 400),
     this.issues = const <ConfigIssue>[],
   });
 
@@ -32,10 +75,16 @@ class AppConfig {
   factory AppConfig.resolve() {
     const rawEnv = String.fromEnvironment(envDefineKey);
     const rawBaseUrl = String.fromEnvironment(apiBaseUrlDefineKey);
+    const rawDataMode = String.fromEnvironment(dataModeDefineKey);
+    const rawMockFailure = String.fromEnvironment(mockFailureDefineKey);
+    const rawMockLatency = String.fromEnvironment(mockLatencyDefineKey);
     return AppConfig.from(
       rawEnvironment: rawEnv,
       rawApiBaseUrl: rawBaseUrl,
       isReleaseBuild: kReleaseMode,
+      rawDataMode: rawDataMode,
+      rawMockFailure: rawMockFailure,
+      rawMockLatencyMs: rawMockLatency,
     );
   }
 
@@ -44,6 +93,9 @@ class AppConfig {
     required String rawEnvironment,
     required String rawApiBaseUrl,
     required bool isReleaseBuild,
+    String rawDataMode = '',
+    String rawMockFailure = '',
+    String rawMockLatencyMs = '',
   }) {
     final issues = <ConfigIssue>[];
 
@@ -103,12 +155,59 @@ class AppConfig {
       }
     }
 
+    final dataMode = AppDataMode.tryParse(rawDataMode);
+    if (dataMode == null) {
+      issues.add(
+        ConfigIssue(
+          '$dataModeDefineKey is "$rawDataMode", which is not live or mock.',
+        ),
+      );
+    }
+    final resolvedDataMode = dataMode ?? AppDataMode.live;
+    if (resolvedDataMode == AppDataMode.mock &&
+        environment != AppEnvironment.dev) {
+      issues.add(
+        ConfigIssue(
+          'Mock data is refused: $dataModeDefineKey=mock is only valid when '
+          '$envDefineKey=dev. A ${environment.wireValue} build must not start '
+          'on synthetic fixtures.',
+        ),
+      );
+    }
+
+    final mockFailure = MockFailureMode.tryParse(rawMockFailure);
+    if (mockFailure == null) {
+      issues.add(
+        ConfigIssue(
+          '$mockFailureDefineKey is "$rawMockFailure", which is not '
+          'none, offline, or server.',
+        ),
+      );
+    }
+    var mockLatency = const Duration(milliseconds: 400);
+    if (rawMockLatencyMs.isNotEmpty) {
+      final parsed = int.tryParse(rawMockLatencyMs);
+      if (parsed == null || parsed < 0 || parsed > 10000) {
+        issues.add(
+          const ConfigIssue(
+            '$mockLatencyDefineKey must be a whole number of milliseconds '
+            'from 0 to 10000.',
+          ),
+        );
+      } else {
+        mockLatency = Duration(milliseconds: parsed);
+      }
+    }
+
     return AppConfig(
       environment: environment,
       apiBaseUri: baseUri ?? Uri.parse(_defaultApiBaseUrl(AppEnvironment.dev)),
       connectTimeout: const Duration(seconds: 15),
       requestTimeout: const Duration(seconds: 30),
       uploadTimeout: const Duration(minutes: 2),
+      dataMode: resolvedDataMode,
+      mockFailure: mockFailure ?? MockFailureMode.none,
+      mockLatency: mockLatency,
       issues: List<ConfigIssue>.unmodifiable(issues),
     );
   }
@@ -120,7 +219,30 @@ class AppConfig {
   /// device testing against a LAN host).
   static const String apiBaseUrlDefineKey = 'TAYTAY_API_BASE_URL';
 
+  /// `--dart-define` key selecting live or mock repositories.
+  ///
+  /// Mock is refused unless [envDefineKey] is `dev`.
+  static const String dataModeDefineKey = 'TAYTAY_DATA';
+
+  /// `--dart-define` key: `none`, `offline`, or `server`. Dev mocks only.
+  static const String mockFailureDefineKey = 'TAYTAY_MOCK_FAILURE';
+
+  /// `--dart-define` key: simulated mock latency in milliseconds.
+  static const String mockLatencyDefineKey = 'TAYTAY_MOCK_LATENCY_MS';
+
   final AppEnvironment environment;
+
+  final AppDataMode dataMode;
+
+  final MockFailureMode mockFailure;
+
+  final Duration mockLatency;
+
+  /// True only for a usable dev build that asked for mocks.
+  bool get usesMockData =>
+      isUsable &&
+      environment == AppEnvironment.dev &&
+      dataMode == AppDataMode.mock;
 
   /// Absolute base URI of the versioned API, including the `/api/v1` prefix.
   /// The version lives in the path per `docs/api/conventions.md` §1.
@@ -148,6 +270,7 @@ class AppConfig {
   @override
   String toString() =>
       'AppConfig(environment: ${environment.wireValue}, '
+      'dataMode: ${dataMode.wireValue}, '
       'apiBaseUri: $apiBaseUri, issues: ${issues.length})';
 }
 

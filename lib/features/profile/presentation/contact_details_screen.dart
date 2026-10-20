@@ -13,6 +13,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/form_support.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../../auth/domain/sign_in_challenge.dart';
 import '../domain/profile_fields.dart';
 import '../domain/resident_profile_detail.dart';
@@ -160,7 +161,11 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
         ResidentProfileField.ownedBy(FieldOwnership.accountOwned);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Your account details')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Your account details'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.manageAccount,

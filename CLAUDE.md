@@ -38,7 +38,7 @@ the wrong repository.
 
 | Source | Standing |
 | --- | --- |
-| **Taytay LGU IDS backend + its OpenAPI/API conventions** | **Authoritative.** The contract, the schema, and every authorization decision. |
+| **Taytay LGU IDS backend** (`Upupapp/taytay-backend`) | **Authoritative.** Clarence Taytay's Node.js API: Firebase Auth only, everything else on Linode. The contract, the schema, and every authorization decision. The PHP tables in `docs/integration/backend-baseline.md` are the historical contract this client still speaks until each repository is re-pointed. Until an endpoint exists, the client mocks behind the repository interface, and only in a dev build. |
 | Esperanza-Mobile | Reference **only** for resident function and onboarding flow. Not a source of API shape or brand. |
 | ServanaClientAPP | Reference **only** for design, motion and haptics craft. Not a source of product decisions. |
 | Any other app in the workspace | Not a source. Do not copy business rules from it. |
@@ -126,8 +126,11 @@ These mirror the backend constitution (Article 3) and ADR 0002, from the client 
    `AccessPolicy` exist for routing and explanation. If every one of them were deleted, the
    system would be less pleasant and exactly as secure.
 3. **Never send an authority-shaped value.** No role, permission list, `is_admin`, tier or
-   scope is ever put in a request. The server ignores such values by design; sending them
-   invites a future reader to believe they matter.
+   scope is ever put in a request as its own field. The server ignores such values by
+   design; sending them invites a future reader to believe they matter. The Node API's
+   development credential is the single string `mock:<role>:<id>` inside
+   `Authorization: Bearer`. That segment is the credential the server defined, and this
+   app mints only the resident role. Staging and production do not mint it.
 4. **`X-Client-Channel: citizen-mobile` is telemetry only.** It is sent for audit and
    presentation defaults. It grants nothing.
 5. **Session expiry is a server verdict.** A `401` is the single signal that ends a
@@ -154,6 +157,8 @@ These mirror the backend constitution (Article 3) and ADR 0002, from the client 
   email and printed QR codes; an unvalidated `?from=` is an open redirect.
 * While the session is restoring, protected routes **wait** — they never resolve to
   "signed out". Deciding early signs a returning resident out on every cold start.
+* **Every non-root route shows `TaytayBackButton`.** The visible circle is 44 dp
+  inside a 48 dp target. Shell roots do not. A test walks the route table.
 
 ---
 
@@ -197,8 +202,10 @@ its components ship correct semantics and focus indicators, and it responds to s
 scaling and high-contrast settings without per-widget work.
 
 * **All colour comes from `BrandColors` via the `ColorScheme`.** A widget that hard-codes a
-  colour bypasses dark mode and high-contrast handling. Dark mode is an accessibility
-  feature, not a preference to postpone.
+  colour bypasses dark mode and high-contrast handling. **Light mode is what the app
+  shows now** (decision D9). `ThemeData` for dark stays built so contrast tests and the
+  later dark-scheme pass have a scheme to check. Dark mode remains an accessibility
+  feature; it is sequenced, not dropped.
 * **Contrast:** body text meets WCAG 2.2 AA (4.5:1), large text and meaningful graphics
   meet 3:1. Enforced by tests over the real theme, not by eye.
 * **Tap targets are at least 48×48 dp**, satisfying both Material guidance and WCAG 2.2
@@ -211,8 +218,14 @@ scaling and high-contrast settings without per-widget work.
 * **Haptics are never the only signal**, never fire on typing or passive scrolling, never
   repeat per retry, and never throw. They are declared by intent (`HapticIntent`), not by
   strength.
-* **No runtime-downloaded fonts.** A font fetched from a third-party CDN is an avoidable
-  data disclosure and renders unstyled text on the weak connections many residents have.
+* **The typeface is Plus Jakarta Sans, bundled** (weights 400–800, SIL OFL 1.1). No
+  runtime download and no `google_fonts` package. A font fetched from a third-party CDN
+  is an avoidable data disclosure and renders unstyled text on the weak connections
+  many residents have.
+* **Icons are the vendored Lucide font, drawn only through `TaytayIcon`**, which
+  requires a semantic label.
+* **The back control is a 44 dp circle inside a 48 dp target** (`A11y.backButtonVisual`,
+  `A11y.minTapTarget`).
 
 ---
 
@@ -222,9 +235,17 @@ scaling and high-contrast settings without per-widget work.
   There is no in-app environment switcher — a build that can be re-pointed after shipping
   has no auditable API target, and it is how staging data reaches a public release.
 * `--dart-define=TAYTAY_API_BASE_URL` overrides the base URL for local and LAN testing.
+* **Mocks are a second compile-time flag, and only for dev.**
+  `--dart-define=TAYTAY_DATA=mock` is honoured when `TAYTAY_ENV=dev`. Staging and
+  production **refuse to start** if mock data is selected. `TAYTAY_MOCK_FAILURE` and
+  `TAYTAY_MOCK_LATENCY_MS` tune that dev mock. Fixtures are synthetic.
+* **Dev authentication against the Node API** is `Authorization: Bearer mock:<role>:<id>`.
+  The success envelope is `{ data, meta }`. A failure is
+  `{ error: { code, message, details, request_id } }`. The resident never sees `message`.
 * `AppConfig` **validates and refuses**: a release build with no declared environment,
-  cleartext HTTP outside dev, credentials embedded in a URL, or a query string on the base
-  URL each produce a blocking startup screen instead of a silent fallback.
+  cleartext HTTP outside dev, credentials embedded in a URL, a query string on the base
+  URL, or mock data outside dev, each produce a blocking startup screen instead of a
+  silent fallback.
 * Non-production builds show an environment banner, so a staging build is never mistaken
   for the real thing during LGU acceptance testing.
 
@@ -266,11 +287,10 @@ A change is done when:
 
 ## Article 10 — Operational prohibitions for agents
 
-**Pushing to `main` is authorised by the owner; production is not.** Direct pushes to
-`main`, no pull request and no required review — the owner asked for that explicitly. The
-same rule stands in `taytay-backend` (Article 9) and `taytay-admin-web` (section 2, rule 9),
-so all three repositories in this programme now agree. Do not infer a rule for one from
-another regardless: read the `CLAUDE.md` of the repository you are in.
+**No direct push to `main`, and no merge, without Paul's written approval.** Decision D10,
+recorded 2026-10-20, narrows an earlier authorisation of direct pushes. A change lands
+through a pull request on its own branch. Do not infer a different rule from
+`taytay-backend` or `taytay-admin-web`: read the `CLAUDE.md` of the repository you are in.
 
 **This repository is public, so a push is a publication.** Article 9's gate — `flutter
 analyze` clean and `flutter test` passing — runs before one, and anything committed is
