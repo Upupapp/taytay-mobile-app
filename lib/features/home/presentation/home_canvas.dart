@@ -674,17 +674,24 @@ class _StatusCard extends StatelessWidget {
               constraints: largeText
                   ? const BoxConstraints(minWidth: 48, minHeight: 48)
                   : null,
+              // Design padding is 14. A border on the background decoration
+              // is added to that padding and the label ellipsizes. The
+              // stroke is painted in front, the same way the design's
+              // inset shadow sits on the padding.
               padding: const EdgeInsets.symmetric(horizontal: 14),
               alignment: Alignment.center,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: Colors.white,
+                borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              foregroundDecoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: BrandColors.taytayBlue, width: 1.5),
               ),
               child: const Text(
                 'Create account',
                 maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                softWrap: false,
                 style: _account,
               ),
             ),

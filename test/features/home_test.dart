@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
@@ -468,6 +469,46 @@ void main() {
       expect(find.text('Sign in'), findsWidgets);
       expect(find.text('Create account'), findsOneWidget);
       expect(find.text('Ano ang kailangan mo?'), findsOneWidget);
+    });
+
+    testWidgets('Create account is the full label on one line', (tester) async {
+      await bootHome(tester, size: const Size(390, 844));
+
+      final Text label = tester.widget<Text>(find.text('Create account'));
+      expect(label.style?.fontSize, 14);
+      expect(label.style?.fontWeight, FontWeight.w800);
+      expect(label.overflow, isNot(TextOverflow.ellipsis));
+      expect(label.maxLines, 1);
+
+      final RenderParagraph paragraph = tester.renderObject<RenderParagraph>(
+        find.text('Create account'),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(paragraph.text.toPlainText(), 'Create account');
+      // The full label is one line, and its glyphs sit inside the button.
+      final List<TextBox> boxes = paragraph.getBoxesForSelection(
+        const TextSelection(baseOffset: 0, extentOffset: 14),
+      );
+      expect(boxes, isNotEmpty);
+      expect(boxes.map((TextBox box) => box.top.round()).toSet(), hasLength(1));
+      final double right = boxes
+          .map((TextBox box) => box.right)
+          .reduce((double a, double b) => a > b ? a : b);
+      expect(right, lessThanOrEqualTo(paragraph.size.width + 0.01));
+      expect(
+        paragraph.size.width + 0.01,
+        greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)),
+      );
+
+      final Padding padding = tester.widget<Padding>(
+        find
+            .ancestor(
+              of: find.text('Create account'),
+              matching: find.byType(Padding),
+            )
+            .first,
+      );
+      expect((padding.padding as EdgeInsets).horizontal, 28);
     });
 
     testWidgets('the sign-in invitation is present but not coercive', (

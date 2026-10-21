@@ -163,14 +163,14 @@ The line measure counts every dark run from the top of the frame. A run is a row
 | --- | --- | --- | --- |
 | 04-01 Home, verified | 18 / 18 | 2 | 5.62% (166607/2962440) |
 | 04-02 Home, unverified | 16 / 16 | 2 | 5.92% (175238/2962440) |
-| 04-03 Guest home | 14 / 14 | 2 | 5.87% (173770/2962440) |
+| 04-03 Guest home | 14 / 14 | 2 | 5.79% (171467/2962440) |
 | 04-04 Hotlines | 14 / 14 | 2 | 3.24% (95903/2962440) |
 | 04-05 Pull to refresh | 11 / 11 | 2 | 3.87% (114518/2962440) |
 | 04-06 Banner, Tulong | 18 / 18 | 2 | 5.47% (162052/2962440) |
 | 04-07 Banner, Directory | 18 / 18 | 2 | 6.10% (180601/2962440) |
 | 04-08 Notifications | 26 / 26 | 2 | 4.20% (124472/2962440) |
 
-On guest home the wordmark reads BAYAN NG TAYTAY in full, at letter-spacing 2.2. Sign in is the label plus 16 dp of horizontal padding, 44 dp tall. Create account is the label plus 14 dp, also 44 dp tall. Both keep a 48 dp hit. The guest title stays on one line. The sub-line is 12/500 with line-height 1.5 and a 2 dp gap under the title, and the tile uses the Lucide user glyph. The unverified hero sits on the design row: the spacer under the pending card is 14 dp plus two thirds of a logical pixel, which is 2 device px. S4 is still not approved.
+On guest home the wordmark reads BAYAN NG TAYTAY in full, at letter-spacing 2.2. Sign in is the label plus 16 dp of horizontal padding, 44 dp tall. Create account is the full label at 14/800 plus 14 dp of horizontal padding, also 44 dp tall, on one line. The 1.5 dp stroke is painted in front of that padding. Both keep a 48 dp hit. The guest title stays on one line. The sub-line is 12/500 with line-height 1.5 and a 2 dp gap under the title, and the tile uses the Lucide user glyph. The unverified hero sits on the design row: the spacer under the pending card is 14 dp plus two thirds of a logical pixel, which is 2 device px. S4 is still not approved.
 
 The wordmark row sits 2 dp lower than the previous capture. The gap under it is 2 dp shorter, so the lines below the header stay put. Each capture frame has its own key, so `04-06` is the Tulong slide and `04-07` is the Directory slide. The hero photograph occupies the right 58% of the card. Its focus is centre 35%, 30%, and 60% on the three slides. The navy overlay and the gold arc stay. The eyebrow icons are newspaper, hand-heart, and briefcase. Directory uses Lucide building-2 and Tulong uses hand-heart, in the tab bar and on the quick tiles. The tab word is `navTulong`. The page background has the design's top-right gold radial, about 16% opacity, spreading 120% by 60% from the corner. The refresh screen does not. `04-04` and `04-08` keep their back buttons: every page has one, and the designs will be updated to match.
 
