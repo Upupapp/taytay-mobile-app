@@ -453,7 +453,7 @@ class _ShieldMark extends StatelessWidget {
       children: <Widget>[
         Positioned(
           left: 111,
-          top: 132,
+          top: 128.3,
           width: 180,
           height: 180,
           child: Transform.rotate(
@@ -468,7 +468,7 @@ class _ShieldMark extends StatelessWidget {
         ),
         const Positioned(
           left: 105,
-          top: 126,
+          top: 122.3,
           width: 180,
           height: 180,
           child: DecoratedBox(
@@ -526,7 +526,7 @@ class _SubmittedMark extends StatelessWidget {
       children: <Widget>[
         Positioned(
           left: 98,
-          top: 133,
+          top: 130,
           width: 180,
           height: 190,
           child: Transform.rotate(
@@ -545,7 +545,7 @@ class _SubmittedMark extends StatelessWidget {
         ),
         const Positioned(
           left: 105,
-          top: 126,
+          top: 123,
           width: 180,
           height: 190,
           child: DecoratedBox(
@@ -591,6 +591,8 @@ class _SubmittedMark extends StatelessWidget {
                 ? "You're all set!"
                 : "You're all set, $name!",
             titleSize: 28,
+            subtitleHeight: 1.53,
+            subtitleDy: 1,
             centered: true,
             subtitle:
                 'Your account is created and your details were sent to '
@@ -866,6 +868,9 @@ class AuthCopy extends StatelessWidget {
     this.titleSize = 24,
     this.subtitleSize = 13,
     this.centered = false,
+    this.titleDy = 0,
+    this.subtitleHeight = 1.5,
+    this.subtitleDy = 0,
     super.key,
   });
 
@@ -875,6 +880,12 @@ class AuthCopy extends StatelessWidget {
   final double titleSize;
   final double subtitleSize;
   final bool centered;
+
+  /// Shifts the title ink without moving the subtitle. Large titles sit low
+  /// against the design's glyph box.
+  final double titleDy;
+  final double subtitleHeight;
+  final double subtitleDy;
 
   @override
   Widget build(BuildContext context) {
@@ -903,26 +914,32 @@ class AuthCopy extends StatelessWidget {
         const SizedBox(height: 6),
         Semantics(
           header: true,
-          child: Text(
-            title,
-            textAlign: centered ? TextAlign.center : TextAlign.start,
-            style: AppTypography.h1SignIn.copyWith(
-              fontSize: titleSize,
-              color: BrandColors.taytayBlueDark,
+          child: Transform.translate(
+            offset: Offset(0, titleDy),
+            child: Text(
+              title,
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: AppTypography.h1SignIn.copyWith(
+                fontSize: titleSize,
+                color: BrandColors.taytayBlueDark,
+              ),
             ),
           ),
         ),
         if (subtitle != null) ...<Widget>[
           const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            textAlign: centered ? TextAlign.center : TextAlign.start,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: subtitleSize,
-              fontWeight: AppTypography.body,
-              height: 1.5,
-              color: const Color(0xFF4A5470),
+          Transform.translate(
+            offset: Offset(0, subtitleDy),
+            child: Text(
+              subtitle!,
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: subtitleSize,
+                fontWeight: AppTypography.body,
+                height: subtitleHeight,
+                color: const Color(0xFF4A5470),
+              ),
             ),
           ),
         ],

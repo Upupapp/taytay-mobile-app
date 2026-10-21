@@ -246,7 +246,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10.33),
           Row(
             children: <Widget>[
               Flexible(
@@ -318,7 +318,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 13.67),
           PrimaryButton(
             kind: TaytayButtonKind.signIn,
             label: _view.expired
@@ -330,7 +330,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                 ? _resend
                 : _verify,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const Text(
             'Valid ang code nang 10 minuto. May 5 subok ka bawat code.',
             textAlign: TextAlign.center,
@@ -509,7 +509,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
             onToggle: () => setState(() => _showPassword = !_showPassword),
             onChanged: () => setState(() => _matchError = null),
           ),
-          SizedBox(height: expired ? 5 : 6),
+          SizedBox(height: expired ? 5 : 5),
           PasswordRules(
             password: widget.fixture == SetPasswordFixture.live
                 ? password
@@ -529,7 +529,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
           ),
           if (mismatch)
             const Padding(
-              padding: EdgeInsets.only(top: 5),
+              padding: EdgeInsets.only(top: 1),
               child: Text(
                 'Hindi tugma ang password. Pakiulit.',
                 style: TextStyle(
@@ -553,13 +553,13 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 ),
               ),
             ),
-          SizedBox(height: expired ? 19 : 16),
+          SizedBox(height: expired ? 19 : 19),
           PrimaryButton(
             kind: TaytayButtonKind.signIn,
             label: expired ? 'Humingi ng bagong code' : 'I-save ang password',
             onPressed: _busy ? null : _save,
           ),
-          SizedBox(height: expired ? 20 : 22),
+          SizedBox(height: expired ? 20 : 19.67),
           AuthTextLink(
             'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
@@ -671,7 +671,7 @@ class PasswordUpdatedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool short = MediaQuery.sizeOf(context).height < 800;
     const Widget sheet = Padding(
-      padding: EdgeInsets.fromLTRB(18, 14, 18, 18),
+      padding: EdgeInsets.fromLTRB(18, 17.7, 18, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -695,7 +695,7 @@ class PasswordUpdatedScreen extends StatelessWidget {
                     color: Color(0xFF062358),
                   ),
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: 3.3),
                 Text(
                   'Kung hindi ikaw ang nagpalit ng password, tumawag sa '
                   'Municipal Hall o pumunta sa MSWDO.',
@@ -727,6 +727,8 @@ class PasswordUpdatedScreen extends StatelessWidget {
         subtitle:
             'Gamitin ang bagong password sa susunod mong pag-sign in sa Taytay LGUIDS.',
         titleSize: 28,
+        subtitleHeight: 1.53,
+        subtitleDy: 1,
         centered: true,
       ),
       footer: PrimaryButton(

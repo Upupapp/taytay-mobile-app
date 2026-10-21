@@ -204,7 +204,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               label: 'Send reset code',
               onPressed: _controller?.busy == true ? null : _send,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 11),
             const Text(
               "For your security, we don't say whether an account exists "
               'for this address.',
@@ -212,6 +212,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               style: TextStyle(
                 fontFamily: AppTypography.fontFamily,
                 fontSize: 11,
+                height: 1.22,
                 fontWeight: AppTypography.body,
                 color: Color(0xFF5B6680),
               ),

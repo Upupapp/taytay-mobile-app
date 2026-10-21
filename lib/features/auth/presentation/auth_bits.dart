@@ -47,7 +47,7 @@ class AuthNoticeBanner extends StatelessWidget {
     return Semantics(
       liveRegion: true,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        padding: const EdgeInsets.fromLTRB(12, 9.33, 12, 10.67),
         decoration: BoxDecoration(
           color: amber ? const Color(0xFFFFF4D6) : const Color(0xFFFDECEC),
           borderRadius: BorderRadius.circular(12),

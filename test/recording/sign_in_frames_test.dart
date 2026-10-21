@@ -262,6 +262,45 @@ void main() {
     expect(index, 56);
   });
 
+  testWidgets('reset frames for the flow recording', (tester) async {
+    final out = Directory('/tmp/s2_reset_frames');
+    if (out.existsSync()) out.deleteSync(recursive: true);
+    out.createSync(recursive: true);
+    final frames = <Widget>[
+      const ForgotPasswordScreen(key: ValueKey('reset-0'), fixture: true),
+      const ResetCodeScreen(
+        key: ValueKey('reset-1'),
+        fixture: ResetCodeFixture.sample,
+      ),
+      const SetPasswordScreen(
+        key: ValueKey('reset-2'),
+        fixture: SetPasswordFixture.mismatch,
+      ),
+      const SetPasswordScreen(
+        key: ValueKey('reset-3'),
+        fixture: SetPasswordFixture.expired,
+      ),
+      const PasswordUpdatedScreen(key: ValueKey('reset-4')),
+      const TooManyAttemptsScreen(
+        key: ValueKey('reset-5'),
+        fixture: TooManyFixture.waiting,
+      ),
+      const TooManyAttemptsScreen(
+        key: ValueKey('reset-6'),
+        fixture: TooManyFixture.ready,
+      ),
+    ];
+    var index = 0;
+    for (final frame in frames) {
+      for (var hold = 0; hold < 8; hold++) {
+        final name = index.toString().padLeft(4, '0');
+        await _paint(tester, frame, '${out.path}/f_$name.png');
+        index++;
+      }
+    }
+    expect(index, 56);
+  });
+
   testWidgets('wizard flow with motion and taps', (tester) async {
     final out = Directory('/tmp/s2_wizard_motion');
     if (out.existsSync()) out.deleteSync(recursive: true);
