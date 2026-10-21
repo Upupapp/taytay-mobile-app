@@ -75,13 +75,16 @@ class ScriptedAnnouncementRepository implements AnnouncementRepository {
   Map<int, dynamic> pages;
 
   final List<int> requestedPages = <int>[];
+  final List<String?> requestedCategories = <String?>[];
 
   @override
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int perPage = 20,
+    String? category,
   }) async {
     requestedPages.add(page);
+    requestedCategories.add(category);
     final scripted = pages[page];
     if (scripted is Paginated<Announcement>) {
       return Ok<Paginated<Announcement>>(scripted);
@@ -95,6 +98,10 @@ class ScriptedAnnouncementRepository implements AnnouncementRepository {
   @override
   Future<Result<Announcement>> loadAnnouncement(String id) async =>
       const Err<Announcement>(NotFoundFailure());
+
+  @override
+  Future<Result<void>> saveArticle(String id) async =>
+      const Err<void>(ServerFailure(isTemporary: true));
 
   // The feed never interacts with a post — TAB 20's detail screen does. These
   // decline so a stray call in a feed test would fail loudly.
@@ -462,6 +469,21 @@ void main() {
         expect(repository.requestedPages, <int>[1]);
       },
     );
+
+    test('a chip is sent as category and Lahat clears it', () async {
+      final repository = ScriptedAnnouncementRepository(
+        pages: <int, dynamic>{
+          1: pageOf(<Announcement>[post(category: 'Advisory')]),
+        },
+      );
+      final controller = NewsFeedController(repository: repository);
+      addTearDown(controller.dispose);
+
+      await controller.applyCategory('Advisory');
+      await controller.applyCategory('Lahat');
+
+      expect(repository.requestedCategories, <String?>['Advisory', null]);
+    });
   });
 
   group('the feed screen', () {
@@ -591,8 +613,10 @@ void main() {
         ),
       );
 
-      expect(find.text('12'), findsOneWidget);
-      expect(find.text('3'), findsOneWidget);
+      // The news contract publishes no reaction or comment counts. The list
+      // does not invent them.
+      expect(find.text('12'), findsNothing);
+      expect(find.text('3'), findsNothing);
     });
 
     testWidgets('the byline names the office, the category and the date', (
@@ -608,12 +632,14 @@ void main() {
       );
 
       expect(
-        find.text('Taytay Public Information Office · Community · 10 Aug 2026'),
+        find.text('COMMUNITY · Taytay Public Information Office · 10 Aug 2026'),
         findsOneWidget,
       );
     });
 
-    testWidgets('the end of the feed is stated', (tester) async {
+    testWidgets('the list does not invent an end-of-feed sentence', (
+      tester,
+    ) async {
       await bootNews(
         tester,
         repository: ScriptedAnnouncementRepository(
@@ -623,9 +649,10 @@ void main() {
         ),
       );
 
+      expect(find.text('Barangay clean-up drive'), findsOneWidget);
       expect(
         find.text('That is everything Taytay LGU has published here.'),
-        findsOneWidget,
+        findsNothing,
       );
     });
 
@@ -702,7 +729,6 @@ void main() {
         );
       }
       expect(find.byType(FloatingActionButton), findsNothing);
-      // The only tappable thing on a card is the card itself.
       expect(find.byType(FilledButton), findsNothing);
     });
 

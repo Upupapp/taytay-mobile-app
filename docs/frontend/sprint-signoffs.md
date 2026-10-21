@@ -10,7 +10,8 @@ This file records that the words were looked for. It does not invent them.
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
-| S5 Directory | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/7 | cb8ae2d329333fa25c3a19860415c94cf28c6350 | No approval words. |
+| S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
+| S6 Balita | In review, not approved | | | No approval words. |
 
 ## S0 pixel match
 
@@ -224,6 +225,43 @@ The frame for `05-04` still reads the fixture's `day` field. The live thread scr
 The offline saved list is a fixed emergency default: MDRRMO, then MSWDO. It is not read from storage and it is not the last list the phone fetched.
 
 Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1277487 bytes, 78 frames), and `s5-gate.mp4` (845421 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in, with the Lucide log-in mark on the button. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
+
+## S6 Balita
+
+S6 is not approved. This section records the capture. It does not record approval words.
+
+Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article page keeps the shell tab bar and has one back button. This app does not call `POST /news` or `PATCH /news/{id}`.
+
+One `BalitaCanvas` paints the feed, a category filter, an empty category, an empty feed, the loading bones, the failed state, and the article. A dev mock reads `test/fixtures/mock/announcements.json`. Every other build reads `GET /news` and `GET /news/{id}`. Lahat sends no `category`. The other chips send the chip string as `category`. The list follows `meta.pagination.next_cursor`.
+
+The line measure counts every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. Pairing is in order. Side-by-sides are design | render | heat in `test/goldens/compare/s6/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The photographs stay in the count. `lib/features/news` contains no `Transform.translate`.
+
+| Screen | Lines (build / design) | Max deviation | Mismatch |
+| --- | --- | --- | --- |
+| 06-01 News feed | 19 / 19 | 1.33 | 9.47% (280610/2962440) |
+| 06-02 Article, PWD | 18 / 18 | 1.67 | 4.10% (121596/2962440) |
+| 06-03 Advisories filter | 24 / 24 | 1.67 | 6.85% (203058/2962440) |
+| 06-04 Empty category | 11 / 11 | 0.67 | 2.09% (61988/2962440) |
+| 06-05 Loading | 6 / 6 | 0.33 | 6.34% (187782/2962440) |
+| 06-06 Article, RPT | 19 / 19 | 1.00 | 3.54% (104761/2962440) |
+| 06-07 Article, BOSS | 19 / 19 | 1.33 | 3.45% (102295/2962440) |
+| 06-08 Article, SMILE | 18 / 18 | 1.00 | 3.39% (100457/2962440) |
+
+The designed frames are specimens. `06-03` paints the pinned advisory, the RPT card, the SMILE card, and the weather sample together. A live Advisory filter is category equality and does not invent that mix. Pins, cover assets, photo credit, a lead, fact rows, and the sample tag live on `BalitaPresentation`, and only the fixture sets them. A live article with no presentation shows the body.
+
+The OpenAPI at `90aa39e` does not publish these, and this app does not invent them:
+
+- A public cover URL. `NewsItem` has `cover_media_id`. `GET /media/{id}` returns `MediaMeta` with no url, and another resident receives 404. The fixture uses bundled photographs. A live article has no image.
+- A bookmark. The design has Save. There is no `POST /news/{id}/saves`. `saveArticle` returns the F32 gap and makes no request. The resident sees "Saving a story is not available yet."
+- A share URL. `share_url` is not on `NewsItem`. Share sends the title and the preview, plus "From Taytay LGU". It does not compose a URL from the host and the id. A URL is included only when the server sent one.
+- An office display name. `NewsItem` has `office_slug`. `GET /offices` and `GET /offices/{slug}` can supply the name. The fixture sets the design's office name. A live card shows the author when the server sent one, otherwise the slug.
+- A pin. `NewsItem` has no pin field. The `06-03` banner is fixture-only (`pinned_title` and `pinned_body`). A live filter does not invent a pin.
+- A separate summary, lead, fact rows, photo credit, and cover asset. Those are `BalitaPresentation`. A live card uses the preview (summary, or the body when summary is absent). The detail shows the body.
+- A category catalogue. The chips are the design's set: Lahat, Abiso, Advisory, Negosyo, Safety, Events.
+
+Comments, reactions, and reports stay off the article page. Those calls still decline. The not-available copy is unchanged: "This announcement is not available" and "See all announcements". The bell goes to sign-in for a guest and to notifications for a signed-in resident. `test/features/s6_balita_test.dart` asserts a 48 dp hit on the bell, Save, Share, a card, the back button, and See all announcements. Icons are Lucide.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (1078187 bytes, 29 frames) and `s6-filter.mp4` (506703 bytes, 27 frames). The article clip opens the PWD story and comes back to that card. The filter clip opens Events, taps See all announcements, and comes back to the feed. `flutter analyze` was clean. `flutter test` passed 1614 tests, with 11 skipped (the recording and live tags).
 
 ## Contract gaps after the Node OpenAPI
 

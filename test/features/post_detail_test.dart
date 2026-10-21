@@ -6,7 +6,6 @@ import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
-import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -17,6 +16,7 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/post_detail_controller.dart';
+import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 
@@ -193,9 +193,14 @@ class ScriptedPostRepository implements AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int perPage = 20,
+    String? category,
   }) async => Ok<Paginated<Announcement>>(
     Paginated<Announcement>.single(<Announcement>[?detail]),
   );
+
+  @override
+  Future<Result<void>> saveArticle(String id) async =>
+      const Err<void>(ServerFailure(isTemporary: true));
 }
 
 /// Records what was handed to the OS.
@@ -375,146 +380,27 @@ void main() {
     });
   });
 
-  group('reporting a comment — F26', () {
-    testWidgets(
-      'Report is offered on somebody else\'s comment, never on your own',
-      (tester) async {
-        await bootPost(
-          tester,
-          detail: post(comments: 2),
-          comments: <PostComment>[
-            comment(id: 'c-1', body: 'Somebody else wrote this.'),
-            comment(id: 'c-2', body: 'I wrote this.', isMine: true),
-          ],
-        );
-
-        // One Report and one Delete: the author already has Delete, which is
-        // immediate and needs nobody, and the server refuses a self-report — so a
-        // Report control on your own comment is one that always fails.
-        expect(find.text('Report'), findsOneWidget);
-        expect(find.text('Delete'), findsOneWidget);
-      },
-    );
-
-    testWidgets('the reasons are the five, with no other and no text box', (
-      tester,
-    ) async {
+  group('the article page offers no comment surface', () {
+    testWidgets('report and delete are not on the page', (tester) async {
       await bootPost(
         tester,
-        detail: post(comments: 1),
-        comments: <PostComment>[comment()],
+        detail: post(),
+        comments: <PostComment>[
+          comment(id: 'c-1', body: 'Somebody else wrote this.'),
+          comment(id: 'c-2', body: 'I wrote this.', isMine: true),
+        ],
       );
 
-      await tester.tap(find.text('Report'));
-      await tester.pumpAndSettle();
-
-      for (final ReportReason reason in ReportReason.values) {
-        expect(find.text(reason.label), findsOneWidget, reason: reason.name);
-      }
-
-      // No "other", and therefore no box under it — which is where a resident
-      // types a neighbour's name and address into a municipal record.
-      //
-      // Scoped to the sheet. An unscoped `findsNothing` for TextField finds the
-      // post's own comment box on the screen underneath and fails for a reason
-      // that has nothing to do with reporting.
-      final Finder sheet = find.byType(BottomSheet);
-      expect(
-        find.descendant(of: sheet, matching: find.textContaining('Other')),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: sheet, matching: find.byType(TextField)),
-        findsNothing,
-      );
-    });
-
-    testWidgets('the sheet says what a report does and does not do', (
-      tester,
-    ) async {
-      await bootPost(
-        tester,
-        detail: post(comments: 1),
-        comments: <PostComment>[comment()],
-      );
-
-      await tester.tap(find.text('Report'));
-      await tester.pumpAndSettle();
-
-      // Both halves matter. "Nothing is removed automatically" stops a resident
-      // expecting a comment to vanish; "the person is not told who reported it"
-      // is what makes reporting a neighbour on a municipal feed safe to do.
-      expect(find.textContaining('Nothing is removed'), findsOneWidget);
-      expect(find.textContaining('not told who'), findsOneWidget);
-    });
-
-    testWidgets('choosing a reason sends it and confirms', (tester) async {
-      await bootPost(
-        tester,
-        detail: post(comments: 1),
-        comments: <PostComment>[comment()],
-      );
-
-      await tester.tap(find.text('Report'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(ReportReason.spam.label));
-      await tester.pumpAndSettle();
-
-      // Scoped to the SnackBar: the sample comment body is "Thank you for the
-      // update.", so an unscoped match finds the comment being reported.
-      expect(
-        find.descendant(
-          of: find.byType(SnackBar),
-          matching: find.textContaining('Taytay LGU staff will look'),
-        ),
-        findsOneWidget,
-      );
-    });
-  });
-
-  group('reporting a comment — F26, the failure path', () {
-    testWidgets('a report that never reached the server says so', (
-      tester,
-    ) async {
-      await bootPost(
-        tester,
-        detail: post(comments: 1),
-        comments: <PostComment>[comment()],
-        reportOutcome: const Err<void>(NetworkFailure()),
-      );
-
-      await tester.tap(find.text('Report'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text(ReportReason.abusive.label));
-      await tester.pumpAndSettle();
-
-      /*
-       * THE WHOLE REASON F26 WAS FILED AS A BLOCKER RATHER THAN A NICETY.
-       *
-       * A report button that silently does nothing is worse than an absent one,
-       * because a resident who has just seen something abusive believes they
-       * have told the municipality. That is true of a declining backend and
-       * equally true of a dropped connection.
-       *
-       * This test was written after a guard proof: hardcoding the confirmation
-       * to "sent" changed nothing, because every existing test used a stub that
-       * succeeds. The failure path had no coverage at all.
-       */
-      final Finder snack = find.byType(SnackBar);
-      expect(
-        find.descendant(
-          of: snack,
-          matching: find.textContaining('Could not send'),
-        ),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: snack,
-          matching: find.textContaining('Taytay LGU staff will look'),
-        ),
-        findsNothing,
-      );
+      // The controller still records a report. The page does not offer one:
+      // the news contract has nowhere to put it, and a button that cannot
+      // land is worse than no button.
+      expect(find.text('Report'), findsNothing);
+      expect(find.text('Delete'), findsNothing);
+      expect(find.text('Post comment'), findsNothing);
+      expect(find.byType(FilterChip), findsNothing);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Classes suspended tomorrow'), findsOneWidget);
+      expect(find.text('Somebody else wrote this.'), findsNothing);
     });
   });
 
@@ -755,219 +641,57 @@ void main() {
     });
   });
 
-  group('guest gating preserves the action — acceptance 3', () {
-    testWidgets('a guest tapping a reaction meets the gate', (tester) async {
-      final booted = await bootPost(
-        tester,
-        level: AccessLevel.guest,
-        detail: post(),
-      );
-
-      await tester.tap(find.widgetWithText(FilterChip, 'Like'));
-      await tester.pumpAndSettle();
-
-      expect(find.byType(BottomSheet), findsOneWidget);
-      expect(
-        booted.dependencies.intents.pending?.kind,
-        ResidentIntentKind.likePost,
-      );
-      // And the gate did not act on their behalf.
-      expect(booted.posts.setReactionCalls, 0);
-    });
-
-    testWidgets('a guest tapping post-comment meets the gate', (tester) async {
-      final booted = await bootPost(
-        tester,
-        level: AccessLevel.guest,
-        detail: post(),
-      );
-
-      await tester.enterText(find.byType(TextField), 'Salamat');
-      await tester.tap(find.text('Post comment'));
-      await tester.pumpAndSettle();
-
-      expect(
-        booted.dependencies.intents.pending?.kind,
-        ResidentIntentKind.commentOnPost,
-      );
-      expect(booted.posts.addCommentCalls, 0);
-    });
-
-    testWidgets('a guest still reads the post and its comments', (
+  group('a guest still reads the article', () {
+    testWidgets('the article is on screen and the composer is not', (
       tester,
     ) async {
-      await bootPost(
+      final booted = await bootPost(
         tester,
         level: AccessLevel.guest,
         detail: post(),
-        comments: <PostComment>[comment(body: 'Thanks for posting.')],
       );
 
       expect(find.text('Classes suspended tomorrow'), findsOneWidget);
-      expect(find.text('Thanks for posting.'), findsOneWidget);
+      expect(
+        find.text('All public schools in Taytay are closed on Tuesday.'),
+        findsOneWidget,
+      );
+      expect(find.byType(TextField), findsNothing);
+      expect(find.byType(FilterChip), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(booted.posts.setReactionCalls, 0);
+      expect(booted.posts.addCommentCalls, 0);
     });
   });
 
   group('sharing', () {
-    testWidgets('shares the server\'s link when there is one', (tester) async {
-      final booted = await bootPost(
-        tester,
-        detail: post(shareUrl: 'https://example.test/news/post-1'),
-      );
-
-      await tester.tap(find.text('Share'));
-      await tester.pumpAndSettle();
-
-      final shared = booted.sharing.shared.single;
-      expect(shared.url, 'https://example.test/news/post-1');
-      expect(shared.text, contains('https://example.test/news/post-1'));
-    });
-
-    testWidgets('never invents a link when the server sent none', (
-      tester,
-    ) async {
-      final booted = await bootPost(tester, detail: post());
-
-      await tester.tap(find.text('Share'));
-      await tester.pumpAndSettle();
-
-      final shared = booted.sharing.shared.single;
-      expect(shared.url, isNull);
-      // A fabricated link in a shared advisory sends people to a 404, or to a
-      // domain somebody else owns.
-      expect(shared.text, isNot(contains('http')));
-      expect(shared.text, contains('Taytay LGU'));
-    });
-
-    testWidgets('a clipboard fallback tells the resident what happened', (
-      tester,
-    ) async {
-      await bootPost(
-        tester,
-        detail: post(),
-        shareOutcome: ShareOutcome.copiedToClipboard,
-      );
-
-      await tester.tap(find.text('Share'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Copied'), findsOneWidget);
-    });
-
-    testWidgets('dismissing the share sheet says nothing', (tester) async {
-      await bootPost(
-        tester,
-        detail: post(),
-        shareOutcome: ShareOutcome.dismissed,
-      );
-
-      await tester.tap(find.text('Share'));
-      await tester.pumpAndSettle();
-
-      // Backing out is a choice, not a failure.
-      expect(find.byType(SnackBar), findsNothing);
-    });
-
     test('shareable content carries no personal data by construction', () {
       const content = ShareableContent(title: 'T', body: 'B');
       expect(content.toString(), isNot(contains('B')));
     });
+
+    test('a missing url is not filled in by the type', () {
+      const content = ShareableContent(title: 'T', body: 'From Taytay LGU');
+      expect(content.url, isNull);
+      expect(content.text, isNot(contains('http')));
+    });
   });
 
   group('the detail screen', () {
-    testWidgets(
-      'an official reply is distinguished by word, not colour alone',
-      (tester) async {
-        await bootPost(
-          tester,
-          detail: post(),
-          comments: <PostComment>[
-            comment(
-              id: 'c-2',
-              authorName: 'Taytay Public Information Office',
-              kind: CommentAuthorKind.official,
-              body: 'Classes resume on Wednesday.',
-            ),
-          ],
-        );
+    testWidgets('the article shows the title and the body', (tester) async {
+      await bootPost(tester, detail: post());
 
-        expect(find.text('Taytay LGU'), findsOneWidget);
-        expect(find.text('Classes resume on Wednesday.'), findsOneWidget);
-      },
-    );
-
-    testWidgets('a hidden comment renders as withheld', (tester) async {
-      await bootPost(
-        tester,
-        detail: post(),
-        comments: <PostComment>[comment(isHidden: true, body: 'secret')],
-      );
-
+      expect(find.text('Classes suspended tomorrow'), findsOneWidget);
       expect(
-        find.text('This comment was removed by Taytay LGU.'),
+        find.text('All public schools in Taytay are closed on Tuesday.'),
         findsOneWidget,
       );
-      expect(find.text('secret'), findsNothing);
-    });
-
-    testWidgets('an unrecognised reaction is shown but cannot be pressed', (
-      tester,
-    ) async {
-      await bootPost(
-        tester,
-        detail: post(
-          availableReactions: <ServerValue<ReactionKind>>[
-            const ServerValue<ReactionKind>(raw: 'applaud', known: null),
-          ],
-        ),
-      );
-
-      expect(find.text('applaud'), findsOneWidget);
-      final chip = tester.widget<FilterChip>(find.byType(FilterChip));
-      expect(
-        chip.onSelected,
-        isNull,
-        reason:
-            'Sending a value the app does not understand is worse than '
-            'showing that it exists.',
-      );
-    });
-
-    testWidgets('delete is offered only on the resident\'s own comment', (
-      tester,
-    ) async {
-      await bootPost(
-        tester,
-        detail: post(),
-        comments: <PostComment>[
-          comment(id: 'mine', isMine: true),
-          comment(id: 'theirs', authorName: 'Ben'),
-        ],
-      );
-
-      expect(find.text('Delete'), findsOneWidget);
-    });
-
-    testWidgets('a failed comment keeps the text in the box', (tester) async {
-      final booted = await bootPost(tester, detail: post());
-      booted.posts.addCommentOutcome = const Err<PostComment>(NetworkFailure());
-
-      await tester.enterText(find.byType(TextField), 'Salamat po');
-      await tester.tap(find.text('Post comment'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Your comment was not posted'), findsOneWidget);
-      // The words are still there.
-      expect(find.text('Salamat po'), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Share'), findsNothing);
+      expect(find.text('Post comment'), findsNothing);
     });
 
     testWidgets('no moderation control exists anywhere', (tester) async {
-      await bootPost(
-        tester,
-        detail: post(),
-        comments: <PostComment>[comment(id: 'theirs', authorName: 'Ben')],
-      );
+      await bootPost(tester, detail: post());
 
       final text = renderedText(tester).toLowerCase();
       for (final forbidden in <String>[
@@ -986,13 +710,14 @@ void main() {
       await bootPost(tester);
 
       expect(find.text('This announcement is not available'), findsOneWidget);
+      expect(find.text('See all announcements'), findsOneWidget);
+      expect(find.byType(TaytayBackButton), findsOneWidget);
     });
 
     testWidgets('the detail survives a 200% text scale', (tester) async {
       await bootPost(
         tester,
         detail: post(),
-        comments: <PostComment>[comment()],
         textScaler: const TextScaler.linear(2),
         size: const Size(400, 6000),
       );

@@ -142,6 +142,9 @@ class Announcement {
     this.capabilities = PostCapabilities.none,
     this.availableReactions = const <ServerValue<ReactionKind>>[],
     this.myReaction,
+    this.officeSlug,
+    this.coverMediaId,
+    this.presentation,
   });
 
   /// Opaque server identifier. The deep-link target for `news_post`.
@@ -194,6 +197,15 @@ class Announcement {
   /// The resident's own reaction, when they have one.
   final ServerValue<ReactionKind>? myReaction;
 
+  /// `office_slug` from `NewsItem`. The display name is not on that object.
+  final String? officeSlug;
+
+  /// `cover_media_id`. The spec does not publish a public image URL.
+  final String? coverMediaId;
+
+  /// Design fields the fixture carries. A live article leaves this null.
+  final BalitaPresentation? presentation;
+
   /// A copy with the reaction fields replaced.
   ///
   /// Exists so a controller can apply an optimistic change and then adopt the
@@ -223,6 +235,9 @@ class Announcement {
     capabilities: capabilities,
     availableReactions: availableReactions,
     myReaction: myReaction,
+    officeSlug: officeSlug,
+    coverMediaId: coverMediaId,
+    presentation: presentation,
   );
 
   /// Whether this post may be shown to a resident.
@@ -274,6 +289,61 @@ class Announcement {
   String toString() => 'Announcement($id)';
 }
 
+/// One row on an article page. The fixture supplies these. `NewsItem` does not.
+@immutable
+class BalitaFact {
+  const BalitaFact({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+
+  /// A Lucide name the canvas maps. Unknown names paint as a landmark.
+  final String icon;
+}
+
+/// Layout the designs need and the news contract does not publish.
+@immutable
+class BalitaPresentation {
+  const BalitaPresentation({
+    this.coverAsset,
+    this.photoCredit,
+    this.lead,
+    this.footer,
+    this.dateLabel,
+    this.listDate,
+    this.coverHeight = 180,
+    this.listCover = false,
+    this.facts = const <BalitaFact>[],
+    this.tileIcon,
+    this.sample = false,
+    this.pinnedTitle,
+    this.pinnedBody,
+  });
+
+  final String? coverAsset;
+  final String? photoCredit;
+  final String? lead;
+  final String? footer;
+  final String? dateLabel;
+
+  /// Date on the list eyebrow. Empty suppresses it. Null uses [dateLabel].
+  final String? listDate;
+  final double coverHeight;
+  final bool listCover;
+  final List<BalitaFact> facts;
+  final String? tileIcon;
+  final bool sample;
+  final String? pinnedTitle;
+  final String? pinnedBody;
+
+  @override
+  String toString() => 'BalitaPresentation()';
+}
+
 /// Municipal announcements, as the committed contract describes them.
 ///
 /// Two calls, both public, both paginated per `docs/api/conventions.md` §5.
@@ -290,7 +360,14 @@ abstract interface class AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page,
     int perPage,
+    String? category,
   });
+
+  /// Saves a story for this phone.
+  ///
+  /// The OpenAPI at `90aa39e` has no bookmark route. The call declines
+  /// instead of pretending the story was stored.
+  Future<Result<void>> saveArticle(String id);
 
   /// One announcement by opaque id.
   ///

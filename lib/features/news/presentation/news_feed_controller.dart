@@ -26,6 +26,9 @@ class NewsFeedController extends ChangeNotifier {
 
   final AnnouncementRepository _repository;
 
+  /// `null` is the whole feed. A chip name is sent as `category`.
+  String? _category;
+
   final List<Announcement> _items = <Announcement>[];
   int _page = 0;
   bool _hasMore = true;
@@ -56,6 +59,21 @@ class NewsFeedController extends ChangeNotifier {
   /// True when the feed is empty **and nothing went wrong** — the only state in
   /// which "there is nothing to show" is a true statement rather than a guess.
   bool get isEmptyAndHealthy => _items.isEmpty && _failure == null;
+
+  /// The category currently requested. `null` asks for every category.
+  String? get category => _category;
+
+  /// Switches the list to [raw] and reloads the first page.
+  ///
+  /// `Lahat` and a blank value clear the filter. The same chip does not
+  /// refetch.
+  Future<void> applyCategory(String? raw) async {
+    final String trimmed = raw?.trim() ?? '';
+    final String? next = trimmed.isEmpty || trimmed == 'Lahat' ? null : trimmed;
+    if (next == _category) return;
+    _category = next;
+    await refresh();
+  }
 
   /// Loads the first page, discarding anything already held.
   ///
@@ -92,7 +110,10 @@ class NewsFeedController extends ChangeNotifier {
 
   Future<void> _fetch({required bool isFirstPage}) async {
     final next = _page + 1;
-    final result = await _repository.listAnnouncements(page: next);
+    final result = await _repository.listAnnouncements(
+      page: next,
+      category: _category,
+    );
 
     result.fold(
       onOk: (page) {

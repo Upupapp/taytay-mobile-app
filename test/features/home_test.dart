@@ -147,12 +147,17 @@ class StubAnnouncementRepository implements AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int perPage = 20,
+    String? category,
   }) async =>
       Ok<Paginated<Announcement>>(Paginated<Announcement>.single(items));
 
   @override
   Future<Result<Announcement>> loadAnnouncement(String id) async =>
       const Err<Announcement>(ServerFailure());
+
+  @override
+  Future<Result<void>> saveArticle(String id) async =>
+      const Err<void>(ServerFailure(isTemporary: true));
 
   // Home never interacts with a post; these exist to satisfy the contract and
   // decline if anything ever tried.

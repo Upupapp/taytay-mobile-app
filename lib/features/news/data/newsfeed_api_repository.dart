@@ -22,10 +22,12 @@ import '../domain/announcement_repository.dart';
 /// than usual on this feature, because it is the only one in the app where a
 /// staff-shaped action would look natural next to a resident-shaped one.
 class NewsfeedApiRepository implements AnnouncementRepository {
-  const NewsfeedApiRepository({required ApiClient apiClient})
-    : _apiClient = apiClient;
+  NewsfeedApiRepository({required ApiClient apiClient}) : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+
+  /// The cursor from the last list page. Page 1 starts again.
+  String? _cursor;
 
   static const String path = 'news';
 
@@ -33,8 +35,11 @@ class NewsfeedApiRepository implements AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int? perPage,
+    String? category,
   }) async {
     assert(page >= 1);
+    if (page <= 1) _cursor = null;
+    final String? chip = category?.trim();
     final response = await _apiClient.send<List<Announcement>>(
       method: HttpMethod.get,
       path: path,
@@ -52,6 +57,10 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       query: <String, String>{
         'limit':
             '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
+        'cursor': ?_cursor,
+        'category': ?((chip == null || chip.isEmpty || chip == 'Lahat')
+            ? null
+            : chip),
       },
       decode: (Object? data) => data is List<dynamic>
           ? data
@@ -60,7 +69,18 @@ class NewsfeedApiRepository implements AnnouncementRepository {
                 .toList(growable: false)
           : const <Announcement>[],
     );
+    if (response case Ok<ApiEnvelope<List<Announcement>>>(:final value)) {
+      _cursor = value.pagination?.nextCursor;
+    }
     return response.map(_toPage);
+  }
+
+  @override
+  Future<Result<void>> saveArticle(String id) {
+    final Object _ = id;
+    return Future<Result<void>>.value(
+      backendGapFailure<void>(BackendGap.absentOnNodeContract, 'saveArticle'),
+    );
   }
 
   @override
@@ -180,12 +200,19 @@ class NewsfeedApiRepository implements AnnouncementRepository {
       category: entry['category'] is String
           ? entry['category'] as String
           : null,
+      officeSlug: entry['office_slug'] is String
+          ? entry['office_slug'] as String
+          : null,
+      coverMediaId: entry['cover_media_id'] is String
+          ? entry['cover_media_id'] as String
+          : null,
       // `published_at`, never `created_at`: the latter is when somebody started
       // drafting, and a reader asking "when was this posted" means the former.
       publishedAt: DateTime.tryParse(
         entry['published_at'] is String ? entry['published_at'] as String : '',
       )?.toUtc(),
       isPinned: entry['is_pinned'] == true,
+      publicationState: _status(entry['status']),
       media: _decodeMedia(entry['media']),
       capabilities: PostCapabilities(
         canReact: true,
@@ -205,6 +232,18 @@ class NewsfeedApiRepository implements AnnouncementRepository {
         canReportComment: true,
       ),
     );
+  }
+
+  static ServerValue<PublicationState>? _status(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    final PublicationState? known = switch (raw) {
+      'draft' => PublicationState.draft,
+      'published' => PublicationState.published,
+      'scheduled' => PublicationState.scheduled,
+      'archived' => PublicationState.archived,
+      _ => null,
+    };
+    return ServerValue<PublicationState>(raw: raw, known: known);
   }
 
   /// The first non-decorative image, with its alt text.

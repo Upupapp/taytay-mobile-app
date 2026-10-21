@@ -175,7 +175,7 @@ void main() {
       expect(find.text('Municipal offices'), findsOneWidget);
 
       await tapDestination(tester, 'Balita');
-      expect(find.widgetWithText(AppBar, 'News'), findsOneWidget);
+      expect(find.text('Municipal news'), findsOneWidget);
 
       await tapDestination(tester, 'Tulong');
       expect(
@@ -194,25 +194,25 @@ void main() {
       tester,
     ) async {
       await boot(tester, initialLocation: '/news/abc123');
-      expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
+      expect(find.text('This announcement is not available'), findsOneWidget);
 
       await tapDestination(tester, 'Directory');
       expect(find.text('Municipal offices'), findsOneWidget);
 
       // Back to Balita: still on the announcement, not reset to the list.
       await tapDestination(tester, 'Balita');
-      expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
+      expect(find.text('This announcement is not available'), findsOneWidget);
     });
 
     testWidgets('re-tapping the current destination returns to its root', (
       tester,
     ) async {
       await boot(tester, initialLocation: '/news/abc123');
-      expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
+      expect(find.text('This announcement is not available'), findsOneWidget);
 
       // The escape hatch from a screen a resident deep-linked into.
       await tapDestination(tester, 'Balita');
-      expect(find.widgetWithText(AppBar, 'News'), findsOneWidget);
+      expect(find.text('Municipal news'), findsOneWidget);
     });
   });
 
