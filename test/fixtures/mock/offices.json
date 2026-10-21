@@ -1,0 +1,629 @@
+{
+  "chips": [
+    "All",
+    "Social services",
+    "Taxes & payments",
+    "Business",
+    "Emergency",
+    "Jobs"
+  ],
+  "offices": [
+    {
+      "id": "mswdo",
+      "shortName": "MSWDO",
+      "name": "Municipal Social Welfare and Development Office",
+      "listName": "MSWDO",
+      "category": "Social services",
+      "listLine": "Social services · Ground Floor, Municipal Hall",
+      "icon": "handHeart",
+      "keywords": [
+        "pwd",
+        "senior",
+        "solo parent",
+        "aics"
+      ],
+      "eyebrow": "SOCIAL SERVICES",
+      "summary": "Social welfare programmes for PWDs, senior citizens, solo parents, families in crisis, women and children.",
+      "hero": "assets/photos/mswdo_relief.jpg",
+      "heroFocus": 0.4,
+      "inset": "assets/photos/municipal_hall.jpg",
+      "representative": true,
+      "credit": "Photos: DSWD relief distribution: Presidential Communications Office (public domain) · Hall: Ramon FVelasquez (CC BY-SA 3.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "(02) 8284-4710",
+      "directionsQuery": "Taytay Municipal Hall, Taytay, Rizal",
+      "privacy": "Only MSWDO staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Municipal Social Welfare and Development Office",
+      "topic": "PWD Cash Gift",
+      "draft": "Magandang araw po. Paano po kung hindi nakuha ang 2026 PWD Cash Gift noong Jul 31? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "Ground Floor, Taytay Municipal Hall",
+          "icon": "pin"
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "clock"
+        },
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "icon": "phone"
+        },
+        {
+          "label": "Facebook",
+          "value": "MSWDO Taytay, Rizal",
+          "icon": "message"
+        }
+      ],
+      "services": [
+        {
+          "label": "PWD ID and the 2026 PWD Cash Gift"
+        },
+        {
+          "label": "Senior citizen services (OSCA)"
+        },
+        {
+          "label": "Solo Parent ID"
+        },
+        {
+          "label": "Assistance to Individuals in Crisis Situation (AICS)"
+        },
+        {
+          "label": "Educational assistance"
+        },
+        {
+          "label": "Women and children protection, referrals"
+        }
+      ]
+    },
+    {
+      "id": "treasury",
+      "shortName": "Treasury",
+      "name": "Municipal Treasurer's Office",
+      "listName": "Municipal Treasurer's Office",
+      "category": "Taxes & payments",
+      "listLine": "Taxes & payments · 2nd Floor, Municipal Hall",
+      "icon": "landmark",
+      "keywords": [
+        "cedula",
+        "rpt",
+        "tax",
+        "community tax"
+      ],
+      "searchLine": "Community Tax Certificate (cedula) · 2nd Floor",
+      "eyebrow": "TAXES & PAYMENTS",
+      "summary": "Collects real property tax and other municipal payments. Also the payout point for the 2026 PWD Cash Gift.",
+      "hero": "assets/photos/peso_notes.jpg",
+      "heroFocus": 0.5,
+      "inset": "assets/photos/municipal_hall.jpg",
+      "representative": false,
+      "credit": "Photos: Peso notes: Tupungato (CC BY 3.0) · Hall: Ramon FVelasquez (CC BY-SA 3.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "8284-4715",
+      "directionsQuery": "Taytay Municipal Hall, Taytay, Rizal",
+      "privacy": "Only Treasury staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Municipal Treasurer's Office",
+      "topic": "Real property tax",
+      "draft": "Magandang araw po. Puwede po bang malaman ang halaga ng RPT ko para sa 2026? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "2nd Floor, Taytay Municipal Hall",
+          "icon": "pin"
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "clock"
+        },
+        {
+          "label": "Landline",
+          "value": "8284-4715 / 4717 / 4709",
+          "icon": "phone"
+        }
+      ],
+      "services": [
+        {
+          "label": "Real property tax (RPT) payment for 2026"
+        },
+        {
+          "label": "Notice of Tax Assessment requests"
+        },
+        {
+          "label": "PWD Cash Gift payout (after MSWDO validation)"
+        }
+      ]
+    },
+    {
+      "id": "assessor",
+      "shortName": "Assessor",
+      "name": "Municipal Assessor's Office",
+      "listName": "Municipal Assessor's Office",
+      "category": "Real property",
+      "listLine": "Real property · Tax declarations",
+      "icon": "fileText",
+      "keywords": [
+        "tax declaration",
+        "assessment"
+      ],
+      "eyebrow": "REAL PROPERTY",
+      "summary": "Keeps the records and assessed values of land, buildings and other real property in Taytay.",
+      "hero": "assets/photos/muzon_street.jpg",
+      "heroFocus": 0.55,
+      "inset": "assets/photos/rizal_avenue.jpg",
+      "representative": false,
+      "credit": "Photos: Muzon street: Judgefloro (CC0) · Rizal Ave.: Ralff Nestor Nacor (CC BY-SA 4.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "8284-4708",
+      "directionsQuery": "Taytay Municipal Hall, Taytay, Rizal",
+      "privacy": "Only Assessor staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Municipal Assessor's Office",
+      "topic": "Tax Declaration",
+      "draft": "Magandang araw po. Paano po kumuha ng kopya ng Tax Declaration ng aming lupa? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "Taytay Municipal Hall",
+          "icon": "pin",
+          "sample": true
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "clock"
+        },
+        {
+          "label": "Landline",
+          "value": "8284-4708 · 8537-1100",
+          "icon": "phone"
+        }
+      ],
+      "services": [
+        {
+          "label": "Tax Declaration copies",
+          "sample": true
+        },
+        {
+          "label": "Property assessment and reassessment",
+          "sample": true
+        },
+        {
+          "label": "Assessment details for RPT payment"
+        }
+      ]
+    },
+    {
+      "id": "bplo",
+      "shortName": "BPLO",
+      "name": "Business Permits and Licensing Office",
+      "listName": "Business Permits and Licensing Office (BPLO)",
+      "category": "Business",
+      "listLine": "Business · Ground Floor, Municipal Hall",
+      "icon": "building2",
+      "keywords": [
+        "permit",
+        "boss",
+        "business"
+      ],
+      "eyebrow": "BUSINESS",
+      "summary": "New business permits and annual renewals through the Business One Stop Shop (BOSS), with e-BOSS online payment.",
+      "hero": "assets/photos/tiangge_lane.jpg",
+      "heroFocus": 0.55,
+      "inset": "assets/photos/sari_sari.jpg",
+      "representative": false,
+      "credit": "Photos: Tiangge: Ralff Nestor Nacor (CC BY-SA 4.0) · Sari-sari store: Sayubis (CC BY-SA 4.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "(02) 8284-4788",
+      "directionsQuery": "Taytay Municipal Hall, Taytay, Rizal",
+      "privacy": "Only BPLO staff can read this conversation. Don't share passwords or OTPs. Replies usually within 1–2 working days.",
+      "composeTo": "Business Permits and Licensing Office",
+      "topic": "Business permit renewal",
+      "draft": "Magandang araw po. Ano po ang requirements para mag-renew ng business permit para sa sari-sari store? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "Ground Floor, Taytay Municipal Hall",
+          "icon": "pin"
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM (except holidays)",
+          "icon": "clock"
+        },
+        {
+          "label": "Landline",
+          "value": "(02) 8284-4788 / 4789 · 8286-6185 / 6186",
+          "icon": "phone"
+        },
+        {
+          "label": "Email",
+          "value": "bplo@taytayrizal.gov.ph",
+          "icon": "mail"
+        }
+      ],
+      "services": [
+        {
+          "label": "Business permit renewal (BOSS, from Jan 2, 2026)"
+        },
+        {
+          "label": "New business registration"
+        },
+        {
+          "label": "e-BOSS online payment portal"
+        }
+      ]
+    },
+    {
+      "id": "mdrrmo",
+      "shortName": "MDRRMO",
+      "name": "MDRRMO & Sagip Taytay Command Center",
+      "listName": "MDRRMO & Sagip Taytay Command Center",
+      "savedName": "MDRRMO & Command Center",
+      "category": "Emergency",
+      "listLine": "Emergency · 24/7",
+      "icon": "siren",
+      "keywords": [
+        "emergency",
+        "rescue",
+        "sagip",
+        "smile safe"
+      ],
+      "eyebrow": "EMERGENCY · 24/7",
+      "summary": "Disaster preparedness, rescue and the 24/7 Sagip Taytay Command and Emergency Operations Center.",
+      "hero": "assets/photos/rescuers.jpg",
+      "heroFocus": 0.35,
+      "inset": "assets/photos/rescue_vehicle.jpg",
+      "representative": true,
+      "credit": "Photos: Rescuers: Angeles City Information Office (public domain) · Rescue vehicle: FroyAgta (CC BY-SA 4.0)",
+      "actions": [
+        "call",
+        "directions",
+        "app"
+      ],
+      "callLabel": "Call 24/7",
+      "callTone": "danger",
+      "phone": "0985-488-3352",
+      "directionsQuery": "Sagip Taytay Command Center, Taytay, Rizal",
+      "facts": [
+        {
+          "label": "Command Center · 24/7",
+          "value": "0985-488-3352",
+          "icon": "siren"
+        },
+        {
+          "label": "MDRRMO",
+          "value": "0952-619-9511 · 0970-884-3791",
+          "icon": "phone"
+        },
+        {
+          "label": "Facebook",
+          "value": "Taytay Command Center - MDRRMO",
+          "icon": "message"
+        },
+        {
+          "label": "App",
+          "value": "SMILE SAFE Taytay (Google Play, App Store)",
+          "icon": "phone"
+        }
+      ],
+      "services": [
+        {
+          "label": "Emergency response and rescue"
+        },
+        {
+          "label": "Community responder trainings (e.g. Incident Command System)"
+        },
+        {
+          "label": "Urban Fire Olympics 2026"
+        }
+      ]
+    },
+    {
+      "id": "peso",
+      "shortName": "PESO",
+      "name": "Public Employment Service Office",
+      "listName": "Public Employment Service Office (PESO)",
+      "category": "Jobs",
+      "listLine": "Jobs & employment",
+      "icon": "graduationCap",
+      "keywords": [
+        "job",
+        "employment",
+        "vacancy"
+      ],
+      "eyebrow": "JOBS & EMPLOYMENT",
+      "summary": "A free, non-fee-charging employment service. Named Regional Best PESO (1st Class Municipality) by DOLE CALABARZON two years in a row.",
+      "hero": "assets/photos/skills_training.jpg",
+      "heroFocus": 0.3,
+      "inset": "assets/photos/municipal_hall.jpg",
+      "representative": true,
+      "credit": "Photos: Skills training: Presidential Communications Office (public domain) · Hall: Ramon FVelasquez (CC BY-SA 3.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "",
+      "directionsQuery": "New Taytay Municipal Building, Taytay, Rizal",
+      "privacy": "Only PESO staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Public Employment Service Office",
+      "topic": "Job vacancies",
+      "draft": "Magandang araw po. May bakante po ba para sa sewer o garments worker? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "4th Floor, New Taytay Municipal Building",
+          "icon": "pin"
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "clock"
+        },
+        {
+          "label": "Facebook",
+          "value": "facebook.com/PESOTAYTAY",
+          "icon": "message"
+        }
+      ],
+      "services": [
+        {
+          "label": "Job vacancies and referrals",
+          "sample": true
+        },
+        {
+          "label": "Job fairs (announced on Facebook)"
+        },
+        {
+          "label": "Employment counselling",
+          "sample": true
+        }
+      ]
+    },
+    {
+      "id": "pio",
+      "shortName": "PIO",
+      "name": "Public Information Office",
+      "listName": "Public Information Office",
+      "category": "News",
+      "listLine": "News & announcements",
+      "icon": "newspaper",
+      "keywords": [
+        "news",
+        "advisory",
+        "balita"
+      ],
+      "eyebrow": "NEWS & ANNOUNCEMENTS",
+      "summary": "Publishes municipal news, advisories and the emergency hotlines list. Source of most Balita in this app.",
+      "hero": "assets/photos/rizal_avenue.jpg",
+      "heroFocus": 0.6,
+      "inset": "assets/photos/municipal_hall.jpg",
+      "representative": false,
+      "credit": "Photos: Rizal Ave.: Ralff Nestor Nacor (CC BY-SA 4.0) · Hall: Ramon FVelasquez (CC BY-SA 3.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "",
+      "directionsQuery": "Taytay Municipal Hall, Taytay, Rizal",
+      "privacy": "Only PIO staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Public Information Office",
+      "topic": "News tip / correction",
+      "draft": "Magandang araw po. Puwede po bang i-post ang schedule ng clean-up drive sa aming barangay? Salamat po.",
+      "facts": [
+        {
+          "label": "Location",
+          "value": "Taytay Municipal Hall",
+          "icon": "pin",
+          "sample": true
+        },
+        {
+          "label": "Office hours",
+          "value": "Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "clock"
+        },
+        {
+          "label": "Email",
+          "value": "smiletaytaypio@gmail.com",
+          "icon": "mail"
+        }
+      ],
+      "services": [
+        {
+          "label": "Balita and advisories"
+        },
+        {
+          "label": "Emergency hotlines list"
+        },
+        {
+          "label": "Media and event coverage",
+          "sample": true
+        }
+      ]
+    },
+    {
+      "id": "tydo",
+      "shortName": "TYDO",
+      "name": "Taytay Youth Development Office",
+      "listName": "Youth Development Office",
+      "category": "Youth",
+      "listLine": "Youth programmes",
+      "icon": "users",
+      "keywords": [
+        "youth",
+        "yorp",
+        "sk"
+      ],
+      "eyebrow": "YOUTH PROGRAMMES",
+      "summary": "Programmes and services for Taytay youth. National finalist, Outstanding Local Youth Development Office, 2026 Philippine SK Awards.",
+      "hero": "assets/photos/sk_council.jpg",
+      "heroFocus": 0.45,
+      "inset": "assets/photos/sk_court.jpg",
+      "representative": true,
+      "credit": "Photos: SK council: Halimawsabanga (CC BY-SA 4.0) · SK court: Iloilo Wanderer (CC BY-SA 3.0)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "8284-4782",
+      "directionsQuery": "Manila East Arcade II, Don Hilario Ave., Brgy. San Juan, Taytay, Rizal",
+      "privacy": "Only TYDO staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Taytay Youth Development Office",
+      "topic": "YORP registration",
+      "draft": "Magandang araw po. Paano po irehistro ang aming youth group sa YORP? Salamat po.",
+      "facts": [
+        {
+          "label": "Main office",
+          "value": "3rd Floor, Manila East Arcade II, Don Hilario Ave., Brgy. San Juan",
+          "icon": "pin"
+        },
+        {
+          "label": "Youth Center",
+          "value": "C6-Ejercito Ave., Brgy. Sta. Ana · Mon–Fri, 8:00 AM – 5:00 PM",
+          "icon": "pin"
+        },
+        {
+          "label": "Landline",
+          "value": "8284-4782",
+          "icon": "phone"
+        },
+        {
+          "label": "Email",
+          "value": "tydo@taytayrizal.gov.ph",
+          "icon": "mail"
+        }
+      ],
+      "services": [
+        {
+          "label": "Youth Organization Registration Program (YORP) caravan"
+        },
+        {
+          "label": "Youth Development Center"
+        },
+        {
+          "label": "SK coordination",
+          "sample": true
+        }
+      ]
+    },
+    {
+      "id": "health",
+      "shortName": "Health Office",
+      "name": "Municipal Health Office",
+      "listName": "Municipal Health Office",
+      "category": "Health",
+      "listLine": "Health · 7 health units, 40 barangay health centres",
+      "icon": "stethoscope",
+      "keywords": [
+        "health",
+        "vaccine",
+        "hospital"
+      ],
+      "eyebrow": "HEALTH",
+      "summary": "Primary health care for all five barangays: 7 health units, 40 barangay health centres and the 24/7 June V. Zapanta Emergency Hospital.",
+      "hero": "assets/photos/health_centre.jpg",
+      "heroFocus": 0.5,
+      "inset": "assets/photos/vaccination.jpg",
+      "representative": true,
+      "credit": "Photos: Health center: FroyAgta (CC BY-SA 4.0) · Vaccination: Province of Camarines Sur (public domain)",
+      "actions": [
+        "call",
+        "directions",
+        "message"
+      ],
+      "callLabel": "Call",
+      "phone": "8284-4771",
+      "directionsQuery": "June V. Zapanta Emergency Hospital, Taytay, Rizal",
+      "privacy": "Only Health Office staff can read this conversation. Don't share passwords or OTPs. Sample message text.",
+      "composeTo": "Municipal Health Office",
+      "topic": "Health centre schedule",
+      "draft": "Magandang araw po. Anong araw po ang bakuna para sa sanggol sa health centre ng San Juan? Salamat po.",
+      "facts": [
+        {
+          "label": "Emergency hospital · 24/7",
+          "value": "June V. Zapanta Emergency Hospital, near St. John the Baptist Church",
+          "icon": "pin"
+        },
+        {
+          "label": "Rural Health Unit I",
+          "value": "J. Asilo St., Brgy. Dolores",
+          "icon": "pin"
+        },
+        {
+          "label": "Municipal trunk line",
+          "value": "8284-4771 / 8286-6149",
+          "icon": "phone"
+        }
+      ],
+      "services": [
+        {
+          "label": "Out-patient consultation"
+        },
+        {
+          "label": "Child delivery"
+        },
+        {
+          "label": "EENT treatment"
+        },
+        {
+          "label": "Diagnosis of social diseases"
+        }
+      ]
+    }
+  ],
+  "thread": {
+    "officeId": "bplo",
+    "day": "Today",
+    "messages": [
+      {
+        "fromResident": true,
+        "body": "Magandang araw po. Ano po ang requirements para mag-renew ng business permit para sa sari-sari store? Salamat po.",
+        "when": "8:42 PM · Seen"
+      },
+      {
+        "fromResident": false,
+        "body": "Magandang araw po! Para sa renewal, dalhin po ang dating Mayor's Permit at mga resibo. Maaari rin pong mag-renew online sa e-BOSS portal.",
+        "when": "BPLO · 9:05 AM"
+      },
+      {
+        "fromResident": false,
+        "attachment": "BOSS-2026-renewal-requirements.pdf",
+        "attachmentMeta": "PDF · 240 KB",
+        "when": "BPLO · 9:06 AM"
+      },
+      {
+        "fromResident": true,
+        "body": "Salamat po!",
+        "when": "9:10 AM"
+      }
+    ]
+  }
+}

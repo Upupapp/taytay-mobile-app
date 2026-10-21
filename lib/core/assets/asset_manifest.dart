@@ -263,6 +263,176 @@ abstract final class AppAssets {
           'a3c5512973fc1b88395ec4a777a6f5e8ecedd1c6a8880cc2284be18fa06a64e4',
       maxBytes: 673736,
     ),
+    AssetEntry(
+      key: 'tiangge_lane',
+      path: 'assets/photos/tiangge_lane.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_tiangge2.jpg. Ralff Nestor Nacor, CC BY-SA 4.0. '
+          'Credit is shown on the BPLO office page. Not precached.',
+      semanticLabel: 'Photo: Taytay tiangge lane',
+      sha256:
+          'f1c1f88ea8b9f890f87a8c431cb56ce7b34931d1458a626feb2f2fb38fbd0475',
+    ),
+    AssetEntry(
+      key: 'sari_sari',
+      path: 'assets/photos/sari_sari.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_sarisari.jpg. Sayubis, CC BY-SA 4.0. '
+          'Credit is shown on the BPLO office page. Not precached.',
+      semanticLabel: 'Photo: a sari-sari store',
+      sha256:
+          'ce5ff7d6778b9266301ff44fa2efee6eadd8011dd5c4241fa9e8b316a888f213',
+    ),
+    AssetEntry(
+      key: 'mswdo_relief',
+      path: 'assets/photos/mswdo_relief.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_mswdo.jpg. Presidential Communications Office, '
+          'public domain. Credit is shown on the MSWDO page. Not precached.',
+      semanticLabel: 'Photo: a relief distribution',
+      sha256:
+          '1ad6043488491ef29d3f08e81cce94b91b1662cd4ceee445e8f900827aab9a9d',
+    ),
+    AssetEntry(
+      key: 'peso_notes',
+      path: 'assets/photos/peso_notes.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_peso_money.jpg. Tupungato, CC BY 3.0. '
+          'Credit is shown on the Treasury page. Not precached.',
+      semanticLabel: 'Photo: Philippine peso notes',
+      sha256:
+          '1ccc7ad6532fd3feca968f92e6d231ad4b2af3c06e49687c15299ea85ec12804',
+    ),
+    AssetEntry(
+      key: 'muzon_street',
+      path: 'assets/photos/muzon_street.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_muzon.jpg. Judgefloro, CC0. '
+          'Credit is shown on the Assessor page. Not precached.',
+      semanticLabel: 'Photo: a Muzon street',
+      sha256:
+          '504569960f68495d3fd0bf4858cf0f78a74fe53e1e2cf67027c6e0964ae1b3ac',
+    ),
+    AssetEntry(
+      key: 'rizal_avenue',
+      path: 'assets/photos/rizal_avenue.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_rizalave.jpg. Ralff Nestor Nacor, CC BY-SA 4.0. '
+          'Credit is shown on the Assessor and PIO pages. Not precached.',
+      semanticLabel: 'Photo: Rizal Avenue in Taytay',
+      sha256:
+          '529cce1422bd10ecb4ef13a04a95c413b961e7d5b059025247c78f6a7a28c4e3',
+    ),
+    AssetEntry(
+      key: 'rescuers',
+      path: 'assets/photos/rescuers.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_bfp.jpg. Angeles City Information Office, '
+          'public domain. Credit is shown on the MDRRMO page. Not precached.',
+      semanticLabel: 'Photo: emergency rescuers',
+      sha256:
+          '0acdf7d8706a0b42691104f39f365e1e3601c1533500e18975760fe014d3f188',
+    ),
+    AssetEntry(
+      key: 'rescue_vehicle',
+      path: 'assets/photos/rescue_vehicle.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_rescuevan.jpg. FroyAgta, CC BY-SA 4.0. '
+          'Credit is shown on the MDRRMO page. Not precached.',
+      semanticLabel: 'Photo: a rescue vehicle',
+      sha256:
+          'b7ba969a9c60835453d7b4e63ff21fbaefc045139e95b1ec243017cbea4d700c',
+    ),
+    AssetEntry(
+      key: 'skills_training',
+      path: 'assets/photos/skills_training.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_tesda.jpg. Presidential Communications Office, '
+          'public domain. Credit is shown on the PESO page. Not precached.',
+      semanticLabel: 'Photo: a skills training session',
+      sha256:
+          '5c9951b9b0648bcca45bdab337e51d57db596c94bdbcafb1406af8373bb77125',
+    ),
+    AssetEntry(
+      key: 'sk_council',
+      path: 'assets/photos/sk_council.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_sk.jpg. Halimawsabanga, CC BY-SA 4.0. '
+          'Credit is shown on the youth office page. Not precached.',
+      semanticLabel: 'Photo: a youth council gathering',
+      sha256:
+          '1dfda285e10128123105075ba4150dd1d428efb55d8d8003263713ffef0cc0ad',
+    ),
+    AssetEntry(
+      key: 'sk_court',
+      path: 'assets/photos/sk_court.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_skhoop.jpg. Iloilo Wanderer, CC BY-SA 3.0. '
+          'Credit is shown on the youth office page. Not precached.',
+      semanticLabel: 'Photo: a youth sports court',
+      sha256:
+          '939e18a541b46f28b9f23ea6e858bcd3b49b9320b42a04d03183787e1595682c',
+    ),
+    AssetEntry(
+      key: 'health_centre',
+      path: 'assets/photos/health_centre.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_bhc.jpg. FroyAgta, CC BY-SA 4.0. '
+          'Credit is shown on the health office page. Not precached.',
+      semanticLabel: 'Photo: a barangay health centre',
+      sha256:
+          '10ff68d33950dc38aa139d0d2d89035abe3d37e6655eafe0b1847cb68aa539d1',
+    ),
+    AssetEntry(
+      key: 'vaccination',
+      path: 'assets/photos/vaccination.jpg',
+      kind: AssetKind.photograph,
+      format: AssetFormat.jpeg,
+      licence: AssetLicence.thirdParty,
+      provenance:
+          'Design source src/ph_vaccine.jpg. Province of Camarines Sur, '
+          'public domain. Credit is shown on the health office page. '
+          'Not precached.',
+      semanticLabel: 'Photo: a vaccination',
+      sha256:
+          '288f8151506341175c98989a2c63335ae3da8497a81832f8ac5c2194abedf473',
+    ),
   ];
 
   /// Assets warmed before the first screen needs them.

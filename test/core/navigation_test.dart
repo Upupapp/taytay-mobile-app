@@ -248,6 +248,15 @@ void main() {
         ShellDestination.home,
       );
       // Events left the tab bar.
+      expect(
+        ShellDestination.forLocation('/offices/bplo'),
+        ShellDestination.directory,
+      );
+      expect(
+        ShellDestination.forLocation('/offices/bplo/message/sent'),
+        ShellDestination.directory,
+      );
+      expect(ShellDestination.forLocation('/offices/bplo/message'), isNull);
       expect(ShellDestination.forLocation('/events/e-1'), isNull);
       // Outside the shell entirely.
       expect(ShellDestination.forLocation('/sign-in'), isNull);

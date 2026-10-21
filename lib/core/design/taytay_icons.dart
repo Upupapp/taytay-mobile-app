@@ -123,6 +123,15 @@ abstract final class TaytayIcons {
 
   static const IconData send = IconData(57682, fontFamily: 'Lucide');
 
+  /// Lucide `paperclip`. The thread composer attach mark.
+  static const IconData paperclip = IconData(57645, fontFamily: 'Lucide');
+
+  /// Lucide `smartphone`. The MDRRMO app action.
+  static const IconData smartphone = IconData(57699, fontFamily: 'Lucide');
+
+  /// Lucide `message-square`. Facebook rows on an office page.
+  static const IconData messageSquare = IconData(57623, fontFamily: 'Lucide');
+
   static const IconData wifiOff = IconData(57775, fontFamily: 'Lucide');
 
   static const IconData circleCheck = IconData(57894, fontFamily: 'Lucide');

@@ -19,6 +19,8 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/directory/data/office_catalogue.dart';
+import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/programs/data/program_dto.dart';
 import 'package:taytay_resident/features/programs/domain/assistance_program.dart';
 import 'package:taytay_resident/features/programs/domain/program_repository.dart';
@@ -837,24 +839,25 @@ void main() {
     ) async {
       final booted = await bootDirectory(tester);
 
-      expect(booted.catalog.listCalls, greaterThan(0));
-      expect(find.text('Community tax certificate'), findsOneWidget);
-      expect(find.text('Burial assistance'), findsOneWidget);
+      expect(booted.catalog.listCalls, 0);
+      expect(find.text('MSWDO'), findsWidgets);
+      expect(
+        find.text('Business Permits and Licensing Office (BPLO)'),
+        findsOneWidget,
+      );
       expect(find.text('Sign in'), findsNothing);
     });
 
-    testWidgets('a guest can search and reach a detail screen', (tester) async {
+    testWidgets('a guest can open an office page', (tester) async {
       await bootDirectory(tester);
 
-      await tester.enterText(find.byType(TextField), 'burial');
-      await tester.pumpAndSettle();
-      expect(find.text('Community tax certificate'), findsNothing);
-
-      await tester.tap(find.text('Burial assistance'));
+      await tester.tap(
+        find.text('Business Permits and Licensing Office (BPLO)'),
+      );
       await tester.pumpAndSettle();
 
-      expect(find.text('BURIAL'), findsOneWidget);
-      expect(find.textContaining('funeral costs'), findsWidgets);
+      expect(find.text('Office details'), findsOneWidget);
+      expect(find.textContaining('Business One Stop Shop'), findsOneWidget);
     });
 
     testWidgets('a guest opening a service deep link is not gated', (
@@ -873,34 +876,23 @@ void main() {
       expect(find.text('See all services'), findsOneWidget);
     });
 
-    testWidgets('an empty catalogue says the catalogue is empty', (
+    testWidgets('a query with no office match is a different sentence', (
       tester,
     ) async {
-      await bootDirectory(tester, services: const <LguService>[]);
-      expect(find.text('No services listed yet'), findsOneWidget);
-    });
-
-    testWidgets('a query with no matches says something different', (
-      tester,
-    ) async {
-      // A separate test, not a second boot: re-pumping a `TaytayResidentApp`
-      // updates the existing State, and the router is a `late final` built from
-      // the first dependencies.
-      await bootDirectory(tester);
-      await tester.enterText(find.byType(TextField), 'zzzz');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Nothing matches that'), findsOneWidget);
-      expect(find.text('Clear filters'), findsOneWidget);
-    });
-
-    testWidgets('an unreachable catalogue explains and offers a retry', (
-      tester,
-    ) async {
-      await bootDirectory(tester, catalogFails: true);
-
-      expect(find.text('Could not load services'), findsOneWidget);
-      expect(find.text('Try again'), findsOneWidget);
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      expect(
+        catalogue.offices.where(
+          (Office office) => office.matches('passport', 'All'),
+        ),
+        isEmpty,
+      );
+      expect(
+        catalogue.offices.where(
+          (Office office) => office.matches('cedula', 'All'),
+        ),
+        isNotEmpty,
+      );
     });
   });
 
@@ -1091,7 +1083,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.byType(TextField), findsOneWidget);
+      expect(find.text('Municipal offices'), findsOneWidget);
     });
 
     testWidgets('programme detail survives a 200% text scale', (tester) async {
@@ -1112,7 +1104,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(NavigationRail), findsOneWidget);
-      expect(find.text('Community tax certificate'), findsOneWidget);
+      expect(find.text('Municipal offices'), findsOneWidget);
     });
   });
 }

@@ -172,7 +172,7 @@ void main() {
       await boot(tester);
 
       await tapDestination(tester, 'Directory');
-      expect(find.widgetWithText(AppBar, 'Services'), findsOneWidget);
+      expect(find.text('Municipal offices'), findsOneWidget);
 
       await tapDestination(tester, 'Balita');
       expect(find.widgetWithText(AppBar, 'News'), findsOneWidget);
@@ -197,7 +197,7 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
 
       await tapDestination(tester, 'Directory');
-      expect(find.widgetWithText(AppBar, 'Services'), findsOneWidget);
+      expect(find.text('Municipal offices'), findsOneWidget);
 
       // Back to Balita: still on the announcement, not reset to the list.
       await tapDestination(tester, 'Balita');

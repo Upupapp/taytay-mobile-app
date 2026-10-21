@@ -49,6 +49,12 @@ enum ShellDestination {
     }
     if (best != null) return best;
     // Hotlines and notifications stay on the Home branch.
+    if (path.startsWith('/offices/') && path.endsWith('/message/sent')) {
+      return ShellDestination.directory;
+    }
+    if (path.startsWith('/offices/') && !path.contains('/message')) {
+      return ShellDestination.directory;
+    }
     if (path == AppRoute.hotlines.path ||
         path.startsWith('${AppRoute.hotlines.path}/') ||
         path == AppRoute.notifications.path ||
