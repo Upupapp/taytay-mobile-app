@@ -348,6 +348,67 @@ final class UnacceptableUploadFailure extends AppFailure {
       : 'That kind of file cannot be sent. Try a photo or a PDF instead.';
 }
 
+/// Which published code-verification failure this is.
+enum CodeExchangeKind {
+  /// `code_invalid`. Another try of this code is still allowed.
+  invalid,
+
+  /// `code_expired`. The screen is `02-04b`.
+  expired,
+
+  /// `code_locked`. The screen is `02-14`, the same one as `RATE_LIMITED`.
+  locked,
+}
+
+/// A 6-digit email or reset code was refused (`code_invalid`, `code_expired`,
+/// `code_locked`).
+///
+/// These are not field errors. [attemptsRemaining] and [retryAfter] are the
+/// server's numbers. A missing field stays null so the screen does not invent one.
+final class CodeExchangeFailure extends AppFailure {
+  const CodeExchangeFailure({
+    required this.exchangeKind,
+    this.attemptsRemaining,
+    this.retryAfter,
+    super.requestId,
+    super.debugMessage,
+  });
+
+  final CodeExchangeKind exchangeKind;
+
+  /// `details.attempts_remaining`. Null when the body did not carry it.
+  final int? attemptsRemaining;
+
+  /// `details.retry_after` on `code_locked`. Zero means a new code can be sent.
+  final Duration? retryAfter;
+
+  @override
+  String get kind => switch (exchangeKind) {
+    CodeExchangeKind.invalid => 'code_invalid',
+    CodeExchangeKind.expired => 'code_expired',
+    CodeExchangeKind.locked => 'code_locked',
+  };
+
+  @override
+  bool get isRetryable => exchangeKind == CodeExchangeKind.invalid;
+
+  @override
+  FailureAffordance get affordance => switch (exchangeKind) {
+    CodeExchangeKind.locked
+        when retryAfter != null && retryAfter! > Duration.zero =>
+      FailureAffordance.retryAfter,
+    _ => FailureAffordance.retryNow,
+  };
+
+  @override
+  String get residentMessage => switch (exchangeKind) {
+    CodeExchangeKind.invalid => 'That code was not accepted.',
+    CodeExchangeKind.expired => 'That code has expired. Request a new one.',
+    CodeExchangeKind.locked =>
+      'Too many attempts. Please wait before requesting another code.',
+  };
+}
+
 /// What a screen should offer a resident in front of a failure.
 enum FailureAffordance {
   /// Try again now. The request could plausibly succeed unchanged.
@@ -374,6 +435,7 @@ AppFailure failureFromApiError({
   String? requestId,
   Map<String, List<String>> fieldErrors = const <String, List<String>>{},
   Duration? retryAfter,
+  int? attemptsRemaining,
 }) {
   switch (code) {
     case ApiErrorCode.unauthenticated:
@@ -388,6 +450,28 @@ AppFailure failureFromApiError({
     case ApiErrorCode.validationFailed:
       return ValidationFailure(
         fieldErrors: fieldErrors,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.codeInvalid:
+      return CodeExchangeFailure(
+        exchangeKind: CodeExchangeKind.invalid,
+        attemptsRemaining: attemptsRemaining,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.codeExpired:
+      return CodeExchangeFailure(
+        exchangeKind: CodeExchangeKind.expired,
+        attemptsRemaining: attemptsRemaining,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.codeLocked:
+      return CodeExchangeFailure(
+        exchangeKind: CodeExchangeKind.locked,
+        attemptsRemaining: attemptsRemaining,
+        retryAfter: retryAfter,
         requestId: requestId,
         debugMessage: message,
       );

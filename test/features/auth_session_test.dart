@@ -83,7 +83,9 @@ class FakeAuthRepository implements AuthRepository {
     if (requestOutcome case Err<void>(:final failure)) {
       return Err<CodeAcceptance>(failure);
     }
-    return const Ok<CodeAcceptance>(CodeAcceptance(accepted: true));
+    return const Ok<CodeAcceptance>(
+      CodeAcceptance(accepted: true, retryAfterSeconds: 60),
+    );
   }
 
   @override
@@ -92,10 +94,9 @@ class FakeAuthRepository implements AuthRepository {
     codesSeen.add(code);
     if (code.trim() == CodeExchangeRules.expiredSentinel) {
       return const Err<EmailVerified>(
-        ValidationFailure(
-          fieldErrors: <String, List<String>>{
-            'code': <String>[CodeExchangeRules.expired],
-          },
+        CodeExchangeFailure(
+          exchangeKind: CodeExchangeKind.expired,
+          attemptsRemaining: CodeExchangeRules.attempts,
         ),
       );
     }
@@ -109,7 +110,9 @@ class FakeAuthRepository implements AuthRepository {
     if (requestOutcome case Err<void>(:final failure)) {
       return Err<CodeAcceptance>(failure);
     }
-    return const Ok<CodeAcceptance>(CodeAcceptance(accepted: true));
+    return const Ok<CodeAcceptance>(
+      CodeAcceptance(accepted: true, retryAfterSeconds: 60),
+    );
   }
 
   @override
@@ -120,10 +123,9 @@ class FakeAuthRepository implements AuthRepository {
     codesSeen.add(code);
     if (code.trim() == CodeExchangeRules.expiredSentinel) {
       return const Err<PasswordResetGrant>(
-        ValidationFailure(
-          fieldErrors: <String, List<String>>{
-            'code': <String>[CodeExchangeRules.expired],
-          },
+        CodeExchangeFailure(
+          exchangeKind: CodeExchangeKind.expired,
+          attemptsRemaining: CodeExchangeRules.attempts,
         ),
       );
     }

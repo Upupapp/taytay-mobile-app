@@ -66,6 +66,7 @@ void main() {
         AppRoute.forgotPassword.path,
         AppRoute.resetCode.path,
         AppRoute.setPassword.path,
+        AppRoute.tooMany.path,
         AppRoute.passwordUpdated.path,
       ]) {
         expect(resolveRedirect(session: _guest, location: path), isNull);
@@ -88,6 +89,7 @@ void main() {
           AppRoute.forgotPassword,
           AppRoute.resetCode,
           AppRoute.setPassword,
+          AppRoute.tooMany,
           AppRoute.passwordUpdated,
         ]) {
           expect(

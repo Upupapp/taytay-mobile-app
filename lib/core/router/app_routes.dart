@@ -303,6 +303,9 @@ enum AppRoute {
     AccessRequirement.public,
   ),
 
+  /// `02-14` and `02-14b`. Public. The wait lives in router extra.
+  tooMany('too-many', '/sign-in/hold', AccessRequirement.public),
+
   /// `02-13`. Public. Returns the resident to sign-in.
   passwordUpdated(
     'password-updated',

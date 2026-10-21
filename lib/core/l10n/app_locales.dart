@@ -115,6 +115,10 @@ String localisedResidentMessage(BuildContext context, AppFailure failure) {
     ForbiddenFailure() => strings.failureForbidden,
     NotFoundFailure() => strings.failureNotFound,
     ValidationFailure() => strings.failureValidation,
+    CodeExchangeFailure(:final exchangeKind) =>
+      exchangeKind == CodeExchangeKind.locked
+          ? strings.failureRateLimited
+          : strings.failureValidation,
     UnacceptableUploadFailure(isTooLarge: final tooLarge) =>
       tooLarge ? strings.failureFileTooLarge : strings.failureFileType,
     ConflictFailure() => strings.failureConflict,

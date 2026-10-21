@@ -165,7 +165,12 @@ class MockAuthRepository implements AuthRepository {
 
   @override
   Future<Result<CodeAcceptance>> sendEmailCode() {
-    return _gate.respond(_codes.sendEmailCode().valueOrNull!);
+    final Result<CodeAcceptance> verdict = _codes.sendEmailCode();
+    return switch (verdict) {
+      Ok<CodeAcceptance>(:final value) => _gate.respond(value),
+      Err<CodeAcceptance>(:final failure) =>
+        Future<Result<CodeAcceptance>>.value(Err<CodeAcceptance>(failure)),
+    };
   }
 
   @override

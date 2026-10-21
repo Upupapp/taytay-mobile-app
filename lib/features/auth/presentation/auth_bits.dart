@@ -10,6 +10,21 @@ import '../domain/code_exchange.dart';
 bool get authClockTicks =>
     !WidgetsBinding.instance.runtimeType.toString().contains('Test');
 
+/// A field drawn inside the 44dp box. The theme's outline would paint a
+/// second border, so every edge of this decoration is empty.
+const InputDecoration bareField = InputDecoration(
+  hintText: '',
+  filled: false,
+  isCollapsed: true,
+  contentPadding: EdgeInsets.zero,
+  border: InputBorder.none,
+  enabledBorder: InputBorder.none,
+  focusedBorder: InputBorder.none,
+  disabledBorder: InputBorder.none,
+  errorBorder: InputBorder.none,
+  focusedErrorBorder: InputBorder.none,
+);
+
 /// Red or amber notice. The words are this app's, never a server message.
 class AuthNoticeBanner extends StatelessWidget {
   const AuthNoticeBanner({
@@ -140,7 +155,7 @@ class PasswordRules extends StatelessWidget {
     final bool letter = RegExp('[A-Za-z]').hasMatch(password);
     return Wrap(
       spacing: 12,
-      runSpacing: 4,
+      runSpacing: 8,
       children: <Widget>[
         _Rule('Hindi bababa sa 8 character', met: chars),
         _Rule('May numero', met: digit),

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
@@ -7,7 +9,9 @@ import 'package:taytay_resident/core/api/retry_policy.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/auth/data/auth_api_repository.dart';
+import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 
 class _Recording implements ApiTransport {
   _Recording(this.responses);
@@ -142,6 +146,96 @@ void main() {
       // phone must still be able to sign out.
       expect(result.isOk, isTrue);
       expect(transport.requests, isEmpty);
+    });
+  });
+
+  ApiHttpResponse okEnvelope(Object data) => ApiHttpResponse(
+    statusCode: 200,
+    body: jsonEncode(<String, Object?>{'data': data}),
+  );
+
+  group('email and reset codes', () {
+    test('a 202 without retry_after is a contract failure', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'accepted': true})),
+      );
+      final Result<CodeAcceptance> result = await repository
+          .requestPasswordReset(email: 'juana@example.com');
+      expect(result.failureOrNull, isA<ContractFailure>());
+    });
+
+    test('retry_after from the body drives the acceptance', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          okEnvelope(<String, Object?>{'accepted': true, 'retry_after': 60}),
+        ),
+      );
+      final Result<CodeAcceptance> result = await repository
+          .requestPasswordReset(email: 'juana@example.com');
+      expect((result as Ok<CodeAcceptance>).value.retryAfterSeconds, 60);
+    });
+  });
+
+  group('submitting a profile', () {
+    const AccountApplication bare = AccountApplication(
+      email: 'juana@example.com',
+      password: 'Password1!',
+      mobile: '09170000000',
+      givenName: 'Juana',
+      familyName: 'Dela Cruz',
+      barangay: 'San Juan',
+    );
+
+    test('posts the notice version and skips an incomplete upload', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'draft'})),
+      );
+      final Result<void> result = await repository.submitProfile(bare);
+      expect(result.isOk, isTrue);
+      expect(transport.requests, hasLength(1));
+      expect(transport.requests.single.path, 'me/consents');
+      expect(transport.requests.single.body, <String, Object?>{
+        'version': 'draft',
+      });
+    });
+
+    test('posts consent and then the verification files', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'draft'})),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'status': 'pending'})),
+      );
+      final Result<void> result = await repository.submitProfile(
+        AccountApplication(
+          email: bare.email,
+          password: bare.password,
+          mobile: bare.mobile,
+          givenName: bare.givenName,
+          familyName: bare.familyName,
+          barangay: bare.barangay,
+          idTypeLabel: 'PhilSys National ID',
+          idFrontBytes: Uint8List.fromList(<int>[1, 2]),
+          idFrontName: 'id_front.jpg',
+          idFrontMime: 'image/jpeg',
+          selfieBytes: Uint8List.fromList(<int>[3]),
+          selfieName: 'selfie.jpg',
+          selfieMime: 'image/jpeg',
+        ),
+      );
+      expect(result.isOk, isTrue);
+      expect(transport.requests.map((ApiRequest r) => r.path), <String>[
+        'me/consents',
+        'me/verification-requests',
+      ]);
+      expect(transport.requests[1].body, <String, Object?>{
+        'id_type': 'philid',
+      });
+      expect(
+        transport.requests[1].files.map((MultipartFile f) => f.field),
+        <String>['id_front', 'selfie'],
+      );
+      expect(result.toString(), isNot(contains('Password1')));
     });
   });
 

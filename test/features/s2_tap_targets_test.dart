@@ -5,6 +5,7 @@ import 'package:taytay_resident/features/auth/presentation/account_wizard_screen
 import 'package:taytay_resident/features/auth/presentation/forgot_password_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
+import 'package:taytay_resident/features/auth/presentation/too_many_attempts_screen.dart';
 
 /// Every tappable control on `02-01` through `02-13` is at least 48 dp.
 void main() {
@@ -25,6 +26,8 @@ void main() {
     '02-12': const SetPasswordScreen(fixture: SetPasswordFixture.mismatch),
     '02-12b': const SetPasswordScreen(fixture: SetPasswordFixture.expired),
     '02-13': const PasswordUpdatedScreen(),
+    '02-14': const TooManyAttemptsScreen(fixture: TooManyFixture.waiting),
+    '02-14b': const TooManyAttemptsScreen(fixture: TooManyFixture.ready),
   };
 
   for (final entry in screens.entries) {

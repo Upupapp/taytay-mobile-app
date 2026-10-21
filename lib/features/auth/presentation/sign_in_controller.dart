@@ -40,6 +40,8 @@ class SignInController extends ChangeNotifier {
   String _mobileNumber = '';
   bool _busy = false;
   SignInMessage? _message;
+  CodeAcceptance? _acceptance;
+  AppFailure? _refusal;
   DateTime? _resendAvailableAt;
   Timer? _cooldownTicker;
 
@@ -64,6 +66,12 @@ class SignInController extends ChangeNotifier {
   bool get busy => _busy;
 
   SignInMessage? get message => _message;
+
+  /// The last accepted send, including `retry_after`.
+  CodeAcceptance? get acceptance => _acceptance;
+
+  /// The last refusal, so a screen can read `retry_after` without the message.
+  AppFailure? get refusal => _refusal;
 
   /// The number painted in the `02-10` banner for the refusal just shown.
   int get passwordAttemptsShown => _passwordAttemptsShown;
@@ -224,11 +232,15 @@ class SignInController extends ChangeNotifier {
     );
     _busy = false;
     switch (result) {
-      case Ok<CodeAcceptance>():
+      case Ok<CodeAcceptance>(:final value):
+        _acceptance = value;
+        _refusal = null;
         _message = null;
         notifyListeners();
         return true;
       case Err<CodeAcceptance>(:final failure):
+        _acceptance = null;
+        _refusal = failure;
         _message = SignInFeedback.forFailure(failure);
         notifyListeners();
         return false;

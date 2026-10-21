@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -70,7 +71,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   bool _busy = false;
   String? _status;
   CapturedDocument? _front;
+  CapturedDocument? _selfieShot;
   bool _selfie = false;
+  CodeAttemptView _attempt = const CodeAttemptView();
   Map<String, String> _errors = <String, String>{};
   bool _codeExpired = false;
 
@@ -192,8 +195,26 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           // The published send route needs a registered session. Registration
           // is still before that account exists, so a refusal does not block
           // the code step. The dev mock accepts the same empty body.
-          await AppDependencies.of(context).authRepository.sendEmailCode();
+          final Result<CodeAcceptance> sent = await AppDependencies.of(
+            context,
+          ).authRepository.sendEmailCode();
           if (!mounted) return;
+          final DateTime now = DateTime.now();
+          _attempt = switch (sent) {
+            Ok<CodeAcceptance>(:final value) => _attempt.applyAcceptance(
+              value,
+              now,
+            ),
+            Err<CodeAcceptance>(:final failure) => _attempt.applyFailure(
+              failure,
+              now,
+            ),
+          };
+          if (_attempt.limited) {
+            setState(() => _step = _Step.code);
+            unawaited(_openHold(now, _attempt.resendAt));
+            return;
+          }
         }
         setState(() => _step = _Step.code);
       case _Step.code:
@@ -208,6 +229,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         }
         // `000000` is the expired stand-in. It does not spend an attempt and
         // does not need the network, so the code step can show `02-04b`.
+        // A real `code_expired` from the server takes the same branch below.
         if (code == CodeExchangeRules.expiredSentinel) {
           setState(() {
             _codeExpired = true;
@@ -230,20 +252,28 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             setState(() {
               _busy = false;
               _codeExpired = false;
+              _status = null;
               _step = _Step.terms;
             });
           case Err<EmailVerified>(:final failure):
-            final List<String>? kinds = failure is ValidationFailure
-                ? failure.fieldErrors['code']
-                : null;
-            final bool expired =
-                kinds != null && kinds.contains(CodeExchangeRules.expired);
+            final DateTime now = DateTime.now();
+            final CodeAttemptView next = _attempt.applyFailure(failure, now);
             setState(() {
               _busy = false;
-              if (expired) {
+              _attempt = next;
+              if (next.expired) {
                 _codeExpired = true;
                 _code.clear();
                 _status = null;
+              } else if (next.unavailable) {
+                _status = CodeAttemptView.unavailableCopy;
+              } else if (next.limited) {
+                _status = null;
+                unawaited(_openHold(now, next.resendAt));
+              } else if (next.wrong && next.attemptsRemaining != null) {
+                _status =
+                    'Mali ang code. ${next.attemptsRemaining} sa '
+                    '${CodeExchangeRules.attempts} subok na lang ang natitira.';
               } else {
                 _status = SignInFeedback.forFailure(failure).text;
               }
@@ -306,6 +336,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _status = null;
     });
     final dependencies = AppDependencies.of(context);
+    final CapturedDocument? front = _front;
+    final CapturedDocument? selfie = _selfieShot;
     final application = AccountApplication(
       email: _email.text.trim(),
       password: _password.text,
@@ -313,8 +345,15 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       givenName: _first.text.trim(),
       familyName: _last.text.trim(),
       barangay: _barangay.text.trim(),
-      hasGovernmentId: _front != null,
-      selfieTaken: _selfie,
+      hasGovernmentId: front != null,
+      selfieTaken: _selfie || selfie != null,
+      idTypeLabel: _idType.text.trim(),
+      idFrontBytes: front?.bytes,
+      idFrontName: front?.fileName,
+      idFrontMime: front?.mimeType,
+      selfieBytes: selfie?.bytes,
+      selfieName: selfie?.fileName,
+      selfieMime: selfie?.mimeType,
     );
     final created = await dependencies.authRepository.createAccount(
       email: application.email,
@@ -328,6 +367,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       });
       return;
     }
+    if (created case Ok<AuthOutcome>(:final value)) {
+      await dependencies.session.signIn(
+        resident: value.resident,
+        accessToken: value.accessToken,
+        expiresAt: value.expiresAt,
+      );
+    }
+    if (!mounted) return;
     final profile = await dependencies.authRepository.submitProfile(
       application,
     );
@@ -339,26 +386,25 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       });
       return;
     }
-    final result = created;
-    if (!mounted) return;
-    switch (result) {
-      case Ok<AuthOutcome>(:final value):
-        await dependencies.session.signIn(
-          resident: value.resident,
-          accessToken: value.accessToken,
-          expiresAt: value.expiresAt,
-        );
-        _front = null;
-        setState(() {
-          _busy = false;
-          _step = _Step.submitted;
-        });
-      case Err<AuthOutcome>(:final failure):
-        setState(() {
-          _busy = false;
-          _status = SignInFeedback.forFailure(failure).text;
-        });
-    }
+    _front = null;
+    _selfieShot = null;
+    setState(() {
+      _busy = false;
+      _step = _Step.submitted;
+    });
+  }
+
+  Future<void> _takeSelfie() async {
+    final picker = AppDependencies.of(context).documentPicker;
+    final CapturedDocument? picked = await picker.pick(
+      DocumentSource.camera,
+      UploadPolicy.fallback,
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _selfieShot = picked;
+      _selfie = true;
+    });
   }
 
   Future<void> _pickFront() async {
@@ -688,10 +734,54 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
+  Future<void> _openHold(DateTime now, DateTime? resumeAt) async {
+    final Duration? wait = resumeAt?.difference(now);
+    final Object? back = await context.pushNamed(
+      AppRoute.tooMany.routeName,
+      extra: CodeHold.fromWait(
+        origin: CodeHoldOrigin.emailVerification,
+        email: _email.text.trim(),
+        now: now,
+        wait: wait != null && wait.isNegative ? Duration.zero : wait,
+      ),
+    );
+    if (!mounted || back is! CodeAcceptance) return;
+    setState(() {
+      _attempt = _attempt.applyAcceptance(back, DateTime.now());
+      _codeExpired = false;
+      _code.clear();
+      _status = null;
+      _step = _Step.code;
+    });
+  }
+
   Future<void> _resendEmailCode() async {
     if (widget.fixture == AccountFixture.live) {
-      await AppDependencies.of(context).authRepository.sendEmailCode();
+      final Result<CodeAcceptance> sent = await AppDependencies.of(
+        context,
+      ).authRepository.sendEmailCode();
       if (!mounted) return;
+      final DateTime now = DateTime.now();
+      setState(() {
+        switch (sent) {
+          case Ok<CodeAcceptance>(:final value):
+            _attempt = _attempt.applyAcceptance(value, now);
+            _codeExpired = false;
+            _code.clear();
+            _status = null;
+          case Err<CodeAcceptance>(:final failure):
+            _attempt = _attempt.applyFailure(failure, now);
+            if (_attempt.unavailable) {
+              _status = CodeAttemptView.unavailableCopy;
+            } else if (_attempt.limited) {
+              _status = null;
+              unawaited(_openHold(now, _attempt.resendAt));
+            } else {
+              _status = SignInFeedback.forFailure(failure).text;
+            }
+        }
+      });
+      return;
     }
     setState(() {
       _codeExpired = false;
@@ -753,35 +843,35 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 maxLength: 6,
                 keyboardType: TextInputType.number,
                 style: const TextStyle(color: Colors.transparent, fontSize: 1),
-                decoration: const InputDecoration(
-                  counterText: '',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
+                decoration: bareField.copyWith(counterText: ''),
                 onChanged: (_) => setState(() {}),
               ),
           ],
         ),
         const SizedBox(height: 8),
-        const Text.rich(
+        Text.rich(
           textAlign: TextAlign.center,
           TextSpan(
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: AppTypography.fontFamily,
               fontSize: 11,
               fontWeight: AppTypography.body,
               color: Color(0xFF5B6680),
             ),
             children: <InlineSpan>[
-              TextSpan(text: "Didn't get it? "),
+              const TextSpan(text: "Didn't get it? "),
               TextSpan(
-                text: 'Resend in 0:45',
-                style: TextStyle(
+                text: widget.fixture == AccountFixture.live
+                    ? (_attempt.canResendAt(DateTime.now())
+                          ? 'Resend'
+                          : 'Resend in ${CodeExchangeRules.countdown(_attempt.resendAt == null ? Duration.zero : _attempt.resendAt!.difference(DateTime.now()))}')
+                    : 'Resend in 0:45',
+                style: const TextStyle(
                   color: BrandColors.taytayBlue,
                   fontWeight: AppTypography.black,
                 ),
               ),
-              TextSpan(text: ' · Check spam folder'),
+              const TextSpan(text: ' · Check spam folder'),
             ],
           ),
         ),
@@ -865,7 +955,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           label: 'Magpadala ng bagong code',
           onPressed: _busy ? null : _resendEmailCode,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 24),
         AuthTextLink(
           'Palitan ang email address',
           fontSize: 12,
@@ -929,77 +1019,92 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 children: <Widget>[
                   Padding(
                     padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
-                    child: Text.rich(
-                      TextSpan(
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12,
-                          height: 1.55,
-                          color: Color(0xFF3A4560),
-                        ),
-                        children: <InlineSpan>[
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: Color(0xFFFFF4D6),
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(999),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 2,
-                                ),
-                                child: Text(
-                                  'DRAFT · LGU-approved Privacy Notice to be inserted',
-                                  style: TextStyle(
-                                    fontFamily: AppTypography.fontFamily,
-                                    fontSize: 12,
-                                    height: 1.2,
-                                    fontWeight: AppTypography.black,
-                                    color: Color(0xFF8A5A00),
-                                  ),
-                                ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Color(0xFFFFF4CC),
+                            borderRadius: BorderRadius.all(
+                              Radius.circular(999),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            child: Text(
+                              'DRAFT · LGU-approved Privacy Notice to be inserted',
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                height: 1.2,
+                                fontWeight: AppTypography.black,
+                                color: Color(0xFF8A5A00),
                               ),
                             ),
                           ),
-                          TextSpan(text: '\n'),
-                          TextSpan(
-                            text:
-                                'Privacy Notice (Republic Act No. 10173 – Data Privacy Act of 2012)\n',
-                            style: TextStyle(fontWeight: AppTypography.black),
+                        ),
+                        SizedBox(height: 8),
+                        Expanded(
+                          child: ClipRect(
+                            child: Text.rich(
+                              TextSpan(
+                                style: TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 12,
+                                  height: 1.55,
+                                  color: Color(0xFF3A4560),
+                                ),
+                                children: <InlineSpan>[
+                                  TextSpan(
+                                    text:
+                                        'Privacy Notice (Republic Act No. 10173 – Data Privacy Act of 2012)\n',
+                                    style: TextStyle(
+                                      fontWeight: AppTypography.black,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        'The Municipality of Taytay collects your name, contact details, address, valid ID and selfie to create and verify your resident account and to deliver municipal services you request.\n\n',
+                                  ),
+                                  TextSpan(
+                                    text: 'How we use it: ',
+                                    style: TextStyle(
+                                      fontWeight: AppTypography.black,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        'identity and residency verification, service requests, and notices from the LGU. ',
+                                  ),
+                                  TextSpan(
+                                    text: 'Who can see it: ',
+                                    style: TextStyle(
+                                      fontWeight: AppTypography.black,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        'authorised Taytay LGU personnel only.\n\n',
+                                  ),
+                                  TextSpan(
+                                    text: 'Your rights: ',
+                                    style: TextStyle(
+                                      fontWeight: AppTypography.black,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text:
+                                        'to be informed, to access, correct, object and erase, and to file a complaint with the National Privacy Commission. Contact the LGU Data Protection Officer for requests.',
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
-                          TextSpan(
-                            text:
-                                'The Municipality of Taytay collects your name, contact details, address, valid ID and selfie to create and verify your resident account and to deliver municipal services you request.\n\n',
-                          ),
-                          TextSpan(
-                            text: 'How we use it: ',
-                            style: TextStyle(fontWeight: AppTypography.black),
-                          ),
-                          TextSpan(
-                            text:
-                                'identity and residency verification, service requests, and notices from the LGU. ',
-                          ),
-                          TextSpan(
-                            text: 'Who can see it: ',
-                            style: TextStyle(fontWeight: AppTypography.black),
-                          ),
-                          TextSpan(
-                            text: 'authorised Taytay LGU personnel only.\n\n',
-                          ),
-                          TextSpan(
-                            text: 'Your rights: ',
-                            style: TextStyle(fontWeight: AppTypography.black),
-                          ),
-                          TextSpan(
-                            text:
-                                'to be informed, to access, correct, object and erase, and to file a complaint with the National Privacy Commission. Contact the LGU Data Protection Officer for requests.',
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                   Positioned(
@@ -1145,20 +1250,25 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                   const Row(
                     children: <Widget>[
                       TaytayIcon(
-                        icon: TaytayIcons.check,
+                        icon: TaytayIcons.circleCheck,
                         semanticLabel: '',
                         excludeSemantics: true,
                         size: 13,
                         color: Color(0xFF0F7A4D),
                       ),
                       SizedBox(width: 4),
-                      Text(
-                        'Clear',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11,
-                          fontWeight: AppTypography.strong,
-                          color: Color(0xFF0F7A4D),
+                      Flexible(
+                        child: Text(
+                          'Clear and readable',
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11,
+                            fontWeight: AppTypography.strong,
+                            color: Color(0xFF0F7A4D),
+                          ),
                         ),
                       ),
                     ],
@@ -1193,9 +1303,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              _SelfieRule('Good light, facing the camera'),
-              _SelfieRule('Whole face visible: no sunglasses, mask or cap'),
-              _SelfieRule('Only you in the photo'),
+              _SelfieRule(TaytayIcons.sun, 'Good light, facing the camera'),
+              _SelfieRule(
+                TaytayIcons.scanFace,
+                'Whole face visible: no sunglasses, mask or cap',
+              ),
+              _SelfieRule(TaytayIcons.user, 'Only you in the photo'),
             ],
           ),
         ),
@@ -1204,7 +1317,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           width: 220,
           child: GoldButton(
             label: 'Take selfie',
-            onPressed: () => setState(() => _selfie = true),
+            icon: const TaytayIcon(
+              icon: TaytayIcons.camera,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: 18,
+              color: BrandColors.taytayBlueDark,
+            ),
+            onPressed: widget.fixture == AccountFixture.live
+                ? _takeSelfie
+                : () => setState(() => _selfie = true),
           ),
         ),
       ],
@@ -1244,6 +1366,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           title: 'Check your details',
           titleSize: 22,
         ),
+        const SizedBox(height: 9),
         _row('Name', name, _Step.personal),
         _row('Email', _email.text.trim(), _Step.personal, badge: 'Verified'),
         _row('Mobile', _mobile.text.trim(), _Step.personal),
@@ -1339,14 +1462,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   Widget _row(String label, String value, _Step edit, {String? badge}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6.83),
+      padding: const EdgeInsets.symmetric(vertical: 5.5),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Color(0xFFEADFC0), width: 1.2),
         ),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: <Widget>[
           Expanded(
             child: Column(
@@ -1389,7 +1512,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 const TaytayIcon(
-                                  icon: TaytayIcons.check,
+                                  icon: TaytayIcons.circleCheck,
                                   semanticLabel: '',
                                   excludeSemantics: true,
                                   size: 11,
@@ -1560,9 +1683,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               obscureText: obscure,
                               textAlignVertical: TextAlignVertical.center,
                               style: AppTypography.fieldValue,
-                              decoration: const InputDecoration.collapsed(
-                                hintText: '',
-                              ),
+                              decoration: bareField,
                             ),
                           ),
                   ),
@@ -1928,8 +2049,9 @@ class _SelfieFrame extends StatelessWidget {
 }
 
 class _SelfieRule extends StatelessWidget {
-  const _SelfieRule(this.label);
+  const _SelfieRule(this.icon, this.label);
 
+  final IconData icon;
   final String label;
 
   @override
@@ -1938,8 +2060,8 @@ class _SelfieRule extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: <Widget>[
-          const TaytayIcon(
-            icon: TaytayIcons.sun,
+          TaytayIcon(
+            icon: icon,
             semanticLabel: '',
             excludeSemantics: true,
             size: 16,

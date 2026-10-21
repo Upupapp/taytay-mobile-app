@@ -161,6 +161,10 @@ abstract final class SignInFeedback {
     NetworkFailure() => SignInMessage.offline,
     TimeoutFailure() => SignInMessage.timedOut,
     RateLimitedFailure() => SignInMessage.tooManyAttempts,
+    CodeExchangeFailure(:final exchangeKind)
+        when exchangeKind == CodeExchangeKind.locked =>
+      SignInMessage.tooManyAttempts,
+    CodeExchangeFailure() => SignInMessage.codeNotAccepted,
     ServerFailure() => SignInMessage.serviceUnavailable,
     NotFoundFailure() ||
     ForbiddenFailure() ||

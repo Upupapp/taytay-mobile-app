@@ -15,6 +15,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/sign_in_challenge.dart';
+import 'auth_bits.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 
@@ -398,9 +399,7 @@ class _Field extends StatelessWidget {
                             style: AppTypography.fieldValue.copyWith(
                               color: BrandColors.fieldInk,
                             ),
-                            decoration: const InputDecoration.collapsed(
-                              hintText: '',
-                            ),
+                            decoration: bareField,
                           ),
                         ),
                 ),
