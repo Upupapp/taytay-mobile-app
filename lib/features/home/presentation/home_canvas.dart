@@ -204,7 +204,14 @@ class _HomeCanvasState extends State<HomeCanvas> {
                         onCreateAccount: widget.onCreateAccount,
                       ),
                     ],
-                    const SizedBox(height: 14),
+                    // The unverified card's text box ends 2 device px above
+                    // the design hero. Two thirds of a logical pixel is that
+                    // gap; the other homes keep the design's 14.
+                    SizedBox(
+                      height: widget.status == HomeStatusKind.pending
+                          ? 14 + 2 / 3
+                          : 14,
+                    ),
                     _Hero(
                       slides: widget.slides,
                       controller: _pages,
@@ -289,9 +296,7 @@ class _GoldGlow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const IgnorePointer(
-      child: CustomPaint(painter: _GoldGlowPainter()),
-    );
+    return const IgnorePointer(child: CustomPaint(painter: _GoldGlowPainter()));
   }
 }
 
@@ -346,36 +351,45 @@ class _Wordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        const _HomeSeal(),
-        const SizedBox(width: 10),
-        const Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                'BAYAN NG TAYTAY',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _wordmark,
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        // Seal, its gap, the bell, and the gap before the trailing control.
+        // The pill may use whatever is left; the wordmark takes the rest.
+        final double pillCap = constraints.maxWidth.isFinite
+            ? constraints.maxWidth - 48 - 10 - 44 - 8
+            : double.infinity;
+        return Row(
+          children: <Widget>[
+            const _HomeSeal(),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'BAYAN NG TAYTAY',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _wordmark,
+                  ),
+                  Text(
+                    'Lalawigan ng Rizal',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: _province,
+                  ),
+                ],
               ),
-              Text(
-                'Lalawigan ng Rizal',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _province,
-              ),
-            ],
-          ),
-        ),
-        _Bell(count: bellCount, onTap: onBell),
-        const SizedBox(width: 8),
-        if (initials.isEmpty)
-          _SignInPill(onTap: onSignIn)
-        else
-          _Avatar(initials: initials, onTap: onAvatar),
-      ],
+            ),
+            _Bell(count: bellCount, onTap: onBell),
+            const SizedBox(width: 8),
+            if (initials.isEmpty)
+              _SignInPill(onTap: onSignIn, maxWidth: pillCap)
+            else
+              _Avatar(initials: initials, onTap: onAvatar),
+          ],
+        );
+      },
     );
   }
 }
@@ -488,18 +502,27 @@ class _Avatar extends StatelessWidget {
 }
 
 class _SignInPill extends StatelessWidget {
-  const _SignInPill({this.onTap});
+  const _SignInPill({required this.maxWidth, this.onTap});
 
+  final double maxWidth;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    // Design: width auto, height 44, padding 0 16. The slot is the label
+    // plus that padding, and never wider than the row has left, so a large
+    // text scale cannot push the wordmark out of the row.
+    final double wanted = _textWidth(context, 'Sign in', _pill) + 32;
+    final double slot = !wanted.isFinite || wanted < maxWidth
+        ? wanted
+        : maxWidth;
     return _Hit(
       label: 'Sign in',
-      width: 92,
+      width: slot,
       height: 44,
       onTap: onTap,
       child: Container(
+        width: slot,
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         alignment: Alignment.center,
@@ -507,7 +530,12 @@ class _SignInPill extends StatelessWidget {
           color: BrandColors.taytayBlue,
           borderRadius: BorderRadius.circular(999),
         ),
-        child: const Text('Sign in', style: _pill),
+        child: const Text(
+          'Sign in',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _pill,
+        ),
       ),
     );
   }
@@ -584,7 +612,14 @@ class _StatusCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool guest = kind == HomeStatusKind.guest;
     return Container(
-      padding: EdgeInsets.fromLTRB(12, guest ? 12 : 10, 12, guest ? 6.67 : 10),
+      // Guest padding is the design's 12, minus a third of a pixel so the
+      // hero below stays on the design row. The pending card is unchanged.
+      padding: EdgeInsets.fromLTRB(
+        12,
+        guest ? 12 : 10,
+        12,
+        guest ? 12 - 1 / 3 : 10,
+      ),
       decoration: BoxDecoration(
         color: guest ? Colors.white : const Color(0xFFFFF4D6),
         borderRadius: BorderRadius.circular(16),
@@ -601,23 +636,38 @@ class _StatusCard extends StatelessWidget {
             children: <Widget>[
               Text(
                 guest ? 'Browsing as guest' : 'Verification pending',
+                maxLines: guest ? 1 : null,
+                overflow: guest ? TextOverflow.ellipsis : null,
                 style: _cardTitle,
               ),
-              const SizedBox(height: 1),
+              // Guest sub-line is `.cs` with margin-top 2. The pending
+              // card keeps the 1 dp gap its hero was lined up against.
+              SizedBox(height: guest ? 2 : 1),
               Text(
                 guest
                     ? 'Sign up to message offices.'
                     : 'Taytay LGU is reviewing your ID. Messaging offices '
                           'unlocks once verified.',
-                style: guest ? _cardBody.copyWith(height: 1) : _cardBody,
+                style: _cardBody,
               ),
             ],
           );
           final bool largeText = scale > 1.05;
+          // Design: width auto, height 44, padding 0 14. A fixed 154 slot
+          // wraps "Browsing as guest". When the row is the one place the
+          // button can sit, the slot stops at the room beside the icon.
+          final double wanted =
+              _textWidth(context, 'Create account', _account) + 28;
+          final double cap = constraints.maxWidth - 44 - (guest ? 12 + 12 : 10);
+          final bool room = cap >= 48;
+          final bool shrink = beside && !largeText && room && wanted <= cap;
+          final double? buttonWidth = shrink
+              ? wanted
+              : (beside && !largeText && room ? cap : null);
           final Widget button = _Hit(
             label: 'Create account',
             onTap: onCreateAccount,
-            width: largeText ? null : 154,
+            width: buttonWidth,
             height: largeText ? null : 44,
             child: Container(
               height: largeText ? null : 44,
@@ -633,13 +683,9 @@ class _StatusCard extends StatelessWidget {
               ),
               child: const Text(
                 'Create account',
-                style: TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _account,
               ),
             ),
           );
@@ -650,10 +696,10 @@ class _StatusCard extends StatelessWidget {
                 background: guest
                     ? BrandColors.surfaceMuted
                     : const Color(0xFFFFFFFF),
-                icon: guest ? TaytayIcons.circleUser : TaytayIcons.clock,
+                icon: guest ? TaytayIcons.user : TaytayIcons.clock,
                 color: guest ? BrandColors.taytayBlue : const Color(0xFF8A5A00),
               ),
-              const SizedBox(width: 10),
+              SizedBox(width: guest ? 12 : 10),
               Expanded(
                 child: beside
                     ? copy
@@ -667,7 +713,7 @@ class _StatusCard extends StatelessWidget {
                       ),
               ),
               if (beside && guest) ...<Widget>[
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 button,
               ],
             ],
@@ -1509,6 +1555,26 @@ const TextStyle _pill = TextStyle(
   color: Colors.white,
   decoration: TextDecoration.none,
 );
+
+const TextStyle _account = TextStyle(
+  fontFamily: 'Plus Jakarta Sans',
+  fontSize: 14,
+  fontWeight: FontWeight.w800,
+  color: BrandColors.taytayBlue,
+  decoration: TextDecoration.none,
+);
+
+/// Width of [text] in the same style the button paints, so the slot can
+/// shrink-wrap without a second layout pass.
+double _textWidth(BuildContext context, String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    maxLines: 1,
+  )..layout();
+  return painter.width;
+}
 
 const TextStyle _badge = TextStyle(
   fontFamily: 'Plus Jakarta Sans',
