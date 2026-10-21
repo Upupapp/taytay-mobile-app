@@ -10,6 +10,7 @@ This file records that the words were looked for. It does not invent them.
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
+| S5 Directory | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/7 | cb8ae2d329333fa25c3a19860415c94cf28c6350 | No approval words. |
 
 ## S0 pixel match
 
@@ -180,7 +181,7 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 ## S5 Directory
 
-S5 is not approved. This section records the capture. It does not record approval words.
+S5 is not approved. This section records the capture. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/7. The directory commit is `cb8ae2d329333fa25c3a19860415c94cf28c6350`.
 
 Office pages are public resident information (decision D11). They are not a staff selector, not a role, and not an office a resident signs in as. One `DirectoryCanvas` paints the list, every office, compose, the sent screen, and the thread from `test/fixtures/mock/offices.json`. There is no per-office widget and no office copy in Dart.
 
