@@ -23,6 +23,7 @@ String? resolveRedirect({
   bool mustUpgrade = false,
   bool isInMaintenance = false,
   OnboardingMode onboarding = OnboardingMode.staffMediated,
+  bool allowDevRoutes = false,
 }) {
   final target = AppRoute.forPath(_pathOf(location));
   if (target == null) {
@@ -90,6 +91,9 @@ String? resolveRedirect({
     final resumed = requested == null
         ? null
         : AppRoute.forPath(_pathOf(requested));
+    if (resumed == AppRoute.componentGallery && !allowDevRoutes) {
+      return AppRoute.home.path;
+    }
     if (resumed != null &&
         resumed != AppRoute.signIn &&
         AccessPolicy.evaluate(
@@ -118,6 +122,13 @@ String? resolveRedirect({
       target.requirement != AccessRequirement.public &&
       target != AppRoute.maintenance) {
     return AppRoute.maintenance.path;
+  }
+
+  // The component gallery is a dev-build tool. It is in the route table so
+  // the requirement is explicit, and it is refused everywhere else — including
+  // a deep link — rather than hidden inside the screen.
+  if (target == AppRoute.componentGallery && !allowDevRoutes) {
+    return AppRoute.home.path;
   }
 
   final decision = AccessPolicy.evaluate(

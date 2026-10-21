@@ -49,6 +49,7 @@ void main() {
   group('ApiErrorCode', () {
     test('parses every canonical wire value from the backend contract', () {
       const canonical = <String, ApiErrorCode>{
+        'INVALID_JSON': ApiErrorCode.invalidJson,
         'BAD_REQUEST': ApiErrorCode.badRequest,
         'UNAUTHENTICATED': ApiErrorCode.unauthenticated,
         'FORBIDDEN': ApiErrorCode.forbidden,
@@ -59,6 +60,7 @@ void main() {
         'VALIDATION_FAILED': ApiErrorCode.validationFailed,
         'RATE_LIMITED': ApiErrorCode.rateLimited,
         'SERVER_ERROR': ApiErrorCode.serverError,
+        'INTERNAL_ERROR': ApiErrorCode.internalError,
         'SERVICE_UNAVAILABLE': ApiErrorCode.serviceUnavailable,
       };
       canonical.forEach((wire, expected) {

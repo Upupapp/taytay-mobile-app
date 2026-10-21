@@ -480,9 +480,10 @@ void main() {
         unorderedEquals(<String>[
           'services',
           'health',
-          'newsfeed',
-          'events',
-          'programs',
+          'news',
+          'offices',
+          'home',
+          'barangays',
         ]),
       );
     });
@@ -794,13 +795,12 @@ void main() {
 
         expect(result.isOk, isTrue);
         final request = transport.sent.single;
-        expect(request.query['channel'], 'citizen-mobile');
-        expect(
-          request.query['per_page'],
-          '100',
-          reason: 'clamped to the maximum',
-        );
-        expect(request.query['page'], '1', reason: 'clamped to the first page');
+        // The Node list query is `limit`, plus an optional category. Channel
+        // stays on the telemetry header; it is not a catalogue filter.
+        expect(request.query.containsKey('channel'), isFalse);
+        expect(request.query.containsKey('page'), isFalse);
+        expect(request.query.containsKey('per_page'), isFalse);
+        expect(request.query['limit'], '100', reason: 'clamped to the maximum');
         expect(request.headers.containsKey('Authorization'), isFalse);
         expect(request.headers['X-Client-Channel'], 'citizen-mobile');
       },

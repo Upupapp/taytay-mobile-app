@@ -21,6 +21,7 @@ import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/announcement_repository.dart';
 import 'news_screen.dart' show formatPublishedDate;
 import 'post_detail_controller.dart';
@@ -183,7 +184,11 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Announcement')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Announcement'),
+      ),
       body: SafeArea(
         child: switch ((_idIsValid, controller)) {
           // An id this app would never have produced. Same words as a missing

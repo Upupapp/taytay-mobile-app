@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/household_summary.dart';
 
 /// Household and family — what Taytay LGU records about the resident's home.
@@ -95,7 +96,11 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
     final summary = _summary;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Household and family')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Household and family'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.viewHouseholdSummary,

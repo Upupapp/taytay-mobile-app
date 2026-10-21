@@ -34,14 +34,15 @@ abstract final class LguServiceDto {
     if (raw is! Map<String, dynamic>) return null;
 
     final id = _string(raw['id']);
-    final code = _string(raw['code']);
+    // Node services are addressed by slug. Older rows used code.
+    final code = _string(raw['code']) ?? _string(raw['slug']);
     if (id == null || code == null) return null;
 
     return LguService(
       id: id,
       code: code,
       name: _string(raw['name']) ?? code,
-      description: _string(raw['description']) ?? '',
+      description: _string(raw['summary']) ?? _string(raw['description']) ?? '',
       category: ServerValue.parse<ServiceCategory>(
         _string(raw['category']),
         ServiceCategory.values,

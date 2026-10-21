@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/config/app_config.dart';
+import '../core/config/app_environment.dart';
 import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
 import '../core/l10n/app_locales.dart';
@@ -39,6 +40,8 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
     launch: widget.dependencies.launch,
     platform: widget.dependencies.platform,
     navigatorKey: _navigatorKey,
+    allowDevRoutes:
+        widget.dependencies.config.environment == AppEnvironment.dev,
   );
 
   AppLifecycleListener? _lifecycle;
@@ -108,9 +111,10 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
         localeResolutionCallback: AppLocales.resolve,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        // Follows the OS setting. Dark mode is an accessibility feature for
-        // light-sensitive residents, not a preference toggle to postpone.
-        themeMode: ThemeMode.system,
+        // Decision D9: the mockups are light, and the dark scheme is a later
+        // pass. The dark ThemeData stays built so contrast tests can see it.
+        // The running app does not follow the OS into dark until that pass.
+        themeMode: AppTheme.themeMode,
         routerConfig: _router,
         builder: (context, child) {
           // Order matters. The lock is innermost so it covers the router's

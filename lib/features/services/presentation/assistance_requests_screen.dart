@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_history.dart';
 import '../domain/request_status_copy.dart';
 import 'release_and_referral.dart';
@@ -87,7 +88,11 @@ class _AssistanceRequestsScreenState extends State<AssistanceRequestsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My requests')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('My requests'),
+      ),
       body: SafeArea(
         // Belt and braces with the route guard: the route is verified-only, so
         // this can only render for a verified resident — but a screen that also

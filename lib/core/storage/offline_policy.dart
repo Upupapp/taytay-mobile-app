@@ -62,28 +62,36 @@ const List<OfflineRule> offlinePolicy = <OfflineRule>[
         'Useless only if it needs a signal.',
   ),
   OfflineRule(
-    feature: 'Assistance programmes',
+    feature: 'Offices',
     posture: OfflinePosture.staleReadable,
-    path: 'programs',
+    path: 'offices',
     because:
-        'Public municipal content, and metered-data-expensive to re-fetch.',
+        'Public municipal pages: name, hours, and a phone. The same for every '
+        'resident, and useful when the signal in the hall is gone.',
   ),
   OfflineRule(
     feature: 'Newsfeed',
     posture: OfflinePosture.staleReadable,
-    path: 'newsfeed',
+    path: 'news',
     because:
         'Public. An advisory read late is better than an advisory not read, and '
         'the screen states when the office actually published it.',
   ),
   OfflineRule(
-    feature: 'Events',
+    feature: 'Home',
     posture: OfflinePosture.staleReadable,
-    path: 'events',
+    path: 'home',
     because:
-        'The listing is public. Availability is NOT cached with it — that is '
-        'derived server-side per read, and a stale "open" sends somebody to a '
-        'covered court for a place that went hours ago.',
+        'The public home payload: banners and shortcuts. Nothing in it is about '
+        'one resident, so a stale copy discloses nothing personal.',
+  ),
+  OfflineRule(
+    feature: 'Barangays',
+    posture: OfflinePosture.staleReadable,
+    path: 'barangays',
+    because:
+        'The public directory of barangay names. A resident filling an address '
+        'should not need a signal to see the list the municipality published.',
   ),
   OfflineRule(
     feature: 'Platform health',

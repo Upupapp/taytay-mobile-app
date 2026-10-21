@@ -28,7 +28,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
 
   final ApiClient _apiClient;
 
-  static const String path = 'me/profile';
+  static const String path = 'me';
 
   @override
   Future<Result<ResidentProfileSummary>> loadOwnSummary() async {
@@ -40,7 +40,8 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
         final map = data is Map<String, dynamic>
             ? data
             : const <String, dynamic>{};
-        final Object? tier = map['verification_tier'];
+        final Object? tier =
+            map['verification_status'] ?? map['verification_tier'];
         return ResidentProfileSummary(
           // Unmapped, and read fresh on every call. The tier decides what a
           // resident may do, so it is authority-shaped: never computed here,
@@ -104,11 +105,12 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     }
 
     final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: '\$path/corrections',
+      method: HttpMethod.patch,
+      path: path,
+      // The Node profile edit is PATCH /me. There is no corrections route.
       authenticated: true,
       idempotencyKey: idempotencyKey,
-      body: <String, Object?>{'changes': named},
+      body: named,
       decode: (_) {},
     );
     return response.map((_) {});
@@ -140,14 +142,32 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     }
 
     final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: '$path/corrections',
+      method: HttpMethod.patch,
+      path: path,
       authenticated: true,
       idempotencyKey: idempotencyKey,
-      body: <String, Object?>{
-        'changes': named,
-        if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
-      },
+      body: named,
+      decode: (_) {},
+    );
+    if (note != null && note.trim().isNotEmpty) {
+      // ProfilePatch has no note field. The words stay off the wire.
+      assert(note.isNotEmpty);
+    }
+    return response.map((_) {});
+  }
+
+  /// `POST me/avatar`.
+  Future<Result<void>> uploadAvatar(MultipartFile file) async {
+    final response = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'me/avatar',
+      authenticated: true,
+      file: MultipartFile(
+        field: 'file',
+        filename: file.filename,
+        bytes: file.bytes,
+        mimeType: file.mimeType,
+      ),
       decode: (_) {},
     );
     return response.map((_) {});
@@ -176,7 +196,13 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
       map['last_name'] as String?,
       map['suffix'] as String?,
     ].whereType<String>().where((String p) => p.trim().isNotEmpty).join(' ');
-    if (fullName.isNotEmpty) values[ResidentProfileField.fullName] = fullName;
+    final Object? singleName = map['name'];
+    final String resolvedName = fullName.isNotEmpty
+        ? fullName
+        : (singleName is String ? singleName.trim() : '');
+    if (resolvedName.isNotEmpty) {
+      values[ResidentProfileField.fullName] = resolvedName;
+    }
 
     final Object? tier = map['verification_tier'];
 

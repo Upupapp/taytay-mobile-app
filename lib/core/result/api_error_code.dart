@@ -9,6 +9,9 @@
 /// unrecognised code must degrade gracefully rather than crash: it maps to
 /// [ApiErrorCode.unknown].
 enum ApiErrorCode {
+  /// 400 — the body was not JSON.
+  invalidJson('INVALID_JSON'),
+
   /// 400 — malformed request the schema cannot express.
   badRequest('BAD_REQUEST'),
 
@@ -55,6 +58,9 @@ enum ApiErrorCode {
 
   /// 500 — unhandled server fault.
   serverError('SERVER_ERROR'),
+
+  /// 500 — the Node API's name for an unhandled fault.
+  internalError('INTERNAL_ERROR'),
 
   /// 503 — dependency down or maintenance.
   serviceUnavailable('SERVICE_UNAVAILABLE'),

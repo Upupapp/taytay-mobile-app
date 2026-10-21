@@ -380,15 +380,55 @@ void main() {
       final entry = _entry(sha: _sha256(bytes));
       expect(_rulesOf(_validate(entry, bytes)), isNot(contains('density')));
       expect(AssetFormat.svg.isDensityDependent, isFalse);
+      expect(AssetFormat.jpeg.isDensityDependent, isFalse);
       expect(AssetFormat.png.isDensityDependent, isTrue);
       expect(AssetFormat.webp.isDensityDependent, isTrue);
     });
 
-    test('lossy formats are not expressible in the manifest', () {
+    test('JPEG is expressible only for a photograph', () {
       expect(
         AssetFormat.values.map((f) => f.name),
-        unorderedEquals(<String>['svg', 'png', 'webp']),
+        unorderedEquals(<String>['svg', 'png', 'webp', 'jpeg']),
       );
+      final bytes = _fakeJpeg();
+      final photograph = _entry(
+        key: 'sample_photo',
+        kind: AssetKind.photograph,
+        format: AssetFormat.jpeg,
+        licence: AssetLicence.thirdParty,
+        provenance: 'CC BY-SA 4.0, credited on the welcome scene.',
+        semanticLabel: 'Photo: a synthetic place',
+        path: 'assets/photos/sample_photo.jpg',
+        sha: _sha256(bytes),
+        maxBytes: 1024,
+      );
+      expect(
+        _validate(photograph, bytes),
+        isEmpty,
+        reason: _validate(photograph, bytes).join('\n'),
+      );
+
+      final illustration = _entry(
+        format: AssetFormat.jpeg,
+        path: 'assets/illustrations/sample_scene.jpg',
+        semanticLabel: 'Illustration: a sample scene.',
+        sha: _sha256(bytes),
+        maxBytes: 1024,
+      );
+      expect(_rulesOf(_validate(illustration, bytes)), contains('format'));
+
+      final unlabeled = _entry(
+        key: 'sample_photo',
+        kind: AssetKind.photograph,
+        format: AssetFormat.jpeg,
+        licence: AssetLicence.thirdParty,
+        provenance: 'CC BY-SA 4.0, credited on the welcome scene.',
+        semanticLabel: 'A hall',
+        path: 'assets/photos/sample_photo.jpg',
+        sha: _sha256(bytes),
+        maxBytes: 1024,
+      );
+      expect(_rulesOf(_validate(unlabeled, bytes)), contains('semantics'));
     });
   });
 

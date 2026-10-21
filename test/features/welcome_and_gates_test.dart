@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -11,6 +12,8 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/onboarding/presentation/welcome_scene.dart';
+import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -158,8 +161,14 @@ const StoredSession unverifiedSession = StoredSession(
 );
 
 void main() {
-  setUp(MotionPreference.reset);
-  tearDown(MotionPreference.reset);
+  setUp(() {
+    MotionPreference.reset();
+    WelcomeMotion.enabled = false;
+  });
+  tearDown(() {
+    MotionPreference.reset();
+    WelcomeMotion.enabled = false;
+  });
 
   group('startup routing', () {
     testWidgets('a first launch lands on the welcome scenes', (tester) async {
@@ -167,7 +176,7 @@ void main() {
       await settle(tester);
 
       expect(dependencies.launch.state, LaunchState.firstLaunch);
-      expect(find.text('Municipal services in one place'), findsOneWidget);
+      expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsOneWidget);
       expect(find.text('Skip'), findsOneWidget);
     });
 
@@ -175,7 +184,7 @@ void main() {
       await boot(tester, welcomeSeen: true);
       await settle(tester);
 
-      expect(find.text('Municipal services in one place'), findsNothing);
+      expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsNothing);
       expect(find.textContaining('no account needed'), findsOneWidget);
     });
 
@@ -241,6 +250,32 @@ void main() {
   });
 
   group('welcome scenes — no trap', () {
+    testWidgets('Skip fires from 23 dp above the centre of its 48 dp target', (
+      tester,
+    ) async {
+      final dependencies = await boot(tester);
+      await settle(tester);
+
+      expect(
+        tester.getSize(find.byKey(welcomeSkipTargetKey)).height,
+        A11y.minTapTarget,
+      );
+      final pill = tester.getSize(
+        find.descendant(
+          of: find.byKey(welcomeSkipTargetKey),
+          matching: find.byType(SizedBox),
+        ),
+      );
+      expect(pill.height, A11y.backButtonVisual);
+
+      final centre = tester.getCenter(find.byKey(welcomeSkipTargetKey));
+      await tester.tapAt(centre + const Offset(0, -23));
+      await tester.pumpAndSettle();
+
+      expect(dependencies.launch.state, LaunchState.returning);
+      expect(find.textContaining('no account needed'), findsOneWidget);
+    });
+
     testWidgets('skip marks the welcome done and enters the app', (
       tester,
     ) async {
@@ -311,7 +346,7 @@ void main() {
       await settle(tester);
 
       final semantics = tester.getSemantics(
-        find.text('Municipal services in one place'),
+        find.text('Serbisyong bayan,\nnasa isang app.'),
       );
       expect(semantics.flagsCollection.isHeader, isTrue);
     });
@@ -326,6 +361,47 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('the travelling light runs unless motion is reduced', (
+      tester,
+    ) async {
+      WelcomeMotion.enabled = true;
+      await boot(tester);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      expect(find.text('Skip'), findsOneWidget);
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+
+      WelcomeMotion.enabled = false;
+      MotionPreference.set(MotionPreference.reduced);
+      await tester.pump();
+      expect(find.byKey(TravellingLight.mark), findsNothing);
+    });
+
+    testWidgets('get started opens sign-in and carries the light', (
+      tester,
+    ) async {
+      final dependencies = await boot(tester);
+      await settle(tester);
+      for (var i = 0; i < 2; i++) {
+        await tester.tap(find.text('Next'));
+        await tester.pumpAndSettle();
+      }
+      WelcomeMotion.enabled = true;
+      await tester.tap(find.text('Get started'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.text('Send one-time code'), findsOneWidget);
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+      expect(dependencies.launch.state, LaunchState.returning);
+      // The speck stays. A 7s loop does not remove the thread.
+      await tester.pump(MotionTokens.welcomeLight);
+      await tester.pump();
+      expect(find.byKey(TravellingLight.mark), findsOneWidget);
+      expect(find.byType(SignInThreadOverlay), findsOneWidget);
+      WelcomeMotion.enabled = false;
+    });
+
     testWidgets('scene transitions work under reduced motion', (tester) async {
       await boot(tester, disableAnimations: true);
       await settle(tester);
@@ -334,7 +410,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Your Taytay ID, on your phone'), findsOneWidget);
+      expect(find.text('YOUR TAYTAY ID, ON YOUR PHONE'), findsOneWidget);
     });
 
     testWidgets('the in-app reduced-motion preference also applies', (

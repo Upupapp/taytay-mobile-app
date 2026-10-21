@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/profile_fields.dart';
 
 /// Privacy and your data.
@@ -35,7 +36,11 @@ class PrivacyScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Privacy and your data')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Privacy and your data'),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(Spacing.lg),

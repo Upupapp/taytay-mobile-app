@@ -84,8 +84,11 @@ class HttpApiTransport implements ApiTransport {
   ) async {
     try {
       final http.BaseRequest outgoing;
-      final MultipartFile? file = request.file;
-      if (file != null) {
+      final List<MultipartFile> parts = <MultipartFile>[
+        if (request.file != null) request.file!,
+        ...request.files,
+      ];
+      if (parts.isNotEmpty) {
         // Content-Type is left to `package:http` so it can generate the
         // boundary. Setting it by hand produces a body the server cannot parse
         // and a 400 that looks like a validation failure.
@@ -93,12 +96,14 @@ class HttpApiTransport implements ApiTransport {
           ..headers.addAll(
             <String, String>{...request.headers}..remove('Content-Type'),
           )
-          ..files.add(
-            http.MultipartFile.fromBytes(
-              file.field,
-              file.bytes,
-              filename: file.filename,
-              contentType: MediaType.parse(file.mimeType),
+          ..files.addAll(
+            parts.map(
+              (MultipartFile part) => http.MultipartFile.fromBytes(
+                part.field,
+                part.bytes,
+                filename: part.filename,
+                contentType: MediaType.parse(part.mimeType),
+              ),
             ),
           );
         if (request.body is Map<String, dynamic>) {

@@ -1024,5 +1024,121 @@
   "intentResumedViewDigitalId": "You can now open your digital ID.",
   "@intentResumedViewDigitalId": {
     "description": "Resident-facing copy."
+  },
+  "welcomeSkip": "Skip",
+  "@welcomeSkip": {
+    "description": "Skip control on every welcome scene."
+  },
+  "welcomeNext": "Next",
+  "@welcomeNext": {
+    "description": "Advances to the next welcome scene."
+  },
+  "welcomeGetStarted": "Get started",
+  "@welcomeGetStarted": {
+    "description": "Leaves the welcome and opens sign-in."
+  },
+  "welcomeContinueAsGuest": "Continue as guest",
+  "@welcomeContinueAsGuest": {
+    "description": "Leaves the welcome and enters the app without an account."
+  },
+  "welcomeGuestNote": "You can browse municipal services without an account.",
+  "@welcomeGuestNote": {
+    "description": "Explains that browsing needs no account."
+  },
+  "welcomeStep": "Step {current} of {total}",
+  "@welcomeStep": {
+    "description": "Announced progress through the welcome scenes.",
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "welcomeServicesEyebrow": "Municipal services in one place",
+  "@welcomeServicesEyebrow": {
+    "description": "English eyebrow on welcome scene 1. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomeServicesTitle": "Serbisyong bayan,\nnasa isang app.",
+  "@welcomeServicesTitle": {
+    "description": "Filipino title on welcome scene 1. Shown in both locales."
+  },
+  "welcomeServicesBody": "Documents, real property tax, health programmes and job services — browse what Taytay LGU offers and track anything you apply for.",
+  "@welcomeServicesBody": {
+    "description": "English body on welcome scene 1. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomeServicesChipDocuments": "Documents",
+  "@welcomeServicesChipDocuments": {
+    "description": "Chip on welcome scene 1."
+  },
+  "welcomeServicesChipTax": "Real property tax",
+  "@welcomeServicesChipTax": {
+    "description": "Chip on welcome scene 1."
+  },
+  "welcomeServicesChipHealth": "Health",
+  "@welcomeServicesChipHealth": {
+    "description": "Chip on welcome scene 1."
+  },
+  "welcomeServicesChipJobs": "Jobs",
+  "@welcomeServicesChipJobs": {
+    "description": "Chip on welcome scene 1."
+  },
+  "welcomeServicesTag": "Taytay Municipal Hall",
+  "@welcomeServicesTag": {
+    "description": "Photo caption on welcome scene 1."
+  },
+  "welcomeServicesCredit": "Photo: Ramon FVelasquez · CC BY-SA 3.0",
+  "@welcomeServicesCredit": {
+    "description": "Photo credit on welcome scene 1."
+  },
+  "welcomeIdEyebrow": "Your Taytay ID, on your phone",
+  "@welcomeIdEyebrow": {
+    "description": "English eyebrow on welcome scene 2. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomeIdTitle": "Ang Taytay ID mo,\nnasa phone mo na.",
+  "@welcomeIdTitle": {
+    "description": "Filipino title on welcome scene 2. Shown in both locales."
+  },
+  "welcomeIdBody": "Apply for and carry your Municipality of Taytay digital ID without queueing at the municipal hall.",
+  "@welcomeIdBody": {
+    "description": "English body on welcome scene 2. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomeIdChipDigital": "Digital ID",
+  "@welcomeIdChipDigital": {
+    "description": "Chip on welcome scene 2."
+  },
+  "welcomeIdChipQueue": "No queueing",
+  "@welcomeIdChipQueue": {
+    "description": "Chip on welcome scene 2."
+  },
+  "welcomeIdTag": "Taytay Tiangge · Garments & Woodcrafts Capital",
+  "@welcomeIdTag": {
+    "description": "Photo caption on welcome scene 2."
+  },
+  "welcomeIdCredit": "Photo: Ralff Nestor Nacor · CC BY-SA 4.0",
+  "@welcomeIdCredit": {
+    "description": "Photo credit on welcome scene 2."
+  },
+  "welcomePrivacyEyebrow": "You choose what you share",
+  "@welcomePrivacyEyebrow": {
+    "description": "English eyebrow on welcome scene 3. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomePrivacyTitle": "Ikaw ang pipili\nng ibabahagi.",
+  "@welcomePrivacyTitle": {
+    "description": "Filipino title on welcome scene 3. Shown in both locales."
+  },
+  "welcomePrivacyBody": "Taytay LGU asks only for what a service needs, and tells you why. Your information is protected under the Data Privacy Act of 2012.",
+  "@welcomePrivacyBody": {
+    "description": "English body on welcome scene 3. The English locale matches the design. Filipino translates this line."
+  },
+  "welcomePrivacyTag": "St. John the Baptist Parish Church",
+  "@welcomePrivacyTag": {
+    "description": "Photo caption on welcome scene 3."
+  },
+  "welcomePrivacyCredit": "Photo: Urbanroamer · CC BY-SA 3.0",
+  "@welcomePrivacyCredit": {
+    "description": "Photo credit on welcome scene 3."
   }
 }

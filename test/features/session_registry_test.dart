@@ -72,137 +72,35 @@ void main() {
       );
     });
 
-    test('reads me/sessions and marks the current one', () async {
-      transport.responses.add(
-        ok(<String, Object?>{
-          'data': <Object?>[
-            <String, Object?>{
-              'id': 's-1',
-              'name': 'Ana\'s phone',
-              'last_used_at': '2026-08-18T02:00:00Z',
-              'expires_at': '2026-09-01T00:00:00Z',
-              'current': true,
-            },
-            <String, Object?>{
-              'id': 's-2',
-              'name': 'Old handset',
-              'last_used_at': '2026-07-01T02:00:00Z',
-              'current': false,
-            },
-          ],
-          'meta': <String, Object?>{'request_id': 'req-1'},
-        }),
-      );
-
+    test('listing sessions declines and sends nothing', () async {
       final Result<List<DeviceSessionSummary>> result = await repository
           .listActiveSessions();
 
-      expect(transport.requests.single.path, 'me/sessions');
-      final List<DeviceSessionSummary> sessions =
-          (result as Ok<List<DeviceSessionSummary>>).value;
-      expect(sessions, hasLength(2));
-      expect(sessions.first.isCurrentDevice, isTrue);
-      expect(sessions.last.label, 'Old handset');
-      expect(sessions.last.lastSeenAt, isNotNull);
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.failureOrNull!.debugMessage, contains('F32'));
+      expect(transport.requests, isEmpty);
     });
 
-    test('an unnamed session is labelled, never blank', () async {
-      // A session a resident cannot recognise is one they dare not revoke.
-      transport.responses.add(
-        ok(<String, Object?>{
-          'data': <Object?>[
-            <String, Object?>{'id': 's-1', 'current': false},
-          ],
-          'meta': <String, Object?>{'request_id': 'req-1'},
-        }),
+    test('revoking one declines and names no session path', () async {
+      final Result<void> result = await repository.revokeSession(
+        sessionId: 's-2',
       );
 
-      final Result<List<DeviceSessionSummary>> result = await repository
-          .listActiveSessions();
-      expect(
-        (result as Ok<List<DeviceSessionSummary>>).value.single.label,
-        isNotEmpty,
-      );
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.failureOrNull, isNot(isA<ForbiddenFailure>()));
+      expect(transport.requests, isEmpty);
     });
 
     test(
-      'the summary carries no movement data, whatever the server sends',
+      'revoking all others is one decline, not a loop of requests',
       () async {
-        transport.responses.add(
-          ok(<String, Object?>{
-            'data': <Object?>[
-              <String, Object?>{
-                'id': 's-1',
-                'name': 'Phone',
-                'current': false,
-                // None of this may survive into the app.
-                'ip_address': '203.0.113.7',
-                'user_agent': 'Dalvik/2.1.0',
-                'city': 'Taytay',
-                'latitude': 14.5691,
-              },
-            ],
-            'meta': <String, Object?>{'request_id': 'req-1'},
-          }),
-        );
+        final Result<void> result = await repository.revokeAllOtherSessions();
 
-        final Result<List<DeviceSessionSummary>> result = await repository
-            .listActiveSessions();
-        final String rendered = (result as Ok<List<DeviceSessionSummary>>)
-            .value
-            .single
-            .toString();
-
-        for (final String leak in <String>[
-          '203.0.113.7',
-          'Dalvik',
-          'Taytay',
-          '14.5',
-        ]) {
-          expect(rendered, isNot(contains(leak)), reason: leak);
-        }
+        expect(result.failureOrNull, isA<ServerFailure>());
+        expect(result.failureOrNull!.debugMessage, contains('F32'));
+        expect(transport.requests, isEmpty);
       },
     );
-
-    test('revoking one names it in the path', () async {
-      transport.responses.add(
-        ok(<String, Object?>{'data': null, 'meta': <String, Object?>{}}),
-      );
-      await repository.revokeSession(sessionId: 's-2');
-      expect(transport.requests.single.path, 'me/sessions/s-2');
-      expect(transport.requests.single.method, HttpMethod.delete);
-    });
-
-    test('revoking all others is a different request, not a loop', () async {
-      // A loop would be a partial success on a dropped connection: some phones
-      // signed out, some not, and no way for the resident to tell which.
-      transport.responses.add(
-        ok(<String, Object?>{'data': null, 'meta': <String, Object?>{}}),
-      );
-      await repository.revokeAllOtherSessions();
-      expect(transport.requests.single.path, 'me/sessions/revoke-all');
-      expect(transport.requests.single.method, HttpMethod.post);
-    });
-
-    test("someone else's session is not found, never forbidden", () async {
-      // Confirming that a session id exists but belongs to somebody else is
-      // itself a disclosure. The server answers 404 and the app must not
-      // translate that into "you may not".
-      transport.responses.add(
-        ok(<String, Object?>{
-          'error': <String, Object?>{
-            'code': 'NOT_FOUND',
-            'message': 'That session was not found.',
-          },
-        }, status: 404),
-      );
-
-      final Result<void> result = await repository.revokeSession(
-        sessionId: 'someone-elses',
-      );
-      expect(result.failureOrNull, isA<NotFoundFailure>());
-      expect(result.failureOrNull, isNot(isA<ForbiddenFailure>()));
-    });
   });
 
   group('a revoked session ends this one, exactly once', () {

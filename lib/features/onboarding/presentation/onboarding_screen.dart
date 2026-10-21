@@ -4,12 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../shared/illustrations/taytay_scenes.dart';
-import '../../../shared/widgets/app_button.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/taytay_thread.dart';
+import 'welcome_scene.dart';
 
 /// The welcome experience: three scenes, then into the app.
 ///
@@ -34,6 +34,11 @@ import '../../../shared/widgets/app_button.dart';
 /// **Nothing here asks for personal data.** The scenes explain what the app does
 /// and what the LGU will later ask for; the first field a resident meets is on
 /// sign-in, after they have been told why.
+///
+/// Get started marks the welcome done and opens Sign-in. Self-registration stays
+/// off, so Sign-in is the destination the guard already uses for that step. The
+/// speck's live cycle position is handed across as [WelcomeThreadArrival]. Skip
+/// and Continue as guest mark the welcome done and enter the app.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -41,229 +46,180 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
-  static final List<_WelcomeScene> _scenes = <_WelcomeScene>[
-    _WelcomeScene(
-      scene: TaytayScenes.services(),
-      title: 'Municipal services in one place',
-      body:
-          'Documents, real property tax, health programmes and job services — '
-          'browse what Taytay LGU offers and track anything you apply for.',
-    ),
-    _WelcomeScene(
-      scene: TaytayScenes.digitalId(),
-      title: 'Your Taytay ID, on your phone',
-      body:
-          'Apply for and carry your Municipality of Taytay digital ID without '
-          'queueing at the municipal hall.',
-    ),
-    _WelcomeScene(
-      scene: TaytayScenes.privacy(),
-      title: 'You choose what you share',
-      body:
-          'Taytay LGU asks only for what a service needs, and tells you why. '
-          'Your information is protected under the Data Privacy Act of 2012.',
-    ),
-  ];
+class _OnboardingScreenState extends State<OnboardingScreen>
+    with TickerProviderStateMixin {
+  final PageController _pages = PageController();
+  late final AnimationController _light;
 
-  final PageController _controller = PageController();
-  int _index = 0;
+  /// Page the swipe started on. The speck is measured from here so a gesture
+  /// does not throw it back to the entry.
+  int _anchor = 0;
 
-  bool get _isLastScene => _index == _scenes.length - 1;
+  /// Eased phase frozen at the start of a swipe. Null while the page is still.
+  double? _heldPhase;
+
+  /// Raw cycle position frozen with [_heldPhase], handed to Sign-in.
+  double _heldCycle = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _light = AnimationController(
+      vsync: this,
+      duration: MotionTokens.welcomeLight,
+    );
+    _pages.addListener(_onPageTick);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!Motion.decorativeLoop(context)) {
+      _light.stop();
+    } else if (!_light.isAnimating) {
+      _light.repeat();
+    }
+  }
+
+  void _onPageTick() {
+    if (!mounted) return;
+    if (!Motion.decorativeLoop(context)) {
+      _heldPhase = null;
+      if (mounted) setState(() {});
+      return;
+    }
+    final current = _page;
+    final settled = (current - current.roundToDouble()).abs() <= 0.001;
+    if (settled) {
+      final landed = current.round();
+      if (_heldPhase != null) {
+        final forward = landed >= _anchor;
+        _anchor = landed;
+        _heldPhase = null;
+        // Forward lands on the next entry (t = 0). Backward lands on the
+        // previous exit, which is the end of that page's curve.
+        _light.value = forward ? 0 : 0.999;
+        if (!_light.isAnimating) _light.repeat();
+      } else {
+        _anchor = landed;
+      }
+    } else if (_heldPhase == null) {
+      _heldCycle = _light.value;
+      _heldPhase = MotionTokens.welcomeLightCurve.transform(_light.value);
+      _light.stop();
+    }
+    if (mounted) setState(() {});
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _pages
+      ..removeListener(_onPageTick)
+      ..dispose();
+    _light.dispose();
     super.dispose();
   }
 
-  /// Marks the welcome as done and enters the app.
-  ///
-  /// Used by both "Skip" and "Continue as guest": the resident has decided, and
-  /// which button they used does not change that.
-  Future<void> _finish() async {
+  double get _page {
+    if (!_pages.hasClients) return 0;
+    return _pages.page ?? _pages.initialPage.toDouble();
+  }
+
+  /// The speck on the joined stitch. Null hides it (reduced motion, or this
+  /// page is not the one currently carrying the light).
+  double? _lightT(int page) {
+    if (Motion.reduced(context)) return null;
+    if (!Motion.decorativeLoop(context)) return null;
+    final phase =
+        _heldPhase ?? MotionTokens.welcomeLightCurve.transform(_light.value);
+    final placement = placeSpeck(page: _page, phase: phase, anchor: _anchor);
+    if (placement.page != page) return null;
+    return placement.t;
+  }
+
+  double get _cycle => _heldPhase != null ? _heldCycle : _light.value;
+
+  Duration get _turn => MotionTokens.standard;
+
+  Future<void> _finish({required bool signIn}) async {
     final dependencies = AppDependencies.of(context);
     final router = GoRouter.of(context);
-
+    final reduced = Motion.reduced(context);
     await dependencies.launch.markWelcomeCompleted();
     if (!mounted) return;
+    if (signIn) {
+      router.goNamed(
+        AppRoute.signIn.routeName,
+        extra: reduced ? null : WelcomeThreadArrival(_cycle),
+      );
+      return;
+    }
     router.goNamed(AppRoute.home.routeName);
   }
 
-  void _next() {
+  void _go(int direction) {
     unawaited(
       AppHaptics.fire(
         HapticIntent.selection,
         suppressed: Motion.reduced(context),
       ),
     );
-    if (_isLastScene) {
-      unawaited(_finish());
+    final next = (_page.round() + direction).clamp(0, 2);
+    if (Motion.reduced(context)) {
+      // A zero-duration page animation is rejected by the scroll activity.
+      // Reduced motion jumps. The gesture swipe still works.
+      _pages.jumpToPage(next);
       return;
     }
-    _controller.nextPage(
-      // Functional motion: it says which way the scenes run. Shortened rather
-      // than removed under reduced motion, so the page change stays legible.
-      duration: Motion.duration(context, MotionTokens.standard),
-      curve: MotionTokens.enterEase,
-    );
+    final turn = direction > 0 ? _pages.nextPage : _pages.previousPage;
+    unawaited(turn(duration: _turn, curve: Curves.ease));
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+    final scenes = WelcomePageCopy.fromStrings(AppStrings.of(context));
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        actions: <Widget>[
-          TextButton(onPressed: _finish, child: const Text('Skip')),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                itemCount: _scenes.length,
-                onPageChanged: (index) => setState(() => _index = index),
-                itemBuilder: (context, index) => _scenes[index],
-              ),
-            ),
-            _SceneProgress(current: _index, total: _scenes.length),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                Spacing.xl,
-                Spacing.lg,
-                Spacing.xl,
-                Spacing.xl,
-              ),
-              child: Column(
-                children: <Widget>[
-                  AppButton(
-                    label: _isLastScene ? 'Get started' : 'Next',
-                    icon: _isLastScene ? null : Icons.arrow_forward,
-                    iconTrailing: true,
-                    onPressed: _next,
-                  ),
-                  if (_isLastScene) ...<Widget>[
-                    const SizedBox(height: Spacing.sm),
-                    AppButton(
-                      label: 'Continue as guest',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: _finish,
-                    ),
-                    const SizedBox(height: Spacing.md),
-                    Text(
-                      'You can browse municipal services without an account.',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Progress through the scenes.
-///
-/// Carries a **text label for assistive technology** as well as the dots: a row
-/// of coloured pills communicates nothing to a screen-reader user, and "step 2
-/// of 3" is the part that actually matters. The dots themselves are excluded
-/// from semantics so the position is announced once, not four times.
-class _SceneProgress extends StatelessWidget {
-  const _SceneProgress({required this.current, required this.total});
-
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final reduced = Motion.reduced(context);
-
-    return Semantics(
-      label: 'Step ${current + 1} of $total',
-      liveRegion: true,
-      child: ExcludeSemantics(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            for (var i = 0; i < total; i++)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
-                child: AnimatedContainer(
-                  // Decorative: the width change carries no information the
-                  // colour and the label do not already carry, so it goes to
-                  // zero under reduced motion rather than merely shortening.
-                  duration: reduced ? MotionTokens.instant : MotionTokens.fast,
-                  width: i == current ? Spacing.xl : Spacing.sm,
-                  height: Spacing.sm,
-                  decoration: BoxDecoration(
-                    color: i == current
-                        ? theme.colorScheme.primary
-                        : theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(Radii.pill),
+      backgroundColor: const Color(0xFFF3F5FA),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final scale = constraints.maxWidth / 390;
+          const canvasHeight = 844.0;
+          return SingleChildScrollView(
+            child: SizedBox(
+              width: constraints.maxWidth,
+              height: canvasHeight * scale,
+              child: FittedBox(
+                fit: BoxFit.fill,
+                child: SizedBox(
+                  width: 390,
+                  height: canvasHeight,
+                  child: AnimatedBuilder(
+                    animation: _light,
+                    builder: (context, _) {
+                      return PageView.builder(
+                        controller: _pages,
+                        itemCount: scenes.length,
+                        itemBuilder: (context, index) {
+                          return WelcomeCanvas(
+                            page: index,
+                            copy: scenes[index],
+                            lightT: _lightT(index),
+                            onSkip: () => unawaited(_finish(signIn: false)),
+                            onNext: () => _go(1),
+                            onBack: () => _go(-1),
+                            onGetStarted: () =>
+                                unawaited(_finish(signIn: true)),
+                            onGuest: () => unawaited(_finish(signIn: false)),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _WelcomeScene extends StatelessWidget {
-  const _WelcomeScene({
-    required this.scene,
-    required this.title,
-    required this.body,
-  });
-
-  /// A painted scene rather than a glyph: onboarding is the one place worth
-  /// spending vertical space on artwork, because it is what tells a resident
-  /// what kind of app this is before any text is read.
-  final Widget scene;
-
-  final String title;
-  final String body;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    // Scrollable so the content survives a 200% system text scale instead of
-    // overflowing.
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(
-        horizontal: Spacing.xl,
-        vertical: Spacing.xl,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          scene,
-          const SizedBox(height: Spacing.xl),
-          Semantics(
-            header: true,
-            child: Text(title, style: theme.textTheme.headlineSmall),
-          ),
-          const SizedBox(height: Spacing.md),
-          Text(
-            body,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -62,35 +62,36 @@ void main() {
   });
 
   group('list surfaces page rather than loading everything', () {
-    test('every paged repository sends page and per_page', () {
-      // A feed page of twenty-five is twenty-five rows over a metered
-      // connection. Loading everything is a cost the resident pays and never
-      // asked for.
+    test('cursor-paged repositories send a bounded limit', () {
+      // The Node lists page with `limit` and a cursor. A feed of everything
+      // is a cost the resident pays and never asked for.
       const List<String> paged = <String>[
         'lib/features/news/data/newsfeed_api_repository.dart',
-        'lib/features/events/data/event_api_repository.dart',
-        'lib/features/programs/data/program_api_repository.dart',
         'lib/features/notifications/data/notification_api_repository.dart',
-        'lib/features/services/data/assistance_api_repository.dart',
       ];
 
       for (final String path in paged) {
         final String source = sourceOf(path);
-        expect(source, contains("'page'"), reason: path);
-        expect(source, contains("'per_page'"), reason: path);
-        // Bounded, because an over-large page is a slow response for a resident
-        // on a weak connection even when the server tolerates it — and since
-        // TAB 05 the bound and the default both come from `PagePolicy` rather
-        // than from a literal written out at each call site. Asserting the
-        // policy is used is a stronger statement than asserting `clamp(`
-        // appears: it also catches a repository that clamps to a number of its
-        // own.
+        expect(source, contains("'limit'"), reason: path);
         expect(source, contains('pages.clampRequest('), reason: path);
         expect(
           source,
           isNot(contains('clamp(1, 100)')),
           reason: '$path still carries its own ceiling',
         );
+      }
+    });
+
+    test('routes the Node API does not publish do not invent paging', () {
+      const List<String> absent = <String>[
+        'lib/features/events/data/event_api_repository.dart',
+        'lib/features/programs/data/program_api_repository.dart',
+        'lib/features/services/data/assistance_api_repository.dart',
+      ];
+      for (final String path in absent) {
+        final String source = sourceOf(path);
+        expect(source, contains('absentOnNodeContract'), reason: path);
+        expect(source, isNot(contains("'per_page'")), reason: path);
       }
     });
   });

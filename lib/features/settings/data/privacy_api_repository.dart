@@ -27,7 +27,7 @@ class PrivacyApiRepository implements AccountControlsRepository {
 
   final ApiClient _apiClient;
 
-  static const String consentsPath = 'me/privacy/consents';
+  static const String consentsPath = 'me/consents';
 
   @override
   Future<Result<AccountControls>> loadControls() async {
@@ -62,25 +62,10 @@ class PrivacyApiRepository implements AccountControlsRepository {
     required String key,
     required String idempotencyKey,
   }) async {
-    final response = await _apiClient.send<ConsentRecord?>(
-      method: HttpMethod.delete,
-      // Addressed by purpose, which is what the server keys a consent on. The
-      // record's own id is not a route key: a resident withdraws a *purpose*,
-      // not a row, and the office keeps every row either way.
-      path: '$consentsPath/$key',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      decode: _decodeConsent,
-    );
-
-    return response.flatMap(
-      (envelope) => envelope.data == null
-          ? const Err<ConsentRecord>(
-              ContractFailure(
-                debugMessage: 'Withdrawal answered with no readable record.',
-              ),
-            )
-          : Ok<ConsentRecord>(envelope.data!),
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<ConsentRecord>(
+      BackendGap.absentOnNodeContract,
+      'withdrawConsent',
     );
   }
 
@@ -89,22 +74,11 @@ class PrivacyApiRepository implements AccountControlsRepository {
     required String detail,
     required String idempotencyKey,
   }) async {
-    // The same route TAB 04 wired, and deliberately not a second one. A
-    // correction raised from the privacy screen and a correction raised from the
-    // profile screen are the same request to the same reviewer; two paths would
-    // be two places for one to be lost, and two places is how one of them stops
-    // being watched.
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: 'me/profile/corrections',
-      authenticated: true,
-      idempotencyKey: idempotencyKey,
-      body: <String, Object?>{
-        'changes': <String, Object?>{'street_address': detail},
-      },
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'requestDataCorrection',
     );
-    return response.map((_) {});
   }
 
   @override
@@ -124,12 +98,26 @@ class PrivacyApiRepository implements AccountControlsRepository {
     );
   }
 
+  /// `POST me/consents`. Records the notice version the resident accepted.
+  Future<Result<ConsentRecord?>> recordConsent({
+    required String version,
+  }) async {
+    final response = await _apiClient.send<ConsentRecord?>(
+      method: HttpMethod.post,
+      path: consentsPath,
+      authenticated: true,
+      body: <String, Object?>{'version': version},
+      decode: _decodeConsent,
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
   static ConsentRecord? _decodeConsent(Object? entry) {
     if (entry is! Map<String, dynamic>) return null;
-    final Object? purpose = entry['purpose'];
+    final Object? purpose = entry['purpose'] ?? entry['version'] ?? entry['id'];
     if (purpose is! String || purpose.isEmpty) return null;
 
-    final Object? version = entry['notice_version'];
+    final Object? version = entry['notice_version'] ?? entry['version'];
 
     return ConsentRecord(
       key: purpose,
@@ -141,7 +129,9 @@ class PrivacyApiRepository implements AccountControlsRepository {
           ? 'Agreed under privacy notice $version'
           : 'Agreed under the privacy notice in force at the time',
       grantedAt: DateTime.tryParse(
-        entry['granted_at'] is String ? entry['granted_at'] as String : '',
+        (entry['granted_at'] ?? entry['accepted_at']) is String
+            ? (entry['granted_at'] ?? entry['accepted_at']) as String
+            : '',
       )?.toUtc(),
       // Kept, not dropped. A withdrawn consent stays in the list because the
       // record is the point.

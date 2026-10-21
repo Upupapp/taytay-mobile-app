@@ -87,7 +87,10 @@ class _NewsScreenState extends State<NewsScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('News')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        title: const Text('News'),
+      ),
       body: SafeArea(
         child: controller == null
             ? const _FeedSkeleton()
@@ -310,7 +313,14 @@ class _EmphasisChip extends StatelessWidget {
         Icon(icon, size: IconSizes.sm, color: colour),
         const SizedBox(width: Spacing.xs),
         // Never colour alone — the word carries the meaning.
-        Text(label, style: theme.textTheme.labelLarge?.copyWith(color: colour)),
+        // labelLarge is the in-app button role, so a status label uses
+        // labelMedium and may wrap inside the card.
+        Expanded(
+          child: Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(color: colour),
+          ),
+        ),
       ],
     );
   }

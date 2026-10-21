@@ -278,7 +278,7 @@ void main() {
 
       expect(
         cache.store<String>(
-          key: PublicCache.keyFor('events', <String, String>{'scope': 'past'}),
+          key: PublicCache.keyFor('news', <String, String>{'limit': '25'}),
           value: 'x',
           authenticated: false,
         ),
@@ -317,13 +317,12 @@ void main() {
 
     test('readAllowingStale returns the value with its age, and keeps it', () {
       var now = DateTime.utc(2026, 8, 16, 2);
-      final cache = PublicCache(
-        clock: () => now,
-      )..store<String>(key: 'events', value: 'yesterday', authenticated: false);
+      final cache = PublicCache(clock: () => now)
+        ..store<String>(key: 'news', value: 'yesterday', authenticated: false);
       final storedAt = now;
 
       now = now.add(const Duration(hours: 9));
-      final read = cache.readAllowingStale<String>('events');
+      final read = cache.readAllowingStale<String>('news');
 
       expect(read, isNotNull);
       expect(read!.value, 'yesterday');
@@ -334,8 +333,8 @@ void main() {
 
     test('a fresh entry reports itself fresh', () {
       final cache = PublicCache()
-        ..store<String>(key: 'events', value: 'now', authenticated: false);
-      expect(cache.readAllowingStale<String>('events')!.isFresh, isTrue);
+        ..store<String>(key: 'news', value: 'now', authenticated: false);
+      expect(cache.readAllowingStale<String>('news')!.isFresh, isTrue);
     });
 
     test('a type mismatch returns null instead of throwing', () {
@@ -364,7 +363,7 @@ void main() {
 
       for (var i = 0; i < 5; i++) {
         cache.store<String>(
-          key: PublicCache.keyFor('events', <String, String>{'page': '$i'}),
+          key: PublicCache.keyFor('news', <String, String>{'limit': '$i'}),
           value: 'page $i',
           authenticated: false,
         );
@@ -374,13 +373,13 @@ void main() {
       expect(cache.size, 3);
       expect(
         cache.read<String>(
-          PublicCache.keyFor('events', <String, String>{'page': '0'}),
+          PublicCache.keyFor('news', <String, String>{'limit': '0'}),
         ),
         isNull,
       );
       expect(
         cache.read<String>(
-          PublicCache.keyFor('events', <String, String>{'page': '4'}),
+          PublicCache.keyFor('news', <String, String>{'limit': '4'}),
         ),
         'page 4',
       );

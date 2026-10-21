@@ -2,27 +2,31 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../motion/motion_tokens.dart';
+import 'button_styles.dart';
 import 'design_tokens.dart';
 import 'typography.dart';
 
 /// Builds the app's Material 3 themes from [BrandColors].
 ///
-/// **Why Material 3 and no custom font package.**
+/// **Why Material 3, and a bundled font.**
 ///
 /// Material 3 is the accessibility foundation: its colour roles carry tested
 /// contrast pairings, its components ship correct semantics and focus
 /// indicators, and it responds to system text scaling and high-contrast settings
-/// without per-widget work. Building a bespoke design system would mean
-/// re-earning all of that.
+/// without per-widget work.
 ///
-/// The type scale uses the platform's own font (Roboto on Android, San
-/// Francisco on iOS) rather than a downloadable font package. A font fetched at
-/// runtime means a network call to a third-party CDN on first launch — an
-/// avoidable data disclosure for a government app — plus unstyled text on a weak
-/// connection, which is exactly the connection many residents have. Bundling a
-/// licensed font file is a later, deliberate choice; borrowing one over the
-/// network is not.
+/// The typeface is Plus Jakarta Sans, shipped as an asset (OFL). It is not
+/// fetched at runtime. A font from a third-party CDN on first launch is an
+/// avoidable data disclosure, and it leaves unstyled text on the weak
+/// connections many residents have.
+///
+/// **Light mode is what the app shows today** (decision D9). [dark] still
+/// exists so the contrast suite and the later dark-scheme pass have a theme to
+/// check. The running app uses [ThemeMode.light] until that pass lands.
 abstract final class AppTheme {
+  /// What [MaterialApp] is given. Light only, until a dark-scheme pass exists.
+  static const ThemeMode themeMode = ThemeMode.light;
+
   static ThemeData light() => _build(Brightness.light);
 
   static ThemeData dark() => _build(Brightness.dark);
@@ -42,13 +46,32 @@ abstract final class AppTheme {
               : null,
           onPrimary: brightness == Brightness.light ? Colors.white : null,
           error: brightness == Brightness.light ? BrandColors.danger : null,
+          onError: brightness == Brightness.light ? Colors.white : null,
+          surface: brightness == Brightness.light ? BrandColors.surface : null,
+          onSurface: brightness == Brightness.light
+              ? BrandColors.textPrimary
+              : null,
+          onSurfaceVariant: brightness == Brightness.light
+              ? BrandColors.textSecondary
+              : null,
+          surfaceContainerLowest: brightness == Brightness.light
+              ? BrandColors.surfaceCard
+              : null,
+          surfaceContainerLow: brightness == Brightness.light
+              ? BrandColors.surfaceMuted
+              : null,
+          surfaceContainerHighest: brightness == Brightness.light
+              ? BrandColors.surfaceCard
+              : null,
         );
 
     final base = ThemeData(colorScheme: scheme, useMaterial3: true);
 
     return base.copyWith(
       textTheme: AppTypography.apply(base.textTheme),
-      scaffoldBackgroundColor: scheme.surface,
+      scaffoldBackgroundColor: brightness == Brightness.light
+          ? BrandColors.surface
+          : scheme.surface,
       visualDensity: VisualDensity.standard,
       // Ensures every Material tap target reserves at least 48x48 dp, including
       // icon buttons inside dense list rows.
@@ -65,6 +88,8 @@ abstract final class AppTheme {
         elevation: Elevation.none,
         scrolledUnderElevation: Elevation.scrolledUnder,
         centerTitle: false,
+        // 48 dp target plus a little room so the circle is not clipped.
+        leadingWidth: A11y.minTapTarget + Spacing.sm,
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           color: scheme.onSurface,
           fontWeight: FontWeight.w700,
@@ -81,38 +106,81 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size.fromHeight(A11y.minTapTarget + Spacing.sm),
+          minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
-          textStyle: base.textTheme.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: TaytayButtonMetrics.inApp.label,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(A11y.minTapTarget + Spacing.sm),
+          minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(Radii.md),
           ),
+          side: const BorderSide(color: BrandColors.taytayBlue, width: 1.5),
+          foregroundColor: BrandColors.taytayBlue,
+          textStyle: TaytayButtonMetrics.inApp.label,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+          foregroundColor: BrandColors.taytayBlue,
+          textStyle: AppTypography.link,
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        labelStyle: AppTypography.label.copyWith(
+          color: brightness == Brightness.light
+              ? BrandColors.textPrimary
+              : scheme.onSurface,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: scheme.surfaceContainerHighest,
+        fillColor: brightness == Brightness.light
+            ? BrandColors.fieldFill
+            : scheme.surfaceContainerHighest,
+        hintStyle: AppTypography.fieldValue.copyWith(
+          fontWeight: AppTypography.body,
+          color: BrandColors.fieldHint,
+        ),
+        labelStyle: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
+        errorStyle: AppTypography.label.copyWith(color: BrandColors.danger),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(Radii.md),
-          borderSide: BorderSide(color: scheme.outline),
+          borderSide: const BorderSide(
+            color: BrandColors.fieldBorder,
+            width: 1.4,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(
+            color: BrandColors.fieldBorder,
+            width: 1.4,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(
+            color: BrandColors.taytayBlue,
+            width: 1.4,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(color: BrandColors.danger, width: 1.4),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(Radii.md),
+          borderSide: const BorderSide(color: BrandColors.danger, width: 1.4),
         ),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.lg,
-          vertical: Spacing.lg,
+          horizontal: Spacing.md,
+          vertical: 14,
         ),
       ),
       snackBarTheme: SnackBarThemeData(

@@ -10,6 +10,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/failure_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 
 /// Account and preferences for a signed-in resident.
 ///
@@ -84,7 +85,11 @@ class _AccountScreenState extends State<AccountScreen> {
     final healthFailure = _healthFailure;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Account')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Account'),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(Spacing.lg),
         children: <Widget>[

@@ -99,10 +99,11 @@ void main() {
     // must say so rather than reporting agreement between two empty sets.
     expect(
       callsInSource().length,
-      greaterThanOrEqualTo(40),
+      greaterThanOrEqualTo(29),
       reason:
           'The source scan found almost nothing. The call shape it looks for '
-          'has probably changed. Fix the scan; do not lower this number.',
+          'has probably changed. The floor is the citizen surface of the Node '
+          'OpenAPI (29 routes). Fix the scan; do not lower this number.',
     );
   });
 
@@ -194,30 +195,10 @@ void main() {
     );
   });
 
-  test('the exception list is exactly the four C-09 routes', () {
-    // Deliberately an equality rather than a ceiling: every entry must be argued
-    // in a report before it can be added, and this test is what forces that.
-    //
-    // It has been earned once already. It went red on 2026-08-27 when F28's
-    // client half began calling `me/kyc/documents`, which the backend added on
-    // the 24th and the pinned baseline does not have — and it refused a push
-    // until somebody wrote down why. That is the whole purpose of an equality
-    // here rather than a `lessThan`.
-    //
-    // All four close the same way, by moving the pin. See C-09.
-    expect(
-      routesAheadOfBaseline.toSet(),
-      <String>{
-        'GET barangays',
-        'POST newsfeed-comments/{}/reports',
-        'GET me/kyc/documents',
-        'POST me/kyc/documents',
-      },
-      reason:
-          'The set of routes ahead of the baseline changed. If one closed, the '
-          'baseline moved and backend_baseline.dart must move with it. If one '
-          'was added, read C-09 in docs/frontend/open-work.md before deciding '
-          'this is acceptable.',
-    );
+  test('nothing is recorded ahead of the Node contract', () {
+    // The live surface is the vendored OpenAPI. The historical C-09 paths are
+    // no longer called, so the ahead-of-pin list is empty. Adding a row means
+    // this app is calling a path the Node spec does not publish.
+    expect(routesAheadOfBaseline, isEmpty);
   });
 }

@@ -15,6 +15,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../../auth/domain/device_session_repository.dart';
 
 /// Sign-in and security: the controls a resident has over their own session.
@@ -165,7 +166,11 @@ class _SecurityScreenState extends State<SecurityScreen> {
     final lock = dependencies.appLock;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Sign-in and security')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Sign-in and security'),
+      ),
       body: SafeArea(
         child: ListenableBuilder(
           listenable: lock,

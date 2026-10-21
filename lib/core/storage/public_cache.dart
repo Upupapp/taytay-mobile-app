@@ -123,11 +123,10 @@ class PublicCache {
   static const Set<String> defaultAllowedPaths = <String>{
     'services',
     'health',
-    // `newsfeed`, not `announcements`. The app cached a path no module has ever
-    // served, so the entry could never have been hit.
-    'newsfeed',
-    'events',
-    'programs',
+    'news',
+    'offices',
+    'home',
+    'barangays',
   };
 
   /// Number of live entries. For tests and diagnostics.

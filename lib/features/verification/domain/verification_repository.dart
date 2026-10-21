@@ -70,6 +70,7 @@ enum VerificationAttemptState {
         'screening' || 'manual-review' => VerificationAttemptState.underReview,
         'needs-more-information' =>
           VerificationAttemptState.needsMoreInformation,
+        'pending' => VerificationAttemptState.underReview,
         'approved' => VerificationAttemptState.approved,
         'rejected' => VerificationAttemptState.rejected,
         'withdrawn' => VerificationAttemptState.withdrawn,

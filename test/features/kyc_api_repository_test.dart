@@ -29,39 +29,6 @@ class _Scripted implements ApiTransport {
   }
 }
 
-Result<ApiHttpResponse> caseResponse({
-  String status = 'draft',
-  int statusCode = 201,
-}) => Ok<ApiHttpResponse>(
-  ApiHttpResponse(
-    statusCode: statusCode,
-    body: jsonEncode(<String, Object?>{
-      'data': <String, Object?>{
-        'id': '01a0140e-0eaf-71fa-bcb7-c354b5edee94',
-        'status': status,
-        'can_edit': true,
-        'submitted_at': null,
-        'message': null,
-        'claimed': <String, Object?>{'first_name': 'Maria'},
-        'resident_id': null,
-      },
-      'meta': <String, Object?>{'request_id': 'req-1'},
-    }),
-    headers: const <String, String>{'x-request-id': 'req-1'},
-  ),
-);
-
-Result<ApiHttpResponse> ok(Object data) => Ok<ApiHttpResponse>(
-  ApiHttpResponse(
-    statusCode: 200,
-    body: jsonEncode(<String, Object?>{
-      'data': data,
-      'meta': <String, Object?>{'request_id': 'req-1'},
-    }),
-    headers: const <String, String>{},
-  ),
-);
-
 KycClaim claimOf({
   String barangayCode = 'brgy-dolores',
   String street = '12 Mabini St',
@@ -95,79 +62,22 @@ void main() {
   });
 
   group('opening a case', () {
-    test('files the claim against the published code, never an integer', () async {
-      transport.responses.add(caseResponse());
+    test(
+      'declines: the Node contract has one multipart submit, not a case',
+      () async {
+        final Result<VerificationStatus> result = await repository.openCase(
+          claim: claimOf(),
+          idempotencyKey: 'key-1',
+        );
 
-      await repository.openCase(claim: claimOf(), idempotencyKey: 'key-1');
-
-      final ApiRequest request = transport.requests.single;
-      expect(request.method, HttpMethod.post);
-      expect(request.path, 'me/kyc');
-
-      final Map<String, Object?> body = request.body! as Map<String, Object?>;
-      // The whole of F14 in one assertion. `barangay_id` is the auto-increment
-      // primary key the backend's own Article 4 forbids publishing; this app has
-      // no way to know one and must never learn.
-      expect(body['barangay_code'], 'brgy-dolores');
-      expect(body.containsKey('barangay_id'), isFalse);
-    });
-
-    test('a birth date is a date, with no timezone attached', () async {
-      transport.responses.add(caseResponse());
-
-      await repository.openCase(claim: claimOf(), idempotencyKey: 'key-1');
-
-      // An ISO instant would put a timezone on a birthday. Manila is UTC+8, so
-      // a date serialised as UTC lands on the previous day, and a birthday off
-      // by one fails the registry match this claim exists to be checked against.
-      expect(
-        (transport.requests.single.body! as Map<String, Object?>)['birth_date'],
-        '1990-03-07',
-      );
-    });
-
-    test('an absent middle name is absent, not blank', () async {
-      transport.responses.add(caseResponse());
-
-      await repository.openCase(claim: claimOf(), idempotencyKey: 'key-1');
-
-      final Map<String, Object?> body =
-          transport.requests.single.body! as Map<String, Object?>;
-      // The server's rule is `nullable`. An empty string is a value a reviewer
-      // has to interpret; many Filipino records genuinely carry no middle name.
-      expect(body.containsKey('middle_name'), isFalse);
-      expect(body.containsKey('suffix'), isFalse);
-      expect(body['first_name'], 'Maria');
-      expect(body['last_name'], 'Santos');
-      expect(body['sex'], 'female');
-      expect(body['street_address'], '12 Mabini St');
-    });
-
-    test('it carries an idempotency key, and the case comes back', () async {
-      transport.responses.add(caseResponse());
-
-      final Result<VerificationStatus> result = await repository.openCase(
-        claim: claimOf(),
-        idempotencyKey: 'key-1',
-      );
-
-      // The server resolves the case from the account, so a repeat returns the
-      // same one — but the app does not get to rely on a guarantee it cannot
-      // see, and a duplicate municipal case is not recoverable from this side.
-      expect(
-        transport.requests.single.headers.entries
-            .firstWhere(
-              (MapEntry<String, String> e) =>
-                  e.key.toLowerCase() == 'idempotency-key',
-            )
-            .value,
-        'key-1',
-      );
-      expect(
-        (result as Ok<VerificationStatus>).value.state,
-        VerificationAttemptState.draft,
-      );
-    });
+        // A birth date, a barangay code and a street address stay on the device.
+        // `POST me/verification-requests` is the route that exists, and it takes
+        // files, not this claim.
+        expect(result.failureOrNull, isA<ServerFailure>());
+        expect(result.failureOrNull!.debugMessage, contains('F32'));
+        expect(transport.requests, isEmpty);
+      },
+    );
 
     test('an incomplete claim never leaves the device', () async {
       final Result<VerificationStatus> result = await repository.openCase(
@@ -184,116 +94,39 @@ void main() {
   });
 
   group('submitting for review', () {
-    test('it posts the submission with no body', () async {
-      transport.responses.add(
-        caseResponse(status: 'submitted', statusCode: 200),
-      );
-
-      final Result<void> result = await repository.submitForReview(
-        documentUploadIds: const <String>[],
-        idempotencyKey: 'key-2',
-      );
-
-      expect(result.isOk, isTrue);
-      final ApiRequest request = transport.requests.single;
-      expect(request.path, 'me/kyc/submit');
-      // The case is resolved from the authenticated account: there is no
-      // identifier in this request for anybody to tamper with.
-      expect(request.body, isNull);
-    });
-
-    test('documents are attached before submission, not carried on it', () async {
-      transport.responses.add(
-        caseResponse(status: 'submitted', statusCode: 200),
-      );
-
-      // F28 used to make this decline: nothing attached a file to a KYC case, so
-      // submitting with documents would have told a resident their PhilID had
-      // reached the office when it never left the device. Documents now go one
-      // per request to `me/kyc/documents`, and the submission carries none.
+    test('declines and does not post me/kyc/submit', () async {
       final Result<void> result = await repository.submitForReview(
         documentUploadIds: const <String>['upload-1'],
         idempotencyKey: 'key-2',
       );
 
-      expect(result.isOk, isTrue);
-      expect(transport.requests.single.path, 'me/kyc/submit');
-      expect(transport.requests.single.body, isNull);
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.failureOrNull!.debugMessage, contains('F32'));
+      expect(transport.requests, isEmpty);
     });
   });
 
   group('attaching a document — F28', () {
-    test('the file and its type travel together, in one request', () async {
-      transport.responses.add(
-        Ok<ApiHttpResponse>(
-          ApiHttpResponse(
-            statusCode: 201,
-            body: jsonEncode(<String, Object?>{
-              'data': <String, Object?>{
-                'type': 'identity-document',
-                'attached': true,
-                'received_at': '2026-08-18T12:00:00Z',
-                'is_available': false,
-              },
-              'meta': <String, Object?>{'request_id': 'req-1'},
-            }),
-            headers: const <String, String>{},
-          ),
-        ),
-      );
-
+    test('declines and does not post a document slot', () async {
       final Result<KycDocument> result = await repository.attachDocument(
         type: KycDocumentType.identityDocument,
-        fileName: 'philid.jpg',
+        fileName: 'sample-id.jpg',
         bytes: Uint8List.fromList(<int>[1, 2, 3]),
         mimeType: 'image/jpeg',
         idempotencyKey: 'key-3',
       );
 
-      final ApiRequest request = transport.requests.single;
-      expect(request.path, 'me/kyc/documents');
-      expect(request.file!.field, 'file');
-      expect(request.file!.mimeType, 'image/jpeg');
-
-      // The wire value, never the Dart name: `proof-of-address` would arrive as
-      // `proofOfAddress` if anybody reached for `.name`, and the server's slot
-      // key would silently become a slot nothing reads.
-      expect(
-        (request.body! as Map<String, Object?>)['type'],
-        'identity-document',
-      );
-
-      final KycDocument document = (result as Ok<KycDocument>).value;
-      expect(document.isAttached, isTrue);
-      // Still being scanned. A screen can say "we are checking it" rather than
-      // offering something that will not open.
-      expect(document.isAvailable, isFalse);
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(transport.requests, isEmpty);
     });
 
-    test(
-      'a type this build has never heard of is dropped, not guessed',
-      () async {
-        transport.responses.add(
-          ok(<String, Object?>{
-            'documents': <Object?>[
-              <String, Object?>{'type': 'identity-document', 'attached': true},
-              <String, Object?>{'type': 'retina-scan', 'attached': true},
-              'garbage',
-            ],
-          }),
-        );
+    test('loading documents declines rather than guessing a type', () async {
+      final Result<List<KycDocument>> result = await repository.loadDocuments();
 
-        final Result<List<KycDocument>> result = await repository
-            .loadDocuments();
-        final List<KycDocument> documents =
-            (result as Ok<List<KycDocument>>).value;
-
-        // An unlabelled slot in a document list is one a resident taps expecting
-        // it to do something.
-        expect(documents, hasLength(1));
-        expect(documents.single.type, KycDocumentType.identityDocument);
-      },
-    );
+      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.failureOrNull!.debugMessage, contains('F32'));
+      expect(transport.requests, isEmpty);
+    });
 
     test('there is no selfie or biometric type to send', () {
       // A facial image is not revocable the way a password is, and a released

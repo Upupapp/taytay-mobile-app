@@ -93,12 +93,23 @@ class ServiceCatalogApiRepository implements ServiceCatalogRepository {
   }) {
     final clampedPerPage = perPage.clamp(1, PagePolicy.maxPerPage);
     final clampedPage = page < 1 ? 1 : page;
+    assert(clampedPage >= 1);
+    assert(channel == null || channel.wireValue.isNotEmpty);
     return <String, String>{
-      'page': '$clampedPage',
-      'per_page': '$clampedPerPage',
-      if (channel != null) 'channel': channel.wireValue,
+      'limit': '$clampedPerPage',
       if (category != null) 'category': category.wireValue,
     };
+  }
+
+  /// `GET services/{slug}`.
+  Future<Result<LguService?>> loadService(String slug) async {
+    final response = await _apiClient.send<LguService?>(
+      method: HttpMethod.get,
+      path: '$path/$slug',
+      authenticated: false,
+      decode: LguServiceDto.fromJson,
+    );
+    return response.map((envelope) => envelope.data);
   }
 
   static Paginated<LguService> _toPage(ApiEnvelope<List<LguService>> envelope) {

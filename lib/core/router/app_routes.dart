@@ -283,7 +283,70 @@ enum AppRoute {
 
   /// The resident's LGU digital ID. Verified residents only: a credential is a
   /// statement by the LGU about a person whose identity it has confirmed.
-  digitalId('digital-id', '/digital-id', AccessRequirement.verified);
+  digitalId('digital-id', '/digital-id', AccessRequirement.verified),
+
+  /// Password help. Public: the person who needs it is not signed in.
+  forgotPassword(
+    'forgot-password',
+    '/sign-in/forgot',
+    AccessRequirement.public,
+  ),
+
+  /// Municipal and barangay hotlines. Public information.
+  hotlines('hotlines', '/hotlines', AccessRequirement.public),
+
+  /// One municipal office, as public information for residents (decision D11).
+  /// Not a staff selector and not an office a resident signs in as.
+  officeDetail(
+    'office-detail',
+    '/offices/:officeId',
+    AccessRequirement.public,
+    parameters: <String>['officeId'],
+  ),
+
+  /// Writing to an office. Verified only. The backend has no messaging module
+  /// yet (decision D7); the screen is mock-only until that endpoint exists.
+  officeCompose(
+    'office-compose',
+    '/offices/:officeId/message',
+    AccessRequirement.verified,
+    parameters: <String>['officeId'],
+  ),
+
+  /// Confirmation after a mock send.
+  officeMessageSent(
+    'office-message-sent',
+    '/offices/:officeId/message/sent',
+    AccessRequirement.verified,
+    parameters: <String>['officeId'],
+  ),
+
+  /// The resident's office-message inbox. Verified only, same gap as compose.
+  messagesInbox('messages', '/messages', AccessRequirement.verified),
+
+  /// One thread. Verified only.
+  messageThread(
+    'message-thread',
+    '/messages/:threadId',
+    AccessRequirement.verified,
+    parameters: <String>['threadId'],
+  ),
+
+  /// Photo credits. Public: it is a list of licences, not a person's record.
+  photoCredits(
+    'photo-credits',
+    '/about/photo-credits',
+    AccessRequirement.public,
+  ),
+
+  /// Component gallery. Public in the table so the guard can explain it, and
+  /// registered only for a dev build. A staging or production build redirects
+  /// away.
+  componentGallery(
+    'component-gallery',
+    '/dev/components',
+    AccessRequirement.public,
+  );
 
   const AppRoute(
     this.routeName,
@@ -309,6 +372,37 @@ enum AppRoute {
   /// Query parameter carrying the destination a resident was pushed off, so
   /// sign-in can return them to it.
   static const String redirectQueryParam = 'from';
+
+  /// Routes that are the top of a stack and therefore do not show a back button.
+  ///
+  /// Shell tabs, the splash, onboarding, and the two blocking gates. Everything
+  /// else shows [showsBackButton]. Events is still a shell tab; decision D6
+  /// moves it off the bar in sprint S4, and the back button appears then.
+  static const Set<AppRoute> navigationRoots = <AppRoute>{
+    splash,
+    onboarding,
+    updateRequired,
+    maintenance,
+    home,
+    services,
+    news,
+    events,
+    profile,
+  };
+
+  /// The approved tab bar (decision D6): Home, Directory, Balita, Tulong,
+  /// My Account. Events is not in this set. The live shell still uses
+  /// [shellDestinations] until S4 draws the raised centre disc.
+  static const List<AppRoute> designRootTabs = <AppRoute>[
+    home,
+    services,
+    news,
+    programs,
+    profile,
+  ];
+
+  /// Whether this route renders a back button. False only for [navigationRoots].
+  bool get showsBackButton => !navigationRoots.contains(this);
 
   /// The five primary destinations, in their fixed order.
   ///

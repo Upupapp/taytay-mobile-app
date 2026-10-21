@@ -133,7 +133,12 @@ void main() {
             // is asserted separately rather than by omission here — a route
             // quietly dropped from a "reaches every route" loop is a route
             // nobody notices going missing.
+            //
+            // The component gallery is one of those routes. It exists only when
+            // the build turns dev routes on; the default refusal is asserted
+            // in foundation_routes_test.
             onboarding: OnboardingMode.selfEnrolled,
+            allowDevRoutes: true,
           ),
           isNull,
           reason: route.name,

@@ -101,13 +101,23 @@ abstract final class AssetValidator {
             '"${AssetPolicy.illustrationLabelPrefix}"',
       );
     }
-    final lowerLabel = entry.semanticLabel.toLowerCase();
-    for (final claim in AssetPolicy.forbiddenLabelClaims) {
-      if (lowerLabel.contains(claim)) {
+    if (entry.kind == AssetKind.photograph) {
+      if (!entry.semanticLabel.startsWith('Photo:')) {
         fail(
           'semantics',
-          'label claims "$claim"; this app ships no documentary photography',
+          'a photograph must be announced as one; label must start with '
+              '"Photo:"',
         );
+      }
+    } else {
+      final lowerLabel = entry.semanticLabel.toLowerCase();
+      for (final claim in AssetPolicy.forbiddenLabelClaims) {
+        if (lowerLabel.contains(claim)) {
+          fail(
+            'semantics',
+            'label claims "$claim"; drawn artwork is not a photograph',
+          );
+        }
       }
     }
 
@@ -137,8 +147,14 @@ abstract final class AssetValidator {
       );
     }
 
-    if (_startsWith(bytes, _jpegSignature)) {
-      fail('format', 'JPEG carries no alpha and smears flat-colour edges');
+    final photograph =
+        entry.kind == AssetKind.photograph && entry.format == AssetFormat.jpeg;
+    if (_startsWith(bytes, _jpegSignature) && !photograph) {
+      fail(
+        'format',
+        'JPEG carries no alpha and smears flat-colour edges. Only a '
+            'photograph may be JPEG.',
+      );
     }
     if (_startsWith(bytes, _gifSignature)) {
       fail('format', 'GIF is limited to 256 colours');
@@ -157,7 +173,11 @@ abstract final class AssetValidator {
     }
 
     // ── Density variants ───────────────────────────────────────────────────
-    if (entry.format.isDensityDependent) {
+    // The municipal seal is one unaltered PNG, already larger than 3× the
+    // size it is drawn at. Density copies would be the same bytes, and
+    // Flutter would then treat that file as a scale-specific asset.
+    if (entry.format.isDensityDependent &&
+        entry.kind != AssetKind.officialArtwork) {
       final separator = entry.path.lastIndexOf('/');
       final directory = entry.path.substring(0, separator);
       final fileName = entry.path.substring(separator + 1);
@@ -232,6 +252,8 @@ abstract final class AssetValidator {
           bytes.sublist(0, bytes.length < 1024 ? bytes.length : 1024),
         );
         return head.contains('<svg');
+      case AssetFormat.jpeg:
+        return _startsWith(bytes, _jpegSignature);
     }
   }
 

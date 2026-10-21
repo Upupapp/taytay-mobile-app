@@ -128,6 +128,19 @@ enum BackendGap {
     finding: 'F13',
     missing: 'account closure / erasure request',
     servedInstead: 'nothing',
+  ),
+
+  /// **F32 — the operation is not in the Taytay LGU IDS OpenAPI.**
+  ///
+  /// The forward contract is the Node API vendored at
+  /// `docs/integration/taytay-node-openapi.json`. Routes that the historical
+  /// PHP pin served and this spec does not — OTP, sessions, events, programmes,
+  /// credentials, assistance intake, household, notification devices — decline
+  /// here. The screen says the office cannot do that from the app yet.
+  absentOnNodeContract(
+    finding: 'F32',
+    missing: 'a citizen route in the Taytay LGU IDS OpenAPI',
+    servedInstead: 'the citizen routes declared in backend_routes.dart',
   );
 
   const BackendGap({

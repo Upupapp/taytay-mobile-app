@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/household_summary.dart';
 
 /// Report an error in the household record.
@@ -104,7 +105,11 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Report an error')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Report an error'),
+      ),
       body: SafeArea(
         child: CapabilityGate(
           capability: ResidentCapability.viewHouseholdSummary,

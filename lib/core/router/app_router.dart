@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/app_dependencies.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
 import '../../features/auth/presentation/sign_in_help_screen.dart';
@@ -9,6 +10,7 @@ import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/events/presentation/event_detail_screen.dart';
 import '../../features/events/presentation/event_registration_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
+import '../../features/gallery/presentation/component_gallery_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/household/presentation/household_correction_screen.dart';
 import '../../features/household/presentation/household_screen.dart';
@@ -35,6 +37,9 @@ import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
+import '../../shared/widgets/foundation_placeholder_screen.dart';
+import '../../shared/widgets/taytay_back_button.dart';
+import '../../shared/widgets/taytay_thread.dart';
 import '../design/design_tokens.dart';
 import '../session/session_controller.dart';
 import '../startup/launch_controller.dart';
@@ -80,6 +85,7 @@ GoRouter buildAppRouter({
   String? initialLocation,
   GlobalKey<NavigatorState>? navigatorKey,
   List<NavigatorObserver> observers = const <NavigatorObserver>[],
+  bool allowDevRoutes = false,
 }) {
   return GoRouter(
     navigatorKey: navigatorKey,
@@ -105,6 +111,7 @@ GoRouter buildAppRouter({
       mustUpgrade: platform.mustUpgrade,
       isInMaintenance: platform.isInMaintenance,
       onboarding: platform.onboardingMode,
+      allowDevRoutes: allowDevRoutes,
     ),
     errorBuilder: (context, state) => const _RouteNotFoundScreen(),
     routes: <RouteBase>[
@@ -133,9 +140,13 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.signIn.path,
         name: AppRoute.signIn.routeName,
-        builder: (context, state) => SignInScreen(
-          returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          return SignInScreen(
+            returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
+            threadCycle: extra is WelcomeThreadArrival ? extra.cycle : 0,
+          );
+        },
       ),
       GoRoute(
         path: AppRoute.signInHelp.path,
@@ -365,6 +376,97 @@ GoRouter buildAppRouter({
         name: AppRoute.digitalId.routeName,
         builder: (context, state) => const DigitalIdScreen(),
       ),
+      GoRoute(
+        path: AppRoute.forgotPassword.path,
+        name: AppRoute.forgotPassword.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Reset your password',
+          sealHeader: true,
+          body:
+              'Password help arrives with the sign-in flow in a later sprint. '
+              'This page is here so the route and its back button can be checked.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.hotlines.path,
+        name: AppRoute.hotlines.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Emergency hotlines',
+          body:
+              'Municipal and barangay hotlines arrive in a later sprint. '
+              'Nothing on this page is a published number.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.officeDetail.path,
+        name: AppRoute.officeDetail.routeName,
+        builder: (context, state) => FoundationPlaceholderScreen(
+          title: 'Office',
+          body:
+              'Office pages are public information for residents: contact, '
+              'hours and services. The page for '
+              '${state.pathParameters['officeId'] ?? 'this office'} '
+              'arrives in a later sprint.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.officeCompose.path,
+        name: AppRoute.officeCompose.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Message an office',
+          body:
+              'Writing to an office is a sample only until the LGU API has a '
+              'messaging endpoint. Nothing sent from a later screen leaves '
+              'this phone in a dev mock.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.officeMessageSent.path,
+        name: AppRoute.officeMessageSent.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Message recorded',
+          body:
+              'A confirmation for a sample message. It is not a receipt from '
+              'Taytay LGU.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.messagesInbox.path,
+        name: AppRoute.messagesInbox.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Messages',
+          body:
+              'The office inbox arrives in a later sprint. There is no live '
+              'mailbox on this build.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.messageThread.path,
+        name: AppRoute.messageThread.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Message',
+          body:
+              'A thread view arrives in a later sprint. This route exists so '
+              'access rules can be tested.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.photoCredits.path,
+        name: AppRoute.photoCredits.routeName,
+        builder: (context, state) => const FoundationPlaceholderScreen(
+          title: 'Photo credits',
+          body:
+              'Photo credits arrive with the screens that use photographs. '
+              'No municipal photograph is bundled in this build.',
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.componentGallery.path,
+        name: AppRoute.componentGallery.routeName,
+        builder: (context, state) => ComponentGalleryScreen(
+          behavior: AppDependencies.of(context).mockBehavior,
+        ),
+      ),
     ],
   );
 }
@@ -376,7 +478,11 @@ class _RouteNotFoundScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Page not found')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Page not found'),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(Spacing.xl),

@@ -867,4 +867,91 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get intentResumedViewDigitalId => 'You can now open your digital ID.';
+
+  @override
+  String get welcomeSkip => 'Skip';
+
+  @override
+  String get welcomeNext => 'Next';
+
+  @override
+  String get welcomeGetStarted => 'Get started';
+
+  @override
+  String get welcomeContinueAsGuest => 'Continue as guest';
+
+  @override
+  String get welcomeGuestNote =>
+      'You can browse municipal services without an account.';
+
+  @override
+  String welcomeStep(int current, int total) {
+    return 'Step $current of $total';
+  }
+
+  @override
+  String get welcomeServicesEyebrow => 'Municipal services in one place';
+
+  @override
+  String get welcomeServicesTitle => 'Serbisyong bayan,\nnasa isang app.';
+
+  @override
+  String get welcomeServicesBody =>
+      'Documents, real property tax, health programmes and job services — browse what Taytay LGU offers and track anything you apply for.';
+
+  @override
+  String get welcomeServicesChipDocuments => 'Documents';
+
+  @override
+  String get welcomeServicesChipTax => 'Real property tax';
+
+  @override
+  String get welcomeServicesChipHealth => 'Health';
+
+  @override
+  String get welcomeServicesChipJobs => 'Jobs';
+
+  @override
+  String get welcomeServicesTag => 'Taytay Municipal Hall';
+
+  @override
+  String get welcomeServicesCredit => 'Photo: Ramon FVelasquez · CC BY-SA 3.0';
+
+  @override
+  String get welcomeIdEyebrow => 'Your Taytay ID, on your phone';
+
+  @override
+  String get welcomeIdTitle => 'Ang Taytay ID mo,\nnasa phone mo na.';
+
+  @override
+  String get welcomeIdBody =>
+      'Apply for and carry your Municipality of Taytay digital ID without queueing at the municipal hall.';
+
+  @override
+  String get welcomeIdChipDigital => 'Digital ID';
+
+  @override
+  String get welcomeIdChipQueue => 'No queueing';
+
+  @override
+  String get welcomeIdTag => 'Taytay Tiangge · Garments & Woodcrafts Capital';
+
+  @override
+  String get welcomeIdCredit => 'Photo: Ralff Nestor Nacor · CC BY-SA 4.0';
+
+  @override
+  String get welcomePrivacyEyebrow => 'You choose what you share';
+
+  @override
+  String get welcomePrivacyTitle => 'Ikaw ang pipili\nng ibabahagi.';
+
+  @override
+  String get welcomePrivacyBody =>
+      'Taytay LGU asks only for what a service needs, and tells you why. Your information is protected under the Data Privacy Act of 2012.';
+
+  @override
+  String get welcomePrivacyTag => 'St. John the Baptist Parish Church';
+
+  @override
+  String get welcomePrivacyCredit => 'Photo: Urbanroamer · CC BY-SA 3.0';
 }

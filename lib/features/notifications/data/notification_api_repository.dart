@@ -1,7 +1,7 @@
 import '../../../core/api/api_client.dart';
-
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/backend_gap.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/push_registration.dart';
@@ -32,25 +32,22 @@ class NotificationApiRepository
 
   final ApiClient _apiClient;
 
-  static const String path = 'me/notifications';
-  static const String preferencesPath = 'me/notification-preferences';
+  static const String path = 'notifications';
+  static const String readAllPath = 'notifications/read';
+  static const String unreadCountPath = 'notifications/unread-count';
 
   @override
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int? perPage,
   }) async {
+    assert(page >= 1);
     final response = await _apiClient.send<List<ResidentNotification>>(
       method: HttpMethod.get,
       path: path,
       authenticated: true,
       query: <String, String>{
-        'page': '${page < 1 ? 1 : page}',
-        // Resolved from what the server chose for this channel (TAB 05). A null
-        // request means "whatever the office publishes", which is what every
-        // caller here actually meant — the four different hardcoded defaults
-        // this replaced were 20 and 25, and the server had said 15 all along.
-        'per_page':
+        'limit':
             '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
       },
       decode: (Object? data) => data is List<dynamic>
@@ -78,7 +75,7 @@ class NotificationApiRepository
   Future<Result<void>> markAllRead() async {
     final response = await _apiClient.send<void>(
       method: HttpMethod.post,
-      path: '$path/read-all',
+      path: readAllPath,
       authenticated: true,
       decode: (_) {},
     );
@@ -87,42 +84,22 @@ class NotificationApiRepository
 
   @override
   Future<Result<NotificationPreferences>> loadPreferences() async {
-    final response = await _apiClient.send<NotificationPreferences>(
-      method: HttpMethod.get,
-      path: preferencesPath,
-      authenticated: true,
-      decode: _decodePreferences,
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<NotificationPreferences>(
+      BackendGap.absentOnNodeContract,
+      'loadPreferences',
     );
-    return response.map((envelope) => envelope.data);
   }
 
   @override
   Future<Result<void>> updatePreferences(
     NotificationPreferences preferences,
   ) async {
-    // Sent per type and channel, the shape the server stores. Critical
-    // categories are not included at all rather than being sent as `true`: the
-    // rule that they cannot be switched off belongs to the server, and a client
-    // that asserts it in a payload is a client that could assert the opposite.
-    final List<Map<String, Object?>> rows = <Map<String, Object?>>[
-      for (final MapEntry<NotificationCategory, bool> entry
-          in preferences.categories.entries)
-        if (!entry.key.isCritical)
-          <String, Object?>{
-            'notification_type': entry.key.wireValue,
-            'channel': 'push',
-            'enabled': entry.value,
-          },
-    ];
-
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.put,
-      path: preferencesPath,
-      authenticated: true,
-      body: <String, Object?>{'preferences': rows},
-      decode: (_) {},
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'updatePreferences',
     );
-    return response.map((_) {});
   }
 
   /// Registers this device so the office can reach it.
@@ -132,29 +109,11 @@ class NotificationApiRepository
   /// session list and had nothing to carry. Here it has one.
   @override
   Future<Result<String>> registerPushToken(String token) async {
-    final response = await _apiClient.send<String>(
-      method: HttpMethod.post,
-      path: 'me/devices',
-      authenticated: true,
-      body: <String, Object?>{
-        // A stable per-install value, not a hardware identifier. The server
-        // needs to recognise the same phone twice; it does not need to know
-        // which phone it is.
-        'fingerprint': token.hashCode.toRadixString(16),
-        'display_name': 'Taytay LGU app',
-        'platform': 'android',
-        'push_token': token,
-      },
-      // The id is read, not discarded. `ApiResponse::item(['id' => ...], 201)`
-      // is what the server returns and it is the only handle that can revoke
-      // this registration later.
-      decode: (Object? data) =>
-          data is Map<String, dynamic> && data['id'] is String
-          ? data['id'] as String
-          : '',
+    final Object _ = _apiClient.runtimeType;
+    return backendGapFailure<String>(
+      BackendGap.absentOnNodeContract,
+      'registerPushToken',
     );
-
-    return response.map((envelope) => envelope.data);
   }
 
   /// Withdraws a registration this install made (F27, closed in TAB 02).
@@ -169,16 +128,28 @@ class NotificationApiRepository
   /// whatever the network does.
   @override
   Future<bool> withdraw(String deviceId) async {
+    final Object _ = _apiClient.runtimeType;
     if (deviceId.isEmpty) return false;
+    // The Node API has no device registry.
+    return false;
+  }
 
-    final response = await _apiClient.send<void>(
-      method: HttpMethod.delete,
-      path: 'me/devices/$deviceId',
+  /// `GET notifications/unread-count`.
+  Future<Result<int>> unreadCount() async {
+    final response = await _apiClient.send<int>(
+      method: HttpMethod.get,
+      path: unreadCountPath,
       authenticated: true,
-      decode: (_) {},
+      decode: (Object? data) {
+        if (data is int) return data;
+        if (data is Map<String, dynamic>) {
+          final Object? count = data['count'] ?? data['unread'];
+          if (count is int) return count;
+        }
+        return 0;
+      },
     );
-
-    return response.isOk;
+    return response.map((envelope) => envelope.data);
   }
 
   static ResidentNotification? _decode(Object? entry) {
@@ -187,6 +158,13 @@ class NotificationApiRepository
     final Object? title = entry['title'];
     if (id is! String || id.isEmpty || title is! String) return null;
 
+    final Object? rawType = entry['type'] ?? entry['category'];
+    final String? categoryWire = switch (rawType) {
+      'verification_decided' => 'verification_update',
+      'message_received' => 'account_security',
+      final String value => value,
+      _ => null,
+    };
     final Object? subjectType = entry['subject_type'];
     final Object? subjectId = entry['subject_id'];
 
@@ -201,7 +179,7 @@ class NotificationApiRepository
         entry['read_at'] is String ? entry['read_at'] as String : '',
       )?.toUtc(),
       category: ServerValue.parse<NotificationCategory>(
-        entry['category'] is String ? entry['category'] as String : null,
+        categoryWire,
         NotificationCategory.values,
         (NotificationCategory c) => c.wireValue,
       ),
@@ -213,52 +191,6 @@ class NotificationApiRepository
           'type': subjectType,
         if (subjectId is String && subjectId.isNotEmpty) 'id': subjectId,
       },
-    );
-  }
-
-  static NotificationPreferences _decodePreferences(Object? data) {
-    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
-    final Object? rows = map['preferences'];
-
-    final Map<NotificationCategory, bool> categories =
-        <NotificationCategory, bool>{};
-    if (rows is List<dynamic>) {
-      for (final Object? row in rows) {
-        if (row is! Map<String, dynamic>) continue;
-        final Object? type = row['notification_type'];
-        if (type is! String) continue;
-        for (final NotificationCategory category
-            in NotificationCategory.values) {
-          if (category.wireValue == type) {
-            // A critical category's stored row is ignored, not trusted. The
-            // server states in the same payload that service and security
-            // notices cannot be switched off; honouring a stray `false` would
-            // silence the one message a resident must not miss.
-            categories[category] =
-                category.isCritical || row['enabled'] == true;
-          }
-        }
-      }
-    }
-
-    // The server stores a row per type *and channel*. A channel is on for this
-    // resident when any category still uses it, which is what the three switches
-    // above the category list actually mean — "does the LGU reach me this way at
-    // all" — rather than a fourth thing to keep in sync.
-    bool anyOn(String channel) =>
-        rows is List<dynamic> &&
-        rows.any(
-          (Object? row) =>
-              row is Map<String, dynamic> &&
-              row['channel'] == channel &&
-              row['enabled'] == true,
-        );
-
-    return NotificationPreferences(
-      push: anyOn('push'),
-      sms: anyOn('sms'),
-      email: anyOn('email'),
-      categories: categories,
     );
   }
 

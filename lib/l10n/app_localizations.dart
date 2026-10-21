@@ -1579,6 +1579,168 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'You can now open your digital ID.'**
   String get intentResumedViewDigitalId;
+
+  /// Skip control on every welcome scene.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip'**
+  String get welcomeSkip;
+
+  /// Advances to the next welcome scene.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get welcomeNext;
+
+  /// Leaves the welcome and opens sign-in.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get welcomeGetStarted;
+
+  /// Leaves the welcome and enters the app without an account.
+  ///
+  /// In en, this message translates to:
+  /// **'Continue as guest'**
+  String get welcomeContinueAsGuest;
+
+  /// Explains that browsing needs no account.
+  ///
+  /// In en, this message translates to:
+  /// **'You can browse municipal services without an account.'**
+  String get welcomeGuestNote;
+
+  /// Announced progress through the welcome scenes.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {current} of {total}'**
+  String welcomeStep(int current, int total);
+
+  /// English eyebrow on welcome scene 1. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'Municipal services in one place'**
+  String get welcomeServicesEyebrow;
+
+  /// Filipino title on welcome scene 1. Shown in both locales.
+  ///
+  /// In en, this message translates to:
+  /// **'Serbisyong bayan,\nnasa isang app.'**
+  String get welcomeServicesTitle;
+
+  /// English body on welcome scene 1. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents, real property tax, health programmes and job services — browse what Taytay LGU offers and track anything you apply for.'**
+  String get welcomeServicesBody;
+
+  /// Chip on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get welcomeServicesChipDocuments;
+
+  /// Chip on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Real property tax'**
+  String get welcomeServicesChipTax;
+
+  /// Chip on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Health'**
+  String get welcomeServicesChipHealth;
+
+  /// Chip on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Jobs'**
+  String get welcomeServicesChipJobs;
+
+  /// Photo caption on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay Municipal Hall'**
+  String get welcomeServicesTag;
+
+  /// Photo credit on welcome scene 1.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: Ramon FVelasquez · CC BY-SA 3.0'**
+  String get welcomeServicesCredit;
+
+  /// English eyebrow on welcome scene 2. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Taytay ID, on your phone'**
+  String get welcomeIdEyebrow;
+
+  /// Filipino title on welcome scene 2. Shown in both locales.
+  ///
+  /// In en, this message translates to:
+  /// **'Ang Taytay ID mo,\nnasa phone mo na.'**
+  String get welcomeIdTitle;
+
+  /// English body on welcome scene 2. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for and carry your Municipality of Taytay digital ID without queueing at the municipal hall.'**
+  String get welcomeIdBody;
+
+  /// Chip on welcome scene 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Digital ID'**
+  String get welcomeIdChipDigital;
+
+  /// Chip on welcome scene 2.
+  ///
+  /// In en, this message translates to:
+  /// **'No queueing'**
+  String get welcomeIdChipQueue;
+
+  /// Photo caption on welcome scene 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay Tiangge · Garments & Woodcrafts Capital'**
+  String get welcomeIdTag;
+
+  /// Photo credit on welcome scene 2.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: Ralff Nestor Nacor · CC BY-SA 4.0'**
+  String get welcomeIdCredit;
+
+  /// English eyebrow on welcome scene 3. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'You choose what you share'**
+  String get welcomePrivacyEyebrow;
+
+  /// Filipino title on welcome scene 3. Shown in both locales.
+  ///
+  /// In en, this message translates to:
+  /// **'Ikaw ang pipili\nng ibabahagi.'**
+  String get welcomePrivacyTitle;
+
+  /// English body on welcome scene 3. The English locale matches the design. Filipino translates this line.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU asks only for what a service needs, and tells you why. Your information is protected under the Data Privacy Act of 2012.'**
+  String get welcomePrivacyBody;
+
+  /// Photo caption on welcome scene 3.
+  ///
+  /// In en, this message translates to:
+  /// **'St. John the Baptist Parish Church'**
+  String get welcomePrivacyTag;
+
+  /// Photo credit on welcome scene 3.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo: Urbanroamer · CC BY-SA 3.0'**
+  String get welcomePrivacyCredit;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

@@ -156,23 +156,32 @@ void main() {
       expect(find.text('Create an account'), findsNothing);
     });
 
-    testWidgets('and the office contact comes from the server', (tester) async {
+    testWidgets('and no contact is invented while bootstrap is absent', (
+      tester,
+    ) async {
       await _bootToSignIn(tester, selfRegistration: false);
 
+      // `GET app/bootstrap` is not on the Node contract, so the support
+      // email and phone never arrive. The panel names the office and does
+      // not compile a number the municipality cannot correct.
       expect(
-        find.textContaining('mswdo@taytayrizal.gov.ph'),
+        find.text('Accounts are made at the MSWDO office'),
         findsOneWidget,
-        reason:
-            'a phone number compiled into a released app is one the '
-            'municipality cannot correct without a store submission',
       );
+      expect(find.textContaining('mswdo@taytayrizal.gov.ph'), findsNothing);
+      expect(find.textContaining('8286'), findsNothing);
     });
 
-    testWidgets('self-enrolled shows the wizard entry instead', (tester) async {
+    testWidgets('a bootstrap flag is not read, so the wizard stays hidden', (
+      tester,
+    ) async {
       await _bootToSignIn(tester, selfRegistration: true);
 
-      expect(find.text('Create an account'), findsOneWidget);
-      expect(find.text('Accounts are made at the MSWDO office'), findsNothing);
+      expect(find.text('Create an account'), findsNothing);
+      expect(
+        find.text('Accounts are made at the MSWDO office'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the office panel is in Filipino too', (tester) async {

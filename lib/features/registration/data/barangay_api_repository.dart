@@ -1,6 +1,5 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_transport.dart';
-import '../../../core/api/page_policy.dart';
 import '../../../core/result/result.dart';
 import '../domain/registration_domain.dart';
 
@@ -32,25 +31,12 @@ class BarangayApiRepository implements BarangayDirectory {
 
   static const String path = 'barangays';
 
-  /// Taytay's barangays fit comfortably inside one page at the contract's
-  /// ceiling, so the whole list arrives in a single request. Asked for
-  /// explicitly rather than relying on the default, which is 15 for this channel
-  /// and would silently truncate an address picker to the first fifteen.
-  ///
-  /// **The deliberate exception to TAB 05, and the reason the clamp is a method
-  /// rather than a rule.** Everything else takes the size the server chose; this
-  /// asks for the contract's maximum because a partial list of barangays is not
-  /// a shorter list, it is an address a resident cannot select. It still goes
-  /// through [PagePolicy] so it cannot exceed what the server will serve.
-  static const int _perPage = PagePolicy.maxPerPage;
-
   @override
   Future<Result<List<Barangay>>> listBarangays() async {
     final response = await _apiClient.send<List<Barangay>>(
       method: HttpMethod.get,
       path: path,
       authenticated: false,
-      query: const <String, String>{'page': '1', 'per_page': '$_perPage'},
       decode: _decodeAll,
     );
     return response.map((envelope) => envelope.data);

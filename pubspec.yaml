@@ -205,6 +205,11 @@ dev_dependencies:
   # cannot locate the Dart SDK.
   analyzer: ^14.1.0
 
+  # Dev-only PNG decode and CIE76 comparison for tool/golden_compare.dart.
+  # It is not linked into the shipped app, it opens no socket, and it asks
+  # for no permission. The resident app never imports it.
+  image: ^4.5.4
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -218,6 +223,33 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    # Synthetic fixtures. Bundled so a dev mock can load them from the asset
+    # bundle; staging and production refuse to start when mocks are selected.
+    - test/fixtures/mock/
+    # Official municipal seal. Byte-identical to the design source. Downscaled
+    # only; see BrandAssets.
+    - assets/brand/taytay_seal.png
+    # Welcome photographs. The design JPEGs, credited on screen.
+    - assets/photos/
+
+  fonts:
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-ExtraBold.ttf
+          weight: 800
+    - family: Lucide
+      fonts:
+        - asset: assets/fonts/lucide/lucide.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../core/design/button_styles.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
 import '../../core/motion/motion_tokens.dart';
@@ -41,6 +42,7 @@ class AppButton extends StatelessWidget {
     required this.label,
     required this.onPressed,
     this.variant = AppButtonVariant.primary,
+    this.kind = TaytayButtonKind.inApp,
     this.icon,
     this.iconTrailing = false,
     this.loading = false,
@@ -57,6 +59,9 @@ class AppButton extends StatelessWidget {
   final VoidCallback? onPressed;
 
   final AppButtonVariant variant;
+
+  /// Sign-in, welcome, or the in-app control. Defaults to the in-app button.
+  final TaytayButtonKind kind;
   final IconData? icon;
   final bool iconTrailing;
 
@@ -93,13 +98,40 @@ class AppButton extends StatelessWidget {
       loading: loading,
     );
 
-    final Widget button = switch (variant) {
+    final metrics = TaytayButtonMetrics.of(kind);
+    final shape = RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(metrics.radius),
+    );
+    ButtonStyle filledStyle({Color? background, Color? foreground}) {
+      return FilledButton.styleFrom(
+        minimumSize: Size(A11y.minTapTarget, metrics.height),
+        shape: shape,
+        textStyle: metrics.label,
+        backgroundColor: background,
+        foregroundColor: foreground,
+        elevation: 0,
+        shadowColor: Colors.transparent,
+      );
+    }
+
+    Widget button = switch (variant) {
       AppButtonVariant.primary => FilledButton(
         onPressed: _isEnabled ? handlePress : null,
+        style: filledStyle(),
         child: child,
       ),
       AppButtonVariant.secondary => OutlinedButton(
         onPressed: _isEnabled ? handlePress : null,
+        style: OutlinedButton.styleFrom(
+          minimumSize: Size(A11y.minTapTarget, metrics.height),
+          shape: shape,
+          textStyle: metrics.label,
+          foregroundColor: BrandColors.taytayBlue,
+          side: BorderSide(
+            color: BrandColors.taytayBlue,
+            width: metrics.borderWidth,
+          ),
+        ),
         child: child,
       ),
       AppButtonVariant.text => TextButton(
@@ -108,13 +140,23 @@ class AppButton extends StatelessWidget {
       ),
       AppButtonVariant.danger => FilledButton(
         onPressed: _isEnabled ? handlePress : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: theme.colorScheme.error,
-          foregroundColor: theme.colorScheme.onError,
+        style: filledStyle(
+          background: theme.colorScheme.error,
+          foreground: theme.colorScheme.onError,
         ),
         child: child,
       ),
     };
+    final shadow = metrics.primaryShadow;
+    if (variant == AppButtonVariant.primary && shadow != null) {
+      button = DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(metrics.radius),
+          boxShadow: shadow,
+        ),
+        child: button,
+      );
+    }
 
     return Semantics(
       button: true,

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
+
+import 'package:flutter/painting.dart';
 
 /// The Taytay brand palette — the single source of colour truth.
 ///
@@ -44,6 +45,90 @@ abstract final class BrandColors {
   static const Color warning = Color(0xFF8A5A00);
   static const Color danger = Color(0xFFB3261E);
   static const Color info = Color(0xFF1B5EA8);
+
+  /// Light surfaces from the resident mockups. The page is [surface]; cards and
+  /// the welcome sheet sit on [surfaceMuted] or white.
+  static const Color surface = Color(0xFFF3F5FA);
+  static const Color surfaceMuted = Color(0xFFEAF0FB);
+  static const Color surfaceCard = Color(0xFFFFFFFF);
+
+  /// Text greys. [textPrimary] is body and titles. [textSecondary] and
+  /// [textMuted] are supporting copy. All three clear 4.5:1 on [surface].
+  static const Color textPrimary = Color(0xFF0F1A33);
+  static const Color textSecondary = Color(0xFF55607A);
+  static const Color textMuted = Color(0xFF5B6680);
+
+  /// Gold darkened so it can be *text* on a light surface. [sealGold] stays
+  /// accent-only: it is about 1.6:1 on white. This value is the eyebrow gold
+  /// measured on the welcome and sign-in screens (5.6:1 on [surface]).
+  static const Color inkGold = Color(0xFF7A5E0C);
+
+  /// Welcome body copy. CSS `.body` is `#46506A`.
+  static const Color welcomeCopy = Color(0xFF46506A);
+
+  /// The stitched thread. CSS stroke `#C9A227`.
+  static const Color threadGold = Color(0xFFC9A227);
+
+  /// Photo-credit chip ink. CSS `.cr` is `#5E5843`.
+  static const Color creditInk = Color(0xFF5E5843);
+
+  /// Core of the travelling light. CSS `.speck` is `#FFF6C2`.
+  static const Color speckCore = Color(0xFFFFF6C2);
+
+  /// Sign-in sheet body. CSS `.sub` is `#4a5470`.
+  static const Color sheetBody = Color(0xFF4A5470);
+
+  /// Field label. CSS `.f label` is `#3a4560`.
+  static const Color fieldLabel = Color(0xFF3A4560);
+
+  /// Resting field fill and border. CSS `.in` is `#FBF8F0` / `#E3DCC6`.
+  static const Color fieldFill = Color(0xFFFBF8F0);
+  static const Color fieldBorder = Color(0xFFE3DCC6);
+
+  /// Error field fill. CSS `.in.bad` background is `#FFF7F7`.
+  static const Color fieldErrorFill = Color(0xFFFFF7F7);
+
+  /// Placeholder ink. Polished from `#9aa0ad`.
+  static const Color fieldHint = Color(0xFF6B7186);
+
+  /// Card hairline. CSS `.card` border is `#E7EBF3`.
+  static const Color cardLine = Color(0xFFE7EBF3);
+
+  /// List meta. Polished from `#6b7590`.
+  static const Color listMeta = Color(0xFF5A6480);
+
+  /// Field value. CSS `.in` is `#1c2540`.
+  static const Color fieldInk = Color(0xFF1C2540);
+
+  /// Trailing chevron. Polished from `#9aa3b8`.
+  static const Color chevron = Color(0xFF7D869C);
+
+  /// SAMPLE dashed stroke. CSS `.sample` border is `#E0A400`.
+  static const Color sampleBorder = Color(0xFFE0A400);
+
+  /// Status chip fills from `.bdg` / `.tag` in the mockup CSS.
+  static const Color chipAmberBg = Color(0xFFFFF4D6);
+  static const Color chipGreenBg = Color(0xFFE6F4EC);
+  static const Color chipRedBg = Color(0xFFFDECEC);
+  static const Color chipBlueBg = Color(0xFFEAF0FB);
+  static const Color chipGreyBg = Color(0xFFEEF1F6);
+  static const Color chipGoldBg = Color(0xFFFFF6CC);
+}
+
+/// Soft shadows for surfaces that float. The colour is the brand navy at low
+/// opacity so a card does not cast a neutral grey that fights the palette.
+///
+/// Depth in Material 3 is still mostly surface tone ([Elevation]). These exist
+/// for the cards and the raised centre tab, where the mockups show a shadow.
+abstract final class TaytayShadows {
+  static const List<BoxShadow> card = <BoxShadow>[
+    BoxShadow(color: Color(0x0D101828), blurRadius: 2, offset: Offset(0, 1)),
+    BoxShadow(color: Color(0x0A101828), blurRadius: 10, offset: Offset(0, 2)),
+  ];
+
+  static const List<BoxShadow> raised = <BoxShadow>[
+    BoxShadow(color: Color(0x24062358), blurRadius: 28, offset: Offset(0, 12)),
+  ];
 }
 
 /// Spacing scale, in logical pixels.
@@ -71,6 +156,14 @@ abstract final class Radii {
   static const double md = 12;
   static const double lg = 16;
   static const double xl = 24;
+
+  /// Bottom sheets. The mockups sit between 22 and 28.
+  static const double sheet = 24;
+  static const double sheetLarge = 28;
+
+  /// The welcome arch. A large continuous corner, not a card radius.
+  static const double arch = 120;
+
   static const double pill = 999;
 }
 
@@ -155,6 +248,11 @@ abstract final class A11y {
   /// and is the floor for every tappable element in this app, including icon
   /// buttons in dense rows.
   static const double minTapTarget = 48;
+
+  /// Visible diameter of the back button. The hit target stays
+  /// [minTapTarget]; the circle is the smaller mark from the mockups, centred
+  /// inside that target (decision D3).
+  static const double backButtonVisual = 44;
 
   /// The app honours the OS text size all the way to this multiplier without
   /// clipping or truncating. Layouts must scroll rather than shrink text; a

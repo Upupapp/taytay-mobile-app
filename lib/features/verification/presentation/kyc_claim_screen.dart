@@ -8,6 +8,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/form_support.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../domain/kyc_claim.dart';
 import 'kyc_claim_controller.dart';
@@ -101,7 +102,11 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Verify your identity')),
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
+        title: const Text('Verify your identity'),
+      ),
       body: SafeArea(
         child: _controller.loadingDirectory
             ? const AppLoadingView(message: 'Loading barangays…')
