@@ -10,7 +10,9 @@ import '../../../../core/session/access_level.dart';
 import '../../../../core/session/push_registration.dart';
 import '../../../../core/session/session_state.dart';
 import '../../../../core/storage/public_cache.dart';
+import '../../../auth/data/code_challenge_book.dart';
 import '../../../auth/domain/auth_repository.dart';
+import '../../../auth/domain/code_exchange.dart';
 import '../../../auth/domain/device_session_repository.dart';
 import '../../../credential/domain/credential_repository.dart';
 import '../../../events/domain/event_registration.dart'
@@ -98,6 +100,7 @@ class MockAuthRepository implements AuthRepository {
   MockAuthRepository(this._gate);
 
   final MockBehaviorController _gate;
+  final CodeChallengeBook _codes = CodeChallengeBook();
 
   @override
   Future<Result<void>> requestOneTimeCode({required String mobileNumber}) {
@@ -160,8 +163,64 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<void>> requestPasswordReset({required String identifier}) =>
-      _gate.respond<void>(null);
+  Future<Result<CodeAcceptance>> sendEmailCode() {
+    return _gate.respond(_codes.sendEmailCode().valueOrNull!);
+  }
+
+  @override
+  Future<Result<EmailVerified>> verifyEmailCode({required String code}) {
+    final Result<EmailVerified> verdict = _codes.verifyEmailCode(code);
+    return switch (verdict) {
+      Ok<EmailVerified>(:final value) => _gate.respond(value),
+      Err<EmailVerified>(:final failure) => Future<Result<EmailVerified>>.value(
+        Err<EmailVerified>(failure),
+      ),
+    };
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> requestPasswordReset({required String email}) {
+    final Result<CodeAcceptance> verdict = _codes.requestReset(email);
+    return switch (verdict) {
+      Ok<CodeAcceptance>(:final value) => _gate.respond(value),
+      Err<CodeAcceptance>(:final failure) =>
+        Future<Result<CodeAcceptance>>.value(Err<CodeAcceptance>(failure)),
+    };
+  }
+
+  @override
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  }) {
+    final Result<PasswordResetGrant> verdict = _codes.verifyReset(
+      email: email,
+      code: code,
+    );
+    return switch (verdict) {
+      Ok<PasswordResetGrant>(:final value) => _gate.respond(value),
+      Err<PasswordResetGrant>(:final failure) =>
+        Future<Result<PasswordResetGrant>>.value(
+          Err<PasswordResetGrant>(failure),
+        ),
+    };
+  }
+
+  @override
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  }) {
+    final Result<PasswordUpdated> verdict = _codes.complete(
+      resetToken: resetToken,
+      newPassword: newPassword,
+    );
+    return switch (verdict) {
+      Ok<PasswordUpdated>(:final value) => _gate.respond(value),
+      Err<PasswordUpdated>(:final failure) =>
+        Future<Result<PasswordUpdated>>.value(Err<PasswordUpdated>(failure)),
+    };
+  }
 
   @override
   Future<Result<AuthOutcome>> registerAccount({required String email}) async {
@@ -547,7 +606,19 @@ class MockNotificationRepository
   @override
   Future<Result<NotificationPreferences>> loadPreferences() {
     return _gate.respond(
-      const NotificationPreferences(push: true, sms: false, email: false),
+      const NotificationPreferences(
+        push: true,
+        sms: false,
+        email: false,
+        channels: <ChannelPreference>[
+          ChannelPreference(
+            type: 'verification_decided',
+            inApp: true,
+            push: true,
+          ),
+          ChannelPreference(type: 'message_received', inApp: true, push: true),
+        ],
+      ),
     );
   }
 
@@ -557,7 +628,7 @@ class MockNotificationRepository
 
   @override
   Future<Result<String>> registerPushToken(String token) {
-    return _gate.respond('device-sample-1');
+    return _gate.respond(token);
   }
 
   @override
@@ -622,6 +693,7 @@ class MockProfileRepository implements ResidentProfileRepository {
     return _gate.respond(
       ResidentProfileDetail(
         verificationTier: 'verified',
+        emailVerified: false,
         values: <ResidentProfileField, String>{
           ResidentProfileField.emailAddress: resident.email,
         },
@@ -1005,6 +1077,10 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
     topic: 'SAMPLE inquiry',
     preview: 'A synthetic message from Juana Dela Cruz.',
     updatedAt: mockNow,
+    unreadCount: 1,
+    lastMessageAt: mockNow,
+    createdAt: mockNow,
+    residentId: 'resident-sample',
   );
 
   @override

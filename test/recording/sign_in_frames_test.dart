@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/forgot_password_screen.dart';
+import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 
 /// Stills of `02-01` through `02-11` at 390×844 @3×, and a frame sequence of
@@ -166,6 +167,47 @@ void main() {
       await _paint(tester, frame.$2, '${out.path}/${frame.$1}.png');
     }
     expect(out.listSync().length, 11);
+  });
+
+  testWidgets('capture 02-02b, 02-04b, 02-12, 02-12b and 02-13', (
+    tester,
+  ) async {
+    final out = Directory('/tmp/s2_renders');
+    out.createSync(recursive: true);
+    final frames = <(String, Widget)>[
+      (
+        '02-02b',
+        const ResetCodeScreen(
+          key: ValueKey('02-02b'),
+          fixture: ResetCodeFixture.sample,
+        ),
+      ),
+      (
+        '02-04b',
+        const AccountWizardScreen(
+          key: ValueKey('02-04b'),
+          fixture: AccountFixture.codeExpired,
+        ),
+      ),
+      (
+        '02-12',
+        const SetPasswordScreen(
+          key: ValueKey('02-12'),
+          fixture: SetPasswordFixture.mismatch,
+        ),
+      ),
+      (
+        '02-12b',
+        const SetPasswordScreen(
+          key: ValueKey('02-12b'),
+          fixture: SetPasswordFixture.expired,
+        ),
+      ),
+      ('02-13', const PasswordUpdatedScreen(key: ValueKey('02-13'))),
+    ];
+    for (final frame in frames) {
+      await _paint(tester, frame.$2, '${out.path}/${frame.$1}.png');
+    }
   });
 
   testWidgets('wizard frames for the flow recording', (tester) async {

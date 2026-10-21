@@ -28,6 +28,10 @@ class ResidentProfileDetail {
     this.values = const <ResidentProfileField, String>{},
     this.verificationTier,
     this.selfServiceFields,
+    this.emailVerified = false,
+    this.rejectionReason,
+    this.closed = false,
+    this.closedAt,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -50,6 +54,18 @@ class ResidentProfileDetail {
   /// Null means the server did not say, and [ownershipOf] falls back to the
   /// declared value so an older response behaves exactly as before.
   final Set<String>? selfServiceFields;
+
+  /// True when the current email was confirmed with a code.
+  final bool emailVerified;
+
+  /// Notes from the latest rejection. Held so a later screen can show them.
+  /// Never rendered today, and never included in [toString].
+  final String? rejectionReason;
+
+  /// `closed` from `GET /me` and from `POST /me/close`.
+  final bool closed;
+
+  final DateTime? closedAt;
 
   /// Who may change [field], preferring the office's answer.
   ///

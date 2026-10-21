@@ -118,6 +118,61 @@ class SignInAtmosphere {
     blueX: 0.50,
     blueY: 0.46,
   );
+
+  /// `02-02b`.
+  static const SignInAtmosphere resetCode = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 204,
+    goldX: 0.30,
+    goldY: 0.28,
+    blueX: 0.70,
+    blueY: 0.44,
+  );
+
+  /// `02-04b`. Distinct from [code] so the email-code golden stays put.
+  static const SignInAtmosphere codeExpired = SignInAtmosphere(
+    fadeHold: 290,
+    fadeSolid: 350,
+    angle: 212,
+    goldX: 0.20,
+    goldY: 0.22,
+    blueX: 0.80,
+    blueY: 0.38,
+  );
+
+  /// `02-12`.
+  static const SignInAtmosphere setPassword = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 180,
+    goldX: 0.80,
+    goldY: 0.20,
+    blueX: 0.20,
+    blueY: 0.36,
+  );
+
+  /// `02-12b`.
+  static const SignInAtmosphere setPasswordExpired = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 188,
+    goldX: 0.62,
+    goldY: 0.26,
+    blueX: 0.38,
+    blueY: 0.42,
+  );
+
+  /// `02-13`.
+  static const SignInAtmosphere passwordUpdated = SignInAtmosphere(
+    fadeHold: 250,
+    fadeSolid: 320,
+    angle: 196,
+    goldX: 0.45,
+    goldY: 0.22,
+    blueX: 0.55,
+    blueY: 0.38,
+  );
 }
 
 /// The page field behind every `02` sheet.

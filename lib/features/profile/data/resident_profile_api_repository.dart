@@ -96,7 +96,8 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     // correction form uses, and it must not re-map anything on the way through.
     final Map<String, Object?> named = <String, Object?>{
       for (final MapEntry<String, Object?> entry in changes.entries)
-        if (entry.value != null) entry.key: entry.value,
+        if (entry.value != null && _patchWire(entry.key) != null)
+          _patchWire(entry.key)!: entry.value,
     };
     if (named.isEmpty) {
       return const Err<void>(
@@ -130,7 +131,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     final Map<String, Object?> named = <String, Object?>{
       for (final MapEntry<ResidentProfileField, String> entry
           in changes.entries)
-        if (entry.key.wireName != null) entry.key.wireName!: entry.value,
+        if (_patchKey(entry.key) != null) _patchKey(entry.key)!: entry.value,
     };
 
     if (named.isEmpty) {
@@ -181,7 +182,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     for (final ResidentProfileField field in ResidentProfileField.values) {
       final String? wire = field.wireName;
       if (wire == null) continue;
-      final Object? value = map[wire];
+      final Object? value = _fieldValue(map, wire);
       if (value is String && value.trim().isNotEmpty) {
         values[field] = value.trim();
       }
@@ -204,7 +205,9 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
       values[ResidentProfileField.fullName] = resolvedName;
     }
 
-    final Object? tier = map['verification_tier'];
+    final Object? tier = map['verification_status'] ?? map['verification_tier'];
+    final Object? reason = map['rejection_reason'];
+    final Object? closedAt = map['closed_at'];
 
     // WHO MAY CHANGE WHAT IS THE OFFICE'S ANSWER, AND IT IS ON THE WIRE (C-13).
     //
@@ -230,6 +233,43 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
       selfServiceFields: selfService != null && selfService.isNotEmpty
           ? Set<String>.unmodifiable(selfService)
           : null,
+      emailVerified: map['email_verified'] == true,
+      rejectionReason: reason is String && reason.trim().isNotEmpty
+          ? reason.trim()
+          : null,
+      closed: map['closed'] == true,
+      closedAt: DateTime.tryParse(closedAt is String ? closedAt : '')?.toUtc(),
     );
+  }
+
+  /// ProfilePatch names. `purok_or_sitio` is not one of them, so it is omitted.
+  /// `role` and `office_id` are never sent.
+  static String? _patchKey(ResidentProfileField field) {
+    final String? wire = field.wireName;
+    if (wire == null) return null;
+    return _patchWire(wire);
+  }
+
+  static String? _patchWire(String wire) => switch (wire) {
+    'mobile_number' => 'mobile',
+    'street_address' => 'address',
+    'birth_date' => 'birthdate',
+    'purok_or_sitio' => null,
+    'role' || 'office_id' || 'rejection_reason' || 'email_verified' => null,
+    _ => wire,
+  };
+
+  /// Reads the historical wire name, then the spec alias.
+  static Object? _fieldValue(Map<String, dynamic> map, String wire) {
+    final Object? direct = map[wire];
+    if (direct is String && direct.trim().isNotEmpty) return direct;
+    final String? alias = switch (wire) {
+      'mobile_number' => 'mobile',
+      'street_address' => 'address',
+      'birth_date' => 'birthdate',
+      _ => null,
+    };
+    if (alias == null) return direct;
+    return map[alias];
   }
 }

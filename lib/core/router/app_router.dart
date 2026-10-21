@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../app/app_dependencies.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
+import '../../features/auth/domain/code_exchange.dart';
 import '../../features/auth/presentation/account_wizard_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
+import '../../features/auth/presentation/reset_flow_screens.dart';
 import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
@@ -381,6 +383,29 @@ GoRouter buildAppRouter({
         path: AppRoute.forgotPassword.path,
         name: AppRoute.forgotPassword.routeName,
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.resetCode.path,
+        name: AppRoute.resetCode.routeName,
+        builder: (context, state) => ResetCodeScreen(
+          draft: state.extra is PasswordResetDraft
+              ? state.extra as PasswordResetDraft
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.setPassword.path,
+        name: AppRoute.setPassword.routeName,
+        builder: (context, state) => SetPasswordScreen(
+          draft: state.extra is PasswordResetDraft
+              ? state.extra as PasswordResetDraft
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.passwordUpdated.path,
+        name: AppRoute.passwordUpdated.routeName,
+        builder: (context, state) => const PasswordUpdatedScreen(),
       ),
       GoRoute(
         path: AppRoute.hotlines.path,

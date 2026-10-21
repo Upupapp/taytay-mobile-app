@@ -26,6 +26,9 @@ class AppBootstrap {
     required this.features,
     required this.support,
     this.serverTime,
+    this.privacyVersion = '',
+    this.termsVersion = '',
+    this.updatedAt,
   });
 
   /// What the app assumes before the server has answered, and after a failure.
@@ -70,6 +73,15 @@ class AppBootstrap {
 
   final FeatureFlags features;
   final SupportContact support;
+
+  /// `privacy_version` from `GET /app/config`. Empty when the server omitted it.
+  final String privacyVersion;
+
+  /// `terms_version` from `GET /app/config`.
+  final String termsVersion;
+
+  /// `updated_at` from `GET /app/config`.
+  final DateTime? updatedAt;
 
   /// How far the device clock is from the server's, when both are known.
   ///

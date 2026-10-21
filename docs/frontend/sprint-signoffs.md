@@ -110,8 +110,8 @@ The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG o
 - The full-frame mismatch is above 2%. Sheet edges on `02-02` through `02-09` match the design PNG. The remainder is glyph antialiasing (Skia against Chrome), the downscaled seal, the dashed seam's dash phase, the hall JPEG, and the drawn ID and selfie stand-ins. Those stand-ins are not a photograph of a person.
 - `02-11`'s white edge is 11 device px below the design. The summary banner's top is within 3 device px.
 - Text links keep a 48 dp hit target. The painted line is the design's 12 or 13 px link. The hit box extends past that line.
-- The live repository declines password sign-in, password reset, and registration. It does not call the staff token route. The dev mock returns an unverified session named Juana. There is no Firebase SDK.
-- `02-10` says "2 attempts left before a 15-minute pause" as the design's copy for a refused password. It is not a live counter.
+- The live repository declines password sign-in and registration. It does not call the staff token route. Email codes and password reset call the published routes. The dev mock returns an unverified session named Juana for password sign-in. There is no Firebase SDK.
+- `02-10` shows "2 attempts left before a 15-minute pause" on the first refused password, then one fewer, then the pause. The design fixture still paints 2. The password route does not publish that count. Code attempts are a separate counter of 5.
 - The help screen still explains a missing one-time code, because registration asks for an email code. Sign-in itself is email or mobile, plus a password.
 - `RegistrationScreen` remains for its existing tests. `/register` paints `AccountWizardScreen`.
 - `docs/taytay-login-and-session-security.md` and `docs/taytay-registration-wizard.md` still describe the earlier one-time-code flow. The contract gap is the section below.
@@ -124,17 +124,20 @@ F31 is closed. `GET/POST /threads`, messages, mark-read, and close are citizen r
 
 These designs still need data the spec does not publish. The calls decline with F32, or the screen keeps static copy:
 
-- Sign-in, sign-up, email code, forgot password (`02-01`–`02-11`). No citizen password, OTP, or registration routes. Identity on the live API is still a Firebase ID token. This app does not add the Firebase SDK and does not call the staff `POST /auth/tokens` route. The live repository declines those calls. The dev mock accepts a password and returns an unverified session. Dev sessions otherwise use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
-- Self-registration. No `app/bootstrap` and no `features.self_registration`. S2 still shows Create an account and `/register`, because that is the designed resident screen. The live `registerAccount` call declines. The dev mock signs the resident in as unverified and does not upload the ID or the selfie.
-- Token revocation. Sign-out clears the session on the device.
+- Citizen password sign-in. There is still no citizen password route. This app does not call the staff token route. The dev mock accepts a password and returns an unverified session. Dev sessions otherwise use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
+- Self-registration. `GET /app/config` is wired, and `feature_flags` are strings. There is still no self-registration route. S2 shows Create an account and `/register` because that is the designed resident screen. The live `registerAccount` call declines. The dev mock signs the resident in as unverified and does not upload the ID or the selfie.
+- Email verification during registration. `POST /auth/email-otp/send` and `verify` are published, and the app calls them. Send requires a registered session and uses the profile email, with no address in the body. `02-04` runs before an account exists, so a live send can be refused. The screen still advances. The dev mock accepts the same empty body and the same `{code}` verify.
+- Code attempt counts and resend timestamps. The `202` body is `{accepted: true}` during the cooldown as well. The client starts a 10-minute code life and a 60-second resend window when that `202` arrives, and counts wrong-code `422`s down from 5. The reset token's `expires_at` is on the verify response and is 15 minutes. `02-12b` is shown when that time has passed. The designed sentence on `02-12b` still says 10 minutes.
+- `02-10`'s password pause (2, then 1, then 15 minutes) is the design's notice. It is not a published field.
+- Token revocation. Sign-out clears the session on the device. `POST` and `DELETE /me/devices` register a push token. They do not revoke a session.
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.
-- Household (`03-07`). Address is a string on `PATCH /me`. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
+- Household (`03-07`). Address is a string on `PATCH /me` (`address`). `purok_or_sitio` is not a ProfilePatch field, so it is not sent. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
 - Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
-- Notification preferences and device registration. Inbox types are only `verification_decided` and `message_received`. Design categories such as advisory, treasury, and BPLO are not in that enum.
+- Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.
-- Account closure.
-- Hotlines as their own resource, weather, payments, and map tiles. An office may carry `phone`, `email`, `latitude`, `longitude`, and `address`. The resident decoder does not surface the coordinates. The design's location cards are an illustrative drawing.
+- `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.
+- Hotlines are on `GET /home` and `GET /hotlines`. The hotline screen is still the placeholder. Weather, payments, and map tiles are not published. An office may carry coordinates. The resident decoder does not surface them.
 - Welcome copy, photo credits, and a bundled hall photograph. None of those are API fields.
-- A thread has no subject or preview. The start call returns the thread. The client loads messages for a preview.
-- Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list. Staff assignment on a profile is not modeled on a resident type.
+- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString` and is not rendered. `email_verified` is on the profile model.
+- Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list.

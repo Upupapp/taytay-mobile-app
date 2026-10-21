@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/auth_repository.dart';
+import '../domain/code_exchange.dart';
 
 /// Talks to the citizen half of `Identity`.
 ///
@@ -119,19 +121,124 @@ class AuthApiRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<void>> requestPasswordReset({
-    required String identifier,
-  }) async {
-    final Object _ = _apiClient.runtimeType;
-    if (identifier.trim().isEmpty) {
-      return const Err<void>(
-        ValidationFailure(debugMessage: 'An identifier is required.'),
+  Future<Result<CodeAcceptance>> sendEmailCode() async {
+    final response = await _apiClient.send<CodeAcceptance>(
+      method: HttpMethod.post,
+      path: 'auth/email-otp/send',
+      authenticated: true,
+      decode: _decodeAccepted,
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<EmailVerified>> verifyEmailCode({required String code}) async {
+    final String digits = code.trim();
+    if (!RegExp(r'^\d{6}$').hasMatch(digits)) {
+      return const Err<EmailVerified>(
+        ValidationFailure(debugMessage: 'A 6-digit code is required.'),
       );
     }
-    return backendGapFailure<void>(
-      BackendGap.absentOnNodeContract,
-      'requestPasswordReset',
+    final response = await _apiClient.send<EmailVerified>(
+      method: HttpMethod.post,
+      path: 'auth/email-otp/verify',
+      authenticated: true,
+      body: <String, Object?>{'code': digits},
+      decode: (Object? data) {
+        final Map<String, dynamic> map = _map(data);
+        return EmailVerified(emailVerified: map['email_verified'] == true);
+      },
     );
+    return response.map((envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> requestPasswordReset({
+    required String email,
+  }) async {
+    final String trimmed = email.trim();
+    if (trimmed.isEmpty) {
+      return const Err<CodeAcceptance>(
+        ValidationFailure(debugMessage: 'An email address is required.'),
+      );
+    }
+    final response = await _apiClient.send<CodeAcceptance>(
+      method: HttpMethod.post,
+      path: 'auth/password-reset/request',
+      authenticated: false,
+      body: <String, Object?>{'email': trimmed},
+      decode: _decodeAccepted,
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  }) async {
+    final String trimmed = email.trim();
+    final String digits = code.trim();
+    if (trimmed.isEmpty || !RegExp(r'^\d{6}$').hasMatch(digits)) {
+      return const Err<PasswordResetGrant>(
+        ValidationFailure(debugMessage: 'An email and a 6-digit code.'),
+      );
+    }
+    final response = await _apiClient.send<PasswordResetGrant>(
+      method: HttpMethod.post,
+      path: 'auth/password-reset/verify',
+      authenticated: false,
+      body: <String, Object?>{'email': trimmed, 'code': digits},
+      decode: (Object? data) {
+        final Map<String, dynamic> map = _map(data);
+        final Object? token = map['reset_token'];
+        final Object? expires = map['expires_at'];
+        if (token is! String || token.isEmpty || expires is! String) {
+          throw const FormatException('Reset token envelope.');
+        }
+        final DateTime? at = DateTime.tryParse(expires);
+        if (at == null) {
+          throw const FormatException('Reset token expiry.');
+        }
+        return PasswordResetGrant(resetToken: token, expiresAt: at.toUtc());
+      },
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    if (resetToken.isEmpty || newPassword.isEmpty) {
+      return const Err<PasswordUpdated>(
+        ValidationFailure(debugMessage: 'A token and a password are required.'),
+      );
+    }
+    final response = await _apiClient.send<PasswordUpdated>(
+      method: HttpMethod.post,
+      path: 'auth/password-reset/complete',
+      authenticated: false,
+      body: <String, Object?>{
+        'reset_token': resetToken,
+        'new_password': newPassword,
+      },
+      decode: (Object? data) {
+        final Map<String, dynamic> map = _map(data);
+        return PasswordUpdated(updated: map['updated'] == true);
+      },
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  static CodeAcceptance _decodeAccepted(Object? data) {
+    final Map<String, dynamic> map = _map(data);
+    return CodeAcceptance(accepted: map['accepted'] == true);
+  }
+
+  static Map<String, dynamic> _map(Object? data) {
+    return data is Map<String, dynamic> ? data : const <String, dynamic>{};
   }
 
   @override

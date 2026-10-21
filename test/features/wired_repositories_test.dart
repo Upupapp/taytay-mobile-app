@@ -369,23 +369,21 @@ void main() {
       }
     });
 
-    test('a critical category stored as off is still on', () async {
+    test('preferences are the two published types', () async {
       transport.responses.add(
         ok(<String, Object?>{
           'preferences': <Object?>[
             <String, Object?>{
-              'notification_type': 'account_security',
-              'channel': 'push',
-              'enabled': false,
+              'type': 'message_received',
+              'in_app': false,
+              'push': false,
             },
             <String, Object?>{
-              'notification_type': 'event_reminder',
-              'channel': 'push',
-              'enabled': false,
+              'type': 'verification_decided',
+              'in_app': false,
+              'push': true,
             },
           ],
-          'mandatory_notice':
-              'Service and security notices cannot be switched off.',
         }),
       );
 
@@ -394,12 +392,21 @@ void main() {
             apiClient: clientFor(transport),
           ).loadPreferences();
 
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
-      expect(transport.requests, isEmpty);
+      final NotificationPreferences preferences =
+          (result as Ok<NotificationPreferences>).value;
+      expect(preferences.channels, hasLength(2));
+      expect(
+        preferences.isEnabled(NotificationCategory.accountSecurity),
+        isTrue,
+      );
+      expect(transport.requests.single.path, 'me/notification-preferences');
+      expect(sentAuthenticated(transport.requests.single), isTrue);
     });
 
-    test('an update declines and sends no preference body', () async {
+    test('an update sends the spec list and not sms or email', () async {
+      transport.responses.add(
+        ok(<String, Object?>{'preferences': <Object?>[]}),
+      );
       final Result<void> result =
           await NotificationApiRepository(
             apiClient: clientFor(transport),
@@ -409,14 +416,20 @@ void main() {
               sms: false,
               email: false,
               categories: <NotificationCategory, bool>{
-                NotificationCategory.accountSecurity: true,
-                NotificationCategory.eventReminder: false,
+                NotificationCategory.verificationUpdate: true,
               },
             ),
           );
 
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(transport.requests, isEmpty);
+      expect(result.isOk, isTrue);
+      final Object? body = transport.requests.single.body;
+      expect(body, isA<Map<String, Object?>>());
+      final String encoded = body.toString();
+      expect(encoded, contains('verification_decided'));
+      expect(encoded, contains('message_received'));
+      expect(encoded, contains('in_app'));
+      expect(encoded, isNot(contains('sms')));
+      expect(encoded, isNot(contains('email')));
     });
   });
 }

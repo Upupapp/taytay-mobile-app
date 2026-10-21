@@ -15,12 +15,10 @@ import '../domain/account_controls.dart';
 /// did she change her mind" is the question a complaint asks. Removing the row
 /// would erase the evidence it exists to provide.
 ///
-/// **`loadControls` still answers "nothing yet", and that is still true.** The
-/// stub it replaces returned `AccountControls.none` deliberately, and this
-/// repository keeps that answer for everything except consent withdrawal —
-/// because withdrawal is the one control the backend actually publishes. A
-/// "Delete my account" button on a government app is a statement about a civil
-/// record, and retention is set by law rather than by a client (F13).
+/// **`loadControls` still does not offer deletion.** Consent withdrawal is the
+/// flag it sets. `POST /me/close` exists and `requestAccountClosure` calls it,
+/// but a deletion button stays off until the LGU retention schedule says what
+/// a municipal record keeps.
 class PrivacyApiRepository implements AccountControlsRepository {
   const PrivacyApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -31,11 +29,9 @@ class PrivacyApiRepository implements AccountControlsRepository {
 
   @override
   Future<Result<AccountControls>> loadControls() async {
-    // Asked of the server, not assumed — but only one answer can be given
-    // truthfully today. Consent withdrawal exists; correction is routed through
-    // TAB 04's corrections flow; deactivation and deletion have no route at all
-    // (F13), and offering either would tell a resident they had asked the
-    // municipality to erase their record when nobody had been told.
+    // Consent withdrawal is the flag the screen can honour today. Correction
+    // is a separate flow. `POST /me/close` exists, and the deletion flag stays
+    // false until the LGU says what a municipal record keeps.
     return const Ok<AccountControls>(
       AccountControls(canWithdrawConsent: true, canRequestDataCorrection: true),
     );
@@ -87,15 +83,17 @@ class PrivacyApiRepository implements AccountControlsRepository {
     required String reason,
     required String idempotencyKey,
   }) async {
-    // F13, unchanged and still a store blocker. No module publishes a route that
-    // closes, erases or deletes an account. Declining is the only honest answer:
-    // a closure request that silently succeeded against nothing would leave a
-    // resident believing they had asked the municipality to erase their record,
-    // and nobody would ever have been told.
-    return backendGapFailure<void>(
-      BackendGap.accountClosure,
-      'requestAccountClosure',
+    // `POST /me/close` has no body. [permanent], [reason] and
+    // [idempotencyKey] stay off the wire: Profile close accepts none of them.
+    // A 409 means the account is already closed.
+    final Object _ = (permanent, reason, idempotencyKey);
+    final response = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'me/close',
+      authenticated: true,
+      decode: (_) {},
     );
+    return response.map((_) {});
   }
 
   /// `POST me/consents`. Records the notice version the resident accepted.

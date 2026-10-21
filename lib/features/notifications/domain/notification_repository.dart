@@ -90,6 +90,26 @@ class ResidentNotification {
   String toString() => 'ResidentNotification($id, unread: $isUnread)';
 }
 
+/// One row of `GET /me/notification-preferences`.
+///
+/// The spec publishes two types: `verification_decided` and `message_received`.
+/// Each has `in_app` and `push`. SMS and email are not on this contract.
+@immutable
+class ChannelPreference {
+  const ChannelPreference({
+    required this.type,
+    required this.inApp,
+    required this.push,
+  });
+
+  final String type;
+  final bool inApp;
+  final bool push;
+
+  @override
+  String toString() => 'ChannelPreference($type, inApp: $inApp, push: $push)';
+}
+
 /// Which channels a resident wants to be contacted on, and about what.
 ///
 /// ---
@@ -110,6 +130,7 @@ class NotificationPreferences {
     required this.sms,
     required this.email,
     this.categories = const <NotificationCategory, bool>{},
+    this.channels = const <ChannelPreference>[],
   });
 
   final bool push;
@@ -118,6 +139,9 @@ class NotificationPreferences {
 
   /// Per-category switches, where the backend supports them.
   final Map<NotificationCategory, bool> categories;
+
+  /// The spec list. Empty until `GET /me/notification-preferences` answers.
+  final List<ChannelPreference> channels;
 
   /// Whether [category] is currently on.
   ///
@@ -140,11 +164,13 @@ class NotificationPreferences {
     bool? sms,
     bool? email,
     Map<NotificationCategory, bool>? categories,
+    List<ChannelPreference>? channels,
   }) => NotificationPreferences(
     push: push ?? this.push,
     sms: sms ?? this.sms,
     email: email ?? this.email,
     categories: categories ?? this.categories,
+    channels: channels ?? this.channels,
   );
 
   /// A copy with one category switched.
