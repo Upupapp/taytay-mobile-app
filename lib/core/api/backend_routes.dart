@@ -71,6 +71,50 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'health', 'platform_api_repository.dart'),
   BackendRoute('GET', 'home', 'node_citizen_api.dart'),
   BackendRoute('GET', 'hotlines', 'node_citizen_api.dart'),
+  BackendRoute('POST', 'households', 'household_api_repository.dart'),
+  BackendRoute('DELETE', 'households/current', 'household_api_repository.dart'),
+  BackendRoute('GET', 'households/current', 'household_api_repository.dart'),
+  BackendRoute('PATCH', 'households/current', 'household_api_repository.dart'),
+  BackendRoute(
+    'POST',
+    'households/current/leave',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'households/current/members',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'DELETE',
+    'households/current/members/{}',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'PATCH',
+    'households/current/members/{}',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'households/current/transfer',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'GET',
+    'households/invitations/current',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'households/invitations/{}/accept',
+    'household_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'households/invitations/{}/decline',
+    'household_api_repository.dart',
+  ),
   BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),
@@ -79,6 +123,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('POST', 'me/consents', 'privacy_api_repository.dart'),
   BackendRoute('DELETE', 'me/devices', 'notification_api_repository.dart'),
   BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
+  BackendRoute('GET', 'me/digital-id', 'credential_api_repository.dart'),
   BackendRoute(
     'GET',
     'me/notification-preferences',

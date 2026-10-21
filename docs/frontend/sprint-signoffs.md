@@ -108,7 +108,7 @@ S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comp
 
 The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
 
-The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens. `flutter analyze` on `lib` and `test` was clean. `flutter test` passed 1572 tests, with 3 skipped (the recording tag).
+The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens. `flutter analyze` on `lib` and `test` was clean. On `feature/s2-sign-in` the suite passed 1572 tests, with 3 skipped (the recording tag). After the merge into this branch the same suite passed 1579 tests, with 3 skipped.
 
 ### S2 deviations
 
@@ -135,9 +135,9 @@ These designs still need data the spec does not publish. The calls decline with 
 - Code attempt counts and resend timestamps. The `202` body is `{accepted: true}` during the cooldown as well. The client starts a 10-minute code life and a 60-second resend window when that `202` arrives, and counts wrong-code `422`s down from 5. The reset token's `expires_at` is on the verify response and is 15 minutes. `02-12b` is shown when that time has passed. The designed sentence on `02-12b` still says 10 minutes.
 - `02-10`'s password pause (2, then 1, then 15 minutes) is the design's notice. It is not a published field.
 - Token revocation. Sign-out clears the session on the device. `POST` and `DELETE /me/devices` register a push token. They do not revoke a session.
-- Digital ID and QR (`01-02`, account). No credential resource.
+- Digital ID and QR are on `GET /me/digital-id` for a verified resident. The card and the QR `expires_at` are on the repository and the dev mock. The mock refreshes the QR inside 15 seconds of the two-minute expiry. `POST /digital-id/verify` is the staff scan and is named on the interface only. The digital ID screen is still the placeholder.
 - Events catalogue and registration. No events resource.
-- Household (`03-07`). Address is a string on `PATCH /me` (`address`). `purok_or_sitio` is not a ProfilePatch field, so it is not sent. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
+- Household is on the citizen routes: `POST /households`, `GET`/`PATCH`/`DELETE /households/current`, member create/update/delete, leave, transfer, and `GET /households/invitations/current` with accept and decline. The repository and the dev mock call those. The barangay-wide list is not called. The household screen still shows the older summary and does not render members. `purok_or_sitio` is still not a ProfilePatch key. `street` and `purok` are on the profile DTO and can be sent from that DTO. They were not added to the account wizard. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
 - Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
 - Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.

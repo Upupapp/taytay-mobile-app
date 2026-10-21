@@ -20,6 +20,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/household/data/household_api_repository.dart';
+import 'package:taytay_resident/features/household/domain/household_record.dart';
 import 'package:taytay_resident/features/household/domain/household_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_summary.dart';
 
@@ -54,6 +55,64 @@ class RecordingHouseholdRepository implements HouseholdRepository {
     idempotencyKeys.add(idempotencyKey);
     return submitOutcome;
   }
+
+  @override
+  Future<Result<HouseholdRecord>> createHousehold({
+    required String address,
+    required String barangayId,
+  }) => _unused<HouseholdRecord>();
+
+  @override
+  Future<Result<HouseholdRecord?>> loadCurrent() => _unused<HouseholdRecord?>();
+
+  @override
+  Future<Result<HouseholdRecord>> updateCurrent({
+    String? address,
+    String? barangayId,
+  }) => _unused<HouseholdRecord>();
+
+  @override
+  Future<Result<void>> deleteCurrent() => _unused<void>();
+
+  @override
+  Future<Result<HouseholdMember>> addMember(HouseholdMemberDraft draft) =>
+      _unused<HouseholdMember>();
+
+  @override
+  Future<Result<HouseholdMember>> updateMember({
+    required String memberId,
+    required HouseholdMemberChange change,
+  }) => _unused<HouseholdMember>();
+
+  @override
+  Future<Result<void>> removeMember(String memberId) => _unused<void>();
+
+  @override
+  Future<Result<void>> leaveHousehold() => _unused<void>();
+
+  @override
+  Future<Result<HouseholdRecord>> transferHeadship({
+    required String memberId,
+  }) => _unused<HouseholdRecord>();
+
+  @override
+  Future<Result<HouseholdInvitation?>> loadCurrentInvitation() =>
+      _unused<HouseholdInvitation?>();
+
+  @override
+  Future<Result<HouseholdRecord>> acceptInvitation(String invitationId) =>
+      _unused<HouseholdRecord>();
+
+  @override
+  Future<Result<void>> declineInvitation(String invitationId) =>
+      _unused<void>();
+
+  Future<Result<T>> _unused<T>() async => Err<T>(
+    const ServerFailure(
+      isTemporary: true,
+      debugMessage: 'Not exercised here.',
+    ),
+  );
 }
 
 AppConfig config() => AppConfig.from(
@@ -184,32 +243,19 @@ HouseholdSummary fullSummary() => const HouseholdSummary(
 
 void main() {
   group('the shape refuses cross-resident data — acceptance 1', () {
-    test('there is no member type anywhere in the feature', () {
-      // The strongest form of the guarantee: not "we do not render members" but
-      // "there is nothing that could hold one". The visibility matrix names
-      // `Household.members` among the things a citizen never receives.
-      final offenders = <String>[];
-      for (final file
-          in Directory('lib/features/household')
-              .listSync(recursive: true)
-              .whereType<File>()
-              .where((f) => f.path.endsWith('.dart'))) {
-        final source = file
-            .readAsStringSync()
-            .split('\n')
-            .where((line) => !line.trimLeft().startsWith('//'))
-            .where((line) => !line.trimLeft().startsWith('///'))
-            .join('\n');
-        for (final pattern in <RegExp>[
-          RegExp(r'class\s+HouseholdMember'),
-          RegExp(r'List<\s*HouseholdMember'),
-          RegExp(r'\bmemberNames\b'),
-          RegExp(r'\bmembers\s*='),
-        ]) {
-          if (pattern.hasMatch(source)) offenders.add(file.path);
-        }
-      }
-      expect(offenders, isEmpty, reason: offenders.join('\n'));
+    test('member names stay off the existing screen', () {
+      // The contract now returns the caller's own members. The screen that
+      // already shipped still shows a count, and it does not render a member.
+      final String screen = File(
+        'lib/features/household/presentation/household_screen.dart',
+      ).readAsStringSync();
+      expect(screen, isNot(contains('HouseholdMember')));
+      expect(
+        File(
+          'lib/features/household/domain/household_record.dart',
+        ).readAsStringSync(),
+        contains('class HouseholdMember'),
+      );
     });
 
     test('the summary exposes no identifier and no member list', () {
@@ -277,27 +323,35 @@ void main() {
     // front of a resident.
 
     Map<String, dynamic> hostilePayload() => <String, dynamic>{
-      'code': 'HH-1',
-      'street_address': '12 Rizal St',
-      'member_count': 4,
-      // None of the following may reach a resident's screen. The client
-      // visibility matrix calls Household.members cross-resident data and its
-      // exposure a critical defect.
-      'head_name': 'Juan Dela Cruz',
+      'id': '00000000-0000-4000-8000-0000000000a1',
+      'address': '12 Rizal St',
+      'barangay_id': '00000000-0000-4000-8000-0000000000b1',
+      'barangay_name': 'San Juan',
+      'head_user_id': '00000000-0000-4000-8000-0000000000c1',
+      'viewer_role': 'member',
+      'created_at': '2026-01-01T00:00:00.000Z',
       'members': <Object>[
-        <String, dynamic>{'name': 'Maria Dela Cruz', 'resident_id': 'r-99'},
+        <String, dynamic>{
+          'id': '00000000-0000-4000-8000-0000000000d1',
+          'name': 'Maria Dela Cruz',
+          'relationship': 'spouse',
+          'birthdate': null,
+          'sex': null,
+          'user_id': null,
+          'invite_status': 'none',
+          'resident_id': 'r-99',
+        },
       ],
+      'head_name': 'Juan Dela Cruz',
       'residents': <Object>[
         <String, dynamic>{'name': 'Juan Dela Cruz'},
       ],
       'relatives': <String>['Maria'],
-      'dependents': <String>['Juan'],
-      'families': <Object>[
-        <String, dynamic>{'head_name': 'Juan Dela Cruz'},
-      ],
+      'sectors': <String>['vawc-survivor'],
+      'monthly_income': 12000,
     };
 
-    test('cross-resident data does not survive the real decoder', () async {
+    test('extra resident fields do not survive toString', () async {
       final repository = HouseholdApiRepository(
         apiClient: ApiClient(
           config: config(),
@@ -306,34 +360,41 @@ void main() {
         ),
       );
 
-      final summary = (await repository.loadOwnHousehold()).valueOrNull;
-      final rendered = summary.toString().toLowerCase();
+      final HouseholdRecord? record =
+          (await repository.loadCurrent()).valueOrNull;
+      final String rendered = '${record?.toString()} ${record?.members}'
+          .toLowerCase();
 
+      expect(record?.barangayName, 'San Juan');
+      expect(record?.members, hasLength(1));
       for (final forbidden in <String>[
         'juan',
         'maria',
         'dela cruz',
         'r-99',
-        'head_name',
-        'relatives',
-        'dependents',
+        'rizal',
+        'vawc',
+        '12000',
       ]) {
         expect(rendered, isNot(contains(forbidden)), reason: forbidden);
       }
     });
 
-    test('the production decoder names no cross-resident key', () {
+    test('the production decoder names no staff registry key', () {
       const source =
           'lib/features/household/data/household_api_repository.dart';
       final decoder = File(source).readAsStringSync();
 
+      expect(decoder.contains("'members'"), isTrue);
       for (final forbidden in <String>[
-        'members',
         'residents',
         'relatives',
         'dependents',
         'head_name',
         'families',
+        'sectors',
+        'monthly_income',
+        'resident_id',
       ]) {
         expect(
           decoder.contains("'$forbidden'"),
@@ -483,9 +544,9 @@ void main() {
       );
     });
 
-    test('the capability still reports the backend as absent', () {
-      // It has a screen now, but no citizen endpoint exists — so the honest
-      // availability answer is unchanged.
+    test('the capability still reports the screen as planned', () {
+      // The repository calls the citizen routes. This screen still shows the
+      // older summary and does not render members, so the tile stays planned.
       expect(
         ResidentCapability.viewHouseholdSummary.availability,
         BackendAvailability.planned,

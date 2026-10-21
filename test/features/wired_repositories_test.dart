@@ -91,19 +91,45 @@ void main() {
   late _Scripted transport;
   setUp(() => transport = _Scripted(<Result<ApiHttpResponse>>[]));
 
-  group('household — the member array is never read', () {
-    test(
-      'the household is not fetched, so the member array is never read',
-      () async {
-        final Result<HouseholdSummary> result = await HouseholdApiRepository(
-          apiClient: clientFor(transport),
-        ).loadOwnHousehold();
+  group('household — the caller\'s own household is fetched', () {
+    test('current household is read, and the barangay list is not', () async {
+      transport.responses.add(
+        ok(<String, Object?>{
+          'id': '00000000-0000-4000-8000-0000000000a1',
+          'address': 'Sample Street',
+          'barangay_id': '00000000-0000-4000-8000-0000000000b1',
+          'barangay_name': 'San Juan',
+          'head_user_id': '00000000-0000-4000-8000-0000000000c1',
+          'viewer_role': 'head',
+          'created_at': '2026-01-01T00:00:00.000Z',
+          'members': <Object>[
+            <String, Object?>{
+              'id': '00000000-0000-4000-8000-0000000000d1',
+              'name': 'Sample Head',
+              'relationship': 'head',
+              'birthdate': null,
+              'sex': null,
+              'user_id': '00000000-0000-4000-8000-0000000000c1',
+              'invite_status': 'accepted',
+            },
+          ],
+        }),
+      );
 
-        expect(result.failureOrNull, isA<ServerFailure>());
-        expect(result.failureOrNull!.debugMessage, contains('F32'));
-        expect(transport.requests, isEmpty);
-      },
-    );
+      final Result<HouseholdSummary> result = await HouseholdApiRepository(
+        apiClient: clientFor(transport),
+      ).loadOwnHousehold();
+
+      expect(result.valueOrNull?.barangay, 'San Juan');
+      expect(result.valueOrNull?.memberCount, 1);
+      expect(result.valueOrNull.toString(), isNot(contains('Sample Head')));
+      expect(transport.requests.single.path, 'households/current');
+      expect(transport.requests.single.method, HttpMethod.get);
+      expect(
+        transport.requests.map((ApiRequest request) => request.path),
+        isNot(contains('households')),
+      );
+    });
   });
 
   group('assistance — the key goes on the irreversible call only', () {

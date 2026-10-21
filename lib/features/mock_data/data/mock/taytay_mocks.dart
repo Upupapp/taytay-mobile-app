@@ -15,10 +15,12 @@ import '../../../auth/domain/auth_repository.dart';
 import '../../../auth/domain/code_exchange.dart';
 import '../../../auth/domain/device_session_repository.dart';
 import '../../../credential/domain/credential_repository.dart';
+import '../../../credential/domain/digital_id.dart';
 import '../../../events/domain/event_registration.dart'
     as event_outcome
     show RegistrationOutcome;
 import '../../../events/domain/event_repository.dart' hide RegistrationOutcome;
+import '../../../household/domain/household_record.dart';
 import '../../../household/domain/household_repository.dart';
 import '../../../household/domain/household_summary.dart';
 import '../../../messaging/domain/office_messaging_repository.dart';
@@ -814,18 +816,40 @@ class MockProfileRepository implements ResidentProfileRepository {
 }
 
 class MockHouseholdRepository implements HouseholdRepository {
-  MockHouseholdRepository(this._gate);
+  MockHouseholdRepository(
+    this._gate, {
+    bool startEmpty = false,
+    bool asHead = false,
+    HouseholdInvitation? invitation,
+  }) : _startEmpty = startEmpty,
+       _asHead = asHead,
+       _invitation = invitation;
 
   final MockBehaviorController _gate;
+  final bool _startEmpty;
+  final bool _asHead;
+
+  HouseholdRecord? _household;
+  HouseholdInvitation? _invitation;
+  bool _ready = false;
+  int _sequence = 0;
 
   @override
   Future<Result<HouseholdSummary>> loadOwnHousehold() async {
-    final resident = await MockResident.load();
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<HouseholdSummary>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    final HouseholdSummary summary = record.toSummary();
     return _gate.respond(
       HouseholdSummary(
-        role: HouseholdRole.member,
+        role: summary.role,
         label: 'SAMPLE household',
-        barangay: resident.barangay,
+        barangay: summary.barangay,
+        streetAddress: summary.streetAddress,
+        memberCount: summary.memberCount,
       ),
     );
   }
@@ -835,29 +859,545 @@ class MockHouseholdRepository implements HouseholdRepository {
     required HouseholdCorrectionRequest request,
     required String idempotencyKey,
   }) => _gate.respond<void>(null);
+
+  @override
+  Future<Result<HouseholdRecord>> createHousehold({
+    required String address,
+    required String barangayId,
+  }) async {
+    final String line = address.trim();
+    final String barangay = barangayId.trim();
+    if (line.isEmpty || barangay.isEmpty) {
+      return const Err<HouseholdRecord>(
+        ValidationFailure(
+          debugMessage: 'An address and a barangay are required.',
+        ),
+      );
+    }
+    if (await _current() != null) {
+      return const Err<HouseholdRecord>(
+        ConflictFailure(debugMessage: 'A household already exists.'),
+      );
+    }
+    final MockResident resident = await MockResident.load();
+    final HouseholdRecord created = HouseholdRecord(
+      id: _id(),
+      address: line,
+      barangayId: barangay,
+      barangayName: resident.barangay,
+      headUserId: resident.accountId,
+      viewerRole: HouseholdViewerRole.head,
+      createdAt: DateTime.utc(2026, 1, 1),
+      members: <HouseholdMember>[
+        HouseholdMember(
+          id: _id(),
+          name: resident.displayName,
+          relationship: HouseholdRelationship.head,
+          birthdate: null,
+          sex: null,
+          userId: resident.accountId,
+          inviteStatus: HouseholdInviteStatus.accepted,
+        ),
+      ],
+    );
+    _household = created;
+    return _gate.respond(created);
+  }
+
+  @override
+  Future<Result<HouseholdRecord?>> loadCurrent() async {
+    return _gate.respond(await _current());
+  }
+
+  @override
+  Future<Result<HouseholdRecord>> updateCurrent({
+    String? address,
+    String? barangayId,
+  }) async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<HouseholdRecord>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<HouseholdRecord>(
+        ForbiddenFailure(debugMessage: 'Only the head can edit the household.'),
+      );
+    }
+    final String? line = address?.trim();
+    final String? barangay = barangayId?.trim();
+    if ((line == null || line.isEmpty) &&
+        (barangay == null || barangay.isEmpty)) {
+      return const Err<HouseholdRecord>(
+        ValidationFailure(debugMessage: 'Nothing to update.'),
+      );
+    }
+    final HouseholdRecord next = HouseholdRecord(
+      id: record.id,
+      address: line == null || line.isEmpty ? record.address : line,
+      barangayId: barangay == null || barangay.isEmpty
+          ? record.barangayId
+          : barangay,
+      barangayName: record.barangayName,
+      headUserId: record.headUserId,
+      viewerRole: record.viewerRole,
+      createdAt: record.createdAt,
+      members: record.members,
+    );
+    _household = next;
+    return _gate.respond(next);
+  }
+
+  @override
+  Future<Result<void>> deleteCurrent() async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<void>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<void>(
+        ForbiddenFailure(
+          debugMessage: 'Only the head can delete the household.',
+        ),
+      );
+    }
+    _household = null;
+    return _gate.respond<void>(null);
+  }
+
+  @override
+  Future<Result<HouseholdMember>> addMember(HouseholdMemberDraft draft) async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<HouseholdMember>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<HouseholdMember>(
+        ForbiddenFailure(debugMessage: 'Only the head can add a member.'),
+      );
+    }
+    final String name = draft.name.trim();
+    if (name.isEmpty) {
+      return const Err<HouseholdMember>(
+        ValidationFailure(debugMessage: 'A name is required.'),
+      );
+    }
+    final HouseholdMember member = HouseholdMember(
+      id: _id(),
+      name: name,
+      relationship: HouseholdRelationship.fromWire(
+        draft.relationship.wireValue,
+      ),
+      birthdate: draft.birthdate,
+      sex: draft.sex,
+      userId: draft.userId,
+      inviteStatus: draft.userId == null
+          ? HouseholdInviteStatus.none
+          : HouseholdInviteStatus.pending,
+    );
+    _household = _copy(
+      record,
+      members: <HouseholdMember>[...record.members, member],
+    );
+    return _gate.respond(member);
+  }
+
+  @override
+  Future<Result<HouseholdMember>> updateMember({
+    required String memberId,
+    required HouseholdMemberChange change,
+  }) async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<HouseholdMember>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<HouseholdMember>(
+        ForbiddenFailure(debugMessage: 'Only the head can edit a member.'),
+      );
+    }
+    if (change.isEmpty) {
+      return const Err<HouseholdMember>(
+        ValidationFailure(debugMessage: 'Nothing to update.'),
+      );
+    }
+    final int index = record.members.indexWhere(
+      (HouseholdMember member) => member.id == memberId,
+    );
+    if (index < 0) {
+      return const Err<HouseholdMember>(
+        NotFoundFailure(debugMessage: 'No such member.'),
+      );
+    }
+    final HouseholdMember current = record.members[index];
+    if (current.relationship == HouseholdRelationship.head &&
+        change.relationship != null) {
+      return const Err<HouseholdMember>(
+        ConflictFailure(debugMessage: 'Transfer headship to change the head.'),
+      );
+    }
+    final HouseholdMember next = HouseholdMember(
+      id: current.id,
+      name: change.name?.trim().isNotEmpty == true
+          ? change.name!.trim()
+          : current.name,
+      relationship: change.relationship == null
+          ? current.relationship
+          : HouseholdRelationship.fromWire(change.relationship!.wireValue),
+      birthdate: change.birthdate ?? current.birthdate,
+      sex: change.sex ?? current.sex,
+      userId: current.userId,
+      inviteStatus: current.inviteStatus,
+    );
+    final List<HouseholdMember> members = List<HouseholdMember>.of(
+      record.members,
+    );
+    members[index] = next;
+    _household = _copy(record, members: members);
+    return _gate.respond(next);
+  }
+
+  @override
+  Future<Result<void>> removeMember(String memberId) async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<void>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<void>(
+        ForbiddenFailure(debugMessage: 'Only the head can remove a member.'),
+      );
+    }
+    final HouseholdMember? member = _find(record, memberId);
+    if (member == null) {
+      return const Err<void>(NotFoundFailure(debugMessage: 'No such member.'));
+    }
+    if (member.relationship == HouseholdRelationship.head) {
+      return const Err<void>(
+        ConflictFailure(debugMessage: 'The head cannot be removed.'),
+      );
+    }
+    _household = _copy(
+      record,
+      members: record.members
+          .where((HouseholdMember item) => item.id != memberId)
+          .toList(growable: false),
+    );
+    return _gate.respond<void>(null);
+  }
+
+  @override
+  Future<Result<void>> leaveHousehold() async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<void>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole == HouseholdViewerRole.head &&
+        record.members.length > 1) {
+      return const Err<void>(
+        ConflictFailure(debugMessage: 'Transfer headship before leaving.'),
+      );
+    }
+    _household = null;
+    return _gate.respond<void>(null);
+  }
+
+  @override
+  Future<Result<HouseholdRecord>> transferHeadship({
+    required String memberId,
+  }) async {
+    final HouseholdRecord? record = await _current();
+    if (record == null) {
+      return const Err<HouseholdRecord>(
+        NotFoundFailure(debugMessage: 'No household on file.'),
+      );
+    }
+    if (record.viewerRole != HouseholdViewerRole.head) {
+      return const Err<HouseholdRecord>(
+        ForbiddenFailure(debugMessage: 'Only the head can transfer.'),
+      );
+    }
+    final HouseholdMember? member = _find(record, memberId);
+    if (member == null || member.userId == null) {
+      return const Err<HouseholdRecord>(
+        NotFoundFailure(debugMessage: 'No such member.'),
+      );
+    }
+    if (member.inviteStatus != HouseholdInviteStatus.accepted) {
+      return const Err<HouseholdRecord>(
+        ConflictFailure(debugMessage: 'That member has not accepted.'),
+      );
+    }
+    final List<HouseholdMember> members = <HouseholdMember>[
+      for (final HouseholdMember item in record.members)
+        if (item.id == member.id)
+          HouseholdMember(
+            id: item.id,
+            name: item.name,
+            relationship: HouseholdRelationship.head,
+            birthdate: item.birthdate,
+            sex: item.sex,
+            userId: item.userId,
+            inviteStatus: item.inviteStatus,
+          )
+        else if (item.relationship == HouseholdRelationship.head)
+          HouseholdMember(
+            id: item.id,
+            name: item.name,
+            relationship: HouseholdRelationship.other,
+            birthdate: item.birthdate,
+            sex: item.sex,
+            userId: item.userId,
+            inviteStatus: item.inviteStatus,
+          )
+        else
+          item,
+    ];
+    final HouseholdRecord next = HouseholdRecord(
+      id: record.id,
+      address: record.address,
+      barangayId: record.barangayId,
+      barangayName: record.barangayName,
+      headUserId: member.userId!,
+      viewerRole: HouseholdViewerRole.member,
+      createdAt: record.createdAt,
+      members: members,
+    );
+    _household = next;
+    return _gate.respond(next);
+  }
+
+  @override
+  Future<Result<HouseholdInvitation?>> loadCurrentInvitation() {
+    return _gate.respond(_invitation);
+  }
+
+  @override
+  Future<Result<HouseholdRecord>> acceptInvitation(String invitationId) async {
+    final HouseholdInvitation? invitation = _invitation;
+    if (invitation == null || invitation.id != invitationId) {
+      return const Err<HouseholdRecord>(
+        NotFoundFailure(debugMessage: 'No such invitation.'),
+      );
+    }
+    if (await _current() != null) {
+      return const Err<HouseholdRecord>(
+        ConflictFailure(debugMessage: 'Already in a household.'),
+      );
+    }
+    final MockResident resident = await MockResident.load();
+    final HouseholdRecord joined = HouseholdRecord(
+      id: invitation.householdId,
+      address: invitation.address,
+      barangayId: invitation.barangayId,
+      barangayName: invitation.barangayName,
+      headUserId: _id(),
+      viewerRole: HouseholdViewerRole.member,
+      createdAt: DateTime.utc(2026, 1, 1),
+      members: <HouseholdMember>[
+        HouseholdMember(
+          id: _id(),
+          name: resident.displayName,
+          relationship: HouseholdRelationship.other,
+          birthdate: null,
+          sex: null,
+          userId: resident.accountId,
+          inviteStatus: HouseholdInviteStatus.accepted,
+        ),
+      ],
+    );
+    _household = joined;
+    _invitation = null;
+    return _gate.respond(joined);
+  }
+
+  @override
+  Future<Result<void>> declineInvitation(String invitationId) async {
+    final HouseholdInvitation? invitation = _invitation;
+    if (invitation == null || invitation.id != invitationId) {
+      return const Err<void>(
+        NotFoundFailure(debugMessage: 'No such invitation.'),
+      );
+    }
+    _invitation = null;
+    return _gate.respond<void>(null);
+  }
+
+  Future<HouseholdRecord?> _current() async {
+    if (_ready) return _household;
+    _ready = true;
+    if (_startEmpty) return null;
+    final MockResident resident = await MockResident.load();
+    final String headId = _id();
+    final bool asHead = _asHead;
+    _household = HouseholdRecord(
+      id: _id(),
+      address: 'Sample Street',
+      barangayId: _id(),
+      barangayName: resident.barangay,
+      headUserId: asHead ? resident.accountId : headId,
+      viewerRole: asHead
+          ? HouseholdViewerRole.head
+          : HouseholdViewerRole.member,
+      createdAt: DateTime.utc(2026, 1, 1),
+      members: <HouseholdMember>[
+        HouseholdMember(
+          id: _id(),
+          name: asHead ? resident.displayName : 'Sample Head',
+          relationship: HouseholdRelationship.head,
+          birthdate: null,
+          sex: null,
+          userId: asHead ? resident.accountId : headId,
+          inviteStatus: HouseholdInviteStatus.accepted,
+        ),
+        HouseholdMember(
+          id: _id(),
+          name: asHead ? 'Sample Relative' : resident.displayName,
+          relationship: HouseholdRelationship.other,
+          birthdate: null,
+          sex: null,
+          userId: asHead ? _id() : resident.accountId,
+          inviteStatus: HouseholdInviteStatus.accepted,
+        ),
+      ],
+    );
+    return _household;
+  }
+
+  HouseholdRecord _copy(
+    HouseholdRecord record, {
+    required List<HouseholdMember> members,
+  }) {
+    return HouseholdRecord(
+      id: record.id,
+      address: record.address,
+      barangayId: record.barangayId,
+      barangayName: record.barangayName,
+      headUserId: record.headUserId,
+      viewerRole: record.viewerRole,
+      createdAt: record.createdAt,
+      members: members,
+    );
+  }
+
+  HouseholdMember? _find(HouseholdRecord record, String memberId) {
+    for (final HouseholdMember member in record.members) {
+      if (member.id == memberId) return member;
+    }
+    return null;
+  }
+
+  String _id() {
+    _sequence += 1;
+    final String suffix = _sequence.toRadixString(16).padLeft(12, '0');
+    return '00000000-0000-4000-8000-$suffix';
+  }
 }
 
 class MockCredentialRepository implements CredentialRepository {
-  MockCredentialRepository(this._gate);
+  MockCredentialRepository(this._gate, {this.verified = true});
 
   final MockBehaviorController _gate;
 
+  /// `GET me/digital-id` answers only for a verified resident.
+  final bool verified;
+
+  DigitalIdCard? _held;
+
+  static const String _cardId = '00000000-0000-4000-8000-0000000000e1';
+  static const String _photoId = '00000000-0000-4000-8000-0000000000e2';
+
   @override
-  Future<Result<ResidentCredential?>> loadOwnCredential() {
-    return _gate.respond(
-      const ResidentCredential(
-        id: 'credential-sample-1',
-        state: CredentialLifecycleState.active,
-        rawState: 'active',
+  Future<Result<ResidentCredential?>> loadOwnCredential() async {
+    final Result<DigitalIdCard> card = await loadDigitalId();
+    return switch (card) {
+      Ok(:final value) => Ok<ResidentCredential?>(
+        credentialFromDigitalId(value),
+      ),
+      Err(:final failure) when failure is NotFoundFailure =>
+        const Ok<ResidentCredential?>(null),
+      Err(:final failure) => Err<ResidentCredential?>(failure),
+    };
+  }
+
+  @override
+  Future<Result<PresentationArtifact>> requestPresentationArtifact() async {
+    final Result<DigitalIdCard> card = await loadDigitalId();
+    return switch (card) {
+      Ok(:final value) => _artifact(value),
+      Err(:final failure) => Err<PresentationArtifact>(failure),
+    };
+  }
+
+  @override
+  Future<Result<DigitalIdCard>> loadDigitalId({DateTime? now}) async {
+    if (!verified) {
+      return const Err<DigitalIdCard>(
+        ForbiddenFailure(
+          debugMessage: 'A digital ID is issued only to a verified resident.',
+        ),
+      );
+    }
+    final DateTime clock = (now ?? DateTime.now()).toUtc();
+    final DigitalIdCard? held = _held;
+    if (held != null && !held.qrRefreshDue(clock)) {
+      return _gate.respond(held);
+    }
+    final DigitalIdCard minted = _mint(clock);
+    final Result<DigitalIdCard> result = await _gate.respond(minted);
+    if (result.isOk) _held = result.valueOrNull;
+    return result;
+  }
+
+  @override
+  Future<Result<DigitalIdHolder>> verifyScannedToken({
+    required String token,
+  }) async {
+    if (token.trim().isEmpty) {
+      return const Err<DigitalIdHolder>(
+        ValidationFailure(debugMessage: 'A token is required.'),
+      );
+    }
+    return const Err<DigitalIdHolder>(
+      ForbiddenFailure(debugMessage: 'Staff scan is not a resident action.'),
+    );
+  }
+
+  DigitalIdCard _mint(DateTime clock) {
+    return DigitalIdCard(
+      id: _cardId,
+      idNumber: 'SAMPLE-ID-0001',
+      photoMediaId: _photoId,
+      status: DigitalIdStatus.active,
+      rawStatus: 'active',
+      issuedAt: DateTime.utc(2026, 1, 1),
+      expiresAt: DateTime.utc(2027, 1, 1),
+      qr: DigitalIdQr(
+        token: 'sample-qr-${clock.microsecondsSinceEpoch}',
+        expiresAt: clock.add(digitalIdQrLifetime),
       ),
     );
   }
 
-  @override
-  Future<Result<PresentationArtifact>> requestPresentationArtifact() {
-    return _gate.respond(
-      const PresentationArtifact(payload: 'SAMPLE-PRESENTATION'),
-    );
+  static Result<PresentationArtifact> _artifact(DigitalIdCard card) {
+    final PresentationArtifact? artifact = presentationFromDigitalId(card);
+    if (artifact == null) {
+      return const Err<PresentationArtifact>(
+        NotFoundFailure(debugMessage: 'The card has no QR payload.'),
+      );
+    }
+    return Ok<PresentationArtifact>(artifact);
   }
 }
 

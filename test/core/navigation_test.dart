@@ -405,9 +405,9 @@ void main() {
     });
 
     test('the household summary is withheld, not faked', () {
-      // The committed contract has no `/me/household` row; the only household
-      // route is staff-scoped. Declaring the capability unavailable is the
-      // honest state.
+      // The citizen routes are called by the repository. The screen does not
+      // render members yet, so the tile stays planned rather than promising
+      // a new surface.
       expect(
         ResidentCapability.viewHouseholdSummary.availability,
         BackendAvailability.planned,

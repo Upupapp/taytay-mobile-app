@@ -132,10 +132,11 @@ enum BackendGap {
   /// **F32 — the operation is not in the Taytay LGU IDS OpenAPI.**
   ///
   /// The forward contract is the Node API vendored at
-  /// `docs/integration/taytay-node-openapi.json`. Routes that the historical
-  /// PHP pin served and this spec does not — OTP, sessions, events, programmes,
-  /// credentials, assistance intake, household, notification devices — decline
-  /// here. The screen says the office cannot do that from the app yet.
+  /// `docs/integration/taytay-node-openapi.json`. Events, programmes, assistance
+  /// intake, and token revocation still decline here. Digital ID
+  /// (`GET me/digital-id`) and the caller's household routes are published and
+  /// are called. The staff scan `POST digital-id/verify` is named on the
+  /// credential interface and is not called.
   absentOnNodeContract(
     finding: 'F32',
     missing: 'a citizen route in the Taytay LGU IDS OpenAPI',
