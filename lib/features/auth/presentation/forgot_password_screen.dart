@@ -7,10 +7,12 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/sign_in_field.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/code_exchange.dart';
+import 'auth_bits.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 import 'sign_in_screen.dart';
@@ -66,19 +68,47 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final controller = _controller;
     if (controller == null) return;
     final ok = await controller.requestPasswordReset(_identifier.text);
-    if (!mounted || !ok) {
-      if (mounted) setState(() => _sent = false);
+    if (!mounted) return;
+    final DateTime now = DateTime.now();
+    final String email = _identifier.text.trim();
+    if (!ok) {
+      final AppFailure? failure = controller.refusal;
+      final bool hold =
+          failure is RateLimitedFailure ||
+          (failure is CodeExchangeFailure &&
+              failure.exchangeKind == CodeExchangeKind.locked);
+      if (hold) {
+        final Duration? wait = failure is RateLimitedFailure
+            ? failure.retryAfter
+            : (failure! as CodeExchangeFailure).retryAfter;
+        unawaited(
+          context.pushNamed(
+            AppRoute.tooMany.routeName,
+            extra: CodeHold.fromWait(
+              origin: CodeHoldOrigin.passwordReset,
+              email: email,
+              now: now,
+              wait: wait,
+            ),
+          ),
+        );
+        return;
+      }
+      setState(() => _sent = false);
       return;
     }
-    final DateTime now = DateTime.now();
+    final CodeAcceptance? accepted = controller.acceptance;
+    if (accepted == null) return;
     unawaited(
       context.pushNamed(
         AppRoute.resetCode.routeName,
         extra: PasswordResetDraft(
-          email: _identifier.text.trim(),
+          email: email,
           issuedAt: now,
           codeExpiresAt: now.add(CodeExchangeRules.codeLife),
-          resendAvailableAt: now.add(CodeExchangeRules.resendCooldown),
+          resendAvailableAt: now.add(
+            Duration(seconds: accepted.retryAfterSeconds),
+          ),
         ),
       ),
     );
@@ -133,7 +163,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     controller: _identifier,
                     textAlignVertical: TextAlignVertical.center,
                     style: AppTypography.fieldValue,
-                    decoration: const InputDecoration.collapsed(hintText: ''),
+                    decoration: bareField,
                   ),
                 ),
               ),
@@ -174,7 +204,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               label: 'Send reset code',
               onPressed: _controller?.busy == true ? null : _send,
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 11),
             const Text(
               "For your security, we don't say whether an account exists "
               'for this address.',
@@ -182,6 +212,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               style: TextStyle(
                 fontFamily: AppTypography.fontFamily,
                 fontSize: 11,
+                height: 1.22,
                 fontWeight: AppTypography.body,
                 color: Color(0xFF5B6680),
               ),

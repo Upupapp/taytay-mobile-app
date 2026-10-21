@@ -211,6 +211,10 @@ abstract final class CrashRedaction {
     ForbiddenFailure() => TelemetryResult.forbidden,
     NotFoundFailure() => TelemetryResult.notFound,
     ValidationFailure() => TelemetryResult.validation,
+    CodeExchangeFailure(:final exchangeKind) =>
+      exchangeKind == CodeExchangeKind.locked
+          ? TelemetryResult.rateLimited
+          : TelemetryResult.validation,
     ConflictFailure() => TelemetryResult.conflict,
     RateLimitedFailure() => TelemetryResult.rateLimited,
     ServerFailure() => TelemetryResult.server,

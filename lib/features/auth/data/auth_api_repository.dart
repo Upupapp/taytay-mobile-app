@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
@@ -235,7 +237,14 @@ class AuthApiRepository implements AuthRepository {
 
   static CodeAcceptance _decodeAccepted(Object? data) {
     final Map<String, dynamic> map = _map(data);
-    return CodeAcceptance(accepted: map['accepted'] == true);
+    final Object? retry = map['retry_after'];
+    if (retry is! int) {
+      throw const FormatException('Accepted envelope is missing retry_after.');
+    }
+    return CodeAcceptance(
+      accepted: map['accepted'] == true,
+      retryAfterSeconds: retry,
+    );
   }
 
   static Map<String, dynamic> _map(Object? data) {
@@ -315,7 +324,6 @@ class AuthApiRepository implements AuthRepository {
 
   @override
   Future<Result<void>> submitProfile(AccountApplication application) async {
-    final Object _ = _apiClient.runtimeType;
     if (application.email.trim().isEmpty || application.password.isEmpty) {
       return const Err<void>(
         ValidationFailure(
@@ -323,10 +331,79 @@ class AuthApiRepository implements AuthRepository {
         ),
       );
     }
-    return backendGapFailure<void>(
-      BackendGap.residentSelfRegistration,
-      'submitProfile',
+    final Result<ApiEnvelope<void>> consent = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'me/consents',
+      authenticated: true,
+      body: <String, Object?>{'version': application.noticeVersion},
+      decode: (Object? _) {},
     );
+    if (consent case Err<ApiEnvelope<void>>(:final failure)) {
+      return Err<void>(failure);
+    }
+
+    final Uint8List? front = application.idFrontBytes;
+    final Uint8List? selfie = application.selfieBytes;
+    final String? frontName = application.idFrontName;
+    final String? frontMime = application.idFrontMime;
+    final String? selfieName = application.selfieName;
+    final String? selfieMime = application.selfieMime;
+    if (front == null ||
+        selfie == null ||
+        frontName == null ||
+        frontMime == null ||
+        selfieName == null ||
+        selfieMime == null) {
+      return const Ok<void>(null);
+    }
+
+    final Result<ApiEnvelope<void>> submitted = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'me/verification-requests',
+      authenticated: true,
+      body: <String, Object?>{'id_type': _idTypeWire(application.idTypeLabel)},
+      files: <MultipartFile>[
+        MultipartFile(
+          field: 'id_front',
+          filename: frontName,
+          bytes: front,
+          mimeType: frontMime,
+        ),
+        if (application.idBackBytes != null &&
+            application.idBackName != null &&
+            application.idBackMime != null)
+          MultipartFile(
+            field: 'id_back',
+            filename: application.idBackName!,
+            bytes: application.idBackBytes!,
+            mimeType: application.idBackMime!,
+          ),
+        MultipartFile(
+          field: 'selfie',
+          filename: selfieName,
+          bytes: selfie,
+          mimeType: selfieMime,
+        ),
+      ],
+      decode: (Object? _) {},
+    );
+    return submitted.map((ApiEnvelope<void> _) {});
+  }
+
+  /// Published `id_type` values. An unrecognised label is `other`.
+  static String _idTypeWire(String label) {
+    return switch (label.trim().toLowerCase()) {
+      'philsys national id' || 'philid' || 'philsys' => 'philid',
+      "driver's license" ||
+      'drivers license' ||
+      'driver license' => 'drivers_license',
+      'passport' => 'passport',
+      'umid' => 'umid',
+      'postal id' || 'postal' => 'postal',
+      "voter's id" || 'voters id' || 'voters' => 'voters',
+      'sss' => 'sss',
+      _ => 'other',
+    };
   }
 
   /// Ends the local session.

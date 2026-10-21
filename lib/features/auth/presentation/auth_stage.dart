@@ -150,7 +150,18 @@ class AuthStage extends StatelessWidget {
 }
 
 /// Which mark sits on the field above the sheet.
-enum AuthArch { none, hall, hallShort, key, smallKey, lock, shield, submitted }
+enum AuthArch {
+  none,
+  hall,
+  hallShort,
+  key,
+  smallKey,
+  lock,
+  holdLock,
+  holdReady,
+  shield,
+  submitted,
+}
 
 class _Arch extends StatelessWidget {
   const _Arch({required this.kind, this.greeting});
@@ -169,6 +180,20 @@ class _Arch extends StatelessWidget {
         label: 'Key',
       ),
       AuthArch.lock => const _SmallMark(icon: TaytayIcons.lock, label: 'Lock'),
+      AuthArch.holdLock => const _SmallMark(
+        icon: TaytayIcons.lock,
+        label: 'Locked',
+        disc: Color(0xFFFFF4D6),
+        iconColor: Color(0xFF8A5A00),
+        iconSize: 34,
+      ),
+      AuthArch.holdReady => const _SmallMark(
+        icon: TaytayIcons.checkCircle,
+        label: 'Ready',
+        disc: Color(0xFFE6F4EC),
+        iconColor: Color(0xFF0F7A4D),
+        iconSize: 34,
+      ),
       AuthArch.shield => const _ShieldMark(),
       AuthArch.submitted => _SubmittedMark(name: greeting),
       AuthArch.none => const SizedBox.shrink(),
@@ -316,10 +341,19 @@ class _KeyArch extends StatelessWidget {
 }
 
 class _SmallMark extends StatelessWidget {
-  const _SmallMark({required this.icon, required this.label});
+  const _SmallMark({
+    required this.icon,
+    required this.label,
+    this.disc,
+    this.iconColor = BrandColors.taytayBlue,
+    this.iconSize = 44,
+  });
 
   final IconData icon;
   final String label;
+  final Color? disc;
+  final Color iconColor;
+  final double iconSize;
 
   @override
   Widget build(BuildContext context) {
@@ -372,11 +406,30 @@ class _SmallMark extends StatelessWidget {
                 ),
               ],
             ),
-            child: TaytayIcon(
-              icon: icon,
-              semanticLabel: label,
-              size: 44,
-              color: BrandColors.taytayBlue,
+            child: Center(
+              child: disc == null
+                  ? TaytayIcon(
+                      icon: icon,
+                      semanticLabel: label,
+                      size: iconSize,
+                      color: iconColor,
+                    )
+                  : DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: disc,
+                        shape: BoxShape.circle,
+                      ),
+                      child: SizedBox(
+                        width: 66,
+                        height: 66,
+                        child: TaytayIcon(
+                          icon: icon,
+                          semanticLabel: label,
+                          size: iconSize,
+                          color: iconColor,
+                        ),
+                      ),
+                    ),
             ),
           ),
         ),
@@ -400,7 +453,7 @@ class _ShieldMark extends StatelessWidget {
       children: <Widget>[
         Positioned(
           left: 111,
-          top: 132,
+          top: 128.3,
           width: 180,
           height: 180,
           child: Transform.rotate(
@@ -415,7 +468,7 @@ class _ShieldMark extends StatelessWidget {
         ),
         const Positioned(
           left: 105,
-          top: 126,
+          top: 122.3,
           width: 180,
           height: 180,
           child: DecoratedBox(
@@ -473,7 +526,7 @@ class _SubmittedMark extends StatelessWidget {
       children: <Widget>[
         Positioned(
           left: 98,
-          top: 133,
+          top: 130,
           width: 180,
           height: 190,
           child: Transform.rotate(
@@ -492,7 +545,7 @@ class _SubmittedMark extends StatelessWidget {
         ),
         const Positioned(
           left: 105,
-          top: 126,
+          top: 123,
           width: 180,
           height: 190,
           child: DecoratedBox(
@@ -538,6 +591,8 @@ class _SubmittedMark extends StatelessWidget {
                 ? "You're all set!"
                 : "You're all set, $name!",
             titleSize: 28,
+            subtitleHeight: 1.53,
+            subtitleDy: 1,
             centered: true,
             subtitle:
                 'Your account is created and your details were sent to '
@@ -813,6 +868,9 @@ class AuthCopy extends StatelessWidget {
     this.titleSize = 24,
     this.subtitleSize = 13,
     this.centered = false,
+    this.titleDy = 0,
+    this.subtitleHeight = 1.5,
+    this.subtitleDy = 0,
     super.key,
   });
 
@@ -822,6 +880,12 @@ class AuthCopy extends StatelessWidget {
   final double titleSize;
   final double subtitleSize;
   final bool centered;
+
+  /// Shifts the title ink without moving the subtitle. Large titles sit low
+  /// against the design's glyph box.
+  final double titleDy;
+  final double subtitleHeight;
+  final double subtitleDy;
 
   @override
   Widget build(BuildContext context) {
@@ -850,26 +914,32 @@ class AuthCopy extends StatelessWidget {
         const SizedBox(height: 6),
         Semantics(
           header: true,
-          child: Text(
-            title,
-            textAlign: centered ? TextAlign.center : TextAlign.start,
-            style: AppTypography.h1SignIn.copyWith(
-              fontSize: titleSize,
-              color: BrandColors.taytayBlueDark,
+          child: Transform.translate(
+            offset: Offset(0, titleDy),
+            child: Text(
+              title,
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: AppTypography.h1SignIn.copyWith(
+                fontSize: titleSize,
+                color: BrandColors.taytayBlueDark,
+              ),
             ),
           ),
         ),
         if (subtitle != null) ...<Widget>[
           const SizedBox(height: 6),
-          Text(
-            subtitle!,
-            textAlign: centered ? TextAlign.center : TextAlign.start,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: subtitleSize,
-              fontWeight: AppTypography.body,
-              height: 1.5,
-              color: const Color(0xFF4A5470),
+          Transform.translate(
+            offset: Offset(0, subtitleDy),
+            child: Text(
+              subtitle!,
+              textAlign: centered ? TextAlign.center : TextAlign.start,
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: subtitleSize,
+                fontWeight: AppTypography.body,
+                height: subtitleHeight,
+                color: const Color(0xFF4A5470),
+              ),
             ),
           ),
         ],

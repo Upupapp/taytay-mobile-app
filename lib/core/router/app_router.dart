@@ -10,6 +10,7 @@ import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/reset_flow_screens.dart';
 import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
+import '../../features/auth/presentation/too_many_attempts_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
 import '../../features/events/presentation/event_detail_screen.dart';
 import '../../features/events/presentation/event_registration_screen.dart';
@@ -400,6 +401,13 @@ GoRouter buildAppRouter({
           draft: state.extra is PasswordResetDraft
               ? state.extra as PasswordResetDraft
               : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.tooMany.path,
+        name: AppRoute.tooMany.routeName,
+        builder: (context, state) => TooManyAttemptsScreen(
+          hold: state.extra is CodeHold ? state.extra as CodeHold : null,
         ),
       ),
       GoRoute(

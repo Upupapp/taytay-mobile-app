@@ -39,12 +39,7 @@ class ResetCodeScreen extends StatefulWidget {
 class _ResetCodeScreenState extends State<ResetCodeScreen> {
   final TextEditingController _code = TextEditingController();
   Timer? _clock;
-  late int _attempts;
-  DateTime? _expiresAt;
-  DateTime? _resendAt;
-  bool _wrong = false;
-  bool _expired = false;
-  bool _locked = false;
+  CodeAttemptView _view = const CodeAttemptView();
   bool _busy = false;
 
   bool get _sample => widget.fixture == ResetCodeFixture.sample;
@@ -53,12 +48,14 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
   void initState() {
     super.initState();
     final PasswordResetDraft? draft = widget.draft;
-    _attempts = _sample
-        ? 4
-        : (draft?.attemptsLeft ?? CodeExchangeRules.attempts);
-    _expiresAt = draft?.codeExpiresAt;
-    _resendAt = draft?.resendAvailableAt;
-    _wrong = _sample;
+    _view = _sample
+        ? const CodeAttemptView(attemptsRemaining: 4, wrong: true)
+        : CodeAttemptView(
+            attemptsRemaining: draft?.attemptsRemaining,
+            resendAt: draft?.resendAvailableAt,
+            expiresAt: draft?.codeExpiresAt,
+            limited: draft?.limited ?? false,
+          );
     if (_sample) _code.text = AuthSample.code;
     _arm();
   }
@@ -87,7 +84,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
 
   String get _expiryLabel {
     if (_sample) return AuthSample.expiry;
-    final DateTime? at = _expiresAt;
+    final DateTime? at = _view.expiresAt;
     if (at == null) {
       return CodeExchangeRules.countdown(CodeExchangeRules.codeLife);
     }
@@ -96,32 +93,21 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
 
   String get _resendLabel {
     if (_sample) return AuthSample.resend;
-    final DateTime? at = _resendAt;
+    final DateTime? at = _view.resendAt;
     if (at == null) return '0:00';
     return CodeExchangeRules.countdown(at.difference(DateTime.now()));
   }
 
   bool get _canResend {
     if (_sample) return false;
-    final DateTime? at = _resendAt;
-    return at == null || !at.isAfter(DateTime.now());
+    return _view.canResendAt(DateTime.now());
   }
 
   Future<void> _verify() async {
-    if (_busy || _locked) return;
+    if (_busy || _view.limited) return;
     final String code = _sample ? AuthSample.code : _code.text.trim();
     if (!RegExp(r'^\d{6}$').hasMatch(code)) return;
     if (_sample) return;
-    final DateTime now = DateTime.now();
-    if (code == CodeExchangeRules.expiredSentinel ||
-        (widget.draft?.codeExpiredAt(now) ?? false)) {
-      setState(() {
-        _expired = true;
-        _wrong = false;
-        _code.clear();
-      });
-      return;
-    }
     setState(() => _busy = true);
     final result = await AppDependencies.of(
       context,
@@ -136,9 +122,9 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
             extra: PasswordResetDraft(
               email: _email,
               issuedAt: widget.draft?.issuedAt,
-              codeExpiresAt: _expiresAt,
-              resendAvailableAt: _resendAt,
-              attemptsLeft: _attempts,
+              codeExpiresAt: _view.expiresAt,
+              resendAvailableAt: _view.resendAt,
+              attemptsRemaining: _view.attemptsRemaining,
               grant: value,
             ),
           ),
@@ -149,26 +135,31 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
   }
 
   void _applyRefusal(AppFailure failure) {
-    final List<String>? codes = failure is ValidationFailure
-        ? failure.fieldErrors['code']
-        : null;
-    final String? kind = codes == null || codes.isEmpty ? null : codes.first;
+    final DateTime now = DateTime.now();
+    final CodeAttemptView next = _view.applyFailure(failure, now);
     setState(() {
       _busy = false;
-      if (kind == CodeExchangeRules.expired) {
-        _expired = true;
-        _wrong = false;
-        _code.clear();
-        return;
-      }
-      if (kind == CodeExchangeRules.locked || _attempts <= 1) {
-        _attempts = 0;
-        _locked = true;
-        _wrong = true;
-        return;
-      }
-      _attempts = (_attempts - 1).clamp(0, CodeExchangeRules.attempts);
-      _wrong = true;
+      _view = next;
+      if (next.expired) _code.clear();
+    });
+    if (next.limited) unawaited(_openHold(now, next.resendAt));
+  }
+
+  Future<void> _openHold(DateTime now, DateTime? resumeAt) async {
+    final Duration? wait = resumeAt?.difference(now);
+    final Object? back = await context.pushNamed(
+      AppRoute.tooMany.routeName,
+      extra: CodeHold.fromWait(
+        origin: CodeHoldOrigin.passwordReset,
+        email: _email == 'your email' ? '' : _email,
+        now: now,
+        wait: wait != null && wait.isNegative ? Duration.zero : wait,
+      ),
+    );
+    if (!mounted || back is! CodeAcceptance) return;
+    setState(() {
+      _view = _view.applyAcceptance(back, DateTime.now());
+      _code.clear();
     });
   }
 
@@ -182,14 +173,13 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
     final DateTime now = DateTime.now();
     setState(() {
       _busy = false;
-      if (result.isOk) {
-        _expiresAt = now.add(CodeExchangeRules.codeLife);
-        _resendAt = now.add(CodeExchangeRules.resendCooldown);
-        _attempts = CodeExchangeRules.attempts;
-        _wrong = false;
-        _expired = false;
-        _locked = false;
-        _code.clear();
+      switch (result) {
+        case Ok(:final value):
+          _view = _view.applyAcceptance(value, now);
+          _code.clear();
+        case Err(:final failure):
+          _view = _view.applyFailure(failure, now);
+          if (_view.limited) unawaited(_openHold(now, _view.resendAt));
       }
     });
   }
@@ -207,24 +197,37 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
             title: 'Ilagay ang 6-digit na code',
             subtitle: 'Nagpadala kami ng code sa $_email.',
           ),
-          if (_expired) ...<Widget>[
-            const SizedBox(height: 12),
-            const AuthNoticeBanner(
-              title: 'Nag-expire na ang code. ',
-              detail: 'Magpadala ng bago. May 5 subok ka ulit.',
-              amber: true,
-            ),
-          ] else if (_wrong) ...<Widget>[
+          if (_sample || _view.wrong) ...<Widget>[
             const SizedBox(height: 12),
             AuthNoticeBanner(
-              title: _locked ? 'Naka-lock ang code. ' : 'Mali ang code. ',
-              detail: _locked
-                  ? 'Humiling ng bagong code para makapagpatuloy.'
-                  : '$_attempts sa ${CodeExchangeRules.attempts} subok na lang ang natitira.',
+              title: 'Mali ang code. ',
+              detail: _sample
+                  ? '4 sa ${CodeExchangeRules.attempts} subok na lang ang natitira.'
+                  : _view.attemptsRemaining == null
+                  ? 'May ${CodeExchangeRules.attempts} subok ka bawat code.'
+                  : '${_view.attemptsRemaining} sa ${CodeExchangeRules.attempts} subok na lang ang natitira.',
+            ),
+          ] else if (_view.expired) ...<Widget>[
+            const SizedBox(height: 12),
+            AuthNoticeBanner(
+              title: 'Nag-expire na ang code. ',
+              detail: _view.attemptsRemaining == null
+                  ? 'Magpadala ng bago. May 5 subok ka ulit.'
+                  : 'Magpadala ng bago. May ${_view.attemptsRemaining} subok ka ulit.',
+              amber: true,
+            ),
+          ] else if (_view.unavailable) ...<Widget>[
+            const SizedBox(height: 12),
+            const AuthNoticeBanner(
+              title: 'Subukan muli. ',
+              detail: CodeAttemptView.unavailableCopy,
             ),
           ],
           const SizedBox(height: 16),
-          SixDigitRow(digits: _code.text, bad: _wrong && !_expired),
+          SixDigitRow(
+            digits: _code.text,
+            bad: (_sample || _view.wrong) && !_view.expired,
+          ),
           if (!_sample)
             Opacity(
               opacity: 0,
@@ -238,12 +241,12 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                   inputFormatters: <TextInputFormatter>[
                     FilteringTextInputFormatter.digitsOnly,
                   ],
-                  decoration: const InputDecoration(counterText: ''),
+                  decoration: bareField.copyWith(counterText: ''),
                   onChanged: (_) => setState(() {}),
                 ),
               ),
             ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10.33),
           Row(
             children: <Widget>[
               Flexible(
@@ -315,17 +318,19 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 13.67),
           PrimaryButton(
             kind: TaytayButtonKind.signIn,
-            label: _expired ? 'Magpadala ng bagong code' : 'I-verify ang code',
+            label: _view.expired
+                ? 'Magpadala ng bagong code'
+                : 'I-verify ang code',
             onPressed: _busy
                 ? null
-                : _expired
+                : _view.expired
                 ? _resend
                 : _verify,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           const Text(
             'Valid ang code nang 10 minuto. May 5 subok ka bawat code.',
             textAlign: TextAlign.center,
@@ -336,6 +341,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
               color: Color(0xFF5B6680),
             ),
           ),
+          const SizedBox(height: 18),
           AuthTextLink(
             'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
@@ -483,14 +489,14 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 'Para sa $_email. Gamitin ito sa susunod mong pag-sign in.',
           ),
           if (expired) ...<Widget>[
-            const SizedBox(height: 12),
+            const SizedBox(height: 11),
             const AuthNoticeBanner(
               title: 'Nag-expire na ang reset link mo. ',
               detail:
-                  'Valid lang ito nang 10 minuto. Humingi ng bagong code para makapagpatuloy.',
+                  'Valid lang ito nang 15 minuto. Humingi ng bagong code para makapagpatuloy.',
             ),
           ],
-          const SizedBox(height: 12),
+          SizedBox(height: expired ? 14 : 12),
           _SecretField(
             label: 'Bagong password *',
             bullets: _sampleMismatch || _sampleExpired ? 10 : password.length,
@@ -503,7 +509,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
             onToggle: () => setState(() => _showPassword = !_showPassword),
             onChanged: () => setState(() => _matchError = null),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: expired ? 5 : 5),
           PasswordRules(
             password: widget.fixture == SetPasswordFixture.live
                 ? password
@@ -523,7 +529,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
           ),
           if (mismatch)
             const Padding(
-              padding: EdgeInsets.only(top: 5),
+              padding: EdgeInsets.only(top: 1),
               child: Text(
                 'Hindi tugma ang password. Pakiulit.',
                 style: TextStyle(
@@ -535,9 +541,9 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
               ),
             )
           else if (matched || _sampleExpired)
-            const Padding(
-              padding: EdgeInsets.only(top: 5),
-              child: Text(
+            Padding(
+              padding: EdgeInsets.only(top: expired ? 1 : 5),
+              child: const Text(
                 'Tugma ang password',
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,
@@ -547,12 +553,13 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 16),
+          SizedBox(height: expired ? 19 : 19),
           PrimaryButton(
             kind: TaytayButtonKind.signIn,
             label: expired ? 'Humingi ng bagong code' : 'I-save ang password',
             onPressed: _busy ? null : _save,
           ),
+          SizedBox(height: expired ? 20 : 19.67),
           AuthTextLink(
             'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
@@ -632,9 +639,7 @@ class _SecretField extends StatelessWidget {
                           obscureText: !shown,
                           textAlignVertical: TextAlignVertical.center,
                           style: AppTypography.fieldValue,
-                          decoration: const InputDecoration.collapsed(
-                            hintText: '',
-                          ),
+                          decoration: bareField,
                           onChanged: (_) => onChanged(),
                         )
                       : Text(
@@ -666,7 +671,7 @@ class PasswordUpdatedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final bool short = MediaQuery.sizeOf(context).height < 800;
     const Widget sheet = Padding(
-      padding: EdgeInsets.fromLTRB(18, 18, 18, 18),
+      padding: EdgeInsets.fromLTRB(18, 17.7, 18, 18),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -690,7 +695,7 @@ class PasswordUpdatedScreen extends StatelessWidget {
                     color: Color(0xFF062358),
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 3.3),
                 Text(
                   'Kung hindi ikaw ang nagpalit ng password, tumawag sa '
                   'Municipal Hall o pumunta sa MSWDO.',
@@ -722,6 +727,8 @@ class PasswordUpdatedScreen extends StatelessWidget {
         subtitle:
             'Gamitin ang bagong password sa susunod mong pag-sign in sa Taytay LGUIDS.',
         titleSize: 28,
+        subtitleHeight: 1.53,
+        subtitleDy: 1,
         centered: true,
       ),
       footer: PrimaryButton(

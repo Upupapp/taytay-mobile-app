@@ -29,6 +29,13 @@ void main() {
     const UnacceptableUploadFailure(isTooLarge: true),
     const UnacceptableUploadFailure(isTooLarge: false),
     const UnexpectedFailure(),
+    const CodeExchangeFailure(exchangeKind: CodeExchangeKind.invalid),
+    const CodeExchangeFailure(exchangeKind: CodeExchangeKind.expired),
+    const CodeExchangeFailure(
+      exchangeKind: CodeExchangeKind.locked,
+      attemptsRemaining: 0,
+      retryAfter: Duration(seconds: 60),
+    ),
   ];
 
   group('every failure says something a resident can act on', () {

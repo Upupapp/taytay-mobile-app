@@ -145,7 +145,13 @@ void main() {
     test('the wire values are SCREAMING_SNAKE_CASE, not PHP case names', () {
       // The exact shape of F05. If a future backend regenerates with `->name`
       // this goes red here rather than silently in every client's error branch.
+      const Set<String> codeExchange = <String>{
+        'code_invalid',
+        'code_expired',
+        'code_locked',
+      };
       for (final String code in publishedCodes()) {
+        if (codeExchange.contains(code)) continue;
         expect(
           code,
           matches(RegExp(r'^[A-Z][A-Z_]*$')),

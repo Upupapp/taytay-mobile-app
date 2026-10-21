@@ -15,6 +15,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/sign_in_challenge.dart';
+import 'auth_bits.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 
@@ -183,7 +184,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 12),
+              SizedBox(height: rejected ? 13.63 : 12),
               _Field(
                 label: 'Email or mobile number',
                 controller: _identifier,
@@ -191,7 +192,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 focused: widget.fixture == SignInFixture.design,
                 obscure: false,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: rejected ? 13.34 : 13.5),
               _Field(
                 label: 'Password',
                 controller: _password,
@@ -204,7 +205,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
-              SizedBox(height: rejected ? 6 : 10),
+              SizedBox(height: rejected ? 6 : 13.5),
               AuthTextLink(
                 'Forgot password?',
                 align: Alignment.centerRight,
@@ -217,7 +218,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 label: 'Sign in',
                 onPressed: controller?.busy == true ? null : _submit,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: rejected ? 9 : 9),
               const _OrRule(),
               const SizedBox(height: 12),
               SecondaryButton(
@@ -398,9 +399,7 @@ class _Field extends StatelessWidget {
                             style: AppTypography.fieldValue.copyWith(
                               color: BrandColors.fieldInk,
                             ),
-                            decoration: const InputDecoration.collapsed(
-                              hintText: '',
-                            ),
+                            decoration: bareField,
                           ),
                         ),
                 ),
@@ -412,13 +411,16 @@ class _Field extends StatelessWidget {
         if (error != null)
           Padding(
             padding: const EdgeInsets.only(top: 5),
-            child: Text(
-              error!,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 12,
-                fontWeight: AppTypography.strong,
-                color: BrandColors.danger,
+            child: Transform.translate(
+              offset: const Offset(0, -3.7),
+              child: Text(
+                error!,
+                style: const TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12,
+                  fontWeight: AppTypography.strong,
+                  color: BrandColors.danger,
+                ),
               ),
             ),
           ),

@@ -141,6 +141,28 @@ class SignInAtmosphere {
     blueY: 0.38,
   );
 
+  /// `02-14`. Waiting out a code lock.
+  static const SignInAtmosphere tooMany = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 220,
+    goldX: 0.36,
+    goldY: 0.18,
+    blueX: 0.64,
+    blueY: 0.34,
+  );
+
+  /// `02-14b`. The wait is over.
+  static const SignInAtmosphere tooManyReady = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 228,
+    goldX: 0.55,
+    goldY: 0.24,
+    blueX: 0.45,
+    blueY: 0.40,
+  );
+
   /// `02-12`.
   static const SignInAtmosphere setPassword = SignInAtmosphere(
     fadeHold: 242,

@@ -181,14 +181,26 @@ abstract final class ApiEnvelopeDecoder {
     final code = ApiErrorCode.parse(_asString(errorMap?['code']));
     final requestId = _asString(errorMap?['request_id']) ?? response.requestId;
 
+    final Object? details = errorMap?['details'];
+    final int? bodyRetry = _detailInt(details, 'retry_after');
     return failureFromApiError(
       statusCode: response.statusCode,
       code: code,
       message: _asString(errorMap?['message']),
       requestId: requestId,
-      fieldErrors: _decodeFieldErrors(errorMap?['details']),
-      retryAfter: response.retryAfter,
+      fieldErrors: _decodeFieldErrors(details),
+      retryAfter: bodyRetry == null
+          ? response.retryAfter
+          : Duration(seconds: bodyRetry),
+      attemptsRemaining: _detailInt(details, 'attempts_remaining'),
     );
+  }
+
+  /// Integer `details` fields. `VALIDATION_FAILED` uses lists, so those stay
+  /// out of here and never become an attempt count.
+  static int? _detailInt(Object? details, String key) {
+    if (details is! Map<String, dynamic>) return null;
+    return _asInt(details[key]);
   }
 
   /// `details` for `VALIDATION_FAILED` is `field -> [messages]`. Anything else

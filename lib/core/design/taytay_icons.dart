@@ -73,6 +73,9 @@ abstract final class TaytayIcons {
 
   static const IconData clock = IconData(57479, fontFamily: 'Lucide');
 
+  /// Lucide `timer`. The `02-14` countdown.
+  static const IconData timer = IconData(57824, fontFamily: 'Lucide');
+
   static const IconData building = IconData(58000, fontFamily: 'Lucide');
 
   static const IconData idCard = IconData(58903, fontFamily: 'Lucide');
@@ -114,6 +117,9 @@ abstract final class TaytayIcons {
   static const IconData wifiOff = IconData(57775, fontFamily: 'Lucide');
 
   static const IconData circleCheck = IconData(57894, fontFamily: 'Lucide');
+
+  /// Lucide `check-circle`. The `02-14b` mark.
+  static const IconData checkCircle = IconData(57468, fontFamily: 'Lucide');
 
   static const IconData inbox = IconData(57591, fontFamily: 'Lucide');
 

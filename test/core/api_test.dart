@@ -230,6 +230,82 @@ void main() {
       expect(failure.retryAfter, const Duration(seconds: 45));
     });
 
+    test('details.retry_after wins over the Retry-After header', () {
+      final result = ApiEnvelopeDecoder.decode<Object?>(
+        _json(
+          429,
+          <String, dynamic>{
+            'error': <String, dynamic>{
+              'code': 'RATE_LIMITED',
+              'details': <String, dynamic>{'retry_after': 90},
+            },
+          },
+          headers: <String, String>{'retry-after': '45'},
+        ),
+        (data) => data,
+      );
+
+      final failure = result.failureOrNull! as RateLimitedFailure;
+      expect(failure.retryAfter, const Duration(seconds: 90));
+    });
+
+    test('code_invalid carries attempts and is not a field error', () {
+      final result = ApiEnvelopeDecoder.decode<Object?>(
+        _json(422, <String, dynamic>{
+          'error': <String, dynamic>{
+            'code': 'code_invalid',
+            'message': 'operator text',
+            'details': <String, dynamic>{'attempts_remaining': 4},
+          },
+        }),
+        (data) => data,
+      );
+
+      final failure = result.failureOrNull! as CodeExchangeFailure;
+      expect(failure.exchangeKind, CodeExchangeKind.invalid);
+      expect(failure.attemptsRemaining, 4);
+      expect(failure.residentMessage, isNot(contains('operator text')));
+    });
+
+    test('code_locked retry_after of 0 is a zero wait', () {
+      final result = ApiEnvelopeDecoder.decode<Object?>(
+        _json(422, <String, dynamic>{
+          'error': <String, dynamic>{
+            'code': 'code_locked',
+            'details': <String, dynamic>{
+              'attempts_remaining': 0,
+              'retry_after': 0,
+            },
+          },
+        }),
+        (data) => data,
+      );
+
+      final failure = result.failureOrNull! as CodeExchangeFailure;
+      expect(failure.exchangeKind, CodeExchangeKind.locked);
+      expect(failure.attemptsRemaining, 0);
+      expect(failure.retryAfter, Duration.zero);
+    });
+
+    test('VALIDATION_FAILED does not become an attempt count', () {
+      final result = ApiEnvelopeDecoder.decode<Object?>(
+        _json(422, <String, dynamic>{
+          'error': <String, dynamic>{
+            'code': 'VALIDATION_FAILED',
+            'details': <String, dynamic>{
+              'email': <String>['Required'],
+              'attempts_remaining': 3,
+            },
+          },
+        }),
+        (data) => data,
+      );
+
+      final failure = result.failureOrNull! as ValidationFailure;
+      expect(failure.fieldErrors['email'], <String>['Required']);
+      expect(failure.fieldErrors.containsKey('attempts_remaining'), isFalse);
+    });
+
     test('falls back to the status when the body is not an envelope', () {
       final result = ApiEnvelopeDecoder.decode<Object?>(
         const ApiHttpResponse(statusCode: 502, body: 'upstream down'),
