@@ -199,8 +199,8 @@ class ScriptedPostRepository implements AnnouncementRepository {
   );
 
   @override
-  Future<Result<void>> saveArticle(String id) async =>
-      const Err<void>(ServerFailure(isTemporary: true));
+  Future<Result<List<NewsCategory>>> listCategories() async =>
+      const Ok<List<NewsCategory>>(NewsCategory.catalogue);
 }
 
 /// Records what was handed to the OS.

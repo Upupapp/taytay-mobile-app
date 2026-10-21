@@ -295,6 +295,7 @@ class PostDetailController extends ChangeNotifier {
       summary: current.summary,
       media: current.media,
       isPinned: current.isPinned,
+      pinnedAt: current.pinnedAt,
       advisoryLevel: current.advisoryLevel,
       publicationState: current.publicationState,
       engagement: AnnouncementEngagement(
@@ -306,6 +307,10 @@ class PostDetailController extends ChangeNotifier {
       capabilities: current.capabilities,
       availableReactions: current.availableReactions,
       myReaction: current.myReaction,
+      officeSlug: current.officeSlug,
+      coverMediaId: current.coverMediaId,
+      coverUrl: current.coverUrl,
+      presentation: current.presentation,
     );
   }
 }

@@ -1017,13 +1017,21 @@
    "get": {
     "operationId": "listNews",
     "summary": "List published Balita",
+    "description": "Pinned articles come first, including when filtered by category. Then newest published.",
     "security": [],
     "parameters": [
      {
       "name": "category",
       "in": "query",
       "schema": {
-       "type": "string"
+       "type": "string",
+       "enum": [
+        "abiso",
+        "advisory",
+        "negosyo",
+        "safety",
+        "events"
+       ]
       }
      },
      {
@@ -1191,6 +1199,188 @@
      },
      "403": {
       "description": "Outside the staff member's office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/news/categories": {
+   "get": {
+    "operationId": "listNewsCategories",
+    "summary": "Balita category catalogue",
+    "description": "Fixed slugs and labels: Abiso, Advisory, Negosyo, Safety, and Events.",
+    "security": [],
+    "responses": {
+     "200": {
+      "description": "Catalogue.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsCategoryListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/news/{id}/cover": {
+   "get": {
+    "operationId": "getNewsCover",
+    "summary": "Balita cover image",
+    "description": "Bytes for a published article's cover, read through MediaStore. A draft is private to that office's staff and to admins. No cover is 404.",
+    "security": [],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Image bytes.",
+      "content": {
+       "image/jpeg": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       },
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       },
+       "image/webp": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found, private draft, or no cover.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/news/{id}/pin": {
+   "post": {
+    "operationId": "pinNews",
+    "summary": "Pin a Balita article",
+    "description": "Staff pin only their own office. Admins pin any article. Repeating the call keeps pinned_at.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Pinned.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Outside the staff member's office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found, or a draft the caller cannot edit.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     }
+    }
+   },
+   "delete": {
+    "operationId": "unpinNews",
+    "summary": "Unpin a Balita article",
+    "description": "Idempotent. Staff unpin only their own office.",
+    "security": [
+     {
+      "firebaseIdToken": []
+     }
+    ],
+    "parameters": [
+     {
+      "name": "id",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string",
+       "format": "uuid"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Unpinned.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/NewsEnvelope"
+        }
+       }
+      }
+     },
+     "403": {
+      "description": "Outside the staff member's office.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found, or a draft the caller cannot edit.",
       "content": {
        "application/json": {
         "schema": {
@@ -5511,6 +5701,8 @@
      "office_slug",
      "status",
      "author_id",
+     "pinned",
+     "share_url",
      "created_at",
      "updated_at"
     ],
@@ -5532,10 +5724,25 @@
       ],
       "format": "uuid"
      },
+     "cover_url": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Public URL of the cover. Null for a draft or when there is no cover."
+     },
      "category": {
       "type": [
        "string",
        "null"
+      ],
+      "enum": [
+       "abiso",
+       "advisory",
+       "negosyo",
+       "safety",
+       "events",
+       null
       ]
      },
      "office_id": {
@@ -5563,6 +5770,19 @@
       "type": "string",
       "format": "uuid"
      },
+     "pinned": {
+      "type": "boolean"
+     },
+     "pinned_at": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time"
+     },
+     "share_url": {
+      "type": "string"
+     },
      "created_at": {
       "type": "string",
       "format": "date-time"
@@ -5570,6 +5790,46 @@
      "updated_at": {
       "type": "string",
       "format": "date-time"
+     }
+    }
+   },
+   "NewsCategory": {
+    "type": "object",
+    "required": [
+     "slug",
+     "label"
+    ],
+    "properties": {
+     "slug": {
+      "type": "string",
+      "enum": [
+       "abiso",
+       "advisory",
+       "negosyo",
+       "safety",
+       "events"
+      ]
+     },
+     "label": {
+      "type": "string"
+     }
+    }
+   },
+   "NewsCategoryListEnvelope": {
+    "type": "object",
+    "required": [
+     "data",
+     "meta"
+    ],
+    "properties": {
+     "data": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/NewsCategory"
+      }
+     },
+     "meta": {
+      "type": "object"
      }
     }
    },
@@ -6609,7 +6869,14 @@
       "type": "string"
      },
      "category": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+       "abiso",
+       "advisory",
+       "negosyo",
+       "safety",
+       "events"
+      ]
      },
      "office_id": {
       "type": "string",
@@ -6639,7 +6906,14 @@
       "type": "string"
      },
      "category": {
-      "type": "string"
+      "type": "string",
+      "enum": [
+       "abiso",
+       "advisory",
+       "negosyo",
+       "safety",
+       "events"
+      ]
      },
      "status": {
       "type": "string",

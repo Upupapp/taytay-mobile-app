@@ -42,6 +42,14 @@ class _Scripted implements ApiTransport {
   }
 }
 
+Result<ApiHttpResponse> _offices() => _ok(<Object?>[
+  <String, String>{
+    'id': '22222222-2222-4222-8222-222222222222',
+    'name': 'MSWDO',
+    'slug': 'mswdo',
+  },
+]);
+
 Result<ApiHttpResponse> _ok(Object? data) => Ok<ApiHttpResponse>(
   ApiHttpResponse(
     statusCode: 200,
@@ -115,8 +123,8 @@ class _Pages implements AnnouncementRepository {
   }
 
   @override
-  Future<Result<void>> saveArticle(String id) async =>
-      const Err<void>(ServerFailure(isTemporary: true, debugMessage: 'F32'));
+  Future<Result<List<NewsCategory>>> listCategories() async =>
+      const Ok<List<NewsCategory>>(NewsCategory.catalogue);
 
   @override
   Future<Result<Announcement>> loadAnnouncement(String id) async =>
@@ -285,6 +293,7 @@ void main() {
   test('GET /news reads the published item and hides a draft', () async {
     final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
       _ok(<Object?>[_item()]),
+      _offices(),
     ]);
     final Result<Paginated<Announcement>> listed =
         await NewsfeedApiRepository(
@@ -293,9 +302,9 @@ void main() {
     final Announcement post =
         (listed as Ok<Paginated<Announcement>>).value.items.single;
 
-    expect(transport.requests.single.path, 'news');
-    expect(transport.requests.single.query.containsKey('category'), isFalse);
-    expect(transport.requests.single.query.containsKey('cursor'), isFalse);
+    expect(transport.requests.first.path, 'news');
+    expect(transport.requests.first.query.containsKey('category'), isFalse);
+    expect(transport.requests.first.query.containsKey('cursor'), isFalse);
     expect(post.officeSlug, 'mswdo');
     expect(post.coverMediaId, '44444444-4444-4444-8444-444444444444');
     expect(post.category, 'Abiso');
@@ -306,6 +315,7 @@ void main() {
 
     final _Scripted detail = _Scripted(<Result<ApiHttpResponse>>[
       _ok(_item(status: 'draft')),
+      _offices(),
     ]);
     final Result<Announcement> loaded =
         await NewsfeedApiRepository(
@@ -313,7 +323,7 @@ void main() {
         ).loadAnnouncement(post.id);
     final Announcement draft = (loaded as Ok<Announcement>).value;
 
-    expect(detail.requests.single.path, 'news/${post.id}');
+    expect(detail.requests.first.path, 'news/${post.id}');
     expect(draft.publicationState?.known, PublicationState.draft);
     expect(draft.isResidentVisible, isFalse);
   });
@@ -327,10 +337,10 @@ void main() {
       apiClient: _client(transport),
     );
 
-    await repository.listAnnouncements(category: 'Advisory');
+    await repository.listAnnouncements(category: 'advisory');
     await repository.listAnnouncements(category: 'Lahat');
 
-    expect(transport.requests.first.query['category'], 'Advisory');
+    expect(transport.requests.first.query['category'], 'advisory');
     expect(transport.requests.last.query.containsKey('category'), isFalse);
     expect(
       transport.requests.every(
@@ -363,15 +373,125 @@ void main() {
     );
   });
 
-  test('saveArticle makes no request and declines with F32', () async {
-    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[]);
-    final Result<void> result = await NewsfeedApiRepository(
+  test('loadAnnouncement calls news/{id}', () async {
+    const String id = '11111111-1111-4111-8111-111111111111';
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(_item()),
+      _offices(),
+    ]);
+    final Result<Announcement> loaded = await NewsfeedApiRepository(
       apiClient: _client(transport),
-    ).saveArticle('11111111-1111-4111-8111-111111111111');
+    ).loadAnnouncement(id);
 
-    expect(transport.requests, isEmpty);
-    expect(result.failureOrNull, isA<ServerFailure>());
-    expect(result.failureOrNull!.debugMessage, contains('F32'));
+    expect(loaded.isOk, isTrue);
+    expect(transport.requests.first.path, 'news/$id');
+    expect(transport.requests.first.method, HttpMethod.get);
+  });
+
+  test('cover_url, share_url and pinned come from the item', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[
+        <String, Object?>{
+          ..._item(),
+          'cover_url': 'https://example.test/covers/pwd.jpg',
+          'share_url': 'https://example.test/news/pwd',
+          'pinned': true,
+          'pinned_at': '2026-07-20T01:00:00Z',
+        },
+        <String, Object?>{
+          ..._item(),
+          'id': '22222222-2222-4222-8222-222222222222',
+          'pinned': false,
+          'share_url': 'https://example.test/news/other',
+          'cover_url': null,
+        },
+      ]),
+      _offices(),
+    ]);
+    final Result<Paginated<Announcement>> listed = await NewsfeedApiRepository(
+      apiClient: _client(transport),
+    ).listAnnouncements();
+    final List<Announcement> items =
+        (listed as Ok<Paginated<Announcement>>).value.items;
+
+    expect(items.first.coverUrl, 'https://example.test/covers/pwd.jpg');
+    expect(items.first.shareUrl, 'https://example.test/news/pwd');
+    expect(items.first.isPinned, isTrue);
+    expect(items.first.pinnedAt, DateTime.utc(2026, 7, 20, 1));
+    expect(items.last.coverUrl, isNull);
+    expect(items.last.isPinned, isFalse);
+    // The repository keeps the server's order. The feed lifts pinned items.
+    expect(items.map((Announcement item) => item.isPinned), <bool>[true, false]);
+  });
+
+  test('GET /news/categories returns slug and label', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[
+        <String, String>{'slug': 'advisory', 'label': 'Advisory'},
+        <String, String>{'slug': 'events', 'label': 'Events'},
+      ]),
+    ]);
+    final Result<List<NewsCategory>> result = await NewsfeedApiRepository(
+      apiClient: _client(transport),
+    ).listCategories();
+
+    expect(transport.requests.single.path, 'news/categories');
+    final List<NewsCategory> categories =
+        (result as Ok<List<NewsCategory>>).value;
+    expect(categories.map((NewsCategory item) => item.slug), <String>[
+      'advisory',
+      'events',
+    ]);
+    expect(categories.first.label, 'Advisory');
+  });
+
+  test('office_slug resolves to the office name and then stays cached', () async {
+    final Map<String, Object?> article = _item();
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[article]),
+      _offices(),
+      _ok(<Object?>[article]),
+    ]);
+    final NewsfeedApiRepository repository = NewsfeedApiRepository(
+      apiClient: _client(transport),
+    );
+
+    final Announcement first =
+        ((await repository.listAnnouncements()) as Ok<Paginated<Announcement>>)
+            .value
+            .items
+            .single;
+    final Announcement second =
+        ((await repository.listAnnouncements()) as Ok<Paginated<Announcement>>)
+            .value
+            .items
+            .single;
+
+    expect(first.author, 'MSWDO');
+    expect(first.officeSlug, 'mswdo');
+    expect(second.author, 'MSWDO');
+    expect(
+      transport.requests.map((ApiRequest request) => request.path),
+      <String>['news', 'offices', 'news'],
+    );
+  });
+
+  test('an unknown office keeps the slug for the card', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[_item()]),
+      _ok(<Object?>[]),
+    ]);
+    final Announcement article =
+        ((await NewsfeedApiRepository(
+                  apiClient: _client(transport),
+                ).listAnnouncements())
+                as Ok<Paginated<Announcement>>)
+            .value
+            .items
+            .single;
+
+    expect(article.author, isNull);
+    expect(article.officeSlug, 'mswdo');
   });
 
   testWidgets('bell, save, share, card, back and see-all are 48 dp', (
@@ -444,6 +564,17 @@ void main() {
     expect(shared.url, isNull);
     expect(shared.text, isNot(contains('http')));
     expect(shared.text, contains('Taytay LGU'));
+  });
+
+  testWidgets('an Advisory chip is sent as the lowercase slug', (tester) async {
+    final _Pages pages = _Pages(<Announcement>[_story()]);
+    await _boot(tester, repository: pages);
+
+    await tester.tap(find.byKey(const Key('balita-chip-Advisory')));
+    await tester.pumpAndSettle();
+
+    expect(pages.categories, contains('advisory'));
+    expect(pages.categories, isNot(contains('Advisory')));
   });
 
   testWidgets('share passes the server url through when one was sent', (

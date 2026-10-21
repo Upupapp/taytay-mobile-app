@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import '../../../../core/api/backend_gap.dart';
 import '../../../../core/api/dev_mock_access.dart';
 import '../../../../core/documents/document_capture.dart';
 import '../../../../core/documents/upload_policy.dart';
@@ -440,6 +439,11 @@ class MockAnnouncementRepository implements AnnouncementRepository {
                 ? DateTime.tryParse(map['published_at']! as String)
                 : mockNow,
             isPinned: map['pinned'] == true,
+            pinnedAt: map['pinned_at'] is String
+                ? DateTime.tryParse(map['pinned_at']! as String)
+                : null,
+            shareUrl: map['share_url'] as String?,
+            coverUrl: map['cover_url'] as String?,
             publicationState: const ServerValue<PublicationState>(
               raw: 'published',
               known: PublicationState.published,
@@ -457,7 +461,7 @@ class MockAnnouncementRepository implements AnnouncementRepository {
   }) async {
     final List<Announcement> all = await _items();
     final String? chip = category?.trim();
-    final List<Announcement> filtered = chip == null ||
+    final List<Announcement> matched = chip == null ||
             chip.isEmpty ||
             chip == 'Lahat'
         ? all
@@ -467,6 +471,11 @@ class MockAnnouncementRepository implements AnnouncementRepository {
                     (item.category ?? '').toLowerCase() == chip.toLowerCase(),
               )
               .toList(growable: false);
+    // The server lists pinned articles first, including under a category.
+    final List<Announcement> filtered = <Announcement>[
+      ...matched.where((Announcement item) => item.isPinned),
+      ...matched.where((Announcement item) => !item.isPinned),
+    ];
     final int start = (page - 1) * perPage;
     final List<Announcement> slice = start >= filtered.length
         ? const <Announcement>[]
@@ -486,11 +495,8 @@ class MockAnnouncementRepository implements AnnouncementRepository {
   }
 
   @override
-  Future<Result<void>> saveArticle(String id) {
-    final Object _ = id;
-    return Future<Result<void>>.value(
-      backendGapFailure<void>(BackendGap.absentOnNodeContract, 'saveArticle'),
-    );
+  Future<Result<List<NewsCategory>>> listCategories() {
+    return _gate.respond(NewsCategory.catalogue);
   }
 
   @override

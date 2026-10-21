@@ -139,7 +139,7 @@
       {
         "label": "Command Center",
         "value": "0985-488-3352",
-        "icon": "bell"
+        "icon": "siren"
       },
       {
         "label": "MDRRMO",
@@ -161,7 +161,7 @@
     "category": "Advisory",
     "published_at": "2026-06-01T00:00:00Z",
     "list_date": "",
-    "tile_icon": "cloud",
+    "tile_icon": "cloud-rain",
     "sample": true
   }
 ]

@@ -156,8 +156,8 @@ class StubAnnouncementRepository implements AnnouncementRepository {
       const Err<Announcement>(ServerFailure());
 
   @override
-  Future<Result<void>> saveArticle(String id) async =>
-      const Err<void>(ServerFailure(isTemporary: true));
+  Future<Result<List<NewsCategory>>> listCategories() async =>
+      const Ok<List<NewsCategory>>(NewsCategory.catalogue);
 
   // Home never interacts with a post; these exist to satisfy the contract and
   // decline if anything ever tried.

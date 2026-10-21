@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/motion/motion_tokens.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
@@ -10,7 +11,37 @@ import '../../../shared/widgets/taytay_rows.dart';
 import '../domain/announcement_repository.dart';
 
 /// Which Balita frame the canvas is painting.
-enum BalitaFrame { feed, filter, emptyCategory, emptyFeed, failed, loading, article }
+enum BalitaFrame {
+  feed,
+  filter,
+  emptyCategory,
+  emptyFeed,
+  failed,
+  loading,
+  article,
+}
+
+/// One chip on the Balita list. [slug] is empty for Lahat, which sends no filter.
+@immutable
+class BalitaChip {
+  const BalitaChip({required this.slug, required this.label});
+
+  final String slug;
+  final String label;
+
+  static const BalitaChip all = BalitaChip(slug: '', label: 'Lahat');
+
+  /// The design set, and the mock catalogue. Live chips come from
+  /// `GET /news/categories`, with Lahat added on the client.
+  static const List<BalitaChip> design = <BalitaChip>[
+    all,
+    BalitaChip(slug: 'abiso', label: 'Abiso'),
+    BalitaChip(slug: 'advisory', label: 'Advisory'),
+    BalitaChip(slug: 'negosyo', label: 'Negosyo'),
+    BalitaChip(slug: 'safety', label: 'Safety'),
+    BalitaChip(slug: 'events', label: 'Events'),
+  ];
+}
 
 /// The Balita list, filters, and article page.
 ///
@@ -22,6 +53,7 @@ class BalitaCanvas extends StatelessWidget {
     this.articles = const <Announcement>[],
     this.article,
     this.selectedChip = 'Lahat',
+    this.chips = BalitaChip.design,
     this.onChip,
     this.onArticle,
     this.onSave,
@@ -34,20 +66,12 @@ class BalitaCanvas extends StatelessWidget {
     super.key,
   });
 
-  static const List<String> chips = <String>[
-    'Lahat',
-    'Abiso',
-    'Advisory',
-    'Negosyo',
-    'Safety',
-    'Events',
-  ];
-
   final BalitaFrame frame;
   final List<Announcement> articles;
   final Announcement? article;
   final String selectedChip;
-  final ValueChanged<String>? onChip;
+  final List<BalitaChip> chips;
+  final ValueChanged<BalitaChip>? onChip;
   final ValueChanged<Announcement>? onArticle;
   final ValueChanged<Announcement>? onSave;
   final ValueChanged<Announcement>? onShare;
@@ -85,7 +109,7 @@ class BalitaCanvas extends StatelessWidget {
           child: Column(
             children: <Widget>[
               _header(),
-              Expanded(child: _fade(_body())),
+              Expanded(child: _fade(_body(context))),
             ],
           ),
         ),
@@ -111,10 +135,11 @@ class BalitaCanvas extends StatelessWidget {
     };
   }
 
-  Widget _body() {
-    return switch (frame) {
-      BalitaFrame.loading => const _LoadingBody(),
+  Widget _body(BuildContext context) {
+    final Widget body = switch (frame) {
+      BalitaFrame.loading => _LoadingBody(chips: chips),
       BalitaFrame.failed => _MessageBody(
+        chips: chips,
         title: 'Announcements are not available right now',
         message:
             'We could not reach Taytay LGU. Check your connection and try '
@@ -123,11 +148,13 @@ class BalitaCanvas extends StatelessWidget {
         action: 'Try again',
         onAction: onRetry,
       ),
-      BalitaFrame.emptyFeed => const _MessageBody(
+      BalitaFrame.emptyFeed => _MessageBody(
+        chips: chips,
         title: 'Nothing new right now',
         message: 'New Taytay LGU announcements will appear here.',
       ),
       BalitaFrame.emptyCategory => _EmptyCategory(
+        chips: chips,
         chip: selectedChip,
         onChip: onChip,
         onSeeAll: onSeeAll,
@@ -136,9 +163,12 @@ class BalitaCanvas extends StatelessWidget {
         article: article!,
       ),
       BalitaFrame.feed || BalitaFrame.filter => _FeedBody(
+        chips: chips,
         articles: articles,
         selectedChip: selectedChip,
-        showBanner: frame == BalitaFrame.filter,
+        showBanner:
+            frame == BalitaFrame.filter ||
+            articles.any((Announcement article) => article.isPinned),
         onChip: onChip,
         onArticle: onArticle,
         onSave: onSave,
@@ -147,6 +177,15 @@ class BalitaCanvas extends StatelessWidget {
       ),
       _ => const SizedBox.shrink(),
     };
+    return AnimatedSwitcher(
+      duration: Motion.decorative(context, MotionTokens.standard),
+      switchInCurve: MotionTokens.enterEase,
+      switchOutCurve: MotionTokens.exitEase,
+      child: KeyedSubtree(
+        key: ValueKey<String>('${frame.name}-$selectedChip'),
+        child: body,
+      ),
+    );
   }
 
   /// Last 28 dp dissolve into the page colour.
@@ -169,10 +208,7 @@ class BalitaCanvas extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: <Color>[
-                    Color(0x00F3F5FA),
-                    BrandColors.surface,
-                  ],
+                  colors: <Color>[Color(0x00F3F5FA), BrandColors.surface],
                 ),
               ),
             ),
@@ -205,34 +241,9 @@ class _ListHeader extends StatelessWidget {
             const _HeaderSeal(),
             const SizedBox(width: 11),
             const Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Balita',
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      color: Colors.white,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  Text(
-                    'Municipal news',
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                      color: Color(0xCCFFFFFF),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
+              child: MunicipalHeaderTitles(
+                title: 'Balita',
+                subtitle: 'Municipal news',
               ),
             ),
             const SizedBox(width: 11),
@@ -322,6 +333,7 @@ class _Bell extends StatelessWidget {
 
 class _FeedBody extends StatelessWidget {
   const _FeedBody({
+    required this.chips,
     required this.articles,
     required this.selectedChip,
     required this.showBanner,
@@ -332,10 +344,11 @@ class _FeedBody extends StatelessWidget {
     this.scrollController,
   });
 
+  final List<BalitaChip> chips;
   final List<Announcement> articles;
   final String selectedChip;
   final bool showBanner;
-  final ValueChanged<String>? onChip;
+  final ValueChanged<BalitaChip>? onChip;
   final ValueChanged<Announcement>? onArticle;
   final ValueChanged<Announcement>? onSave;
   final ValueChanged<Announcement>? onShare;
@@ -351,14 +364,14 @@ class _FeedBody extends StatelessWidget {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(
-            selected: selectedChip,
-            onChip: onChip,
-          ),
+          child: _Chips(chips: chips, selected: selectedChip, onChip: onChip),
         ),
         if (banner != null) ...<Widget>[
           _PinnedBanner(article: banner),
-          const SizedBox(height: 12),
+          // 13, not 12: the first card under the pin sits 1 dp high on
+          // 06-03. The gap after that card gives the dp back, so the
+          // cards below stay where the specimen put them.
+          const SizedBox(height: 13),
         ],
         for (var i = 0; i < articles.length; i++) ...<Widget>[
           _StoryCard(
@@ -371,11 +384,13 @@ class _FeedBody extends StatelessWidget {
           // sits in the fade dark enough to count as its own run. A sample
           // card keeps the 12 dp gap the specimen uses.
           SizedBox(
-            height:
-                i + 1 < articles.length &&
-                    articles[i + 1].presentation?.sample == true
-                ? 12
-                : 14,
+            height: () {
+              final bool beforeSample =
+                  i + 1 < articles.length &&
+                  articles[i + 1].presentation?.sample == true;
+              final double gap = beforeSample ? 12 : 14;
+              return banner != null && i == 0 ? gap - 1 : gap;
+            }(),
           ),
         ],
       ],
@@ -394,10 +409,11 @@ Announcement? _bannerOf(List<Announcement> articles, bool showBanner) {
 }
 
 class _Chips extends StatelessWidget {
-  const _Chips({required this.selected, this.onChip});
+  const _Chips({required this.chips, required this.selected, this.onChip});
 
+  final List<BalitaChip> chips;
   final String selected;
-  final ValueChanged<String>? onChip;
+  final ValueChanged<BalitaChip>? onChip;
 
   @override
   Widget build(BuildContext context) {
@@ -405,13 +421,13 @@ class _Chips extends StatelessWidget {
       spacing: 7,
       runSpacing: 7,
       children: <Widget>[
-        for (final String label in BalitaCanvas.chips)
+        for (final BalitaChip chip in chips)
           _Hit(
-            hitKey: Key('balita-chip-$label'),
-            label: label,
+            hitKey: Key('balita-chip-${chip.label}'),
+            label: chip.label,
             height: 36,
-            onTap: onChip == null ? null : () => onChip!(label),
-            child: _Chip(label: label, on: label == selected),
+            onTap: onChip == null ? null : () => onChip!(chip),
+            child: _Chip(label: chip.label, on: chip.label == selected),
           ),
       ],
     );
@@ -478,115 +494,117 @@ class _StoryCard extends StatelessWidget {
     final String? asset = presentation?.listCover == true
         ? presentation?.coverAsset
         : null;
+    final String? remote = asset == null ? article.coverUrl : null;
     return Opacity(
       opacity: sample ? 0.9 : 1,
       child: _Hit(
         hitKey: Key('balita-article-${article.id}'),
         label: article.title,
         onTap: onOpen,
-        child: DecoratedBox(
+        child: Container(
           decoration: _card,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (asset != null) ...<Widget>[
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.asset(
-                      asset,
-                      height: 150,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      filterQuality: FilterQuality.medium,
-                      semanticLabel: presentation?.photoCredit ?? article.title,
+          // The border is outside this padding, so 16 dp of padding would
+          // start the content 17 dp from the card edge and make the card
+          // 2 dp taller. A photo card is 1 dp high in the specimens: top
+          // padding 16 puts the photo on the design line, and bottom
+          // padding 14 gives that pixel back so the next card does not move.
+          // A text card keeps a 15 dp vertical padding, which lands on the
+          // same 16 dp inset the specimens were spaced with.
+          padding: asset != null
+              ? const EdgeInsets.fromLTRB(16, 16, 16, 14)
+              : const EdgeInsets.fromLTRB(16, 15, 16, 15),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (asset != null || remote != null) ...<Widget>[
+                _Cover(
+                  asset: asset,
+                  url: remote,
+                  height: 150,
+                  radius: 12,
+                  label: presentation?.photoCredit ?? article.title,
+                  darken: false,
+                ),
+                const SizedBox(height: 10),
+              ],
+              Row(
+                // Sample rows centre the tile on the copy. The other
+                // cards pin it to the top, matching the specimens.
+                crossAxisAlignment: sample
+                    ? CrossAxisAlignment.center
+                    : CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (asset == null) ...<Widget>[
+                    _Tile(
+                      icon: _tileIcon(article),
+                      background: _tileBackground(article),
+                      color: _ink(article),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        _Eyebrow(article: article),
+                        const SizedBox(height: 3),
+                        Text(article.title, style: _storyTitle),
+                        SizedBox(height: asset != null ? 11 / 3 : 4),
+                        Text(article.preview, style: _storySummary),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 10),
                 ],
+              ),
+              if (!sample) ...<Widget>[
+                const SizedBox(height: 10),
                 Row(
-                  // Sample rows centre the tile on the copy. The other
-                  // cards pin it to the top, matching the specimens.
-                  crossAxisAlignment: sample
-                      ? CrossAxisAlignment.center
-                      : CrossAxisAlignment.start,
                   children: <Widget>[
-                    if (asset == null) ...<Widget>[
-                      _Tile(
-                        icon: _tileIcon(article),
-                        background: _tileBackground(article),
-                        color: _ink(article),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    _Hit(
+                      hitKey: Key('balita-save-${article.id}'),
+                      label: 'Save ${article.title}',
+                      height: 16,
+                      onTap: onSave,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: <Widget>[
-                          _Eyebrow(article: article),
-                          const SizedBox(height: 3),
-                          Text(article.title, style: _storyTitle),
-                          const SizedBox(height: 4),
-                          Text(
-                            article.preview,
-                            style: _storySummary,
+                          TaytayIcon(
+                            icon: TaytayIcons.bookmark,
+                            size: 16,
+                            color: BrandColors.listMeta,
+                            semanticLabel: '',
+                            excludeSemantics: true,
                           ),
+                          SizedBox(width: 16),
+                          Text('Save', style: _action),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    _Hit(
+                      hitKey: Key('balita-share-${article.id}'),
+                      label: 'Share ${article.title}',
+                      height: 16,
+                      onTap: onShare,
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          TaytayIcon(
+                            icon: TaytayIcons.share,
+                            size: 16,
+                            color: BrandColors.listMeta,
+                            semanticLabel: '',
+                            excludeSemantics: true,
+                          ),
+                          SizedBox(width: 6),
+                          Text('Share', style: _action),
                         ],
                       ),
                     ),
                   ],
                 ),
-                if (!sample) ...<Widget>[
-                  const SizedBox(height: 10),
-                  Row(
-                    children: <Widget>[
-                      _Hit(
-                        hitKey: Key('balita-save-${article.id}'),
-                        label: 'Save ${article.title}',
-                        height: 16,
-                        onTap: onSave,
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            TaytayIcon(
-                              icon: TaytayIcons.bookmark,
-                              size: 16,
-                              color: BrandColors.listMeta,
-                              semanticLabel: '',
-                              excludeSemantics: true,
-                            ),
-                            SizedBox(width: 16),
-                            Text('Save', style: _action),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      _Hit(
-                        hitKey: Key('balita-share-${article.id}'),
-                        label: 'Share ${article.title}',
-                        height: 16,
-                        onTap: onShare,
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            TaytayIcon(
-                              icon: TaytayIcons.share,
-                              size: 16,
-                              color: BrandColors.listMeta,
-                              semanticLabel: '',
-                              excludeSemantics: true,
-                            ),
-                            SizedBox(width: 6),
-                            Text('Share', style: _action),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       ),
@@ -611,9 +629,7 @@ class _Eyebrow extends StatelessWidget {
         children: <InlineSpan>[
           if (category.isNotEmpty) TextSpan(text: category),
           if (office.isNotEmpty)
-            TextSpan(
-              text: category.isNotEmpty ? ' · $office' : office,
-            ),
+            TextSpan(text: category.isNotEmpty ? ' · $office' : office),
           if (presentation?.sample == true) ...<InlineSpan>[
             const TextSpan(text: ' · '),
             const WidgetSpan(
@@ -639,40 +655,36 @@ class _PinnedBanner extends StatelessWidget {
         article.advisoryLevel?.known == AdvisoryLevel.emergency;
     final String title = emergency
         ? 'Emergency advisory'
-        : article.presentation?.pinnedTitle ?? 'Pinned by Taytay LGU';
-    final String body =
-        article.presentation?.pinnedBody ??
-        (emergency ? article.title : article.title);
-    return DecoratedBox(
+        : article.presentation?.pinnedTitle ?? 'Pinned advisory';
+    final String body = article.presentation?.pinnedBody ?? article.title;
+    return Container(
       decoration: BoxDecoration(
         color: BrandColors.chipAmberBg,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF2D77A)),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: <Widget>[
-            const _Tile(
-              icon: TaytayIcons.triangleAlert,
-              background: Colors.white,
-              color: BrandColors.warning,
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      child: Row(
+        children: <Widget>[
+          const _Tile(
+            icon: TaytayIcons.triangleAlert,
+            background: Colors.white,
+            color: BrandColors.warning,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(title, style: _storyTitle),
+                Text(
+                  body,
+                  style: _storySummary.copyWith(fontSize: 13, height: 1.5),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(title, style: _storyTitle),
-                  Text(
-                    body,
-                    style: _storySummary.copyWith(fontSize: 13, height: 1.5),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -687,6 +699,7 @@ class _ArticleBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final BalitaPresentation? presentation = article.presentation;
     final String? asset = presentation?.coverAsset;
+    final String? remote = asset == null ? article.coverUrl : null;
     final String lead = presentation?.lead ?? article.body;
     final String meta = <String>[
       if ((article.author ?? article.officeSlug ?? '').isNotEmpty)
@@ -699,28 +712,14 @@ class _ArticleBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        if (asset != null)
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: ColorFiltered(
-              // Flutter's cover sample sits about one level above the
-              // design on a single row of the 190 dp photo, which splits
-              // that photo into two runs. Two levels closes it.
-              colorFilter: const ColorFilter.matrix(<double>[
-                1, 0, 0, 0, -2,
-                0, 1, 0, 0, -2,
-                0, 0, 1, 0, -2,
-                0, 0, 0, 1, 0,
-              ]),
-              child: Image.asset(
-                asset,
-                height: presentation?.coverHeight ?? 180,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                filterQuality: FilterQuality.medium,
-                semanticLabel: presentation?.photoCredit ?? article.title,
-              ),
-            ),
+        if (asset != null || remote != null)
+          _Cover(
+            asset: asset,
+            url: remote,
+            height: presentation?.coverHeight ?? 180,
+            radius: 16,
+            label: presentation?.photoCredit ?? article.title,
+            darken: asset != null,
           ),
         if ((presentation?.photoCredit ?? '').isNotEmpty) ...<Widget>[
           const SizedBox(height: 6),
@@ -740,21 +739,20 @@ class _ArticleBody extends StatelessWidget {
         Text(article.title, style: _articleTitle),
         const SizedBox(height: 8),
         Text(lead, style: _lead),
-        if ((presentation?.facts ?? const <BalitaFact>[]).isNotEmpty) ...<Widget>[
+        if ((presentation?.facts ?? const <BalitaFact>[])
+            .isNotEmpty) ...<Widget>[
           const SizedBox(height: 15),
-          DecoratedBox(
+          Container(
             decoration: _card,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              child: Column(
-                children: <Widget>[
-                  for (var i = 0; i < presentation!.facts.length; i++)
-                    _FactRow(
-                      fact: presentation.facts[i],
-                      last: i == presentation.facts.length - 1,
-                    ),
-                ],
-              ),
+            padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
+            child: Column(
+              children: <Widget>[
+                for (var i = 0; i < presentation!.facts.length; i++)
+                  _FactRow(
+                    fact: presentation.facts[i],
+                    last: i == presentation.facts.length - 1,
+                  ),
+              ],
             ),
           ),
         ],
@@ -825,20 +823,23 @@ class _Tag extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        child: Text(
-          label,
-          style: _eyebrow.copyWith(color: _ink(article)),
-        ),
+        child: Text(label, style: _eyebrow.copyWith(color: _ink(article))),
       ),
     );
   }
 }
 
 class _EmptyCategory extends StatelessWidget {
-  const _EmptyCategory({required this.chip, this.onChip, this.onSeeAll});
+  const _EmptyCategory({
+    required this.chips,
+    required this.chip,
+    this.onChip,
+    this.onSeeAll,
+  });
 
+  final List<BalitaChip> chips;
   final String chip;
-  final ValueChanged<String>? onChip;
+  final ValueChanged<BalitaChip>? onChip;
   final VoidCallback? onSeeAll;
 
   @override
@@ -850,7 +851,7 @@ class _EmptyCategory extends StatelessWidget {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(selected: chip, onChip: onChip),
+          child: _Chips(chips: chips, selected: chip, onChip: onChip),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 28, 18, 0),
@@ -866,7 +867,7 @@ class _EmptyCategory extends StatelessWidget {
                   height: 72,
                   child: Center(
                     child: TaytayIcon(
-                      icon: TaytayIcons.calendar,
+                      icon: TaytayIcons.calendarX,
                       size: 32,
                       color: BrandColors.taytayBlue,
                       semanticLabel: '',
@@ -927,23 +928,25 @@ class _EmptyCategory extends StatelessWidget {
 }
 
 class _LoadingBody extends StatelessWidget {
-  const _LoadingBody();
+  const _LoadingBody({required this.chips});
+
+  final List<BalitaChip> chips;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: const <Widget>[
+      children: <Widget>[
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(selected: 'Lahat'),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: _Chips(chips: chips, selected: 'Lahat'),
         ),
-        _SkeletonCard(photo: true),
-        SizedBox(height: 12),
-        _SkeletonCard(),
-        SizedBox(height: 12),
-        _SkeletonCard(),
+        const _SkeletonCard(photo: true),
+        const SizedBox(height: 12),
+        const _SkeletonCard(),
+        const SizedBox(height: 12),
+        const _SkeletonCard(),
       ],
     );
   }
@@ -956,26 +959,24 @@ class _SkeletonCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
+    return Container(
       decoration: _card,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (photo) ...<Widget>[
-              const _Bone(height: 150, radius: 12),
-              const SizedBox(height: 12),
-            ],
-            const _Bone(widthFactor: 0.35, height: 11),
-            const SizedBox(height: 10),
-            const _Bone(widthFactor: 0.9, height: 14),
-            const SizedBox(height: 8),
-            const _Bone(widthFactor: 0.75, height: 12),
-            const SizedBox(height: 6),
-            const _Bone(widthFactor: 0.55, height: 12),
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (photo) ...<Widget>[
+            const _Bone(height: 150, radius: 12),
+            const SizedBox(height: 12),
           ],
-        ),
+          const _Bone(widthFactor: 0.35, height: 11),
+          const SizedBox(height: 10),
+          const _Bone(widthFactor: 0.9, height: 14),
+          const SizedBox(height: 8),
+          const _Bone(widthFactor: 0.75, height: 12),
+          const SizedBox(height: 6),
+          const _Bone(widthFactor: 0.55, height: 12),
+        ],
       ),
     );
   }
@@ -995,7 +996,10 @@ class _Bone extends StatelessWidget {
         color: const Color(0xFFE6EAF2),
         borderRadius: BorderRadius.circular(radius),
       ),
-      child: SizedBox(height: height, width: widthFactor == null ? double.infinity : null),
+      child: SizedBox(
+        height: height,
+        width: widthFactor == null ? double.infinity : null,
+      ),
     );
     if (widthFactor == null) return box;
     return FractionallySizedBox(
@@ -1008,12 +1012,14 @@ class _Bone extends StatelessWidget {
 
 class _MessageBody extends StatelessWidget {
   const _MessageBody({
+    required this.chips,
     required this.title,
     required this.message,
     this.action,
     this.onAction,
   });
 
+  final List<BalitaChip> chips;
   final String title;
   final String message;
   final String? action;
@@ -1025,9 +1031,9 @@ class _MessageBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(selected: 'Lahat'),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: _Chips(chips: chips, selected: 'Lahat'),
         ),
         Text(title, style: _storyTitle.copyWith(fontSize: 16)),
         const SizedBox(height: 8),
@@ -1241,7 +1247,7 @@ IconData _tileIcon(Announcement article) {
   if (named != null && named.isNotEmpty) return _namedIcon(named);
   return switch ((article.category ?? '').toLowerCase()) {
     'negosyo' => TaytayIcons.briefcase,
-    'safety' => TaytayIcons.bell,
+    'safety' => TaytayIcons.siren,
     _ => TaytayIcons.landmark,
   };
 }
@@ -1250,12 +1256,13 @@ IconData _namedIcon(String name) {
   return switch (name) {
     'bookmark' => TaytayIcons.bookmark,
     'briefcase' => TaytayIcons.briefcase,
-    'bell' => TaytayIcons.bell,
-    'cloud' => TaytayIcons.cloud,
+    'bell' || 'siren' => TaytayIcons.siren,
+    'cloud' || 'cloud-rain' => TaytayIcons.cloudRain,
     'map-pin' => TaytayIcons.mapPin,
     'file-text' => TaytayIcons.fileText,
     'phone' => TaytayIcons.phone,
     'calendar' => TaytayIcons.calendar,
+    'calendar-x' => TaytayIcons.calendarX,
     'globe' => TaytayIcons.globe,
     'smartphone' => TaytayIcons.smartphone,
     'message-square' => TaytayIcons.messageSquare,
@@ -1263,6 +1270,77 @@ IconData _namedIcon(String name) {
     'share' => TaytayIcons.share,
     _ => TaytayIcons.landmark,
   };
+}
+
+class _Cover extends StatelessWidget {
+  const _Cover({
+    required this.height,
+    required this.radius,
+    required this.label,
+    required this.darken,
+    this.asset,
+    this.url,
+  });
+
+  final String? asset;
+  final String? url;
+  final double height;
+  final double radius;
+  final String label;
+  final bool darken;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget image = asset != null
+        ? Image.asset(
+            asset!,
+            height: height,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: label,
+          )
+        : Image.network(
+            url!,
+            height: height,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.medium,
+            semanticLabel: label,
+            errorBuilder: (context, error, stackTrace) =>
+                SizedBox(height: height, width: double.infinity),
+          );
+    if (darken) {
+      // The fixture photo sits one level above the design on a single row
+      // of the 190 dp cover, which splits that photo into two runs.
+      image = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          1,
+          0,
+          0,
+          0,
+          -2,
+          0,
+          1,
+          0,
+          0,
+          -2,
+          0,
+          0,
+          1,
+          0,
+          -2,
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: image,
+      );
+    }
+    return ClipRRect(borderRadius: BorderRadius.circular(radius), child: image);
+  }
 }
 
 const BoxDecoration _card = BoxDecoration(

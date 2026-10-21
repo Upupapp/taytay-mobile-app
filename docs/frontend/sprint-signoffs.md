@@ -228,40 +228,48 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 ## S6 Balita
 
-S6 is not approved. This section records the capture. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
+S6 is not approved. This section records the round-1 capture and the sync to backend `6f4c582`. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The first Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
 
-Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article page keeps the shell tab bar and has one back button. This app does not call `POST /news` or `PATCH /news/{id}`.
+Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article header paints one translucent back disc, 44 dp across, with a 48 dp hit. The shell tab bar stays. This app does not call `POST /news`, `PATCH /news/{id}`, or `POST`/`DELETE /news/{id}/pin`.
 
-One `BalitaCanvas` paints the feed, a category filter, an empty category, an empty feed, the loading bones, the failed state, and the article. A dev mock reads `test/fixtures/mock/announcements.json`. Every other build reads `GET /news` and `GET /news/{id}`. Lahat sends no `category`. The other chips send the chip string as `category`. The list follows `meta.pagination.next_cursor`.
+One `BalitaCanvas` paints the feed, a category filter, an empty category, an empty feed, the loading bones, the failed state, and the article. A dev mock reads `test/fixtures/mock/announcements.json`. Every other build reads `GET /news`, `GET /news/{id}`, and `GET /news/categories`. Lahat is client-side and sends no `category`. The other chips send the lowercase slug. The list follows `meta.pagination.next_cursor`.
 
-The line measure counts every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. Pairing is in order. Side-by-sides are design | render | heat in `test/goldens/compare/s6/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The photographs stay in the count. `lib/features/news` contains no `Transform.translate`.
+The line measure is `rev.py`: every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. Pairing is in order. Deviation is image pixels on the 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s6/`. Mismatch is CIE76 ΔE above 6 over the full frame. The photographs stay in the count. `lib/features/news` contains no `Transform.translate`.
 
-| Screen | Lines (build / design) | Max deviation | Mismatch |
+The shared header title is a 16 dp block and the subtitle is 11 dp text on a 16 dp line. On this capture the title ink starts at y 158 or 159 (design 157) and the subtitle ink starts at y 229 or 230 (design 229 or 230). The same header is on the directory screens. Re-rendered side-by-sides are in `test/goldens/compare/s5/`.
+
+| Screen | Lines (build / design) | Max deviation (image px) | Mismatch |
 | --- | --- | --- | --- |
-| 06-01 News feed | 19 / 19 | 1.33 | 9.47% (280610/2962440) |
-| 06-02 Article, PWD | 18 / 18 | 1.67 | 4.10% (121596/2962440) |
-| 06-03 Advisories filter | 24 / 24 | 1.67 | 6.85% (203058/2962440) |
-| 06-04 Empty category | 11 / 11 | 0.67 | 2.09% (61988/2962440) |
-| 06-05 Loading | 6 / 6 | 0.33 | 6.34% (187782/2962440) |
-| 06-06 Article, RPT | 19 / 19 | 1.00 | 3.54% (104761/2962440) |
-| 06-07 Article, BOSS | 19 / 19 | 1.33 | 3.45% (102295/2962440) |
-| 06-08 Article, SMILE | 18 / 18 | 1.00 | 3.39% (100457/2962440) |
+| 06-01 News feed | 19 / 19 | 2 | 3.11% (92122/2962440) |
+| 06-02 Article, PWD | 18 / 18 | 5 | 3.02% (89526/2962440) |
+| 06-03 Advisories filter | 24 / 24 | 3 | 4.16% (123103/2962440) |
+| 06-04 Empty category | 11 / 11 | 2 | 1.94% (57345/2962440) |
+| 06-05 Loading | 6 / 6 | 1 | 6.09% (180432/2962440) |
+| 06-06 Article, RPT | 19 / 19 | 3 | 2.48% (73599/2962440) |
+| 06-07 Article, BOSS | 19 / 19 | 4 | 2.62% (77571/2962440) |
+| 06-08 Article, SMILE | 18 / 18 | 3 | 2.12% (62734/2962440) |
+| 05-01 Office list | 24 / 24 | 2 | 3.25% (96208/2962440) |
+| 05-02 Office detail | 18 / 18 | 2 | 3.87% (114639/2962440) |
+| 05-04 Message thread | 17 / 17 | 2 | 4.38% (129816/2962440) |
 
-The designed frames are specimens. `06-03` paints the pinned advisory, the RPT card, the SMILE card, and the weather sample together. A live Advisory filter is category equality and does not invent that mix. Pins, cover assets, photo credit, a lead, fact rows, and the sample tag live on `BalitaPresentation`, and only the fixture sets them. A live article with no presentation shows the body.
+`06-01`, `06-04`, `06-05`, `05-01`, `05-02`, and `05-04` are within 2 image px. The others are not, and S6 stays unapproved.
 
-The OpenAPI at `90aa39e` does not publish these, and this app does not invent them:
+Giving every card the border in its layout height moved each following card down by 2 dp, and the lower lines missed by more than they had. The cards keep a border-box inset on the sides. Vertical padding is chosen so the card keeps the height the specimens were spaced against. A photo card starts its content 1 dp lower, which is what brought `06-01` to 2 px. `06-07` is still up to 4 image px low on the facts block (1737 +3, 1943 +4, 2151 +3). That remainder is reported rather than shaved again. `06-02` is still 5 px high at the bottom of the PWD story (1896 −3, 1996 −3, 2135 −5). `06-03` has one line at 2081 −3. `06-06` is 3 px high at 1950 and 2157. `06-08` is 3 px high at 1339.
 
-- A public cover URL. `NewsItem` has `cover_media_id`. `GET /media/{id}` returns `MediaMeta` with no url, and another resident receives 404. The fixture uses bundled photographs. A live article has no image.
-- A bookmark. The design has Save. There is no `POST /news/{id}/saves`. `saveArticle` returns the F32 gap and makes no request. The resident sees "Saving a story is not available yet."
-- A share URL. `share_url` is not on `NewsItem`. Share sends the title and the preview, plus "From Taytay LGU". It does not compose a URL from the host and the id. A URL is included only when the server sent one.
-- An office display name. `NewsItem` has `office_slug`. `GET /offices` and `GET /offices/{slug}` can supply the name. The fixture sets the design's office name. A live card shows the author when the server sent one, otherwise the slug.
-- A pin. `NewsItem` has no pin field. The `06-03` banner is fixture-only (`pinned_title` and `pinned_body`). A live filter does not invent a pin.
-- A separate summary, lead, fact rows, photo credit, and cover asset. Those are `BalitaPresentation`. A live card uses the preview (summary, or the body when summary is absent). The detail shows the body.
-- A category catalogue. The chips are the design's set: Lahat, Abiso, Advisory, Negosyo, Safety, Events.
+The designed frames are specimens. `06-03` paints the pinned advisory, the RPT card, the SMILE card, and the weather sample together. A live Advisory filter is category equality and does not invent that mix. Cover assets, photo credit, a lead, fact rows, and the sample tag live on `BalitaPresentation`, and only the fixture sets them. A live article with no presentation shows the body.
 
-Comments, reactions, and reports stay off the article page. Those calls still decline. The not-available copy is unchanged: "This announcement is not available" and "See all announcements". The bell goes to sign-in for a guest and to notifications for a signed-in resident. `test/features/s6_balita_test.dart` asserts a 48 dp hit on the bell, Save, Share, a card, the back button, and See all announcements. Icons are Lucide.
+Synced to backend `6f4c582`:
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (1078187 bytes, 29 frames) and `s6-filter.mp4` (506703 bytes, 27 frames). The article clip opens the PWD story and comes back to that card. The filter clip opens Events, taps See all announcements, and comes back to the feed. `flutter analyze` was clean. `flutter test` passed 1614 tests, with 11 skipped (the recording and live tags).
+- `cover_url` is the live cover. It is null on a draft or when there is no cover. Fixture covers stay bundled assets. The −2 RGB filter is only on those fixture article photographs.
+- `pinned` and `pinned_at` come from the list. The server already lists pinned items first, including under a category filter. A live pinned item shows "Pinned advisory" and the article title. The `06-03` specimen still uses the fixture's `pinned_title` and `pinned_body`. Staff pin and unpin are not called.
+- `share_url` is sent with the share. An empty string is treated as no URL. This app does not compose a URL from the host and the id.
+- `GET /news/categories` returns `{slug, label}`. The chips are that list, with Lahat added on the client. The dev mock returns the design set. The category query is the lowercase slug.
+- Bookmarks are not on the contract. There is no save method and no save request. Save still says "Saving a story is not available yet."
+- There is no `office_name` on `NewsItem`. A live card resolves `office_slug` through `GET /offices`, cached on the repository, and uses `name`. The slug is the last resort, when the join has no row.
+
+Comments, reactions, and reports stay off the article page. Those calls still decline. The not-available copy is unchanged: "This announcement is not available" and "See all announcements". The bell goes to sign-in for a guest and to notifications for a signed-in resident. Icons are Lucide: the safety tile and the Command Center row use siren, the weather sample uses cloud-rain, and the empty category uses calendar-x. The BOSS "Opened" fact stays calendar.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (2891150 bytes, 61 frames) and `s6-filter.mp4` (3996678 bytes, 103 frames). The article clip scrolls the feed, shows "Saving a story is not available yet.", opens the PWD story, and comes back. The filter clip scrolls, opens Events, returns through See all announcements, opens an article, and comes back. `flutter analyze` was clean. `flutter test` passed 1619 tests, with 11 skipped (the recording and live tags).
 
 ## Contract gaps after the Node OpenAPI
 

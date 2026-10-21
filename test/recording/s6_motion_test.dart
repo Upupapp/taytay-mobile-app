@@ -193,8 +193,56 @@ class _ShellHostState extends State<_ShellHost> {
 }
 
 Finder get _pwd => find.byKey(const Key('balita-article-balita-pwd'));
+Finder get _save => find.byKey(const Key('balita-save-balita-pwd'));
 Finder get _events => find.byKey(const Key('balita-chip-Events'));
 Finder get _seeAll => find.byKey(const Key('balita-see-all'));
+Finder get _unavailable => find.text('Saving a story is not available yet.');
+
+const Duration _tick = Duration(milliseconds: 20);
+
+Future<int> _ticks(
+  WidgetTester tester,
+  Directory out,
+  int frame,
+  int count,
+) async {
+  for (var i = 0; i < count; i++) {
+    await tester.pump(_tick);
+    await _precache(tester);
+    await _shot(tester, out, frame);
+    frame++;
+  }
+  return frame;
+}
+
+Future<int> _scroll(
+  WidgetTester tester,
+  Directory out,
+  int frame,
+) async {
+  final Offset start = tester.getCenter(_pwd);
+  final TestGesture gesture = await tester.startGesture(start);
+  for (var i = 0; i < 8; i++) {
+    await gesture.moveBy(const Offset(0, -36));
+    frame = await _ticks(tester, out, frame, 1);
+  }
+  await gesture.up();
+  return _ticks(tester, out, frame, 6);
+}
+
+Future<int> _scrollBack(
+  WidgetTester tester,
+  Directory out,
+  int frame,
+) async {
+  final TestGesture gesture = await tester.startGesture(const Offset(200, 520));
+  for (var i = 0; i < 8; i++) {
+    await gesture.moveBy(const Offset(0, 40));
+    frame = await _ticks(tester, out, frame, 1);
+  }
+  await gesture.up();
+  return _ticks(tester, out, frame, 4);
+}
 
 void main() {
   setUpAll(_loadFonts);
@@ -209,13 +257,19 @@ void main() {
     await _mount(tester, dependencies);
 
     var frame = await _until(tester, out, 0, _pwd);
-    frame = await _hold(tester, out, frame, 8);
+    frame = await _hold(tester, out, frame, 2);
+    frame = await _scroll(tester, out, frame);
+    await tester.tap(_save);
+    frame = await _until(tester, out, frame, _unavailable);
+    frame = await _hold(tester, out, frame, 3);
     await tester.tap(_pwd);
-    frame = await _until(tester, out, frame, find.byType(TaytayBackButton));
-    frame = await _hold(tester, out, frame, 10);
+    frame = await _ticks(tester, out, frame, 18);
+    expect(find.byType(TaytayBackButton), findsOneWidget);
+    frame = await _hold(tester, out, frame, 2);
     await tester.tap(find.byType(TaytayBackButton));
-    frame = await _until(tester, out, frame, _pwd);
-    frame = await _hold(tester, out, frame, 8);
+    frame = await _ticks(tester, out, frame, 18);
+    expect(_pwd, findsOneWidget);
+    frame = await _hold(tester, out, frame, 2);
     expect(frame, greaterThan(20));
   });
 
@@ -231,13 +285,24 @@ void main() {
     await _mount(tester, dependencies);
 
     var frame = await _until(tester, out, 0, _events);
-    frame = await _hold(tester, out, frame, 6);
+    frame = await _hold(tester, out, frame, 2);
+    frame = await _scroll(tester, out, frame);
+    frame = await _scrollBack(tester, out, frame);
+    expect(_events, findsOneWidget);
     await tester.tap(_events);
-    frame = await _until(tester, out, frame, _seeAll);
-    frame = await _hold(tester, out, frame, 10);
+    frame = await _ticks(tester, out, frame, 16);
+    expect(_seeAll, findsOneWidget);
+    frame = await _hold(tester, out, frame, 2);
     await tester.tap(_seeAll);
-    frame = await _until(tester, out, frame, _pwd);
-    frame = await _hold(tester, out, frame, 8);
+    frame = await _ticks(tester, out, frame, 16);
+    expect(_pwd, findsOneWidget);
+    await tester.tap(_pwd);
+    frame = await _ticks(tester, out, frame, 18);
+    expect(find.byType(TaytayBackButton), findsOneWidget);
+    frame = await _hold(tester, out, frame, 2);
+    await tester.tap(find.byType(TaytayBackButton));
+    frame = await _ticks(tester, out, frame, 18);
+    frame = await _hold(tester, out, frame, 2);
     expect(frame, greaterThan(16));
     expect(find.text('Walang events pa'), findsNothing);
   });

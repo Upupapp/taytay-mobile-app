@@ -17,6 +17,10 @@ The resident copy is never `error.message`. In dev the credential is
 `verified`, `staff`, `admin`. This app mints only `registered` and `verified`.
 
 The file was read. It is vendored at `docs/integration/taytay-node-openapi.json`.
+The Balita paths in that copy were refreshed from backend `6f4c582`: `NewsItem`
+carries `cover_url`, `pinned`, `pinned_at`, and `share_url`, and
+`GET /news/categories` publishes `{slug, label}`. Staff pin and unpin stay out of
+`backend_routes.dart`. Bookmarks are not on that contract.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

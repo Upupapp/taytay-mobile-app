@@ -18,8 +18,8 @@ import 'news_feed_controller.dart';
 /// to register.
 ///
 /// **This app consumes; it never publishes.** No compose, pin, or moderation
-/// control. Saving a story declines: the news contract has no bookmark route,
-/// and the screen says so in its own words.
+/// control. Bookmarks are not on the contract. The screen says so in its
+/// own words and does not call a save route.
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
 
@@ -30,7 +30,8 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> {
   NewsFeedController? _controller;
   final ScrollController _scroll = ScrollController();
-  String _chip = 'Lahat';
+  String _chip = BalitaChip.all.label;
+  List<BalitaChip> _chips = BalitaChip.design;
 
   @override
   void initState() {
@@ -49,6 +50,27 @@ class _NewsScreenState extends State<NewsScreen> {
           )
           ..addListener(_onChanged)
           ..refresh();
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final Result<List<NewsCategory>> result = await AppDependencies.of(
+      context,
+    ).announcementRepository.listCategories();
+    if (!mounted) return;
+    result.fold(
+      onOk: (List<NewsCategory> categories) {
+        if (categories.isEmpty) return;
+        setState(() {
+          _chips = <BalitaChip>[
+            BalitaChip.all,
+            for (final NewsCategory category in categories)
+              BalitaChip(slug: category.slug, label: category.label),
+          ];
+        });
+      },
+      onErr: (_) {},
+    );
   }
 
   void _onChanged() {
@@ -89,30 +111,21 @@ class _NewsScreenState extends State<NewsScreen> {
     return _chip == 'Lahat' ? BalitaFrame.feed : BalitaFrame.filter;
   }
 
-  Future<void> _selectChip(String chip) async {
-    if (_chip == chip) return;
-    setState(() => _chip = chip);
-    await _controller?.applyCategory(chip);
+  Future<void> _selectChip(BalitaChip chip) async {
+    if (_chip == chip.label) return;
+    setState(() => _chip = chip.label);
+    final String slug = chip.slug.trim();
+    await _controller?.applyCategory(slug.isEmpty ? null : slug);
   }
 
-  Future<void> _save(Announcement article) async {
-    final Result<void> result = await AppDependencies.of(context)
-        .announcementRepository
-        .saveArticle(article.id);
-    if (!mounted) return;
-    // The server's debug text stays off the screen. There is no bookmark route.
-    result.fold(
-      onOk: (_) {},
-      onErr: (_) => Outcome.problem(
-        context,
-        'Saving a story is not available yet.',
-      ),
-    );
+  void _save(Announcement article) {
+    final Object _ = article.id;
+    // Bookmarks are not on the contract. The resident still gets an answer.
+    Outcome.problem(context, 'Saving a story is not available yet.');
   }
 
   Future<void> _share(Announcement article) async {
-    final ShareOutcome outcome = await AppDependencies.of(context)
-        .shareService
+    final ShareOutcome outcome = await AppDependencies.of(context).shareService
         .share(
           ShareableContent(
             title: article.title,
@@ -153,6 +166,7 @@ class _NewsScreenState extends State<NewsScreen> {
         child: BalitaCanvas(
           frame: _frame(controller),
           articles: controller?.items ?? const <Announcement>[],
+          chips: _chips,
           selectedChip: _chip,
           scrollController: _scroll,
           onChip: _selectChip,
@@ -164,8 +178,8 @@ class _NewsScreenState extends State<NewsScreen> {
                 ? AppRoute.signIn.routeName
                 : AppRoute.notifications.routeName,
           ),
-          onBack: () => _selectChip('Lahat'),
-          onSeeAll: () => _selectChip('Lahat'),
+          onBack: () => _selectChip(BalitaChip.all),
+          onSeeAll: () => _selectChip(BalitaChip.all),
           onRetry: () => controller?.refresh(),
         ),
       ),

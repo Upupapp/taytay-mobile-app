@@ -100,8 +100,8 @@ class ScriptedAnnouncementRepository implements AnnouncementRepository {
       const Err<Announcement>(NotFoundFailure());
 
   @override
-  Future<Result<void>> saveArticle(String id) async =>
-      const Err<void>(ServerFailure(isTemporary: true));
+  Future<Result<List<NewsCategory>>> listCategories() async =>
+      const Ok<List<NewsCategory>>(NewsCategory.catalogue);
 
   // The feed never interacts with a post — TAB 20's detail screen does. These
   // decline so a stray call in a feed test would fail loudly.
@@ -479,10 +479,10 @@ void main() {
       final controller = NewsFeedController(repository: repository);
       addTearDown(controller.dispose);
 
-      await controller.applyCategory('Advisory');
+      await controller.applyCategory('advisory');
       await controller.applyCategory('Lahat');
 
-      expect(repository.requestedCategories, <String?>['Advisory', null]);
+      expect(repository.requestedCategories, <String?>['advisory', null]);
     });
   });
 
@@ -570,7 +570,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Pinned by Taytay LGU'), findsOneWidget);
+      expect(find.text('Pinned advisory'), findsOneWidget);
     });
 
     testWidgets('counts appear only when the office published them', (
