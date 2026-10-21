@@ -17,12 +17,13 @@ import 'taytay_icon.dart';
 /// both true (decision D3).
 ///
 /// Welcome and sign-in mockups draw this same solid white circle. In-app
-/// mockups draw a 44 px disc at 14% white with a white chevron, which reads as
-/// a bare chevron on the navy header. Those screens still use this circle.
+/// mockups draw a 44 px disc at 14% white with a white chevron. Pass
+/// [translucent] for that disc. The default stays the solid circle.
 class TaytayBackButton extends StatelessWidget {
   const TaytayBackButton({
     this.onPressed,
     this.light = false,
+    this.translucent = false,
     this.enabled = true,
     super.key,
   });
@@ -33,17 +34,26 @@ class TaytayBackButton extends StatelessWidget {
   /// White circle and navy glyph, for use on a navy header.
   final bool light;
 
+  /// 44 dp disc at 14% white with a white chevron. The S3 header uses this.
+  final bool translucent;
+
   /// False while a step is busy, so the control cannot be tapped twice.
   final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final fill = light
+    final Color fill = translucent
+        ? Colors.white.withValues(alpha: 0.14)
+        : light
         ? BrandColors.surfaceCard
         : scheme.surfaceContainerLowest;
     // Sign-in `.back` strokes the chevron in `#0B3D91` at 20 px.
-    final glyph = light ? BrandColors.taytayBlue : scheme.onSurface;
+    final Color glyph = translucent
+        ? Colors.white
+        : light
+        ? BrandColors.taytayBlue
+        : scheme.onSurface;
 
     // The ink well is the 48 dp target. A circle centred inside it is only
     // paint; putting the well on the circle made screen readers measure 44.
@@ -76,7 +86,7 @@ class TaytayBackButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: fill,
                   shape: BoxShape.circle,
-                  boxShadow: light
+                  boxShadow: light && !translucent
                       ? const <BoxShadow>[
                           BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
                           BoxShadow(
@@ -89,9 +99,15 @@ class TaytayBackButton extends StatelessWidget {
                 ),
                 child: Center(
                   child: TaytayIcon(
-                    icon: TaytayIcons.arrowLeft,
+                    icon: translucent
+                        ? TaytayIcons.chevronLeft
+                        : TaytayIcons.arrowLeft,
                     semanticLabel: 'Back',
-                    size: light ? 20 : IconSizes.sm,
+                    size: translucent
+                        ? 22
+                        : light
+                        ? 20
+                        : IconSizes.sm,
                     color: glyph,
                   ),
                 ),

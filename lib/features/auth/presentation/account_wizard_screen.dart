@@ -13,6 +13,7 @@ import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
@@ -396,9 +397,27 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           );
           return;
         case VerificationSubmitOutcome.continueVerified:
-          dependencies.session.applyVerificationTier('verified');
-          setState(() => _busy = false);
-          context.goNamed(AppRoute.home.routeName);
+          // Staff and admin accounts are also answered with 403. The session
+          // takes the tier GET /me reports, and home opens only when that
+          // tier is verified.
+          final me = await dependencies.residentProfileRepository
+              .loadOwnDetail();
+          if (!mounted) return;
+          var home = false;
+          if (me case Ok(:final value)) {
+            final String? tier = value.verificationTier;
+            if (tier != null && tier.isNotEmpty) {
+              dependencies.session.applyVerificationTier(tier);
+              home =
+                  AccessLevel.fromVerificationTier(tier) ==
+                  AccessLevel.verified;
+            }
+          }
+          setState(() {
+            _busy = false;
+            if (!home) _status = failure.residentMessage;
+          });
+          if (home) context.goNamed(AppRoute.home.routeName);
           return;
         case VerificationSubmitOutcome.opened:
         case VerificationSubmitOutcome.failed:

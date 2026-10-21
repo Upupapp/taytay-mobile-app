@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
+import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
@@ -59,6 +60,20 @@ Future<void> _mount(WidgetTester tester, Widget child) async {
       ),
     ),
   );
+  await tester.pump();
+  await _precache(tester);
+}
+
+Future<void> _precache(WidgetTester tester) async {
+  final images = find.byType(Image);
+  if (images.evaluate().isEmpty) return;
+  final context = tester.element(images.first);
+  for (final element in images.evaluate()) {
+    final widget = element.widget;
+    if (widget is Image) {
+      await tester.runAsync(() => precacheImage(widget.image, context));
+    }
+  }
   await tester.pump();
 }
 
@@ -158,7 +173,7 @@ class _GateReelState extends State<_GateReel>
           children: <Widget>[
             const GateBackdrop(),
             ModalBarrier(
-              color: Color.fromRGBO(136, 136, 156, 0.66 * t),
+              color: GateScrim.at(t),
               dismissible: false,
             ),
             Align(
@@ -187,15 +202,42 @@ void main() {
     if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);
 
+    const record = MockResidentRecordRepository.sampleRecord;
+    final String idType = idTypeLabel(MockResidentRecordRepository.sampleIdType);
     await _mount(
       tester,
-      const _SceneReel(initial: PendingStatusPage()),
+      _SceneReel(
+        initial: PendingStatusPage(
+          accountCreated: formatManilaStamp(
+            MockResidentRecordRepository.sampleAccountCreatedAt,
+          ),
+          email: record.email,
+          idType: idType,
+        ),
+      ),
     );
     final reel = tester.state<_SceneReelState>(find.byType(_SceneReel));
     var frame = await _hold(tester, out, 0, 8);
-    reel.show(const VerifiedStatusPage(onHome: _noop));
+    reel.show(
+      VerifiedStatusPage(
+        onHome: _noop,
+        verifiedOn: formatManilaDate(
+          MockResidentRecordRepository.sampleVerifiedAt,
+        ),
+        completeness: record.completeness,
+      ),
+    );
     frame = await _hold(tester, out, frame, 12);
-    reel.show(const NeedsCorrectionPage(onResubmit: _noop));
+    reel.show(
+      NeedsCorrectionPage(
+        onResubmit: _noop,
+        reason: record.rejectionReason,
+        idType: idType,
+        reviewedOn: formatManilaDate(
+          MockResidentRecordRepository.sampleReviewedAt,
+        ),
+      ),
+    );
     frame = await _hold(tester, out, frame, 12);
     expect(frame, greaterThan(20));
   });
@@ -224,6 +266,9 @@ void main() {
     Widget page(ProfileWizardStep step) => ProfileWizardPage(
       step: step,
       record: record,
+      submittedAt: step == ProfileWizardStep.submitted
+          ? MockResidentRecordRepository.sampleSubmittedAt
+          : null,
       onBack: _noop,
       onContinue: _noop,
       certified: true,

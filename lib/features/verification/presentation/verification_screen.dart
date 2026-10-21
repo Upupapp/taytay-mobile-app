@@ -5,9 +5,11 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../profile/domain/profile_fields.dart';
 import '../domain/field_correction_note.dart';
 import '../domain/verification_face.dart';
 import '../domain/verification_status_detail.dart';
+import 'manila_stamp.dart';
 import 's3_chrome.dart';
 import 'verification_controller.dart';
 import 'verification_status_pages.dart';
@@ -37,6 +39,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
   bool _started = false;
   String? _tier;
   String? _reason;
+  String _email = '';
+  String _accountCreated = '';
   bool _tierReady = false;
 
   @override
@@ -66,6 +70,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
       setState(() {
         _tier = tier;
         _reason = value.rejectionReason;
+        _email = value.valueOf(ResidentProfileField.emailAddress) ?? '';
+        _accountCreated = _stamp(value.createdAt);
         _tierReady = true;
       });
       return;
@@ -97,7 +103,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
         ? 'verified'
         : raw;
     final bool notes = status?.hasIssues ?? false;
-    var face = verificationFaceFor(tier, fieldNotes: notes && tier == 'rejected');
+    var face = verificationFaceFor(
+      tier,
+      fieldNotes: notes && tier == 'rejected',
+    );
     if (widget.preferPending &&
         face != VerificationFace.verified &&
         face != VerificationFace.needsCorrection) {
@@ -121,6 +130,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final face = _face;
+    final VerificationStatusDetail? status = _controller.status;
+    final String idLabel = idTypeLabel(status?.idType);
+    final String reviewed = _date(status?.reviewedAt);
     final Widget page = switch (face) {
       VerificationFace.verified => VerifiedStatusPage(
         onBack: () => _leave(context),
@@ -128,18 +140,21 @@ class _VerificationScreenState extends State<VerificationScreen> {
         onProfile: () => context.goNamed(AppRoute.residentProfile.routeName),
         onDigitalId: () => context.goNamed(AppRoute.digitalId.routeName),
         onMessage: () => context.goNamed(AppRoute.messagesInbox.routeName),
+        verifiedOn: reviewed,
       ),
       VerificationFace.pending => PendingStatusPage(
         onBack: () => _leave(context),
+        accountCreated: _accountCreated,
+        email: _email,
+        idType: idLabel,
       ),
       VerificationFace.needsCorrection => NeedsCorrectionPage(
         onBack: () => _leave(context),
-        reason: _reason ??
-            _controller.status?.residentGuidance ??
-            'Taytay LGU needs a correction before it can finish checking.',
+        reason: _reason ?? status?.residentGuidance ?? '',
         notes: _notes,
-        onResubmit: () =>
-            context.goNamed(AppRoute.residentProfile.routeName),
+        idType: idLabel,
+        reviewedOn: reviewed,
+        onResubmit: () => context.goNamed(AppRoute.residentProfile.routeName),
       ),
       VerificationFace.unverified => UnverifiedStatusPage(
         onBack: () => _leave(context),
@@ -165,15 +180,19 @@ class _VerificationScreenState extends State<VerificationScreen> {
               title: 'Verification status',
               subtitle: 'Bayan ng Taytay · Rizal',
             ),
-            Expanded(
-              child: Center(child: Text('Could not check your status')),
-            ),
+            Expanded(child: Center(child: Text('Could not check your status'))),
           ],
         ),
       );
     }
     return page;
   }
+
+  String _stamp(DateTime? instant) =>
+      instant == null ? '' : formatManilaStamp(instant);
+
+  String _date(DateTime? instant) =>
+      instant == null ? '' : formatManilaDate(instant);
 
   void _leave(BuildContext context) {
     if (context.canPop()) {

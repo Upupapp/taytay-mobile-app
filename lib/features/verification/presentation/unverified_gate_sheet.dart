@@ -9,10 +9,16 @@ import '../../../shared/widgets/taytay_icon.dart';
 import 's3_chrome.dart';
 
 /// Which verified-only action the gate is explaining.
-enum VerifiedOnlyAction {
-  digitalId,
-  message,
-  other,
+enum VerifiedOnlyAction { digitalId, message, other }
+
+/// Dark scrim over the whole messages page, header included.
+///
+/// Tuned so the navy band and the office cards read at the design's dimmed
+/// values. It covers the first 300 px, which is the header.
+abstract final class GateScrim {
+  static const Color color = Color.fromRGBO(0, 24, 84, 0.34);
+
+  static Color at(double t) => Color.fromRGBO(0, 24, 84, 0.34 * t);
 }
 
 /// `03-04`. The same sheet for every verified-only action.
@@ -25,6 +31,7 @@ class UnverifiedGateSheet extends StatelessWidget {
     required this.onContinue,
     required this.onDismiss,
     this.statusLabel = 'Pending review',
+    this.fill = false,
     super.key,
   });
 
@@ -32,6 +39,9 @@ class UnverifiedGateSheet extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onDismiss;
   final String statusLabel;
+
+  /// Stretch to the positioned frame used by the design preview.
+  final bool fill;
 
   static VerifiedOnlyAction actionFor(ResidentIntentKind intent) =>
       switch (intent) {
@@ -47,24 +57,35 @@ class UnverifiedGateSheet extends StatelessWidget {
     VerifiedOnlyAction.other => 'Verify your account to continue',
   };
 
+  String get _lead => switch (action) {
+    VerifiedOnlyAction.message =>
+      'Messaging municipal offices is for verified Taytay residents.',
+    VerifiedOnlyAction.digitalId =>
+      'Your Taytay digital ID is for verified Taytay residents.',
+    VerifiedOnlyAction.other => 'This action is for verified Taytay residents.',
+  };
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: BrandColors.surfaceCard,
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 28, 20, 28),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
-            const TaytayIcon(
-              icon: TaytayIcons.clock,
-              semanticLabel: '',
-              excludeSemantics: true,
+            const _DragHandle(),
+            const SizedBox(height: 26),
+            const IconTile(
+              icon: TaytayIcons.lock,
+              fill: BrandColors.chipAmberBg,
+              ink: BrandColors.warning,
               size: 28,
-              color: BrandColors.warning,
+              iconSize: 16,
             ),
-            const SizedBox(height: 29),
+            const SizedBox(height: 16),
             Text(
               title,
               textAlign: TextAlign.center,
@@ -72,70 +93,68 @@ class UnverifiedGateSheet extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontFamily: AppTypography.fontFamily,
-                fontSize: 18,
+                fontSize: 16,
                 fontWeight: FontWeight.w800,
                 height: 1.15,
                 color: BrandColors.textPrimary,
+                decoration: TextDecoration.none,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Text(
-              _bodyLead,
+              _lead,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontFamily: AppTypography.fontFamily,
-                fontSize: 15,
+                fontSize: 13,
                 fontWeight: FontWeight.w500,
-                height: 1.2,
+                height: 1.25,
                 color: BrandColors.textSecondary,
+                decoration: TextDecoration.none,
               ),
             ),
-            const SizedBox(height: 2),
-            Text.rich(
-              TextSpan(
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w500,
-                  height: 1.15,
-                  color: BrandColors.textSecondary,
-                ),
-                children: <InlineSpan>[
-                  const TextSpan(text: 'residents. Your verification is '),
-                  TextSpan(
-                    text: statusLabel,
-                    style: const TextStyle(
-                      color: BrandColors.warning,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            Transform.translate(
-              offset: const Offset(0, -1),
-              child: PrimaryButton(
-                label: 'Continue verification',
-                onPressed: onContinue,
-              ),
-            ),
-            const SizedBox(height: 16),
-            GestureDetector(
-              onTap: onDismiss,
-              behavior: HitTestBehavior.opaque,
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                child: Text(
-                  'Not now',
+            const SizedBox(height: 4),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: <Widget>[
+                const Text(
+                  'Your verification is',
                   style: TextStyle(
                     fontFamily: AppTypography.fontFamily,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    height: 1.1,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    height: 1.25,
                     color: BrandColors.textSecondary,
+                    decoration: TextDecoration.none,
                   ),
+                ),
+                StatusChip(label: statusLabel, tone: StatusTone.pending),
+              ],
+            ),
+            const SizedBox(height: 8),
+            PrimaryButton(
+              label: 'Continue verification',
+              onPressed: onContinue,
+            ),
+            const SizedBox(height: 2),
+            TextButton(
+              onPressed: onDismiss,
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, A11y.minTapTarget),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                foregroundColor: BrandColors.textSecondary,
+              ),
+              child: const Text(
+                'Not now',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  height: 1.2,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ),
@@ -144,17 +163,29 @@ class UnverifiedGateSheet extends StatelessWidget {
       ),
     );
   }
-
-  String get _bodyLead => switch (action) {
-    VerifiedOnlyAction.message =>
-      'Messaging municipal offices is for verified Taytay',
-    VerifiedOnlyAction.digitalId =>
-      'Your Taytay digital ID is for verified Taytay',
-    VerifiedOnlyAction.other => 'This action is for verified Taytay',
-  };
 }
 
-/// The messages list behind `03-04`, dimmed, for the side-by-side.
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: 12,
+      child: Center(
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: Color(0xFFD6DCE8),
+            borderRadius: BorderRadius.all(Radius.circular(2)),
+          ),
+          child: SizedBox(width: 36, height: 4),
+        ),
+      ),
+    );
+  }
+}
+
+/// The messages list behind `03-04`: office cards under the navy header.
 class GateBackdrop extends StatelessWidget {
   const GateBackdrop({super.key});
 
@@ -167,14 +198,14 @@ class GateBackdrop extends StatelessWidget {
           const S3Header(title: 'Messages', subtitle: 'Municipal offices'),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 34, 16, 16),
+              padding: s3PagePadding,
               children: const <Widget>[
-                _OfficeRow(
+                _OfficeCard(
                   title: "Municipal Treasurer's Office",
                   detail: 'Real property tax, payments',
                 ),
-                SizedBox(height: 38),
-                _OfficeRow(
+                SizedBox(height: s3CardGap),
+                _OfficeCard(
                   title: 'Business Permits & Licensing Office',
                   detail: 'Permits and renewals',
                 ),
@@ -187,24 +218,24 @@ class GateBackdrop extends StatelessWidget {
   }
 }
 
-class _OfficeRow extends StatelessWidget {
-  const _OfficeRow({required this.title, required this.detail});
+class _OfficeCard extends StatelessWidget {
+  const _OfficeCard({required this.title, required this.detail});
 
   final String title;
   final String detail;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+    return S3Card(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const TaytayIcon(
+          const IconTile(
             icon: TaytayIcons.landmark,
-            semanticLabel: '',
-            excludeSemantics: true,
-            color: BrandColors.taytayBlue,
+            fill: BrandColors.chipBlueBg,
+            ink: BrandColors.taytayBlue,
+            size: 44,
+            iconSize: 22,
+            radius: 12,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -215,22 +246,34 @@ class _OfficeRow extends StatelessWidget {
                   title,
                   style: const TextStyle(
                     fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
+                    height: 1.25,
                     color: BrandColors.textPrimary,
+                    decoration: TextDecoration.none,
                   ),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   detail,
                   style: const TextStyle(
                     fontFamily: AppTypography.fontFamily,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
+                    height: 1.25,
                     color: BrandColors.textSecondary,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ],
             ),
+          ),
+          const TaytayIcon(
+            icon: TaytayIcons.chevronRight,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: 18,
+            color: BrandColors.chevron,
           ),
         ],
       ),
@@ -238,28 +281,35 @@ class _OfficeRow extends StatelessWidget {
   }
 }
 
-/// `03-04` composed the way the design is drawn: list, then the sheet.
+/// `03-04` composed the way the design is drawn: dimmed list, then the sheet.
+///
+/// The sheet's top edge is the design's y = 1579 device px.
 class UnverifiedGatePreview extends StatelessWidget {
   const UnverifiedGatePreview({super.key});
 
+  static const double sheetTop = 1579 / 3;
+
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return const Stack(
       children: <Widget>[
-        const GateBackdrop(),
-        const ModalBarrier(
-          color: Color.fromRGBO(136, 136, 156, 0.66),
-          dismissible: false,
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
+        GateBackdrop(),
+        ModalBarrier(color: GateScrim.color, dismissible: false),
+        Positioned(
+          top: sheetTop,
+          left: 0,
+          right: 0,
+          bottom: 0,
           child: UnverifiedGateSheet(
             action: VerifiedOnlyAction.message,
-            onContinue: () {},
-            onDismiss: () {},
+            onContinue: _noop,
+            onDismiss: _noop,
+            fill: true,
           ),
         ),
       ],
     );
   }
 }
+
+void _noop() {}

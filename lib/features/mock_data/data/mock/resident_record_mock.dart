@@ -16,6 +16,20 @@ class MockResidentRecordRepository implements ResidentRecordRepository {
 
   ResidentRecord _record = sampleRecord;
 
+  /// Fixture instants for the design stamps. Production reads the same
+  /// fields from `/me` and `/me/verification-requests/current`.
+  static final DateTime sampleAccountCreatedAt = DateTime.utc(
+    2026,
+    10,
+    20,
+    12,
+    12,
+  );
+  static final DateTime sampleSubmittedAt = DateTime.utc(2026, 10, 20, 12, 40);
+  static final DateTime sampleReviewedAt = DateTime.utc(2026, 10, 21);
+  static final DateTime sampleVerifiedAt = DateTime.utc(2026, 10, 22);
+  static const String sampleIdType = 'philid';
+
   static const ResidentRecord sampleRecord = ResidentRecord(
     givenName: 'Juana',
     middleName: 'Santos',

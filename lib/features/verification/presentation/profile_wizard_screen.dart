@@ -6,6 +6,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../domain/resident_record.dart';
 import '../domain/resident_record_repository.dart';
+import '../domain/verification_repository.dart';
 import 'profile_wizard_page.dart';
 
 /// Loads the resident's own profile for one wizard step.
@@ -25,6 +26,7 @@ class ProfileWizardScreen extends StatefulWidget {
 
 class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
   ResidentRecord? _record;
+  DateTime? _submittedAt;
   Object? _failureMessage;
   bool _certified = true;
   bool _started = false;
@@ -53,10 +55,21 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
     }
     final result = await repository.load();
     if (!mounted) return;
+    DateTime? submitted;
+    if (widget.step == ProfileWizardStep.submitted &&
+        result is Ok<ResidentRecord>) {
+      final VerificationRepository verification = AppDependencies.of(
+        context,
+      ).verificationRepository;
+      final status = await verification.loadOwnStatusDetail();
+      if (!mounted) return;
+      if (status case Ok(:final value)) submitted = value.submittedAt;
+    }
     switch (result) {
       case Ok(:final value):
         setState(() {
           _record = value;
+          _submittedAt = submitted;
           _failureMessage = null;
         });
       case Err(:final failure):
@@ -140,6 +153,7 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
     return ProfileWizardPage(
       step: widget.step,
       record: record,
+      submittedAt: _submittedAt,
       certified: _certified,
       onCertified: (bool value) => setState(() => _certified = value),
       onBack: () {

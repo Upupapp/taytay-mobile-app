@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -19,6 +20,7 @@ import 'package:taytay_resident/features/verification/domain/verification_face.d
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
+import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
@@ -168,6 +170,28 @@ void main() {
         AccessLevel.fromVerificationTier('gold'),
         AccessLevel.unverified,
       );
+    });
+
+    test('a Manila stamp keeps the design clock', () {
+      expect(
+        formatManilaStamp(DateTime.utc(2026, 10, 20, 12, 12)),
+        'Oct 20, 2026 · 8:12 PM',
+      );
+      expect(
+        formatManilaStamp(DateTime.utc(2026, 10, 20, 12, 40)),
+        'Oct 20, 2026 · 8:40 PM',
+      );
+      expect(formatManilaDate(DateTime.utc(2026, 10, 22)), 'Oct 22, 2026');
+      expect(idTypeLabel('philid'), 'PhilSys National ID');
+    });
+
+    test('a 403 does not stamp verified without the server tier', () {
+      final source = File(
+        'lib/features/auth/presentation/account_wizard_screen.dart',
+      ).readAsStringSync();
+      expect(source, isNot(contains("applyVerificationTier('verified')")));
+      expect(source, contains('loadOwnDetail'));
+      expect(source, contains('AccessLevel.fromVerificationTier'));
     });
 
     test('409 opens pending review and 403 continues as verified', () {

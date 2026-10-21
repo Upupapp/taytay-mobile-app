@@ -15,10 +15,7 @@ enum VerificationFace { pending, verified, needsCorrection, unverified }
 /// been named as rejected. An unknown tier never becomes verified, and it
 /// does not become a correction task either — a word this build does not know
 /// is the unverified face.
-VerificationFace verificationFaceFor(
-  String? tier, {
-  bool fieldNotes = false,
-}) {
+VerificationFace verificationFaceFor(String? tier, {bool fieldNotes = false}) {
   if (AccessLevel.fromVerificationTier(tier) == AccessLevel.verified) {
     return VerificationFace.verified;
   }

@@ -152,19 +152,29 @@ class KycApiRepository implements VerificationRepository {
 
     final Object? raw = map['status'];
     final Object? message = map['message'];
+    final Object? notes = map['notes'];
     final Object? submittedAt = map['submitted_at'] ?? map['created_at'];
     final Object? canEdit = map['can_edit'];
+    final Object? idType = map['id_type'];
+    final Object? reviewedAt = map['reviewed_at'];
+    final String? guidance = message is String && message.trim().isNotEmpty
+        ? message.trim()
+        : (notes is String && notes.trim().isNotEmpty ? notes.trim() : null);
 
     return VerificationStatusDetail(
       stage: ResidentVerificationStage.fromAttemptState(
         VerificationAttemptState.parse(raw is String ? raw : null),
       ),
       rawState: raw is String ? raw : '',
-      residentGuidance: message is String && message.trim().isNotEmpty
-          ? message.trim()
-          : null,
+      residentGuidance: guidance,
       submittedAt: submittedAt is String
           ? DateTime.tryParse(submittedAt)?.toUtc()
+          : null,
+      idType: idType is String && idType.trim().isNotEmpty
+          ? idType.trim()
+          : null,
+      reviewedAt: reviewedAt is String
+          ? DateTime.tryParse(reviewedAt)?.toUtc()
           : null,
       // Only a real boolean counts. A missing field means "the server did not
       // say" and must stay null so the fallback applies; coercing it to false

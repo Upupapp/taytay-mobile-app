@@ -32,6 +32,7 @@ class ResidentProfileDetail {
     this.rejectionReason,
     this.closed = false,
     this.closedAt,
+    this.createdAt,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -66,6 +67,9 @@ class ResidentProfileDetail {
   final bool closed;
 
   final DateTime? closedAt;
+
+  /// `created_at` on `GET /me`. When the account was opened.
+  final DateTime? createdAt;
 
   /// Who may change [field], preferring the office's answer.
   ///

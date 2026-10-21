@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
+import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
@@ -60,6 +61,7 @@ Future<void> _paint(WidgetTester tester, Widget child, String path) async {
     ),
   );
   await tester.pump();
+  await _precache(tester);
 
   final boundary =
       tester.renderObject(find.byKey(const ValueKey<String>('s3-frame')))
@@ -76,6 +78,19 @@ Future<void> _paint(WidgetTester tester, Widget child, String path) async {
   }
 }
 
+Future<void> _precache(WidgetTester tester) async {
+  final images = find.byType(Image);
+  if (images.evaluate().isEmpty) return;
+  final context = tester.element(images.first);
+  for (final element in images.evaluate()) {
+    final widget = element.widget;
+    if (widget is Image) {
+      await tester.runAsync(() => precacheImage(widget.image, context));
+    }
+  }
+  await tester.pump();
+}
+
 void _noop() {}
 
 void main() {
@@ -86,15 +101,42 @@ void main() {
     if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);
     const record = MockResidentRecordRepository.sampleRecord;
+    final String created = formatManilaStamp(
+      MockResidentRecordRepository.sampleAccountCreatedAt,
+    );
+    final String idType = idTypeLabel(MockResidentRecordRepository.sampleIdType);
     final frames = <(String, Widget)>[
-      ('03-01', const PendingStatusPage(onBack: _noop)),
+      (
+        '03-01',
+        PendingStatusPage(
+          onBack: _noop,
+          accountCreated: created,
+          email: record.email,
+          idType: idType,
+        ),
+      ),
       (
         '03-02',
-        const VerifiedStatusPage(onBack: _noop, onHome: _noop),
+        VerifiedStatusPage(
+          onBack: _noop,
+          onHome: _noop,
+          verifiedOn: formatManilaDate(
+            MockResidentRecordRepository.sampleVerifiedAt,
+          ),
+          completeness: record.completeness,
+        ),
       ),
       (
         '03-03',
-        const NeedsCorrectionPage(onBack: _noop, onResubmit: _noop),
+        NeedsCorrectionPage(
+          onBack: _noop,
+          onResubmit: _noop,
+          reason: record.rejectionReason,
+          idType: idType,
+          reviewedOn: formatManilaDate(
+            MockResidentRecordRepository.sampleReviewedAt,
+          ),
+        ),
       ),
       ('03-04', const UnverifiedGatePreview()),
       (
@@ -135,9 +177,10 @@ void main() {
       ),
       (
         '03-09',
-        const ProfileWizardPage(
+        ProfileWizardPage(
           step: ProfileWizardStep.submitted,
           record: record,
+          submittedAt: MockResidentRecordRepository.sampleSubmittedAt,
           onBack: _noop,
           onContinue: _noop,
         ),

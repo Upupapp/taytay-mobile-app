@@ -31,9 +31,9 @@ Tokens, the Sign in pill, the back button, and the empty state are at or under 2
 
 ### Back control
 
-The control stays a 44 dp circle inside a 48 dp target (`TaytayBackButton`). In-app mockups draw that circle as a 14% white disc with a white chevron (class `hb`), which reads as a bare chevron on navy. Those screens still use the solid white circle:
+The control stays a 44 dp circle inside a 48 dp target (`TaytayBackButton`). In-app mockups draw that circle as a 14% white disc with a white chevron (class `hb`), which reads as a bare chevron on navy. S3 verification screens `03-01` through `03-09` use that translucent disc. The screens below still use the solid white circle:
 
-03-01 Verification-Status-Pending, 03-02 Verified, 03-03 Needs-Correction, 03-04 Unverified-Gate, 03-05 Resident-Profile-Overview, 03-06 Personal-Info, 03-07 Household-Address, 03-08 Review-Submit, 03-09 Profile-Submitted, 04-04 Home Hotlines, 04-08 Home Notifications, 05-02 Office-Detail, 05-03 Message-Office-Compose, 05-04 Message-Thread, 05-05 Search-Empty, 05-08 Office-MSWDO, 05-09 Office-Treasurer, 05-10 Office-Assessor, 05-11 Office-MDRRMO, 05-12 Office-PESO, 05-13 Office-PIO, 05-14 Office-Youth-Development, 05-15 Office-Health-Office, 05-16 Message-Sent, 05-17 Compose-MSWDO, 05-18 Compose-Treasury, 05-19 Compose-Assessor, 05-20 Compose-PESO, 05-21 Compose-PIO, 05-22 Compose-TYDO, 05-23 Compose-Health-Office, 06-02 Article-Detail, 06-03 Advisories-Filter, 06-04 Empty-Category, 06-06 Article-RPT-Advisory, 06-07 Article-BOSS-2026, 06-08 Article-SMILE-SAFE, 07-02 Service-Info-Page, 07-03 Social-Services-Centre, 07-04 Programme-Featured, 07-06 Service-PWD, 07-07 Service-Solo-Parent, 07-08 Service-AICS, 07-09 Service-Educational, 07-10 Service-Women-Children, 07-11 Service-PESO-Jobs, 07-12 Service-Youth, 08-02 Messages-Inbox, 08-03 Edit-Profile, 08-04 Settings-Privacy, 08-05 Photo-Credits-About, 08-06 Messages-Empty, 08-07 Thread-MSWDO, 08-08 Thread-Treasurer, 08-09 Privacy-Notice, 08-10 Photo-Credits-Office-Banners.
+04-04 Home Hotlines, 04-08 Home Notifications, 05-02 Office-Detail, 05-03 Message-Office-Compose, 05-04 Message-Thread, 05-05 Search-Empty, 05-08 Office-MSWDO, 05-09 Office-Treasurer, 05-10 Office-Assessor, 05-11 Office-MDRRMO, 05-12 Office-PESO, 05-13 Office-PIO, 05-14 Office-Youth-Development, 05-15 Office-Health-Office, 05-16 Message-Sent, 05-17 Compose-MSWDO, 05-18 Compose-Treasury, 05-19 Compose-Assessor, 05-20 Compose-PESO, 05-21 Compose-PIO, 05-22 Compose-TYDO, 05-23 Compose-Health-Office, 06-02 Article-Detail, 06-03 Advisories-Filter, 06-04 Empty-Category, 06-06 Article-RPT-Advisory, 06-07 Article-BOSS-2026, 06-08 Article-SMILE-SAFE, 07-02 Service-Info-Page, 07-03 Social-Services-Centre, 07-04 Programme-Featured, 07-06 Service-PWD, 07-07 Service-Solo-Parent, 07-08 Service-AICS, 07-09 Service-Educational, 07-10 Service-Women-Children, 07-11 Service-PESO-Jobs, 07-12 Service-Youth, 08-02 Messages-Inbox, 08-03 Edit-Profile, 08-04 Settings-Privacy, 08-05 Photo-Credits-About, 08-06 Messages-Empty, 08-07 Thread-MSWDO, 08-08 Thread-Treasurer, 08-09 Privacy-Notice, 08-10 Photo-Credits-Office-Banners.
 
 Welcome scenes `w2` and `w3` draw a solid circle. Onboarding is a navigation root, so the app does not put a back button on it.
 
@@ -126,27 +126,27 @@ The mismatch table above is the review capture at 1170×2532, full frame, CIE76 
 
 ## S3 Verification
 
-S3 is not approved. This section records the capture. It does not record approval words.
+S3 is not approved. This section records the capture after the structure rebuild. It does not record approval words.
 
-Status screens take the server tier through `AccessLevel.fromVerificationTier` and fail closed. Only the string `verified` is the verified face. `pending` is the pending face. `rejected` is needs-correction. Anything else, including an unknown tier, is unverified. A 409 from `POST /me/verification-requests` opens the pending-review screen. A 403 continues into the app as verified. The profile wizard loads its own record and does not write it onto the session. `03-04` is the sheet for every verified-only action, including Message and Digital ID.
+Status screens take the server tier through `AccessLevel.fromVerificationTier` and fail closed. Only the string `verified` is the verified face. `pending` is the pending face. `rejected` is needs-correction. Anything else, including an unknown tier, is unverified. A 409 from `POST /me/verification-requests` opens the pending-review screen. A 403 does not stamp the session verified. The wizard fetches `GET /me`, applies the server tier, and goes home only when that tier is verified. The profile wizard loads its own record and does not write it onto the session. Dates, the email, and the ID type come from `/me` and `/me/verification-requests/current`. `03-04` is the sheet for every verified-only action, including Message and Digital ID. The header is the translucent back disc and has no bell. `lib/features/verification` contains no `Transform.translate`.
 
-The line bar is the reviewer's dark-run rule: mean channel under 110, columns 60–1110, y above 330, minimum run 8. Line counts match, and every paired line is within 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`.
+The line measure is the reviewer's dark-run rule: any pixel with mean channel under 110, columns 60–1110, y above 330, minimum run 8. Max deviation is the larger of the two nearest-neighbour distances, so an extra build run counts. Where the counts match, that figure is also the in-order pairing. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`. Counts do not all match, and no screen is inside 2 device px. That is the measurement, not a bar this capture clears.
 
-| Screen | Lines | Max deviation | Mismatch |
+| Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
-| 03-01 Pending | 20 / 20 | 2 | 8.12% (240483/2962440) |
-| 03-02 Verified | 15 / 15 | 2 | 7.00% (207299/2962440) |
-| 03-03 Needs correction | 12 / 12 | 0 | 11.32% (335279/2962440) |
-| 03-04 Unverified gate | 8 / 8 | 2 | 21.57% (638929/2962440) |
-| 03-05 Profile overview | 15 / 15 | 2 | 6.98% (206880/2962440) |
-| 03-06 Personal info | 14 / 14 | 2 | 6.65% (197117/2962440) |
-| 03-07 Household address | 16 / 16 | 2 | 7.32% (216768/2962440) |
-| 03-08 Review | 15 / 15 | 2 | 6.88% (203929/2962440) |
-| 03-09 Submitted | 11 / 11 | 2 | 6.51% (192935/2962440) |
+| 03-01 Pending | 19 / 20 | 43 | 8.02% (237657/2962440) |
+| 03-02 Verified | 14 / 15 | 69 | 7.77% (230312/2962440) |
+| 03-03 Needs correction | 16 / 12 | 242 | 9.86% (292107/2962440) |
+| 03-04 Unverified gate | 10 / 8 | 107 | 8.59% (254558/2962440) |
+| 03-05 Profile overview | 11 / 15 | 79 | 12.76% (377887/2962440) |
+| 03-06 Personal info | 14 / 14 | 37 | 7.70% (228212/2962440) |
+| 03-07 Household address | 17 / 16 | 152 | 9.84% (291583/2962440) |
+| 03-08 Review | 15 / 15 | 29 | 8.06% (238788/2962440) |
+| 03-09 Submitted | 11 / 11 | 35 | 6.03% (178688/2962440) |
 
-`03-04` is the high mismatch. The scrim is light enough that the dimmed office list does not add dark runs, so only the two backdrop titles and the sheet lines count. The rest of the frame is that scrim against the design's dimmed page. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG.
+The one-way figure (each design run to its nearest build run) is lower where the build has extra runs: 03-03 is 68, 03-04 is 43, 03-07 is 57. `03-04`'s sheet top is the design's y = 1579, and the first 300 px mismatch is 9.12%. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG.
 
-Recordings are 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4`, `s3-gate.mp4`, `s3-wizard.mp4`. `flutter analyze` was clean. `flutter test` passed 1589 tests, with 5 skipped (the recording tag).
+Recordings are 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4`, `s3-gate.mp4`, `s3-wizard.mp4`. `flutter analyze` was clean. `flutter test` passed 1593 tests, with 5 skipped (the recording tag).
 
 ## Contract gaps after the Node OpenAPI
 

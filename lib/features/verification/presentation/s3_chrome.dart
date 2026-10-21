@@ -10,31 +10,34 @@ import '../../../shared/widgets/taytay_back_button.dart';
 import '../../../shared/widgets/taytay_headers.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 
-/// In-app header shared by the verification and profile screens.
+/// Horizontal inset that puts a card on the design's x = 51 device px.
+const EdgeInsets s3PagePadding = EdgeInsets.fromLTRB(17, 15, 17, 16);
+
+/// Gap between stacked cards. 14 logical px is 42 device px.
+const double s3CardGap = 14;
+
+/// In-app header for the verification and profile screens.
 ///
-/// Height is 104 logical px, which is the design's header band at 390×844 @3×.
-/// The line bar starts below it.
+/// The band is 104 logical px. The back control is the design's translucent
+/// disc: a 44 dp circle at 14% white, with a white chevron, inside a 48 dp
+/// target. These screens have no bell.
 class S3Header extends StatelessWidget {
   const S3Header({
     required this.title,
     required this.subtitle,
     this.onBack,
-    this.showBell = true,
     super.key,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onBack;
-  final bool showBell;
 
   static const double height = 104;
 
   @override
   Widget build(BuildContext context) {
     const gradient = BrandGradients.inAppHeader;
-    // 104 at the default scale, which is the design band. A larger text
-    // scale grows the band so the two lines still fit; the body scrolls.
     final double scale = MediaQuery.textScalerOf(context).scale(1);
     final double band = math.max(height, 52 + 36 * scale);
     return SizedBox(
@@ -48,10 +51,10 @@ class S3Header extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 44, 8, 8),
+          padding: const EdgeInsets.fromLTRB(6, 44, 16, 8),
           child: Row(
             children: <Widget>[
-              TaytayBackButton(onPressed: onBack, light: true),
+              TaytayBackButton(onPressed: onBack, translucent: true),
               const SizedBox(width: 8),
               const FramedSeal(diameter: 36, shadowBlur: 8, shadowOffsetY: 2),
               const SizedBox(width: 10),
@@ -66,6 +69,7 @@ class S3Header extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.headerTitle.copyWith(
                         color: Colors.white,
+                        decoration: TextDecoration.none,
                       ),
                     ),
                     Text(
@@ -74,24 +78,12 @@ class S3Header extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: AppTypography.headerSubtitle.copyWith(
                         color: Colors.white.withValues(alpha: 0.8),
+                        decoration: TextDecoration.none,
                       ),
                     ),
                   ],
                 ),
               ),
-              if (showBell)
-                const SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(
-                    child: TaytayIcon(
-                      icon: TaytayIcons.bell,
-                      semanticLabel: 'Notifications',
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -100,13 +92,77 @@ class S3Header extends StatelessWidget {
   }
 }
 
-/// Amber, green, or red status chip from the designs.
-class StatusChip extends StatelessWidget {
-  const StatusChip({
-    required this.label,
-    required this.tone,
+/// White card. Radius 16, the design's card shadow.
+class S3Card extends StatelessWidget {
+  const S3Card({
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
     super.key,
   });
+
+  final Widget child;
+  final EdgeInsets padding;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BrandColors.surfaceCard,
+        borderRadius: BorderRadius.circular(Radii.lg),
+        boxShadow: TaytayShadows.card,
+      ),
+      child: Padding(padding: padding, child: child),
+    );
+  }
+}
+
+/// Coloured disc or rounded tile behind an icon.
+class IconTile extends StatelessWidget {
+  const IconTile({
+    required this.icon,
+    required this.fill,
+    required this.ink,
+    this.size = 40,
+    this.iconSize,
+    this.radius,
+    super.key,
+  });
+
+  final IconData icon;
+  final Color fill;
+  final Color ink;
+  final double size;
+  final double? iconSize;
+
+  /// Null paints a circle. A value paints a rounded square.
+  final double? radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final double? corner = radius;
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: fill,
+        shape: corner == null ? BoxShape.circle : BoxShape.rectangle,
+        borderRadius: corner == null ? null : BorderRadius.circular(corner),
+      ),
+      child: TaytayIcon(
+        icon: icon,
+        semanticLabel: '',
+        excludeSemantics: true,
+        size: iconSize ?? size * 0.46,
+        color: ink,
+      ),
+    );
+  }
+}
+
+/// Amber, green, or red status chip from the designs.
+class StatusChip extends StatelessWidget {
+  const StatusChip({required this.label, required this.tone, super.key});
 
   final String label;
   final StatusTone tone;
@@ -114,9 +170,16 @@ class StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (Color ink, Color fill) = switch (tone) {
-      StatusTone.pending => (BrandColors.warning, const Color(0xFFFFF4D6)),
-      StatusTone.verified => (BrandColors.success, const Color(0xFFE5F6EE)),
-      StatusTone.correction => (BrandColors.danger, const Color(0xFFFDECEC)),
+      StatusTone.pending => (BrandColors.warning, BrandColors.chipAmberBg),
+      StatusTone.verified => (BrandColors.success, BrandColors.chipGreenBg),
+      StatusTone.correction => (BrandColors.danger, BrandColors.chipRedBg),
+      StatusTone.neutral => (BrandColors.textSecondary, BrandColors.chipGreyBg),
+    };
+    final IconData icon = switch (tone) {
+      StatusTone.verified => TaytayIcons.badgeCheck,
+      StatusTone.correction => TaytayIcons.triangleAlert,
+      StatusTone.neutral => TaytayIcons.circleCheck,
+      StatusTone.pending => TaytayIcons.clock,
     };
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -129,9 +192,7 @@ class StatusChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             TaytayIcon(
-              icon: tone == StatusTone.verified
-                  ? TaytayIcons.badgeCheck
-                  : TaytayIcons.clock,
+              icon: icon,
               semanticLabel: '',
               excludeSemantics: true,
               size: 14,
@@ -140,7 +201,10 @@ class StatusChip extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: AppTypography.headerSubtitle.copyWith(color: ink),
+              style: AppTypography.headerSubtitle.copyWith(
+                color: ink,
+                decoration: TextDecoration.none,
+              ),
             ),
           ],
         ),
@@ -150,122 +214,211 @@ class StatusChip extends StatelessWidget {
 }
 
 enum StatusTone {
+  // Chip colour only. The words on the chip are the label string.
   pending,
   verified,
   correction,
+  neutral,
 }
 
-/// One row in a progress list.
-///
-/// A dark icon shares the title's run. The detail sits below that icon so it
-/// is its own run. A light icon stays above the line-bar threshold, which is
-/// how the later steps on `03-01` and `03-09` keep a run that starts on the
-/// title rather than on the glyph.
-class ProgressRow extends StatelessWidget {
-  const ProgressRow({
+enum TimelineTone {
+  // Disc colour only. The step title is a separate string.
+  done,
+  current,
+  upcoming,
+}
+
+/// One step in a filled timeline.
+class TimelineStep {
+  const TimelineStep({
     required this.icon,
     required this.title,
-    required this.detail,
-    this.iconDark = true,
-    this.showDetail = true,
-    this.bottom = 8,
-    this.titleNudge = 4,
-    this.rowShift = 0,
-    this.titleShift = 0,
-    this.detailShift = 0,
-    super.key,
+    required this.tone,
+    this.detail = '',
   });
 
   final IconData icon;
   final String title;
   final String detail;
+  final TimelineTone tone;
+}
 
-  /// When false the glyph is tinted so it does not open a dark run.
-  final bool iconDark;
-  final bool showDetail;
-  final double bottom;
+/// Filled discs, a connecting stroke, and the step's title and detail.
+class Timeline extends StatelessWidget {
+  const Timeline({required this.steps, super.key});
 
-  /// Extra logical px before a light title, so its run starts on the design line.
-  final double titleNudge;
+  final List<TimelineStep> steps;
 
-  /// Visual shift of the icon and title. Does not move the detail or the next row.
-  final double rowShift;
+  static const Color _amber = Color(0xFFE0A400);
+  static const Color _future = Color(0xFFAEB6C8);
 
-  /// Visual shift of the title ink only.
-  final double titleShift;
-
-  /// Visual shift of the detail ink only.
-  final double detailShift;
+  static (Color fill, Color ink) _paint(TimelineTone tone) => switch (tone) {
+    TimelineTone.done => (BrandColors.success, Colors.white),
+    TimelineTone.current => (_amber, Colors.white),
+    TimelineTone.upcoming => (_future, Colors.white),
+  };
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = iconDark
-        ? BrandColors.success
-        : BrandColors.textMuted.withValues(alpha: 0.55);
+    return Column(
+      children: <Widget>[
+        for (var i = 0; i < steps.length; i++)
+          _TimelineRow(step: steps[i], last: i == steps.length - 1),
+      ],
+    );
+  }
+}
+
+class _TimelineRow extends StatelessWidget {
+  const _TimelineRow({required this.step, required this.last});
+
+  final TimelineStep step;
+  final bool last;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color fill, Color ink) = Timeline._paint(step.tone);
+    // Light rail. A dark stroke would join the discs into one run.
+    const Color line = Color(0xFFE7EBF3);
+    // Disc is 24 logical (the design's ~74 device px). The detail starts at
+    // the disc's bottom, so the rail and the detail stay separate runs.
     return Padding(
-      padding: EdgeInsets.only(bottom: bottom),
+      padding: EdgeInsets.only(bottom: last ? 0 : 2),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Transform.translate(
-            offset: Offset(0, rowShift),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                TaytayIcon(
-                  icon: icon,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 22,
-                  color: ink,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Padding(
-                    // A light glyph does not open a run, so the title ink has to
-                    // sit where the design's title run starts.
-                    padding: EdgeInsets.only(top: iconDark ? 0 : titleNudge),
-                    child: Transform.translate(
-                      offset: Offset(0, titleShift),
-                      child: Text(
-                        title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          height: 1.15,
-                          color: BrandColors.textPrimary,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (showDetail)
-            Transform.translate(
-              offset: Offset(0, detailShift),
-              child: Padding(
-                padding: const EdgeInsets.only(left: 34, top: 3),
+          Row(
+            children: <Widget>[
+              IconTile(
+                icon: step.icon,
+                fill: fill,
+                ink: ink,
+                size: 24,
+                iconSize: 13,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
                 child: Text(
-                  detail,
+                  step.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontFamily: AppTypography.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                     height: 1.15,
-                    color: BrandColors.textSecondary,
+                    color: BrandColors.textPrimary,
+                    decoration: TextDecoration.none,
                   ),
+                ),
+              ),
+            ],
+          ),
+          if (step.detail.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 36, top: 2),
+              child: Text(
+                step.detail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  height: 1.15,
+                  color: BrandColors.textSecondary,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ),
+          if (!last)
+            const Padding(
+              padding: EdgeInsets.only(left: 11),
+              child: SizedBox(
+                width: 2,
+                height: 4,
+                child: ColoredBox(color: line),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A green check-circle with a title and an optional detail.
+class CheckLine extends StatelessWidget {
+  const CheckLine({
+    required this.title,
+    this.detail = '',
+    this.onTap,
+    super.key,
+  });
+
+  final String title;
+  final String detail;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // 24 dp disc beside the title. The detail sits under the disc so the
+    // green fill does not join the two lines into one dark run. A tappable
+    // row still offers a 48 dp target.
+    final Widget row = ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: onTap == null ? 44 : A11y.minTapTarget,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const IconTile(
+                icon: TaytayIcons.check,
+                fill: BrandColors.success,
+                ink: Colors.white,
+                size: 24,
+                iconSize: 13,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    height: 1.15,
+                    color: BrandColors.textPrimary,
+                    decoration: TextDecoration.none,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (detail.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 36, top: 2),
+              child: Text(
+                detail,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  height: 1.15,
+                  color: BrandColors.textSecondary,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ),
         ],
       ),
     );
+    if (onTap == null) return row;
+    return InkWell(onTap: onTap, child: row);
   }
 }

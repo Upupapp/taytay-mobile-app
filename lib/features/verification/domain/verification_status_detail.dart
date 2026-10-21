@@ -272,6 +272,8 @@ class VerificationStatusDetail {
     this.manualReviewAvailable = false,
     this.submittedAt,
     this.canEdit,
+    this.idType,
+    this.reviewedAt,
   });
 
   /// Nothing known yet — the initial state before a load completes.
@@ -323,6 +325,13 @@ class VerificationStatusDetail {
   final bool manualReviewAvailable;
 
   final DateTime? submittedAt;
+
+  /// `id_type` on the current verification request. A kind of document,
+  /// never the document number.
+  final String? idType;
+
+  /// When the office recorded a decision. A timestamp, not a reviewer.
+  final DateTime? reviewedAt;
 
   bool get isVerified => stage == ResidentVerificationStage.verified;
 
