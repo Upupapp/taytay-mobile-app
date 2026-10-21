@@ -32,4 +32,19 @@ class PlatformExternalLinkService implements ExternalLinkService {
       return LinkOutcome.unavailable;
     }
   }
+
+  @override
+  Future<LinkOutcome> dial(String number) async {
+    final Uri? uri = ExternalLink.dialUri(number);
+    if (uri == null) return LinkOutcome.refused;
+    try {
+      final bool launched = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+      return launched ? LinkOutcome.opened : LinkOutcome.unavailable;
+    } on Object {
+      return LinkOutcome.unavailable;
+    }
+  }
 }

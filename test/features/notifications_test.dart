@@ -564,7 +564,7 @@ void main() {
         ],
       );
 
-      expect(find.textContaining('Assistance updates'), findsOneWidget);
+      expect(find.textContaining('ASSISTANCE UPDATES'), findsOneWidget);
       expect(find.textContaining('PHT'), findsOneWidget);
     });
 

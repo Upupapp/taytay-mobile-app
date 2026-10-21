@@ -1,0 +1,107 @@
+{
+  "slides": [
+    {
+      "eyebrow": "BALITA · MSWDO",
+      "title": "Unclaimed 2026 PWD Cash Gift",
+      "body": "Validate at MSWDO, claim at the Treasury Office.",
+      "action": "Read Balita",
+      "photo": "assets/photos/municipal_hall.jpg",
+      "credit": "Photo: Ramon FVelasquez · CC BY-SA 3.0",
+      "route": "news"
+    },
+    {
+      "eyebrow": "TULONG",
+      "title": "Help for seniors, PWDs and families",
+      "body": "Social welfare programmes from MSWDO.",
+      "action": "Explore Tulong",
+      "photo": "assets/photos/parish_church.jpg",
+      "credit": "Photo: Urbanroamer · CC BY-SA 3.0",
+      "route": "programs"
+    },
+    {
+      "eyebrow": "NEGOSYO · BPLO",
+      "title": "Business permits for 2026",
+      "body": "Find BPLO and other offices in the Directory.",
+      "action": "Open Directory",
+      "photo": "assets/photos/tiangge.jpg",
+      "credit": "Photo: Ralff Nestor Nacor · CC BY-SA 4.0",
+      "route": "services"
+    }
+  ],
+  "news": [
+    {
+      "id": "rpt-2026",
+      "eyebrow": "ADVISORY · TREASURY",
+      "title": "Advisory for 2026 Real Property Tax Payment",
+      "alert": false
+    },
+    {
+      "id": "smile-safe",
+      "eyebrow": "SAFETY · PIO",
+      "title": "SMILE SAFE Taytay app: report emergencies to the Command Center",
+      "alert": true
+    }
+  ],
+  "hotlines": [
+    {
+      "id": "sagip",
+      "name": "Sagip Taytay Command Center",
+      "number": "0985-488-3352",
+      "category": "municipal"
+    },
+    {
+      "id": "tmdrrmo",
+      "name": "TMDRRMO",
+      "number": "0952-619-9511 · 0970-884-3791",
+      "category": "municipal"
+    },
+    {
+      "id": "pnp",
+      "name": "Taytay PNP",
+      "number": "0998-598-5730 · 0917-163-3556",
+      "category": "municipal"
+    },
+    {
+      "id": "bfp",
+      "name": "Taytay BFP",
+      "number": "0917-148-9964",
+      "category": "municipal"
+    },
+    {
+      "id": "national",
+      "name": "National Emergency Hotline",
+      "number": "911",
+      "category": "municipal"
+    },
+    {
+      "id": "dolores",
+      "name": "Brgy. Dolores",
+      "number": "0918-911-0533 · 0918-911-4627",
+      "category": "barangay"
+    },
+    {
+      "id": "muzon",
+      "name": "Brgy. Muzon",
+      "number": "0962-241-9967",
+      "category": "barangay"
+    },
+    {
+      "id": "san-isidro",
+      "name": "Brgy. San Isidro",
+      "number": "8-669-1096 · 0920-972-0909",
+      "category": "barangay"
+    },
+    {
+      "id": "san-juan",
+      "name": "Brgy. San Juan",
+      "number": "0998-220-5844",
+      "category": "barangay"
+    },
+    {
+      "id": "santa-ana",
+      "name": "Brgy. Santa Ana",
+      "number": "0920-919-2434 · (02) 8706-6332",
+      "category": "barangay"
+    }
+  ]
+}

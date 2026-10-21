@@ -295,7 +295,7 @@ void main() {
 
         expect(dependencies.session.state, isA<AuthenticatedSession>());
         // The router reacted; the screen did not route itself.
-        expect(find.text('Kumusta, Ana!'), findsOneWidget);
+        expect(find.textContaining(', Ana!'), findsOneWidget);
       },
     );
 
@@ -366,7 +366,7 @@ void main() {
       await tester.tap(find.text('Continue as guest'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
   });
 
@@ -430,8 +430,8 @@ void main() {
 
       // The point of the acceptance: public services are still reachable.
       await goTo(tester, 'home');
-      expect(find.text('Kumusta!'), findsOneWidget);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('cancelling keeps the resident signed in', (tester) async {
@@ -521,7 +521,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
 
     testWidgets('a deliberate sign-out is not explained as an expiry', (
@@ -572,7 +572,7 @@ void main() {
 
       expect(find.text('Taytay LGU IDS is locked'), findsOneWidget);
       // The content underneath is not merely covered — it is not built.
-      expect(find.text('Kumusta!'), findsNothing);
+      expect(find.textContaining(', Bisita!'), findsNothing);
 
       await tester.tap(find.text('Unlock'));
       await tester.pumpAndSettle();
@@ -620,7 +620,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Taytay LGU IDS is locked'), findsNothing);
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
   });
 
@@ -736,7 +736,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Kumusta, Ana!'), findsNothing);
+      expect(find.textContaining(', Ana!'), findsNothing);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
   });

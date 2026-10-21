@@ -8,6 +8,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/intent_resumer.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import 'shell_destinations.dart';
+import 'shell_tab_bar.dart';
 
 /// Material 3 window size classes, as this app uses them.
 ///
@@ -119,33 +120,37 @@ class _BarScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppStrings.of(context);
-
+    final double bottomInset = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
       // The banner sits above the branch content rather than inside each
       // screen: reachability is one app-wide fact, and a per-screen banner is
       // a banner some screens forget.
       body: Column(
         children: <Widget>[
-          const SafeArea(bottom: false, child: OfflineBanner()),
-          Expanded(child: child),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex,
-        onDestinationSelected: onSelected,
-        // Always show labels. Icon-only navigation is a memory test, and the
-        // icons for "News" and "Events" are not distinguishable to someone who
-        // uses the app twice a year.
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        destinations: <NavigationDestination>[
-          for (final destination in ShellDestination.values)
-            NavigationDestination(
-              icon: Icon(destination.icon),
-              selectedIcon: Icon(destination.selectedIcon),
-              label: destination.labelIn(strings),
-              tooltip: destination.labelIn(strings),
+          const OfflineBanner(),
+          Expanded(
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: Padding(
+                    padding: EdgeInsets.only(
+                      bottom: ShellTabBar.barHeight + bottomInset,
+                    ),
+                    child: child,
+                  ),
+                ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: bottomInset,
+                  child: ShellTabBar(
+                    selectedIndex: selectedIndex,
+                    onSelected: onSelected,
+                  ),
+                ),
+              ],
             ),
+          ),
         ],
       ),
     );
@@ -200,7 +205,7 @@ class _RailScaffold extends StatelessWidget {
               for (final destination in ShellDestination.values)
                 NavigationRailDestination(
                   icon: Icon(destination.icon),
-                  selectedIcon: Icon(destination.selectedIcon),
+                  selectedIcon: Icon(destination.icon),
                   label: Text(destination.labelIn(strings)),
                 ),
             ],

@@ -139,11 +139,30 @@ Future<AppDependencies> bootVerification(
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 
-  final action = find.text('Check my status').evaluate().isNotEmpty
-      ? find.text('Check my status')
-      : find.byType(FilledButton).first;
-  await tester.ensureVisible(action);
-  await tester.tap(action);
+  await tester.tap(find.text('My Account').last);
+  await tester.pumpAndSettle();
+  final shortcut = find.text('Verify my identity');
+  final scrollable = find
+      .descendant(
+        of: find
+            .ancestor(
+              of: find.widgetWithText(AppBar, 'Profile'),
+              matching: find.byType(Scaffold),
+            )
+            .first,
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  for (
+    var attempt = 0;
+    attempt < 15 && shortcut.evaluate().isEmpty;
+    attempt++
+  ) {
+    await tester.drag(scrollable, const Offset(0, -220));
+    await tester.pumpAndSettle();
+  }
+  await tester.ensureVisible(shortcut.first);
+  await tester.tap(shortcut.first);
   await tester.pumpAndSettle();
   return dependencies;
 }
@@ -166,10 +185,7 @@ void main() {
         verificationFaceFor('gold', fieldNotes: true),
         VerificationFace.unverified,
       );
-      expect(
-        AccessLevel.fromVerificationTier('gold'),
-        AccessLevel.unverified,
-      );
+      expect(AccessLevel.fromVerificationTier('gold'), AccessLevel.unverified);
     });
 
     test('a Manila stamp keeps the design clock', () {
@@ -215,11 +231,7 @@ void main() {
     testWidgets('pending, verified and needs-correction say what they are', (
       tester,
     ) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: PendingStatusPage(),
-        ),
-      );
+      await tester.pumpWidget(const MaterialApp(home: PendingStatusPage()));
       expect(find.text('Pending review'), findsOneWidget);
       expect(find.text('Your account is verified'), findsNothing);
 

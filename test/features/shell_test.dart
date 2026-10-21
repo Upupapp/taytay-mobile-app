@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
@@ -11,6 +12,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/shell/presentation/shell_destinations.dart';
+import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -112,14 +114,16 @@ void main() {
       ) async {
         await boot(tester, level: level);
 
-        expect(find.byType(NavigationBar), findsOneWidget);
-        final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-        expect(bar.destinations, hasLength(5));
+        expect(find.byType(ShellTabBar), findsOneWidget);
+        expect(
+          tester.getSize(find.byKey(ShellTabBar.discKey)).shortestSide,
+          greaterThanOrEqualTo(A11y.minTapTarget),
+        );
 
         for (final destination in ShellDestination.values) {
           expect(
             find.descendant(
-              of: find.byType(NavigationBar),
+              of: find.byType(ShellTabBar),
               matching: find.text(destination.label),
             ),
             findsOneWidget,
@@ -133,18 +137,21 @@ void main() {
       tester,
     ) async {
       final dependencies = await boot(tester, level: AccessLevel.unverified);
-      final before = tester
-          .widget<NavigationBar>(find.byType(NavigationBar))
-          .destinations
+      final before = find
+          .descendant(of: find.byType(ShellTabBar), matching: find.byType(Text))
+          .evaluate()
           .length;
 
       dependencies.session.applyVerificationTier('verified');
       await tester.pumpAndSettle();
 
       expect(
-        tester
-            .widget<NavigationBar>(find.byType(NavigationBar))
-            .destinations
+        find
+            .descendant(
+              of: find.byType(ShellTabBar),
+              matching: find.byType(Text),
+            )
+            .evaluate()
             .length,
         before,
       );
@@ -164,20 +171,23 @@ void main() {
     testWidgets('each of the five opens its screen', (tester) async {
       await boot(tester);
 
-      await tapDestination(tester, 'Services');
+      await tapDestination(tester, 'Directory');
       expect(find.widgetWithText(AppBar, 'Services'), findsOneWidget);
 
-      await tapDestination(tester, 'News');
+      await tapDestination(tester, 'Balita');
       expect(find.widgetWithText(AppBar, 'News'), findsOneWidget);
 
-      await tapDestination(tester, 'Events');
-      expect(find.widgetWithText(AppBar, 'Events'), findsOneWidget);
+      await tapDestination(tester, 'Tulong');
+      expect(
+        find.widgetWithText(AppBar, 'Assistance programmes'),
+        findsOneWidget,
+      );
 
-      await tapDestination(tester, 'Profile');
+      await tapDestination(tester, 'My Account');
       expect(find.widgetWithText(AppBar, 'Profile'), findsOneWidget);
 
       await tapDestination(tester, 'Home');
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
 
     testWidgets('a branch keeps its place while another is visited', (
@@ -186,11 +196,11 @@ void main() {
       await boot(tester, initialLocation: '/news/abc123');
       expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
 
-      await tapDestination(tester, 'Services');
+      await tapDestination(tester, 'Directory');
       expect(find.widgetWithText(AppBar, 'Services'), findsOneWidget);
 
-      // Back to News: still on the announcement, not reset to the list.
-      await tapDestination(tester, 'News');
+      // Back to Balita: still on the announcement, not reset to the list.
+      await tapDestination(tester, 'Balita');
       expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
     });
 
@@ -201,7 +211,7 @@ void main() {
       expect(find.widgetWithText(AppBar, 'Announcement'), findsOneWidget);
 
       // The escape hatch from a screen a resident deep-linked into.
-      await tapDestination(tester, 'News');
+      await tapDestination(tester, 'Balita');
       expect(find.widgetWithText(AppBar, 'News'), findsOneWidget);
     });
   });
@@ -211,7 +221,7 @@ void main() {
       await boot(tester, size: const Size(1000, 900));
 
       expect(find.byType(NavigationRail), findsOneWidget);
-      expect(find.byType(NavigationBar), findsNothing);
+      expect(find.byType(ShellTabBar), findsNothing);
 
       final rail = tester.widget<NavigationRail>(find.byType(NavigationRail));
       expect(rail.destinations, hasLength(5));
@@ -234,12 +244,15 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationRail),
-          matching: find.text('Events'),
+          matching: find.text('Tulong'),
         ),
       );
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(AppBar, 'Events'), findsOneWidget);
+      expect(
+        find.widgetWithText(AppBar, 'Assistance programmes'),
+        findsOneWidget,
+      );
     });
   });
 
@@ -248,7 +261,7 @@ void main() {
       tester,
     ) async {
       await boot(tester);
-      await tapDestination(tester, 'Profile');
+      await tapDestination(tester, 'My Account');
 
       expect(find.text('You are browsing as a guest'), findsOneWidget);
       expect(find.text('Sign in'), findsWidgets);
@@ -260,7 +273,7 @@ void main() {
       tester,
     ) async {
       await boot(tester, level: AccessLevel.unverified);
-      await tapDestination(tester, 'Profile');
+      await tapDestination(tester, 'My Account');
 
       // TAB 12 put the field sections above the shortcuts, so the requirement
       // labels start below the fold on a phone.
@@ -275,7 +288,7 @@ void main() {
       tester,
     ) async {
       await boot(tester, level: AccessLevel.verified);
-      await tapDestination(tester, 'Profile');
+      await tapDestination(tester, 'My Account');
 
       // Access is fine; the LGU has not switched these on. Different sentence.
       await scrollProfile(tester, find.text('Not available yet'));
@@ -365,8 +378,10 @@ void main() {
       await boot(tester, textScaler: const TextScaler.linear(2));
 
       expect(tester.takeException(), isNull);
-      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(bar.destinations, hasLength(5));
+      expect(find.byType(ShellTabBar), findsOneWidget);
+      for (final destination in ShellDestination.values) {
+        expect(find.text(destination.label), findsWidgets);
+      }
     });
   });
 }

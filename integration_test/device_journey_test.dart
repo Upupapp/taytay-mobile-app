@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/features/shell/presentation/shell_destinations.dart';
+import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 
 /// The core journeys, walked on a real runtime.
 ///
@@ -84,14 +85,10 @@ void main() {
     // The shell is up and every destination is reachable. With no server the
     // screens render their own empty and error states, which is exactly the
     // condition a resident on a bad connection meets.
-    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.byType(ShellTabBar), findsOneWidget);
 
-    final NavigationBar bar = tester.widget<NavigationBar>(
-      find.byType(NavigationBar),
-    );
-
-    for (int i = 0; i < bar.destinations.length; i++) {
-      await tester.tap(find.byType(NavigationDestination).at(i));
+    for (int i = 0; i < ShellDestination.values.length; i++) {
+      await tester.tap(find.text(ShellDestination.values[i].label).last);
       await tester.pumpAndSettle(const Duration(seconds: 5));
 
       expect(

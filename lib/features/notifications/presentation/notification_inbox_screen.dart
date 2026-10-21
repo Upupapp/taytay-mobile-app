@@ -3,18 +3,20 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/notification_repository.dart';
+import 'notification_centre.dart';
 import 'notification_inbox_controller.dart';
 
 /// Everything Taytay LGU has sent this resident.
@@ -96,28 +98,29 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Notifications'),
-        actions: <Widget>[
-          if ((controller?.unreadCount ?? 0) > 0)
-            TextButton(
-              onPressed: controller!.markAllRead,
-              child: const Text('Mark all read'),
+      backgroundColor: BrandColors.surface,
+      body: Column(
+        children: <Widget>[
+          MunicipalHeader(
+            title: 'Notifications',
+            subtitle: 'Bayan ng Taytay · Rizal',
+            onBack: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.goNamed('home');
+              }
+            },
+          ),
+          Expanded(
+            child: CapabilityGate(
+              capability: ResidentCapability.readNotifications,
+              child: controller == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : _Inbox(controller: controller, onOpen: _open),
             ),
+          ),
         ],
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.readNotifications,
-          child: controller == null
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: controller.refresh,
-                  child: _Inbox(controller: controller, onOpen: _open),
-                ),
-        ),
       ),
     );
   }
@@ -169,42 +172,83 @@ class _Inbox extends StatelessWidget {
       );
     }
 
-    final sections = controller.sections;
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(Spacing.lg),
-      itemCount: sections.length + 1,
-      itemBuilder: (context, index) {
-        if (index == sections.length) return _Footer(controller: controller);
-
-        final section = sections[index];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (index > 0) const SizedBox(height: Spacing.lg),
-            Semantics(
-              header: true,
-              child: Text(
-                section.group.labelIn(AppStrings.of(context)),
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(height: Spacing.sm),
-            for (final item in section.items)
-              Padding(
-                padding: const EdgeInsets.only(bottom: Spacing.sm),
-                child: _NotificationTile(
-                  notification: item,
-                  onTap: () => onOpen(item),
-                ),
-              ),
-          ],
+    final List<NoticeRow> earlier = <NoticeRow>[];
+    NoticeSection? current;
+    for (final InboxSection section in controller.sections) {
+      final List<NoticeRow> rows = <NoticeRow>[
+        for (final ResidentNotification item in section.items)
+          NoticeRow(
+            eyebrow: _eyebrow(context, item),
+            title: item.title,
+            when: item.sentAt == null
+                ? ''
+                : ManilaTime.formatDateTime(item.sentAt!),
+            unread: item.isUnread,
+            tone: _tone(item),
+            tile: _tile(item),
+            icon: _icon(item),
+            onTap: () => onOpen(item),
+          ),
+      ];
+      if (section.group == InboxGroup.today) {
+        current = NoticeSection(
+          heading: section.group.labelIn(AppStrings.of(context)),
+          rows: rows,
         );
-      },
+      } else {
+        earlier.addAll(rows);
+      }
+    }
+
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: NotificationCentre(
+            sections: <NoticeSection>[
+              ?current,
+              if (earlier.isNotEmpty)
+                NoticeSection(heading: 'Earlier', rows: earlier),
+            ],
+            onMarkAllRead: controller.markAllRead,
+          ),
+        ),
+        _Footer(controller: controller),
+      ],
     );
   }
+}
+
+String _eyebrow(BuildContext context, ResidentNotification item) {
+  final category = item.category?.known;
+  if (category == null) return 'UPDATE';
+  return notificationCategoryLabel(context, category).toUpperCase();
+}
+
+Color _tone(ResidentNotification item) {
+  return switch (item.category?.known) {
+    NotificationCategory.publicAdvisory => BrandColors.danger,
+    NotificationCategory.accountSecurity => BrandColors.warning,
+    NotificationCategory.verificationUpdate => BrandColors.warning,
+    _ => BrandColors.taytayBlue,
+  };
+}
+
+Color _tile(ResidentNotification item) {
+  return switch (item.category?.known) {
+    NotificationCategory.publicAdvisory => const Color(0xFFFDECEC),
+    NotificationCategory.accountSecurity => const Color(0xFFFFF4D6),
+    NotificationCategory.verificationUpdate => const Color(0xFFFFF4D6),
+    _ => BrandColors.surfaceMuted,
+  };
+}
+
+IconData _icon(ResidentNotification item) {
+  return switch (item.category?.known) {
+    NotificationCategory.publicAdvisory => TaytayIcons.siren,
+    NotificationCategory.verificationUpdate => TaytayIcons.hourglass,
+    NotificationCategory.assistanceStatus => TaytayIcons.handHelping,
+    _ => TaytayIcons.messageCircle,
+  };
 }
 
 class _Footer extends StatelessWidget {
@@ -244,78 +288,6 @@ class _Footer extends StatelessWidget {
       );
     }
     return const SizedBox(height: Spacing.xl);
-  }
-}
-
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({required this.notification, required this.onTap});
-
-  final ResidentNotification notification;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final unread = notification.isUnread;
-
-    return AppCard(
-      onTap: onTap,
-      child: Semantics(
-        // Unread is a dot as well as a weight; a screen reader hears it either
-        // way rather than inferring it from styling.
-        label: unread ? 'Unread. ${notification.title}' : null,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                if (unread) ...<Widget>[
-                  Padding(
-                    padding: const EdgeInsets.only(top: Spacing.xs),
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: Spacing.sm),
-                ],
-                Expanded(
-                  child: Text(
-                    notification.title,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: Spacing.xs),
-            Text(notification.body, style: theme.textTheme.bodyMedium),
-
-            const SizedBox(height: Spacing.xs),
-            Text(
-              <String>[
-                if (notification.category?.known != null)
-                  notificationCategoryLabel(
-                    context,
-                    notification.category!.known!,
-                  ),
-                if (notification.sentAt != null)
-                  ManilaTime.formatDateTime(notification.sentAt!),
-              ].join(' · '),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

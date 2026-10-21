@@ -23,6 +23,9 @@ abstract final class TaytayIcons {
 
   static const IconData bell = IconData(57433, fontFamily: 'Lucide');
 
+  /// Lucide `refresh-cw`. The pull-to-refresh spinner on Home.
+  static const IconData refreshCw = IconData(57669, fontFamily: 'Lucide');
+
   static const IconData arrowLeft = IconData(57416, fontFamily: 'Lucide');
 
   static const IconData arrowRight = IconData(57417, fontFamily: 'Lucide');
@@ -129,4 +132,7 @@ abstract final class TaytayIcons {
   static const IconData stethoscope = IconData(58097, fontFamily: 'Lucide');
 
   static const IconData handshake = IconData(58816, fontFamily: 'Lucide');
+
+  /// Lucide `hand-coins`. The welfare row on the notification centre.
+  static const IconData handCoins = IconData(58808, fontFamily: 'Lucide');
 }

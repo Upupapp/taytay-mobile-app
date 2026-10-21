@@ -186,6 +186,13 @@ class RecordingLinkService implements ExternalLinkService {
     if (!ExternalLink.isSafe(url)) return LinkOutcome.refused;
     return outcome;
   }
+
+  @override
+  Future<LinkOutcome> dial(String number) async {
+    opened.add(number);
+    if (ExternalLink.dialUri(number) == null) return LinkOutcome.refused;
+    return outcome;
+  }
 }
 
 // ─── Harness ────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/remote_image.dart';
 import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/event_repository.dart';
 import 'events_controller.dart';
 
@@ -80,6 +81,7 @@ class _EventsScreenState extends State<EventsScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: const TaytayBackButton(),
         title: const Text('Events'),
       ),
       body: SafeArea(

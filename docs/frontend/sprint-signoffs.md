@@ -8,7 +8,8 @@ This file records that the words were looked for. It does not invent them.
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
-| S3 Verification | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 38f45e7c7ca39be4a39c47716df63b88b479bc86 | No approval words. Paul merges when he chooses. |
+| S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
+| S4 Shell and Home | Not approved | | | No approval words. |
 
 ## S0 pixel match
 
@@ -45,7 +46,7 @@ Welcome scenes `w2` and `w3` draw a solid circle. Onboarding is a navigation roo
 - Flutter rounds a CSS line box to a whole logical pixel. On the type scale that is about 4 device pixels by the second line.
 - In-app mockups that draw a bare chevron still use the solid white circle. Those screens are listed above. Onboarding is a navigation root, so it has no back button. Welcome scenes `w2` and `w3` draw a circle the app does not show there.
 - Welcome and sign-in copy stays the English OTP flow. The mockup is Filipino and asks for a password. Firebase is not in this sprint.
-- The tab bar stays Home, Services, News, Events, Profile until S4.
+- S4 moves the phone tab bar to Home, Directory, Balita, Tulong, and My Account. Events leaves the bar.
 - Full screens 01–08 are S1–S8. Skia and Chrome do not rasterize Plus Jakarta Sans, Lucide, or the downscaled seal onto the same pixels. Those diffs are the images above.
 
 Exceptions, recorded rather than forced under 2%:
@@ -126,11 +127,11 @@ The mismatch table above is the review capture at 1170×2532, full frame, CIE76 
 
 ## S3 Verification
 
-S3 is not approved. This section records the capture after the structure rebuild. It does not record approval words.
+The owner approved S3 ("S3 is approved"). Pull request #5 is merged into main at `29e5605`. This section records the capture that was merged.
 
 Status screens take the server tier through `AccessLevel.fromVerificationTier` and fail closed. Only the string `verified` is the verified face. `pending` is the pending face. `rejected` is needs-correction. Anything else, including an unknown tier, is unverified. A 409 from `POST /me/verification-requests` opens the pending-review screen. A 403 does not stamp the session verified. The wizard fetches `GET /me`, applies the server tier, and goes home only when that tier is verified. The profile wizard loads its own record and does not write it onto the session. Dates, the email, and the ID type come from `/me` and `/me/verification-requests/current`. `03-04` is the sheet for every verified-only action, including Message and Digital ID. The header is the translucent back disc, with a white Lucide arrow-left, and has no bell. The `03-01` status tile is the hourglass. The `03-05` overview name is the given name and the family name. `lib/features/verification` contains no `Transform.translate`.
 
-The line measure is the reviewer's dark-run rule: any pixel with mean channel under 110, columns 60–1110, y above 330, minimum run 8. Max deviation is the larger of the two nearest-neighbour distances, so an extra or a missing run counts. Where the counts match, that figure is also the in-order pairing. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`. On this capture every screen has the same run count as the design, and the symmetric nearest-neighbour distance is at most 2 device px. S3 is not approved.
+The line measure is the reviewer's dark-run rule: any pixel with mean channel under 110, columns 60–1110, y above 330, minimum run 8. Max deviation is the larger of the two nearest-neighbour distances, so an extra or a missing run counts. Where the counts match, that figure is also the in-order pairing. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`. On this capture every screen has the same run count as the design, and the symmetric nearest-neighbour distance is at most 2 device px.
 
 | Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
@@ -147,6 +148,31 @@ The line measure is the reviewer's dark-run rule: any pixel with mean channel un
 `03-04`'s sheet top is the design's y = 1579. The first 300 px of that frame still mismatch at 9.14% (32090/351000): the office list under the scrim. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG. Account created, email, ID type, the office note, the review date, and the submitted stamp are parameters. `VerificationScreen` fills them from `GET /me` and the current verification request. `ProfileWizardScreen` fills the submitted stamp from `GET me/verification-requests/current`. An empty value renders as an em dash, or as a generic sentence when the office sent no note. `lib/features/verification` does not contain `juana.delacruz@example.com`, `Oct 20, 2026`, `(sample)`, or `Transform.translate`. `test/features/s3_tap_target_test.dart` asserts that, and that every `IconButton`, `FilledButton`, `OutlinedButton`, `TextButton`, `InkWell`, and `GestureDetector` is at least 48×48 dp.
 
 Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4` (220524 bytes), `s3-gate.mp4` (106929 bytes), `s3-wizard.mp4` (335424 bytes). `flutter analyze` was clean. `flutter test` passed 1593 tests, with 5 skipped (the recording tag). The S2 stills are byte-identical to the capture before this change, and every `02` screen stays within 2 device px.
+
+## S4 Shell and Home
+
+S4 is not approved. This section records the capture. It does not record approval words.
+
+The phone bar is Home, Directory, Balita, Tulong, and My Account in every session state. Balita is the raised centre disc: a 60 dp navy disc inside a 48 dp hit, lifted above the 90 dp bar. Events is a full-screen route with a back button. Programs is a root and has no back button. Hotlines and notifications stay on the Home branch, so the bar remains with Home selected. Each tab keeps its own back stack. `lib/features/shell`, `lib/features/home`, and `lib/features/notifications` contain no `Transform.translate`.
+
+Home paints a gradient header, a bell, an avatar, a three-slide hero, quick actions, a news teaser, and a hotlines entry. Verified home has no status card. Unverified home shows the pending card. Guest home shows the guest card, a Sign in pill, and no badge. The hero auto-advances every 5 seconds and pauses when motion is reduced. Hotline numbers come from `GET /home` when the API returns them, and from the dev mock otherwise. Call uses `tel:` through `dial`. A missing dialer shows a toast. Guests who tap the bell go to sign-in. A signed-in bell opens the notification centre. Mark all read clears the unread dots. Rows follow the notification deep link.
+
+The line measure is the same dark-run rule as S3. Side-by-sides are design | render | heat in `test/goldens/compare/s4/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The hero photographs on `04-01`, `04-06`, and `04-07` stay in the count.
+
+| Screen | Lines (build / design) | Max deviation | Mismatch |
+| --- | --- | --- | --- |
+| 04-01 Home, verified | 17 / 17 | 2 | 16.93% (501668/2962440) |
+| 04-02 Home, unverified | 15 / 15 | 2 | 17.77% (526451/2962440) |
+| 04-03 Guest home | 13 / 13 | 2 | 18.34% (543442/2962440) |
+| 04-04 Hotlines | 13 / 13 | 2 | 3.28% (97307/2962440) |
+| 04-05 Pull to refresh | 10 / 10 | 2 | 4.59% (136098/2962440) |
+| 04-06 Banner, Tulong | 17 / 17 | 2 | 19.55% (579057/2962440) |
+| 04-07 Banner, Directory | 17 / 17 | 2 | 19.46% (576562/2962440) |
+| 04-08 Notifications | 25 / 25 | 2 | 4.25% (125876/2962440) |
+
+`test/features/s3_tap_target_test.dart` covers the S4 controls as well: every `IconButton`, `FilledButton`, `OutlinedButton`, `TextButton`, `InkWell`, and `GestureDetector` on Home, the tab bar, hotlines, and the notification centre is at least 48×48 dp, and the centre disc is at least 48 dp. Slide copy, hotline numbers, and the notification illustration live in `test/fixtures/mock/home_catalogue.json` and the capture test, not in `lib/`.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s4/recordings/s4-tabs.mp4` (402203 bytes, 56 frames) and `s4-carousel.mp4` (281594 bytes, 38 frames). These files are new captures. Their sizes are not the S3 recordings.
 
 ## Contract gaps after the Node OpenAPI
 

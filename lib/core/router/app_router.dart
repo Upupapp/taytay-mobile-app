@@ -17,6 +17,7 @@ import '../../features/events/presentation/event_registration_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
 import '../../features/gallery/presentation/component_gallery_screen.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/presentation/hotlines_screen.dart';
 import '../../features/household/presentation/household_correction_screen.dart';
 import '../../features/household/presentation/household_screen.dart';
 import '../../features/news/presentation/news_post_screen.dart';
@@ -177,6 +178,26 @@ GoRouter buildAppRouter({
                 name: AppRoute.home.routeName,
                 builder: (context, state) => const HomeScreen(),
               ),
+              // Same navigator as Home, so the tab stays Home and back returns
+              // there. Absolute paths cannot be children of `/home`.
+              GoRoute(
+                path: AppRoute.hotlines.path,
+                name: AppRoute.hotlines.routeName,
+                builder: (context, state) => const HotlinesScreen(),
+              ),
+              GoRoute(
+                path: AppRoute.notifications.path,
+                name: AppRoute.notifications.routeName,
+                builder: (context, state) => const NotificationInboxScreen(),
+                routes: <RouteBase>[
+                  GoRoute(
+                    path: 'settings',
+                    name: AppRoute.notificationSettings.routeName,
+                    builder: (context, state) =>
+                        const NotificationPreferencesScreen(),
+                  ),
+                ],
+              ),
             ],
           ),
           StatefulShellBranch(
@@ -218,25 +239,16 @@ GoRouter buildAppRouter({
           StatefulShellBranch(
             routes: <RouteBase>[
               GoRoute(
-                path: AppRoute.events.path,
-                name: AppRoute.events.routeName,
-                builder: (context, state) => const EventsScreen(),
+                path: AppRoute.programs.path,
+                name: AppRoute.programs.routeName,
+                builder: (context, state) => const ProgramsScreen(),
                 routes: <RouteBase>[
                   GoRoute(
-                    path: ':eventId',
-                    name: AppRoute.eventDetail.routeName,
-                    builder: (context, state) => EventDetailScreen(
-                      eventId: state.pathParameters['eventId'] ?? '',
+                    path: ':programId',
+                    name: AppRoute.programDetail.routeName,
+                    builder: (context, state) => ProgramDetailScreen(
+                      programId: state.pathParameters['programId'] ?? '',
                     ),
-                    routes: <RouteBase>[
-                      GoRoute(
-                        path: 'register',
-                        name: AppRoute.eventRegistration.routeName,
-                        builder: (context, state) => EventRegistrationScreen(
-                          eventId: state.pathParameters['eventId'] ?? '',
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
@@ -295,14 +307,25 @@ GoRouter buildAppRouter({
         ],
       ),
       GoRoute(
-        path: AppRoute.notifications.path,
-        name: AppRoute.notifications.routeName,
-        builder: (context, state) => const NotificationInboxScreen(),
+        path: AppRoute.events.path,
+        name: AppRoute.events.routeName,
+        builder: (context, state) => const EventsScreen(),
         routes: <RouteBase>[
           GoRoute(
-            path: 'settings',
-            name: AppRoute.notificationSettings.routeName,
-            builder: (context, state) => const NotificationPreferencesScreen(),
+            path: ':eventId',
+            name: AppRoute.eventDetail.routeName,
+            builder: (context, state) => EventDetailScreen(
+              eventId: state.pathParameters['eventId'] ?? '',
+            ),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'register',
+                name: AppRoute.eventRegistration.routeName,
+                builder: (context, state) => EventRegistrationScreen(
+                  eventId: state.pathParameters['eventId'] ?? '',
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -393,20 +416,6 @@ GoRouter buildAppRouter({
         ),
       ),
       GoRoute(
-        path: AppRoute.programs.path,
-        name: AppRoute.programs.routeName,
-        builder: (context, state) => const ProgramsScreen(),
-        routes: <RouteBase>[
-          GoRoute(
-            path: ':programId',
-            name: AppRoute.programDetail.routeName,
-            builder: (context, state) => ProgramDetailScreen(
-              programId: state.pathParameters['programId'] ?? '',
-            ),
-          ),
-        ],
-      ),
-      GoRoute(
         path: AppRoute.household.path,
         name: AppRoute.household.routeName,
         builder: (context, state) => const HouseholdScreen(),
@@ -457,16 +466,6 @@ GoRouter buildAppRouter({
         path: AppRoute.passwordUpdated.path,
         name: AppRoute.passwordUpdated.routeName,
         builder: (context, state) => const PasswordUpdatedScreen(),
-      ),
-      GoRoute(
-        path: AppRoute.hotlines.path,
-        name: AppRoute.hotlines.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Emergency hotlines',
-          body:
-              'Municipal and barangay hotlines arrive in a later sprint. '
-              'Nothing on this page is a published number.',
-        ),
       ),
       GoRoute(
         path: AppRoute.officeDetail.path,
