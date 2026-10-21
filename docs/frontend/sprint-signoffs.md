@@ -9,7 +9,7 @@ This file records that the words were looked for. It does not invent them.
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
-| S4 Shell and Home | Not approved | https://github.com/Upupapp/taytay-mobile-app/pull/6 | cdf196e8ad74eb5b7c9fa7670c88a9af293135d8 | No approval words. |
+| S4 Shell and Home | Not approved | https://github.com/Upupapp/taytay-mobile-app/pull/6 | fd013ec0ff45996c82dd4eb8782e06659186fd2c | No approval words. |
 
 ## S0 pixel match
 
