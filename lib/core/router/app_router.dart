@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../../app/app_dependencies.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
+import '../../features/auth/presentation/account_wizard_screen.dart';
+import '../../features/auth/presentation/forgot_password_screen.dart';
 import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
@@ -24,7 +26,6 @@ import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/programs/presentation/program_detail_screen.dart';
 import '../../features/programs/presentation/programs_screen.dart';
-import '../../features/registration/presentation/registration_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_intake_screen.dart';
@@ -156,7 +157,7 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.register.path,
         name: AppRoute.register.routeName,
-        builder: (context, state) => const RegistrationScreen(),
+        builder: (context, state) => const AccountWizardScreen(),
       ),
 
       // --- The shell: five branches, in the order they appear. ---------------
@@ -379,13 +380,7 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.forgotPassword.path,
         name: AppRoute.forgotPassword.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Reset your password',
-          sealHeader: true,
-          body:
-              'Password help arrives with the sign-in flow in a later sprint. '
-              'This page is here so the route and its back button can be checked.',
-        ),
+        builder: (context, state) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: AppRoute.hotlines.path,

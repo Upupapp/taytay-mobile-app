@@ -131,6 +131,62 @@ class MockAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    if (password == 'wrong-password') {
+      return const Err<AuthOutcome>(UnauthenticatedFailure());
+    }
+    final resident = await MockResident.load();
+    final token = DevMockAccess.tryToken(id: resident.accountId);
+    if (token == null) {
+      return const Err<AuthOutcome>(
+        ContractFailure(
+          debugMessage: 'Dev mock account id cannot form a bearer segment.',
+        ),
+      );
+    }
+    return _gate.respond(
+      AuthOutcome(
+        resident: ResidentSession(
+          accountId: resident.accountId,
+          accessLevel: AccessLevel.unverified,
+          displayName: 'Juana',
+        ),
+        accessToken: token,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> requestPasswordReset({required String identifier}) =>
+      _gate.respond<void>(null);
+
+  @override
+  Future<Result<AuthOutcome>> registerAccount({required String email}) async {
+    final resident = await MockResident.load();
+    final token = DevMockAccess.tryToken(id: resident.accountId);
+    if (token == null) {
+      return const Err<AuthOutcome>(
+        ContractFailure(
+          debugMessage: 'Dev mock account id cannot form a bearer segment.',
+        ),
+      );
+    }
+    return _gate.respond(
+      AuthOutcome(
+        resident: ResidentSession(
+          accountId: resident.accountId,
+          accessLevel: AccessLevel.unverified,
+          displayName: 'Juana',
+        ),
+        accessToken: token,
+      ),
+    );
+  }
+
+  @override
   Future<Result<void>> signOut() => _gate.respond<void>(null);
 }
 

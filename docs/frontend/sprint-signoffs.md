@@ -7,6 +7,7 @@ This file records that the words were looked for. It does not invent them.
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
+| S2 Sign-in | In review, not approved | draft from `feature/s2-sign-in` | SHA_PENDING | No approval words. Paul merges when he chooses. |
 
 ## S0 pixel match
 
@@ -80,14 +81,51 @@ The speck runs for 7s on `cubic-bezier(.45, 0, .55, 1)`. Its position on the wel
 - Photographs are the design JPEGs, with the credits in `docs/frontend/PHOTO_CREDITS.md`. The seal is the existing asset, unaltered.
 - No new package.
 
+## S2 Sign-in
+
+S2 is in review. It is not approved. This file does not record an approval, and it does not record Paul as having written one. S0 and S1 are on `main` at `67732d02204f271e7e547e118d7b25fdc6de9f97`.
+
+S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comparison uses `tool/golden_compare` at 1170×2532. A pixel differs when CIE76 ΔE is above 6. The municipal-hall interior is masked on `02-01` and `02-10`. The rim stays in the count. The design PNGs have no status bar, so the top of the frame stays in the count. The side-by-side is design | build | diff.
+
+| Screen | Mismatch | Sheet edge |
+| --- | --- | --- |
+| 02-01 Sign in | 9.09% (232559/2559744) | Hall arch. Sheet top 332. |
+| 02-02 Forgot password | 6.96% (206096/2962440) | White edge y = 912, same as the design. |
+| 02-03 Personal info | 10.68% (316392/2962440) | White edge y = 462, same as the design. |
+| 02-04 Email code | 5.02% (148577/2962440) | Sheet top y = 901, same as the design. |
+| 02-05 Terms | 12.32% (365041/2962440) | White edge y = 462, same as the design. |
+| 02-06 Valid ID | 7.67% (227137/2962440) | White edge y = 462, same as the design. |
+| 02-07 Selfie | 7.51% (222374/2962440) | White edge y = 462, same as the design. |
+| 02-08 Review | 7.65% (226666/2962440) | White edge y = 462, same as the design. |
+| 02-09 Submitted | 4.98% (147674/2962440) | Sheet top y = 1493, same as the design. |
+| 02-10 Sign-in error | 9.07% (242947/2679696) | Short hall arch. Sheet top 276. |
+| 02-11 Validation | 11.22% (332256/2962440) | White edge 11 device px below the design. |
+
+The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
+
+`flutter analyze` on `lib` and `test` reported `No issues found!`. `flutter test` passed 1550 tests, with 3 skipped (the recording tag).
+
+### S2 deviations
+
+- The full-frame mismatch is above 2%. Sheet edges on `02-02` through `02-09` match the design PNG. The remainder is glyph antialiasing (Skia against Chrome), the downscaled seal, the dashed seam's dash phase, the hall JPEG, and the drawn ID and selfie stand-ins. Those stand-ins are not a photograph of a person.
+- `02-11`'s white edge is 11 device px below the design. The summary banner's top is within 3 device px.
+- Text links keep a 48 dp hit target. The painted line is the design's 12 or 13 px link. The hit box extends past that line.
+- The live repository declines password sign-in, password reset, and registration. It does not call the staff token route. The dev mock returns an unverified session named Juana. There is no Firebase SDK.
+- `02-10` says "2 attempts left before a 15-minute pause" as the design's copy for a refused password. It is not a live counter.
+- The help screen still explains a missing one-time code, because registration asks for an email code. Sign-in itself is email or mobile, plus a password.
+- `RegistrationScreen` remains for its existing tests. `/register` paints `AccountWizardScreen`.
+- `docs/taytay-login-and-session-security.md` and `docs/taytay-registration-wizard.md` still describe the earlier one-time-code flow. The contract gap is the section below.
+- `AccountApplication.toString` is `AccountApplication(redacted)`. A failure on submit shows `SignInMessage` text, not the server's message.
+- No new package.
+
 ## Contract gaps after the Node OpenAPI
 
 F31 is closed. `GET/POST /threads`, messages, mark-read, and close are citizen routes and the live repository calls them.
 
 These designs still need data the spec does not publish. The calls decline with F32, or the screen keeps static copy:
 
-- Sign-in, sign-up, email code, forgot password (`02-01`–`02-11`). No OTP or password routes. Identity is a Firebase ID token. This app does not add the Firebase SDK. Dev sessions use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
-- Self-registration and the office contact line. No `app/bootstrap` and no `features.self_registration`. The wizard stays off the signed-out path. Creating an account is not offered from sign-in.
+- Sign-in, sign-up, email code, forgot password (`02-01`–`02-11`). No citizen password, OTP, or registration routes. Identity on the live API is still a Firebase ID token. This app does not add the Firebase SDK and does not call the staff `POST /auth/tokens` route. The live repository declines those calls. The dev mock accepts a password and returns an unverified session. Dev sessions otherwise use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
+- Self-registration. No `app/bootstrap` and no `features.self_registration`. S2 still shows Create an account and `/register`, because that is the designed resident screen. The live `registerAccount` call declines. The dev mock signs the resident in as unverified and does not upload the ID or the selfie.
 - Token revocation. Sign-out clears the session on the device.
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.

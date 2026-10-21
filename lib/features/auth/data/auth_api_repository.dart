@@ -98,6 +98,56 @@ class AuthApiRepository implements AuthRepository {
     );
   }
 
+  @override
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    final Object _ = _apiClient.runtimeType;
+    if (identifier.trim().isEmpty || password.isEmpty) {
+      return const Err<AuthOutcome>(
+        ValidationFailure(
+          debugMessage: 'An identifier and a password are required.',
+        ),
+      );
+    }
+    // Not `POST /auth/tokens`: that route filters staff accounts.
+    return backendGapFailure<AuthOutcome>(
+      BackendGap.absentOnNodeContract,
+      'signInWithPassword',
+    );
+  }
+
+  @override
+  Future<Result<void>> requestPasswordReset({
+    required String identifier,
+  }) async {
+    final Object _ = _apiClient.runtimeType;
+    if (identifier.trim().isEmpty) {
+      return const Err<void>(
+        ValidationFailure(debugMessage: 'An identifier is required.'),
+      );
+    }
+    return backendGapFailure<void>(
+      BackendGap.absentOnNodeContract,
+      'requestPasswordReset',
+    );
+  }
+
+  @override
+  Future<Result<AuthOutcome>> registerAccount({required String email}) async {
+    final Object _ = _apiClient.runtimeType;
+    if (email.trim().isEmpty) {
+      return const Err<AuthOutcome>(
+        ValidationFailure(debugMessage: 'An email address is required.'),
+      );
+    }
+    return backendGapFailure<AuthOutcome>(
+      BackendGap.residentSelfRegistration,
+      'registerAccount',
+    );
+  }
+
   /// Ends the local session.
   ///
   /// The Node API publishes no token-revocation route. Sign-out clears the

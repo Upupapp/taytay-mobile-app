@@ -82,4 +82,25 @@ abstract interface class AuthRepository {
   /// Local sign-out happens regardless of the result — a resident on a borrowed
   /// phone must be able to sign out with no connectivity.
   Future<Result<void>> signOut();
+
+  /// Email or mobile, plus a password, as `02-01` draws it.
+  ///
+  /// The live repository declines. The Node contract has no citizen password
+  /// route, and `POST /auth/tokens` is the staff console. The dev mock is the
+  /// only implementation that returns a session, until Clarence's Firebase
+  /// and Node endpoints exist. Nothing here sends a role or a permission.
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  });
+
+  /// Asks for a reset code. The answer must not say whether the account exists.
+  Future<Result<void>> requestPasswordReset({required String identifier});
+
+  /// Creates a resident account and returns an unverified session.
+  ///
+  /// The live repository declines: there is no citizen registration route.
+  /// The dev mock returns an unverified session and does not upload the ID
+  /// or the selfie. Those bytes stay on the device until a route exists.
+  Future<Result<AuthOutcome>> registerAccount({required String email});
 }

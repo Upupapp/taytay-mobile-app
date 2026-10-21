@@ -763,7 +763,7 @@ void main() {
       final booted = await bootProfile(tester, location: '/profile/contact');
 
       // The route is authenticated, so the guard moves them to sign-in.
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
       expect(booted.profile.updates, isEmpty);
     });
 

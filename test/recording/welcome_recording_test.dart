@@ -141,7 +141,7 @@ void main() {
     // Sign-in carry is 2333ms. Capture through it and a beat after it ends.
     await hold(const Duration(milliseconds: 100), 28);
 
-    expect(find.text('Send one-time code'), findsOneWidget);
+    expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     expect(frame, 149);
   });
 
@@ -235,7 +235,7 @@ void main() {
     await tester.pump();
     await hold(const Duration(milliseconds: 100), 24);
 
-    expect(find.text('Send one-time code'), findsOneWidget);
+    expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     expect(frame, 44);
   });
 
@@ -275,8 +275,8 @@ void main() {
     router.goNamed('sign-in');
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
-    expect(find.text('Send one-time code'), findsOneWidget);
-    final context = tester.element(find.text('Send one-time code'));
+    expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+    final context = tester.element(find.text('Maligayang pagbabalik!'));
     await tester.runAsync(() async {
       await precacheImage(
         const AssetImage('assets/brand/taytay_seal.png'),

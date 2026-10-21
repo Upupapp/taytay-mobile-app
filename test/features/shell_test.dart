@@ -288,7 +288,7 @@ void main() {
     ) async {
       await boot(tester, initialLocation: '/requests/r-1');
 
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
       expect(find.text('Request status'), findsNothing);
     });
 

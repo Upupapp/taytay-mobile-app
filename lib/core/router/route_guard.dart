@@ -63,19 +63,14 @@ String? resolveRedirect({
         : AppRoute.home.path;
   }
 
-  // ONBOARDING IS STAFF-MEDIATED UNLESS THE SERVER SAYS OTHERWISE (TAB 03, F15).
-  //
-  // The wizard is kept — it is built, tested, and becomes correct the day the
-  // LGU chooses self-enrolment — but it is unreachable while there is no server
-  // route behind it. Enforced *here*, in the guard, rather than by hiding the
-  // button: a screen that hides its own entrance is still reachable by deep
-  // link, by the back stack, and by the two other places in this app that
-  // navigate to it.
-  //
-  // Sign-in is where a resident is sent, because that is the honest next step:
-  // an account exists, it was made at the office, and this is where they use it.
-  if (target == AppRoute.register && !onboarding.allowsSelfRegistration) {
-    return AppRoute.signIn.path;
+  // The registration wizard is a public route in every [OnboardingMode].
+  // The live repository still declines the submit: there is no citizen
+  // registration endpoint (F15). The dev mock is the only path that returns
+  // an unverified session. Hiding the route would leave `02-03` unreachable
+  // by the button the design draws.
+  if (target == AppRoute.register) {
+    final OnboardingMode mode = onboarding;
+    assert(mode.name.isNotEmpty);
   }
 
   // A signed-in resident has no business on the sign-in screen. Resume the

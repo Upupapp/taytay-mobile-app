@@ -27,8 +27,17 @@ class ThreadCurve {
     ThreadCurve(170, 260),
   ];
 
-  /// Entry 250, close to the page-3 exit at 260.
+  /// Entry 250, close to the page-3 exit at 260. `02-01` and `02-10`.
   static const ThreadCurve signIn = ThreadCurve(250, 180);
+
+  /// `02-02` rises from the sign-in exit.
+  static const ThreadCurve reset = ThreadCurve(180, 250);
+
+  /// Flat stitch across the create-account header (`02-03` through `02-08`, `02-11`).
+  static const ThreadCurve wizard = ThreadCurve(136, 136);
+
+  /// `02-09`.
+  static const ThreadCurve submitted = ThreadCurve(230, 170);
 }
 
 /// Passed as `go_router` extra when Get started opens Sign-in.
@@ -305,10 +314,17 @@ class _KnotPainter extends CustomPainter {
 /// Get started does not jump. Reduced motion keeps the thread and hides the
 /// speck.
 class SignInThreadOverlay extends StatefulWidget {
-  const SignInThreadOverlay({this.cycle = 0, super.key});
+  const SignInThreadOverlay({
+    this.cycle = 0,
+    this.curve = ThreadCurve.signIn,
+    super.key,
+  });
 
   /// Raw 0–1 position on the 7s loop, before easing.
   final double cycle;
+
+  /// Which cubic the thread and the speck follow.
+  final ThreadCurve curve;
 
   @override
   State<SignInThreadOverlay> createState() => _SignInThreadOverlayState();
@@ -368,12 +384,12 @@ class _SignInThreadOverlayState extends State<SignInThreadOverlay>
                     );
                     return Stack(
                       children: <Widget>[
-                        const CustomPaint(
-                          painter: ThreadPainter(ThreadCurve.signIn),
-                          child: SizedBox.expand(),
+                        CustomPaint(
+                          painter: ThreadPainter(widget.curve),
+                          child: const SizedBox.expand(),
                         ),
                         if (showSpeck)
-                          TravellingLight(curve: ThreadCurve.signIn, t: t),
+                          TravellingLight(curve: widget.curve, t: t),
                       ],
                     );
                   },

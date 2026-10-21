@@ -187,8 +187,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
-      expect(find.text('Mobile number'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+      expect(find.text('Email or mobile number'), findsOneWidget);
     });
 
     testWidgets('an unverified resident tapping the ID lands on verification', (
@@ -286,7 +286,7 @@ void main() {
       // requires authentication, so signing out cannot leave the resident on it.
       expect(dependencies.session.accessLevel, AccessLevel.guest);
       expect(find.text('Sign out'), findsNothing);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 
     testWidgets('an expired session moves the resident off and explains why', (
@@ -321,7 +321,7 @@ void main() {
   });
 
   group('sign-in screen', () {
-    testWidgets('validates the mobile number before sending anything', (
+    testWidgets('validates the identifier before sending anything', (
       tester,
     ) async {
       await _pumpApp(tester);
@@ -330,15 +330,19 @@ void main() {
       await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Send one-time code'));
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Enter your mobile number.'), findsOneWidget);
+      expect(find.text('Enter your email or mobile number.'), findsOneWidget);
 
-      await tester.enterText(find.byType(TextFormField), '12345');
-      await tester.tap(find.text('Send one-time code'));
+      await tester.enterText(find.byType(TextFormField).at(0), '12345');
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
       await tester.pumpAndSettle();
       expect(
-        find.text('Enter an 11-digit mobile number starting with 09.'),
+        find.text('Enter an email address or an 11-digit mobile number.'),
         findsOneWidget,
       );
     });
@@ -352,8 +356,14 @@ void main() {
       await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await tester.tap(find.text('Send one-time code'));
+      await tester.enterText(find.byType(TextFormField).at(0), '09171234567');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'password-sample',
+      );
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
       await tester.pumpAndSettle();
 
       // TAB 09: sign-in renders only a `SignInMessage`, never a failure view.

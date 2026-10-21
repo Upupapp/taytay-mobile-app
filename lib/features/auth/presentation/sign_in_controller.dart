@@ -144,6 +144,71 @@ class SignInController extends ChangeNotifier {
     }
   }
 
+  /// Email or mobile plus a password. The screen does not navigate.
+  ///
+  /// A refusal that could mean "no such account" or "wrong password" becomes
+  /// [SignInMessage.credentialsRejected]. The server's message is never used.
+  Future<bool> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    if (_busy) return false;
+    _busy = true;
+    _message = null;
+    notifyListeners();
+
+    final result = await _repository.signInWithPassword(
+      identifier: identifier.trim(),
+      password: password,
+    );
+
+    _busy = false;
+    switch (result) {
+      case Ok<AuthOutcome>(:final value):
+        await _session.signIn(
+          resident: value.resident,
+          accessToken: value.accessToken,
+          expiresAt: value.expiresAt,
+        );
+        _reset();
+        notifyListeners();
+        return true;
+      case Err<AuthOutcome>(:final failure):
+        _message = switch (failure) {
+          NotFoundFailure() ||
+          ForbiddenFailure() ||
+          UnauthenticatedFailure() ||
+          ValidationFailure() ||
+          ConflictFailure() => SignInMessage.credentialsRejected,
+          _ => SignInFeedback.forFailure(failure),
+        };
+        notifyListeners();
+        return false;
+    }
+  }
+
+  /// Asks for a reset code. Success and "no such account" look the same.
+  Future<bool> requestPasswordReset(String identifier) async {
+    if (_busy) return false;
+    _busy = true;
+    _message = null;
+    notifyListeners();
+    final result = await _repository.requestPasswordReset(
+      identifier: identifier.trim(),
+    );
+    _busy = false;
+    switch (result) {
+      case Ok<void>():
+        _message = null;
+        notifyListeners();
+        return true;
+      case Err<void>(:final failure):
+        _message = SignInFeedback.forFailure(failure);
+        notifyListeners();
+        return false;
+    }
+  }
+
   /// Back to step 1, e.g. "I typed the wrong number".
   void changeNumber() {
     _step = SignInStep.identifier;

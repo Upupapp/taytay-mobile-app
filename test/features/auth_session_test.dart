@@ -13,10 +13,15 @@ import 'package:taytay_resident/features/auth/presentation/sign_in_controller.da
 
 /// An [AuthRepository] each test dictates.
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({this.requestOutcome, this.verifyOutcome});
+  FakeAuthRepository({
+    this.requestOutcome,
+    this.verifyOutcome,
+    this.passwordOutcome,
+  });
 
   Result<void>? requestOutcome;
   Result<AuthOutcome>? verifyOutcome;
+  Result<AuthOutcome>? passwordOutcome;
 
   int requestCalls = 0;
   int verifyCalls = 0;
@@ -43,6 +48,49 @@ class FakeAuthRepository implements AuthRepository {
             resident: ResidentSession(
               accountId: 'acct-1',
               accessLevel: AccessLevel.unverified,
+            ),
+            accessToken: 'token',
+          ),
+        );
+  }
+
+  int passwordCalls = 0;
+
+  @override
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    passwordCalls++;
+    return passwordOutcome ??
+        verifyOutcome ??
+        const Ok<AuthOutcome>(
+          AuthOutcome(
+            resident: ResidentSession(
+              accountId: 'acct-1',
+              accessLevel: AccessLevel.unverified,
+            ),
+            accessToken: 'token',
+          ),
+        );
+  }
+
+  @override
+  Future<Result<void>> requestPasswordReset({
+    required String identifier,
+  }) async {
+    return requestOutcome ?? const Ok<void>(null);
+  }
+
+  @override
+  Future<Result<AuthOutcome>> registerAccount({required String email}) async {
+    return passwordOutcome ??
+        const Ok<AuthOutcome>(
+          AuthOutcome(
+            resident: ResidentSession(
+              accountId: 'acct-1',
+              accessLevel: AccessLevel.unverified,
+              displayName: 'Juana',
             ),
             accessToken: 'token',
           ),
