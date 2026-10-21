@@ -346,6 +346,9 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
             'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
+          // The sheet hugs its content. Design ends at y 2119; the build was
+          // 42 device px short.
+          const SizedBox(height: 14 + 1 / 3),
         ],
       ),
     );
@@ -564,6 +567,9 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
             'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
+          // Design sheet bottoms: y 2267 (02-12) and y 2525 (02-12b).
+          // The build was 44 and 43 device px short.
+          SizedBox(height: expired ? 44 / 3 : 15),
         ],
       ),
     );
