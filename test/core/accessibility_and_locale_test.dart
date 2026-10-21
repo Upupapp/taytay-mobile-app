@@ -123,7 +123,8 @@ void main() {
         'navHome':
             'The word Filipino speakers use in app navigation. '
             'Translating it would be less clear, not more.',
-        'navProfile': 'As navHome.',
+        'navNews': 'The approved tab word is Balita in both locales.',
+        'navTulong': 'The approved tab word is Tulong in both locales.',
         'fieldBarangay': '"Barangay" is the Filipino word already.',
         'profileFieldBarangay': 'As fieldBarangay.',
         'fieldEmail': '"Email address" is used untranslated in Filipino UI.',

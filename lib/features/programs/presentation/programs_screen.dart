@@ -13,7 +13,6 @@ import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_program.dart';
 
 /// Assistance programmes the LGU is currently running.
@@ -82,7 +81,6 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
         title: const Text('Assistance programmes'),
       ),
       body: SafeArea(

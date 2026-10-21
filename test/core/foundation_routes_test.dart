@@ -32,9 +32,9 @@ const SessionState _verified = AuthenticatedSession(
 /// `!navigationRoots.contains`, so a test that only compares the two checks
 /// the definition against itself.
 ///
-/// S4 note, not done here: `programs` becomes the Tulong root. Remove its back
-/// button and add [AppRoute.programs] to this set and to [AppRoute.navigationRoots]
-/// then.
+/// Shell tabs, plus the splash, onboarding and the two blocking gates.
+/// Events left the bar in S4 and shows a back button. Programs is the Tulong
+/// root and does not.
 const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
   AppRoute.splash,
   AppRoute.onboarding,
@@ -43,7 +43,7 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
   AppRoute.home,
   AppRoute.services,
   AppRoute.news,
-  AppRoute.events,
+  AppRoute.programs,
   AppRoute.profile,
 };
 
@@ -77,7 +77,7 @@ String _openLocation(AppRoute route) =>
 void main() {
   test('routes with no back button are this list', () {
     expect(AppRoute.navigationRoots, _routesWithoutBackButton);
-    expect(_routesWithoutBackButton, isNot(contains(AppRoute.programs)));
+    expect(_routesWithoutBackButton, isNot(contains(AppRoute.events)));
     for (final route in AppRoute.values) {
       expect(
         route.showsBackButton,
@@ -87,7 +87,7 @@ void main() {
     }
   });
 
-  test('approved tabs are recorded separately from the live shell', () {
+  test('the live shell is the approved five tabs', () {
     expect(AppRoute.designRootTabs, <AppRoute>[
       AppRoute.home,
       AppRoute.services,
@@ -96,7 +96,8 @@ void main() {
       AppRoute.profile,
     ]);
     expect(AppRoute.designRootTabs, isNot(contains(AppRoute.events)));
-    expect(AppRoute.shellDestinations, contains(AppRoute.events));
+    expect(AppRoute.shellDestinations, AppRoute.designRootTabs);
+    expect(AppRoute.shellDestinations, isNot(contains(AppRoute.events)));
   });
 
   test('new public routes stay reachable for a guest', () {

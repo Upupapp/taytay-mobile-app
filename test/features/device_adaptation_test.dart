@@ -247,14 +247,14 @@ void main() {
 
       // Proves the locale reached the widgets, so the layout assertions below
       // are measuring Filipino rather than English on a Filipino device.
-      expect(find.text('Mga Serbisyo'), findsWidgets);
-      expect(find.text('Mga Kaganapan'), findsWidgets);
+      expect(find.text('Direktoryo'), findsWidgets);
+      expect(find.text('Tulong'), findsWidgets);
       expect(find.text('Balita'), findsWidgets);
       expect(find.text('Events'), findsNothing);
     });
 
     testWidgets('core routes render in Filipino', (tester) async {
-      // Filipino runs longer than English — "Mga Kaganapan" against "Events" —
+      // Filipino runs longer than English — "Aking Account" against "My Account" —
       // and a navigation bar that fits one and clips the other is a bar that
       // was only ever checked in one language.
       for (final route in coreRoutes) {

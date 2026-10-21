@@ -200,10 +200,10 @@ void main() {
         ShellDestination.values.map((d) => d.label).toList(),
         orderedEquals(<String>[
           'Home',
-          'Services',
-          'News',
-          'Events',
-          'Profile',
+          'Directory',
+          'Balita',
+          'Tulong',
+          'My Account',
         ]),
       );
     });
@@ -233,12 +233,22 @@ void main() {
 
     test('a branch route maps back to its destination', () {
       expect(ShellDestination.forLocation('/home'), ShellDestination.home);
-      expect(ShellDestination.forLocation('/news'), ShellDestination.news);
-      expect(ShellDestination.forLocation('/news/abc'), ShellDestination.news);
+      expect(ShellDestination.forLocation('/news'), ShellDestination.balita);
       expect(
-        ShellDestination.forLocation('/events/e-1'),
-        ShellDestination.events,
+        ShellDestination.forLocation('/news/abc'),
+        ShellDestination.balita,
       );
+      expect(
+        ShellDestination.forLocation('/programs/aics'),
+        ShellDestination.tulong,
+      );
+      expect(ShellDestination.forLocation('/hotlines'), ShellDestination.home);
+      expect(
+        ShellDestination.forLocation('/notifications/settings'),
+        ShellDestination.home,
+      );
+      // Events left the tab bar.
+      expect(ShellDestination.forLocation('/events/e-1'), isNull);
       // Outside the shell entirely.
       expect(ShellDestination.forLocation('/sign-in'), isNull);
       expect(ShellDestination.forLocation('/digital-id'), isNull);

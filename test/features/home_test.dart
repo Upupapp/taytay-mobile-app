@@ -2,12 +2,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/links/external_link_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -16,8 +18,11 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
+import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/domain/home_emphasis.dart';
+import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
+import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
@@ -26,7 +31,6 @@ import 'package:taytay_resident/features/verification/domain/correctable_field.d
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
-import 'package:taytay_resident/shared/widgets/next_action_card.dart';
 
 /// Counts every `/me/` read so a test can assert a guest issued none.
 class CountingRequestRepository implements ServiceRequestRepository {
@@ -233,16 +237,51 @@ class StubEventRepository implements EventRepository {
   }) async => const Err<EventRegistration>(ServerFailure());
 }
 
-AppConfig config() => AppConfig.from(
+/// Counts notification reads. Home must not call this for a guest.
+class CountingNotificationRepository implements NotificationRepository {
+  int listCalls = 0;
+
+  @override
+  Future<Result<Paginated<ResidentNotification>>> listOwn({
+    int page = 1,
+    int perPage = 20,
+  }) async {
+    listCalls++;
+    return const Err<Paginated<ResidentNotification>>(ServerFailure());
+  }
+
+  @override
+  Future<Result<void>> markRead(String id) async => const Ok<void>(null);
+
+  @override
+  Future<Result<void>> markAllRead() async => const Ok<void>(null);
+
+  @override
+  Future<Result<NotificationPreferences>> loadPreferences() async =>
+      const Err<NotificationPreferences>(ServerFailure());
+
+  @override
+  Future<Result<void>> updatePreferences(
+    NotificationPreferences preferences,
+  ) async => const Ok<void>(null);
+
+  @override
+  Future<Result<String>> registerPushToken(String token) async =>
+      const Err<String>(ServerFailure());
+}
+
+AppConfig config({String dataMode = ''}) => AppConfig.from(
   rawEnvironment: 'dev',
   rawApiBaseUrl: 'https://example.test/api/v1',
   isReleaseBuild: false,
+  rawDataMode: dataMode,
 );
 
 typedef Booted = ({
   AppDependencies dependencies,
   CountingRequestRepository requests,
   CountingVerificationRepository verification,
+  CountingNotificationRepository notifications,
 });
 
 Future<Booted> bootHome(
@@ -254,6 +293,8 @@ Future<Booted> bootHome(
   Size size = const Size(400, 1400),
   TextScaler textScaler = TextScaler.noScaling,
   bool disableAnimations = false,
+  String dataMode = '',
+  ExternalLinkService? links,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -280,9 +321,10 @@ Future<Booted> bootHome(
   final verification = CountingVerificationRepository(
     detail: verificationDetail,
   );
+  final notifications = CountingNotificationRepository();
 
   final base = AppDependencies.build(
-    config: config(),
+    config: config(dataMode: dataMode),
     secrets: secrets,
     sessionStore: sessionStore,
     localAuthenticator: const UnavailableLocalAuthenticator(),
@@ -312,9 +354,9 @@ Future<Booted> bootHome(
     requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
-    externalLinks: base.externalLinks,
+    externalLinks: links ?? base.externalLinks,
     accountControlsRepository: base.accountControlsRepository,
-    notificationRepository: base.notificationRepository,
+    notificationRepository: notifications,
     registrationRepository: base.registrationRepository,
     barangayDirectory: base.barangayDirectory,
     platform: base.platform,
@@ -338,6 +380,7 @@ Future<Booted> bootHome(
     dependencies: dependencies,
     requests: requests,
     verification: verification,
+    notifications: notifications,
   );
 }
 
@@ -350,66 +393,57 @@ String renderedText(WidgetTester tester) => tester
 
 void main() {
   group('emphasis is declared, not improvised', () {
-    test('every access level gets a hero, an action and a way to the hall', () {
-      for (final level in AccessLevel.values) {
-        final emphasis = HomeEmphasis.forLevel(level);
-        expect(emphasis.contains(HomeSection.hero), isTrue, reason: level.name);
-        expect(
-          emphasis.contains(HomeSection.nextAction),
-          isTrue,
-          reason: level.name,
-        );
-        // The route that works when the software does not.
-        expect(
-          emphasis.sections.last,
-          HomeSection.municipalHall,
-          reason: level.name,
-        );
-      }
-    });
-
-    test('public content is offered at every level, in the same order', () {
+    test('every level gets the same public sections, in one order', () {
+      const order = <HomeSection>[
+        HomeSection.greeting,
+        HomeSection.carousel,
+        HomeSection.quickActions,
+        HomeSection.news,
+        HomeSection.hotline,
+      ];
       for (final level in AccessLevel.values) {
         final sections = HomeEmphasis.forLevel(level).sections;
-        expect(sections.contains(HomeSection.services), isTrue);
         expect(
-          sections.indexOf(HomeSection.services),
-          lessThan(sections.indexOf(HomeSection.news)),
-          reason: level.name,
-        );
-        expect(
-          sections.indexOf(HomeSection.news),
-          lessThan(sections.indexOf(HomeSection.events)),
+          sections.where((section) => section != HomeSection.statusCard),
+          orderedEquals(order),
           reason: level.name,
         );
       }
     });
 
-    test('a guest is offered no personal section at all — acceptance 3', () {
+    test('only an unverified resident and a guest get a status card', () {
       expect(
-        HomeEmphasis.forLevel(AccessLevel.guest).personalSections,
-        isEmpty,
+        HomeEmphasis.forLevel(
+          AccessLevel.verified,
+        ).contains(HomeSection.statusCard),
+        isFalse,
       );
       expect(
-        HomeEmphasis.forLevel(AccessLevel.unverified).personalSections,
-        isEmpty,
+        HomeEmphasis.forLevel(AccessLevel.guest).sections.first,
+        HomeSection.greeting,
       );
       expect(
-        HomeEmphasis.forLevel(AccessLevel.verified).personalSections,
-        contains(HomeSection.requests),
+        HomeEmphasis.forLevel(
+          AccessLevel.guest,
+        ).contains(HomeSection.statusCard),
+        isTrue,
+      );
+      expect(
+        HomeEmphasis.forLevel(
+          AccessLevel.unverified,
+        ).contains(HomeSection.statusCard),
+        isTrue,
       );
     });
 
-    test('what the LGU needs comes before what it announces', () {
-      final verified = HomeEmphasis.forLevel(AccessLevel.verified).sections;
-      expect(
-        verified.indexOf(HomeSection.nextAction),
-        lessThan(verified.indexOf(HomeSection.news)),
-      );
-      expect(
-        verified.indexOf(HomeSection.requests),
-        lessThan(verified.indexOf(HomeSection.news)),
-      );
+    test('no level is offered a personal section — acceptance 3', () {
+      for (final level in AccessLevel.values) {
+        expect(
+          HomeEmphasis.forLevel(level).personalSections,
+          isEmpty,
+          reason: level.name,
+        );
+      }
     });
 
     test('no section appears twice', () {
@@ -430,11 +464,51 @@ void main() {
     ) async {
       await bootHome(tester);
 
-      expect(find.text('Kumusta!'), findsOneWidget);
-      expect(find.textContaining('no account needed'), findsOneWidget);
-      // Public content and the always-present fallback.
-      expect(find.text('Municipal services'), findsOneWidget);
-      expect(find.text('Taytay Municipal Hall'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
+      expect(find.text('Sign in'), findsWidgets);
+      expect(find.text('Create account'), findsOneWidget);
+      expect(find.text('Ano ang kailangan mo?'), findsOneWidget);
+    });
+
+    testWidgets('Create account is the full label on one line', (tester) async {
+      await bootHome(tester, size: const Size(390, 844));
+
+      final Text label = tester.widget<Text>(find.text('Create account'));
+      expect(label.style?.fontSize, 14);
+      expect(label.style?.fontWeight, FontWeight.w800);
+      expect(label.overflow, isNot(TextOverflow.ellipsis));
+      expect(label.maxLines, 1);
+
+      final RenderParagraph paragraph = tester.renderObject<RenderParagraph>(
+        find.text('Create account'),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(paragraph.text.toPlainText(), 'Create account');
+      // The full label is one line, and its glyphs sit inside the button.
+      final List<TextBox> boxes = paragraph.getBoxesForSelection(
+        const TextSelection(baseOffset: 0, extentOffset: 14),
+      );
+      expect(boxes, isNotEmpty);
+      expect(boxes.map((TextBox box) => box.top.round()).toSet(), hasLength(1));
+      final double right = boxes
+          .map((TextBox box) => box.right)
+          .reduce((double a, double b) => a > b ? a : b);
+      expect(right, lessThanOrEqualTo(paragraph.size.width + 0.01));
+      expect(
+        paragraph.size.width + 0.01,
+        greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)),
+      );
+
+      final Padding padding = tester.widget<Padding>(
+        find
+            .ancestor(
+              of: find.text('Create account'),
+              matching: find.byType(Padding),
+            )
+            .first,
+      );
+      expect((padding.padding as EdgeInsets).horizontal, 28);
     });
 
     testWidgets('the sign-in invitation is present but not coercive', (
@@ -442,10 +516,8 @@ void main() {
     ) async {
       await bootHome(tester);
 
-      expect(find.byType(NextActionCard), findsOneWidget);
-      expect(find.text('Your Taytay ID, on your phone'), findsOneWidget);
-      // Offered, with an equally visible way to decline, and no modal.
-      expect(find.text('Just browsing'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
+      expect(find.text('Sign up to message offices.'), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
     });
@@ -470,10 +542,9 @@ void main() {
         ],
       );
 
-      expect(find.text('Latest from Taytay LGU'), findsOneWidget);
+      expect(find.text('Latest Balita'), findsOneWidget);
       expect(find.text('Water interruption advisory'), findsOneWidget);
-      expect(find.text('Coming up in Taytay'), findsOneWidget);
-      expect(find.text('Medical mission'), findsOneWidget);
+      expect(find.text('Medical mission'), findsNothing);
     });
   });
 
@@ -486,6 +557,7 @@ void main() {
       // screenshot either.
       expect(booted.requests.listCalls, 0);
       expect(booted.verification.statusCalls, 0);
+      expect(booted.notifications.listCalls, 0);
     });
 
     testWidgets('no personal wording appears anywhere on the screen', (
@@ -510,14 +582,14 @@ void main() {
       tester,
     ) async {
       final booted = await bootHome(tester, level: AccessLevel.verified);
-      expect(find.textContaining('verified Taytay resident'), findsOneWidget);
+      expect(find.textContaining(', Ana!'), findsOneWidget);
 
       await booted.dependencies.session.signOut();
       await tester.pumpAndSettle();
 
       final rendered = renderedText(tester);
       expect(rendered, isNot(contains('ana')));
-      expect(rendered, contains('no account needed'));
+      expect(rendered, contains('bisita'));
     });
   });
 
@@ -527,28 +599,26 @@ void main() {
     ) async {
       await bootHome(tester, level: AccessLevel.unverified);
 
-      expect(find.byType(NextActionCard), findsOneWidget);
-      expect(find.text('One step to go'), findsOneWidget);
-      expect(find.text('Check my status'), findsOneWidget);
-    });
-
-    testWidgets('a verified resident is pointed at their ID', (tester) async {
-      await bootHome(
-        tester,
-        level: AccessLevel.verified,
-        verificationDetail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.verified,
-          rawState: 'approved',
-        ),
+      expect(find.text('Verification pending'), findsOneWidget);
+      expect(
+        find.textContaining('Messaging offices unlocks once verified.'),
+        findsOneWidget,
       );
-
-      expect(find.text('Open my digital ID'), findsOneWidget);
     });
 
-    testWidgets('a flagged verification says so, in the LGU words', (
+    testWidgets('a verified resident has no status card', (tester) async {
+      await bootHome(tester, level: AccessLevel.verified);
+
+      expect(find.text('Verification pending'), findsNothing);
+      expect(find.text('Browsing as guest'), findsNothing);
+      expect(find.textContaining(', Ana!'), findsOneWidget);
+      expect(find.text('Sign in'), findsNothing);
+    });
+
+    testWidgets('the status card follows the session, not a fetched case', (
       tester,
     ) async {
-      await bootHome(
+      final booted = await bootHome(
         tester,
         level: AccessLevel.unverified,
         verificationDetail: const VerificationStatusDetail(
@@ -557,18 +627,10 @@ void main() {
         ),
       );
 
-      // Reuses TAB 08's vocabulary rather than re-deriving status, so Home and
-      // the verification screen cannot disagree.
-      expect(find.text('More information needed'), findsOneWidget);
-    });
-
-    testWidgets('exactly one next-action card, never a wall of them', (
-      tester,
-    ) async {
-      for (final level in AccessLevel.values) {
-        await bootHome(tester, level: level);
-        expect(find.byType(NextActionCard), findsOneWidget, reason: level.name);
-      }
+      // Home does not read the verification case. The card is the session.
+      expect(booted.verification.statusCalls, 0);
+      expect(find.text('Verification pending'), findsOneWidget);
+      expect(find.text('More information needed'), findsNothing);
     });
   });
 
@@ -637,12 +699,10 @@ void main() {
       // No announcements and no events: the declining default repositories.
       await bootHome(tester);
 
-      expect(find.text('Latest from Taytay LGU'), findsNothing);
+      expect(find.text('Latest Balita'), findsNothing);
       expect(find.text('Coming up in Taytay'), findsNothing);
-      // What never disappears is what keeps Home worth opening.
-      expect(find.text('Municipal services'), findsOneWidget);
-      expect(find.text('Taytay Municipal Hall'), findsOneWidget);
-      expect(find.byType(NextActionCard), findsOneWidget);
+      expect(find.text('Ano ang kailangan mo?'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('a verified resident with no requests sees no empty box', (
@@ -662,7 +722,7 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
 
     testWidgets('Home renders on a wide surface beside the rail', (
@@ -672,26 +732,181 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(NavigationRail), findsOneWidget);
-      expect(find.text('Kumusta!'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
     });
 
-    testWidgets('the hero animates only when motion is allowed', (
+    testWidgets('the carousel stays put unless a test arms autoplay', (
       tester,
     ) async {
-      await bootHome(tester);
-      expect(find.byType(TweenAnimationBuilder<double>), findsOneWidget);
+      await _pumpCarousel(tester, autoplay: false, reduced: false);
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page ?? 0,
+        closeTo(0, 0.01),
+      );
+
+      await tester.pump(const Duration(seconds: 6));
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page ?? 0,
+        closeTo(0, 0.01),
+      );
     });
 
-    testWidgets('the hero does not animate under reduced motion', (
+    testWidgets('autoplay advances when a test arms it', (tester) async {
+      await _pumpCarousel(tester, autoplay: true, reduced: false);
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        closeTo(1, 0.01),
+      );
+    });
+
+    testWidgets('reduced motion pauses autoplay', (tester) async {
+      await _pumpCarousel(tester, autoplay: true, reduced: true);
+      await tester.pump(const Duration(seconds: 6));
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page ?? 0,
+        closeTo(0, 0.01),
+      );
+    });
+
+    testWidgets('a reused canvas still honours a new initial slide', (
       tester,
     ) async {
-      // The hero's fade is decorative, so reduced motion removes it entirely
-      // rather than shortening it. It is the most repeated animation in the app
-      // — every visit to Home — and so the one most worth suppressing.
-      await bootHome(tester, disableAnimations: true);
+      Future<void> show(int slide) {
+        return tester.pumpWidget(
+          MaterialApp(
+            home: HomeCanvas(
+              greeting: 'Magandang gabi!',
+              slides: _slides,
+              initialSlide: slide,
+            ),
+          ),
+        );
+      }
 
-      expect(find.byType(TweenAnimationBuilder<double>), findsNothing);
-      expect(find.text('Kumusta!'), findsOneWidget);
+      await show(0);
+      await tester.pump();
+      expect(find.text('First slide'), findsOneWidget);
+
+      await show(1);
+      await tester.pump();
+      expect(find.text('Second slide'), findsOneWidget);
+      expect(find.text('First slide'), findsNothing);
+    });
+
+    testWidgets('pull to refresh shows the skeleton line', (tester) async {
+      // The skeleton news heading sits below the fold of the default 600 dp
+      // test surface, and the list builds children lazily.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 1400);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: HomeCanvas(
+            greeting: 'Magandang gabi, Juana!',
+            slides: <HomeSlide>[],
+            refreshing: true,
+          ),
+        ),
+      );
+
+      expect(find.text('Updating Balita and advisories…'), findsOneWidget);
+      expect(find.text('Magandang gabi, Juana!'), findsOneWidget);
+      expect(find.text('Ano ang maitutulong namin ngayon?'), findsNothing);
+      expect(find.text('Latest Balita'), findsOneWidget);
     });
   });
+
+  group('the bell and the hotline', () {
+    testWidgets('a guest bell opens sign-in', (tester) async {
+      await bootHome(tester);
+      await tester.tap(find.byKey(const Key('home-bell')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+    });
+
+    testWidgets('a signed-in bell opens the notification centre', (
+      tester,
+    ) async {
+      await bootHome(tester, level: AccessLevel.unverified);
+      await tester.tap(find.byKey(const Key('home-bell')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Notifications'), findsOneWidget);
+    });
+
+    testWidgets('a call with no dialer shows a toast', (tester) async {
+      await bootHome(
+        tester,
+        dataMode: 'mock',
+        links: const UnavailableExternalLinkService(),
+      );
+      await tester.scrollUntilVisible(
+        find.text('All hotlines'),
+        200,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.tap(find.text('All hotlines'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Emergency hotlines'), findsOneWidget);
+      await tester.tap(
+        find.bySemanticsLabel('Call Sagip Taytay Command Center'),
+      );
+      await tester.pump();
+
+      expect(
+        find.text('This phone has no app that can place a call.'),
+        findsOneWidget,
+      );
+    });
+  });
+}
+
+const List<HomeSlide> _slides = <HomeSlide>[
+  HomeSlide(
+    eyebrow: 'BALITA',
+    title: 'First slide',
+    body: 'One.',
+    action: 'Open',
+    photoAsset: 'assets/photos/municipal_hall.jpg',
+    credit: 'Photo credit',
+    routeName: 'news',
+  ),
+  HomeSlide(
+    eyebrow: 'TULONG',
+    title: 'Second slide',
+    body: 'Two.',
+    action: 'Open',
+    photoAsset: 'assets/photos/parish_church.jpg',
+    credit: 'Photo credit',
+    routeName: 'programs',
+  ),
+];
+
+Future<void> _pumpCarousel(
+  WidgetTester tester, {
+  required bool autoplay,
+  required bool reduced,
+}) async {
+  tester.view.physicalSize = const Size(400, 900);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  await tester.pumpWidget(
+    MaterialApp(
+      home: MediaQuery(
+        data: MediaQueryData.fromView(
+          tester.view,
+        ).copyWith(disableAnimations: reduced),
+        child: HomeCanvas(
+          greeting: 'Magandang gabi!',
+          slides: _slides,
+          autoplayInTests: autoplay,
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
 }

@@ -76,7 +76,7 @@ Future<void> openAccountEntry(WidgetTester tester) async {
 /// `ListView` only builds what fits, so an un-scrolled tap misses a widget that
 /// is genuinely absent from the tree.
 Future<void> openProfileShortcut(WidgetTester tester, String label) async {
-  await tester.tap(find.text('Profile').last);
+  await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
   await revealInProfile(tester, find.text(label));
   await tester.tap(find.text(label));
@@ -138,8 +138,8 @@ void main() {
       await _settle(tester);
 
       expect(dependencies.session.state, const GuestSession());
-      expect(find.text('Kumusta!'), findsOneWidget);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.textContaining(', Bisita!'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('resumes a stored session without asking to sign in again', (
@@ -160,8 +160,8 @@ void main() {
       await _settle(tester);
 
       expect(dependencies.session.accessLevel, AccessLevel.verified);
-      expect(find.text('Kumusta, Ana!'), findsOneWidget);
-      expect(find.textContaining('verified Taytay resident'), findsOneWidget);
+      expect(find.textContaining(', Ana!'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsNothing);
       expect(find.text('Sign in'), findsNothing);
     });
   });
@@ -412,7 +412,7 @@ void main() {
         find.text('This build is not configured correctly and cannot start.'),
         findsOneWidget,
       );
-      expect(find.text('Kumusta!'), findsNothing);
+      expect(find.textContaining(', Bisita!'), findsNothing);
     });
   });
 

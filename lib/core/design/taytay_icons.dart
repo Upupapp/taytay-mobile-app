@@ -23,6 +23,9 @@ abstract final class TaytayIcons {
 
   static const IconData bell = IconData(57433, fontFamily: 'Lucide');
 
+  /// Lucide `refresh-cw`. The pull-to-refresh spinner on Home.
+  static const IconData refreshCw = IconData(57669, fontFamily: 'Lucide');
+
   static const IconData arrowLeft = IconData(57416, fontFamily: 'Lucide');
 
   static const IconData arrowRight = IconData(57417, fontFamily: 'Lucide');
@@ -81,6 +84,9 @@ abstract final class TaytayIcons {
 
   static const IconData building = IconData(58000, fontFamily: 'Lucide');
 
+  /// Lucide `building-2`. Directory in the tab bar and on the Home quick tile.
+  static const IconData building2 = IconData(58000, fontFamily: 'Lucide');
+
   static const IconData idCard = IconData(58903, fontFamily: 'Lucide');
 
   static const IconData eye = IconData(57530, fontFamily: 'Lucide');
@@ -129,4 +135,11 @@ abstract final class TaytayIcons {
   static const IconData stethoscope = IconData(58097, fontFamily: 'Lucide');
 
   static const IconData handshake = IconData(58816, fontFamily: 'Lucide');
+
+  /// Lucide `hand-coins`. The welfare row on the notification centre.
+  static const IconData handCoins = IconData(58808, fontFamily: 'Lucide');
+
+  /// Lucide `hand-heart`. Tulong in the tab bar, the Home quick tile, and
+  /// the Tulong hero eyebrow.
+  static const IconData handHeart = IconData(58809, fontFamily: 'Lucide');
 }

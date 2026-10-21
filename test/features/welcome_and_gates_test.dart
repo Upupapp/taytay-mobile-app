@@ -103,7 +103,7 @@ Future<void> openAccountEntry(WidgetTester tester) async {
 /// `ListView` only builds what fits, so an un-scrolled tap misses a widget that
 /// is genuinely absent from the tree.
 Future<void> openProfileShortcut(WidgetTester tester, String label) async {
-  await tester.tap(find.text('Profile').last);
+  await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
   await revealInProfile(tester, find.text(label));
   await tester.tap(find.text(label));
@@ -185,7 +185,7 @@ void main() {
       await settle(tester);
 
       expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsNothing);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('a returning verified resident lands on home', (tester) async {
@@ -197,7 +197,9 @@ void main() {
       await settle(tester);
 
       expect(dependencies.session.accessLevel, AccessLevel.verified);
-      expect(find.textContaining('verified Taytay resident'), findsOneWidget);
+      expect(find.text('BAYAN NG TAYTAY'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsNothing);
+      expect(find.text('Verification pending'), findsNothing);
     });
 
     testWidgets('an unverified resident lands on home with the next step', (
@@ -206,7 +208,7 @@ void main() {
       await boot(tester, welcomeSeen: true, stored: unverifiedSession);
       await settle(tester);
 
-      expect(find.text('One step to go'), findsOneWidget);
+      expect(find.text('Verification pending'), findsOneWidget);
     });
 
     testWidgets('an expired session drops to guest and explains why', (
@@ -224,7 +226,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.session.accessLevel, AccessLevel.guest);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
 
       // The reason survives, so sign-in can say the session ended.
       final session = dependencies.session.state as GuestSession;
@@ -273,7 +275,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.launch.state, LaunchState.returning);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('skip marks the welcome done and enters the app', (
@@ -286,7 +288,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.launch.state, LaunchState.returning);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('a skipped welcome is not shown again on the next launch', (
@@ -325,7 +327,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.launch.state, LaunchState.returning);
-      expect(find.textContaining('no account needed'), findsOneWidget);
+      expect(find.text('Browsing as guest'), findsOneWidget);
     });
 
     testWidgets('progress is announced as text, not only as dots', (
@@ -584,11 +586,9 @@ void main() {
       await boot(tester, welcomeSeen: true, stored: unverifiedSession);
       await settle(tester);
 
-      // TAB 11: Home's next-action card is the route to verification for an
-      // unverified resident. With no status loaded it says what is true from
-      // the session alone and offers to check.
-      expect(find.text('One step to go'), findsOneWidget);
-      await tapVisible(tester, find.text('Check my status'));
+      // Home states the session. Verification itself is opened from My Account.
+      expect(find.text('Verification pending'), findsOneWidget);
+      await openProfileShortcut(tester, 'Verify my identity');
 
       // TAB 04 wired this to `GET me/kyc`, so the screen now reports a real
       // failure rather than an absent module — in a widget test there is no

@@ -8,19 +8,19 @@
   "@navHome": {
     "description": "Shell destination: the resident's dashboard."
   },
-  "navServices": "Services",
+  "navServices": "Directory",
   "@navServices": {
     "description": "Shell destination: the municipal service catalogue."
   },
-  "navNews": "News",
+  "navNews": "Balita",
   "@navNews": {
     "description": "Shell destination: LGU announcements."
   },
-  "navEvents": "Events",
-  "@navEvents": {
-    "description": "Shell destination: LGU events."
+  "navTulong": "Tulong",
+  "@navTulong": {
+    "description": "Shell destination: social welfare programmes."
   },
-  "navProfile": "Profile",
+  "navProfile": "My Account",
   "@navProfile": {
     "description": "Shell destination: the resident's own account."
   },

@@ -15,16 +15,16 @@ class AppStringsEn extends AppStrings {
   String get navHome => 'Home';
 
   @override
-  String get navServices => 'Services';
+  String get navServices => 'Directory';
 
   @override
-  String get navNews => 'News';
+  String get navNews => 'Balita';
 
   @override
-  String get navEvents => 'Events';
+  String get navTulong => 'Tulong';
 
   @override
-  String get navProfile => 'Profile';
+  String get navProfile => 'My Account';
 
   @override
   String get actionTryAgain => 'Try again';

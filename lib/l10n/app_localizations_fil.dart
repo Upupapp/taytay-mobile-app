@@ -15,16 +15,16 @@ class AppStringsFil extends AppStrings {
   String get navHome => 'Home';
 
   @override
-  String get navServices => 'Mga Serbisyo';
+  String get navServices => 'Direktoryo';
 
   @override
   String get navNews => 'Balita';
 
   @override
-  String get navEvents => 'Mga Kaganapan';
+  String get navTulong => 'Tulong';
 
   @override
-  String get navProfile => 'Profile';
+  String get navProfile => 'Aking Account';
 
   @override
   String get actionTryAgain => 'Subukan muli';

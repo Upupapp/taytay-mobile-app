@@ -425,8 +425,8 @@ enum AppRoute {
   /// Routes that are the top of a stack and therefore do not show a back button.
   ///
   /// Shell tabs, the splash, onboarding, and the two blocking gates. Everything
-  /// else shows [showsBackButton]. Events is still a shell tab; decision D6
-  /// moves it off the bar in sprint S4, and the back button appears then.
+  /// else shows [showsBackButton]. Events left the bar in S4 and shows a back
+  /// button. Programs is the Tulong root and does not.
   static const Set<AppRoute> navigationRoots = <AppRoute>{
     splash,
     onboarding,
@@ -435,13 +435,13 @@ enum AppRoute {
     home,
     services,
     news,
-    events,
+    programs,
     profile,
   };
 
   /// The approved tab bar (decision D6): Home, Directory, Balita, Tulong,
-  /// My Account. Events is not in this set. The live shell still uses
-  /// [shellDestinations] until S4 draws the raised centre disc.
+  /// My Account. Events is not in this set. [shellDestinations] is the same
+  /// list.
   static const List<AppRoute> designRootTabs = <AppRoute>[
     home,
     services,
@@ -460,13 +460,7 @@ enum AppRoute {
   /// makes the app unlearnable: the tab someone reached for yesterday is
   /// somewhere else today, and the change happens at the exact moment they are
   /// least sure of themselves. See `ShellDestination`.
-  static const List<AppRoute> shellDestinations = <AppRoute>[
-    home,
-    services,
-    news,
-    events,
-    profile,
-  ];
+  static const List<AppRoute> shellDestinations = designRootTabs;
 
   /// Builds a concrete location from this route's pattern.
   ///

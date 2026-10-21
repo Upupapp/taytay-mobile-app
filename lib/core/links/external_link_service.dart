@@ -49,6 +49,15 @@ abstract final class ExternalLink {
     if (parsed.host.isEmpty) return false;
     return true;
   }
+
+  /// A `tel:` URI for a published office number, or null when [number] has no
+  /// dialable digits. `https` stays the only scheme [isSafe] accepts.
+  static Uri? dialUri(String number) {
+    final String first = number.split('·').first.trim();
+    final String digits = first.replaceAll(RegExp(r'[^\d+]'), '');
+    if (digits.replaceAll('+', '').length < 3) return null;
+    return Uri(scheme: 'tel', path: digits);
+  }
 }
 
 /// Opening a link outside the app.
@@ -58,6 +67,10 @@ abstract final class ExternalLink {
 /// defined behaviour rather than an exception.
 abstract interface class ExternalLinkService {
   Future<LinkOutcome> open(String url);
+
+  /// Hands a published hotline to the phone dialer. [LinkOutcome.unavailable]
+  /// when the device has no dialer, so the screen can say so.
+  Future<LinkOutcome> dial(String number);
 }
 
 /// Refuses everything. The default in tests, and on any platform without a
@@ -68,4 +81,10 @@ class UnavailableExternalLinkService implements ExternalLinkService {
   @override
   Future<LinkOutcome> open(String url) async =>
       ExternalLink.isSafe(url) ? LinkOutcome.unavailable : LinkOutcome.refused;
+
+  @override
+  Future<LinkOutcome> dial(String number) async => ExternalLink.dialUri(number) ==
+          null
+      ? LinkOutcome.refused
+      : LinkOutcome.unavailable;
 }

@@ -105,7 +105,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // TAB 11 moved the per-capability entries to the Profile destination.
-      await tester.tap(find.text('Profile').last);
+      await tester.tap(find.text('My Account').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('Hold your Taytay digital ID'));
       await tester.pumpAndSettle();
