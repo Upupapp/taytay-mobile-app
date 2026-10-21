@@ -161,13 +161,18 @@ class _Rule extends StatelessWidget {
       children: <Widget>[
         Icon(Icons.check, size: 13, color: ink),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 12,
-            fontWeight: AppTypography.strong,
-            color: ink,
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 12,
+              fontWeight: AppTypography.strong,
+              color: ink,
+            ),
           ),
         ),
       ],

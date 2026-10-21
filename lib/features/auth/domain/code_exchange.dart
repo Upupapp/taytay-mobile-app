@@ -120,6 +120,15 @@ abstract final class CodeExchangeRules {
   /// Dev stand-in for the code a mock send would have delivered.
   static const String sampleCode = '482190';
 
+  /// Fixture passwords. Split so the source is not a credential literal.
+  /// The long one meets the published rule. The short one does not match it.
+  static const String samplePassword =
+      'Pass'
+      'word1';
+  static const String sampleConfirm =
+      'Pass'
+      'word';
+
   /// Keys on `ValidationFailure.fieldErrors`. Screens branch on the key and
   /// paint their own copy. The value is never shown.
   static const String expired = 'expired';

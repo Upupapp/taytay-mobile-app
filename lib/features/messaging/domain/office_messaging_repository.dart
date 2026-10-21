@@ -19,7 +19,6 @@ class OfficeThread {
     this.status = 'open',
     this.unread = false,
     this.unreadCount = 0,
-    this.residentId = '',
     this.lastMessageAt,
     this.createdAt,
     this.sample = true,
@@ -39,7 +38,6 @@ class OfficeThread {
   final String status;
   final bool unread;
   final int unreadCount;
-  final String residentId;
   final DateTime? lastMessageAt;
   final DateTime? createdAt;
 
@@ -78,7 +76,8 @@ class OfficeMessage {
 ///
 /// Threads are `GET/POST /threads` on the Taytay LGU IDS API. F31 is closed.
 /// A thread carries `subject`, `last_message_preview`, `last_message_at` and
-/// `unread_count`. [OfficeThread.topic] is that subject. Starting a thread
+/// `unread_count`. `resident_id` comes back and is not stored.
+/// [OfficeThread.topic] is that subject. Starting a thread
 /// sends `office_id`, `subject` and `body`, and the response is the thread
 /// plus the first message.
 abstract interface class OfficeMessagingRepository {
