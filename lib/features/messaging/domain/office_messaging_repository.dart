@@ -18,18 +18,28 @@ class OfficeThread {
     this.officeSlug = '',
     this.status = 'open',
     this.unread = false,
+    this.unreadCount = 0,
+    this.lastMessageAt,
+    this.createdAt,
     this.sample = true,
   });
 
   final String id;
   final String officeId;
   final String officeName;
+
+  /// The thread `subject`. The screens already call this the topic.
   final String topic;
+
+  /// `last_message_preview`.
   final String preview;
   final DateTime updatedAt;
   final String officeSlug;
   final String status;
   final bool unread;
+  final int unreadCount;
+  final DateTime? lastMessageAt;
+  final DateTime? createdAt;
 
   /// True while the fact is a fixture, not an LGU record.
   final bool sample;
@@ -65,9 +75,11 @@ class OfficeMessage {
 /// Messages a verified resident sends to a municipal office.
 ///
 /// Threads are `GET/POST /threads` on the Taytay LGU IDS API. F31 is closed.
-/// A thread has no topic and no preview; those stay on the model for the
-/// screens that already show them, filled from the office slug and the latest
-/// message when the server sent neither.
+/// A thread carries `subject`, `last_message_preview`, `last_message_at` and
+/// `unread_count`. `resident_id` comes back and is not stored.
+/// [OfficeThread.topic] is that subject. Starting a thread
+/// sends `office_id`, `subject` and `body`, and the response is the thread
+/// plus the first message.
 abstract interface class OfficeMessagingRepository {
   Future<Result<List<OfficeThread>>> listThreads();
 

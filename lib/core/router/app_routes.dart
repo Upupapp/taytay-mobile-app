@@ -292,6 +292,27 @@ enum AppRoute {
     AccessRequirement.public,
   ),
 
+  /// `02-02b`. The reset code. Public: the person is not signed in.
+  /// The reset token is never a path or query parameter.
+  resetCode('reset-code', '/sign-in/forgot/code', AccessRequirement.public),
+
+  /// `02-12` and `02-12b`. Public. Token expiry is read from router extra.
+  setPassword(
+    'set-password',
+    '/sign-in/forgot/password',
+    AccessRequirement.public,
+  ),
+
+  /// `02-14` and `02-14b`. Public. The wait lives in router extra.
+  tooMany('too-many', '/sign-in/hold', AccessRequirement.public),
+
+  /// `02-13`. Public. Returns the resident to sign-in.
+  passwordUpdated(
+    'password-updated',
+    '/sign-in/forgot/updated',
+    AccessRequirement.public,
+  ),
+
   /// Municipal and barangay hotlines. Public information.
   hotlines('hotlines', '/hotlines', AccessRequirement.public),
 

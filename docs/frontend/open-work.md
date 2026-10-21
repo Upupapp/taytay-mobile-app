@@ -67,7 +67,7 @@ ahead of the pin, and moving the pin needs the backend repository to be still.
 > `test/integration/backend_routes_test.dart` asserts they match the manifest — derived there, not
 > transcribed here. If the manifest changes and this line does not, the suite goes red.
 
-**C-09, current: 29 declared routes, 29 on the Node contract, 0 recorded ahead.**
+**C-09, current: 41 declared routes, 41 on the Node contract, 0 recorded ahead.**
 
 ---
 
@@ -155,7 +155,7 @@ accident.
 | Finding | Route at backend HEAD | Owner |
 | --- | --- | --- |
 | **F03** signing keystore custody | n/a | LGU |
-| **F13** no account-closure route | **still absent** | LGU (needs the retention schedule first) + backend |
+| **F13** account closure | **`POST /me/close` is published** and the repository calls it. The screen still does not offer deletion until the LGU retention schedule says what is kept | LGU retention schedule |
 | **F15** no self-registration route | **still absent** | LGU product decision, then backend |
 | **F16** codes reach nobody | seam present (`TransactionalSender`); bound to `NullTransactionalSender`, no vendor adapter exists | LGU procurement |
 | **F24** no per-service intake form | **still absent** | the office that adjudicates each service |

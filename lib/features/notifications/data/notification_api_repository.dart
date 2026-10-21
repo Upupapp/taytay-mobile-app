@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
-import '../../../core/api/backend_gap.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/push_registration.dart';
@@ -84,54 +85,161 @@ class NotificationApiRepository
 
   @override
   Future<Result<NotificationPreferences>> loadPreferences() async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<NotificationPreferences>(
-      BackendGap.absentOnNodeContract,
-      'loadPreferences',
+    final response = await _apiClient.send<NotificationPreferences>(
+      method: HttpMethod.get,
+      path: 'me/notification-preferences',
+      authenticated: true,
+      decode: _decodePreferences,
     );
+    return response.map((envelope) => envelope.data);
   }
 
   @override
   Future<Result<void>> updatePreferences(
     NotificationPreferences preferences,
   ) async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<void>(
-      BackendGap.absentOnNodeContract,
-      'updatePreferences',
+    final response = await _apiClient.send<void>(
+      method: HttpMethod.patch,
+      path: 'me/notification-preferences',
+      authenticated: true,
+      body: <String, Object?>{'preferences': _preferenceBody(preferences)},
+      decode: (_) {},
     );
+    return response.map((_) {});
   }
 
   /// Registers this device so the office can reach it.
   ///
-  /// `me/devices` is the device registry — the same one TAB 03 deliberately did
-  /// not touch, because a registration whose purpose is a push token is not a
-  /// session list and had nothing to carry. Here it has one.
+  /// `POST /me/devices` takes `{platform, token}` and returns a device row
+  /// that does **not** include the token. The value returned here is the
+  /// token that was sent, because `DELETE /me/devices` removes the row by
+  /// that token in the body. It is not logged.
   @override
   Future<Result<String>> registerPushToken(String token) async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<String>(
-      BackendGap.absentOnNodeContract,
-      'registerPushToken',
+    if (token.isEmpty) {
+      return const Err<String>(
+        ValidationFailure(debugMessage: 'A push token is required.'),
+      );
+    }
+    final response = await _apiClient.send<String>(
+      method: HttpMethod.post,
+      path: 'me/devices',
+      authenticated: true,
+      body: <String, Object?>{'platform': _devicePlatform(), 'token': token},
+      decode: (_) => token,
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  /// Withdraws the push registration by the token [registerPushToken] returned.
+  ///
+  /// `DELETE /me/devices` carries `{token}` in the body. This is not session
+  /// revocation. Returns false rather than throwing: a resident signing out
+  /// is signed out whatever the network does.
+  @override
+  Future<bool> withdraw(String deviceId) async {
+    if (deviceId.isEmpty) return false;
+    final Result<ApiEnvelope<bool>> response = await _apiClient.send<bool>(
+      method: HttpMethod.delete,
+      path: 'me/devices',
+      authenticated: true,
+      body: <String, Object?>{'token': deviceId},
+      decode: (Object? data) {
+        if (data is Map<String, dynamic>) return data['deleted'] == true;
+        return false;
+      },
+    );
+    return switch (response) {
+      Ok<ApiEnvelope<bool>>(:final value) => value.data,
+      Err<ApiEnvelope<bool>>() => false,
+    };
+  }
+
+  static String _devicePlatform() {
+    if (kIsWeb) return 'web';
+    return switch (defaultTargetPlatform) {
+      TargetPlatform.iOS => 'ios',
+      TargetPlatform.android => 'android',
+      _ => 'web',
+    };
+  }
+
+  static NotificationPreferences _decodePreferences(Object? data) {
+    final Map<String, dynamic> map = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final Object? raw = map['preferences'];
+    final List<ChannelPreference> channels = raw is List<dynamic>
+        ? raw
+              .map(_channel)
+              .whereType<ChannelPreference>()
+              .toList(growable: false)
+        : const <ChannelPreference>[];
+    final bool push =
+        channels.isEmpty || channels.any((ChannelPreference c) => c.push);
+    ChannelPreference? verification;
+    for (final ChannelPreference channel in channels) {
+      if (channel.type == 'verification_decided') verification = channel;
+    }
+    return NotificationPreferences(
+      push: push,
+      sms: false,
+      email: false,
+      channels: channels,
+      categories: <NotificationCategory, bool>{
+        if (verification != null)
+          NotificationCategory.verificationUpdate: verification.inApp,
+      },
     );
   }
 
-  /// Withdraws a registration this install made (F27, closed in TAB 02).
-  ///
-  /// The old note here said "there is no route that removes a registration by
-  /// push token" — true, and beside the point. `DELETE me/devices/{device}`
-  /// removes it by **id**, and the id was being thrown away at registration
-  /// rather than being unavailable.
-  ///
-  /// Returns false rather than throwing, and never blocks: the contract in
-  /// [PushRegistrationWithdrawal] is that a resident signing out is signed out
-  /// whatever the network does.
-  @override
-  Future<bool> withdraw(String deviceId) async {
-    final Object _ = _apiClient.runtimeType;
-    if (deviceId.isEmpty) return false;
-    // The Node API has no device registry.
-    return false;
+  static ChannelPreference? _channel(Object? raw) {
+    if (raw is! Map<String, dynamic>) return null;
+    final Object? type = raw['type'];
+    if (type != 'verification_decided' && type != 'message_received') {
+      return null;
+    }
+    return ChannelPreference(
+      type: type! as String,
+      inApp: raw['in_app'] == true,
+      push: raw['push'] == true,
+    );
+  }
+
+  static List<Map<String, Object?>> _preferenceBody(
+    NotificationPreferences preferences,
+  ) {
+    final bool verificationOn = preferences.isEnabled(
+      NotificationCategory.verificationUpdate,
+    );
+    final List<ChannelPreference> source = preferences.channels.isEmpty
+        ? <ChannelPreference>[
+            ChannelPreference(
+              type: 'verification_decided',
+              inApp: verificationOn,
+              push: preferences.push && verificationOn,
+            ),
+            const ChannelPreference(
+              type: 'message_received',
+              inApp: true,
+              push: true,
+            ),
+          ]
+        : preferences.channels;
+    return <Map<String, Object?>>[
+      for (final ChannelPreference channel in source)
+        if (channel.type == 'verification_decided' ||
+            channel.type == 'message_received')
+          <String, Object?>{
+            'type': channel.type,
+            'in_app': channel.type == 'message_received'
+                ? true
+                : verificationOn && channel.inApp,
+            'push': channel.type == 'message_received'
+                ? true
+                : verificationOn && channel.push && preferences.push,
+          },
+    ];
   }
 
   /// `GET notifications/unread-count`.

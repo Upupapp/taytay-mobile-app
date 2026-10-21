@@ -5,31 +5,219 @@ import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
 
-/// The sign-in page field from `02-01`.
+/// Navy ramp, two glows, and the fade to [BrandColors.surface] for one `02` screen.
 ///
-/// The navy ramp and the two glows fill the 844-tall frame. A vertical fade
-/// then covers them: transparent through y = 322, solid [BrandColors.surface]
-/// at y = 382. The white form sheet starts at 332, on that light ground.
+/// Defaults are `02-01`: transparent through y = 322, solid surface at y = 382.
+class SignInAtmosphere {
+  const SignInAtmosphere({
+    this.fadeHold = 322,
+    this.fadeSolid = 382,
+    this.angle = 100,
+    this.goldX = 0.80,
+    this.goldY = 0.20,
+    this.blueX = 0.20,
+    this.blueY = 0.36,
+  });
+
+  final double fadeHold;
+  final double fadeSolid;
+  final double angle;
+  final double goldX;
+  final double goldY;
+  final double blueX;
+  final double blueY;
+
+  static const SignInAtmosphere signIn = SignInAtmosphere();
+
+  static const SignInAtmosphere reset = SignInAtmosphere(
+    fadeHold: 290,
+    fadeSolid: 350,
+    angle: 108,
+    goldX: 0.62,
+    goldY: 0.26,
+    blueX: 0.38,
+    blueY: 0.42,
+  );
+
+  static const SignInAtmosphere personal = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 116,
+    goldX: 0.45,
+    goldY: 0.22,
+    blueX: 0.55,
+    blueY: 0.38,
+  );
+
+  static const SignInAtmosphere code = SignInAtmosphere(
+    fadeHold: 290,
+    fadeSolid: 350,
+    angle: 124,
+    goldX: 0.30,
+    goldY: 0.28,
+    blueX: 0.70,
+    blueY: 0.44,
+  );
+
+  static const SignInAtmosphere terms = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 132,
+    goldX: 0.20,
+    goldY: 0.22,
+    blueX: 0.80,
+    blueY: 0.38,
+  );
+
+  static const SignInAtmosphere idCard = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 140,
+    goldX: 0.36,
+    goldY: 0.18,
+    blueX: 0.64,
+    blueY: 0.34,
+  );
+
+  static const SignInAtmosphere selfie = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 148,
+    goldX: 0.55,
+    goldY: 0.24,
+    blueX: 0.45,
+    blueY: 0.40,
+  );
+
+  static const SignInAtmosphere review = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 156,
+    goldX: 0.72,
+    goldY: 0.20,
+    blueX: 0.28,
+    blueY: 0.36,
+  );
+
+  static const SignInAtmosphere submitted = SignInAtmosphere(
+    fadeHold: 250,
+    fadeSolid: 320,
+    angle: 164,
+    goldX: 0.86,
+    goldY: 0.26,
+    blueX: 0.14,
+    blueY: 0.42,
+  );
+
+  static const SignInAtmosphere errors = SignInAtmosphere(
+    fadeHold: 170,
+    fadeSolid: 240,
+    angle: 172,
+    goldX: 0.50,
+    goldY: 0.30,
+    blueX: 0.50,
+    blueY: 0.46,
+  );
+
+  /// `02-02b`.
+  static const SignInAtmosphere resetCode = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 204,
+    goldX: 0.30,
+    goldY: 0.28,
+    blueX: 0.70,
+    blueY: 0.44,
+  );
+
+  /// `02-04b`. Distinct from [code] so the email-code golden stays put.
+  static const SignInAtmosphere codeExpired = SignInAtmosphere(
+    fadeHold: 290,
+    fadeSolid: 350,
+    angle: 212,
+    goldX: 0.20,
+    goldY: 0.22,
+    blueX: 0.80,
+    blueY: 0.38,
+  );
+
+  /// `02-14`. Waiting out a code lock.
+  static const SignInAtmosphere tooMany = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 220,
+    goldX: 0.36,
+    goldY: 0.18,
+    blueX: 0.64,
+    blueY: 0.34,
+  );
+
+  /// `02-14b`. The wait is over.
+  static const SignInAtmosphere tooManyReady = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 228,
+    goldX: 0.55,
+    goldY: 0.24,
+    blueX: 0.45,
+    blueY: 0.40,
+  );
+
+  /// `02-12`.
+  static const SignInAtmosphere setPassword = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 180,
+    goldX: 0.80,
+    goldY: 0.20,
+    blueX: 0.20,
+    blueY: 0.36,
+  );
+
+  /// `02-12b`.
+  static const SignInAtmosphere setPasswordExpired = SignInAtmosphere(
+    fadeHold: 242,
+    fadeSolid: 302,
+    angle: 188,
+    goldX: 0.62,
+    goldY: 0.26,
+    blueX: 0.38,
+    blueY: 0.42,
+  );
+
+  /// `02-13`.
+  static const SignInAtmosphere passwordUpdated = SignInAtmosphere(
+    fadeHold: 250,
+    fadeSolid: 320,
+    angle: 196,
+    goldX: 0.45,
+    goldY: 0.22,
+    blueX: 0.55,
+    blueY: 0.38,
+  );
+}
+
+/// The page field behind every `02` sheet.
 class SignInBackdrop extends StatelessWidget {
-  const SignInBackdrop({super.key});
+  const SignInBackdrop({this.atmosphere = SignInAtmosphere.signIn, super.key});
+
+  final SignInAtmosphere atmosphere;
 
   @override
   Widget build(BuildContext context) {
-    return const CustomPaint(
-      painter: SignInPagePainter(),
-      child: SizedBox.expand(),
+    return CustomPaint(
+      painter: SignInPagePainter(atmosphere),
+      child: const SizedBox.expand(),
     );
   }
 }
 
 class SignInPagePainter extends CustomPainter {
-  const SignInPagePainter();
+  const SignInPagePainter(this.atmosphere);
+
+  final SignInAtmosphere atmosphere;
 
   static const double pageHeight = 844;
-
-  /// CSS `linear-gradient(180deg, transparent 322px, #F3F5FA 382px)`.
-  static const double fadeHold = 322;
-  static const double fadeSolid = 382;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -41,7 +229,7 @@ class SignInPagePainter extends CustomPainter {
       Paint()
         ..shader = _cssLinear(
           page,
-          100,
+          atmosphere.angle,
           const <Color>[
             Color(0xFF041A44),
             BrandColors.taytayBlueDark,
@@ -53,8 +241,8 @@ class SignInPagePainter extends CustomPainter {
     _glow(
       canvas,
       page,
-      cx: 0.80,
-      cy: 0.20,
+      cx: atmosphere.goldX,
+      cy: atmosphere.goldY,
       rx: 220,
       ry: 200,
       color: BrandColors.sealGold.withValues(alpha: 0.42),
@@ -62,22 +250,27 @@ class SignInPagePainter extends CustomPainter {
     _glow(
       canvas,
       page,
-      cx: 0.20,
-      cy: 0.36,
+      cx: atmosphere.blueX,
+      cy: atmosphere.blueY,
       rx: 260,
       ry: 240,
       color: const Color(0xFF2E70E0).withValues(alpha: 0.75),
     );
-    const fade = LinearGradient(
+    final fade = LinearGradient(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-      colors: <Color>[
+      colors: const <Color>[
         Color(0x00F3F5FA),
         Color(0x00F3F5FA),
         BrandColors.surface,
         BrandColors.surface,
       ],
-      stops: <double>[0, fadeHold / pageHeight, fadeSolid / pageHeight, 1],
+      stops: <double>[
+        0,
+        atmosphere.fadeHold / pageHeight,
+        atmosphere.fadeSolid / pageHeight,
+        1,
+      ],
     );
     canvas.drawRect(page, Paint()..shader = fade.createShader(page));
     if (size.height > pageHeight) {
@@ -136,5 +329,14 @@ class SignInPagePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant SignInPagePainter oldDelegate) => false;
+  bool shouldRepaint(covariant SignInPagePainter oldDelegate) {
+    final previous = oldDelegate.atmosphere;
+    return previous.fadeHold != atmosphere.fadeHold ||
+        previous.fadeSolid != atmosphere.fadeSolid ||
+        previous.angle != atmosphere.angle ||
+        previous.goldX != atmosphere.goldX ||
+        previous.goldY != atmosphere.goldY ||
+        previous.blueX != atmosphere.blueX ||
+        previous.blueY != atmosphere.blueY;
+  }
 }

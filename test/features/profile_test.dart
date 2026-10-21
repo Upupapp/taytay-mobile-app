@@ -347,6 +347,12 @@ void main() {
       'last_name': 'Reyes',
       'mobile_number': '09171234567',
       'verification_tier': 'verified',
+      'verification_status': 'verified',
+      'email_verified': false,
+      'rejection_reason': 'notes from a reviewer',
+      'role': 'staff',
+      'office_id': 'office-9',
+      'closed': false,
       // None of the following may reach a resident's screen.
       'resident_id': 'r-1',
       'record_number': 'REC-1',
@@ -397,9 +403,15 @@ void main() {
           '0.87',
           'vawc',
           'juan dela cruz',
+          'reviewer',
+          'staff',
+          'office-9',
         ]) {
           expect(rendered, isNot(contains(forbidden)), reason: forbidden);
         }
+        expect(detail?.emailVerified, isFalse);
+        expect(detail?.rejectionReason, 'notes from a reviewer');
+        expect(detail?.closed, isFalse);
       },
     );
 
@@ -763,7 +775,7 @@ void main() {
       final booted = await bootProfile(tester, location: '/profile/contact');
 
       // The route is authenticated, so the guard moves them to sign-in.
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
       expect(booted.profile.updates, isEmpty);
     });
 

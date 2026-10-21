@@ -89,6 +89,44 @@ class NodeCitizenApi {
           )
           .whereType<String>()
           .toList(growable: false),
+      hotlines: _list(
+        map['hotlines'],
+      ).map(_hotline).whereType<MunicipalHotline>().toList(growable: false),
+    );
+  }
+
+  /// `GET /hotlines`. The screen that lists them is still a later sprint.
+  Future<Result<List<MunicipalHotline>>> listHotlines() async {
+    final response = await _apiClient.send<List<MunicipalHotline>>(
+      method: HttpMethod.get,
+      path: 'hotlines',
+      authenticated: false,
+      decode: (Object? data) => _list(
+        data,
+      ).map(_hotline).whereType<MunicipalHotline>().toList(growable: false),
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  static MunicipalHotline? _hotline(Object? raw) {
+    final map = _map(raw);
+    final id = _string(map['id']);
+    final name = _string(map['name']);
+    final number = _string(map['number']);
+    if (id == null || name == null || number == null) return null;
+    return MunicipalHotline(
+      id: id,
+      name: name,
+      number: number,
+      category: _string(map['category']) ?? '',
+      sortOrder: map['sort_order'] is int ? map['sort_order'] as int : 0,
+      active: map['active'] != false,
+      createdAt: DateTime.tryParse(
+        map['created_at'] is String ? map['created_at'] as String : '',
+      )?.toUtc(),
+      updatedAt: DateTime.tryParse(
+        map['updated_at'] is String ? map['updated_at'] as String : '',
+      )?.toUtc(),
     );
   }
 

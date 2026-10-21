@@ -7,6 +7,7 @@ This file records that the words were looked for. It does not invent them.
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
+| S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 
 ## S0 pixel match
 
@@ -80,23 +81,68 @@ The speck runs for 7s on `cubic-bezier(.45, 0, .55, 1)`. Its position on the wel
 - Photographs are the design JPEGs, with the credits in `docs/frontend/PHOTO_CREDITS.md`. The seal is the existing asset, unaltered.
 - No new package.
 
+## S2 Sign-in
+
+S2 is in review. It is not approved. This file does not record an approval, and it does not record Paul as having written one. S0 and S1 are on `main` at `67732d02204f271e7e547e118d7b25fdc6de9f97`.
+
+S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comparison uses `tool/golden_compare` at 1170×2532. A pixel differs when CIE76 ΔE is above 6. The municipal-hall interior is masked on `02-01` and `02-10`. The rim stays in the count. The design PNGs have no status bar, so the top of the frame stays in the count. The side-by-side is design | build | diff.
+
+| Screen | Mismatch | Sheet edge |
+| --- | --- | --- |
+| 02-01 Sign in | 7.78% (230429/2962440) | Hall arch included. Sheet top 332. |
+| 02-02 Forgot password | 6.61% (195897/2962440) | White edge y = 912, same as the design. |
+| 02-03 Personal info | 10.48% (310375/2962440) | White edge y = 462, same as the design. |
+| 02-04 Email code | 5.34% (158221/2962440) | Sheet top y = 901, same as the design. |
+| 02-05 Terms | 10.63% (314777/2962440) | White edge y = 462, same as the design. |
+| 02-06 Valid ID | 7.60% (225129/2962440) | White edge y = 462, same as the design. |
+| 02-07 Selfie | 7.50% (222050/2962440) | White edge y = 462, same as the design. |
+| 02-08 Review | 6.64% (196606/2962440) | White edge y = 462, same as the design. |
+| 02-09 Submitted | 4.77% (141386/2962440) | Sheet top y = 1493, same as the design. |
+| 02-10 Sign-in error | 8.09% (239556/2962440) | Short hall arch included. Sheet top 276. |
+| 02-11 Validation | 10.48% (310548/2962440) | Street and the address line are gone. Barangay is full width. |
+| 02-02b Reset code | 9.05% (267993/2962440) | White edge y = 756, same as the design. |
+| 02-04b Code expired | 5.59% (165614/2962440) | White edge y = 900, same as the design. |
+| 02-12 Set new password | 10.11% (299436/2962440) | White edge y = 756, same as the design. |
+| 02-12b Expired reset | 11.86% (351225/2962440) | White edge y = 756, same as the design. |
+| 02-13 Password updated | 3.98% (117903/2962440) | White edge y = 1500, same as the design. |
+
+The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
+
+The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens. `flutter analyze` on `lib` and `test` was clean. `flutter test` passed 1572 tests, with 3 skipped (the recording tag).
+
+### S2 deviations
+
+- The full-frame mismatch is above 2%. Sheet edges on `02-02` through `02-09` match the design PNG. The remainder is glyph antialiasing (Skia against Chrome), the downscaled seal, the dashed seam's dash phase, the hall JPEG, and the drawn ID and selfie stand-ins. Those stand-ins are not a photograph of a person.
+- `02-11` no longer draws Street/Purok or the address line. Barangay is full width. Each error line is 11.5/700 `#B3261E` with a 14 px circle-alert. The sheet top was not moved.
+- Text links keep a 48 dp hit target. The painted line is the design's 12 or 13 px link. The hit box extends past that line.
+- The live repository declines password sign-in and registration. It does not call the staff token route. Email codes and password reset call the published routes. The dev mock returns an unverified session named Juana for password sign-in. There is no Firebase SDK.
+- `02-10` shows "2 attempts left before a 15-minute pause" on the first refused password, then one fewer, then the pause. The design fixture still paints 2. The password route does not publish that count. Code attempts are a separate counter of 5.
+- The help screen still explains a missing one-time code, because registration asks for an email code. Sign-in itself is email or mobile, plus a password.
+- `RegistrationScreen` remains for its existing tests. `/register` paints `AccountWizardScreen`.
+- `docs/taytay-login-and-session-security.md` and `docs/taytay-registration-wizard.md` still describe the earlier one-time-code flow. The contract gap is the section below.
+- `AccountApplication.toString` is `AccountApplication(redacted)`. A failure on submit shows `SignInMessage` text, not the server's message.
+- No new package.
+
 ## Contract gaps after the Node OpenAPI
 
 F31 is closed. `GET/POST /threads`, messages, mark-read, and close are citizen routes and the live repository calls them.
 
 These designs still need data the spec does not publish. The calls decline with F32, or the screen keeps static copy:
 
-- Sign-in, sign-up, email code, forgot password (`02-01`–`02-11`). No OTP or password routes. Identity is a Firebase ID token. This app does not add the Firebase SDK. Dev sessions use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
-- Self-registration and the office contact line. No `app/bootstrap` and no `features.self_registration`. The wizard stays off the signed-out path. Creating an account is not offered from sign-in.
-- Token revocation. Sign-out clears the session on the device.
+- Citizen password sign-in. There is still no citizen password route. This app does not call the staff token route. The dev mock accepts a password and returns an unverified session. Dev sessions otherwise use `Authorization: Bearer mock:<role>:<id>` with role `registered` or `verified` only.
+- Self-registration. `GET /app/config` is wired, and `feature_flags` are strings. There is still no self-registration route. S2 shows Create an account and `/register` because that is the designed resident screen. The live `registerAccount` call declines. The dev mock signs the resident in as unverified and does not upload the ID or the selfie.
+- Email verification during registration. `POST /auth/email-otp/send` and `verify` are published, and the app calls them. Send requires a registered session and uses the profile email, with no address in the body. `02-04` runs before an account exists, so a live send can be refused. The screen still advances. The dev mock accepts the same empty body and the same `{code}` verify.
+- Code attempt counts and resend timestamps. The `202` body is `{accepted: true}` during the cooldown as well. The client starts a 10-minute code life and a 60-second resend window when that `202` arrives, and counts wrong-code `422`s down from 5. The reset token's `expires_at` is on the verify response and is 15 minutes. `02-12b` is shown when that time has passed. The designed sentence on `02-12b` still says 10 minutes.
+- `02-10`'s password pause (2, then 1, then 15 minutes) is the design's notice. It is not a published field.
+- Token revocation. Sign-out clears the session on the device. `POST` and `DELETE /me/devices` register a push token. They do not revoke a session.
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.
-- Household (`03-07`). Address is a string on `PATCH /me`. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
+- Household (`03-07`). Address is a string on `PATCH /me` (`address`). `purok_or_sitio` is not a ProfilePatch field, so it is not sent. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
 - Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
-- Notification preferences and device registration. Inbox types are only `verification_decided` and `message_received`. Design categories such as advisory, treasury, and BPLO are not in that enum.
+- Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.
-- Account closure.
-- Hotlines as their own resource, weather, payments, and map tiles. An office may carry `phone`, `email`, `latitude`, `longitude`, and `address`. The resident decoder does not surface the coordinates. The design's location cards are an illustrative drawing.
+- `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.
+- Hotlines are on `GET /home` and `GET /hotlines`. The hotline screen is still the placeholder. Weather, payments, and map tiles are not published. An office may carry coordinates. The resident decoder does not surface them.
 - Welcome copy, photo credits, and a bundled hall photograph. None of those are API fields.
-- A thread has no subject or preview. The start call returns the thread. The client loads messages for a preview.
-- Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list. Staff assignment on a profile is not modeled on a resident type.
+- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString` and is not rendered. `email_verified` is on the profile model. A thread's `resident_id` is the signed-in account and is not stored.
+- Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list.

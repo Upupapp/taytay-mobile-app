@@ -49,14 +49,46 @@ final class BackendRoute {
 /// then method. Admin paths are absent. Historical PHP paths that the Node
 /// contract does not publish are not called.
 const List<BackendRoute> backendRoutes = <BackendRoute>[
+  BackendRoute('GET', 'app/config', 'platform_api_repository.dart'),
+  BackendRoute('POST', 'auth/email-otp/send', 'auth_api_repository.dart'),
+  BackendRoute('POST', 'auth/email-otp/verify', 'auth_api_repository.dart'),
+  BackendRoute(
+    'POST',
+    'auth/password-reset/complete',
+    'auth_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'auth/password-reset/request',
+    'auth_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'auth/password-reset/verify',
+    'auth_api_repository.dart',
+  ),
   BackendRoute('GET', 'barangays', 'barangay_api_repository.dart'),
   BackendRoute('GET', 'health', 'platform_api_repository.dart'),
   BackendRoute('GET', 'home', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'hotlines', 'node_citizen_api.dart'),
   BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),
+  BackendRoute('POST', 'me/close', 'privacy_api_repository.dart'),
   BackendRoute('GET', 'me/consents', 'privacy_api_repository.dart'),
   BackendRoute('POST', 'me/consents', 'privacy_api_repository.dart'),
+  BackendRoute('DELETE', 'me/devices', 'notification_api_repository.dart'),
+  BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
+  BackendRoute(
+    'GET',
+    'me/notification-preferences',
+    'notification_api_repository.dart',
+  ),
+  BackendRoute(
+    'PATCH',
+    'me/notification-preferences',
+    'notification_api_repository.dart',
+  ),
   BackendRoute('POST', 'me/verification-requests', 'kyc_api_repository.dart'),
   BackendRoute(
     'GET',

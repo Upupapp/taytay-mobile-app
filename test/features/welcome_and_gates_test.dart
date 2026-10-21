@@ -391,7 +391,7 @@ void main() {
       await tester.tap(find.text('Get started'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
-      expect(find.text('Send one-time code'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
       expect(find.byKey(TravellingLight.mark), findsOneWidget);
       expect(dependencies.launch.state, LaunchState.returning);
       // The speck stays. A 7s loop does not remove the thread.
@@ -474,7 +474,7 @@ void main() {
       // opened from — not stranded on a sheet or bounced to sign-in.
       expect(find.byType(BottomSheet), findsNothing);
       expect(find.widgetWithText(AppBar, 'Profile'), findsOneWidget);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
 
     testWidgets('the gate never grants access by itself', (tester) async {
@@ -555,8 +555,14 @@ void main() {
       await tester.tap(find.text('Sign in').first);
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await tester.tap(find.text('Send one-time code'));
+      await tester.enterText(find.byType(TextFormField).at(0), '09171234567');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'password-sample',
+      );
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
       await tester.pumpAndSettle();
 
       // The repository is wired now, so this is a real request that could not
@@ -569,7 +575,7 @@ void main() {
         isTrue,
         reason: 'no resident-facing sign-in message was shown',
       );
-      expect(find.text('Send one-time code'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 
     testWidgets('verification explains rather than collecting documents', (

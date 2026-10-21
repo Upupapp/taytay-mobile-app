@@ -8,6 +8,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -35,6 +36,7 @@ Future<AppDependencies> boot(
   FakeLocalAuthenticator? authenticator,
   StoredSession? stored,
   TextScaler textScaler = TextScaler.noScaling,
+  DocumentPicker? documentPicker,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -75,7 +77,7 @@ Future<AppDependencies> boot(
     verificationRepository: base.verificationRepository,
     serviceRequestRepository: base.serviceRequestRepository,
     requirementRepository: base.requirementRepository,
-    documentPicker: base.documentPicker,
+    documentPicker: documentPicker ?? base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,
     accountControlsRepository: base.accountControlsRepository,
@@ -107,20 +109,6 @@ Future<void> goTo(WidgetTester tester, String routeName) async {
   await tester.pumpAndSettle();
 }
 
-bool _contains(Widget widget, bool Function(Widget widget) match) {
-  if (match(widget)) return true;
-  if (widget is Positioned) return _contains(widget.child, match);
-  if (widget is ProxyWidget) return _contains(widget.child, match);
-  if (widget is SingleChildRenderObjectWidget) {
-    final child = widget.child;
-    return child != null && _contains(child, match);
-  }
-  if (widget is MultiChildRenderObjectWidget) {
-    return widget.children.any((child) => _contains(child, match));
-  }
-  return false;
-}
-
 Future<void> reveal(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
@@ -134,26 +122,19 @@ Future<void> reveal(WidgetTester tester, Finder finder) async {
 }
 
 void main() {
-  group('sign-in, two steps', () {
-    testWidgets('asks for a number, then a code', (tester) async {
+  group('sign-in, email or mobile and a password', () {
+    testWidgets('asks for an identifier and a password', (tester) async {
       final auth = FakeAuthRepository();
       await boot(tester, auth: auth);
       await goTo(tester, 'sign-in');
 
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
-      expect(find.text('Mobile number'), findsOneWidget);
-      // No password field anywhere: the contract has none for a citizen.
-      expect(find.text('Password'), findsNothing);
-
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await tester.tap(find.text('Send one-time code'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Enter your code'), findsOneWidget);
-      expect(find.text('One-time code'), findsOneWidget);
-      // The number is masked on the screen that confirms it back.
-      expect(find.textContaining('0917 ••• 4567'), findsOneWidget);
-      expect(find.textContaining('09171234567'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+      expect(find.text('Email or mobile number'), findsOneWidget);
+      expect(find.text('Password'), findsOneWidget);
+      expect(find.text('Forgot password?'), findsOneWidget);
+      expect(find.text('Create an account'), findsOneWidget);
+      // The debug session simulator is not on this screen.
+      expect(find.text('Session simulator'), findsNothing);
     });
 
     testWidgets('the form sits on the white sheet and clears AA', (
@@ -167,12 +148,10 @@ void main() {
       expect(tester.widget<Material>(sheet).color, Colors.white);
 
       const lines = <String>[
-        'Welcome to Taytay LGU IDS',
-        'Enter your mobile number and we will send you a one-time code. '
-            'There is no password to remember.',
-        'Taytay LGU uses your mobile number to sign you in and to contact '
-            'you about your requests. It is never shared for advertising.',
-        'Trouble signing in?',
+        'Maligayang pagbabalik!',
+        'Sign in to your Taytay resident account.',
+        'Forgot password?',
+        'Create an account',
         'Continue as guest',
       ];
       for (final line in lines) {
@@ -184,15 +163,28 @@ void main() {
       }
 
       // The stitch is a sibling behind the sheet, not a paint over the field.
-      final stack = tester.widget<Stack>(
+      // Walk the element tree: the sheet key lives inside the sheet widget's
+      // build, so it is not a field on the stack's child configuration.
+      final stackElement = tester.element(
         find.byKey(const Key('sign-in-stack')),
       );
-      final threadAt = stack.children.indexWhere(
-        (child) => _contains(child, (widget) => widget is SignInThreadOverlay),
+      final layers = <Element>[];
+      stackElement.visitChildren(layers.add);
+      bool subtree(Element element, bool Function(Element node) match) {
+        if (match(element)) return true;
+        var found = false;
+        element.visitChildren((child) {
+          found = found || subtree(child, match);
+        });
+        return found;
+      }
+
+      final threadAt = layers.indexWhere(
+        (layer) => subtree(layer, (node) => node.widget is SignInThreadOverlay),
       );
-      final sheetAt = stack.children.indexWhere(
-        (child) =>
-            _contains(child, (widget) => widget.key == signInFormSheetKey),
+      final sheetAt = layers.indexWhere(
+        (layer) =>
+            subtree(layer, (node) => node.widget.key == signInFormSheetKey),
       );
       expect(threadAt, greaterThanOrEqualTo(0));
       expect(sheetAt, greaterThan(threadAt));
@@ -285,11 +277,14 @@ void main() {
         final dependencies = await boot(tester, auth: auth);
         await goTo(tester, 'sign-in');
 
-        await tester.enterText(find.byType(TextFormField), '09171234567');
-        await tester.tap(find.text('Send one-time code'));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(find.byType(TextFormField), '123456');
+        await tester.enterText(
+          find.byType(TextFormField).at(0),
+          'juana.delacruz@example.com',
+        );
+        await tester.enterText(
+          find.byType(TextFormField).at(1),
+          'password-sample',
+        );
         await tester.tap(
           find.descendant(
             of: find.byType(Form),
@@ -304,26 +299,33 @@ void main() {
       },
     );
 
-    testWidgets('a refused code says nothing about the account', (
+    testWidgets('a refused password says nothing about the account', (
       tester,
     ) async {
       final auth = FakeAuthRepository(
-        verifyOutcome: const Err<AuthOutcome>(NotFoundFailure()),
+        passwordOutcome: const Err<AuthOutcome>(UnauthenticatedFailure()),
       );
       await boot(tester, auth: auth);
       await goTo(tester, 'sign-in');
 
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await tester.tap(find.text('Send one-time code'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField), '999999');
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'juana.delacruz@example.com',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'wrong-password',
+      );
       await tester.tap(
         find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('That code did not work'), findsOneWidget);
+      expect(
+        find.textContaining('Incorrect email or password'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('not registered'), findsNothing);
       final rendered = tester
           .widgetList<Text>(find.byType(Text))
           .map((t) => t.data ?? '')
@@ -339,20 +341,21 @@ void main() {
       }
     });
 
-    testWidgets('the code step offers a resend and a way back', (tester) async {
+    testWidgets('forgot password is a screen, and sign-in has a way back', (
+      tester,
+    ) async {
       await boot(tester, auth: FakeAuthRepository());
       await goTo(tester, 'sign-in');
 
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await tester.tap(find.text('Send one-time code'));
+      expect(find.byType(BackButton), findsNothing);
+      await tester.tap(find.text('Forgot password?'));
       await tester.pumpAndSettle();
 
-      // Cooling down, so the label counts rather than inviting a wasted attempt.
-      expect(find.textContaining('Send a new code in'), findsOneWidget);
-
-      await tester.tap(find.text('Use a different number'));
+      expect(find.text('Reset your password'), findsOneWidget);
+      expect(find.text('Send reset code'), findsOneWidget);
+      await tester.tap(find.text('Back to sign in'));
       await tester.pumpAndSettle();
-      expect(find.text('Mobile number'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 
     testWidgets('a guest can leave sign-in without an account', (tester) async {
@@ -368,14 +371,12 @@ void main() {
   });
 
   group('help for someone who cannot sign in', () {
-    testWidgets('explains there is no password and collects nothing', (
-      tester,
-    ) async {
+    testWidgets('points at reset and collects nothing', (tester) async {
       await boot(tester);
       await goTo(tester, 'sign-in-help');
 
-      expect(find.text('There is no password to reset'), findsOneWidget);
-      // No form: this screen cannot be used to test whether a number exists.
+      expect(find.text('Forgot your password?'), findsOneWidget);
+      // No form: this screen cannot be used to test whether an account exists.
       expect(find.byType(TextFormField), findsNothing);
       expect(find.byType(TextField), findsNothing);
     });
@@ -714,16 +715,29 @@ void main() {
       );
       await goTo(tester, 'sign-in');
 
-      await reveal(tester, find.text('Mobile number'));
+      await reveal(tester, find.text('Email or mobile number'));
       expect(tester.takeException(), isNull);
 
-      await tester.enterText(find.byType(TextFormField), '09171234567');
-      await reveal(tester, find.text('Send one-time code'));
-      await tester.tap(find.text('Send one-time code'));
+      await tester.enterText(
+        find.byType(TextFormField).at(0),
+        'juana.delacruz@example.com',
+      );
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'password-sample',
+      );
+      await reveal(
+        tester,
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Enter your code'), findsOneWidget);
+      expect(find.text('Kumusta, Ana!'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
   });
 }

@@ -11,11 +11,11 @@ import '../../../shared/widgets/taytay_headers.dart';
 ///
 /// ---
 ///
-/// **There is no forgot-password flow, because there is no password.** The
-/// committed contract signs a citizen in with a one-time code on their mobile
-/// number (`POST /api/v1/auth/otp`). Nothing is memorised, so nothing can be
-/// forgotten, and there is no reset link for anyone to phish. A "reset your
-/// password" screen here would be a form that could never work.
+/// **Reset is a separate screen, and this one still collects nothing.**
+/// Sign-in asks for a password. Forgot password (`02-02`) asks for an email
+/// or a mobile number and does not say whether an account exists. The live
+/// repository declines that call: there is no citizen reset route. This help
+/// page only explains the path and never looks an account up.
 ///
 /// **This screen never confirms whether a number has an account.** Every answer
 /// below is true regardless of who is reading it. A recovery screen is the
@@ -46,19 +46,25 @@ class SignInHelpScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(Spacing.lg),
                 children: <Widget>[
                   Text(
-                    'There is no password to reset',
+                    'Forgot your password?',
                     style: AppTypography.h1SignIn.copyWith(
                       color: BrandColors.taytayBlueDark,
                     ),
                   ),
                   const SizedBox(height: Spacing.sm),
                   Text(
-                    'Taytay LGU IDS signs you in with a one-time code sent to your '
-                    'mobile number. Nothing to memorise, and nothing anyone can trick '
-                    'you into resetting.',
+                    'Reset it from the sign-in screen. We send a code to the email '
+                    'or mobile number on the account, and we never say whether that '
+                    'account exists.',
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
+                  ),
+                  const SizedBox(height: Spacing.md),
+                  FilledButton(
+                    onPressed: () =>
+                        context.goNamed(AppRoute.forgotPassword.routeName),
+                    child: const Text('Reset your password'),
                   ),
                   const SizedBox(height: Spacing.xl),
                   const _HelpItem(

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
@@ -7,7 +9,9 @@ import 'package:taytay_resident/core/api/retry_policy.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/auth/data/auth_api_repository.dart';
+import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 
 class _Recording implements ApiTransport {
   _Recording(this.responses);
@@ -142,6 +146,208 @@ void main() {
       // phone must still be able to sign out.
       expect(result.isOk, isTrue);
       expect(transport.requests, isEmpty);
+    });
+  });
+
+  ApiHttpResponse okEnvelope(Object data) => ApiHttpResponse(
+    statusCode: 200,
+    body: jsonEncode(<String, Object?>{'data': data}),
+  );
+
+  group('email and reset codes', () {
+    test('a 202 without retry_after is a contract failure', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'accepted': true})),
+      );
+      final Result<CodeAcceptance> result = await repository
+          .requestPasswordReset(email: 'juana@example.com');
+      expect(result.failureOrNull, isA<ContractFailure>());
+    });
+
+    test('retry_after from the body drives the acceptance', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          okEnvelope(<String, Object?>{'accepted': true, 'retry_after': 60}),
+        ),
+      );
+      final Result<CodeAcceptance> result = await repository
+          .requestPasswordReset(email: 'juana@example.com');
+      expect((result as Ok<CodeAcceptance>).value.retryAfterSeconds, 60);
+    });
+  });
+
+  group('submitting a profile', () {
+    const AccountApplication bare = AccountApplication(
+      email: 'juana@example.com',
+      password: 'Password1!',
+      mobile: '09170000000',
+      givenName: 'Juana',
+      familyName: 'Dela Cruz',
+      barangay: 'San Juan',
+    );
+
+    AccountApplication ready() => AccountApplication(
+      email: bare.email,
+      password: bare.password,
+      mobile: bare.mobile,
+      givenName: bare.givenName,
+      familyName: bare.familyName,
+      barangay: bare.barangay,
+      idTypeLabel: 'PhilSys National ID',
+      idFrontBytes: Uint8List.fromList(<int>[1, 2]),
+      idFrontName: 'id_front.jpg',
+      idFrontMime: 'image/jpeg',
+      selfieBytes: Uint8List.fromList(<int>[3]),
+      selfieName: 'selfie.jpg',
+      selfieMime: 'image/jpeg',
+    );
+
+    ApiHttpResponse config({
+      String? privacy = '2026-03-privacy',
+      String? terms = '2026-03-terms',
+    }) => okEnvelope(<String, Object?>{
+      'privacy_version': privacy,
+      'terms_version': terms,
+    });
+
+    ApiHttpResponse created() => ApiHttpResponse(
+      statusCode: 201,
+      body: jsonEncode(<String, Object?>{
+        'data': <String, Object?>{'status': 'pending'},
+      }),
+    );
+
+    ApiHttpResponse problem(int status, String code) => ApiHttpResponse(
+      statusCode: status,
+      body: jsonEncode(<String, Object?>{
+        'error': <String, Object?>{
+          'code': code,
+          'message': 'operator text that must not be shown',
+        },
+      }),
+    );
+
+    test('a missing ID front or selfie fails before any request', () async {
+      final Result<void> missingFront = await repository.submitProfile(bare);
+      expect(missingFront.failureOrNull, isA<ValidationFailure>());
+      expect(transport.requests, isEmpty);
+
+      final Result<void> missingSelfie = await repository.submitProfile(
+        AccountApplication(
+          email: bare.email,
+          password: bare.password,
+          mobile: bare.mobile,
+          givenName: bare.givenName,
+          familyName: bare.familyName,
+          barangay: bare.barangay,
+          idFrontBytes: Uint8List.fromList(<int>[1]),
+          idFrontName: 'id_front.jpg',
+          idFrontMime: 'image/jpeg',
+        ),
+      );
+      expect(missingSelfie.failureOrNull, isA<ValidationFailure>());
+      expect(transport.requests, isEmpty);
+    });
+
+    test('a config without versions is a contract failure', () async {
+      transport.responses.add(Ok<ApiHttpResponse>(config(privacy: null)));
+      final Result<void> result = await repository.submitProfile(ready());
+      expect(result.failureOrNull, isA<ContractFailure>());
+      expect(transport.requests.single.path, 'app/config');
+    });
+
+    test('posts both consent versions, then opens on 201', () async {
+      transport.responses.add(Ok<ApiHttpResponse>(config()));
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'y'})),
+      );
+      transport.responses.add(Ok<ApiHttpResponse>(created()));
+      final Result<void> result = await repository.submitProfile(ready());
+      expect(result.isOk, isTrue);
+      expect(transport.requests.map((ApiRequest r) => r.path), <String>[
+        'app/config',
+        'me/consents',
+        'me/consents',
+        'me/verification-requests',
+      ]);
+      expect(transport.requests[1].body, <String, Object?>{
+        'version': '2026-03-privacy',
+      });
+      expect(transport.requests[2].body, <String, Object?>{
+        'version': '2026-03-terms',
+      });
+      expect(transport.requests[3].body, <String, Object?>{
+        'id_type': 'philid',
+      });
+      expect(
+        transport.requests[3].files.map((MultipartFile f) => f.field),
+        <String>['id_front', 'selfie'],
+      );
+      expect(result.toString(), isNot(contains('Password1')));
+      expect(result.toString(), isNot(contains('draft')));
+    });
+
+    test('one consent call when the two versions match', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+      );
+      transport.responses.add(Ok<ApiHttpResponse>(created()));
+      final Result<void> result = await repository.submitProfile(ready());
+      expect(result.isOk, isTrue);
+      expect(
+        transport.requests.where((ApiRequest r) => r.path == 'me/consents'),
+        hasLength(1),
+      );
+    });
+
+    test('a 200 from verification does not count as opened', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'status': 'pending'})),
+      );
+      final Result<void> result = await repository.submitProfile(ready());
+      expect(result.failureOrNull, isA<ContractFailure>());
+    });
+
+    test('409 is already pending and 403 is already verified', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+      );
+      transport.responses.add(Ok<ApiHttpResponse>(problem(409, 'CONFLICT')));
+      final Result<void> pending = await repository.submitProfile(ready());
+      expect(pending.failureOrNull, isA<ConflictFailure>());
+      expect(
+        pending.failureOrNull!.residentMessage,
+        isNot(contains('operator')),
+      );
+
+      transport.responses.add(
+        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+      );
+      transport.responses.add(Ok<ApiHttpResponse>(problem(403, 'FORBIDDEN')));
+      final Result<void> verified = await repository.submitProfile(ready());
+      expect(verified.failureOrNull, isA<ForbiddenFailure>());
+      expect(
+        verified.failureOrNull!.residentMessage,
+        isNot(contains('operator')),
+      );
     });
   });
 

@@ -92,6 +92,10 @@ class FailureView extends StatelessWidget {
     ForbiddenFailure() => Icons.no_accounts_outlined,
     NotFoundFailure() => Icons.search_off_outlined,
     ValidationFailure() => Icons.edit_note_outlined,
+    CodeExchangeFailure(:final exchangeKind) =>
+      exchangeKind == CodeExchangeKind.locked
+          ? Icons.hourglass_top_outlined
+          : Icons.edit_note_outlined,
     ConflictFailure() => Icons.sync_problem_outlined,
     RateLimitedFailure() => Icons.hourglass_top_outlined,
     UnacceptableUploadFailure() => Icons.photo_size_select_large_outlined,

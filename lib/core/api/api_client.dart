@@ -105,6 +105,7 @@ class ApiClient {
     MultipartFile? file,
     List<MultipartFile> files = const <MultipartFile>[],
     bool attachTokenIfAvailable = false,
+    int? requiredStatus,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -151,6 +152,7 @@ class ApiClient {
       decode: decode,
       file: file,
       files: files,
+      requiredStatus: requiredStatus,
     );
 
     // `401` is the single signal that ends a session, handled once here rather
@@ -184,6 +186,7 @@ class ApiClient {
         decode: decode,
         file: file,
         files: files,
+        requiredStatus: requiredStatus,
       );
       if (decoded.failureOrNull?.requiresReauthentication ?? false) {
         await _onUnauthenticated?.call();
@@ -218,6 +221,7 @@ class ApiClient {
     required String? token,
     MultipartFile? file,
     List<MultipartFile> files = const <MultipartFile>[],
+    int? requiredStatus,
     required T Function(Object? data) decode,
   }) async {
     // A fresh correlation id per attempt: a replay is a different request and
@@ -249,8 +253,32 @@ class ApiClient {
     return switch (response) {
       Err<ApiHttpResponse>(:final failure) => Err<ApiEnvelope<T>>(failure),
       Ok<ApiHttpResponse>(value: final httpResponse) =>
-        ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
+        _requiredStatusMissed(httpResponse, requiredStatus) ??
+            ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
     };
+  }
+
+  /// A 2xx that is not the status this call is allowed to treat as success.
+  ///
+  /// Verification is opened only by `201`. A `200` is still in the success
+  /// range, and treating it as opened would show the submitted screen for a
+  /// response that did not open a request.
+  static Result<ApiEnvelope<T>>? _requiredStatusMissed<T>(
+    ApiHttpResponse response,
+    int? requiredStatus,
+  ) {
+    if (requiredStatus == null ||
+        !response.isSuccess ||
+        response.statusCode == requiredStatus) {
+      return null;
+    }
+    return Err<ApiEnvelope<T>>(
+      ContractFailure(
+        requestId: response.requestId,
+        debugMessage:
+            'Expected HTTP $requiredStatus, received ${response.statusCode}.',
+      ),
+    );
   }
 
   /// A cached public envelope for [path], when one is fresh.

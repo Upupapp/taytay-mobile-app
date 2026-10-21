@@ -125,6 +125,12 @@ enum SignInMessage {
   unexpected(
     'Something went wrong. Please try again, or visit the Taytay municipal '
     'hall if it keeps happening.',
+  ),
+
+  /// `02-10`. One sentence for a wrong password and an unknown identifier.
+  /// The attempt count is the designed lockout notice, not a server message.
+  credentialsRejected(
+    'Incorrect email or password. 2 attempts left before a 15-minute pause.',
   );
 
   const SignInMessage(this.text);
@@ -155,6 +161,10 @@ abstract final class SignInFeedback {
     NetworkFailure() => SignInMessage.offline,
     TimeoutFailure() => SignInMessage.timedOut,
     RateLimitedFailure() => SignInMessage.tooManyAttempts,
+    CodeExchangeFailure(:final exchangeKind)
+        when exchangeKind == CodeExchangeKind.locked =>
+      SignInMessage.tooManyAttempts,
+    CodeExchangeFailure() => SignInMessage.codeNotAccepted,
     ServerFailure() => SignInMessage.serviceUnavailable,
     NotFoundFailure() ||
     ForbiddenFailure() ||

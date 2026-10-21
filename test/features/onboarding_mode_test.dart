@@ -106,54 +106,43 @@ void main() {
     });
   });
 
-  group('the wizard is unreachable while there is nothing behind it', () {
+  group('the wizard stays reachable in every onboarding mode', () {
     test('by route, for a guest and for a signed-in resident', () {
       for (final SessionState session in <SessionState>[_guest, _verified]) {
         expect(
           resolveRedirect(session: session, location: AppRoute.register.path),
-          AppRoute.signIn.path,
-          reason: 'sign-in is the honest next step, not a dead end',
+          isNull,
+          reason: 'the designed create-account screen is public',
         );
       }
     });
 
     test('by deep link, including one carrying a query string', () {
-      // The links this app receives arrive from SMS, email and printed QR
-      // codes. A guard that only covered in-app navigation would leave the
-      // wizard reachable by exactly the routes it cannot control.
       expect(
         resolveRedirect(
           session: _guest,
           location: '${AppRoute.register.path}?from=/home',
         ),
-        AppRoute.signIn.path,
+        isNull,
       );
     });
 
-    test('and the default is staff-mediated without anybody saying so', () {
-      // The parameter's default, asserted directly. A caller that forgets to
-      // pass the mode gets the safe answer rather than the permissive one.
+    test('and the default mode does not hide it', () {
+      // The live repository still declines the submit. Hiding the route would
+      // leave the screen the design draws unreachable.
       expect(
         resolveRedirect(session: _guest, location: AppRoute.register.path),
-        isNot(isNull),
+        isNull,
       );
     });
   });
 
   group('what a resident actually sees', () {
-    testWidgets('staff-mediated shows the office panel, not a dead control', (
-      tester,
-    ) async {
+    testWidgets('sign-in offers create account', (tester) async {
       await _bootToSignIn(tester, selfRegistration: false);
 
-      // The acceptance criterion is "not a disabled button". A control a
-      // resident cannot use reads as a broken app; a sentence tells them where
-      // to go.
-      expect(
-        find.text('Accounts are made at the MSWDO office'),
-        findsOneWidget,
-      );
-      expect(find.text('Create an account'), findsNothing);
+      expect(find.text('Create an account'), findsOneWidget);
+      expect(find.text('Accounts are made at the MSWDO office'), findsNothing);
     });
 
     testWidgets('and no contact is invented while bootstrap is absent', (
@@ -161,40 +150,30 @@ void main() {
     ) async {
       await _bootToSignIn(tester, selfRegistration: false);
 
-      // `GET app/bootstrap` is not on the Node contract, so the support
-      // email and phone never arrive. The panel names the office and does
-      // not compile a number the municipality cannot correct.
-      expect(
-        find.text('Accounts are made at the MSWDO office'),
-        findsOneWidget,
-      );
       expect(find.textContaining('mswdo@taytayrizal.gov.ph'), findsNothing);
       expect(find.textContaining('8286'), findsNothing);
     });
 
-    testWidgets('a bootstrap flag is not read, so the wizard stays hidden', (
+    testWidgets('a bootstrap flag does not hide create account', (
       tester,
     ) async {
       await _bootToSignIn(tester, selfRegistration: true);
 
-      expect(find.text('Create an account'), findsNothing);
-      expect(
-        find.text('Accounts are made at the MSWDO office'),
-        findsOneWidget,
-      );
+      expect(find.text('Create an account'), findsOneWidget);
+      expect(find.text('Accounts are made at the MSWDO office'), findsNothing);
     });
 
-    testWidgets('the office panel is in Filipino too', (tester) async {
+    testWidgets('the sign-in copy stays the design in Filipino too', (
+      tester,
+    ) async {
       await _bootToSignIn(
         tester,
         selfRegistration: false,
         locale: AppLocales.filipino,
       );
 
-      expect(
-        find.text('Ginagawa ang account sa tanggapan ng MSWDO'),
-        findsOneWidget,
-      );
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+      expect(find.text('Create an account'), findsOneWidget);
     });
   });
 

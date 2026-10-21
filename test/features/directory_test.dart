@@ -863,7 +863,7 @@ void main() {
       await bootDirectory(tester, location: '/services/CEDULA');
 
       expect(find.text('Community tax certificate'), findsOneWidget);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
 
     testWidgets('an unknown code says so and offers the list', (tester) async {
@@ -920,7 +920,7 @@ void main() {
       );
 
       expect(booted.programs.listCalls, 1);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsNothing);
       expect(
         find.text('Assistance to Individuals in Crisis Situation'),
         findsOneWidget,
@@ -955,7 +955,7 @@ void main() {
       );
 
       expect(booted.programs.detailCalls, 1);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsNothing);
+      expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
   });
 

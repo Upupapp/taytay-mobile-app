@@ -31,6 +31,18 @@ abstract final class TaytayIcons {
 
   static const IconData chevronLeft = IconData(57454, fontFamily: 'Lucide');
 
+  static const IconData chevronDown = IconData(57453, fontFamily: 'Lucide');
+
+  static const IconData key = IconData(57597, fontFamily: 'Lucide');
+
+  static const IconData camera = IconData(57444, fontFamily: 'Lucide');
+
+  static const IconData sun = IconData(57720, fontFamily: 'Lucide');
+
+  static const IconData scanFace = IconData(58225, fontFamily: 'Lucide');
+
+  static const IconData shieldCheck = IconData(57855, fontFamily: 'Lucide');
+
   static const IconData phone = IconData(57651, fontFamily: 'Lucide');
 
   static const IconData mapPin = IconData(57617, fontFamily: 'Lucide');
@@ -60,6 +72,9 @@ abstract final class TaytayIcons {
   static const IconData fileText = IconData(57548, fontFamily: 'Lucide');
 
   static const IconData clock = IconData(57479, fontFamily: 'Lucide');
+
+  /// Lucide `timer`. The `02-14` countdown.
+  static const IconData timer = IconData(57824, fontFamily: 'Lucide');
 
   static const IconData building = IconData(58000, fontFamily: 'Lucide');
 
@@ -102,6 +117,9 @@ abstract final class TaytayIcons {
   static const IconData wifiOff = IconData(57775, fontFamily: 'Lucide');
 
   static const IconData circleCheck = IconData(57894, fontFamily: 'Lucide');
+
+  /// Lucide `check-circle`. The `02-14b` mark.
+  static const IconData checkCircle = IconData(57468, fontFamily: 'Lucide');
 
   static const IconData inbox = IconData(57591, fontFamily: 'Lucide');
 

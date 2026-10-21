@@ -584,7 +584,7 @@ void main() {
       final booted = await bootHousehold(tester, level: AccessLevel.guest);
 
       expect(booted.household.loadCalls, 0);
-      expect(find.text('Welcome to Taytay LGU IDS'), findsOneWidget);
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 
     testWidgets('an unverified resident reads nothing and is sent to verify', (

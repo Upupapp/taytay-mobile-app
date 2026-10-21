@@ -7,16 +7,23 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_controller.dart';
 
 /// An [AuthRepository] each test dictates.
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({this.requestOutcome, this.verifyOutcome});
+  FakeAuthRepository({
+    this.requestOutcome,
+    this.verifyOutcome,
+    this.passwordOutcome,
+  });
 
   Result<void>? requestOutcome;
   Result<AuthOutcome>? verifyOutcome;
+  Result<AuthOutcome>? passwordOutcome;
 
   int requestCalls = 0;
   int verifyCalls = 0;
@@ -43,6 +50,181 @@ class FakeAuthRepository implements AuthRepository {
             resident: ResidentSession(
               accountId: 'acct-1',
               accessLevel: AccessLevel.unverified,
+            ),
+            accessToken: 'token',
+          ),
+        );
+  }
+
+  int passwordCalls = 0;
+
+  @override
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    passwordCalls++;
+    return passwordOutcome ??
+        verifyOutcome ??
+        const Ok<AuthOutcome>(
+          AuthOutcome(
+            resident: ResidentSession(
+              accountId: 'acct-1',
+              accessLevel: AccessLevel.unverified,
+            ),
+            accessToken: 'token',
+          ),
+        );
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendEmailCode() async {
+    requestCalls++;
+    if (requestOutcome case Err<void>(:final failure)) {
+      return Err<CodeAcceptance>(failure);
+    }
+    return const Ok<CodeAcceptance>(
+      CodeAcceptance(accepted: true, retryAfterSeconds: 60),
+    );
+  }
+
+  @override
+  Future<Result<EmailVerified>> verifyEmailCode({required String code}) async {
+    verifyCalls++;
+    codesSeen.add(code);
+    if (code.trim() == CodeExchangeRules.expiredSentinel) {
+      return const Err<EmailVerified>(
+        CodeExchangeFailure(
+          exchangeKind: CodeExchangeKind.expired,
+          attemptsRemaining: CodeExchangeRules.attempts,
+        ),
+      );
+    }
+    return const Ok<EmailVerified>(EmailVerified(emailVerified: true));
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> requestPasswordReset({
+    required String email,
+  }) async {
+    if (requestOutcome case Err<void>(:final failure)) {
+      return Err<CodeAcceptance>(failure);
+    }
+    return const Ok<CodeAcceptance>(
+      CodeAcceptance(accepted: true, retryAfterSeconds: 60),
+    );
+  }
+
+  @override
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  }) async {
+    codesSeen.add(code);
+    if (code.trim() == CodeExchangeRules.expiredSentinel) {
+      return const Err<PasswordResetGrant>(
+        CodeExchangeFailure(
+          exchangeKind: CodeExchangeKind.expired,
+          attemptsRemaining: CodeExchangeRules.attempts,
+        ),
+      );
+    }
+    return Ok<PasswordResetGrant>(
+      PasswordResetGrant(
+        resetToken: 'example-reset-token-not-a-secret',
+        expiresAt: DateTime.utc(2026, 10, 21, 2),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    if (!CodeExchangeRules.acceptablePassword(newPassword)) {
+      return const Err<PasswordUpdated>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'new_password': <String>[CodeExchangeRules.weak],
+          },
+        ),
+      );
+    }
+    return const Ok<PasswordUpdated>(PasswordUpdated(updated: true));
+  }
+
+  String? createdPassword;
+  AccountApplication? submittedProfile;
+
+  @override
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    createdPassword = password;
+    if (passwordOutcome case Err<AuthOutcome>()) {
+      return passwordOutcome!;
+    }
+    return registerAccount(email: email);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email}) {
+    if (email != null && email.trim().isEmpty) {
+      return Future<Result<CodeAcceptance>>.value(
+        const Err<CodeAcceptance>(
+          ValidationFailure(debugMessage: 'An email address is required.'),
+        ),
+      );
+    }
+    return sendEmailCode();
+  }
+
+  @override
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  }) {
+    if (link != null && link.isNotEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(
+            debugMessage: 'Link confirmation is not published.',
+          ),
+        ),
+      );
+    }
+    if (code == null || code.isEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(debugMessage: 'A code is required.'),
+        ),
+      );
+    }
+    return verifyEmailCode(code: code);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email}) {
+    return requestPasswordReset(email: email);
+  }
+
+  @override
+  Future<Result<void>> submitProfile(AccountApplication application) async {
+    submittedProfile = application;
+    return const Ok<void>(null);
+  }
+
+  @override
+  Future<Result<AuthOutcome>> registerAccount({required String email}) async {
+    return passwordOutcome ??
+        const Ok<AuthOutcome>(
+          AuthOutcome(
+            resident: ResidentSession(
+              accountId: 'acct-1',
+              accessLevel: AccessLevel.unverified,
+              displayName: 'Juana',
             ),
             accessToken: 'token',
           ),

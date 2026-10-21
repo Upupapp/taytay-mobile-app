@@ -1,5 +1,7 @@
 import '../../../core/result/result.dart';
 import '../../../core/session/session_state.dart';
+import 'account_application.dart';
+import 'code_exchange.dart';
 
 /// What a completed authentication yields.
 ///
@@ -82,4 +84,86 @@ abstract interface class AuthRepository {
   /// Local sign-out happens regardless of the result — a resident on a borrowed
   /// phone must be able to sign out with no connectivity.
   Future<Result<void>> signOut();
+
+  /// Email or mobile, plus a password, as `02-01` draws it.
+  ///
+  /// The live repository declines. The Node contract has no citizen password
+  /// route, and the staff token route is not this app's. The dev mock is the
+  /// only implementation that returns a session. Nothing here sends a role.
+  Future<Result<AuthOutcome>> signInWithPassword({
+    required String identifier,
+    required String password,
+  });
+
+  /// `POST /auth/email-otp/send`. Authenticated. No body. `202`.
+  ///
+  /// The code goes to the profile email. Registration asks for a code before
+  /// an account exists, so a live call can be refused; the screen still
+  /// advances and the dev mock accepts the same shape.
+  Future<Result<CodeAcceptance>> sendEmailCode();
+
+  /// `POST /auth/email-otp/verify` with `{code}`.
+  Future<Result<EmailVerified>> verifyEmailCode({required String code});
+
+  /// `POST /auth/password-reset/request` with `{email}`.
+  ///
+  /// A well-formed email is always accepted, whether or not an account exists.
+  Future<Result<CodeAcceptance>> requestPasswordReset({required String email});
+
+  /// `POST /auth/password-reset/verify` with `{email, code}`.
+  ///
+  /// Returns a reset token that expires after 15 minutes.
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  });
+
+  /// `POST /auth/password-reset/complete` with `{reset_token, new_password}`.
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  });
+
+  /// Creates a resident account and returns an unverified session.
+  ///
+  /// The live repository declines: there is no citizen registration route.
+  /// The dev mock returns an unverified session and does not upload the ID
+  /// or the selfie. Those bytes stay on the device until a route exists.
+  ///
+  /// Prefer [createAccount], which keeps the password with the draft.
+  Future<Result<AuthOutcome>> registerAccount({required String email});
+
+  /// Email and password for a new resident account.
+  ///
+  /// The live client declines with the same gap as [registerAccount]. The
+  /// password stays on [AccountApplication] and is not posted to a staff
+  /// token route. The dev mock accepts it and returns an unverified session.
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  });
+
+  /// Asks for an email check. A 6-digit code uses [sendEmailCode]. A provider
+  /// that sends a link uses this method; the published route is the same send,
+  /// because no separate link route exists.
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email});
+
+  /// Confirms either a 6-digit [code] or a verification [link].
+  ///
+  /// A code uses [verifyEmailCode]. A link has no published exchange, so the
+  /// live client declines without calling a staff route.
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  });
+
+  /// Asks for a password reset. The 6-digit path is [requestPasswordReset].
+  /// This name stays for a provider that sends a link instead of a code.
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email});
+
+  /// Names, mobile, barangay, and whether an ID and a selfie were captured.
+  ///
+  /// The bytes stay on the device. The live client declines: there is no
+  /// citizen upload route. The dev mock accepts the draft and stores nothing.
+  Future<Result<void>> submitProfile(AccountApplication application);
 }

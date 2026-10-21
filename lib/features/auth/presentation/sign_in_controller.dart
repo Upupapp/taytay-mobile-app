@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/session_controller.dart';
 import '../domain/auth_repository.dart';
+import '../domain/code_exchange.dart';
 import '../domain/sign_in_challenge.dart';
 
 /// Drives the two-step sign-in: mobile number, then one-time code.
@@ -39,8 +40,17 @@ class SignInController extends ChangeNotifier {
   String _mobileNumber = '';
   bool _busy = false;
   SignInMessage? _message;
+  CodeAcceptance? _acceptance;
+  AppFailure? _refusal;
   DateTime? _resendAvailableAt;
   Timer? _cooldownTicker;
+
+  /// Shown on the first refused password, matching `02-10`. The next refusal
+  /// shows one fewer, then a 15-minute pause. This is the design's lockout
+  /// notice. The password route does not publish an attempt count.
+  int _passwordAttemptsShown = 2;
+  int _passwordRemaining = 2;
+  DateTime? _passwordPauseUntil;
 
   SignInStep get step => _step;
 
@@ -56,6 +66,15 @@ class SignInController extends ChangeNotifier {
   bool get busy => _busy;
 
   SignInMessage? get message => _message;
+
+  /// The last accepted send, including `retry_after`.
+  CodeAcceptance? get acceptance => _acceptance;
+
+  /// The last refusal, so a screen can read `retry_after` without the message.
+  AppFailure? get refusal => _refusal;
+
+  /// The number painted in the `02-10` banner for the refusal just shown.
+  int get passwordAttemptsShown => _passwordAttemptsShown;
 
   /// Seconds until "Send a new code" becomes available, or zero.
   int get resendCooldownSeconds {
@@ -138,6 +157,90 @@ class SignInController extends ChangeNotifier {
         notifyListeners();
         return true;
       case Err<AuthOutcome>(:final failure):
+        _message = SignInFeedback.forFailure(failure);
+        notifyListeners();
+        return false;
+    }
+  }
+
+  /// Email or mobile plus a password. The screen does not navigate.
+  ///
+  /// A refusal that could mean "no such account" or "wrong password" becomes
+  /// [SignInMessage.credentialsRejected]. The server's message is never used.
+  Future<bool> signInWithPassword({
+    required String identifier,
+    required String password,
+  }) async {
+    if (_busy) return false;
+    _busy = true;
+    _message = null;
+    notifyListeners();
+
+    final result = await _repository.signInWithPassword(
+      identifier: identifier.trim(),
+      password: password,
+    );
+
+    _busy = false;
+    switch (result) {
+      case Ok<AuthOutcome>(:final value):
+        await _session.signIn(
+          resident: value.resident,
+          accessToken: value.accessToken,
+          expiresAt: value.expiresAt,
+        );
+        _reset();
+        notifyListeners();
+        return true;
+      case Err<AuthOutcome>(:final failure):
+        _message = switch (failure) {
+          NotFoundFailure() ||
+          ForbiddenFailure() ||
+          UnauthenticatedFailure() ||
+          ValidationFailure() ||
+          ConflictFailure() => _passwordRefusal(),
+          _ => SignInFeedback.forFailure(failure),
+        };
+        notifyListeners();
+        return false;
+    }
+  }
+
+  SignInMessage _passwordRefusal() {
+    final DateTime now = _now();
+    final DateTime? paused = _passwordPauseUntil;
+    if (paused != null && now.isBefore(paused)) {
+      return SignInMessage.tooManyAttempts;
+    }
+    _passwordAttemptsShown = _passwordRemaining;
+    if (_passwordRemaining <= 0) {
+      _passwordPauseUntil = now.add(const Duration(minutes: 15));
+      return SignInMessage.tooManyAttempts;
+    }
+    _passwordRemaining -= 1;
+    return SignInMessage.credentialsRejected;
+  }
+
+  /// Asks for a reset code. Success and "no such account" look the same.
+  Future<bool> requestPasswordReset(String identifier) async {
+    if (_busy) return false;
+    _busy = true;
+    _message = null;
+    notifyListeners();
+    final result = await _repository.requestPasswordReset(
+      email: identifier.trim(),
+    );
+    _busy = false;
+    switch (result) {
+      case Ok<CodeAcceptance>(:final value):
+        _acceptance = value;
+        _refusal = null;
+        _message = null;
+        notifyListeners();
+        return true;
+      case Err<CodeAcceptance>(:final failure):
+        _acceptance = null;
+        _refusal = failure;
         _message = SignInFeedback.forFailure(failure);
         notifyListeners();
         return false;

@@ -34,9 +34,23 @@ enum ApiErrorCode {
   invalidStateTransition('INVALID_STATE_TRANSITION'),
 
   /// 422 — input failed validation; `details` is `field -> [messages]`.
+  ///
+  /// This code does not carry `attempts_remaining`. Email and reset codes use
+  /// [codeInvalid], [codeExpired], and [codeLocked] instead.
   validationFailed('VALIDATION_FAILED'),
 
-  /// 429 — throttled; the response carries `Retry-After`.
+  /// 422 — the 6-digit code was wrong. `details.attempts_remaining` is 4 down to 1.
+  codeInvalid('code_invalid'),
+
+  /// 422 — the 6-digit code has expired. `details.attempts_remaining` is set.
+  /// The screen for it is `02-04b`.
+  codeExpired('code_expired'),
+
+  /// 422 — five wrong codes locked this one. `details.attempts_remaining` is 0
+  /// and `details.retry_after` is the wait. Zero means a new code can be sent now.
+  codeLocked('code_locked'),
+
+  /// 429 — throttled. `details.retry_after` is the wait in seconds, up to 900.
   rateLimited('RATE_LIMITED'),
 
   /// 413 — the body exceeded the server's limit.
@@ -71,7 +85,10 @@ enum ApiErrorCode {
 
   const ApiErrorCode(this.wireValue);
 
-  /// The `SCREAMING_SNAKE_CASE` value as it appears in the error envelope.
+  /// The value as it appears in the error envelope.
+  ///
+  /// Most codes are `SCREAMING_SNAKE_CASE`. `code_invalid`, `code_expired`, and
+  /// `code_locked` are the spelling `90aa39e` publishes for email and reset codes.
   final String wireValue;
 
   /// Parses a wire value, falling back to [ApiErrorCode.unknown].
