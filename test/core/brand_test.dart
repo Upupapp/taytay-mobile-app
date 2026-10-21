@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/brand_assets.dart';
 import 'package:taytay_resident/core/design/brand_gradients.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/design/welcome_field.dart';
 
 /// Magic-byte signatures, so format is checked by content rather than by file
 /// extension. The candidate asset that failed this audit was a JPEG named
@@ -244,6 +245,23 @@ void main() {
           greaterThanOrEqualTo(A11y.minBodyContrastRatio),
           reason: entry.key,
         );
+      }
+    });
+
+    test('welcome field stops carry white and gold at AA', () {
+      for (final field in WelcomePageField.pages) {
+        for (final stop in field.colors) {
+          expect(
+            contrastRatio(Colors.white, stop),
+            greaterThanOrEqualTo(7),
+            reason: 'white on ${stop.toARGB32().toRadixString(16)}',
+          );
+          expect(
+            contrastRatio(BrandColors.sealGold, stop),
+            greaterThanOrEqualTo(A11y.minBodyContrastRatio),
+            reason: 'gold on ${stop.toARGB32().toRadixString(16)}',
+          );
+        }
       }
     });
 

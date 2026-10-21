@@ -63,6 +63,18 @@ abstract final class BrandColors {
   /// measured on the welcome and sign-in screens (5.6:1 on [surface]).
   static const Color inkGold = Color(0xFF7A5E0C);
 
+  /// Welcome body copy. CSS `.body` is `#46506A`.
+  static const Color welcomeCopy = Color(0xFF46506A);
+
+  /// The stitched thread. CSS stroke `#C9A227`.
+  static const Color threadGold = Color(0xFFC9A227);
+
+  /// Photo-credit chip ink. CSS `.cr` is `#5E5843`.
+  static const Color creditInk = Color(0xFF5E5843);
+
+  /// Core of the travelling light. CSS `.speck` is `#FFF6C2`.
+  static const Color speckCore = Color(0xFFFFF6C2);
+
   /// Sign-in sheet body. CSS `.sub` is `#4a5470`.
   static const Color sheetBody = Color(0xFF4A5470);
 

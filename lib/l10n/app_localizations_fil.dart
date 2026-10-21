@@ -878,4 +878,94 @@ class AppStringsFil extends AppStrings {
   @override
   String get intentResumedViewDigitalId =>
       'Maaari mo nang buksan ang iyong digital ID.';
+
+  @override
+  String get welcomeSkip => 'Laktawan';
+
+  @override
+  String get welcomeNext => 'Susunod';
+
+  @override
+  String get welcomeGetStarted => 'Magsimula';
+
+  @override
+  String get welcomeContinueAsGuest => 'Magpatuloy bilang bisita';
+
+  @override
+  String get welcomeGuestNote =>
+      'Maaari mong tingnan ang mga serbisyo ng munisipyo nang walang account.';
+
+  @override
+  String welcomeStep(int current, int total) {
+    return 'Hakbang $current ng $total';
+  }
+
+  @override
+  String get welcomeServicesEyebrow =>
+      'Mga serbisyo ng munisipyo sa iisang lugar';
+
+  @override
+  String get welcomeServicesTitle => 'Serbisyong bayan,\nnasa isang app.';
+
+  @override
+  String get welcomeServicesBody =>
+      'Mga dokumento, buwis sa lupa, mga programa sa kalusugan, at serbisyo sa trabaho — tingnan ang inaalok ng Taytay LGU at subaybayan ang anumang hiling mo.';
+
+  @override
+  String get welcomeServicesChipDocuments => 'Mga dokumento';
+
+  @override
+  String get welcomeServicesChipTax => 'Buwis sa lupa';
+
+  @override
+  String get welcomeServicesChipHealth => 'Kalusugan';
+
+  @override
+  String get welcomeServicesChipJobs => 'Trabaho';
+
+  @override
+  String get welcomeServicesTag => 'Munisipyo ng Taytay';
+
+  @override
+  String get welcomeServicesCredit =>
+      'Larawan: Ramon FVelasquez · CC BY-SA 3.0';
+
+  @override
+  String get welcomeIdEyebrow => 'Ang iyong Taytay ID, nasa telepono mo';
+
+  @override
+  String get welcomeIdTitle => 'Ang Taytay ID mo,\nnasa phone mo na.';
+
+  @override
+  String get welcomeIdBody =>
+      'Mag-apply at dalhin ang digital ID ng Munisipalidad ng Taytay nang hindi pumipila sa munisipyo.';
+
+  @override
+  String get welcomeIdChipDigital => 'Digital na ID';
+
+  @override
+  String get welcomeIdChipQueue => 'Walang pila';
+
+  @override
+  String get welcomeIdTag =>
+      'Taytay Tiangge · Kabisera ng kasuotan at woodcraft';
+
+  @override
+  String get welcomeIdCredit => 'Larawan: Ralff Nestor Nacor · CC BY-SA 4.0';
+
+  @override
+  String get welcomePrivacyEyebrow => 'Ikaw ang pipili ng ibabahagi mo';
+
+  @override
+  String get welcomePrivacyTitle => 'Ikaw ang pipili\nng ibabahagi.';
+
+  @override
+  String get welcomePrivacyBody =>
+      'Humihingi ang Taytay LGU ng kailangan lang ng isang serbisyo, at sinasabi kung bakit. Protektado ang iyong impormasyon sa ilalim ng Data Privacy Act of 2012.';
+
+  @override
+  String get welcomePrivacyTag => 'Parokya ni San Juan Bautista';
+
+  @override
+  String get welcomePrivacyCredit => 'Larawan: Urbanroamer · CC BY-SA 3.0';
 }

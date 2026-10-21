@@ -25,11 +25,33 @@ class GoldenReport {
   final bool sameSize;
 }
 
+/// A rectangle of pixels left out of the mismatch percentage.
+///
+/// Welcome compares use this for the photograph. The rim around it stays in
+/// the count.
+class GoldenMask {
+  const GoldenMask(this.x, this.y, this.width, this.height);
+
+  final int x;
+  final int y;
+  final int width;
+  final int height;
+
+  bool contains(int px, int py) =>
+      px >= x && py >= y && px < x + width && py < y + height;
+}
+
 /// Compares [design] with [render].
 ///
 /// Rows in `[0, excludeTop)` are drawn and ignored, so a status-bar crop can
-/// be left out of the percentage. A pixel differs when CIE76 ΔE is above 6.
-GoldenReport compareImages(Image design, Image render, {int excludeTop = 0}) {
+/// be left out of the percentage. [masks] do the same for photographs. A pixel
+/// differs when CIE76 ΔE is above 6.
+GoldenReport compareImages(
+  Image design,
+  Image render, {
+  int excludeTop = 0,
+  List<GoldenMask> masks = const <GoldenMask>[],
+}) {
   final sameSize =
       design.width == render.width && design.height == render.height;
   if (!sameSize) {
@@ -52,7 +74,8 @@ GoldenReport compareImages(Image design, Image render, {int excludeTop = 0}) {
       final right = render.getPixel(x, y);
       final delta = _deltaE(left, right);
       final differs = delta > 6;
-      if (y >= top) {
+      final masked = y < top || _masked(x, y, masks);
+      if (!masked) {
         compared++;
         if (differs) differing++;
       }
@@ -69,6 +92,13 @@ GoldenReport compareImages(Image design, Image render, {int excludeTop = 0}) {
     sideBySide: _join(design, render, heat),
     sameSize: true,
   );
+}
+
+bool _masked(int x, int y, List<GoldenMask> masks) {
+  for (final mask in masks) {
+    if (mask.contains(x, y)) return true;
+  }
+  return false;
 }
 
 Image _blank(int width, int height) => Image(width: width, height: height);
@@ -126,6 +156,7 @@ void main(List<String> args) {
   String? renderPath;
   String? outPath;
   var excludeTop = 0;
+  final masks = <GoldenMask>[];
   for (var i = 0; i < args.length; i++) {
     final arg = args[i];
     String next() {
@@ -147,6 +178,22 @@ void main(List<String> args) {
         outPath = next();
       case '--exclude-top':
         excludeTop = int.tryParse(next()) ?? 0;
+      case '--mask':
+        final parts = next().split(',');
+        if (parts.length != 4) {
+          stderr.writeln('--mask expects x,y,width,height');
+          exitCode = 64;
+          return;
+        }
+        final numbers = parts.map(int.tryParse).toList();
+        if (numbers.any((n) => n == null)) {
+          stderr.writeln('--mask expects four integers');
+          exitCode = 64;
+          return;
+        }
+        masks.add(
+          GoldenMask(numbers[0]!, numbers[1]!, numbers[2]!, numbers[3]!),
+        );
       default:
         stderr.writeln('Unknown argument $arg');
         exitCode = 64;
@@ -171,7 +218,12 @@ void main(List<String> args) {
     return;
   }
 
-  final report = compareImages(design, render, excludeTop: excludeTop);
+  final report = compareImages(
+    design,
+    render,
+    excludeTop: excludeTop,
+    masks: masks,
+  );
   File(outPath).writeAsBytesSync(encodePng(report.sideBySide));
   stdout.writeln(
     'mismatch ${report.mismatchPercent.toStringAsFixed(2)}% '

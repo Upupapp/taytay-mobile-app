@@ -1,9 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -12,6 +16,8 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
+import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 import 'auth_session_test.dart' show FakeAuthRepository, FakeLocalAuthenticator;
 
@@ -101,6 +107,20 @@ Future<void> goTo(WidgetTester tester, String routeName) async {
   await tester.pumpAndSettle();
 }
 
+bool _contains(Widget widget, bool Function(Widget widget) match) {
+  if (match(widget)) return true;
+  if (widget is Positioned) return _contains(widget.child, match);
+  if (widget is ProxyWidget) return _contains(widget.child, match);
+  if (widget is SingleChildRenderObjectWidget) {
+    final child = widget.child;
+    return child != null && _contains(child, match);
+  }
+  if (widget is MultiChildRenderObjectWidget) {
+    return widget.children.any((child) => _contains(child, match));
+  }
+  return false;
+}
+
 Future<void> reveal(WidgetTester tester, Finder finder) async {
   if (finder.evaluate().isEmpty) {
     await tester.scrollUntilVisible(
@@ -134,6 +154,117 @@ void main() {
       // The number is masked on the screen that confirms it back.
       expect(find.textContaining('0917 ••• 4567'), findsOneWidget);
       expect(find.textContaining('09171234567'), findsNothing);
+    });
+
+    testWidgets('the form sits on the white sheet and clears AA', (
+      tester,
+    ) async {
+      await boot(tester);
+      await goTo(tester, 'sign-in');
+
+      final sheet = find.byKey(signInFormSheetKey);
+      expect(sheet, findsOneWidget);
+      expect(tester.widget<Material>(sheet).color, Colors.white);
+
+      const lines = <String>[
+        'Welcome to Taytay LGU IDS',
+        'Enter your mobile number and we will send you a one-time code. '
+            'There is no password to remember.',
+        'Taytay LGU uses your mobile number to sign you in and to contact '
+            'you about your requests. It is never shared for advertising.',
+        'Trouble signing in?',
+        'Continue as guest',
+      ];
+      for (final line in lines) {
+        expect(
+          find.descendant(of: sheet, matching: find.text(line)),
+          findsOneWidget,
+          reason: line,
+        );
+      }
+
+      // The stitch is a sibling behind the sheet, not a paint over the field.
+      final stack = tester.widget<Stack>(
+        find.byKey(const Key('sign-in-stack')),
+      );
+      final threadAt = stack.children.indexWhere(
+        (child) => _contains(child, (widget) => widget is SignInThreadOverlay),
+      );
+      final sheetAt = stack.children.indexWhere(
+        (child) =>
+            _contains(child, (widget) => widget.key == signInFormSheetKey),
+      );
+      expect(threadAt, greaterThanOrEqualTo(0));
+      expect(sheetAt, greaterThan(threadAt));
+
+      RenderObject? ancestor = tester.renderObject(sheet).parent;
+      RenderRepaintBoundary? boundary;
+      while (ancestor != null) {
+        if (ancestor is RenderRepaintBoundary) {
+          boundary = ancestor;
+          break;
+        }
+        ancestor = ancestor.parent;
+      }
+      expect(boundary, isNotNull);
+
+      Future<List<int>> capture() async {
+        final image = await tester.runAsync(() => boundary!.toImage());
+        final captured = image!;
+        final bytes = await tester.runAsync(
+          () => captured.toByteData(format: ui.ImageByteFormat.rawRgba),
+        );
+        final packed = <int>[
+          captured.width,
+          captured.height,
+          ...bytes!.buffer.asUint8List(),
+        ];
+        captured.dispose();
+        return packed;
+      }
+
+      Color pixelAt(List<int> packed, Offset global) {
+        final width = packed[0];
+        final height = packed[1];
+        final local = boundary!.globalToLocal(global);
+        final x = local.dx.round().clamp(0, width - 1);
+        final y = local.dy.round().clamp(0, height - 1);
+        final i = 2 + (y * width + x) * 4;
+        return Color.fromARGB(
+          packed[i + 3],
+          packed[i],
+          packed[i + 1],
+          packed[i + 2],
+        );
+      }
+
+      for (final line in lines) {
+        await reveal(tester, find.text(line));
+        final rect = tester.getRect(find.text(line));
+        final sheetRect = tester.getRect(sheet);
+        final packed = await capture();
+        // Left padding of the sheet, level with the line.
+        final background = pixelAt(
+          packed,
+          Offset(sheetRect.left + 8, rect.center.dy),
+        );
+        expect(
+          contrastRatio(background, Colors.white),
+          lessThan(1.2),
+          reason: '$line background $background rect $rect sheet $sheetRect',
+        );
+        Color? ink;
+        for (var y = rect.top + 2; y < rect.bottom - 1 && ink == null; y += 1) {
+          for (var x = rect.left + 2; x < rect.right - 1; x += 1) {
+            final color = pixelAt(packed, Offset(x, y));
+            if (contrastRatio(color, background) >= 4.5) {
+              ink = color;
+              break;
+            }
+          }
+        }
+        expect(ink, isNotNull, reason: '$line has no AA ink on $background');
+      }
     });
 
     testWidgets(

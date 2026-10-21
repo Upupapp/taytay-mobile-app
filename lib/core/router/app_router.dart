@@ -39,6 +39,7 @@ import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../../shared/widgets/foundation_placeholder_screen.dart';
 import '../../shared/widgets/taytay_back_button.dart';
+import '../../shared/widgets/taytay_thread.dart';
 import '../design/design_tokens.dart';
 import '../session/session_controller.dart';
 import '../startup/launch_controller.dart';
@@ -139,9 +140,13 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.signIn.path,
         name: AppRoute.signIn.routeName,
-        builder: (context, state) => SignInScreen(
-          returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
-        ),
+        builder: (context, state) {
+          final extra = state.extra;
+          return SignInScreen(
+            returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
+            threadCycle: extra is WelcomeThreadArrival ? extra.cycle : 0,
+          );
+        },
       ),
       GoRoute(
         path: AppRoute.signInHelp.path,

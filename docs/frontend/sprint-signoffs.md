@@ -6,6 +6,7 @@ This file records that the words were looked for. It does not invent them.
 | Sprint | Status | Pull request | Commit | Approval |
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
+| S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 
 ## S0 pixel match
 
@@ -49,6 +50,35 @@ Exceptions, recorded rather than forced under 2%:
 
 - Screens `01-01` through `08-10` are not built in S0.
 - Photographs and the OS status bar are excluded by the pixel-match method.
+
+## S1 Welcome
+
+The design reviewer Ui/Ux Taytay approved S1 on 2026-10-21 at `2ecacd054f7c27ff59c88f4789b7bc25d6a7221f`. Paul merges. Pull request #2 stays a draft until that merge. This file does not record Paul as having written "S1 approved".
+
+S1 renders welcome scenes `01-01`, `01-02`, and `01-03`. Comparison uses `tool/golden_compare` at 1170×2532, which is 390×844 at 3×. The side-by-side is design | build | diff. The photograph is masked to the rounded arch interior, so the white rim stays in the count. The design PNGs have no status bar, so the top of the frame stays in the count. A pixel differs when CIE76 ΔE is above 6.
+
+| Screen | Design source | Mismatch | Layout |
+| --- | --- | --- | --- |
+| 01-01 Municipal services | `01-01_Welcome_Municipal-Services.png` | 3.67% (78365/2132448) | Body line tops 1889/1954/2019, +1/0/−1 against 1888/1954/2020. Copy-block origin within 1 device px. Next pill origin within 1 device px. Seal ring samples `(214, 181, 29)`. Arch rim samples `#FFFFFF`. `test/goldens/compare/welcome_01-01.png` |
+| 01-02 Taytay ID | `01-02_Welcome_Taytay-ID.png` | 3.12% (66579/2132448) | Body line tops 1889/1953, +2/+1 against the design at 1887/1952. Next pill origin within 1 device px. `test/goldens/compare/welcome_01-02.png` |
+| 01-03 Privacy | `01-03_Welcome_Privacy-Get-Started.png` | 4.06% (94970/2339862) | Body line tops 1685/1749/1815, +2/+1/+2 against the design at 1683/1748/1813. Knot row sits 28 px under the body. Get started pill is within 1 device px. `test/goldens/compare/welcome_01-03.png` |
+
+On `01-01`, the gradient outside the seal and wordmark is 0.17%. The arch band outside the photograph is 1.43%. Body line tops are the first row with more than 15 pixels near `#46506A`. The design reads 1887/1952/2017, so the build is +2/+2/+2, and the pitch is 65/65 device px. `01-03`'s two gaps sum to 130 device px, the same as the design. The welcome golden host is a `Material`, so the text is not Flutter's missing-`Material` underline. S0 goldens already sat in a `Scaffold` or a transparent `Material`. The woven-header and gallery-frame goldens were regenerated because the shared seal ring now paints above its drop shadow.
+
+Sign-in against `02-01` is 42.78% (1267297/2962440) for the full frame, in `test/goldens/compare/signin_02-01.png`. With the sheet interior masked, it is 32.08% (436190/1359504). The fade margins beside the sheet (y 960–1200, x under 36 or over 1134) are 0.00% (0/17040). The band below the sheet (y ≥ 2472) is 0.00% (0/70200). The header band y under 300 is 5.15% (18088/351000), the same seal and glyph class as the S0 woven header. At x = 12, y = 1146 (382 dp) the ground is `#F3F5FA`. The thread's gold pixels run from y = 129 to y = 753 and do not enter the sheet.
+
+The speck runs for 7s on `cubic-bezier(.45, 0, .55, 1)`. Its position on the welcome pages is `PageController.page` along the joined stitch `Y=[200, 300, 170, 260]`, so the exit of page *n* is the entry of page *n+1*. Get started hands the live cycle to Sign-in. The thread and the 7s loop stay on the sign-in screen. Reduced motion hides the speck and keeps the thread still.
+
+### S1 deviations
+
+- The full-frame mismatch is above 2%. The gradient field matches. The remainder is glyph antialiasing, the downscaled seal, dashed chip edges, and button-label edges. Layout is within 2 device px.
+- The body uses height 1.55 and a strut at the same leading. The engine still rounds one strut to 22 logical px, so each line is placed `14 × 1.55` apart. The line tops stay within 2 device px of 1888/1954/2020 on `01-01`, and within 2 device px of the design on `01-02` and `01-03`.
+- Sign-in fades the navy field to `#F3F5FA` by y = 382 dp. The form sits on the white sheet, and the thread is painted behind that sheet. The 42.78% against `02-01` is the municipal-hall arch this OTP screen does not draw, English OTP copy against the design's Filipino email and password screen, and the debug session simulator, which is present because the capture runs with `kDebugMode`. The headline, intro, privacy line, "Trouble signing in?", and "Continue as guest" are on the white sheet and clear AA there.
+- The prototype `spk` keyframes are one 7s loop positioned in percentages. These scenes follow the SVG stitch in `w1.html`, `w2.html`, and `w3.html`, on that same duration and curve, and Sign-in keeps that loop.
+- Skip's painted pill is 44 dp inside a 48 dp target.
+- The English locale is the design: Filipino headlines, English eyebrows and bodies, English controls. Filipino translates the English lines. The three headlines stay shared, because they are already the design's Filipino.
+- Photographs are the design JPEGs, with the credits in `docs/frontend/PHOTO_CREDITS.md`. The seal is the existing asset, unaltered.
+- No new package.
 
 ## Contract gaps after the Node OpenAPI
 
