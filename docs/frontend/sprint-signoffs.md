@@ -7,7 +7,7 @@ This file records that the words were looked for. It does not invent them.
 | --- | --- | --- | --- | --- | --- |
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
-| S2 Sign-in | In review, not approved | draft from `feature/s2-sign-in` | SHA_PENDING | No approval words. Paul merges when he chooses. |
+| S2 Sign-in | In review, not approved | draft from `feature/s2-sign-in` | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 
 ## S0 pixel match
 
