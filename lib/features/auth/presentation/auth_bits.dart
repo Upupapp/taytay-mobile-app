@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/code_exchange.dart';
 
 /// True outside widget tests. A periodic timer keeps `pumpAndSettle` waiting.
@@ -41,8 +43,9 @@ class AuthNoticeBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Icon(
-              amber ? Icons.schedule : Icons.error_outline,
+            TaytayIcon(
+              icon: amber ? TaytayIcons.clock : TaytayIcons.circleAlert,
+              semanticLabel: amber ? 'Waiting' : 'Error',
               size: 18,
               color: icon,
             ),
@@ -159,7 +162,13 @@ class _Rule extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        Icon(Icons.check, size: 13, color: ink),
+        TaytayIcon(
+          icon: TaytayIcons.check,
+          semanticLabel: '',
+          excludeSemantics: true,
+          size: 13,
+          color: ink,
+        ),
         const SizedBox(width: 4),
         Flexible(
           child: Text(
@@ -185,11 +194,15 @@ class ShowPasswordToggle extends StatelessWidget {
   const ShowPasswordToggle({
     required this.shown,
     required this.onPressed,
+    this.showLabel = 'Ipakita',
+    this.hideLabel = 'Itago',
     super.key,
   });
 
   final bool shown;
   final VoidCallback onPressed;
+  final String showLabel;
+  final String hideLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -213,7 +226,7 @@ class ShowPasswordToggle extends StatelessWidget {
             ),
           ),
           onPressed: onPressed,
-          child: Text(shown ? 'Itago' : 'Ipakita'),
+          child: Text(shown ? hideLabel : showLabel),
         ),
       ),
     );

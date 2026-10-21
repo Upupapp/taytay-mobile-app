@@ -31,6 +31,18 @@ abstract final class TaytayIcons {
 
   static const IconData chevronLeft = IconData(57454, fontFamily: 'Lucide');
 
+  static const IconData chevronDown = IconData(57453, fontFamily: 'Lucide');
+
+  static const IconData key = IconData(57597, fontFamily: 'Lucide');
+
+  static const IconData camera = IconData(57444, fontFamily: 'Lucide');
+
+  static const IconData sun = IconData(57720, fontFamily: 'Lucide');
+
+  static const IconData scanFace = IconData(58225, fontFamily: 'Lucide');
+
+  static const IconData shieldCheck = IconData(57855, fontFamily: 'Lucide');
+
   static const IconData phone = IconData(57651, fontFamily: 'Lucide');
 
   static const IconData mapPin = IconData(57617, fontFamily: 'Lucide');

@@ -127,13 +127,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               ),
               child: SizedBox(
                 height: 44,
-                child: TextFormField(
-                  controller: _identifier,
-                  style: AppTypography.fieldValue,
-                  decoration: const InputDecoration(
-                    isCollapsed: true,
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: TextFormField(
+                    controller: _identifier,
+                    textAlignVertical: TextAlignVertical.center,
+                    style: AppTypography.fieldValue,
+                    decoration: const InputDecoration.collapsed(hintText: ''),
                   ),
                 ),
               ),

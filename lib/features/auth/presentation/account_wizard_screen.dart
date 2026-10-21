@@ -6,12 +6,14 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/sign_in_field.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
@@ -101,7 +103,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _terms = true;
       _privacy = true;
       _selfie = true;
-      _code.text = widget.fixture == AccountFixture.codeExpired ? '' : '4821';
+      _code.text = widget.fixture == AccountFixture.codeExpired
+          ? ''
+          : AuthSample.code;
     }
     _codeExpired = widget.fixture == AccountFixture.codeExpired;
     _step = switch (widget.fixture) {
@@ -304,13 +308,38 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     final dependencies = AppDependencies.of(context);
     final application = AccountApplication(
       email: _email.text.trim(),
+      password: _password.text,
       mobile: _mobile.text.replaceAll(' ', ''),
       givenName: _first.text.trim(),
       familyName: _last.text.trim(),
+      barangay: _barangay.text.trim(),
+      hasGovernmentId: _front != null,
+      selfieTaken: _selfie,
     );
-    final result = await dependencies.authRepository.registerAccount(
+    final created = await dependencies.authRepository.createAccount(
       email: application.email,
+      password: application.password,
     );
+    if (!mounted) return;
+    if (created case Err<AuthOutcome>(:final failure)) {
+      setState(() {
+        _busy = false;
+        _status = SignInFeedback.forFailure(failure).text;
+      });
+      return;
+    }
+    final profile = await dependencies.authRepository.submitProfile(
+      application,
+    );
+    if (!mounted) return;
+    if (profile case Err<void>(:final failure)) {
+      setState(() {
+        _busy = false;
+        _status = SignInFeedback.forFailure(failure).text;
+      });
+      return;
+    }
+    final result = created;
     if (!mounted) return;
     switch (result) {
       case Ok<AuthOutcome>(:final value):
@@ -363,6 +392,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       atmosphere: _atmosphere,
       curve: submitted ? ThreadCurve.submitted : ThreadCurve.wizard,
       onBack: _back,
+      greeting: _first.text.trim(),
       footer: showFooter ? _footer() : null,
       child: SingleChildScrollView(
         padding: EdgeInsets.fromLTRB(
@@ -473,8 +503,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                   ),
                   child: Row(
                     children: <Widget>[
-                      const Icon(
-                        Icons.error_outline,
+                      const TaytayIcon(
+                        icon: TaytayIcons.circleAlert,
+                        semanticLabel: 'Error',
                         size: 16,
                         color: Color(0xFFB3261E),
                       ),
@@ -558,28 +589,45 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           requiredField: true,
           ok: _errors.isEmpty && _mobile.text.isNotEmpty,
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _box(
-                'Barangay',
-                _barangay,
-                error: _errors['barangay'],
-                requiredField: true,
-                ok: _errors.isEmpty && _barangay.text.isNotEmpty,
-                trailing: const Icon(
-                  Icons.keyboard_arrow_down,
-                  size: 16,
-                  color: Color(0xFF5A6480),
+        if (_errors.isEmpty)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: _box(
+                  'Barangay',
+                  _barangay,
+                  error: _errors['barangay'],
+                  requiredField: true,
+                  ok: _errors.isEmpty && _barangay.text.isNotEmpty,
+                  trailing: const TaytayIcon(
+                    icon: TaytayIcons.chevronDown,
+                    semanticLabel: 'Barangay list',
+                    size: 16,
+                    color: Color(0xFF5A6480),
+                  ),
                 ),
               ),
+              const SizedBox(width: 10),
+              Expanded(child: _box('Street / Purok', _street)),
+            ],
+          )
+        else
+          _box(
+            'Barangay',
+            _barangay,
+            error: _errors['barangay'],
+            requiredField: true,
+            trailing: const TaytayIcon(
+              icon: TaytayIcons.chevronDown,
+              semanticLabel: 'Barangay list',
+              size: 16,
+              color: Color(0xFF5A6480),
             ),
-            const SizedBox(width: 10),
-            Expanded(child: _box('Street / Purok', _street)),
-          ],
-        ),
-        if (_street.text.isNotEmpty && _barangay.text.isNotEmpty)
+          ),
+        if (_errors.isEmpty &&
+            _street.text.isNotEmpty &&
+            _barangay.text.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 5),
             child: Text(
@@ -606,18 +654,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               : widget.fixture != AccountFixture.live && _obscure
               ? '•••••••••••'
               : null,
-          trailing: TextButton(
-            style: TextButton.styleFrom(
-              minimumSize: const Size(48, 48),
-              foregroundColor: const Color(0xFF5B6680),
-              textStyle: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 12,
-                fontWeight: AppTypography.strong,
-              ),
-            ),
+          trailing: ShowPasswordToggle(
+            shown: !_obscure,
+            showLabel: 'Show',
+            hideLabel: 'Hide',
             onPressed: () => setState(() => _obscure = !_obscure),
-            child: Text(_obscure ? 'Show' : 'Hide'),
           ),
         ),
         const SizedBox(height: 5),
@@ -897,15 +938,34 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                           color: Color(0xFF3A4560),
                         ),
                         children: <InlineSpan>[
-                          TextSpan(
-                            text:
-                                'DRAFT · LGU-approved Privacy Notice to be inserted\n',
-                            style: TextStyle(
-                              fontWeight: AppTypography.black,
-                              color: Color(0xFF8A5A00),
-                              backgroundColor: Color(0xFFFFF4CC),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: Color(0xFFFFF4D6),
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(999),
+                                ),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                child: Text(
+                                  'DRAFT · LGU-approved Privacy Notice to be inserted',
+                                  style: TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontSize: 12,
+                                    height: 1.2,
+                                    fontWeight: AppTypography.black,
+                                    color: Color(0xFF8A5A00),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
+                          TextSpan(text: '\n'),
                           TextSpan(
                             text:
                                 'Privacy Notice (Republic Act No. 10173 – Data Privacy Act of 2012)\n',
@@ -1032,8 +1092,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           requiredField: true,
           readOnly: true,
           ok: true,
-          trailing: const Icon(
-            Icons.keyboard_arrow_down,
+          trailing: const TaytayIcon(
+            icon: TaytayIcons.chevronDown,
+            semanticLabel: 'ID types',
             size: 16,
             color: Color(0xFF5A6480),
           ),
@@ -1083,7 +1144,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                   const SizedBox(height: 4),
                   const Row(
                     children: <Widget>[
-                      Icon(Icons.check, size: 13, color: Color(0xFF0F7A4D)),
+                      TaytayIcon(
+                        icon: TaytayIcons.check,
+                        semanticLabel: '',
+                        excludeSemantics: true,
+                        size: 13,
+                        color: Color(0xFF0F7A4D),
+                      ),
                       SizedBox(width: 4),
                       Text(
                         'Clear',
@@ -1144,6 +1211,29 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
+  String get _addressLine {
+    final street = _street.text.trim();
+    final barangay = _barangay.text.trim();
+    final parts = <String>[
+      if (street.isNotEmpty) street,
+      if (barangay.isNotEmpty) 'Brgy. $barangay',
+      if (street.isNotEmpty || barangay.isNotEmpty) 'Taytay, Rizal',
+    ];
+    return parts.join(', ');
+  }
+
+  String get _idSummary {
+    final type = _idType.text.trim();
+    final captured =
+        _front != null ||
+        widget.fixture == AccountFixture.idCard ||
+        widget.fixture == AccountFixture.selfie ||
+        widget.fixture == AccountFixture.review ||
+        widget.fixture == AccountFixture.submitted;
+    if (type.isEmpty) return captured ? 'Front captured' : 'Not added';
+    return captured ? '$type · front' : type;
+  }
+
   Widget _review() {
     final name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
     return Column(
@@ -1154,16 +1244,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           title: 'Check your details',
           titleSize: 22,
         ),
-        _row('Name', name.isEmpty ? 'Juana Dela Cruz' : name, _Step.personal),
+        _row('Name', name, _Step.personal),
         _row('Email', _email.text.trim(), _Step.personal, badge: 'Verified'),
         _row('Mobile', _mobile.text.trim(), _Step.personal),
+        _row('Address', _addressLine, _Step.personal),
         _row(
-          'Address',
-          '${_street.text.trim()}, Brgy. ${_barangay.text.trim()}, Taytay, Rizal',
-          _Step.personal,
+          'Terms & Privacy Notice',
+          _terms && _privacy ? 'Agreed · consent given' : 'Not yet agreed',
+          _Step.terms,
         ),
-        _row('Terms & Privacy Notice', 'Agreed · consent given', _Step.terms),
-        _row('Valid ID', 'PhilSys National ID · front', _Step.idCard),
+        _row('Valid ID', _idSummary, _Step.idCard),
         _row('Selfie', _selfie ? 'Taken' : 'Not taken', _Step.selfie),
         if (_status != null)
           Padding(
@@ -1220,34 +1310,36 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             color: Color(0xFF4A5470),
           ),
         ),
-        const SizedBox(height: 8),
-        const Text.rich(
-          TextSpan(
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              color: Color(0xFF5B6680),
-            ),
-            children: <InlineSpan>[
-              TextSpan(text: 'Account no. '),
-              TextSpan(
-                text: 'TAY-2026-000123',
-                style: TextStyle(
-                  color: BrandColors.taytayBlueDark,
-                  fontWeight: AppTypography.black,
-                ),
+        if (widget.fixture == AccountFixture.submitted) ...<Widget>[
+          const SizedBox(height: 8),
+          const Text.rich(
+            TextSpan(
+              style: TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 11,
+                color: Color(0xFF5B6680),
               ),
-              TextSpan(text: ' (sample)'),
-            ],
+              children: <InlineSpan>[
+                TextSpan(text: 'Account no. '),
+                TextSpan(
+                  text: 'TAY-2026-000123',
+                  style: TextStyle(
+                    color: BrandColors.taytayBlueDark,
+                    fontWeight: AppTypography.black,
+                  ),
+                ),
+                TextSpan(text: ' (sample)'),
+              ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
 
   Widget _row(String label, String value, _Step edit, {String? badge}) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 9),
+      padding: const EdgeInsets.symmetric(vertical: 6.83),
       decoration: const BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Color(0xFFEADFC0), width: 1.2),
@@ -1293,14 +1385,27 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               color: const Color(0xFFE6F4EC),
                               borderRadius: BorderRadius.circular(999),
                             ),
-                            child: Text(
-                              badge,
-                              style: const TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                fontWeight: AppTypography.black,
-                                color: Color(0xFF0F7A4D),
-                              ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const TaytayIcon(
+                                  icon: TaytayIcons.check,
+                                  semanticLabel: '',
+                                  excludeSemantics: true,
+                                  size: 11,
+                                  color: Color(0xFF0F7A4D),
+                                ),
+                                const SizedBox(width: 3),
+                                Text(
+                                  badge,
+                                  style: const TextStyle(
+                                    fontFamily: AppTypography.fontFamily,
+                                    fontSize: 11,
+                                    fontWeight: AppTypography.black,
+                                    color: Color(0xFF0F7A4D),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -1345,8 +1450,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                       : Border.all(color: BrandColors.fieldBorder, width: 1.4),
                 ),
                 child: value
-                    ? const Icon(
-                        Icons.check,
+                    ? const TaytayIcon(
+                        icon: TaytayIcons.check,
+                        semanticLabel: '',
+                        excludeSemantics: true,
                         size: 14,
                         color: Color(0xFFFCD116),
                       )
@@ -1445,16 +1552,16 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               style: AppTypography.fieldValue,
                             ),
                           )
-                        : TextFormField(
-                            controller: controller,
-                            readOnly: readOnly,
-                            obscureText: obscure,
-                            style: AppTypography.fieldValue,
-                            decoration: const InputDecoration(
-                              isCollapsed: true,
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 12,
+                        : Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: TextFormField(
+                              controller: controller,
+                              readOnly: readOnly,
+                              obscureText: obscure,
+                              textAlignVertical: TextAlignVertical.center,
+                              style: AppTypography.fieldValue,
+                              decoration: const InputDecoration.collapsed(
+                                hintText: '',
                               ),
                             ),
                           ),
@@ -1467,13 +1574,29 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                error,
-                style: const TextStyle(
-                  color: BrandColors.danger,
-                  fontSize: 12,
-                  fontWeight: AppTypography.strong,
-                ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const TaytayIcon(
+                    icon: TaytayIcons.circleAlert,
+                    semanticLabel: 'Error',
+                    size: 14,
+                    color: Color(0xFFB3261E),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 11.5,
+                        height: 1.2,
+                        fontWeight: AppTypography.strong,
+                        color: Color(0xFFB3261E),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -1501,7 +1624,13 @@ class _Chip extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (met != null)
-          Icon(met! ? Icons.check : Icons.close, size: 12, color: color),
+          TaytayIcon(
+            icon: met! ? TaytayIcons.check : TaytayIcons.close,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: 12,
+            color: color,
+          ),
         if (met != null) const SizedBox(width: 3),
         Text(
           label,
@@ -1561,7 +1690,13 @@ class _UploadSlot extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
-                Icon(Icons.add, size: 16, color: BrandColors.taytayBlue),
+                TaytayIcon(
+                  icon: TaytayIcons.plus,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: 16,
+                  color: BrandColors.taytayBlue,
+                ),
                 SizedBox(width: 8),
                 Flexible(
                   child: Text(
@@ -1803,8 +1938,10 @@ class _SelfieRule extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Row(
         children: <Widget>[
-          const Icon(
-            Icons.wb_sunny_outlined,
+          const TaytayIcon(
+            icon: TaytayIcons.sun,
+            semanticLabel: '',
+            excludeSemantics: true,
             size: 16,
             color: BrandColors.taytayBlue,
           ),

@@ -7,6 +7,7 @@ import 'package:taytay_resident/core/session/session_controller.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
@@ -149,6 +150,68 @@ class FakeAuthRepository implements AuthRepository {
       );
     }
     return const Ok<PasswordUpdated>(PasswordUpdated(updated: true));
+  }
+
+  String? createdPassword;
+  AccountApplication? submittedProfile;
+
+  @override
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    createdPassword = password;
+    if (passwordOutcome case Err<AuthOutcome>()) {
+      return passwordOutcome!;
+    }
+    return registerAccount(email: email);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email}) {
+    if (email != null && email.trim().isEmpty) {
+      return Future<Result<CodeAcceptance>>.value(
+        const Err<CodeAcceptance>(
+          ValidationFailure(debugMessage: 'An email address is required.'),
+        ),
+      );
+    }
+    return sendEmailCode();
+  }
+
+  @override
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  }) {
+    if (link != null && link.isNotEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(
+            debugMessage: 'Link confirmation is not published.',
+          ),
+        ),
+      );
+    }
+    if (code == null || code.isEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(debugMessage: 'A code is required.'),
+        ),
+      );
+    }
+    return verifyEmailCode(code: code);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email}) {
+    return requestPasswordReset(email: email);
+  }
+
+  @override
+  Future<Result<void>> submitProfile(AccountApplication application) async {
+    submittedProfile = application;
+    return const Ok<void>(null);
   }
 
   @override

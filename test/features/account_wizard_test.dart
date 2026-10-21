@@ -103,15 +103,21 @@ void main() {
   test('an application draft does not render its fields', () {
     const draft = AccountApplication(
       email: 'juana.delacruz@example.com',
+      password: 'Password1!',
       mobile: '09171234567',
       givenName: 'Juana',
       familyName: 'Dela Cruz',
+      barangay: 'San Juan',
+      hasGovernmentId: true,
+      selfieTaken: true,
     );
     final text = draft.toString();
     expect(text, contains('redacted'));
     expect(text, isNot(contains('Juana')));
     expect(text, isNot(contains('0917')));
     expect(text, isNot(contains('example.com')));
+    expect(text, isNot(contains('Password1!')));
+    expect(text, isNot(contains('San Juan')));
   });
 
   testWidgets('each empty personal field is named', (tester) async {
@@ -230,7 +236,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Pending review'), findsOneWidget);
-    expect(find.textContaining('TAY-2026-000123'), findsWidgets);
+    expect(find.textContaining('TAY-2026-000123'), findsNothing);
+    expect(find.text("You're all set, Juana!"), findsOneWidget);
+    expect(auth.createdPassword, 'Password1!');
+    expect(auth.submittedProfile?.barangay, 'San Juan');
+    expect(auth.submittedProfile?.hasGovernmentId, isTrue);
+    expect(auth.submittedProfile?.selfieTaken, isTrue);
+    expect(auth.submittedProfile.toString(), isNot(contains('Password1!')));
     expect(dependencies.session.accessLevel, AccessLevel.unverified);
     final rendered = tester
         .widgetList<Text>(find.byType(Text))
