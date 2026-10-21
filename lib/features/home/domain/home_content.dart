@@ -11,6 +11,7 @@ class HomeSlide {
     required this.photoAsset,
     required this.credit,
     required this.routeName,
+    this.focus = 0.35,
   });
 
   final String eyebrow;
@@ -22,6 +23,9 @@ class HomeSlide {
 
   /// `goNamed` target: news, programs, or services.
   final String routeName;
+
+  /// CSS `background-position` vertical fraction. 0 is the top of the photo.
+  final double focus;
 
   @override
   String toString() => 'HomeSlide($routeName)';

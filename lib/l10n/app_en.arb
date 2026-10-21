@@ -16,9 +16,9 @@
   "@navNews": {
     "description": "Shell destination: LGU announcements."
   },
-  "navEvents": "Tulong",
-  "@navEvents": {
-    "description": "Shell destination: LGU events."
+  "navTulong": "Tulong",
+  "@navTulong": {
+    "description": "Shell destination: social welfare programmes."
   },
   "navProfile": "My Account",
   "@navProfile": {

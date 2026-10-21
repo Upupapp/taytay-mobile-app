@@ -10,9 +10,9 @@ import '../../../l10n/app_localizations.dart';
 /// five show for a guest, an unverified resident and a verified resident.
 enum ShellDestination {
   home(AppRoute.home, 'Home', TaytayIcons.house),
-  directory(AppRoute.services, 'Directory', TaytayIcons.landmark),
+  directory(AppRoute.services, 'Directory', TaytayIcons.building2),
   balita(AppRoute.news, 'Balita', TaytayIcons.newspaper),
-  tulong(AppRoute.programs, 'Tulong', TaytayIcons.handHelping),
+  tulong(AppRoute.programs, 'Tulong', TaytayIcons.handHeart),
   account(AppRoute.profile, 'My Account', TaytayIcons.user);
 
   const ShellDestination(this.route, this.label, this.icon);
@@ -28,7 +28,7 @@ enum ShellDestination {
     ShellDestination.home => strings.navHome,
     ShellDestination.directory => strings.navServices,
     ShellDestination.balita => strings.navNews,
-    ShellDestination.tulong => strings.navEvents,
+    ShellDestination.tulong => strings.navTulong,
     ShellDestination.account => strings.navProfile,
   };
 

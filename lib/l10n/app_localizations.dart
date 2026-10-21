@@ -122,11 +122,11 @@ abstract class AppStrings {
   /// **'News'**
   String get navNews;
 
-  /// Shell destination: LGU events.
+  /// Shell destination: social welfare programmes.
   ///
   /// In en, this message translates to:
-  /// **'Events'**
-  String get navEvents;
+  /// **'Tulong'**
+  String get navTulong;
 
   /// Shell destination: the resident's own account.
   ///

@@ -8,22 +8,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/router/app_router.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
+import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/home/data/home_catalogue.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
-import 'package:taytay_resident/features/news/presentation/news_screen.dart';
-import 'package:taytay_resident/features/profile/presentation/profile_screen.dart';
-import 'package:taytay_resident/features/programs/presentation/programs_screen.dart';
-import 'package:taytay_resident/features/services/presentation/services_screen.dart';
 import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 
@@ -49,6 +49,7 @@ Future<void> _loadFonts() async {
 
 Future<AppDependencies> _dependencies() async {
   final InMemorySecretStore secrets = InMemorySecretStore();
+  await secrets.write(LaunchController.welcomeCompletedKey, 'true');
   final InMemorySessionStore store = InMemorySessionStore();
   await store.write(
     const StoredSession(
@@ -73,6 +74,7 @@ Future<AppDependencies> _dependencies() async {
     localAuthenticator: const UnavailableLocalAuthenticator(),
   );
   await dependencies.session.restore();
+  await dependencies.launch.restore();
   return dependencies;
 }
 
@@ -143,6 +145,24 @@ Future<void> _shot(WidgetTester tester, Directory out, int frame) async {
 
 const Duration _step = Duration(milliseconds: 125);
 
+Future<int> _until(
+  WidgetTester tester,
+  Directory out,
+  int frame,
+  Finder finder, {
+  int maxFrames = 40,
+}) async {
+  for (var i = 0; i < maxFrames; i++) {
+    await tester.pump(_step);
+    await _precache(tester);
+    await _shot(tester, out, frame);
+    frame++;
+    if (finder.evaluate().isNotEmpty) return frame;
+  }
+  expect(finder, findsWidgets);
+  return frame;
+}
+
 Future<int> _hold(
   WidgetTester tester,
   Directory out,
@@ -193,33 +213,43 @@ class _Phone extends StatelessWidget {
 
 void _ignore(int index) {}
 
-class _TabReel extends StatefulWidget {
-  const _TabReel({required this.home});
+/// The real shell, without the non-production environment banner.
+///
+/// Each tab keeps its own navigator. The recording goes into a Directory
+/// service, leaves, and comes back to that same service.
+class _ShellHost extends StatefulWidget {
+  const _ShellHost({required this.dependencies});
 
-  final Widget home;
+  final AppDependencies dependencies;
 
   @override
-  State<_TabReel> createState() => _TabReelState();
+  State<_ShellHost> createState() => _ShellHostState();
 }
 
-class _TabReelState extends State<_TabReel> {
-  int index = 0;
+class _ShellHostState extends State<_ShellHost> {
+  late final GoRouter router = buildAppRouter(
+    session: widget.dependencies.session,
+    launch: widget.dependencies.launch,
+    platform: widget.dependencies.platform,
+    initialLocation: AppRoute.home.path,
+  );
 
-  void show(int next) => setState(() => index = next);
+  @override
+  void dispose() {
+    router.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _Phone(
-      index: index,
-      child: IndexedStack(
-        index: index,
-        children: <Widget>[
-          widget.home,
-          const ServicesScreen(),
-          const NewsScreen(),
-          const ProgramsScreen(),
-          const ProfileScreen(),
-        ],
+    return AppDependenciesScope(
+      dependencies: widget.dependencies,
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        localizationsDelegates: AppStrings.localizationsDelegates,
+        supportedLocales: AppStrings.supportedLocales,
+        routerConfig: router,
       ),
     );
   }
@@ -235,39 +265,52 @@ void main() {
 
     final AppDependencies dependencies = await _dependencies();
     addTearDown(dependencies.dispose);
-    final List<HomeSlide> slides = await HomeCatalogue.slides();
-    final ({List<HomeNewsItem> news, List<HomeHotline> hotlines}) feed =
-        await HomeCatalogue.mockFeed();
 
-    await _mount(
-      tester,
-      AppDependenciesScope(
-        dependencies: dependencies,
-        child: _TabReel(
-          home: HomeCanvas(
-            greeting: 'Magandang gabi, Juana!',
-            initials: 'JD',
-            bellCount: 2,
-            status: HomeStatusKind.none,
-            slides: slides,
-            news: feed.news,
-            hotline: feed.hotlines.first,
-          ),
+    tester.view.devicePixelRatio = 3;
+    tester.view.physicalSize = const Size(1170, 2532);
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(
+          size: Size(390, 844),
+          textScaler: TextScaler.noScaling,
+          disableAnimations: false,
+        ),
+        child: RepaintBoundary(
+          key: const ValueKey<String>('s4-motion'),
+          child: _ShellHost(dependencies: dependencies),
         ),
       ),
     );
-    // Let the mock catalogues paint before the first frame.
-    await tester.pump(const Duration(milliseconds: 400));
-    await _precache(tester);
+    await tester.pump();
 
-    final _TabReelState reel = tester.state<_TabReelState>(find.byType(_TabReel));
-    var frame = await _hold(tester, out, 0, 8);
-    for (final int tab in <int>[1, 2, 3, 4, 2, 0]) {
-      reel.show(tab);
-      await tester.pump();
-      await _precache(tester);
-      frame = await _hold(tester, out, frame, 8);
-    }
+    final Finder service = find.text('Service').hitTestable();
+    final Finder sample = find.text('SAMPLE PWD Cash Gift').hitTestable();
+
+    var frame = await _until(tester, out, 0, find.text('BAYAN NG TAYTAY'));
+    frame = await _hold(tester, out, frame, 6);
+
+    await tester.tap(find.byKey(const Key('shell-tab-directory')));
+    frame = await _until(tester, out, frame, sample);
+    frame = await _hold(tester, out, frame, 6);
+    expect(service, findsNothing);
+
+    await tester.tap(sample);
+    frame = await _until(tester, out, frame, service);
+    frame = await _hold(tester, out, frame, 8);
+
+    await tester.tap(find.byKey(const Key('shell-tab-home')));
+    frame = await _until(tester, out, frame, find.text('BAYAN NG TAYTAY'));
+    frame = await _hold(tester, out, frame, 6);
+    expect(service, findsNothing);
+
+    await tester.tap(find.byKey(const Key('shell-tab-directory')));
+    frame = await _until(tester, out, frame, service);
+    frame = await _hold(tester, out, frame, 8);
+    expect(service, findsOneWidget);
     expect(frame, greaterThan(40));
   });
 

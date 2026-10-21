@@ -22,8 +22,9 @@ import 'home_canvas.dart';
 /// The canvas is the same. The status card and the avatar change with the
 /// session. A guest's bell opens sign-in and this screen does not call a
 /// `/me/` route for them. Hotline numbers come from `GET /home`. News titles
-/// come from the announcements feed. The three hero slides are the published
-/// municipal set. A dev mock fills hotlines and news when those calls are empty.
+/// come from the announcements feed. Hero slides come from the bundled
+/// catalogue, with titles and routes from `GET /home` when that feed has
+/// banners. A dev mock fills hotlines and news when those calls are empty.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -54,9 +55,14 @@ class _HomeScreenState extends State<HomeScreen> {
     }
     final SessionState session = dependencies.session.state;
     final bool guest = session is! AuthenticatedSession;
-    final List<HomeSlide> slides = await HomeCatalogue.slides();
+    final List<HomeSlide> bundled = await HomeCatalogue.slides();
+    final Result<HomeFeed> home = await dependencies.citizenApi.loadHome();
+    final List<HomeSlide> slides = home.fold(
+      onOk: (HomeFeed feed) => HomeCatalogue.withBanners(bundled, feed.banners),
+      onErr: (_) => bundled,
+    );
     final List<HomeNewsItem> news = await _newsFrom(dependencies);
-    final HomeHotline? hotline = await _hotlineFrom(dependencies);
+    final HomeHotline? hotline = await _hotlineFrom(home, dependencies);
     var bell = 0;
     if (!guest) {
       final Result<Paginated<ResidentNotification>> page = await dependencies
@@ -101,8 +107,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return feed.news;
   }
 
-  Future<HomeHotline?> _hotlineFrom(AppDependencies dependencies) async {
-    final Result<HomeFeed> home = await dependencies.citizenApi.loadHome();
+  Future<HomeHotline?> _hotlineFrom(
+    Result<HomeFeed> home,
+    AppDependencies dependencies,
+  ) async {
     final List<MunicipalHotline> rows = home.fold(
       onOk: (HomeFeed feed) =>
           feed.hotlines.where((MunicipalHotline row) => row.active).toList(),

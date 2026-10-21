@@ -1,33 +1,4 @@
 {
-  "slides": [
-    {
-      "eyebrow": "BALITA · MSWDO",
-      "title": "Unclaimed 2026 PWD Cash Gift",
-      "body": "Validate at MSWDO, claim at the Treasury Office.",
-      "action": "Read Balita",
-      "photo": "assets/photos/municipal_hall.jpg",
-      "credit": "Photo: Ramon FVelasquez · CC BY-SA 3.0",
-      "route": "news"
-    },
-    {
-      "eyebrow": "TULONG",
-      "title": "Help for seniors, PWDs and families",
-      "body": "Social welfare programmes from MSWDO.",
-      "action": "Explore Tulong",
-      "photo": "assets/photos/parish_church.jpg",
-      "credit": "Photo: Urbanroamer · CC BY-SA 3.0",
-      "route": "programs"
-    },
-    {
-      "eyebrow": "NEGOSYO · BPLO",
-      "title": "Business permits for 2026",
-      "body": "Find BPLO and other offices in the Directory.",
-      "action": "Open Directory",
-      "photo": "assets/photos/tiangge.jpg",
-      "credit": "Photo: Ralff Nestor Nacor · CC BY-SA 4.0",
-      "route": "services"
-    }
-  ],
   "news": [
     {
       "id": "rpt-2026",

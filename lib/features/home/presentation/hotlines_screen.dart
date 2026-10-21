@@ -288,6 +288,7 @@ class _Line extends StatelessWidget {
                   button: true,
                   label: 'Call ${line.name}',
                   child: GestureDetector(
+                    key: Key('hotline-call-${line.id}'),
                     behavior: HitTestBehavior.opaque,
                     onTap: onCall,
                     child: Center(

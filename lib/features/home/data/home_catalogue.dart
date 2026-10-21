@@ -1,16 +1,81 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+
 import '../../../core/mock/mock_fixtures.dart';
+import '../../citizen_api/domain/citizen_contract.dart';
 import '../domain/home_content.dart';
 
-/// The designed Home catalogue. Slides are the published municipal features.
-/// News rows and hotline numbers are dev-mock fixtures: a live build prefers
-/// `GET /home` and the announcements feed, and only falls back here in a
-/// dev mock build.
+/// The designed Home catalogue.
+///
+/// Hero slides ship in `assets/home/slides.json`. A live build reads that
+/// asset, and replaces a slide's title and route when `GET /home` returns an
+/// active banner. News rows and hotline numbers stay dev-mock fixtures: a
+/// live build prefers the announcements feed and `GET /home`, and only falls
+/// back here in a dev mock build.
 abstract final class HomeCatalogue {
-  static Future<List<HomeSlide>> slides() async {
-    final Map<String, Object?> json = await _json();
-    return _slides(json['slides']);
+  static const String slidesAsset = 'assets/home/slides.json';
+
+  /// Parsed once. A later call returns a [SynchronousFuture] created in the
+  /// caller's zone: the asset bundle caches the first load's [Future], and
+  /// awaiting that same future from a later test never resumes.
+  static List<HomeSlide>? _parsedSlides;
+
+  static Future<List<HomeSlide>> slides() {
+    final List<HomeSlide>? parsed = _parsedSlides;
+    if (parsed != null) return SynchronousFuture<List<HomeSlide>>(parsed);
+    return _readSlides();
+  }
+
+  static Future<List<HomeSlide>> _readSlides() async {
+    final Object? decoded = jsonDecode(await rootBundle.loadString(slidesAsset));
+    if (decoded is! Map) return const <HomeSlide>[];
+    final List<HomeSlide> parsed = _slides(decoded['slides']);
+    _parsedSlides = parsed;
+    return parsed;
+  }
+
+  /// Banner titles and links from `/home`, with the bundled photograph kept.
+  /// A banner's media id is not a file this app can paint.
+  static List<HomeSlide> withBanners(
+    List<HomeSlide> bundled,
+    List<HomeBanner> banners,
+  ) {
+    if (bundled.isEmpty) return bundled;
+    final List<HomeBanner> active =
+        banners.where((HomeBanner banner) => banner.active).toList()
+          ..sort(
+            (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
+          );
+    if (active.isEmpty) return bundled;
+    return <HomeSlide>[
+      for (var i = 0; i < active.length; i++)
+        _fromBanner(active[i], bundled[i < bundled.length ? i : bundled.length - 1]),
+    ];
+  }
+
+  static HomeSlide _fromBanner(HomeBanner banner, HomeSlide fallback) {
+    return HomeSlide(
+      eyebrow: fallback.eyebrow,
+      title: banner.title,
+      body: fallback.body,
+      action: fallback.action,
+      photoAsset: fallback.photoAsset,
+      credit: fallback.credit,
+      routeName: _route(banner.href, fallback.routeName),
+      focus: fallback.focus,
+    );
+  }
+
+  static String _route(String? href, String fallback) {
+    if (href == null || href.isEmpty) return fallback;
+    final String path = Uri.tryParse(href)?.path ?? href;
+    if (path.contains('program')) return 'programs';
+    if (path.contains('service')) return 'services';
+    if (path.contains('hotline')) return 'hotlines';
+    if (path.contains('news')) return 'news';
+    return fallback;
   }
 
   static Future<({List<HomeNewsItem> news, List<HomeHotline> hotlines})>
@@ -42,6 +107,9 @@ abstract final class HomeCatalogue {
                 photoAsset: _s(row['photo']),
                 credit: _s(row['credit']),
                 routeName: _s(row['route']),
+                focus: row['focus'] is num
+                    ? (row['focus'] as num).toDouble()
+                    : 0.35,
               ),
         ]
         .where((HomeSlide slide) => slide.title.isNotEmpty)

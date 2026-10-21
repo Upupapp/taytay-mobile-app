@@ -182,6 +182,9 @@ void main() {
       bool newsAndHotline = true,
     }) {
       return HomeCanvas(
+        key: ValueKey<String>(
+          's4-${status.name}-$initials-$bellCount-$initialSlide-$refreshing',
+        ),
         greeting: greeting,
         initials: initials,
         bellCount: bellCount,

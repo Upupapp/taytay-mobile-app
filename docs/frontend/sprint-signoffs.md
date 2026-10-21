@@ -157,22 +157,24 @@ The phone bar is Home, Directory, Balita, Tulong, and My Account in every sessio
 
 Home paints a gradient header, a bell, an avatar, a three-slide hero, quick actions, a news teaser, and a hotlines entry. Verified home has no status card. Unverified home shows the pending card. Guest home shows the guest card, a Sign in pill, and no badge. The hero auto-advances every 5 seconds and pauses when motion is reduced. Hotline numbers come from `GET /home` when the API returns them, and from the dev mock otherwise. Call uses `tel:` through `dial`. A missing dialer shows a toast. Guests who tap the bell go to sign-in. A signed-in bell opens the notification centre. Mark all read clears the unread dots. Rows follow the notification deep link.
 
-The line measure is the same dark-run rule as S3. Side-by-sides are design | render | heat in `test/goldens/compare/s4/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The hero photographs on `04-01`, `04-06`, and `04-07` stay in the count.
+The line measure counts every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. An earlier table started the count below the header, so `04-01`, `04-02`, `04-03`, `04-05`, `04-06`, and `04-07` were each reported one run short and the wordmark's 6 device px offset was invisible. Side-by-sides are design | render | heat in `test/goldens/compare/s4/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The hero photographs stay in the count.
 
 | Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
-| 04-01 Home, verified | 17 / 17 | 2 | 16.93% (501668/2962440) |
-| 04-02 Home, unverified | 15 / 15 | 2 | 17.77% (526451/2962440) |
-| 04-03 Guest home | 13 / 13 | 2 | 18.34% (543442/2962440) |
-| 04-04 Hotlines | 13 / 13 | 2 | 3.28% (97307/2962440) |
-| 04-05 Pull to refresh | 10 / 10 | 2 | 4.59% (136098/2962440) |
-| 04-06 Banner, Tulong | 17 / 17 | 2 | 19.55% (579057/2962440) |
-| 04-07 Banner, Directory | 17 / 17 | 2 | 19.46% (576562/2962440) |
-| 04-08 Notifications | 25 / 25 | 2 | 4.25% (125876/2962440) |
+| 04-01 Home, verified | 18 / 18 | 2 | 5.62% (166607/2962440) |
+| 04-02 Home, unverified | 16 / 16 | 2 | 8.44% (249960/2962440) |
+| 04-03 Guest home | 14 / 14 | 2 | 7.12% (210795/2962440) |
+| 04-04 Hotlines | 14 / 14 | 2 | 3.24% (95903/2962440) |
+| 04-05 Pull to refresh | 11 / 11 | 2 | 3.87% (114518/2962440) |
+| 04-06 Banner, Tulong | 18 / 18 | 2 | 5.47% (162052/2962440) |
+| 04-07 Banner, Directory | 18 / 18 | 2 | 6.10% (180601/2962440) |
+| 04-08 Notifications | 26 / 26 | 2 | 4.20% (124472/2962440) |
 
-`test/features/s3_tap_target_test.dart` covers the S4 controls as well: every `IconButton`, `FilledButton`, `OutlinedButton`, `TextButton`, `InkWell`, and `GestureDetector` on Home, the tab bar, hotlines, and the notification centre is at least 48×48 dp, and the centre disc is at least 48 dp. Slide copy, hotline numbers, and the notification illustration live in `test/fixtures/mock/home_catalogue.json` and the capture test, not in `lib/`.
+The wordmark row sits 2 dp lower than the previous capture. The gap under it is 2 dp shorter, so the lines below the header stay put. Each capture frame has its own key, so `04-06` is the Tulong slide and `04-07` is the Directory slide. The hero photograph occupies the right 58% of the card. Its focus is centre 35%, 30%, and 60% on the three slides. The navy overlay and the gold arc stay. The eyebrow icons are newspaper, hand-heart, and briefcase. Directory uses Lucide building-2 and Tulong uses hand-heart, in the tab bar and on the quick tiles. The tab word is `navTulong`. The page background has the design's top-right gold radial, about 16% opacity, spreading 120% by 60% from the corner. The refresh screen does not. `04-04` and `04-08` keep their back buttons: every page has one, and the designs will be updated to match.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s4/recordings/s4-tabs.mp4` (402203 bytes, 56 frames) and `s4-carousel.mp4` (281594 bytes, 38 frames). These files are new captures. Their sizes are not the S3 recordings.
+`test/features/s4_tap_target_test.dart` asserts a 48 dp hit on the centre disc, every tab, the bell, the avatar, the hero call to action, the four quick tiles, and every hotline call button. Hero slides are read from `assets/home/slides.json`. A live `GET /home` can replace a slide's title and route when it returns banners. The photograph stays the bundled asset. News rows and hotline numbers in a dev mock still come from `test/fixtures/mock/home_catalogue.json`.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s4/recordings/s4-tabs.mp4` (406679 bytes, 41 frames) and `s4-carousel.mp4` (297621 bytes, 38 frames). The tab clip opens a Directory service, switches to Home, and comes back to that same service. These files are new captures. Their sizes are not the previous S4 recordings and not the S3 recordings.
 
 ## Contract gaps after the Node OpenAPI
 

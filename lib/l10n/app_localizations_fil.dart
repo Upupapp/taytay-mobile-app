@@ -21,7 +21,7 @@ class AppStringsFil extends AppStrings {
   String get navNews => 'Balita';
 
   @override
-  String get navEvents => 'Tulong';
+  String get navTulong => 'Tulong';
 
   @override
   String get navProfile => 'Aking Account';

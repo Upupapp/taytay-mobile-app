@@ -729,6 +729,31 @@ void main() {
       );
     });
 
+    testWidgets('a reused canvas still honours a new initial slide', (
+      tester,
+    ) async {
+      Future<void> show(int slide) {
+        return tester.pumpWidget(
+          MaterialApp(
+            home: HomeCanvas(
+              greeting: 'Magandang gabi!',
+              slides: _slides,
+              initialSlide: slide,
+            ),
+          ),
+        );
+      }
+
+      await show(0);
+      await tester.pump();
+      expect(find.text('First slide'), findsOneWidget);
+
+      await show(1);
+      await tester.pump();
+      expect(find.text('Second slide'), findsOneWidget);
+      expect(find.text('First slide'), findsNothing);
+    });
+
     testWidgets('pull to refresh shows the skeleton line', (tester) async {
       // The skeleton news heading sits below the fold of the default 600 dp
       // test surface, and the list builds children lazily.

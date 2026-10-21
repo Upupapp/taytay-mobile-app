@@ -197,6 +197,7 @@ class _Tab extends StatelessWidget {
       selected: selected,
       label: label,
       child: GestureDetector(
+        key: Key('shell-tab-${destination.name}'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: SizedBox(

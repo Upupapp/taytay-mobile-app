@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../../../core/design/brand_assets.dart';
@@ -97,10 +98,23 @@ class _HomeCanvasState extends State<HomeCanvas> {
   @override
   void didUpdateWidget(HomeCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialSlide != widget.initialSlide) {
+      _index = _bounded(widget.initialSlide);
+      if (_pages.hasClients) {
+        // The index is already the destination, so the page callback does
+        // not schedule another frame from inside this update.
+        _pages.jumpToPage(_index);
+      }
+    }
     if (oldWidget.autoplayInTests != widget.autoplayInTests ||
         oldWidget.refreshing != widget.refreshing) {
       _armTimer();
     }
+  }
+
+  int _bounded(int requested) {
+    if (widget.slides.isEmpty) return 0;
+    return requested.clamp(0, widget.slides.length - 1);
   }
 
   bool get _testing => SchedulerBinding.instance.runtimeType
@@ -136,7 +150,10 @@ class _HomeCanvasState extends State<HomeCanvas> {
   @override
   Widget build(BuildContext context) {
     final double top = MediaQuery.paddingOf(context).top;
-    final double padTop = top == 0 ? 50 : top;
+    // The design padding is 50. The wordmark ink sits 2 dp lower than that
+    // padding: 6 device px at the 3× capture. The gap under the wordmark
+    // gives those 2 dp back, so the lines below stay where they are.
+    final double padTop = top == 0 ? 52 : top;
     return ColoredBox(
       color: BrandColors.surface,
       child: DecoratedBox(
@@ -150,8 +167,7 @@ class _HomeCanvasState extends State<HomeCanvas> {
         ),
         child: Stack(
           children: <Widget>[
-            if (!widget.refreshing)
-              const Positioned(top: 0, right: 0, child: _GoldGlow()),
+            if (!widget.refreshing) const Positioned.fill(child: _GoldGlow()),
             RefreshIndicator(
               onRefresh: widget.onRefresh ?? () async {},
               child: ListView(
@@ -166,13 +182,14 @@ class _HomeCanvasState extends State<HomeCanvas> {
                     onSignIn: widget.onSignIn,
                   ),
                   if (widget.refreshing) ...<Widget>[
-                    // Spinner row is 36 dp. 14 above and 10 below place its
-                    // ink on the same rows as the design.
-                    const SizedBox(height: 14),
+                    // Spinner row is 36 dp. 12 above and 10 below place its
+                    // ink on the same rows as the design. The 2 dp taken
+                    // from this gap offset the wordmark's extra top inset.
+                    const SizedBox(height: 12),
                     const _UpdatingLine(),
                     const SizedBox(height: 10),
                   ],
-                  if (!widget.refreshing) const SizedBox(height: 18),
+                  if (!widget.refreshing) const SizedBox(height: 16),
                   Text(widget.greeting, style: _greeting),
                   if (!widget.refreshing) ...<Widget>[
                     const SizedBox(height: 4),
@@ -192,7 +209,10 @@ class _HomeCanvasState extends State<HomeCanvas> {
                       slides: widget.slides,
                       controller: _pages,
                       index: _index,
-                      onChanged: (int index) => setState(() => _index = index),
+                      onChanged: (int index) {
+                        if (index == _index) return;
+                        setState(() => _index = index);
+                      },
                       onOpen: widget.onSlide,
                     ),
                   ] else ...<Widget>[
@@ -261,23 +281,52 @@ class _HomeCanvasState extends State<HomeCanvas> {
   }
 }
 
+/// `radial-gradient(120% 60% at 100% 0, rgba(252,209,22,.16), transparent 60%)`
+/// on the page background. The refresh screen's background is the linear
+/// wash only, so this painter is not mounted while [HomeCanvas.refreshing].
 class _GoldGlow extends StatelessWidget {
   const _GoldGlow();
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: 220,
-        height: 160,
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            colors: <Color>[Color(0x29FCD116), Color(0x00FCD116)],
-          ),
-        ),
-      ),
+    return const IgnorePointer(
+      child: CustomPaint(painter: _GoldGlowPainter()),
     );
   }
+}
+
+class _GoldGlowPainter extends CustomPainter {
+  const _GoldGlowPainter();
+
+  static const Color _gold = Color.fromRGBO(252, 209, 22, 0.16);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double radiusX = size.width * 1.2;
+    final double radiusY = size.height * 0.6;
+    if (radiusX <= 0 || radiusY <= 0) return;
+    final Offset center = Offset(size.width, 0);
+    // The shader matrix maps a device point into the circular gradient.
+    // Scaling Y by radiusX/radiusY turns that circle into the 120% by 60%
+    // ellipse. Transparent arrives at 60% of the ellipse.
+    final Matrix4 matrix = Matrix4.identity()
+      ..translateByDouble(center.dx, center.dy, 0, 1)
+      ..scaleByDouble(1, radiusX / radiusY, 1, 1)
+      ..translateByDouble(-center.dx, -center.dy, 0, 1);
+    final Paint paint = Paint()
+      ..shader = ui.Gradient.radial(
+        center,
+        radiusX,
+        const <Color>[_gold, Color.fromRGBO(252, 209, 22, 0)],
+        const <double>[0, 0.6],
+        TileMode.clamp,
+        matrix.storage,
+      );
+    canvas.drawRect(Offset.zero & size, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _Wordmark extends StatelessWidget {
@@ -420,6 +469,7 @@ class _Avatar extends StatelessWidget {
       height: 44,
       onTap: onTap,
       child: Container(
+        key: const Key('home-avatar'),
         width: 44,
         height: 44,
         alignment: Alignment.center,
@@ -661,10 +711,23 @@ class _Hero extends StatelessWidget {
               itemCount: slides.length,
               onPageChanged: onChanged,
               itemBuilder: (BuildContext context, int page) {
-                return Image.asset(
-                  slides[page].photoAsset,
-                  fit: BoxFit.cover,
-                  alignment: const Alignment(0, -0.3),
+                final HomeSlide item = slides[page];
+                // CSS `background-position: center <focus>` maps to
+                // Alignment y = focus * 2 - 1.
+                return ColoredBox(
+                  color: BrandColors.taytayBlueDark,
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: FractionallySizedBox(
+                      widthFactor: 0.58,
+                      heightFactor: 1,
+                      child: Image.asset(
+                        item.photoAsset,
+                        fit: BoxFit.cover,
+                        alignment: Alignment(0, item.focus * 2 - 1),
+                      ),
+                    ),
+                  ),
                 );
               },
             ),
@@ -694,7 +757,15 @@ class _Hero extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _Eyebrow(slide.eyebrow),
+                  // The pill is inline and may be wider than the 196 dp
+                  // title column. CSS lets it paint past that box.
+                  OverflowBox(
+                    alignment: Alignment.centerLeft,
+                    fit: OverflowBoxFit.deferToChild,
+                    minWidth: 0,
+                    maxWidth: double.infinity,
+                    child: _Eyebrow(slide.eyebrow, slide.routeName),
+                  ),
                   const SizedBox(height: 8),
                   Text(slide.title, style: _heroTitle),
                   const SizedBox(height: 4),
@@ -709,6 +780,7 @@ class _Hero extends StatelessWidget {
                 label: slide.action,
                 onTap: () => onOpen?.call(slide),
                 child: Container(
+                  key: const Key('home-hero-cta'),
                   constraints: const BoxConstraints(
                     minWidth: 48,
                     minHeight: 48,
@@ -791,9 +863,16 @@ class _ArcPainter extends CustomPainter {
 }
 
 class _Eyebrow extends StatelessWidget {
-  const _Eyebrow(this.text);
+  const _Eyebrow(this.text, this.routeName);
 
   final String text;
+  final String routeName;
+
+  IconData get _icon => switch (routeName) {
+    'programs' => TaytayIcons.handHeart,
+    'services' => TaytayIcons.briefcase,
+    _ => TaytayIcons.newspaper,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -803,7 +882,20 @@ class _Eyebrow extends StatelessWidget {
         color: BrandColors.sealGold,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(text, style: _eyebrow),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TaytayIcon(
+            icon: _icon,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: 12,
+            color: BrandColors.taytayBlueDark,
+          ),
+          const SizedBox(width: 5),
+          Text(text, style: _eyebrow),
+        ],
+      ),
     );
   }
 }
@@ -935,14 +1027,14 @@ class _QuickActions extends StatelessWidget {
           (
             'Directory',
             'services',
-            TaytayIcons.landmark,
+            TaytayIcons.building2,
             Color(0xFFEAF0FB),
             BrandColors.taytayBlue,
           ),
           (
             'Tulong',
             'programs',
-            TaytayIcons.handHelping,
+            TaytayIcons.handHeart,
             Color(0xFFE6F4EC),
             BrandColors.success,
           ),
@@ -967,6 +1059,7 @@ class _QuickActions extends StatelessWidget {
         label: tiles[i].$1,
         onTap: () => onTap?.call(tiles[i].$2),
         child: Container(
+          key: Key('home-quick-${tiles[i].$2}'),
           constraints: const BoxConstraints(minHeight: 92),
           padding: const EdgeInsets.fromLTRB(4, 12, 4, 10),
           decoration: BoxDecoration(
@@ -1196,6 +1289,7 @@ class _EmergencyCard extends StatelessWidget {
             height: 44,
             onTap: onCall,
             child: Container(
+              key: const Key('home-call'),
               width: 44,
               height: 44,
               decoration: const BoxDecoration(
