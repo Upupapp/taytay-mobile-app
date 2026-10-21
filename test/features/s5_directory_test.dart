@@ -213,6 +213,13 @@ void main() {
     expect(find.text('Sign in to continue'), findsOneWidget);
     expect(find.byType(UnverifiedGateSheet), findsNothing);
     expect(find.text('New message'), findsNothing);
+    final Finder signIn = find.widgetWithText(FilledButton, 'Sign in');
+    final Icon icon = tester.widget<Icon>(
+      find.descendant(of: signIn, matching: find.byType(Icon)),
+    );
+    expect(icon.icon?.fontFamily, 'Lucide');
+    expect(icon.icon?.fontFamily, isNot('MaterialIcons'));
+    expect(icon.icon, isNot(Icons.login));
   });
 
   testWidgets('an unverified Message opens the verification gate', (

@@ -101,6 +101,9 @@ abstract final class TaytayIcons {
 
   static const IconData lock = IconData(57611, fontFamily: 'Lucide');
 
+  /// Lucide `log-in`. The sign-in gate's primary action.
+  static const IconData logIn = IconData(57613, fontFamily: 'Lucide');
+
   static const IconData calendar = IconData(57443, fontFamily: 'Lucide');
 
   static const IconData circleAlert = IconData(57463, fontFamily: 'Lucide');

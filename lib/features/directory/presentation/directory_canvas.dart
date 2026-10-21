@@ -647,6 +647,9 @@ class _OfflineBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fixed emergency default. MDRRMO and MSWDO are the numbers that
+    // stay on this screen when the directory cannot load. They are not
+    // read from storage and they are not the last list the phone fetched.
     final List<Office> saved =
         offices
             .where(
@@ -1210,7 +1213,11 @@ class _ComposeBody extends StatelessWidget {
                   decoration: const InputDecoration(
                     isCollapsed: true,
                     isDense: true,
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -1244,7 +1251,9 @@ class _ComposeBody extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        // 14dp is the design gap under the attach row. The 10 above it
+        // stays, so the paperclip keeps its line and the notice does not.
+        const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: _cardDecoration.copyWith(color: const Color(0xFFF6F8FB)),
@@ -1254,7 +1263,7 @@ class _ComposeBody extends StatelessWidget {
               const TaytayIcon(
                 icon: TaytayIcons.shield,
                 size: 18,
-                color: BrandColors.taytayBlue,
+                color: BrandColors.listMeta,
                 semanticLabel: '',
                 excludeSemantics: true,
               ),
@@ -1721,7 +1730,7 @@ class _OfficeRow extends StatelessWidget {
                   height: 36,
                   decoration: BoxDecoration(
                     color: office.id == 'mdrrmo'
-                        ? const Color(0xFFFDECEC)
+                        ? BrandColors.chipBlueBg
                         : BrandColors.surfaceMuted,
                     shape: BoxShape.circle,
                   ),
@@ -1860,7 +1869,11 @@ class _SearchBoxState extends State<_SearchBox> {
                 decoration: InputDecoration(
                   isCollapsed: true,
                   isDense: true,
+                  filled: false,
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   hintText: widget.hint,
                   hintStyle: ink.copyWith(
                     fontWeight: FontWeight.w500,

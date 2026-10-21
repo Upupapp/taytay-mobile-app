@@ -189,13 +189,13 @@ The line measure counts every dark run from the top of the frame. A run is a row
 
 | Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
-| 05-01 Office list | 24 / 24 | 0.67 | 3.91% (115730/2962440) |
+| 05-01 Office list | 24 / 24 | 0.67 | 3.45% (102181/2962440) |
 | 05-02 Office detail, BPLO | 18 / 18 | 0.67 | 4.02% (119012/2962440) |
-| 05-03 Compose, BPLO | 13 / 13 | 2.00 | 3.31% (97909/2962440) |
-| 05-04 Message thread | 17 / 17 | 0.67 | 6.62% (196097/2962440) |
-| 05-05 Search, cedula and empty | 20 / 20 | 0.67 | 2.89% (85669/2962440) |
+| 05-03 Compose, BPLO | 13 / 13 | 0.67 | 2.28% (67555/2962440) |
+| 05-04 Message thread | 17 / 17 | 0.67 | 4.65% (137884/2962440) |
+| 05-05 Search, cedula and empty | 20 / 20 | 0.67 | 2.18% (64556/2962440) |
 | 05-06 Loading | 7 / 7 | 0.33 | 3.38% (100148/2962440) |
-| 05-07 Offline | 13 / 13 | 0.67 | 3.30% (97803/2962440) |
+| 05-07 Offline | 13 / 13 | 0.67 | 3.03% (89781/2962440) |
 | 05-08 MSWDO | 18 / 18 | 0.67 | 4.09% (121306/2962440) |
 | 05-09 Treasurer | 17 / 17 | 0.67 | 3.61% (106871/2962440) |
 | 05-10 Assessor | 17 / 17 | 0.67 | 3.75% (111200/2962440) |
@@ -205,13 +205,13 @@ The line measure counts every dark run from the top of the frame. A run is a row
 | 05-14 Youth Development | 19 / 19 | 0.67 | 4.33% (128307/2962440) |
 | 05-15 Health Office | 16 / 16 | 0.67 | 4.37% (129348/2962440) |
 | 05-16 Message sent | 15 / 15 | 0.67 | 2.84% (84037/2962440) |
-| 05-17 Compose, MSWDO | 15 / 15 | 2.00 | 3.44% (101883/2962440) |
-| 05-18 Compose, Treasury | 13 / 13 | 2.00 | 3.00% (88878/2962440) |
-| 05-19 Compose, Assessor | 12 / 12 | 2.00 | 3.01% (89222/2962440) |
-| 05-20 Compose, PESO | 11 / 11 | 2.00 | 2.99% (88500/2962440) |
-| 05-21 Compose, PIO | 12 / 12 | 2.00 | 3.05% (90345/2962440) |
-| 05-22 Compose, TYDO | 12 / 12 | 2.00 | 2.96% (87551/2962440) |
-| 05-23 Compose, Health Office | 13 / 13 | 2.00 | 3.12% (92353/2962440) |
+| 05-17 Compose, MSWDO | 15 / 15 | 0.67 | 2.47% (73028/2962440) |
+| 05-18 Compose, Treasury | 13 / 13 | 0.67 | 2.05% (60729/2962440) |
+| 05-19 Compose, Assessor | 12 / 12 | 0.67 | 2.05% (60598/2962440) |
+| 05-20 Compose, PESO | 11 / 11 | 0.67 | 2.04% (60510/2962440) |
+| 05-21 Compose, PIO | 12 / 12 | 0.67 | 2.12% (62895/2962440) |
+| 05-22 Compose, TYDO | 12 / 12 | 0.67 | 2.02% (59697/2962440) |
+| 05-23 Compose, Health Office | 13 / 13 | 0.67 | 2.14% (63296/2962440) |
 
 A guest who taps Message goes to sign-in. A signed-in unverified resident gets the S3 gate sheet (`03-04`). A verified resident opens compose. The route stays verified-only, so a direct link still redirects. Search on the list and on `05-05` is a text field and filters by name and by service. Compose has a topic picker and a message field, and posts `office_id`, `subject`, and `body`. An empty message is refused. A `403` on send refetches `GET /me` and, when the tier is no longer verified, opens `03-04`. The sent screen uses the office on the route. The thread loads through `GET /threads/{id}` and `GET /threads/{id}/messages`. MDRRMO has Call 24/7, Directions, and App. It has no Message action. Dev builds (`TAYTAY_DATA=mock`) send through `MockOfficeMessagingRepository`. Any other build calls `POST /threads`. The resident never sees the server's error message.
 
@@ -219,9 +219,11 @@ Facts the LGU has not confirmed stay in the fixture and wear the SAMPLE tag: Ass
 
 The header seal is the municipal seal on a white pad, with no gold ring. Back buttons are a 44 dp disc inside a 48 dp hit. `test/features/s5_directory_test.dart` covers the catalogue, the 48 dp hits, the back button, and Message from guest, unverified, and verified.
 
-The frame for `05-04` still reads the fixture's `day` field. The live thread screen formats the message time in Manila time and does not take the chip from the clock.
+The frame for `05-04` still reads the fixture's `day` field. The live thread screen formats the message time in Manila time and does not take the chip from the clock. The `05-04` comparison uses the updated design (`18_v_Fsh4K51mZwb5Dlp09br6TdDhSdqx`). The bubble layout was not changed.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1292180 bytes, 78 frames), and `s5-gate.mp4` (846813 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
+The offline saved list is a fixed emergency default: MDRRMO, then MSWDO. It is not read from storage and it is not the last list the phone fetched.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1277487 bytes, 78 frames), and `s5-gate.mp4` (845421 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in, with the Lucide log-in mark on the button. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
 
 ## Contract gaps after the Node OpenAPI
 
