@@ -241,6 +241,7 @@
       "privacy": "Only BPLO staff can read this conversation. Don't share passwords or OTPs. Replies usually within 1–2 working days.",
       "composeTo": "Business Permits and Licensing Office",
       "topic": "Business permit renewal",
+      "topics": ["Business permit renewal", "New business registration"],
       "draft": "Magandang araw po. Ano po ang requirements para mag-renew ng business permit para sa sari-sari store? Salamat po.",
       "facts": [
         {

@@ -183,45 +183,45 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 S5 is not approved. This section records the capture. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/7. The directory commit is `cb8ae2d329333fa25c3a19860415c94cf28c6350`.
 
-Office pages are public resident information (decision D11). They are not a staff selector, not a role, and not an office a resident signs in as. One `DirectoryCanvas` paints the list, every office, compose, the sent screen, and the thread from `test/fixtures/mock/offices.json`. There is no per-office widget and no office copy in Dart.
+Office pages are public resident information (decision D11). They are not a staff selector, not a role, and not an office a resident signs in as. One `DirectoryCanvas` paints the list, every office, compose, the sent screen, and the thread. A dev mock reads `test/fixtures/mock/offices.json`. Every other build reads `GET /offices` and `GET /offices/{slug}`. There is no per-office widget and no office copy in Dart.
 
 The line measure counts every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. Side-by-sides are design | render | heat in `test/goldens/compare/s5/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The office photographs stay in the count. `lib/features/directory` contains no `Transform.translate`.
 
 | Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
-| 05-01 Office list | 24 / 24 | 2 | 3.45% (102181/2962440) |
-| 05-02 Office detail, BPLO | 18 / 18 | 2 | 5.42% (160480/2962440) |
-| 05-03 Compose, BPLO | 13 / 13 | 2 | 2.51% (74415/2962440) |
-| 05-04 Message thread | 17 / 17 | 2 | 6.62% (196097/2962440) |
-| 05-05 Search, cedula and empty | 20 / 20 | 2 | 2.18% (64556/2962440) |
-| 05-06 Loading | 7 / 7 | 1 | 2.92% (86599/2962440) |
-| 05-07 Offline | 13 / 13 | 2 | 4.54% (134604/2962440) |
-| 05-08 MSWDO | 18 / 18 | 2 | 5.50% (162841/2962440) |
-| 05-09 Treasurer | 17 / 17 | 2 | 5.01% (148547/2962440) |
-| 05-10 Assessor | 17 / 17 | 2 | 5.16% (152780/2962440) |
-| 05-11 MDRRMO | 16 / 16 | 2 | 5.57% (165066/2962440) |
-| 05-12 PESO | 17 / 17 | 2 | 5.98% (177253/2962440) |
-| 05-13 PIO | 17 / 17 | 2 | 5.21% (154368/2962440) |
-| 05-14 Youth Development | 19 / 19 | 2 | 5.73% (169776/2962440) |
-| 05-15 Health Office | 16 / 16 | 2 | 5.76% (170777/2962440) |
-| 05-16 Message sent | 15 / 15 | 2 | 2.84% (84037/2962440) |
-| 05-17 Compose, MSWDO | 15 / 15 | 2 | 2.70% (79888/2962440) |
-| 05-18 Compose, Treasury | 13 / 13 | 2 | 2.28% (67589/2962440) |
-| 05-19 Compose, Assessor | 12 / 12 | 2 | 2.28% (67458/2962440) |
-| 05-20 Compose, PESO | 11 / 11 | 2 | 2.27% (67370/2962440) |
-| 05-21 Compose, PIO | 12 / 12 | 2 | 2.41% (71392/2962440) |
-| 05-22 Compose, TYDO | 12 / 12 | 2 | 2.25% (66557/2962440) |
-| 05-23 Compose, Health Office | 13 / 13 | 2 | 2.37% (70156/2962440) |
+| 05-01 Office list | 24 / 24 | 0.67 | 3.91% (115730/2962440) |
+| 05-02 Office detail, BPLO | 18 / 18 | 0.67 | 4.02% (119012/2962440) |
+| 05-03 Compose, BPLO | 13 / 13 | 2.00 | 3.31% (97909/2962440) |
+| 05-04 Message thread | 17 / 17 | 0.67 | 6.62% (196097/2962440) |
+| 05-05 Search, cedula and empty | 20 / 20 | 0.67 | 2.89% (85669/2962440) |
+| 05-06 Loading | 7 / 7 | 0.33 | 3.38% (100148/2962440) |
+| 05-07 Offline | 13 / 13 | 0.67 | 3.30% (97803/2962440) |
+| 05-08 MSWDO | 18 / 18 | 0.67 | 4.09% (121306/2962440) |
+| 05-09 Treasurer | 17 / 17 | 0.67 | 3.61% (106871/2962440) |
+| 05-10 Assessor | 17 / 17 | 0.67 | 3.75% (111200/2962440) |
+| 05-11 MDRRMO | 16 / 16 | 0.67 | 4.17% (123561/2962440) |
+| 05-12 PESO | 17 / 17 | 0.67 | 4.58% (135550/2962440) |
+| 05-13 PIO | 17 / 17 | 0.67 | 3.83% (113334/2962440) |
+| 05-14 Youth Development | 19 / 19 | 0.67 | 4.33% (128307/2962440) |
+| 05-15 Health Office | 16 / 16 | 0.67 | 4.37% (129348/2962440) |
+| 05-16 Message sent | 15 / 15 | 0.67 | 2.84% (84037/2962440) |
+| 05-17 Compose, MSWDO | 15 / 15 | 2.00 | 3.44% (101883/2962440) |
+| 05-18 Compose, Treasury | 13 / 13 | 2.00 | 3.00% (88878/2962440) |
+| 05-19 Compose, Assessor | 12 / 12 | 2.00 | 3.01% (89222/2962440) |
+| 05-20 Compose, PESO | 11 / 11 | 2.00 | 2.99% (88500/2962440) |
+| 05-21 Compose, PIO | 12 / 12 | 2.00 | 3.05% (90345/2962440) |
+| 05-22 Compose, TYDO | 12 / 12 | 2.00 | 2.96% (87551/2962440) |
+| 05-23 Compose, Health Office | 13 / 13 | 2.00 | 3.12% (92353/2962440) |
 
-Message on an office uses the S3 gate sheet (`03-04`) for a guest and for an unverified resident. A verified resident opens compose. The route stays verified-only, so a direct link still redirects. MDRRMO has Call 24/7, Directions, and App. It has no Message action. Dev builds (`TAYTAY_DATA=mock`) send through `MockOfficeMessagingRepository`. Any other build calls `POST /threads`. The resident never sees the server's error message.
+A guest who taps Message goes to sign-in. A signed-in unverified resident gets the S3 gate sheet (`03-04`). A verified resident opens compose. The route stays verified-only, so a direct link still redirects. Search on the list and on `05-05` is a text field and filters by name and by service. Compose has a topic picker and a message field, and posts `office_id`, `subject`, and `body`. An empty message is refused. A `403` on send refetches `GET /me` and, when the tier is no longer verified, opens `03-04`. The sent screen uses the office on the route. The thread loads through `GET /threads/{id}` and `GET /threads/{id}/messages`. MDRRMO has Call 24/7, Directions, and App. It has no Message action. Dev builds (`TAYTAY_DATA=mock`) send through `MockOfficeMessagingRepository`. Any other build calls `POST /threads`. The resident never sees the server's error message.
 
 Facts the LGU has not confirmed stay in the fixture and wear the SAMPLE tag: Assessor location, Tax Declaration copies, and property reassessment; PESO vacancies and employment counselling; PIO location and media coverage; Youth SK coordination. The thread is marked SAMPLE. No sample sentence is hardcoded in Dart.
 
 The header seal is the municipal seal on a white pad, with no gold ring. Back buttons are a 44 dp disc inside a 48 dp hit. `test/features/s5_directory_test.dart` covers the catalogue, the 48 dp hits, the back button, and Message from guest, unverified, and verified.
 
-The thread's day chip is the fixture's `day` field. The screen does not decide that label from the clock.
+The frame for `05-04` still reads the fixture's `day` field. The live thread screen formats the message time in Manila time and does not take the chip from the clock.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (652377 bytes, 17 frames), `s5-message.mp4` (702190 bytes, 18 frames), and `s5-gate.mp4` (600312 bytes, 15 frames). The office clip opens BPLO and comes back to the list. The message clip is a verified resident sending. The gate clip is a guest tapping Message. `flutter analyze` was clean. `flutter test` passed 1606 tests, with 9 skipped (the recording tag).
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1292180 bytes, 78 frames), and `s5-gate.mp4` (846813 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
 
 ## Contract gaps after the Node OpenAPI
 

@@ -224,14 +224,14 @@ void main() {
     await _mount(tester, dependencies);
 
     var frame = await _until(tester, out, 0, _bplo);
-    frame = await _hold(tester, out, frame, 4);
+    frame = await _hold(tester, out, frame, 8);
     await tester.tap(_bplo);
     frame = await _until(tester, out, frame, _message);
-    frame = await _hold(tester, out, frame, 6);
+    frame = await _hold(tester, out, frame, 10);
     await tester.tap(find.byType(TaytayBackButton));
     frame = await _until(tester, out, frame, _bplo);
-    frame = await _hold(tester, out, frame, 4);
-    expect(frame, greaterThan(12));
+    frame = await _hold(tester, out, frame, 8);
+    expect(frame, greaterThan(20));
     expect(_message, findsNothing);
   });
 
@@ -245,19 +245,42 @@ void main() {
     await _mount(tester, dependencies);
 
     var frame = await _until(tester, out, 0, _bplo);
+    frame = await _hold(tester, out, frame, 6);
+    await tester.tap(find.byType(TextField).first);
+    frame = await _hold(tester, out, frame, 4);
+    const String query = 'bplo';
+    for (var i = 1; i <= query.length; i++) {
+      await tester.enterText(
+        find.byType(TextField).first,
+        query.substring(0, i),
+      );
+      frame = await _hold(tester, out, frame, 2);
+    }
+    frame = await _hold(tester, out, frame, 6);
     await tester.tap(_bplo);
     frame = await _until(tester, out, frame, _message);
-    frame = await _hold(tester, out, frame, 4);
+    frame = await _hold(tester, out, frame, 8);
     await tester.tap(_message);
     frame = await _until(tester, out, frame, _send);
-    frame = await _hold(tester, out, frame, 4);
+    frame = await _hold(tester, out, frame, 6);
+    await tester.tap(find.byKey(const Key('directory-message-field')));
+    frame = await _hold(tester, out, frame, 3);
+    const String typed = 'Saan po ang pila?';
+    for (var i = 1; i <= typed.length; i++) {
+      await tester.enterText(
+        find.byKey(const Key('directory-message-field')),
+        typed.substring(0, i),
+      );
+      frame = await _hold(tester, out, frame, 1);
+    }
+    frame = await _hold(tester, out, frame, 6);
     await tester.tap(_send);
     frame = await _until(tester, out, frame, find.text('Message sent'));
-    frame = await _hold(tester, out, frame, 6);
-    expect(frame, greaterThan(16));
+    frame = await _hold(tester, out, frame, 10);
+    expect(frame, greaterThan(40));
   });
 
-  testWidgets('guest message opens the verification gate, motion on', (
+  testWidgets('guest message opens sign-in, motion on', (
     tester,
   ) async {
     final Directory out = Directory('/tmp/s5_motion_gate');
@@ -269,18 +292,15 @@ void main() {
     await _mount(tester, dependencies);
 
     var frame = await _until(tester, out, 0, _bplo);
+    frame = await _hold(tester, out, frame, 8);
     await tester.tap(_bplo);
     frame = await _until(tester, out, frame, _message);
-    frame = await _hold(tester, out, frame, 4);
-    await tester.tap(_message);
-    frame = await _until(
-      tester,
-      out,
-      frame,
-      find.text('Verify your account to message offices'),
-    );
     frame = await _hold(tester, out, frame, 8);
+    await tester.tap(_message);
+    frame = await _until(tester, out, frame, find.text('Sign in to continue'));
+    frame = await _hold(tester, out, frame, 12);
     expect(_send, findsNothing);
-    expect(frame, greaterThan(12));
+    expect(find.text('Verify your account to message offices'), findsNothing);
+    expect(frame, greaterThan(24));
   });
 }

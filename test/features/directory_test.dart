@@ -180,6 +180,8 @@ AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
   rawApiBaseUrl: 'https://example.test/api/v1',
   isReleaseBuild: false,
+  rawDataMode: 'mock',
+  rawMockLatencyMs: '0',
 );
 
 typedef BootedDirectory = ({

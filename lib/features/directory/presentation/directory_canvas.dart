@@ -44,6 +44,12 @@ class DirectoryCanvas extends StatelessWidget {
     this.chips = const <String>[],
     this.emergencyPhone = '',
     this.dayLabel = '',
+    this.query = '',
+    this.searchController,
+    this.onSearch,
+    this.messageController,
+    this.selectedTopic,
+    this.onTopic,
     super.key,
   });
 
@@ -66,6 +72,14 @@ class DirectoryCanvas extends StatelessWidget {
   final VoidCallback? onMessages;
   final VoidCallback? onRetry;
   final VoidCallback? onBrowseAll;
+
+  /// The list filter. Empty shows every office.
+  final String query;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearch;
+  final TextEditingController? messageController;
+  final String? selectedTopic;
+  final VoidCallback? onTopic;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
   static const Color _searchBorder = Color(0xFFE1E6F0);
@@ -143,6 +157,9 @@ class DirectoryCanvas extends StatelessWidget {
       DirectoryFrame.list => _ListBody(
         offices: offices,
         chips: chips,
+        query: query,
+        searchController: searchController,
+        onSearch: onSearch,
         onOffice: onOffice,
       ),
       DirectoryFrame.searchSpecimen => _SearchSpecimen(
@@ -166,6 +183,9 @@ class DirectoryCanvas extends StatelessWidget {
       DirectoryFrame.compose when current != null => _ComposeBody(
         office: current,
         onSend: onSend,
+        messageController: messageController,
+        selectedTopic: selectedTopic,
+        onTopic: onTopic,
       ),
       DirectoryFrame.sent => _SentBody(
         emergencyPhone: emergencyPhone,
@@ -329,28 +349,45 @@ class _Bell extends StatelessWidget {
 }
 
 class _ListBody extends StatelessWidget {
-  const _ListBody({required this.offices, required this.chips, this.onOffice});
+  const _ListBody({
+    required this.offices,
+    required this.chips,
+    required this.query,
+    this.searchController,
+    this.onSearch,
+    this.onOffice,
+  });
 
   final List<Office> offices;
   final List<String> chips;
+  final String query;
+  final TextEditingController? searchController;
+  final ValueChanged<String>? onSearch;
   final ValueChanged<Office>? onOffice;
 
   @override
   Widget build(BuildContext context) {
+    final List<Office> visible = offices
+        .where((Office office) => office.matches(query, 'All'))
+        .toList(growable: false);
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        const _SearchBox(hint: 'Search offices or services'),
+        _SearchBox(
+          hint: 'Search offices or services',
+          controller: searchController,
+          onChanged: onSearch,
+        ),
         const SizedBox(height: 12),
         _Chips(labels: chips, selected: 'All'),
         const SizedBox(height: 12),
-        _OfficeCard(offices: offices, compact: true, onOffice: onOffice),
+        _OfficeCard(offices: visible, compact: true, onOffice: onOffice),
       ],
     );
   }
 }
 
-class _SearchSpecimen extends StatelessWidget {
+class _SearchSpecimen extends StatefulWidget {
   const _SearchSpecimen({
     required this.offices,
     this.onOffice,
@@ -362,38 +399,91 @@ class _SearchSpecimen extends StatelessWidget {
   final VoidCallback? onBrowseAll;
 
   @override
+  State<_SearchSpecimen> createState() => _SearchSpecimenState();
+}
+
+class _SearchSpecimenState extends State<_SearchSpecimen> {
+  late final TextEditingController _cedula = TextEditingController(
+    text: 'cedula',
+  );
+  late final TextEditingController _passport = TextEditingController(
+    text: 'passport',
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _cedula.addListener(_changed);
+    _passport.addListener(_changed);
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _cedula.dispose();
+    _passport.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final Office? treasury = offices.cast<Office?>().firstWhere(
-      (Office? office) => office?.id == 'treasury',
-      orElse: () => offices.isEmpty ? null : offices.first,
-    );
+    final List<Office> found = widget.offices
+        .where((Office office) => office.matches(_cedula.text, 'All'))
+        .toList(growable: false);
+    final List<Office> missed = widget.offices
+        .where((Office office) => office.matches(_passport.text, 'All'))
+        .toList(growable: false);
+    final String countWord = found.length == 1 ? 'result' : 'results';
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        const _SearchBox(text: 'cedula', active: true),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(2, 12, 2, 12),
-          child: Text('1 result for “cedula”', style: _meta),
+        _SearchBox(
+          key: const Key('directory-search-cedula'),
+          controller: _cedula,
+          active: true,
         ),
-        if (treasury != null)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(2, 12, 2, 12),
+          child: Text(
+            '${found.length} $countWord for “${_cedula.text}”',
+            style: _meta,
+          ),
+        ),
+        if (found.isNotEmpty)
           _OfficeCard(
-            offices: <Office>[treasury],
+            offices: found,
             compact: false,
             looseSubtitle: true,
             lineFor: (Office office) => office.searchLine ?? office.listLine,
-            onOffice: onOffice,
+            onOffice: widget.onOffice,
           ),
         const SizedBox(height: 19.5),
-        const _SearchBox(text: 'passport', active: true, showClear: false),
-        _EmptySearch(onBrowseAll: onBrowseAll),
+        _SearchBox(
+          key: const Key('directory-search-passport'),
+          controller: _passport,
+          active: true,
+          showClear: false,
+        ),
+        if (missed.isEmpty)
+          _EmptySearch(query: _passport.text, onBrowseAll: widget.onBrowseAll)
+        else
+          _OfficeCard(
+            offices: missed,
+            compact: false,
+            onOffice: widget.onOffice,
+          ),
       ],
     );
   }
 }
 
 class _EmptySearch extends StatelessWidget {
-  const _EmptySearch({this.onBrowseAll});
+  const _EmptySearch({this.query = 'passport', this.onBrowseAll});
 
+  final String query;
   final VoidCallback? onBrowseAll;
 
   @override
@@ -418,10 +508,10 @@ class _EmptySearch extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'No offices found for “passport”',
+          Text(
+            'No offices found for “$query”',
             textAlign: TextAlign.center,
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: AppTypography.fontFamily,
               fontSize: 14,
               fontWeight: FontWeight.w800,
@@ -557,9 +647,17 @@ class _OfflineBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<Office> saved = offices
-        .where((Office office) => office.id == 'mdrrmo' || office.id == 'mswdo')
-        .toList();
+    final List<Office> saved =
+        offices
+            .where(
+              (Office office) => office.id == 'mdrrmo' || office.id == 'mswdo',
+            )
+            .toList()
+          ..sort((Office a, Office b) {
+            if (a.id == 'mdrrmo') return -1;
+            if (b.id == 'mdrrmo') return 1;
+            return 0;
+          });
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
@@ -720,7 +818,7 @@ class _DetailBody extends StatelessWidget {
                 hitKey: const Key('directory-message'),
                 label: office.messageable ? 'Message' : 'App',
                 icon: office.messageable
-                    ? TaytayIcons.messageCircle
+                    ? TaytayIcons.messageSquare
                     : TaytayIcons.smartphone,
                 onTap: office.messageable ? onMessage : onApp,
               ),
@@ -749,137 +847,151 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: SizedBox(
-        height: 196,
-        child: Stack(
-          fit: StackFit.expand,
-          children: <Widget>[
-            Image.asset(
-              office.heroAsset,
-              fit: BoxFit.cover,
-              alignment: Alignment(0, office.heroFocus * 2 - 1),
-            ),
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[
-                    Color(0x0D062358),
-                    Color(0x8C062358),
-                    Color(0xF0062358),
-                  ],
-                  stops: <double>[0.2, 0.58, 1],
-                ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const <BoxShadow>[
+          BoxShadow(
+            color: Color(0x29062358),
+            blurRadius: 24,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: SizedBox(
+          height: 196,
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              Image.asset(
+                office.heroAsset,
+                fit: BoxFit.cover,
+                alignment: Alignment(0, office.heroFocus * 2 - 1),
               ),
-            ),
-            Positioned(
-              right: 14,
-              top: 14,
-              child: Container(
-                width: 76,
-                height: 76,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: Color(0x4D000000),
-                      blurRadius: 14,
-                      offset: Offset(0, 6),
-                    ),
-                    BoxShadow(color: BrandColors.sealGold, spreadRadius: 5),
-                    BoxShadow(color: Colors.white, spreadRadius: 3),
-                  ],
-                ),
-                child: ClipOval(
-                  child: Image.asset(office.insetAsset, fit: BoxFit.cover),
-                ),
-              ),
-            ),
-            if (office.representative)
-              const Positioned(
-                left: 14,
-                top: 14,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0xF0FFFFFF),
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: <Color>[
+                      Color(0x0D062358),
+                      Color(0x8C062358),
+                      Color(0xF0062358),
+                    ],
+                    stops: <double>[0.2, 0.58, 1],
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    child: Text(
-                      'Representative photo',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: BrandColors.taytayBlueDark,
-                        decoration: TextDecoration.none,
+                ),
+              ),
+              Positioned(
+                right: 14,
+                top: 14,
+                child: Container(
+                  width: 76,
+                  height: 76,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: <BoxShadow>[
+                      BoxShadow(
+                        color: Color(0x4D000000),
+                        blurRadius: 14,
+                        offset: Offset(0, 6),
+                      ),
+                      BoxShadow(color: BrandColors.sealGold, spreadRadius: 5),
+                      BoxShadow(color: Colors.white, spreadRadius: 3),
+                    ],
+                  ),
+                  child: ClipOval(
+                    child: Image.asset(office.insetAsset, fit: BoxFit.cover),
+                  ),
+                ),
+              ),
+              if (office.representative)
+                const Positioned(
+                  left: 14,
+                  top: 14,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xF0FFFFFF),
+                      borderRadius: BorderRadius.all(Radius.circular(999)),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      child: Text(
+                        'Representative photo',
+                        style: TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: BrandColors.taytayBlueDark,
+                          decoration: TextDecoration.none,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 14,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: BrandColors.sealGold,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        TaytayIcon(
-                          icon: _officeIcon(office.icon),
-                          size: 12,
-                          color: BrandColors.taytayBlueDark,
-                          semanticLabel: '',
-                          excludeSemantics: true,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          office.eyebrow,
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.6,
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 9,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: BrandColors.sealGold,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          TaytayIcon(
+                            icon: office.eyebrow == 'BUSINESS'
+                                ? TaytayIcons.briefcase
+                                : _officeIcon(office.icon),
+                            size: 12,
                             color: BrandColors.taytayBlueDark,
-                            decoration: TextDecoration.none,
+                            semanticLabel: '',
+                            excludeSemantics: true,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 5),
+                          Text(
+                            office.eyebrow,
+                            style: const TextStyle(
+                              fontFamily: AppTypography.fontFamily,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.6,
+                              color: BrandColors.taytayBlueDark,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    office.name,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                      letterSpacing: -0.3,
-                      color: Colors.white,
-                      decoration: TextDecoration.none,
+                    const SizedBox(height: 6),
+                    Text(
+                      office.name,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        height: 1.15,
+                        letterSpacing: -0.3,
+                        color: Colors.white,
+                        decoration: TextDecoration.none,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1012,10 +1124,19 @@ class _ServiceCard extends StatelessWidget {
 }
 
 class _ComposeBody extends StatelessWidget {
-  const _ComposeBody({required this.office, this.onSend});
+  const _ComposeBody({
+    required this.office,
+    this.onSend,
+    this.messageController,
+    this.selectedTopic,
+    this.onTopic,
+  });
 
   final Office office;
   final VoidCallback? onSend;
+  final TextEditingController? messageController;
+  final String? selectedTopic;
+  final VoidCallback? onTopic;
 
   @override
   Widget build(BuildContext context) {
@@ -1029,7 +1150,12 @@ class _ComposeBody extends StatelessWidget {
           decoration: _cardDecoration,
           child: Row(
             children: <Widget>[
-              _Tile(icon: _officeIcon(office.icon), label: office.shortName),
+              _Tile(
+                icon: office.id == 'pio'
+                    ? TaytayIcons.megaphone
+                    : _officeIcon(office.icon),
+                label: office.shortName,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1044,31 +1170,58 @@ class _ComposeBody extends StatelessWidget {
           ),
         ),
         const _FieldLabel('Topic'),
-        _FieldBox(
-          child: Row(
-            children: <Widget>[
-              Expanded(child: Text(office.topic ?? '', style: _fieldInk)),
-              const TaytayIcon(
-                icon: TaytayIcons.chevronDown,
-                size: 18,
-                color: BrandColors.chevron,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-            ],
+        _Hit(
+          hitKey: const Key('directory-topic'),
+          label: 'Topic',
+          onTap: onTopic,
+          child: _FieldBox(
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    selectedTopic ?? office.topic ?? '',
+                    style: _fieldInk,
+                  ),
+                ),
+                const TaytayIcon(
+                  icon: TaytayIcons.chevronDown,
+                  size: 18,
+                  color: BrandColors.chevron,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                ),
+              ],
+            ),
           ),
         ),
         const _FieldLabel('Message'),
         _FieldBox(
           height: 170,
           alignTop: true,
-          child: Text(office.draft ?? '', style: _fieldBody),
+          child: messageController == null
+              ? Text(office.draft ?? '', style: _fieldBody)
+              : TextField(
+                  key: const Key('directory-message-field'),
+                  controller: messageController,
+                  maxLines: null,
+                  keyboardType: TextInputType.multiline,
+                  style: _fieldBody,
+                  cursorColor: BrandColors.taytayBlue,
+                  decoration: const InputDecoration(
+                    isCollapsed: true,
+                    isDense: true,
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
         ),
-        const SizedBox(height: 8),
+        // The paperclip sits above the cap height. 10dp keeps that ink on
+        // the design's attach line; 8dp lifts the run by more than 2dp.
+        const SizedBox(height: 10),
         const Row(
           children: <Widget>[
             TaytayIcon(
-              icon: TaytayIcons.plus,
+              icon: TaytayIcons.paperclip,
               size: 16,
               color: BrandColors.taytayBlue,
               semanticLabel: '',
@@ -1566,14 +1719,18 @@ class _OfficeRow extends StatelessWidget {
                 child: Container(
                   width: 36,
                   height: 36,
-                  decoration: const BoxDecoration(
-                    color: BrandColors.surfaceMuted,
+                  decoration: BoxDecoration(
+                    color: office.id == 'mdrrmo'
+                        ? const Color(0xFFFDECEC)
+                        : BrandColors.surfaceMuted,
                     shape: BoxShape.circle,
                   ),
-                  child: const TaytayIcon(
+                  child: TaytayIcon(
                     icon: TaytayIcons.phone,
                     size: 16,
-                    color: BrandColors.taytayBlue,
+                    color: office.id == 'mdrrmo'
+                        ? BrandColors.danger
+                        : BrandColors.taytayBlue,
                     semanticLabel: '',
                     excludeSemantics: true,
                   ),
@@ -1601,21 +1758,74 @@ class _OfficeRow extends StatelessWidget {
   }
 }
 
-class _SearchBox extends StatelessWidget {
+class _SearchBox extends StatefulWidget {
   const _SearchBox({
+    super.key,
+    this.controller,
     this.hint,
-    this.text,
+    this.onChanged,
     this.active = false,
     this.showClear = true,
   });
 
+  final TextEditingController? controller;
   final String? hint;
-  final String? text;
+  final ValueChanged<String>? onChanged;
   final bool active;
   final bool showClear;
 
   @override
+  State<_SearchBox> createState() => _SearchBoxState();
+}
+
+class _SearchBoxState extends State<_SearchBox> {
+  TextEditingController? _owned;
+
+  TextEditingController get _controller => widget.controller ?? _owned!;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.controller == null) {
+      _owned = TextEditingController();
+    }
+    _controller.addListener(_changed);
+  }
+
+  @override
+  void didUpdateWidget(_SearchBox oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.controller == widget.controller) return;
+    (oldWidget.controller ?? _owned)?.removeListener(_changed);
+    if (widget.controller == null && _owned == null) {
+      _owned = TextEditingController();
+    }
+    _controller.addListener(_changed);
+  }
+
+  void _changed() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_changed);
+    _owned?.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final bool filled = _controller.text.isNotEmpty;
+    final bool active = widget.active || filled;
+    final TextStyle ink = TextStyle(
+      fontFamily: AppTypography.fontFamily,
+      fontSize: 14,
+      height: 1,
+      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+      color: active ? BrandColors.textPrimary : DirectoryCanvas._searchInk,
+      decoration: TextDecoration.none,
+    );
     return Container(
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -1638,21 +1848,30 @@ class _SearchBox extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              text ?? hint ?? '',
-              maxLines: 1,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-                color: active
-                    ? BrandColors.textPrimary
-                    : DirectoryCanvas._searchInk,
-                decoration: TextDecoration.none,
+            child: Material(
+              type: MaterialType.transparency,
+              child: TextField(
+                controller: _controller,
+                onChanged: widget.onChanged,
+                maxLines: 1,
+                style: ink,
+                cursorColor: BrandColors.taytayBlue,
+                cursorWidth: 1.2,
+                decoration: InputDecoration(
+                  isCollapsed: true,
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: widget.hint,
+                  hintStyle: ink.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: DirectoryCanvas._searchInk,
+                  ),
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
           ),
-          if (active && showClear)
+          if (active && widget.showClear && filled)
             const TaytayIcon(
               icon: TaytayIcons.close,
               size: 16,

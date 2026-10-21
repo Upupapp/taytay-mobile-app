@@ -7,8 +7,12 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
+import '../../messaging/domain/office_messaging_repository.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../data/office_catalogue.dart';
 import '../domain/office.dart';
 import 'directory_canvas.dart';
@@ -26,17 +30,32 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   List<String> _chips = const <String>[];
   bool _loading = true;
   bool _offline = false;
+  bool _started = false;
+  final TextEditingController _search = TextEditingController();
+  String _query = '';
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
     _load();
   }
 
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
+    final AppDependencies dependencies = AppDependencies.of(context);
     try {
       final ({List<String> chips, List<Office> offices}) catalogue =
-          await OfficeCatalogue.load();
+          await OfficeCatalogue.load(
+            mock: dependencies.config.usesMockData,
+            api: dependencies.apiClient,
+          );
       if (!mounted) return;
       setState(() {
         _offices = catalogue.offices;
@@ -65,6 +84,9 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
             : DirectoryFrame.list,
         offices: _offices,
         chips: _chips,
+        query: _query,
+        searchController: _search,
+        onSearch: (String value) => setState(() => _query = value),
         onOffice: (Office office) => context.pushNamed(
           AppRoute.officeDetail.routeName,
           pathParameters: <String, String>{'officeId': office.id},
@@ -87,11 +109,19 @@ class OfficeDetailScreen extends StatefulWidget {
 
 class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
   Office? _office;
+  bool _started = false;
 
   @override
-  void initState() {
-    super.initState();
-    OfficeCatalogue.byId(widget.officeId).then((Office? office) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    OfficeCatalogue.byId(
+      widget.officeId,
+      mock: dependencies.config.usesMockData,
+      api: dependencies.apiClient,
+    ).then((Office? office) {
       if (mounted) setState(() => _office = office);
     });
   }
@@ -104,11 +134,11 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
       requirement: ResidentIntentKind.messageOffice.requirement,
     );
     if (decision is! AccessAllowed) {
+      // A guest goes to sign-in. The verification sheet is only for a
+      // signed-in resident the LGU has not confirmed.
       await AccessGateSheet.show(
         context: context,
-        decision: decision is AccessNeedsAuthentication
-            ? const AccessNeedsVerification()
-            : decision,
+        decision: decision,
         intent: ResidentIntentKind.messageOffice,
         targetId: office.id,
       );
@@ -170,24 +200,79 @@ class OfficeComposeScreen extends StatefulWidget {
 class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   Office? _office;
   String? _error;
+  String _topic = '';
+  bool _started = false;
+  final TextEditingController _message = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    OfficeCatalogue.byId(widget.officeId).then((Office? office) {
-      if (mounted) setState(() => _office = office);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    OfficeCatalogue.byId(
+      widget.officeId,
+      mock: dependencies.config.usesMockData,
+      api: dependencies.apiClient,
+    ).then((Office? office) {
+      if (!mounted || office == null) return;
+      setState(() {
+        _office = office;
+        _topic = office.topics.isNotEmpty
+            ? office.topics.first
+            : (office.topic ?? '');
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _message.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickTopic() async {
+    final Office? office = _office;
+    if (office == null || office.topics.isEmpty) return;
+    final String? chosen = await showModalBottomSheet<String>(
+      context: context,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              for (final String topic in office.topics)
+                ListTile(
+                  title: Text(topic),
+                  onTap: () => Navigator.of(sheetContext).pop(topic),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen == null || !mounted) return;
+    setState(() => _topic = chosen);
   }
 
   Future<void> _send() async {
     final Office? office = _office;
     if (office == null) return;
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .send(
-          officeId: office.id,
-          topic: office.topic ?? office.shortName,
-          body: office.draft ?? '',
-        );
+    final String body = _message.text.trim();
+    if (body.isEmpty) {
+      setState(() => _error = 'Write a message before sending.');
+      return;
+    }
+    if (_topic.trim().isEmpty) {
+      setState(() => _error = 'Choose a topic before sending.');
+      return;
+    }
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final result = await dependencies.officeMessagingRepository.send(
+      officeId: office.wireId,
+      topic: _topic,
+      body: body,
+    );
     if (!mounted) return;
     switch (result) {
       case Ok():
@@ -198,8 +283,50 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
           ),
         );
       case Err(:final failure):
+        if (failure is ForbiddenFailure) {
+          await _applyTierAfterForbidden(dependencies, office, failure);
+          return;
+        }
         setState(() => _error = failure.residentMessage);
     }
+  }
+
+  Future<void> _applyTierAfterForbidden(
+    AppDependencies dependencies,
+    Office office,
+    AppFailure failure,
+  ) async {
+    final Result<ResidentProfileDetail> me = await dependencies
+        .residentProfileRepository
+        .loadOwnDetail();
+    if (!mounted) return;
+    if (me case Ok(:final value)) {
+      final String? tier = value.verificationTier;
+      if (AccessLevel.fromVerificationTier(tier) != AccessLevel.verified) {
+        // Leave the verified-only compose route before the session drops.
+        // Otherwise the guard replaces this screen and the sheet never lands.
+        GoRouter.of(context).goNamed(
+          AppRoute.officeDetail.routeName,
+          pathParameters: <String, String>{'officeId': office.id},
+        );
+        if (tier != null && tier.isNotEmpty) {
+          dependencies.session.applyVerificationTier(tier);
+        }
+        if (!context.mounted) return;
+        await AccessGateSheet.show(
+          context: context,
+          decision: const AccessNeedsVerification(),
+          intent: ResidentIntentKind.messageOffice,
+          targetId: office.id,
+        );
+        return;
+      }
+      if (tier != null && tier.isNotEmpty) {
+        dependencies.session.applyVerificationTier(tier);
+      }
+    }
+    if (!mounted) return;
+    setState(() => _error = failure.residentMessage);
   }
 
   @override
@@ -213,6 +340,9 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
               frame: DirectoryFrame.compose,
               offices: const <Office>[],
               office: _office,
+              messageController: _message,
+              selectedTopic: _topic,
+              onTopic: _pickTopic,
               onBack: () => _back(context),
               onSend: _send,
             ),
@@ -248,11 +378,19 @@ class MessageSentScreen extends StatefulWidget {
 
 class _MessageSentScreenState extends State<MessageSentScreen> {
   String _phone = '';
+  bool _started = false;
 
   @override
-  void initState() {
-    super.initState();
-    OfficeCatalogue.byId('mdrrmo').then((Office? office) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    OfficeCatalogue.byId(
+      widget.officeId,
+      mock: dependencies.config.usesMockData,
+      api: dependencies.apiClient,
+    ).then((Office? office) {
       if (mounted) setState(() => _phone = office?.phone ?? '');
     });
   }
@@ -285,22 +423,89 @@ class _OfficeThreadScreenState extends State<OfficeThreadScreen> {
   Office? _office;
   List<DirectoryThreadBubble> _bubbles = const <DirectoryThreadBubble>[];
   String _dayLabel = '';
+  bool _started = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
     _load();
   }
 
   Future<void> _load() async {
-    final Office? office = await OfficeCatalogue.byId('bplo');
-    final ({String dayLabel, List<DirectoryThreadBubble> messages}) thread =
-        await OfficeCatalogue.thread();
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final Result<OfficeThread> thread = await dependencies
+        .officeMessagingRepository
+        .loadThread(widget.threadId);
+    final Result<List<OfficeMessage>> messages = await dependencies
+        .officeMessagingRepository
+        .listMessages(widget.threadId);
     if (!mounted) return;
+    final OfficeThread? loaded = switch (thread) {
+      Ok(:final value) => value,
+      Err() => null,
+    };
+    final String slug = loaded == null
+        ? ''
+        : (loaded.officeSlug.isNotEmpty ? loaded.officeSlug : loaded.officeId);
+    final Office? office = slug.isEmpty
+        ? null
+        : await OfficeCatalogue.byId(
+            slug,
+            mock: dependencies.config.usesMockData,
+            api: dependencies.apiClient,
+          );
+    if (!mounted) return;
+    final String? accountId =
+        dependencies.session.state.residentOrNull?.accountId;
+    final List<OfficeMessage> rows = switch (messages) {
+      Ok(:final value) => value.reversed.toList(growable: false),
+      Err() => const <OfficeMessage>[],
+    };
     setState(() {
-      _office = office;
-      _bubbles = thread.messages;
-      _dayLabel = thread.dayLabel;
+      _office =
+          office ??
+          (loaded == null
+              ? null
+              : Office(
+                  id: slug,
+                  serverId: loaded.officeId,
+                  shortName: loaded.officeName,
+                  name: loaded.officeName,
+                  listName: loaded.officeName,
+                  category: '',
+                  listLine: '',
+                  icon: OfficeIcon.building2,
+                  keywords: const <String>[],
+                  eyebrow: '',
+                  summary: '',
+                  heroAsset: 'assets/photos/municipal_hall.jpg',
+                  heroFocus: 0.5,
+                  insetAsset: 'assets/photos/municipal_hall.jpg',
+                  representative: false,
+                  credit: '',
+                  messageable: true,
+                  callLabel: 'Call',
+                  callIsEmergency: false,
+                  phone: '',
+                  directionsQuery: '',
+                  facts: const <OfficeFact>[],
+                  services: const <OfficeServiceLine>[],
+                ));
+      _bubbles = <DirectoryThreadBubble>[
+        for (final OfficeMessage message in rows)
+          DirectoryThreadBubble(
+            fromResident:
+                message.fromResident ||
+                (accountId != null &&
+                    accountId.isNotEmpty &&
+                    message.senderId == accountId),
+            when: ManilaTime.formatTime(message.sentAt),
+            body: message.body,
+          ),
+      ];
+      _dayLabel = rows.isEmpty ? '' : ManilaTime.formatDate(rows.first.sentAt);
     });
   }
 

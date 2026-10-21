@@ -331,10 +331,13 @@ void main() {
           .join(' ')
           .toLowerCase();
 
-      // "No services" would be a lie: the app does not know what is there.
+      // "No services" or "no offices" would be a lie: the app does not know
+      // what is there. The directory may still name numbers that ship on
+      // the phone, and it has to say the list itself did not load.
       expect(rendered, isNot(contains('no services')));
+      expect(rendered, isNot(contains('no offices')));
       expect(rendered, isNot(contains('sent')));
-      expect(rendered, isNot(contains('saved')));
+      expect(rendered, contains("can't load the directory"));
     });
 
     testWidgets('the unsent notice never says "saved"', (tester) async {

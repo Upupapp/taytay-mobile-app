@@ -77,15 +77,23 @@ class Office {
     required this.directionsQuery,
     required this.facts,
     required this.services,
+    this.serverId = '',
     this.searchLine,
     this.privacy,
     this.composeTo,
     this.topic,
+    this.topics = const <String>[],
     this.draft,
     this.savedName,
   });
 
+  /// Route slug. Live rows use the office `slug`, which is what
+  /// `GET /offices/{slug}` takes.
   final String id;
+
+  /// UUID for `POST /threads` `office_id`. Empty on a fixture row, which has
+  /// no server id.
+  final String serverId;
   final String shortName;
   final String name;
   final String listName;
@@ -113,11 +121,18 @@ class Office {
   final String? privacy;
   final String? composeTo;
   final String? topic;
+
+  /// Choices for the compose topic picker. The first is the one the field
+  /// shows until the resident picks another.
+  final List<String> topics;
   final String? draft;
 
   /// Shorter label on the offline saved-numbers row, when the list name
   /// would wrap. Null keeps [listName].
   final String? savedName;
+
+  /// The id sent as `office_id`. A live office sends its UUID.
+  String get wireId => serverId.isNotEmpty ? serverId : id;
 
   bool matches(String query, String chip) {
     if (chip != 'All' && category != chip) return false;
@@ -126,6 +141,7 @@ class Office {
     final String haystack = <String>[
       listName,
       name,
+      shortName,
       listLine,
       category,
       ...keywords,

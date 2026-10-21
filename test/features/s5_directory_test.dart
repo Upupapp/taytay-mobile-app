@@ -25,6 +25,8 @@ AppConfig _config() => AppConfig.from(
   rawEnvironment: 'dev',
   rawApiBaseUrl: 'https://example.test/api/v1',
   isReleaseBuild: false,
+  rawDataMode: 'mock',
+  rawMockLatencyMs: '0',
 );
 
 Future<void> _boot(
@@ -204,22 +206,29 @@ void main() {
     expect(tester.getSize(mark.first), const Size(44, 44));
   });
 
-  for (final AccessLevel level in <AccessLevel>[
-    AccessLevel.guest,
-    AccessLevel.unverified,
-  ]) {
-    testWidgets('a $level Message opens the verification gate', (tester) async {
-      await _boot(tester, level: level, location: '/offices/bplo');
-      await tester.tap(find.byKey(const Key('directory-message')));
-      await tester.pumpAndSettle();
-      expect(find.byType(UnverifiedGateSheet), findsOneWidget);
-      expect(
-        find.text('Verify your account to message offices'),
-        findsOneWidget,
-      );
-      expect(find.text('New message'), findsNothing);
-    });
-  }
+  testWidgets('a guest Message goes to sign-in', (tester) async {
+    await _boot(tester, level: AccessLevel.guest, location: '/offices/bplo');
+    await tester.tap(find.byKey(const Key('directory-message')));
+    await tester.pumpAndSettle();
+    expect(find.text('Sign in to continue'), findsOneWidget);
+    expect(find.byType(UnverifiedGateSheet), findsNothing);
+    expect(find.text('New message'), findsNothing);
+  });
+
+  testWidgets('an unverified Message opens the verification gate', (
+    tester,
+  ) async {
+    await _boot(
+      tester,
+      level: AccessLevel.unverified,
+      location: '/offices/bplo',
+    );
+    await tester.tap(find.byKey(const Key('directory-message')));
+    await tester.pumpAndSettle();
+    expect(find.byType(UnverifiedGateSheet), findsOneWidget);
+    expect(find.text('Verify your account to message offices'), findsOneWidget);
+    expect(find.text('New message'), findsNothing);
+  });
 
   testWidgets('a verified resident reaches compose', (tester) async {
     await _boot(tester, level: AccessLevel.verified, location: '/offices/bplo');
@@ -227,6 +236,6 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(UnverifiedGateSheet), findsNothing);
     expect(find.text('New message'), findsOneWidget);
-    expect(find.textContaining('business permit'), findsWidgets);
+    expect(find.text('Business permit renewal'), findsOneWidget);
   });
 }

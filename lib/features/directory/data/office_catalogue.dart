@@ -1,13 +1,61 @@
+import '../../../core/api/api_client.dart';
 import '../../../core/mock/mock_fixtures.dart';
+import '../../../core/result/result.dart';
 import '../domain/office.dart';
+import 'office_api_repository.dart';
 
-/// The designed office catalogue.
+/// Raised when `GET /offices` does not answer. The screen turns that into
+/// the offline frame.
+final class OfficeDirectoryException implements Exception {
+  OfficeDirectoryException(this.failure);
+
+  final AppFailure failure;
+}
+
+/// The office catalogue.
 ///
-/// Facts live in `test/fixtures/mock/offices.json`. A fact the LGU has not
-/// confirmed is marked `sample` and the screen paints the SAMPLE tag. There
-/// is no office copy in this file.
+/// A dev mock reads `test/fixtures/mock/offices.json`. Every other build
+/// reads `GET /offices` and `GET /offices/{slug}`. The fixture is not a
+/// silent fallback for a failed live call.
 abstract final class OfficeCatalogue {
-  static Future<({List<String> chips, List<Office> offices})> load() async {
+  static Future<({List<String> chips, List<Office> offices})> load({
+    bool mock = true,
+    ApiClient? api,
+  }) async {
+    if (mock) return _fixture();
+    final Result<({List<String> chips, List<Office> offices})> result =
+        await OfficeApiRepository(apiClient: api!).list();
+    switch (result) {
+      case Ok(:final value):
+        return value;
+      case Err(:final failure):
+        throw OfficeDirectoryException(failure);
+    }
+  }
+
+  static Future<Office?> byId(
+    String id, {
+    bool mock = true,
+    ApiClient? api,
+  }) async {
+    if (mock) {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await _fixture();
+      for (final Office office in catalogue.offices) {
+        if (office.id == id) return office;
+      }
+      return null;
+    }
+    final Result<Office?> result = await OfficeApiRepository(
+      apiClient: api!,
+    ).bySlug(id);
+    return switch (result) {
+      Ok(:final value) => value,
+      Err() => null,
+    };
+  }
+
+  static Future<({List<String> chips, List<Office> offices})> _fixture() async {
     final Map<String, Object?> json = await MockFixtures.object('offices');
     final List<String> chips = json['chips'] is List
         ? (json['chips']! as List).map((Object? item) => '$item').toList()
@@ -19,14 +67,6 @@ abstract final class OfficeCatalogue {
               .toList(growable: false)
         : const <Office>[];
     return (chips: chips, offices: offices);
-  }
-
-  static Future<Office?> byId(String id) async {
-    final ({List<String> chips, List<Office> offices}) catalogue = await load();
-    for (final Office office in catalogue.offices) {
-      if (office.id == id) return office;
-    }
-    return null;
   }
 
   /// The sample thread. The day chip comes from the fixture, so this screen
@@ -92,6 +132,7 @@ abstract final class OfficeCatalogue {
       privacy: json['privacy'] as String?,
       composeTo: json['composeTo'] as String?,
       topic: json['topic'] as String?,
+      topics: _topics(json),
       draft: json['draft'] as String?,
       savedName: json['savedName'] as String?,
       facts: json['facts'] is List
@@ -117,6 +158,18 @@ abstract final class OfficeCatalogue {
             }).toList()
           : const <OfficeServiceLine>[],
     );
+  }
+
+  static List<String> _topics(Map<dynamic, dynamic> json) {
+    if (json['topics'] is List) {
+      return (json['topics'] as List)
+          .map((Object? item) => '$item')
+          .where((String item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+    final Object? topic = json['topic'];
+    if (topic is String && topic.isNotEmpty) return <String>[topic];
+    return const <String>[];
   }
 
   static OfficeIcon _icon(String name) => switch (name) {

@@ -182,6 +182,7 @@ abstract final class AccessGateSheet {
   ) {
     return showModalBottomSheet<GateOutcome>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => UnverifiedGateSheet(
@@ -190,12 +191,10 @@ abstract final class AccessGateSheet {
           Navigator.of(sheetContext).pop(GateOutcome.goingToVerify);
           router.goNamed(AppRoute.verification.routeName);
         },
-        onDismiss: () =>
-            Navigator.of(sheetContext).pop(GateOutcome.dismissed),
+        onDismiss: () => Navigator.of(sheetContext).pop(GateOutcome.dismissed),
       ),
     );
   }
-
 }
 
 class _GateBody extends StatelessWidget {
