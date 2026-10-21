@@ -11,7 +11,7 @@ This file records that the words were looked for. It does not invent them.
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
 | S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
-| S6 Balita | In review, not approved | | | No approval words. |
+| S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | ad8e88e11f8696febdd8d9d80e8f974d72e18094 | No approval words. |
 
 ## S0 pixel match
 
@@ -228,7 +228,7 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 ## S6 Balita
 
-S6 is not approved. This section records the capture. It does not record approval words.
+S6 is not approved. This section records the capture. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
 
 Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article page keeps the shell tab bar and has one back button. This app does not call `POST /news` or `PATCH /news/{id}`.
 
