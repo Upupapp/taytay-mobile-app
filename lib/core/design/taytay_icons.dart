@@ -104,7 +104,22 @@ abstract final class TaytayIcons {
   /// Lucide `log-in`. The sign-in gate's primary action.
   static const IconData logIn = IconData(57613, fontFamily: 'Lucide');
 
+  /// Lucide `bookmark`. Save on a Balita card.
+  static const IconData bookmark = IconData(57440, fontFamily: 'Lucide');
+
+  /// Lucide `cloud`.
+  static const IconData cloud = IconData(57480, fontFamily: 'Lucide');
+
+  /// Lucide `cloud-rain`. The sample weather advisory.
+  static const IconData cloudRain = IconData(57486, fontFamily: 'Lucide');
+
+  /// Lucide `globe`. The e-BOSS row.
+  static const IconData globe = IconData(57576, fontFamily: 'Lucide');
+
   static const IconData calendar = IconData(57443, fontFamily: 'Lucide');
+
+  /// Lucide `calendar-x`. The empty Balita category.
+  static const IconData calendarX = IconData(58046, fontFamily: 'Lucide');
 
   static const IconData circleAlert = IconData(57463, fontFamily: 'Lucide');
 

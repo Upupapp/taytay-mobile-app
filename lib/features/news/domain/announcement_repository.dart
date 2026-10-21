@@ -135,6 +135,7 @@ class Announcement {
     this.summary,
     this.media,
     this.isPinned = false,
+    this.pinnedAt,
     this.advisoryLevel,
     this.publicationState,
     this.engagement,
@@ -142,6 +143,10 @@ class Announcement {
     this.capabilities = PostCapabilities.none,
     this.availableReactions = const <ServerValue<ReactionKind>>[],
     this.myReaction,
+    this.officeSlug,
+    this.coverMediaId,
+    this.coverUrl,
+    this.presentation,
   });
 
   /// Opaque server identifier. The deep-link target for `news_post`.
@@ -169,9 +174,12 @@ class Announcement {
 
   final AnnouncementMedia? media;
 
-  /// Pinned by the admin portal. Presentation emphasis only — the app never
-  /// re-orders on its own.
+  /// Pinned by staff. The list from `GET /news` already puts these first.
+  /// This app does not call the pin routes.
   final bool isPinned;
+
+  /// When [isPinned] was set. Null when the article is not pinned.
+  final DateTime? pinnedAt;
 
   final ServerValue<AdvisoryLevel>? advisoryLevel;
   final ServerValue<PublicationState>? publicationState;
@@ -194,6 +202,18 @@ class Announcement {
   /// The resident's own reaction, when they have one.
   final ServerValue<ReactionKind>? myReaction;
 
+  /// `office_slug` from `NewsItem`. The display name is not on that object.
+  final String? officeSlug;
+
+  /// `cover_media_id`. The bytes are at [coverUrl] when the article is published.
+  final String? coverMediaId;
+
+  /// Public cover URL. Null on a draft or when there is no cover.
+  final String? coverUrl;
+
+  /// Design fields the fixture carries. A live article leaves this null.
+  final BalitaPresentation? presentation;
+
   /// A copy with the reaction fields replaced.
   ///
   /// Exists so a controller can apply an optimistic change and then adopt the
@@ -212,6 +232,7 @@ class Announcement {
     summary: summary,
     media: media,
     isPinned: isPinned,
+    pinnedAt: pinnedAt,
     advisoryLevel: advisoryLevel,
     publicationState: publicationState,
     engagement: AnnouncementEngagement(
@@ -223,6 +244,35 @@ class Announcement {
     capabilities: capabilities,
     availableReactions: availableReactions,
     myReaction: myReaction,
+    officeSlug: officeSlug,
+    coverMediaId: coverMediaId,
+    coverUrl: coverUrl,
+    presentation: presentation,
+  );
+
+  /// The office's short name, resolved from `GET /offices`.
+  Announcement withAuthor(String name) => Announcement(
+    id: id,
+    title: title,
+    body: body,
+    publishedAt: publishedAt,
+    category: category,
+    author: name,
+    summary: summary,
+    media: media,
+    isPinned: isPinned,
+    pinnedAt: pinnedAt,
+    advisoryLevel: advisoryLevel,
+    publicationState: publicationState,
+    engagement: engagement,
+    shareUrl: shareUrl,
+    capabilities: capabilities,
+    availableReactions: availableReactions,
+    myReaction: myReaction,
+    officeSlug: officeSlug,
+    coverMediaId: coverMediaId,
+    coverUrl: coverUrl,
+    presentation: presentation,
   );
 
   /// Whether this post may be shown to a resident.
@@ -274,6 +324,82 @@ class Announcement {
   String toString() => 'Announcement($id)';
 }
 
+/// One row on an article page. The fixture supplies these. `NewsItem` does not.
+@immutable
+class BalitaFact {
+  const BalitaFact({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+
+  /// A Lucide name the canvas maps. Unknown names paint as a landmark.
+  final String icon;
+}
+
+/// Layout the designs need and the news contract does not publish.
+@immutable
+class BalitaPresentation {
+  const BalitaPresentation({
+    this.coverAsset,
+    this.photoCredit,
+    this.lead,
+    this.footer,
+    this.dateLabel,
+    this.listDate,
+    this.coverHeight = 180,
+    this.listCover = false,
+    this.facts = const <BalitaFact>[],
+    this.tileIcon,
+    this.sample = false,
+    this.pinnedTitle,
+    this.pinnedBody,
+  });
+
+  final String? coverAsset;
+  final String? photoCredit;
+  final String? lead;
+  final String? footer;
+  final String? dateLabel;
+
+  /// Date on the list eyebrow. Empty suppresses it. Null uses [dateLabel].
+  final String? listDate;
+  final double coverHeight;
+  final bool listCover;
+  final List<BalitaFact> facts;
+  final String? tileIcon;
+  final bool sample;
+  final String? pinnedTitle;
+  final String? pinnedBody;
+
+  @override
+  String toString() => 'BalitaPresentation()';
+}
+
+/// One row of `GET /news/categories`. Slugs are lowercase.
+@immutable
+class NewsCategory {
+  const NewsCategory({required this.slug, required this.label});
+
+  final String slug;
+  final String label;
+
+  /// The design set. The dev mock serves these. Lahat is not one of them.
+  static const List<NewsCategory> catalogue = <NewsCategory>[
+    NewsCategory(slug: 'abiso', label: 'Abiso'),
+    NewsCategory(slug: 'advisory', label: 'Advisory'),
+    NewsCategory(slug: 'negosyo', label: 'Negosyo'),
+    NewsCategory(slug: 'safety', label: 'Safety'),
+    NewsCategory(slug: 'events', label: 'Events'),
+  ];
+
+  @override
+  String toString() => 'NewsCategory($slug)';
+}
+
 /// Municipal announcements, as the committed contract describes them.
 ///
 /// Two calls, both public, both paginated per `docs/api/conventions.md` §5.
@@ -290,7 +416,11 @@ abstract interface class AnnouncementRepository {
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page,
     int perPage,
+    String? category,
   });
+
+  /// `GET /news/categories`. Lahat is not in this list.
+  Future<Result<List<NewsCategory>>> listCategories();
 
   /// One announcement by opaque id.
   ///

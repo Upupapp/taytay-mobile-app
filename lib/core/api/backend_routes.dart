@@ -110,6 +110,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'media/{}', 'node_citizen_api.dart'),
   BackendRoute('GET', 'news', 'newsfeed_api_repository.dart'),
   BackendRoute('GET', 'news/{}', 'newsfeed_api_repository.dart'),
+  BackendRoute('GET', 'news/categories', 'newsfeed_api_repository.dart'),
   BackendRoute('GET', 'notifications', 'notification_api_repository.dart'),
   BackendRoute(
     'POST',

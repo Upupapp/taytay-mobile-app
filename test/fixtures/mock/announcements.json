@@ -1,8 +1,167 @@
 [
   {
-    "id": "post-sample-1",
-    "title": "SAMPLE advisory for 2026",
-    "body": "This notice is synthetic. It is not an announcement from Taytay LGU.",
-    "summary": "SAMPLE"
+    "id": "balita-pwd",
+    "title": "Unclaimed 2026 PWD Cash Gift",
+    "summary": "Validate your PWD ID at MSWDO (Ground Floor), then claim at the Treasury Office (2nd Floor), Municipal Hall.",
+    "body": "The Municipal Treasury Office is open for beneficiaries who have not yet claimed their 2026 PWD Cash Gift.",
+    "category": "Abiso",
+    "author": "MSWDO",
+    "office_slug": "mswdo",
+    "published_at": "2026-07-15T00:00:00Z",
+    "cover_asset": "assets/photos/municipal_hall.jpg",
+    "photo_credit": "Photo: Ramon FVelasquez · CC BY-SA 3.0",
+    "lead": "The Municipal Treasury Office is open for beneficiaries who have not yet claimed their 2026 PWD Cash Gift.",
+    "footer": "Questions: (02) 8284-4710 · 0921-284-3685",
+    "date_label": "July 2026",
+    "list_date": "Jul 2026",
+    "cover_height": 190,
+    "list_cover": true,
+    "facts": [
+      {
+        "label": "Step 1",
+        "value": "MSWD Office, Ground Floor, Municipal Hall: validate your ID",
+        "icon": "map-pin"
+      },
+      {
+        "label": "Step 2",
+        "value": "Treasury Office, 2nd Floor: claim your benefit",
+        "icon": "landmark"
+      },
+      {
+        "label": "Bring",
+        "value": "Original and photocopy of your valid PWD ID",
+        "icon": "file-text"
+      }
+    ]
+  },
+  {
+    "id": "balita-rpt",
+    "title": "Advisory for 2026 Real Property Tax Payment",
+    "summary": "Bring your current Tax Declaration and latest RPT receipt. Ask Treasury for your Notice of Tax Assessment.",
+    "body": "Property owners can now pay their 2026 real property tax at the Municipal Treasurer's Office.",
+    "category": "Advisory",
+    "author": "Treasury Office",
+    "office_slug": "treasury",
+    "published_at": "2026-01-15T00:00:00Z",
+    "cover_asset": "assets/photos/muzon_street.jpg",
+    "photo_credit": "Photo: Judgefloro (CC0)",
+    "lead": "Property owners can now pay their 2026 real property tax at the Municipal Treasurer's Office.",
+    "footer": "Source: taytayrizal.gov.ph, Advisory for 2026 Real Property Tax Payment.",
+    "date_label": "2026",
+    "list_date": "",
+    "cover_height": 180,
+    "pinned_title": "Pinned advisory",
+    "pinned_body": "Real property tax payment guidance for 2026",
+    "facts": [
+      {
+        "label": "Bring",
+        "value": "Current Tax Declaration and latest RPT official receipt",
+        "icon": "file-text"
+      },
+      {
+        "label": "Pay at",
+        "value": "Treasurer's Office, 2nd Floor, Municipal Hall",
+        "icon": "landmark"
+      },
+      {
+        "label": "Treasury",
+        "value": "8284-4715 / 4717 / 4709",
+        "icon": "phone"
+      },
+      {
+        "label": "Assessor",
+        "value": "8284-4708 · 8537-1100",
+        "icon": "phone"
+      }
+    ]
+  },
+  {
+    "id": "balita-boss",
+    "title": "Guide to Business Permit Processing for 2026 BOSS",
+    "summary": "Renewals and new applications opened Jan 2, 2026; e-BOSS online payment available.",
+    "body": "The Business One Stop Shop for new and renewing businesses opened on January 2, 2026.",
+    "category": "Negosyo",
+    "author": "BPLO",
+    "office_slug": "bplo",
+    "published_at": "2026-01-02T00:00:00Z",
+    "cover_asset": "assets/photos/tiangge_lane.jpg",
+    "photo_credit": "Photo: Ralff Nestor Nacor (CC BY-SA 4.0)",
+    "lead": "The Business One Stop Shop for new and renewing businesses opened on January 2, 2026.",
+    "footer": "Source: taytayrizal.gov.ph BOSS 2026 post.",
+    "date_label": "Jan 2026",
+    "list_date": "Jan 2026",
+    "cover_height": 180,
+    "facts": [
+      {
+        "label": "Opened",
+        "value": "January 2, 2026",
+        "icon": "calendar"
+      },
+      {
+        "label": "Where",
+        "value": "BPLO, Ground Floor, Municipal Hall",
+        "icon": "briefcase"
+      },
+      {
+        "label": "Online",
+        "value": "e-BOSS online payment portal",
+        "icon": "globe"
+      },
+      {
+        "label": "BPLO",
+        "value": "(02) 8284-4788 / 4789",
+        "icon": "phone"
+      }
+    ]
+  },
+  {
+    "id": "balita-smile",
+    "title": "SMILE SAFE Taytay app",
+    "summary": "Emergency reports go straight to the Sagip Taytay Command Center. Available on Google Play and the App Store.",
+    "body": "Report emergencies straight to the Sagip Taytay Command and Emergency Operations Center from your phone.",
+    "category": "Safety",
+    "author": "PIO",
+    "office_slug": "pio",
+    "published_at": "2025-03-27T00:00:00Z",
+    "cover_asset": "assets/photos/rescue_vehicle.jpg",
+    "photo_credit": "Photo: FroyAgta (CC BY-SA 4.0) · representative photo",
+    "lead": "Report emergencies straight to the Sagip Taytay Command and Emergency Operations Center from your phone.",
+    "footer": "Source: taytayrizal.gov.ph, SMILE SAFE Taytay App.",
+    "date_label": "Mar 27, 2025",
+    "list_date": "Mar 2025",
+    "cover_height": 180,
+    "facts": [
+      {
+        "label": "Get the app",
+        "value": "Google Play and the App Store",
+        "icon": "smartphone"
+      },
+      {
+        "label": "Command Center",
+        "value": "0985-488-3352",
+        "icon": "siren"
+      },
+      {
+        "label": "MDRRMO",
+        "value": "0952-619-9511 · 0970-884-3791",
+        "icon": "phone"
+      },
+      {
+        "label": "Facebook",
+        "value": "Taytay Command Center - MDRRMO",
+        "icon": "message-square"
+      }
+    ]
+  },
+  {
+    "id": "balita-weather",
+    "title": "Weather advisory example",
+    "summary": "Placeholder for MDRRMO weather and class-suspension advisories.",
+    "body": "Placeholder for MDRRMO weather and class-suspension advisories.",
+    "category": "Advisory",
+    "published_at": "2026-06-01T00:00:00Z",
+    "list_date": "",
+    "tile_icon": "cloud-rain",
+    "sample": true
   }
 ]

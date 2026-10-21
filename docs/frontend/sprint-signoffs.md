@@ -10,7 +10,8 @@ This file records that the words were looked for. It does not invent them.
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
-| S5 Directory | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/7 | cb8ae2d329333fa25c3a19860415c94cf28c6350 | No approval words. |
+| S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
+| S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | 5d9d4c41377749b73d301771c3f87d4dc8467c95 | No approval words. |
 
 ## S0 pixel match
 
@@ -224,6 +225,53 @@ The frame for `05-04` still reads the fixture's `day` field. The live thread scr
 The offline saved list is a fixed emergency default: MDRRMO, then MSWDO. It is not read from storage and it is not the last list the phone fetched.
 
 Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1277487 bytes, 78 frames), and `s5-gate.mp4` (845421 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in, with the Lucide log-in mark on the button. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
+
+## S6 Balita
+
+S6 is not approved. This section records the card and byline correction, the line-box correction, the round-1 capture, and the sync to backend `6f4c582` and `f32a631`. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The card commit is `5d9d4c41377749b73d301771c3f87d4dc8467c95`. The line-box commit is `d437ddf052bdcb915958d9869c3ca4dd73843814`. The round-1 commit is `18b00183c0eedd04225067b2f5b984340edb0903`. The first Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
+
+Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article header paints one translucent back disc, 44 dp across, with a 48 dp hit. The shell tab bar stays. This app does not call `POST /news`, `PATCH /news/{id}`, or `POST`/`DELETE /news/{id}/pin`.
+
+One `BalitaCanvas` paints the feed, a category filter, an empty category, an empty feed, the loading bones, the failed state, and the article. A dev mock reads `test/fixtures/mock/announcements.json`. Every other build reads `GET /news`, `GET /news/{id}`, and `GET /news/categories`. Lahat is client-side and sends no `category`. The other chips send the lowercase slug. The list follows `meta.pagination.next_cursor`.
+
+The line measure for this capture is `rev5.py`: every dark run from the top of the frame. A row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is image pixels on the 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s6/`. Mismatch is CIE76 ΔE above 6 over the full frame. The photographs stay in the count. `lib/features/news` contains no `Transform.translate`.
+
+The shared header title is a 16 dp block and the subtitle is 11 dp text on a 16 dp line. On this capture the title ink starts at y 158 or 159 (design 157) and the subtitle ink starts at y 229 or 230 (design 229 or 230). The same header is on the directory screens. Re-rendered side-by-sides are in `test/goldens/compare/s5/`.
+
+| Screen | Lines (build / design) | Max deviation (image px) | Mismatch |
+| --- | --- | --- | --- |
+| 06-01 News feed | 19 / 19 | 2 | 2.92% (86537/2962440) |
+| 06-02 Article, PWD | 18 / 18 | 2 | 2.26% (66876/2962440) |
+| 06-03 Advisories filter | 24 / 24 | 2 | 3.40% (100688/2962440) |
+| 06-04 Empty category | 11 / 11 | 2 | 1.94% (57345/2962440) |
+| 06-05 Loading | 6 / 6 | 1 | 1.03% (30557/2962440) |
+| 06-06 Article, RPT | 19 / 19 | 2 | 2.03% (60099/2962440) |
+| 06-07 Article, BOSS | 19 / 19 | 1 | 2.09% (61927/2962440) |
+| 06-08 Article, SMILE | 18 / 18 | 2 | 2.44% (72255/2962440) |
+| 05-01 Office list | 24 / 24 | 2 | 3.25% (96208/2962440) |
+| 05-02 Office detail | 18 / 18 | 2 | 3.87% (114639/2962440) |
+| 05-04 Message thread | 17 / 17 | 2 | 4.38% (129816/2962440) |
+
+Every frame in the table is within 2 image px. S6 stays unapproved. The directory rows were not re-rendered. The header is unchanged, so `05-01`, `05-02`, and `05-04` stay at the numbers above.
+
+The gap after the banner and after every card is 12 dp. Photo cards and the loading bones use 16 dp of padding on every side. The 1 dp border is painted on that box. A text card and the sample use 16 dp on the left, right, and bottom, and 15 dp on the top. A 16 dp top inset places the first line 3 px below the specimen, and that line already sits at the edge of the 2 px window. The banner uses the same 15 dp top, which is the height of the specimen banner. Photo titles sit on the CSS line advance. The summary margin is the stylesheet's 4 dp. Padding of 17 dp, the border plus 16, places the skeleton bones 12 px past the design and takes `06-01` and `06-03` past 2 px. The skeleton at 16 dp matches the design bone spans, and `06-05` mismatch is 1.03%.
+
+The article lead is `.cs` at 14 / 500 / 1.6. The engine rounds 22.4 dp to 22, so each lead line sits on the unrounded 22.4 dp advance, with a strut at that leading (`forceStrutHeight`, even distribution). A fact value is `.lt` at 13 / 700 with no line-height, so the advance is the font's normal 1.26 (16.38 dp), placed the same way. A fact label is `.ls` at 12 / 700 on that same normal (15.12 dp); the rounded 15 dp line sits on the bottom of the 15.12 dp advance. The facts card uses the stylesheet's margin-top 12 and padding 4 × 16. The sample card uses the text-card inset and no title margin. The SAMPLE chip's text is normal 1.26, so the eyebrow line is the inline box. `05-01`, `05-02`, and `05-04` were re-rendered after that chip change and stayed at max 2.
+
+The designed frames are specimens. `06-03` paints the pinned advisory, the RPT card, the SMILE card, and the weather sample together. A live Advisory filter is category equality and does not invent that mix. Cover assets, photo credit, a lead, fact rows, and the sample tag live on `BalitaPresentation`, and only the fixture sets them. A live article with no presentation shows the body.
+
+Synced to backend `6f4c582`, with `short_name` from `f32a631`:
+
+- `cover_url` is the live cover. It is null on a draft or when there is no cover. Fixture covers stay bundled assets. The −2 RGB filter is only on those fixture article photographs.
+- `pinned` and `pinned_at` come from the list. The server already lists pinned items first, including under a category filter. A live pinned item shows "Pinned advisory" and the article title. The `06-03` specimen still uses the fixture's `pinned_title` and `pinned_body`. Staff pin and unpin are not called.
+- `share_url` is sent with the share. An empty string is treated as no URL. This app does not compose a URL from the host and the id. A production `share_url` is https, so the client sends the value as published.
+- `GET /news/categories` returns `{slug, label}`. The chips are that list, with Lahat added on the client. The dev mock returns the design set. The category query is the lowercase slug.
+- Bookmarks are not on the contract. There is no save method and no save request. Save still says "Saving a story is not available yet." Leaving `/news` clears that message.
+- There is no `office_name` on `NewsItem`. A live card resolves `office_slug` through `GET /offices`. The byline is `short_name` when that field is a string, then `name`, then the slug. Backend `f32a631` publishes `short_name` as a string or null on `GET /offices` and `GET /offices/{slug}`. A null short name, as on the assessor, uses the name. The byline is one line and ellipsizes. A failed offices read is not stored, so the next list asks again. A completed read is cached. The dev mock joins the same field. Seeded labels in the fixture are MSWDO, BPLO, Treasury Office, PIO, MHO, and MDRRMO. The directory catalogue still reads its own `shortName` for the S5 header, so those screens keep their labels.
+
+Comments, reactions, and reports stay off the article page. Those calls still decline. The not-available copy is unchanged: "This announcement is not available" and "See all announcements". The bell goes to sign-in for a guest and to notifications for a signed-in resident. Icons are Lucide: the safety tile and the Command Center row use siren, the weather sample uses cloud-rain, and the empty category uses calendar-x. The BOSS "Opened" fact stays calendar.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (2179907 bytes, 61 frames) and `s6-filter.mp4` (2977029 bytes, 103 frames). The article clip scrolls the feed, shows "Saving a story is not available yet.", opens the PWD story, and comes back. The filter clip scrolls, opens Events, returns through See all announcements, opens an article, and comes back. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1625 tests, with 11 skipped (the recording and live tags).
 
 ## Contract gaps after the Node OpenAPI
 

@@ -379,8 +379,52 @@ class MockAnnouncementRepository implements AnnouncementRepository {
 
   final MockBehaviorController _gate;
 
+  BalitaPresentation? _presentation(Map<String, Object?> map) {
+    final Object? facts = map['facts'];
+    final List<BalitaFact> parsed = facts is List
+        ? <BalitaFact>[
+            for (final Object? row in facts)
+              if (row is Map)
+                BalitaFact(
+                  label: '${row['label'] ?? ''}',
+                  value: '${row['value'] ?? ''}',
+                  icon: '${row['icon'] ?? 'landmark'}',
+                ),
+          ]
+        : const <BalitaFact>[];
+    if (map['cover_asset'] == null &&
+        map['lead'] == null &&
+        map['footer'] == null &&
+        map['date_label'] == null &&
+        map['list_date'] == null &&
+        map['photo_credit'] == null &&
+        map['pinned_title'] == null &&
+        parsed.isEmpty &&
+        map['sample'] != true) {
+      return null;
+    }
+    return BalitaPresentation(
+      coverAsset: map['cover_asset'] as String?,
+      photoCredit: map['photo_credit'] as String?,
+      lead: map['lead'] as String?,
+      footer: map['footer'] as String?,
+      dateLabel: map['date_label'] as String?,
+      listDate: map['list_date'] as String?,
+      coverHeight: map['cover_height'] is num
+          ? (map['cover_height']! as num).toDouble()
+          : 180,
+      listCover: map['list_cover'] == true,
+      facts: parsed,
+      tileIcon: map['tile_icon'] as String?,
+      sample: map['sample'] == true,
+      pinnedTitle: map['pinned_title'] as String?,
+      pinnedBody: map['pinned_body'] as String?,
+    );
+  }
+
   Future<List<Announcement>> _items() async {
     final raw = await MockFixtures.list('announcements');
+    final Map<String, String> offices = await _officeLabels();
     return <Announcement>[
       for (final entry in raw)
         if (_asMap(entry) case final Map<String, Object?> map)
@@ -389,25 +433,107 @@ class MockAnnouncementRepository implements AnnouncementRepository {
             title: map['title']! as String,
             body: map['body']! as String,
             summary: map['summary'] as String?,
-            publishedAt: mockNow,
-            advisoryLevel: const ServerValue<AdvisoryLevel>(
-              raw: 'advisory',
-              known: AdvisoryLevel.advisory,
-            ),
+            category: map['category'] as String?,
+            author: _bylineOffice(map, offices),
+            officeSlug: map['office_slug'] as String?,
+            publishedAt: map['published_at'] is String
+                ? DateTime.tryParse(map['published_at']! as String)
+                : mockNow,
+            isPinned: map['pinned'] == true,
+            pinnedAt: map['pinned_at'] is String
+                ? DateTime.tryParse(map['pinned_at']! as String)
+                : null,
+            shareUrl: map['share_url'] as String?,
+            coverUrl: map['cover_url'] as String?,
             publicationState: const ServerValue<PublicationState>(
               raw: 'published',
               known: PublicationState.published,
             ),
+            presentation: _presentation(map),
           ),
     ];
+  }
+
+  /// Byline office: `short_name`, then `name`, then the slug. The announcement
+  /// `author` is only the fallback when the office row has neither label.
+  String? _bylineOffice(
+    Map<String, Object?> article,
+    Map<String, String> offices,
+  ) {
+    final Object? slug = article['office_slug'];
+    if (slug is String && offices[slug] != null) return offices[slug];
+    final Object? author = article['author'];
+    if (author is! String) return null;
+    final String trimmed = author.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// `short_name` when it is a string. Null falls through to `name`, then the id.
+  Future<Map<String, String>> _officeLabels() async {
+    final Map<String, Object?> json = await MockFixtures.object('offices');
+    final Object? rows = json['offices'];
+    if (rows is! List) return const <String, String>{};
+    final Map<String, String> labels = <String, String>{};
+    for (final Object? row in rows) {
+      if (row is! Map) continue;
+      final Object? id = row['id'];
+      if (id is! String || id.isEmpty) continue;
+      final String? shortName = _officeText(row['short_name']);
+      final String? name = _officeText(row['name']);
+      labels[id] = shortName ?? name ?? id;
+    }
+    return labels;
+  }
+
+  String? _officeText(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   @override
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
     int perPage = 15,
+    String? category,
   }) async {
-    return _gate.respond(_page(await _items()));
+    final List<Announcement> all = await _items();
+    final String? chip = category?.trim();
+    final List<Announcement> matched =
+        chip == null || chip.isEmpty || chip == 'Lahat'
+        ? all
+        : all
+              .where(
+                (Announcement item) =>
+                    (item.category ?? '').toLowerCase() == chip.toLowerCase(),
+              )
+              .toList(growable: false);
+    // The server lists pinned articles first, including under a category.
+    final List<Announcement> filtered = <Announcement>[
+      ...matched.where((Announcement item) => item.isPinned),
+      ...matched.where((Announcement item) => !item.isPinned),
+    ];
+    final int start = (page - 1) * perPage;
+    final List<Announcement> slice = start >= filtered.length
+        ? const <Announcement>[]
+        : filtered.skip(start).take(perPage).toList(growable: false);
+    return _gate.respond(
+      Paginated<Announcement>(
+        items: slice,
+        page: page,
+        perPage: perPage,
+        total: filtered.length,
+        totalPages: filtered.isEmpty
+            ? 1
+            : ((filtered.length + perPage - 1) ~/ perPage),
+        hasMore: start + slice.length < filtered.length,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<List<NewsCategory>>> listCategories() {
+    return _gate.respond(NewsCategory.catalogue);
   }
 
   @override

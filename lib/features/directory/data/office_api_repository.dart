@@ -7,9 +7,10 @@ import '../domain/office.dart';
 /// Public office pages on `GET /offices` and `GET /offices/{slug}`.
 ///
 /// The list is unauthenticated. A row carries the contract fields only:
-/// name, slug, description, head, hours, phone, email, address, category.
-/// Photographs, service lines and the SAMPLE tag stay on the dev-mock
-/// fixture, because this response does not publish them.
+/// name, slug, short_name, description, head, hours, phone, email, address,
+/// category. `short_name` is a string or null. Photographs, service lines
+/// and the SAMPLE tag stay on the dev-mock fixture, because this response
+/// does not publish them.
 class OfficeApiRepository {
   const OfficeApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -27,10 +28,7 @@ class OfficeApiRepository {
             method: HttpMethod.get,
             path: 'offices',
             authenticated: false,
-            query: <String, String>{
-              'limit': '50',
-              'cursor': ?cursor,
-            },
+            query: <String, String>{'limit': '50', 'cursor': ?cursor},
             decode: _decodeList,
           );
       switch (response) {
@@ -99,10 +97,11 @@ class OfficeApiRepository {
     final String address = _text(json['address']);
     final String head = _text(json['head']);
     final String category = _text(json['category']);
+    final String? shortName = _optional(json['short_name']);
     return Office(
       id: slug,
       serverId: id,
-      shortName: name,
+      shortName: shortName ?? name,
       name: name,
       listName: name,
       category: category,
@@ -146,4 +145,11 @@ class OfficeApiRepository {
   }
 
   static String _text(Object? value) => value is String ? value : '';
+
+  /// `short_name` is present and null when the office has no short label.
+  static String? _optional(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
 }

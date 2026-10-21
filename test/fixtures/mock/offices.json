@@ -10,6 +10,7 @@
   "offices": [
     {
       "id": "mswdo",
+      "short_name": "MSWDO",
       "shortName": "MSWDO",
       "name": "Municipal Social Welfare and Development Office",
       "listName": "MSWDO",
@@ -86,6 +87,7 @@
     },
     {
       "id": "treasury",
+      "short_name": "Treasury Office",
       "shortName": "Treasury",
       "name": "Municipal Treasurer's Office",
       "listName": "Municipal Treasurer's Office",
@@ -149,6 +151,7 @@
     },
     {
       "id": "assessor",
+      "short_name": null,
       "shortName": "Assessor",
       "name": "Municipal Assessor's Office",
       "listName": "Municipal Assessor's Office",
@@ -212,6 +215,7 @@
     },
     {
       "id": "bplo",
+      "short_name": "BPLO",
       "shortName": "BPLO",
       "name": "Business Permits and Licensing Office",
       "listName": "Business Permits and Licensing Office (BPLO)",
@@ -279,6 +283,7 @@
     },
     {
       "id": "mdrrmo",
+      "short_name": "MDRRMO",
       "shortName": "MDRRMO",
       "name": "MDRRMO & Sagip Taytay Command Center",
       "listName": "MDRRMO & Sagip Taytay Command Center",
@@ -407,6 +412,7 @@
     },
     {
       "id": "pio",
+      "short_name": "PIO",
       "shortName": "PIO",
       "name": "Public Information Office",
       "listName": "Public Information Office",
@@ -537,6 +543,7 @@
     },
     {
       "id": "health",
+      "short_name": "MHO",
       "shortName": "Health Office",
       "name": "Municipal Health Office",
       "listName": "Municipal Health Office",

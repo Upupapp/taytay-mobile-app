@@ -236,34 +236,9 @@ class _ListHeader extends StatelessWidget {
             _HeaderSeal(),
             SizedBox(width: 11),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Directory',
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      color: Colors.white,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  Text(
-                    'Municipal offices',
-                    maxLines: 1,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      height: 1.2,
-                      color: Color(0xCCFFFFFF),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
+              child: MunicipalHeaderTitles(
+                title: 'Directory',
+                subtitle: 'Municipal offices',
               ),
             ),
             SizedBox(width: 11),

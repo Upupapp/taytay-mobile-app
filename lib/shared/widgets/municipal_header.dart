@@ -61,33 +61,95 @@ class MunicipalHeader extends StatelessWidget {
                   ),
             const SizedBox(width: 11),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.headerTitle.copyWith(
-                      color: Colors.white,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.headerSubtitle.copyWith(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ],
-              ),
+              child: MunicipalHeaderTitles(title: title, subtitle: subtitle),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Title is a 16 dp block. The subtitle is 11 dp text on a 16 dp line.
+///
+/// The designs put the title ink at y 157 and the subtitle at y 229 on a
+/// 3× frame. A 1.2 line box sat the title low and the subtitle high.
+class MunicipalHeaderTitles extends StatelessWidget {
+  const MunicipalHeaderTitles({
+    required this.title,
+    required this.subtitle,
+    super.key,
+  });
+
+  final String title;
+  final String subtitle;
+
+  static const TextStyle _title = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    height: 1,
+    color: Colors.white,
+    decoration: TextDecoration.none,
+  );
+
+  static const TextStyle _subtitle = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w600,
+    height: 1,
+    color: Color(0xCCFFFFFF),
+    decoration: TextDecoration.none,
+  );
+
+  static const StrutStyle _titleStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 16,
+    height: 1,
+    forceStrutHeight: true,
+  );
+
+  static const StrutStyle _subtitleStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 11,
+    height: 16 / 11,
+    leadingDistribution: TextLeadingDistribution.even,
+    forceStrutHeight: true,
+  );
+
+  static const TextHeightBehavior _block = TextHeightBehavior(
+    applyHeightToFirstAscent: false,
+    applyHeightToLastDescent: false,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        // 14 image px at the 3× capture. The same amount above the title
+        // keeps the title ink where it is while the subtitle moves down
+        // onto the design's y 229 line. The column stays inside the 44 dp row.
+        const SizedBox(height: 14 / 3),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _title,
+          strutStyle: _titleStrut,
+          textHeightBehavior: _block,
+        ),
+        const SizedBox(height: 14 / 3),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: _subtitle,
+          strutStyle: _subtitleStrut,
+          textHeightBehavior: _block,
+        ),
+      ],
     );
   }
 }
