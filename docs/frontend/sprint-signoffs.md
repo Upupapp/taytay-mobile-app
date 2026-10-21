@@ -100,10 +100,15 @@ S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comp
 | 02-09 Submitted | 4.98% (147674/2962440) | Sheet top y = 1493, same as the design. |
 | 02-10 Sign-in error | 9.07% (242947/2679696) | Short hall arch. Sheet top 276. |
 | 02-11 Validation | 11.22% (332256/2962440) | White edge 11 device px below the design. |
+| 02-02b Reset code | 9.22% (273184/2962440) | White edge y = 756, same as the design. |
+| 02-04b Code expired | 5.61% (166189/2962440) | White edge y = 900, same as the design. |
+| 02-12 Set new password | 10.41% (308363/2962440) | White edge y = 756, same as the design. |
+| 02-12b Expired reset | 12.18% (360752/2962440) | White edge y = 756, same as the design. |
+| 02-13 Password updated | 4.22% (125140/2962440) | White edge y = 1500, same as the design. |
 
 The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
 
-`flutter analyze` on `lib` and `test` reported `No issues found!`. `flutter test` passed 1550 tests, with 3 skipped (the recording tag).
+`flutter analyze` on `lib` and `test` reported `No issues found!`. `flutter test` passed 1556 tests, with 3 skipped (the recording tag). `02-12`, `02-12b`, and `02-13` are the designed screens.
 
 ### S2 deviations
 

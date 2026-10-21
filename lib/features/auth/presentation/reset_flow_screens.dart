@@ -280,19 +280,33 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                 ),
               ),
               const SizedBox(width: 8),
-              TextButton(
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  foregroundColor: const Color(0xFF5B6680),
-                  textStyle: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    fontWeight: AppTypography.strong,
+              SizedBox(
+                width: 152,
+                height: 18,
+                child: OverflowBox(
+                  maxHeight: 48,
+                  maxWidth: 180,
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                      minimumSize: const Size(48, 48),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: EdgeInsets.zero,
+                      foregroundColor: const Color(0xFF5B6680),
+                      disabledForegroundColor: const Color(0xFF5B6680),
+                      textStyle: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        fontWeight: AppTypography.strong,
+                      ),
+                    ),
+                    onPressed: _canResend ? _resend : null,
+                    child: Text(
+                      _canResend
+                          ? 'Ipadala muli'
+                          : 'Ipadala muli sa $_resendLabel',
+                    ),
                   ),
-                ),
-                onPressed: _canResend ? _resend : null,
-                child: Text(
-                  _canResend ? 'Ipadala muli' : 'Ipadala muli sa $_resendLabel',
                 ),
               ),
             ],
