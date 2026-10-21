@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/app_dependencies.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/intent/resident_intent.dart';
 import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
@@ -151,7 +152,7 @@ abstract final class AccessGateSheet {
         privacyNote: strings.gateSheetSignInPrivacy,
         primary: AppButton(
           label: strings.gateSheetSignInAction,
-          icon: Icons.login,
+          icon: TaytayIcons.logIn,
           onPressed: () {
             Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
             router.goNamed(AppRoute.signIn.routeName);
@@ -182,6 +183,7 @@ abstract final class AccessGateSheet {
   ) {
     return showModalBottomSheet<GateOutcome>(
       context: context,
+      useRootNavigator: true,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => UnverifiedGateSheet(
@@ -190,12 +192,10 @@ abstract final class AccessGateSheet {
           Navigator.of(sheetContext).pop(GateOutcome.goingToVerify);
           router.goNamed(AppRoute.verification.routeName);
         },
-        onDismiss: () =>
-            Navigator.of(sheetContext).pop(GateOutcome.dismissed),
+        onDismiss: () => Navigator.of(sheetContext).pop(GateOutcome.dismissed),
       ),
     );
   }
-
 }
 
 class _GateBody extends StatelessWidget {

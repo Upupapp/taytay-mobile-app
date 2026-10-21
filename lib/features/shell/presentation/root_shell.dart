@@ -106,6 +106,12 @@ class RootShell extends StatelessWidget {
   }
 }
 
+/// Compose and a thread fill the phone. The confirmation keeps the bar.
+bool _fullScreen(String path) {
+  if (path.startsWith('/messages/')) return true;
+  return path.contains('/message') && !path.endsWith('/message/sent');
+}
+
 /// Compact: bottom navigation.
 class _BarScaffold extends StatelessWidget {
   const _BarScaffold({
@@ -121,6 +127,9 @@ class _BarScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double bottomInset = MediaQuery.paddingOf(context).bottom;
+    final String path = GoRouterState.of(context).uri.path;
+    // Compose and a thread cover the phone. The sent screen keeps the bar.
+    final bool showBar = !_fullScreen(path);
     return Scaffold(
       // The banner sits above the branch content rather than inside each
       // screen: reachability is one app-wide fact, and a per-screen banner is
@@ -134,20 +143,21 @@ class _BarScaffold extends StatelessWidget {
                 Positioned.fill(
                   child: Padding(
                     padding: EdgeInsets.only(
-                      bottom: ShellTabBar.barHeight + bottomInset,
+                      bottom: showBar ? ShellTabBar.barHeight + bottomInset : 0,
                     ),
                     child: child,
                   ),
                 ),
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: bottomInset,
-                  child: ShellTabBar(
-                    selectedIndex: selectedIndex,
-                    onSelected: onSelected,
+                if (showBar)
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: bottomInset,
+                    child: ShellTabBar(
+                      selectedIndex: selectedIndex,
+                      onSelected: onSelected,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

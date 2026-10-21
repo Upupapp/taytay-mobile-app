@@ -17,6 +17,7 @@ import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
 import 'package:taytay_resident/features/services/domain/service_catalog_repository.dart';
+import 'package:taytay_resident/features/services/presentation/services_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/network_status_views.dart';
 import 'package:taytay_resident/shared/widgets/remote_image.dart';
@@ -204,6 +205,23 @@ Future<BootedOffline> bootOffline(
   return (dependencies: dependencies, monitor: monitor, catalog: catalog);
 }
 
+/// The service catalogue is no longer the Directory tab. These cases still
+/// prove its stale-cache behaviour by mounting the screen on the same
+/// dependencies the boot just built.
+Future<void> showServiceCatalogue(
+  WidgetTester tester,
+  BootedOffline booted,
+) async {
+  await tester.pumpWidget(
+    AppDependenciesScope(
+      dependencies: booted.dependencies,
+      child: localised(const ServicesScreen()),
+    ),
+  );
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
 void main() {
   // ── The banner earns its place before it takes it ───────────────────────
 
@@ -313,10 +331,13 @@ void main() {
           .join(' ')
           .toLowerCase();
 
-      // "No services" would be a lie: the app does not know what is there.
+      // "No services" or "no offices" would be a lie: the app does not know
+      // what is there. The directory may still name numbers that ship on
+      // the phone, and it has to say the list itself did not load.
       expect(rendered, isNot(contains('no services')));
+      expect(rendered, isNot(contains('no offices')));
       expect(rendered, isNot(contains('sent')));
-      expect(rendered, isNot(contains('saved')));
+      expect(rendered, contains("can't load the directory"));
     });
 
     testWidgets('the unsent notice never says "saved"', (tester) async {
@@ -597,10 +618,13 @@ void main() {
     testWidgets('a failed first load adopts the last known catalogue', (
       tester,
     ) async {
-      await bootOffline(
+      final booted = await bootOffline(
         tester,
         beforeLoad: (catalog) => catalog.lastKnown = remembered(),
       );
+      // /services is the office directory. The service catalogue still falls
+      // back; it is no longer the tab, so the assertion mounts that screen.
+      await showServiceCatalogue(tester, booted);
 
       // A guest opening the app on a weak connection is exactly the person the
       // public content is for.
@@ -612,10 +636,11 @@ void main() {
     });
 
     testWidgets('and states when the office actually answered', (tester) async {
-      await bootOffline(
+      final booted = await bootOffline(
         tester,
         beforeLoad: (catalog) => catalog.lastKnown = remembered(),
       );
+      await showServiceCatalogue(tester, booted);
 
       // The cache's own timestamp, not the moment the app gave up.
       expect(

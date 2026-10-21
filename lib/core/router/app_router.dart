@@ -12,6 +12,7 @@ import '../../features/auth/presentation/sign_in_help_screen.dart';
 import '../../features/auth/presentation/sign_in_screen.dart';
 import '../../features/auth/presentation/too_many_attempts_screen.dart';
 import '../../features/credential/presentation/digital_id_screen.dart';
+import '../../features/directory/presentation/directory_screen.dart';
 import '../../features/events/presentation/event_detail_screen.dart';
 import '../../features/events/presentation/event_registration_screen.dart';
 import '../../features/events/presentation/events_screen.dart';
@@ -35,7 +36,6 @@ import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/services/presentation/service_detail_screen.dart';
-import '../../features/services/presentation/services_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
@@ -94,8 +94,10 @@ GoRouter buildAppRouter({
   List<NavigatorObserver> observers = const <NavigatorObserver>[],
   bool allowDevRoutes = false,
 }) {
+  final GlobalKey<NavigatorState> rootNavigatorKey =
+      navigatorKey ?? GlobalKey<NavigatorState>();
   return GoRouter(
-    navigatorKey: navigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: initialLocation ?? AppRoute.splash.path,
     // Observation only. An observer is told where navigation went; it never
     // decides. The guard remains the single source of navigation truth.
@@ -205,7 +207,7 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: AppRoute.services.path,
                 name: AppRoute.services.routeName,
-                builder: (context, state) => const ServicesScreen(),
+                builder: (context, state) => const DirectoryScreen(),
                 routes: <RouteBase>[
                   GoRoute(
                     path: ':serviceCode',
@@ -215,6 +217,31 @@ GoRouter buildAppRouter({
                     ),
                   ),
                 ],
+              ),
+              // Office pages stay on this branch so the bar remains. Compose
+              // and the thread are full-screen and stay outside the shell.
+              GoRoute(
+                path: AppRoute.officeDetail.path,
+                name: AppRoute.officeDetail.routeName,
+                builder: (context, state) => OfficeDetailScreen(
+                  officeId: state.pathParameters['officeId'] ?? '',
+                ),
+              ),
+              GoRoute(
+                path: AppRoute.officeMessageSent.path,
+                name: AppRoute.officeMessageSent.routeName,
+                builder: (context, state) => MessageSentScreen(
+                  officeId: state.pathParameters['officeId'] ?? '',
+                ),
+              ),
+              // Compose stays on this branch so the push does not collide with
+              // the office page on the root navigator. The shell hides the bar.
+              GoRoute(
+                path: AppRoute.officeCompose.path,
+                name: AppRoute.officeCompose.routeName,
+                builder: (context, state) => OfficeComposeScreen(
+                  officeId: state.pathParameters['officeId'] ?? '',
+                ),
               ),
             ],
           ),
@@ -333,8 +360,7 @@ GoRouter buildAppRouter({
         path: AppRoute.verification.path,
         name: AppRoute.verification.routeName,
         builder: (context, state) {
-          final bool pending =
-              state.uri.queryParameters['status'] == 'pending';
+          final bool pending = state.uri.queryParameters['status'] == 'pending';
           return VerificationScreen(preferPending: pending);
         },
         routes: <RouteBase>[
@@ -346,16 +372,14 @@ GoRouter buildAppRouter({
           GoRoute(
             path: 'profile',
             name: AppRoute.residentProfile.routeName,
-            builder: (context, state) => const ProfileWizardScreen(
-              step: ProfileWizardStep.overview,
-            ),
+            builder: (context, state) =>
+                const ProfileWizardScreen(step: ProfileWizardStep.overview),
             routes: <RouteBase>[
               GoRoute(
                 path: 'personal',
                 name: AppRoute.residentProfilePersonal.routeName,
-                builder: (context, state) => const ProfileWizardScreen(
-                  step: ProfileWizardStep.personal,
-                ),
+                builder: (context, state) =>
+                    const ProfileWizardScreen(step: ProfileWizardStep.personal),
               ),
               GoRoute(
                 path: 'address',
@@ -367,9 +391,8 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: 'review',
                 name: AppRoute.residentProfileReview.routeName,
-                builder: (context, state) => const ProfileWizardScreen(
-                  step: ProfileWizardStep.review,
-                ),
+                builder: (context, state) =>
+                    const ProfileWizardScreen(step: ProfileWizardStep.review),
               ),
               GoRoute(
                 path: 'submitted',
@@ -468,39 +491,6 @@ GoRouter buildAppRouter({
         builder: (context, state) => const PasswordUpdatedScreen(),
       ),
       GoRoute(
-        path: AppRoute.officeDetail.path,
-        name: AppRoute.officeDetail.routeName,
-        builder: (context, state) => FoundationPlaceholderScreen(
-          title: 'Office',
-          body:
-              'Office pages are public information for residents: contact, '
-              'hours and services. The page for '
-              '${state.pathParameters['officeId'] ?? 'this office'} '
-              'arrives in a later sprint.',
-        ),
-      ),
-      GoRoute(
-        path: AppRoute.officeCompose.path,
-        name: AppRoute.officeCompose.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Message an office',
-          body:
-              'Writing to an office is a sample only until the LGU API has a '
-              'messaging endpoint. Nothing sent from a later screen leaves '
-              'this phone in a dev mock.',
-        ),
-      ),
-      GoRoute(
-        path: AppRoute.officeMessageSent.path,
-        name: AppRoute.officeMessageSent.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Message recorded',
-          body:
-              'A confirmation for a sample message. It is not a receipt from '
-              'Taytay LGU.',
-        ),
-      ),
-      GoRoute(
         path: AppRoute.messagesInbox.path,
         name: AppRoute.messagesInbox.routeName,
         builder: (context, state) => const FoundationPlaceholderScreen(
@@ -513,11 +503,8 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.messageThread.path,
         name: AppRoute.messageThread.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Message',
-          body:
-              'A thread view arrives in a later sprint. This route exists so '
-              'access rules can be tested.',
+        builder: (context, state) => OfficeThreadScreen(
+          threadId: state.pathParameters['threadId'] ?? '',
         ),
       ),
       GoRoute(

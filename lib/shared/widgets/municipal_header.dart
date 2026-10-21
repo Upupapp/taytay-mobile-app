@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/brand_assets.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
 import 'taytay_back_button.dart';
@@ -12,12 +13,17 @@ class MunicipalHeader extends StatelessWidget {
     required this.title,
     required this.subtitle,
     this.onBack,
+    this.plainSeal = false,
     super.key,
   });
 
   final String title;
   final String subtitle;
   final VoidCallback? onBack;
+
+  /// Directory headers draw the seal in a white circle with no gold ring.
+  /// Welcome and the woven header keep the ring.
+  final bool plainSeal;
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +52,13 @@ class MunicipalHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 11),
-            const FramedSeal(diameter: 38, shadowBlur: 8, shadowOffsetY: 2),
+            plainSeal
+                ? const _PlainSeal()
+                : const FramedSeal(
+                    diameter: 38,
+                    shadowBlur: 8,
+                    shadowOffsetY: 2,
+                  ),
             const SizedBox(width: 11),
             Expanded(
               child: Column(
@@ -74,6 +86,35 @@ class MunicipalHeader extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 38 dp white circle, 2 dp pad, unaltered seal. No gold ring.
+class _PlainSeal extends StatelessWidget {
+  const _PlainSeal();
+
+  @override
+  Widget build(BuildContext context) {
+    const BrandAsset seal = BrandAssets.municipalSeal;
+    return Semantics(
+      label: seal.semanticLabel,
+      image: true,
+      child: Container(
+        width: 38,
+        height: 38,
+        padding: const EdgeInsets.all(2),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+        ),
+        child: Image.asset(
+          seal.assetPath,
+          fit: BoxFit.contain,
+          filterQuality: FilterQuality.high,
+          semanticLabel: seal.semanticLabel,
         ),
       ),
     );

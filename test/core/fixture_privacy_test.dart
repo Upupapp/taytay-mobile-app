@@ -16,7 +16,13 @@ void main() {
     expect(combined, contains('@example.com'));
     expect(combined, contains('SAMPLE'));
     expect(combined, contains('0917-000-0000'));
-    expect(combined.toLowerCase(), isNot(contains('password')));
+    // The compose screens warn "Don't share passwords or OTPs." That sentence
+    // is the design's privacy line, not a credential stored in the fixture.
+    final String withoutWarning = combined.replaceAll(
+      "Don't share passwords or OTPs.",
+      '',
+    );
+    expect(withoutWarning.toLowerCase(), isNot(contains('password')));
     expect(combined, isNot(contains('sample-session-token')));
   });
 }

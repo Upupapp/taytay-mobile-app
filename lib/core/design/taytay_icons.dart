@@ -101,6 +101,9 @@ abstract final class TaytayIcons {
 
   static const IconData lock = IconData(57611, fontFamily: 'Lucide');
 
+  /// Lucide `log-in`. The sign-in gate's primary action.
+  static const IconData logIn = IconData(57613, fontFamily: 'Lucide');
+
   static const IconData calendar = IconData(57443, fontFamily: 'Lucide');
 
   static const IconData circleAlert = IconData(57463, fontFamily: 'Lucide');
@@ -122,6 +125,15 @@ abstract final class TaytayIcons {
   static const IconData circleUser = IconData(58465, fontFamily: 'Lucide');
 
   static const IconData send = IconData(57682, fontFamily: 'Lucide');
+
+  /// Lucide `paperclip`. The thread composer attach mark.
+  static const IconData paperclip = IconData(57645, fontFamily: 'Lucide');
+
+  /// Lucide `smartphone`. The MDRRMO app action.
+  static const IconData smartphone = IconData(57699, fontFamily: 'Lucide');
+
+  /// Lucide `message-square`. Facebook rows on an office page.
+  static const IconData messageSquare = IconData(57623, fontFamily: 'Lucide');
 
   static const IconData wifiOff = IconData(57775, fontFamily: 'Lucide');
 

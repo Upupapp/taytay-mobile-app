@@ -9,7 +9,8 @@ This file records that the words were looked for. It does not invent them.
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
 | S3 Verification | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/5 | 29e5605fd00e75c942606b11bfc0c4a9ac769049 | The owner wrote "S3 is approved". Pull request #5 is merged. |
-| S4 Shell and Home | Not approved | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 1efc04e44dc1f7b4422e93d67d43d22112635911 | No approval words. |
+| S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
+| S5 Directory | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/7 | cb8ae2d329333fa25c3a19860415c94cf28c6350 | No approval words. |
 
 ## S0 pixel match
 
@@ -151,7 +152,7 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 ## S4 Shell and Home
 
-S4 is not approved. This section records the capture. It does not record approval words.
+Ui/Ux Taytay approved S4 at tip `68f5687a086ae536302ced32c88a77e751ef8502`. Pull request #6 was merged into main with a merge commit, `d2636260207fb07c7cbcf2eadcfcf4529b9369ee`. This section records the capture that was approved.
 
 The phone bar is Home, Directory, Balita, Tulong, and My Account in every session state. Balita is the raised centre disc: a 60 dp navy disc inside a 48 dp hit, lifted above the 90 dp bar. Events is a full-screen route with a back button. Programs is a root and has no back button. Hotlines and notifications stay on the Home branch, so the bar remains with Home selected. Each tab keeps its own back stack. `lib/features/shell`, `lib/features/home`, and `lib/features/notifications` contain no `Transform.translate`.
 
@@ -170,13 +171,59 @@ The line measure counts every dark run from the top of the frame. A run is a row
 | 04-07 Banner, Directory | 18 / 18 | 2 | 6.10% (180601/2962440) |
 | 04-08 Notifications | 26 / 26 | 2 | 4.20% (124472/2962440) |
 
-On guest home the wordmark reads BAYAN NG TAYTAY in full, at letter-spacing 2.2. Sign in is the label plus 16 dp of horizontal padding, 44 dp tall. Create account is the full label at 14/800 plus 14 dp of horizontal padding, also 44 dp tall, on one line. The 1.5 dp stroke is painted in front of that padding. Both keep a 48 dp hit. The guest title stays on one line. The sub-line is 12/500 with line-height 1.5 and a 2 dp gap under the title, and the tile uses the Lucide user glyph. The unverified hero sits on the design row: the spacer under the pending card is 14 dp plus two thirds of a logical pixel, which is 2 device px. S4 is still not approved.
+On guest home the wordmark reads BAYAN NG TAYTAY in full, at letter-spacing 2.2. Sign in is the label plus 16 dp of horizontal padding, 44 dp tall. Create account is the full label at 14/800 plus 14 dp of horizontal padding, also 44 dp tall, on one line. The 1.5 dp stroke is painted in front of that padding. Both keep a 48 dp hit. The guest title stays on one line. The sub-line is 12/500 with line-height 1.5 and a 2 dp gap under the title, and the tile uses the Lucide user glyph. The unverified hero sits on the design row: the spacer under the pending card is 14 dp plus two thirds of a logical pixel, which is 2 device px. S4 is approved at that tip.
 
 The wordmark row sits 2 dp lower than the previous capture. The gap under it is 2 dp shorter, so the lines below the header stay put. Each capture frame has its own key, so `04-06` is the Tulong slide and `04-07` is the Directory slide. The hero photograph occupies the right 58% of the card. Its focus is centre 35%, 30%, and 60% on the three slides. The navy overlay and the gold arc stay. The eyebrow icons are newspaper, hand-heart, and briefcase. Directory uses Lucide building-2 and Tulong uses hand-heart, in the tab bar and on the quick tiles. The tab word is `navTulong`. The page background has the design's top-right gold radial, about 16% opacity, spreading 120% by 60% from the corner. The refresh screen does not. `04-04` and `04-08` keep their back buttons: every page has one, and the designs will be updated to match.
 
 `test/features/s4_tap_target_test.dart` asserts a 48 dp hit on the centre disc, every tab, the bell, the avatar, the hero call to action, the four quick tiles, and every hotline call button. Hero slides are read from `assets/home/slides.json`. A live `GET /home` can replace a slide's title and route when it returns banners. The photograph stays the bundled asset. News rows and hotline numbers in a dev mock still come from `test/fixtures/mock/home_catalogue.json`.
 
 Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s4/recordings/s4-tabs.mp4` (406679 bytes, 41 frames) and `s4-carousel.mp4` (297621 bytes, 38 frames). The tab clip opens a Directory service, switches to Home, and comes back to that same service. These files are new captures. Their sizes are not the previous S4 recordings and not the S3 recordings.
+
+## S5 Directory
+
+S5 is not approved. This section records the capture. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/7. The directory commit is `cb8ae2d329333fa25c3a19860415c94cf28c6350`.
+
+Office pages are public resident information (decision D11). They are not a staff selector, not a role, and not an office a resident signs in as. One `DirectoryCanvas` paints the list, every office, compose, the sent screen, and the thread. A dev mock reads `test/fixtures/mock/offices.json`. Every other build reads `GET /offices` and `GET /offices/{slug}`. There is no per-office widget and no office copy in Dart.
+
+The line measure counts every dark run from the top of the frame. A run is a row whose pixels from x 60 to 1110 average below 110, kept when the run is at least 8 rows. Nothing is dropped for being in the header. Side-by-sides are design | render | heat in `test/goldens/compare/s5/`. On this capture every screen has the same run count as the design, and the in-order pairing is at most 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. The office photographs stay in the count. `lib/features/directory` contains no `Transform.translate`.
+
+| Screen | Lines (build / design) | Max deviation | Mismatch |
+| --- | --- | --- | --- |
+| 05-01 Office list | 24 / 24 | 0.67 | 3.45% (102181/2962440) |
+| 05-02 Office detail, BPLO | 18 / 18 | 0.67 | 4.02% (119012/2962440) |
+| 05-03 Compose, BPLO | 13 / 13 | 0.67 | 2.28% (67555/2962440) |
+| 05-04 Message thread | 17 / 17 | 0.67 | 4.65% (137884/2962440) |
+| 05-05 Search, cedula and empty | 20 / 20 | 0.67 | 2.18% (64556/2962440) |
+| 05-06 Loading | 7 / 7 | 0.33 | 3.38% (100148/2962440) |
+| 05-07 Offline | 13 / 13 | 0.67 | 3.03% (89781/2962440) |
+| 05-08 MSWDO | 18 / 18 | 0.67 | 4.09% (121306/2962440) |
+| 05-09 Treasurer | 17 / 17 | 0.67 | 3.61% (106871/2962440) |
+| 05-10 Assessor | 17 / 17 | 0.67 | 3.75% (111200/2962440) |
+| 05-11 MDRRMO | 16 / 16 | 0.67 | 4.17% (123561/2962440) |
+| 05-12 PESO | 17 / 17 | 0.67 | 4.58% (135550/2962440) |
+| 05-13 PIO | 17 / 17 | 0.67 | 3.83% (113334/2962440) |
+| 05-14 Youth Development | 19 / 19 | 0.67 | 4.33% (128307/2962440) |
+| 05-15 Health Office | 16 / 16 | 0.67 | 4.37% (129348/2962440) |
+| 05-16 Message sent | 15 / 15 | 0.67 | 2.84% (84037/2962440) |
+| 05-17 Compose, MSWDO | 15 / 15 | 0.67 | 2.47% (73028/2962440) |
+| 05-18 Compose, Treasury | 13 / 13 | 0.67 | 2.05% (60729/2962440) |
+| 05-19 Compose, Assessor | 12 / 12 | 0.67 | 2.05% (60598/2962440) |
+| 05-20 Compose, PESO | 11 / 11 | 0.67 | 2.04% (60510/2962440) |
+| 05-21 Compose, PIO | 12 / 12 | 0.67 | 2.12% (62895/2962440) |
+| 05-22 Compose, TYDO | 12 / 12 | 0.67 | 2.02% (59697/2962440) |
+| 05-23 Compose, Health Office | 13 / 13 | 0.67 | 2.14% (63296/2962440) |
+
+A guest who taps Message goes to sign-in. A signed-in unverified resident gets the S3 gate sheet (`03-04`). A verified resident opens compose. The route stays verified-only, so a direct link still redirects. Search on the list and on `05-05` is a text field and filters by name and by service. Compose has a topic picker and a message field, and posts `office_id`, `subject`, and `body`. An empty message is refused. A `403` on send refetches `GET /me` and, when the tier is no longer verified, opens `03-04`. The sent screen uses the office on the route. The thread loads through `GET /threads/{id}` and `GET /threads/{id}/messages`. MDRRMO has Call 24/7, Directions, and App. It has no Message action. Dev builds (`TAYTAY_DATA=mock`) send through `MockOfficeMessagingRepository`. Any other build calls `POST /threads`. The resident never sees the server's error message.
+
+Facts the LGU has not confirmed stay in the fixture and wear the SAMPLE tag: Assessor location, Tax Declaration copies, and property reassessment; PESO vacancies and employment counselling; PIO location and media coverage; Youth SK coordination. The thread is marked SAMPLE. No sample sentence is hardcoded in Dart.
+
+The header seal is the municipal seal on a white pad, with no gold ring. Back buttons are a 44 dp disc inside a 48 dp hit. `test/features/s5_directory_test.dart` covers the catalogue, the 48 dp hits, the back button, and Message from guest, unverified, and verified.
+
+The frame for `05-04` still reads the fixture's `day` field. The live thread screen formats the message time in Manila time and does not take the chip from the clock. The `05-04` comparison uses the updated design (`18_v_Fsh4K51mZwb5Dlp09br6TdDhSdqx`). The bubble layout was not changed.
+
+The offline saved list is a fixed emergency default: MDRRMO, then MSWDO. It is not read from storage and it is not the last list the phone fetched.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s5/recordings/s5-office.mp4` (956794 bytes, 29 frames), `s5-message.mp4` (1277487 bytes, 78 frames), and `s5-gate.mp4` (845421 bytes, 31 frames). The office clip opens BPLO and comes back to the list. The message clip types a search, opens BPLO, types a message, and sends. The gate clip is a guest tapping Message and reaching sign-in, with the Lucide log-in mark on the button. These sizes are not the previous captures. `flutter analyze` was clean. `flutter test` passed 1618 tests, with 9 skipped (the recording tag).
 
 ## Contract gaps after the Node OpenAPI
 
