@@ -107,6 +107,8 @@ enum ResidentCapability {
   ),
 
   // --- Verified: acts on the resident's civil record. -----------------------
+  /// `GET /me/digital-id` is on the contract and the repository calls it.
+  /// The screen is still the placeholder, so the tile stays planned.
   holdDigitalId(
     AccessRequirement.verified,
     'Hold your Taytay digital ID',
@@ -149,27 +151,18 @@ enum ResidentCapability {
     route: AppRoute.requestRequirements,
   ),
 
-  /// The household or family summary the Master Command asks for, **withheld**.
+  /// The caller's household.
   ///
-  /// The committed contract has exactly one household row —
-  /// `GET /api/v1/households/{household_id}` — and it is a **staff** route
-  /// requiring the `resident.view` permission under a role scope, with the
-  /// sensitivity note "member list is other people's data — audited read".
-  /// There is no `/me/household`.
-  ///
-  /// A household summary is other residents' personal data. Building it against
-  /// the staff route would mean this app asking for a permission it must never
-  /// hold; building it against an invented `/me/` route would mean shipping a
-  /// screen whose contract nobody has agreed, for the most sensitive collection
-  /// in the system. So the capability is declared and reported unavailable,
-  /// which is the honest state and the one a future TAB can flip in one line.
+  /// `GET /households/current` and the member, leave, transfer, and invitation
+  /// routes are on the contract. The repository calls those. It does not call
+  /// the barangay-wide list. The screen still shows the older summary and does
+  /// not render members, so this tile stays planned.
   viewHouseholdSummary(
     AccessRequirement.verified,
     'See your household summary',
     BackendAvailability.planned,
-    // TAB 13 gave it a screen. The capability stays `planned` because no
-    // citizen endpoint exists — the screen explains that honestly rather than
-    // showing an invented family — but access alone decides whether it opens.
+    // The routes are called. The screen still shows the older summary, so the
+    // tile stays planned. Access alone decides whether that screen opens.
     route: AppRoute.household,
   );
 

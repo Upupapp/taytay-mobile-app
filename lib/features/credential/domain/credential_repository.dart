@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../../../core/result/result.dart';
+import 'digital_id.dart';
 
 /// The LGU ID lifecycle.
 ///
@@ -132,4 +133,42 @@ abstract interface class CredentialRepository {
   /// credential, which is the failure mode a verification system exists to
   /// prevent.
   Future<Result<PresentationArtifact>> requestPresentationArtifact();
+
+  /// The signed-in resident's card and its current QR.
+  ///
+  /// `GET /api/v1/me/digital-id` answers for a verified resident. Anyone else
+  /// receives 403, which stays a [ForbiddenFailure]. When the QR already held
+  /// is inside [digitalIdQrRefreshLead] of its `expires_at`, the next call
+  /// fetches a replacement before returning.
+  Future<Result<DigitalIdCard>> loadDigitalId({DateTime? now});
+
+  /// Staff scan of a presented QR.
+  ///
+  /// The route is `POST /api/v1/digital-id/verify`. It belongs to the staff
+  /// scanner. This interface names the operation. The resident client does
+  /// not call it.
+  Future<Result<DigitalIdHolder>> verifyScannedToken({required String token});
+}
+
+/// The card fields the older credential type still carries.
+ResidentCredential credentialFromDigitalId(DigitalIdCard card) {
+  return ResidentCredential(
+    id: card.id,
+    state: switch (card.status) {
+      DigitalIdStatus.active => CredentialLifecycleState.active,
+      DigitalIdStatus.suspended => CredentialLifecycleState.suspended,
+      DigitalIdStatus.revoked => CredentialLifecycleState.revoked,
+      null => null,
+    },
+    rawState: card.rawStatus,
+    issuedAt: card.issuedAt,
+    expiresAt: card.expiresAt,
+  );
+}
+
+/// The QR, when the card has one.
+PresentationArtifact? presentationFromDigitalId(DigitalIdCard card) {
+  final DigitalIdQr? code = card.qr;
+  if (code == null || code.token.isEmpty) return null;
+  return PresentationArtifact(payload: code.token, expiresAt: code.expiresAt);
 }

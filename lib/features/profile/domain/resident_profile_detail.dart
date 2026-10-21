@@ -32,6 +32,8 @@ class ResidentProfileDetail {
     this.rejectionReason,
     this.closed = false,
     this.closedAt,
+    this.street,
+    this.purok,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -66,6 +68,13 @@ class ResidentProfileDetail {
   final bool closed;
 
   final DateTime? closedAt;
+
+  /// Structured street line from `UserProfile.street`. Not the free-text
+  /// `address`, and not shown on the account wizard.
+  final String? street;
+
+  /// `UserProfile.purok`. Held on the profile. Not shown on the account wizard.
+  final String? purok;
 
   /// Who may change [field], preferring the office's answer.
   ///
@@ -117,6 +126,8 @@ class ContactDetailsUpdate {
     this.emailAddress,
     this.streetAddress,
     this.purokOrSitio,
+    this.street,
+    this.purok,
   });
 
   /// `null` means "leave unchanged"; an empty string is not sent.
@@ -131,11 +142,20 @@ class ContactDetailsUpdate {
   final String? streetAddress;
   final String? purokOrSitio;
 
+  /// `ProfilePatch.street`. Separate from [streetAddress], which is sent as
+  /// `address`.
+  final String? street;
+
+  /// `ProfilePatch.purok`. `purok_or_sitio` is not a patch key and is not sent.
+  final String? purok;
+
   bool get isEmpty =>
       (mobileNumber == null || mobileNumber!.isEmpty) &&
       (emailAddress == null || emailAddress!.isEmpty) &&
       (streetAddress == null || streetAddress!.isEmpty) &&
-      (purokOrSitio == null || purokOrSitio!.isEmpty);
+      (purokOrSitio == null || purokOrSitio!.isEmpty) &&
+      (street == null || street!.isEmpty) &&
+      (purok == null || purok!.isEmpty);
 
   /// The fields this update touches. Used to prove, in a test, that it can
   /// never carry anything the resident does not own.

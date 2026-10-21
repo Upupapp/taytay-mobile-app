@@ -85,6 +85,8 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
         ResidentProfileField.purokOrSitio: update.purokOrSitio!,
     },
     idempotencyKey: idempotencyKey,
+    street: update.street,
+    purok: update.purok,
   );
 
   @override
@@ -127,11 +129,15 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     required Map<ResidentProfileField, String> changes,
     required String idempotencyKey,
     String? note,
+    String? street,
+    String? purok,
   }) async {
     final Map<String, Object?> named = <String, Object?>{
       for (final MapEntry<ResidentProfileField, String> entry
           in changes.entries)
         if (_patchKey(entry.key) != null) _patchKey(entry.key)!: entry.value,
+      if (street != null && street.trim().isNotEmpty) 'street': street.trim(),
+      if (purok != null && purok.trim().isNotEmpty) 'purok': purok.trim(),
     };
 
     if (named.isEmpty) {
@@ -239,11 +245,20 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
           : null,
       closed: map['closed'] == true,
       closedAt: DateTime.tryParse(closedAt is String ? closedAt : '')?.toUtc(),
+      street: _optionalText(map['street']),
+      purok: _optionalText(map['purok']),
     );
   }
 
-  /// ProfilePatch names. `purok_or_sitio` is not one of them, so it is omitted.
-  /// `role` and `office_id` are never sent.
+  static String? _optionalText(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// ProfilePatch names. `street` and `purok` are sent when the update carries
+  /// them. The older `purok_or_sitio` key is still omitted. `role` and
+  /// `office_id` are never sent.
   static String? _patchKey(ResidentProfileField field) {
     final String? wire = field.wireName;
     if (wire == null) return null;
