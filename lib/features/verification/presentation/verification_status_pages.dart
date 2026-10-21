@@ -37,7 +37,7 @@ class PendingStatusPage extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 const IconTile(
-                  icon: TaytayIcons.clock,
+                  icon: TaytayIcons.hourglass,
                   fill: BrandColors.chipAmberBg,
                   ink: BrandColors.warning,
                   size: 60,

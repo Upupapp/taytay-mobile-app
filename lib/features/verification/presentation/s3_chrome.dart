@@ -134,8 +134,8 @@ const StrutStyle s3BodyStrut = StrutStyle(
 /// In-app header for the verification and profile screens.
 ///
 /// The band is 104 logical px. The back control is the design's translucent
-/// disc: a 44 dp circle at 14% white, with a white chevron, inside a 48 dp
-/// target. These screens have no bell.
+/// disc: a 44 dp circle at 14% white, with a white Lucide arrow-left, inside
+/// a 48 dp target. These screens have no bell.
 class S3Header extends StatelessWidget {
   const S3Header({
     required this.title,

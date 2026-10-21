@@ -140,7 +140,10 @@ class _Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String name = record.displayName;
+    final String name = <String>[
+      record.givenName.trim(),
+      record.familyName.trim(),
+    ].where((String part) => part.isNotEmpty).join(' ');
     final (String chip, StatusTone tone) = switch (record.verificationTier) {
       'verified' => ('Verified', StatusTone.verified),
       'rejected' => ('Needs correction', StatusTone.correction),

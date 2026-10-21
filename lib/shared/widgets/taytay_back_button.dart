@@ -17,8 +17,8 @@ import 'taytay_icon.dart';
 /// both true (decision D3).
 ///
 /// Welcome and sign-in mockups draw this same solid white circle. In-app
-/// mockups draw a 44 px disc at 14% white with a white chevron. Pass
-/// [translucent] for that disc. The default stays the solid circle.
+/// mockups draw a 44 px disc at 14% white with a white Lucide arrow-left.
+/// Pass [translucent] for that disc. The default stays the solid circle.
 class TaytayBackButton extends StatelessWidget {
   const TaytayBackButton({
     this.onPressed,
@@ -34,7 +34,8 @@ class TaytayBackButton extends StatelessWidget {
   /// White circle and navy glyph, for use on a navy header.
   final bool light;
 
-  /// 44 dp disc at 14% white with a white chevron. The S3 header uses this.
+  /// 44 dp disc at 14% white with a white Lucide arrow-left. The S3 header
+  /// uses this.
   final bool translucent;
 
   /// False while a step is busy, so the control cannot be tapped twice.
@@ -99,15 +100,9 @@ class TaytayBackButton extends StatelessWidget {
                 ),
                 child: Center(
                   child: TaytayIcon(
-                    icon: translucent
-                        ? TaytayIcons.chevronLeft
-                        : TaytayIcons.arrowLeft,
+                    icon: TaytayIcons.arrowLeft,
                     semanticLabel: 'Back',
-                    size: translucent
-                        ? 22
-                        : light
-                        ? 20
-                        : IconSizes.sm,
+                    size: translucent || light ? 20 : IconSizes.sm,
                     color: glyph,
                   ),
                 ),

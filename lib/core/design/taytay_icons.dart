@@ -73,6 +73,9 @@ abstract final class TaytayIcons {
 
   static const IconData clock = IconData(57479, fontFamily: 'Lucide');
 
+  /// Lucide `hourglass`. The pending-review status tile on `03-01`.
+  static const IconData hourglass = IconData(58006, fontFamily: 'Lucide');
+
   /// Lucide `timer`. The `02-14` countdown.
   static const IconData timer = IconData(57824, fontFamily: 'Lucide');
 

@@ -263,7 +263,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Juana Santos Dela Cruz'), findsOneWidget);
+    expect(find.text('Juana Dela Cruz'), findsOneWidget);
     final resident = dependencies.session.state.residentOrNull!;
     expect(resident.displayName, 'Ana');
     expect(resident.accessLevel, AccessLevel.unverified);
