@@ -25,11 +25,16 @@ class TooManyAttemptsScreen extends StatefulWidget {
   const TooManyAttemptsScreen({
     this.fixture = TooManyFixture.live,
     this.hold,
+    this.shownRemaining,
     super.key,
   });
 
   final TooManyFixture fixture;
   final CodeHold? hold;
+
+  /// Paints [TooManyFixture.waiting] at this remaining time. The capture of
+  /// `02-14` leaves it null so the clock stays at 14:32.
+  final Duration? shownRemaining;
 
   @override
   State<TooManyAttemptsScreen> createState() => _TooManyAttemptsScreenState();
@@ -68,7 +73,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
 
   Duration get _remaining {
     if (widget.fixture == TooManyFixture.waiting) {
-      return const Duration(minutes: 14, seconds: 32);
+      return widget.shownRemaining ?? const Duration(minutes: 14, seconds: 32);
     }
     if (widget.fixture == TooManyFixture.ready) return Duration.zero;
     final Duration left = _resumeAt.difference(DateTime.now());
@@ -368,7 +373,7 @@ class _WhyBanner extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             TaytayIcon(
-              icon: TaytayIcons.circleAlert,
+              icon: TaytayIcons.info,
               semanticLabel: '',
               excludeSemantics: true,
               size: 18,

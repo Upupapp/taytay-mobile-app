@@ -291,14 +291,27 @@ void main() {
       ),
     ];
     var index = 0;
-    for (final frame in frames) {
-      for (var hold = 0; hold < 8; hold++) {
+    for (var scene = 0; scene < frames.length; scene++) {
+      // 02-14 holds for 2s and the clock steps from 14:32 to 14:31.
+      final bool clock = scene == 5;
+      final int count = clock ? 16 : 8;
+      for (var hold = 0; hold < count; hold++) {
+        final Widget painted = clock
+            ? TooManyAttemptsScreen(
+                key: ValueKey<String>('reset-5-$hold'),
+                fixture: TooManyFixture.waiting,
+                shownRemaining: Duration(
+                  minutes: 14,
+                  seconds: hold < 8 ? 32 : 31,
+                ),
+              )
+            : frames[scene];
         final name = index.toString().padLeft(4, '0');
-        await _paint(tester, frame, '${out.path}/f_$name.png');
+        await _paint(tester, painted, '${out.path}/f_$name.png');
         index++;
       }
     }
-    expect(index, 56);
+    expect(index, 64);
   });
 
   testWidgets('wizard flow with motion and taps', (tester) async {

@@ -45,7 +45,10 @@ class AccountApplication {
   /// The label the resident picked. The repository maps it to the wire enum.
   final String idTypeLabel;
 
-  /// `POST me/consents` body. There is no published notice version yet.
+  /// Kept for the draft the screen used to label itself with.
+  ///
+  /// `submitProfile` does not send this. Consent versions come from
+  /// `GET /app/config` (`privacy_version` and `terms_version`).
   final String noticeVersion;
 
   final Uint8List? idFrontBytes;

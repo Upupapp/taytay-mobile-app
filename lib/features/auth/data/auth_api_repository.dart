@@ -331,43 +331,50 @@ class AuthApiRepository implements AuthRepository {
         ),
       );
     }
-    final Result<ApiEnvelope<void>> consent = await _apiClient.send<void>(
-      method: HttpMethod.post,
-      path: 'me/consents',
-      authenticated: true,
-      body: <String, Object?>{'version': application.noticeVersion},
-      decode: (Object? _) {},
-    );
-    if (consent case Err<ApiEnvelope<void>>(:final failure)) {
-      return Err<void>(failure);
+    if (_uploadMissing(
+          application.idFrontBytes,
+          application.idFrontName,
+          application.idFrontMime,
+        ) ||
+        _uploadMissing(
+          application.selfieBytes,
+          application.selfieName,
+          application.selfieMime,
+        )) {
+      return const Err<void>(
+        ValidationFailure(
+          debugMessage: 'The ID front and a selfie are required.',
+        ),
+      );
     }
 
-    final Uint8List? front = application.idFrontBytes;
-    final Uint8List? selfie = application.selfieBytes;
-    final String? frontName = application.idFrontName;
-    final String? frontMime = application.idFrontMime;
-    final String? selfieName = application.selfieName;
-    final String? selfieMime = application.selfieMime;
-    if (front == null ||
-        selfie == null ||
-        frontName == null ||
-        frontMime == null ||
-        selfieName == null ||
-        selfieMime == null) {
-      return const Ok<void>(null);
+    final Result<({String privacy, String terms})> versions =
+        await _consentVersions();
+    if (versions case Err(:final failure)) return Err<void>(failure);
+    final Ok<({String privacy, String terms})> published =
+        versions as Ok<({String privacy, String terms})>;
+    final String privacy = published.value.privacy;
+    final String terms = published.value.terms;
+
+    final Result<void> privacyConsent = await _recordConsent(privacy);
+    if (privacyConsent case Err(:final failure)) return Err<void>(failure);
+    if (terms != privacy) {
+      final Result<void> termsConsent = await _recordConsent(terms);
+      if (termsConsent case Err(:final failure)) return Err<void>(failure);
     }
 
     final Result<ApiEnvelope<void>> submitted = await _apiClient.send<void>(
       method: HttpMethod.post,
       path: 'me/verification-requests',
       authenticated: true,
+      requiredStatus: 201,
       body: <String, Object?>{'id_type': _idTypeWire(application.idTypeLabel)},
       files: <MultipartFile>[
         MultipartFile(
           field: 'id_front',
-          filename: frontName,
-          bytes: front,
-          mimeType: frontMime,
+          filename: application.idFrontName!,
+          bytes: application.idFrontBytes!,
+          mimeType: application.idFrontMime!,
         ),
         if (application.idBackBytes != null &&
             application.idBackName != null &&
@@ -380,14 +387,69 @@ class AuthApiRepository implements AuthRepository {
           ),
         MultipartFile(
           field: 'selfie',
-          filename: selfieName,
-          bytes: selfie,
-          mimeType: selfieMime,
+          filename: application.selfieName!,
+          bytes: application.selfieBytes!,
+          mimeType: application.selfieMime!,
         ),
       ],
       decode: (Object? _) {},
     );
     return submitted.map((ApiEnvelope<void> _) {});
+  }
+
+  /// `privacy_version` and `terms_version` from `GET /app/config`.
+  ///
+  /// A missing version is a contract failure. The screen used to send the
+  /// literal `draft`, which is not a published notice.
+  Future<Result<({String privacy, String terms})>> _consentVersions() async {
+    final Result<ApiEnvelope<({String privacy, String terms})>> config =
+        await _apiClient.send<({String privacy, String terms})>(
+          method: HttpMethod.get,
+          path: 'app/config',
+          authenticated: false,
+          decode: _decodeConsentVersions,
+        );
+    return switch (config) {
+      Ok(:final value) => Ok(value.data),
+      Err(:final failure) => Err(failure),
+    };
+  }
+
+  static ({String privacy, String terms}) _decodeConsentVersions(Object? data) {
+    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
+    final String? privacy = _publishedVersion(map['privacy_version']);
+    final String? terms = _publishedVersion(map['terms_version']);
+    if (privacy == null || terms == null) {
+      throw const FormatException('app/config omitted a consent version');
+    }
+    return (privacy: privacy, terms: terms);
+  }
+
+  static String? _publishedVersion(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    if (trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  Future<Result<void>> _recordConsent(String version) async {
+    final Result<ApiEnvelope<void>> consent = await _apiClient.send<void>(
+      method: HttpMethod.post,
+      path: 'me/consents',
+      authenticated: true,
+      body: <String, Object?>{'version': version},
+      decode: (Object? _) {},
+    );
+    return consent.map((ApiEnvelope<void> _) {});
+  }
+
+  static bool _uploadMissing(Uint8List? bytes, String? name, String? mime) {
+    return bytes == null ||
+        bytes.isEmpty ||
+        name == null ||
+        name.isEmpty ||
+        mime == null ||
+        mime.isEmpty;
   }
 
   /// Published `id_type` values. An unrecognised label is `other`.

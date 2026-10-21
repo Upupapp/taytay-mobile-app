@@ -388,7 +388,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     if (profile case Err<void>(:final failure)) {
       setState(() {
         _busy = false;
-        _status = SignInFeedback.forFailure(failure).text;
+        _status = _verificationFailureCopy(failure);
       });
       return;
     }
@@ -398,6 +398,18 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _busy = false;
       _step = _Step.submitted;
     });
+  }
+
+  /// Resident copy for a verification submit that did not open with `201`.
+  ///
+  /// `409` is a request already pending. `403` is an account already verified.
+  /// The server's own message stays in the failure and is not shown.
+  String _verificationFailureCopy(AppFailure failure) {
+    return switch (failure) {
+      ConflictFailure() => 'A verification request is already pending.',
+      ForbiddenFailure() => 'This account is already verified.',
+      _ => failure.residentMessage,
+    };
   }
 
   Future<void> _takeSelfie() async {
@@ -1172,9 +1184,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         const SizedBox(height: 12),
         const _FieldLabel('Front of ID', requiredField: true),
         const SizedBox(height: 2.67),
-        if (attached)
-          _attached(name: _front?.fileName ?? 'id_front.jpg')
-        else
+        if (attached) ...<Widget>[
+          _attached(name: _front?.fileName ?? 'id_front.jpg'),
+          const SizedBox(height: 1),
+        ] else
           _UploadSlot(key: const Key('id-front-pick'), onPressed: _pickFront),
         const SizedBox(height: 12),
         const _FieldLabel('Back of ID (optional)'),
@@ -1187,65 +1200,72 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Widget _attached({required String name}) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.fieldFill,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFC9A227), width: 1.4),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const _SampleIdCard(),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(top: 14.66),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13,
-                        fontWeight: AppTypography.strong,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    const Row(
-                      children: <Widget>[
-                        TaytayIcon(
-                          icon: TaytayIcons.circleCheck,
-                          semanticLabel: '',
-                          excludeSemantics: true,
-                          size: 13,
-                          color: Color(0xFF0F7A4D),
+    return CustomPaint(
+      foregroundPainter: const _DashedRoundPainter(),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BrandColors.fieldFill,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const _SampleIdCard(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 14.66),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        name,
+                        style: const TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 13,
+                          fontWeight: AppTypography.strong,
                         ),
-                        SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            'Clear and readable',
-                            maxLines: 1,
-                            overflow: TextOverflow.fade,
-                            softWrap: false,
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 11,
-                              fontWeight: AppTypography.strong,
-                              color: Color(0xFF0F7A4D),
+                      ),
+                      const SizedBox(height: 2),
+                      const Row(
+                        children: <Widget>[
+                          TaytayIcon(
+                            icon: TaytayIcons.circleCheck,
+                            semanticLabel: '',
+                            excludeSemantics: true,
+                            size: 13,
+                            color: Color(0xFF0F7A4D),
+                          ),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Clear and readable',
+                              maxLines: 1,
+                              overflow: TextOverflow.fade,
+                              softWrap: false,
+                              style: TextStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                fontWeight: AppTypography.strong,
+                                color: Color(0xFF0F7A4D),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Transform.translate(
+                        offset: const Offset(0, -10 / 3),
+                        child: _ChangeLink(onPressed: _pickFront),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1437,94 +1457,94 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Widget _row(String label, String value, _Step edit, {String? badge}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      decoration: const BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFEADFC0), width: 1.2),
+    return CustomPaint(
+      foregroundPainter: const _RowDashPainter(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        decoration: const BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Color(0x00EADFC0), width: 1.2),
+          ),
         ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: <Widget>[
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 11,
-                    fontWeight: AppTypography.strong,
-                    color: Color(0xFF5B6680),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Transform.translate(
-                  offset: const Offset(0, -1.7),
-                  child: Text.rich(
-                    TextSpan(
-                      text: value,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13,
-                        fontWeight: AppTypography.strong,
-                        color: BrandColors.fieldInk,
-                      ),
-                      children: <InlineSpan>[
-                        if (badge != null)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Container(
-                              margin: const EdgeInsets.only(left: 4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE6F4EC),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  const TaytayIcon(
-                                    icon: TaytayIcons.circleCheck,
-                                    semanticLabel: '',
-                                    excludeSemantics: true,
-                                    size: 11,
-                                    color: Color(0xFF0F7A4D),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    badge,
-                                    style: const TextStyle(
-                                      fontFamily: AppTypography.fontFamily,
-                                      fontSize: 11,
-                                      fontWeight: AppTypography.black,
-                                      color: Color(0xFF0F7A4D),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    label,
+                    style: const TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 11,
+                      fontWeight: AppTypography.strong,
+                      color: Color(0xFF5B6680),
                     ),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 2),
+                  Transform.translate(
+                    offset: const Offset(0, -1.7),
+                    child: Text.rich(
+                      TextSpan(
+                        text: value,
+                        style: const TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 13,
+                          fontWeight: AppTypography.strong,
+                          color: BrandColors.fieldInk,
+                        ),
+                        children: <InlineSpan>[
+                          if (badge != null)
+                            WidgetSpan(
+                              alignment: PlaceholderAlignment.middle,
+                              child: Container(
+                                margin: const EdgeInsets.only(left: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE6F4EC),
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    const TaytayIcon(
+                                      icon: TaytayIcons.circleCheck,
+                                      semanticLabel: '',
+                                      excludeSemantics: true,
+                                      size: 11,
+                                      color: Color(0xFF0F7A4D),
+                                    ),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      badge,
+                                      style: const TextStyle(
+                                        fontFamily: AppTypography.fontFamily,
+                                        fontSize: 11,
+                                        fontWeight: AppTypography.black,
+                                        color: Color(0xFF0F7A4D),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            Transform.translate(
+            offset: const Offset(0, 8 / 3),
+            child: _EditLink(onPressed: () => setState(() => _step = edit)),
           ),
-          AuthTextLink(
-            'Edit',
-            align: Alignment.centerRight,
-            fontSize: 12,
-            expand: false,
-            onPressed: () => setState(() => _step = edit),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1871,63 +1891,181 @@ class _SampleIdCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 120,
-      height: 82.33,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
+    // Design thumbnail is 120×77 logical, sitting 5 below the previous top so
+    // its bottom stays on the red run the line bar already matches.
+    return const Padding(
+      padding: EdgeInsets.only(top: 5),
+      child: SizedBox(
+        width: 120,
+        height: 77,
+        child: ClipRRect(
           borderRadius: BorderRadius.all(Radius.circular(8)),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[Color(0xFFDFE8F7), Color(0xFFF7F1DF)],
-          ),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-              left: 8,
-              top: 16,
-              width: 28,
-              height: 36,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Color(0xFFB8C4D8),
-                  borderRadius: BorderRadius.all(Radius.circular(4)),
-                ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: <Color>[Color(0xFFDFE8F7), Color(0xFFF7F1DF)],
               ),
             ),
-            Positioned(left: 44, top: 18, child: _IdLine(width: 60)),
-            Positioned(
-              left: 44,
-              top: 28,
-              child: _IdLine(width: 48, color: Color(0xFFB8C4D8)),
-            ),
-            Positioned(
-              left: 44,
-              top: 38,
-              child: _IdLine(width: 40, color: Color(0xFFB8C4D8)),
-            ),
-            Positioned(
-              right: 4,
-              bottom: 16.3,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: Color(0xFFB3261E)),
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  child: Text(
-                    'SAMPLE',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 8,
-                      fontWeight: AppTypography.black,
-                      color: Colors.white,
+            child: Stack(
+              children: <Widget>[
+                Positioned(
+                  left: 8,
+                  top: 16,
+                  width: 28,
+                  height: 36,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Color(0xFFB8C4D8),
+                      borderRadius: BorderRadius.all(Radius.circular(4)),
                     ),
                   ),
                 ),
-              ),
+                Positioned(left: 44, top: 18, child: _IdLine(width: 60)),
+                Positioned(
+                  left: 44,
+                  top: 28,
+                  child: _IdLine(width: 48, color: Color(0xFFB8C4D8)),
+                ),
+                Positioned(
+                  left: 44,
+                  top: 38,
+                  child: _IdLine(width: 40, color: Color(0xFFB8C4D8)),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: 2 + 29 / 3 + 1,
+                  child: _SampleRibbon(),
+                ),
+              ],
             ),
-          ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 'Edit' on the label's top edge. The 48dp hit target hangs below the line.
+class _EditLink extends StatelessWidget {
+  const _EditLink({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 48,
+      height: 16,
+      child: OverflowBox(
+        maxWidth: 80,
+        maxHeight: 48,
+        alignment: Alignment.topRight,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: BrandColors.taytayBlue,
+            minimumSize: const Size(48, 48),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            alignment: Alignment.topRight,
+            textStyle: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 12,
+              fontWeight: AppTypography.black,
+            ),
+          ),
+          onPressed: onPressed,
+          child: const Text('Edit'),
+        ),
+      ),
+    );
+  }
+}
+
+/// 'Change' under the readable line. Layout height is the line; the hit
+/// target is 48dp.
+class _ChangeLink extends StatelessWidget {
+  const _ChangeLink({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 72,
+      height: 16,
+      child: OverflowBox(
+        maxWidth: 96,
+        maxHeight: 48,
+        alignment: Alignment.topLeft,
+        child: TextButton(
+          style: TextButton.styleFrom(
+            foregroundColor: BrandColors.taytayBlue,
+            minimumSize: const Size(48, 48),
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            alignment: Alignment.topLeft,
+            textStyle: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 12,
+              fontWeight: AppTypography.black,
+            ),
+          ),
+          onPressed: onPressed,
+          child: const Text('Change'),
+        ),
+      ),
+    );
+  }
+}
+
+/// Light dashed hairline along the bottom of a review row.
+class _RowDashPainter extends CustomPainter {
+  const _RowDashPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFEADFC0)
+      ..strokeWidth = 1;
+    const dash = 4.0;
+    const gap = 3.0;
+    final double y = size.height - 0.5;
+    var x = 0.0;
+    while (x < size.width) {
+      final double end = math.min(x + dash, size.width);
+      canvas.drawLine(Offset(x, y), Offset(end, y), paint);
+      x = end + gap;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _RowDashPainter oldDelegate) => false;
+}
+
+class _SampleRibbon extends StatelessWidget {
+  const _SampleRibbon();
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: -0.46,
+      alignment: Alignment.bottomRight,
+      child: const DecoratedBox(
+        decoration: BoxDecoration(color: Color(0xFFB3261E)),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          child: Text(
+            'SAMPLE',
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 8,
+              letterSpacing: 0.6,
+              fontWeight: AppTypography.black,
+              color: Colors.white,
+            ),
+          ),
         ),
       ),
     );

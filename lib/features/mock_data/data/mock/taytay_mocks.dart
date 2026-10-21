@@ -300,6 +300,26 @@ class MockAuthRepository implements AuthRepository {
         ),
       );
     }
+    if (application.idFrontBytes == null ||
+        application.idFrontBytes!.isEmpty ||
+        application.idFrontName == null ||
+        application.idFrontName!.isEmpty ||
+        application.idFrontMime == null ||
+        application.idFrontMime!.isEmpty ||
+        application.selfieBytes == null ||
+        application.selfieBytes!.isEmpty ||
+        application.selfieName == null ||
+        application.selfieName!.isEmpty ||
+        application.selfieMime == null ||
+        application.selfieMime!.isEmpty) {
+      return Future<Result<void>>.value(
+        const Err<void>(
+          ValidationFailure(
+            debugMessage: 'The ID front and a selfie are required.',
+          ),
+        ),
+      );
+    }
     return _gate.respond<void>(null);
   }
 
