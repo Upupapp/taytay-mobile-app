@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/result/result.dart';
-import 'package:taytay_resident/features/auth/data/code_challenge_book.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
+import 'package:taytay_resident/features/mock_data/data/mock/code_challenge_book.dart';
 
 void main() {
   late DateTime now;

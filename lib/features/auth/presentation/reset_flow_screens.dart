@@ -395,8 +395,12 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
       context.goNamed(AppRoute.forgotPassword.routeName);
       return;
     }
-    final String password = _sampleMismatch ? 'Password1' : _password.text;
-    final String confirm = _sampleMismatch ? 'Password' : _confirm.text;
+    final String password = _sampleMismatch
+        ? CodeExchangeRules.samplePassword
+        : _password.text;
+    final String confirm = _sampleMismatch
+        ? CodeExchangeRules.sampleConfirm
+        : _confirm.text;
     if (password != confirm) {
       setState(() => _matchError = 'Hindi tugma ang password. Pakiulit.');
       return;
@@ -438,12 +442,12 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
     final bool expired = _tokenExpired;
     final bool short = MediaQuery.sizeOf(context).height < 800;
     final String password = _sampleMismatch || _sampleExpired
-        ? 'Password1'
+        ? CodeExchangeRules.samplePassword
         : _password.text;
     final String confirm = _sampleMismatch
-        ? 'Password'
+        ? CodeExchangeRules.sampleConfirm
         : _sampleExpired
-        ? 'Password1'
+        ? CodeExchangeRules.samplePassword
         : _confirm.text;
     final bool mismatch =
         _matchError != null || (_sampleMismatch && password != confirm);
@@ -485,7 +489,7 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
           PasswordRules(
             password: widget.fixture == SetPasswordFixture.live
                 ? password
-                : 'Password1',
+                : CodeExchangeRules.samplePassword,
           ),
           const SizedBox(height: 12),
           _SecretField(

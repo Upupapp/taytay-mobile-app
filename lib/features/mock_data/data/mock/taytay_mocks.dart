@@ -10,7 +10,6 @@ import '../../../../core/session/access_level.dart';
 import '../../../../core/session/push_registration.dart';
 import '../../../../core/session/session_state.dart';
 import '../../../../core/storage/public_cache.dart';
-import '../../../auth/data/code_challenge_book.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../../auth/domain/code_exchange.dart';
 import '../../../auth/domain/device_session_repository.dart';
@@ -45,6 +44,7 @@ import '../../../verification/domain/correctable_field.dart';
 import '../../../verification/domain/kyc_claim.dart';
 import '../../../verification/domain/verification_repository.dart';
 import '../../../verification/domain/verification_status_detail.dart';
+import 'code_challenge_book.dart';
 
 /// Frozen instant for fixtures and goldens: 20 Oct 2026, 09:05 in Manila.
 final DateTime mockNow = DateTime.utc(2026, 10, 20, 1, 5);
@@ -1080,7 +1080,6 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
     unreadCount: 1,
     lastMessageAt: mockNow,
     createdAt: mockNow,
-    residentId: 'resident-sample',
   );
 
   @override

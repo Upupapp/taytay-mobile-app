@@ -1,5 +1,5 @@
-import '../../../core/result/result.dart';
-import '../domain/code_exchange.dart';
+import '../../../../core/result/result.dart';
+import '../../../auth/domain/code_exchange.dart';
 
 /// The dev mock's copy of the published code rules.
 ///

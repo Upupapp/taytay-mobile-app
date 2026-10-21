@@ -139,5 +139,5 @@ These designs still need data the spec does not publish. The calls decline with 
 - `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.
 - Hotlines are on `GET /home` and `GET /hotlines`. The hotline screen is still the placeholder. Weather, payments, and map tiles are not published. An office may carry coordinates. The resident decoder does not surface them.
 - Welcome copy, photo credits, and a bundled hall photograph. None of those are API fields.
-- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString` and is not rendered. `email_verified` is on the profile model.
+- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString` and is not rendered. `email_verified` is on the profile model. A thread's `resident_id` is the signed-in account and is not stored.
 - Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list.

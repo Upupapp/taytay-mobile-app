@@ -145,7 +145,6 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     final Object? preview = raw['last_message_preview'];
     final Object? updated = raw['updated_at'] ?? raw['created_at'];
     final Object? unreadCount = raw['unread_count'];
-    final Object? resident = raw['resident_id'];
     return OfficeThread(
       id: id,
       officeId: officeId,
@@ -156,7 +155,6 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       status: raw['status'] is String ? raw['status'] as String : 'open',
       unread: raw['unread'] == true,
       unreadCount: unreadCount is int ? unreadCount : 0,
-      residentId: resident is String ? resident : '',
       lastMessageAt: DateTime.tryParse(
         raw['last_message_at'] is String
             ? raw['last_message_at'] as String
