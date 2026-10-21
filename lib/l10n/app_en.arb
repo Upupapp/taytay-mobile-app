@@ -633,6 +633,7 @@
     "description": "First sentence of the sign-in gate."
   },
   "gateSignInViewDigitalId": "You need a Taytay LGU account to open your digital ID.",
+  "gateSignInMessageOffice": "You need a Taytay LGU account to message offices.",
   "@gateSignInViewDigitalId": {
     "description": "First sentence of the sign-in gate."
   },
@@ -665,6 +666,7 @@
     "description": "First sentence of the verification gate."
   },
   "gateVerifyViewDigitalId": "Taytay LGU needs to confirm who you are before you can open your digital ID.",
+  "gateVerifyMessageOffice": "Taytay LGU needs to confirm who you are before you can message offices.",
   "@gateVerifyViewDigitalId": {
     "description": "First sentence of the verification gate."
   },
@@ -1022,6 +1024,7 @@
     "description": "Resident-facing copy."
   },
   "intentResumedViewDigitalId": "You can now open your digital ID.",
+  "intentResumedMessageOffice": "You can now message offices.",
   "@intentResumedViewDigitalId": {
     "description": "Resident-facing copy."
   },

@@ -8,6 +8,7 @@ This file records that the words were looked for. It does not invent them.
 | S0 Foundations | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/1 | bc3f75259bff5c6ed5c3ab9bf469a619c15a8d8f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S1 Welcome | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/2 | 2ecacd054f7c27ff59c88f4789b7bc25d6a7221f | Ui/Ux Taytay, 2026-10-21. Paul merges. |
 | S2 Sign-in | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/3 | 3221abdcea60e6b03fdfa14799417187fa7b1f8c | No approval words. Paul merges when he chooses. |
+| S3 Verification | In review, not approved | draft, against main | feature/s3-verification | No approval words. Paul merges when he chooses. |
 
 ## S0 pixel match
 
@@ -123,6 +124,30 @@ The mismatch table above is the review capture at 1170×2532, full frame, CIE76 
 - `AccountApplication.toString` is `AccountApplication(redacted)`. A failure on submit shows `SignInMessage` text, not the server's message.
 - No new package.
 
+## S3 Verification
+
+S3 is not approved. This section records the capture. It does not record approval words.
+
+Status screens take the server tier through `AccessLevel.fromVerificationTier` and fail closed. Only the string `verified` is the verified face. `pending` is the pending face. `rejected` is needs-correction. Anything else, including an unknown tier, is unverified. A 409 from `POST /me/verification-requests` opens the pending-review screen. A 403 continues into the app as verified. The profile wizard loads its own record and does not write it onto the session. `03-04` is the sheet for every verified-only action, including Message and Digital ID.
+
+The line bar is the reviewer's dark-run rule: mean channel under 110, columns 60–1110, y above 330, minimum run 8. Line counts match, and every paired line is within 2 device px. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`.
+
+| Screen | Lines | Max deviation | Mismatch |
+| --- | --- | --- | --- |
+| 03-01 Pending | 20 / 20 | 2 | 8.12% (240483/2962440) |
+| 03-02 Verified | 15 / 15 | 2 | 7.00% (207299/2962440) |
+| 03-03 Needs correction | 12 / 12 | 0 | 11.32% (335279/2962440) |
+| 03-04 Unverified gate | 8 / 8 | 2 | 21.57% (638929/2962440) |
+| 03-05 Profile overview | 15 / 15 | 2 | 6.98% (206880/2962440) |
+| 03-06 Personal info | 14 / 14 | 2 | 6.65% (197117/2962440) |
+| 03-07 Household address | 16 / 16 | 2 | 7.32% (216768/2962440) |
+| 03-08 Review | 15 / 15 | 2 | 6.88% (203929/2962440) |
+| 03-09 Submitted | 11 / 11 | 2 | 6.51% (192935/2962440) |
+
+`03-04` is the high mismatch. The scrim is light enough that the dimmed office list does not add dark runs, so only the two backdrop titles and the sheet lines count. The rest of the frame is that scrim against the design's dimmed page. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG.
+
+Recordings are 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4`, `s3-gate.mp4`, `s3-wizard.mp4`. `flutter analyze` was clean. `flutter test` passed 1589 tests, with 5 skipped (the recording tag).
+
 ## Contract gaps after the Node OpenAPI
 
 F31 is closed. `GET/POST /threads`, messages, mark-read, and close are citizen routes and the live repository calls them.
@@ -137,12 +162,12 @@ These designs still need data the spec does not publish. The calls decline with 
 - Token revocation. Sign-out clears the session on the device. `POST` and `DELETE /me/devices` register a push token. They do not revoke a session.
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.
-- Household (`03-07`). Address is a string on `PATCH /me` (`address`). `purok_or_sitio` is not a ProfilePatch field, so it is not sent. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
+- Household (`03-07`). `PATCH /me` sends `street` and `purok`. The resident household calls are `GET` and `PATCH /households/current` and `POST /households`. Years at the address, residence type, and member count are not on the spec, so the live repository does not send them. The dev mock does. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
 - Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
 - Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.
 - `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.
 - Hotlines are on `GET /home` and `GET /hotlines`. The hotline screen is still the placeholder. Weather, payments, and map tiles are not published. An office may carry coordinates. The resident decoder does not surface them.
 - Welcome copy, photo credits, and a bundled hall photograph. None of those are API fields.
-- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString` and is not rendered. `email_verified` is on the profile model. A thread's `resident_id` is the signed-in account and is not stored.
+- `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString`. The needs-correction screen shows it as the office's note to the resident. `email_verified` is on the profile model. A thread's `resident_id` is the signed-in account and is not stored.
 - Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list.

@@ -455,11 +455,11 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Verify your identity'),
+          matching: find.text('Verify your account to open your digital ID'),
         ),
         findsOneWidget,
       );
-      expect(find.text('Start verification'), findsWidgets);
+      expect(find.text('Continue verification'), findsWidgets);
     });
 
     testWidgets('dismissing a gate forgets the intent', (tester) async {

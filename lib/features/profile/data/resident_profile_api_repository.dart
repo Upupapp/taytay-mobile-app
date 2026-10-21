@@ -242,7 +242,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     );
   }
 
-  /// ProfilePatch names. `purok_or_sitio` is not one of them, so it is omitted.
+  /// ProfilePatch names. `street` and `purok` are the structured lines.
   /// `role` and `office_id` are never sent.
   static String? _patchKey(ResidentProfileField field) {
     final String? wire = field.wireName;
@@ -252,24 +252,26 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
 
   static String? _patchWire(String wire) => switch (wire) {
     'mobile_number' => 'mobile',
-    'street_address' => 'address',
+    'street_address' => 'street',
     'birth_date' => 'birthdate',
-    'purok_or_sitio' => null,
+    'purok_or_sitio' => 'purok',
     'role' || 'office_id' || 'rejection_reason' || 'email_verified' => null,
     _ => wire,
   };
 
-  /// Reads the historical wire name, then the spec alias.
+  /// Reads the historical wire name, then Clarence's names on `/me`.
   static Object? _fieldValue(Map<String, dynamic> map, String wire) {
-    final Object? direct = map[wire];
-    if (direct is String && direct.trim().isNotEmpty) return direct;
-    final String? alias = switch (wire) {
-      'mobile_number' => 'mobile',
-      'street_address' => 'address',
-      'birth_date' => 'birthdate',
-      _ => null,
+    final List<String> keys = switch (wire) {
+      'mobile_number' => <String>['mobile_number', 'mobile'],
+      'street_address' => <String>['street', 'street_address', 'address'],
+      'purok_or_sitio' => <String>['purok', 'purok_or_sitio'],
+      'birth_date' => <String>['birth_date', 'birthdate'],
+      _ => <String>[wire],
     };
-    if (alias == null) return direct;
-    return map[alias];
+    for (final String key in keys) {
+      final Object? value = map[key];
+      if (value is String && value.trim().isNotEmpty) return value;
+    }
+    return null;
   }
 }

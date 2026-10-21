@@ -16,6 +16,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
+import '../../verification/domain/verification_submit_outcome.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
@@ -386,11 +387,27 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
     if (!mounted) return;
     if (profile case Err<void>(:final failure)) {
-      setState(() {
-        _busy = false;
-        _status = _verificationFailureCopy(failure);
-      });
-      return;
+      switch (verificationSubmitOutcome(failure)) {
+        case VerificationSubmitOutcome.pendingReview:
+          setState(() => _busy = false);
+          context.goNamed(
+            AppRoute.verification.routeName,
+            queryParameters: const <String, String>{'status': 'pending'},
+          );
+          return;
+        case VerificationSubmitOutcome.continueVerified:
+          dependencies.session.applyVerificationTier('verified');
+          setState(() => _busy = false);
+          context.goNamed(AppRoute.home.routeName);
+          return;
+        case VerificationSubmitOutcome.opened:
+        case VerificationSubmitOutcome.failed:
+          setState(() {
+            _busy = false;
+            _status = failure.residentMessage;
+          });
+          return;
+      }
     }
     _front = null;
     _selfieShot = null;
@@ -398,18 +415,6 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _busy = false;
       _step = _Step.submitted;
     });
-  }
-
-  /// Resident copy for a verification submit that did not open with `201`.
-  ///
-  /// `409` is a request already pending. `403` is an account already verified.
-  /// The server's own message stays in the failure and is not shown.
-  String _verificationFailureCopy(AppFailure failure) {
-    return switch (failure) {
-      ConflictFailure() => 'A verification request is already pending.',
-      ForbiddenFailure() => 'This account is already verified.',
-      _ => failure.residentMessage,
-    };
   }
 
   Future<void> _takeSelfie() async {

@@ -8,6 +8,7 @@ import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
 import '../../core/session/access_policy.dart';
 import '../../core/session/resident_capability.dart';
+import '../../features/verification/presentation/unverified_gate_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/illustrations/state_illustrations.dart';
 import 'app_button.dart';
@@ -179,32 +180,22 @@ abstract final class AccessGateSheet {
     GoRouter router,
     ResidentIntentKind intent,
   ) {
-    final strings = AppStrings.of(context);
-    return AppSheet.show<GateOutcome>(
+    return showModalBottomSheet<GateOutcome>(
       context: context,
-      title: strings.gateSheetVerifyTitle,
-      builder: (sheetContext) => _GateBody(
-        illustration: StateIllustrations.empty(size: 96),
-        message: gateVerificationMessage(context, intent),
-        privacyNote: strings.gateSheetVerifyPrivacy,
-        primary: AppButton(
-          label: strings.gateSheetStartVerification,
-          icon: Icons.arrow_forward,
-          iconTrailing: true,
-          onPressed: () {
-            Navigator.of(sheetContext).pop(GateOutcome.goingToVerify);
-            router.goNamed(AppRoute.verification.routeName);
-          },
-        ),
-        secondary: AppButton(
-          label: strings.gateSheetNotNow,
-          variant: AppButtonVariant.text,
-          onPressed: () =>
-              Navigator.of(sheetContext).pop(GateOutcome.dismissed),
-        ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => UnverifiedGateSheet(
+        action: UnverifiedGateSheet.actionFor(intent),
+        onContinue: () {
+          Navigator.of(sheetContext).pop(GateOutcome.goingToVerify);
+          router.goNamed(AppRoute.verification.routeName);
+        },
+        onDismiss: () =>
+            Navigator.of(sheetContext).pop(GateOutcome.dismissed),
       ),
     );
   }
+
 }
 
 class _GateBody extends StatelessWidget {

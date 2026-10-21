@@ -593,7 +593,7 @@ void main() {
       final booted = await bootHousehold(tester, level: AccessLevel.unverified);
 
       expect(booted.household.loadCalls, 0);
-      expect(find.text('Identity verification'), findsWidgets);
+      expect(find.text('Verification status'), findsWidgets);
       expect(find.text('Your household'), findsNothing);
     });
 

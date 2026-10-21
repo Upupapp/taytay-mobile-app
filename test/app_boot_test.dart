@@ -212,7 +212,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Verify your identity'),
+          matching: find.text('Verify your account to open your digital ID'),
         ),
         findsOneWidget,
       );
@@ -220,13 +220,13 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Start verification'),
+          matching: find.text('Continue verification'),
         ),
       );
       await tester.pumpAndSettle();
 
       // TAB 08 replaced the placeholder with the real status screen.
-      expect(find.text('Identity verification'), findsWidgets);
+      expect(find.text('Verification status'), findsWidgets);
     });
 
     testWidgets('a verified resident reaches the digital ID', (tester) async {

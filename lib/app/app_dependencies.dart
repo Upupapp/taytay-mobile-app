@@ -37,6 +37,7 @@ import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
 import '../features/messaging/data/office_messaging_gap_repository.dart';
 import '../features/messaging/domain/office_messaging_repository.dart';
+import '../features/mock_data/data/mock/resident_record_mock.dart';
 import '../features/mock_data/data/mock/taytay_mocks.dart';
 import '../features/news/data/newsfeed_api_repository.dart';
 import '../features/news/domain/announcement_repository.dart';
@@ -60,6 +61,8 @@ import '../features/services/domain/service_request_repository.dart';
 import '../features/settings/data/privacy_api_repository.dart';
 import '../features/settings/domain/account_controls.dart';
 import '../features/verification/data/kyc_api_repository.dart';
+import '../features/verification/data/resident_record_api_repository.dart';
+import '../features/verification/domain/resident_record_repository.dart';
 import '../features/verification/domain/verification_repository.dart';
 
 /// The composition root: every long-lived object the app needs, built once.
@@ -92,6 +95,7 @@ class AppDependencies {
     required this.barangayDirectory,
     required this.credentialRepository,
     required this.verificationRepository,
+    this.residentRecordRepository,
     required this.serviceRequestRepository,
     required this.requirementRepository,
     required this.notificationRepository,
@@ -304,6 +308,9 @@ class AppDependencies {
       verificationRepository: mock == null
           ? KycApiRepository(apiClient: apiClient, telemetry: telemetry)
           : MockVerificationRepository(mock),
+      residentRecordRepository: mock == null
+          ? ResidentRecordApiRepository(apiClient: apiClient)
+          : MockResidentRecordRepository(mock),
       serviceRequestRepository: mock == null
           ? AssistanceApiRepository(apiClient: apiClient, telemetry: telemetry)
           : MockServiceRequestRepository(mock),
@@ -420,6 +427,11 @@ class AppDependencies {
   final BarangayDirectory barangayDirectory;
   final CredentialRepository credentialRepository;
   final VerificationRepository verificationRepository;
+
+  /// The profile wizard's own record. Null only in tests that never open it.
+  /// A dev mock build supplies [MockResidentRecordRepository]; every other
+  /// build talks to `/me` and `/households/current`.
+  final ResidentRecordRepository? residentRecordRepository;
   final ServiceRequestRepository serviceRequestRepository;
 
   /// The documents one request is waiting on, and their uploads. Same
