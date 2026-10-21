@@ -93,6 +93,7 @@ void main() {
 
   testWidgets('capture 02-01 through 02-11', (tester) async {
     final out = Directory('/tmp/s2_renders');
+    if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);
     final frames = <(String, Widget)>[
       (

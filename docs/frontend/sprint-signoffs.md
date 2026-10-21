@@ -89,31 +89,31 @@ S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comp
 
 | Screen | Mismatch | Sheet edge |
 | --- | --- | --- |
-| 02-01 Sign in | 9.09% (232559/2559744) | Hall arch. Sheet top 332. |
-| 02-02 Forgot password | 6.96% (206096/2962440) | White edge y = 912, same as the design. |
-| 02-03 Personal info | 10.68% (316392/2962440) | White edge y = 462, same as the design. |
-| 02-04 Email code | 5.02% (148577/2962440) | Sheet top y = 901, same as the design. |
-| 02-05 Terms | 12.32% (365041/2962440) | White edge y = 462, same as the design. |
-| 02-06 Valid ID | 7.67% (227137/2962440) | White edge y = 462, same as the design. |
-| 02-07 Selfie | 7.51% (222374/2962440) | White edge y = 462, same as the design. |
-| 02-08 Review | 7.65% (226666/2962440) | White edge y = 462, same as the design. |
-| 02-09 Submitted | 4.98% (147674/2962440) | Sheet top y = 1493, same as the design. |
-| 02-10 Sign-in error | 9.07% (242947/2679696) | Short hall arch. Sheet top 276. |
-| 02-11 Validation | 11.22% (332256/2962440) | White edge 11 device px below the design. |
-| 02-02b Reset code | 9.22% (273184/2962440) | White edge y = 756, same as the design. |
-| 02-04b Code expired | 5.61% (166189/2962440) | White edge y = 900, same as the design. |
-| 02-12 Set new password | 10.41% (308363/2962440) | White edge y = 756, same as the design. |
-| 02-12b Expired reset | 12.18% (360752/2962440) | White edge y = 756, same as the design. |
-| 02-13 Password updated | 4.22% (125140/2962440) | White edge y = 1500, same as the design. |
+| 02-01 Sign in | 7.78% (230429/2962440) | Hall arch included. Sheet top 332. |
+| 02-02 Forgot password | 6.61% (195897/2962440) | White edge y = 912, same as the design. |
+| 02-03 Personal info | 10.48% (310375/2962440) | White edge y = 462, same as the design. |
+| 02-04 Email code | 5.34% (158221/2962440) | Sheet top y = 901, same as the design. |
+| 02-05 Terms | 10.63% (314777/2962440) | White edge y = 462, same as the design. |
+| 02-06 Valid ID | 7.60% (225129/2962440) | White edge y = 462, same as the design. |
+| 02-07 Selfie | 7.50% (222050/2962440) | White edge y = 462, same as the design. |
+| 02-08 Review | 6.64% (196606/2962440) | White edge y = 462, same as the design. |
+| 02-09 Submitted | 4.77% (141386/2962440) | Sheet top y = 1493, same as the design. |
+| 02-10 Sign-in error | 8.09% (239556/2962440) | Short hall arch included. Sheet top 276. |
+| 02-11 Validation | 10.48% (310548/2962440) | Street and the address line are gone. Barangay is full width. |
+| 02-02b Reset code | 9.05% (267993/2962440) | White edge y = 756, same as the design. |
+| 02-04b Code expired | 5.59% (165614/2962440) | White edge y = 900, same as the design. |
+| 02-12 Set new password | 10.11% (299436/2962440) | White edge y = 756, same as the design. |
+| 02-12b Expired reset | 11.86% (351225/2962440) | White edge y = 756, same as the design. |
+| 02-13 Password updated | 3.98% (117903/2962440) | White edge y = 1500, same as the design. |
 
 The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
 
-`flutter analyze` on `lib` and `test` reported `No issues found!`. `flutter test` passed 1556 tests, with 3 skipped (the recording tag). `02-12`, `02-12b`, and `02-13` are the designed screens.
+The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens.
 
 ### S2 deviations
 
 - The full-frame mismatch is above 2%. Sheet edges on `02-02` through `02-09` match the design PNG. The remainder is glyph antialiasing (Skia against Chrome), the downscaled seal, the dashed seam's dash phase, the hall JPEG, and the drawn ID and selfie stand-ins. Those stand-ins are not a photograph of a person.
-- `02-11`'s white edge is 11 device px below the design. The summary banner's top is within 3 device px.
+- `02-11` no longer draws Street/Purok or the address line. Barangay is full width. Each error line is 11.5/700 `#B3261E` with a 14 px circle-alert. The sheet top was not moved.
 - Text links keep a 48 dp hit target. The painted line is the design's 12 or 13 px link. The hit box extends past that line.
 - The live repository declines password sign-in and registration. It does not call the staff token route. Email codes and password reset call the published routes. The dev mock returns an unverified session named Juana for password sign-in. There is no Firebase SDK.
 - `02-10` shows "2 attempts left before a 15-minute pause" on the first refused password, then one fewer, then the pause. The design fixture still paints 2. The password route does not publish that count. Code attempts are a separate counter of 5.
