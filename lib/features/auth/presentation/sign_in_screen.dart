@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
@@ -12,6 +13,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
@@ -194,7 +196,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 label: 'Password',
                 controller: _password,
                 error: rejected ? 'Incorrect password' : _passwordError,
-                obscure: _obscure && !_preview,
+                obscure: _obscure,
                 previewMask: _preview,
                 bad: rejected,
                 trailing: _ShowPassword(
@@ -277,7 +279,12 @@ class _CredentialBanner extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Icon(Icons.error_outline, size: 18, color: Color(0xFFB3261E)),
+            const TaytayIcon(
+              icon: TaytayIcons.circleAlert,
+              semanticLabel: 'Error',
+              size: 18,
+              color: Color(0xFFB3261E),
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text.rich(
@@ -382,17 +389,17 @@ class _Field extends StatelessWidget {
                             ),
                           ),
                         )
-                      : TextFormField(
-                          controller: controller,
-                          obscureText: obscure,
-                          style: AppTypography.fieldValue.copyWith(
-                            color: BrandColors.fieldInk,
-                          ),
-                          decoration: const InputDecoration(
-                            isCollapsed: true,
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12,
+                      : Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: TextFormField(
+                            controller: controller,
+                            obscureText: obscure,
+                            textAlignVertical: TextAlignVertical.center,
+                            style: AppTypography.fieldValue.copyWith(
+                              color: BrandColors.fieldInk,
+                            ),
+                            decoration: const InputDecoration.collapsed(
+                              hintText: '',
                             ),
                           ),
                         ),

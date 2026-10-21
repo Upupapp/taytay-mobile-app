@@ -5,8 +5,10 @@ import 'package:flutter/material.dart';
 import '../../../core/assets/asset_manifest.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/sign_in_field.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../shared/widgets/taytay_headers.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 
 /// The 02 frame: navy field fading near y = 330, thread and speck behind
@@ -27,6 +29,7 @@ class AuthStage extends StatelessWidget {
     this.footer,
     this.fieldCaption,
     this.bleed = false,
+    this.greeting,
     super.key,
   });
 
@@ -56,6 +59,9 @@ class AuthStage extends StatelessWidget {
   /// `02-04` draws the sheet edge to edge, radius on the top corners only.
   final bool bleed;
 
+  /// First name for the submitted title. Empty stays generic.
+  final String? greeting;
+
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
@@ -77,12 +83,12 @@ class AuthStage extends StatelessWidget {
         key: const Key('sign-in-stack'),
         children: <Widget>[
           Positioned.fill(child: SignInBackdrop(atmosphere: atmosphere)),
-          if (arch != AuthArch.none) _Arch(kind: arch),
           Positioned.fill(
             child: IgnorePointer(
               child: SignInThreadOverlay(cycle: threadCycle, curve: curve),
             ),
           ),
+          if (arch != AuthArch.none) _Arch(kind: arch, greeting: greeting),
           if (bleed)
             const Positioned.fill(child: ColoredBox(color: Color(0x73062358))),
           Positioned(
@@ -147,9 +153,10 @@ class AuthStage extends StatelessWidget {
 enum AuthArch { none, hall, hallShort, key, smallKey, lock, shield, submitted }
 
 class _Arch extends StatelessWidget {
-  const _Arch({required this.kind});
+  const _Arch({required this.kind, this.greeting});
 
   final AuthArch kind;
+  final String? greeting;
 
   @override
   Widget build(BuildContext context) {
@@ -157,10 +164,13 @@ class _Arch extends StatelessWidget {
       AuthArch.hall => const _HallArch(top: 112, height: 196),
       AuthArch.hallShort => const _HallArch(top: 112, height: 140),
       AuthArch.key => const _KeyArch(),
-      AuthArch.smallKey => const _SmallMark(icon: Icons.key_outlined),
-      AuthArch.lock => const _SmallMark(icon: Icons.lock_outline),
+      AuthArch.smallKey => const _SmallMark(
+        icon: TaytayIcons.key,
+        label: 'Key',
+      ),
+      AuthArch.lock => const _SmallMark(icon: TaytayIcons.lock, label: 'Lock'),
       AuthArch.shield => const _ShieldMark(),
-      AuthArch.submitted => const _SubmittedMark(),
+      AuthArch.submitted => _SubmittedMark(name: greeting),
       AuthArch.none => const SizedBox.shrink(),
     };
   }
@@ -292,8 +302,9 @@ class _KeyArch extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              Icons.key_outlined,
+            child: TaytayIcon(
+              icon: TaytayIcons.key,
+              semanticLabel: 'Key',
               size: 60,
               color: BrandColors.taytayBlue,
             ),
@@ -305,9 +316,10 @@ class _KeyArch extends StatelessWidget {
 }
 
 class _SmallMark extends StatelessWidget {
-  const _SmallMark({required this.icon});
+  const _SmallMark({required this.icon, required this.label});
 
   final IconData icon;
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +372,12 @@ class _SmallMark extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(icon, size: 44, color: BrandColors.taytayBlue),
+            child: TaytayIcon(
+              icon: icon,
+              semanticLabel: label,
+              size: 44,
+              color: BrandColors.taytayBlue,
+            ),
           ),
         ),
       ],
@@ -423,8 +440,9 @@ class _ShieldMark extends StatelessWidget {
                 child: SizedBox(
                   width: 108,
                   height: 108,
-                  child: Icon(
-                    Icons.verified_user_outlined,
+                  child: TaytayIcon(
+                    icon: TaytayIcons.shieldCheck,
+                    semanticLabel: 'Verified',
                     size: 48,
                     color: Color(0xFF0F7A4D),
                   ),
@@ -439,7 +457,9 @@ class _ShieldMark extends StatelessWidget {
 }
 
 class _SubmittedMark extends StatelessWidget {
-  const _SubmittedMark();
+  const _SubmittedMark({this.name});
+
+  final String? name;
 
   @override
   Widget build(BuildContext context) {
@@ -508,13 +528,15 @@ class _SubmittedMark extends StatelessWidget {
             ),
           ),
         ),
-        const Positioned(
+        Positioned(
           left: 24,
           right: 24,
           top: 346,
           child: AuthCopy(
             eyebrow: 'Naipasa na',
-            title: "You're all set, Juana!",
+            title: name == null || name!.isEmpty
+                ? "You're all set!"
+                : "You're all set, $name!",
             titleSize: 28,
             centered: true,
             subtitle:

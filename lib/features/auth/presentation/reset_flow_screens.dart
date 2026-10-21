@@ -7,10 +7,12 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/sign_in_field.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/code_exchange.dart';
 import 'auth_bits.dart';
@@ -255,8 +257,10 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      const Icon(
-                        Icons.schedule,
+                      const TaytayIcon(
+                        icon: TaytayIcons.clock,
+                        semanticLabel: '',
+                        excludeSemantics: true,
                         size: 14,
                         color: BrandColors.taytayBlue,
                       ),
@@ -626,10 +630,10 @@ class _SecretField extends StatelessWidget {
                       ? TextField(
                           controller: controller,
                           obscureText: !shown,
+                          textAlignVertical: TextAlignVertical.center,
                           style: AppTypography.fieldValue,
-                          decoration: const InputDecoration(
-                            isCollapsed: true,
-                            border: InputBorder.none,
+                          decoration: const InputDecoration.collapsed(
+                            hintText: '',
                           ),
                           onChanged: (_) => onChanged(),
                         )
@@ -666,8 +670,9 @@ class PasswordUpdatedScreen extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Icon(
-            Icons.verified_user_outlined,
+          TaytayIcon(
+            icon: TaytayIcons.shieldCheck,
+            semanticLabel: 'Verified',
             size: 20,
             color: Color(0xFF0F7A4D),
           ),

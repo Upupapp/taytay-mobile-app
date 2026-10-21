@@ -8,11 +8,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/documents/upload_policy.dart';
+import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/forgot_password_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
+
+import '../features/auth_screens_test.dart' show boot;
+import '../features/auth_session_test.dart' show FakeAuthRepository;
 
 /// Stills of `02-01` through `02-11` at 390×844 @3×, and a frame sequence of
 /// the wizard. Not part of `flutter test`.
@@ -86,6 +93,7 @@ void main() {
 
   testWidgets('capture 02-01 through 02-11', (tester) async {
     final out = Directory('/tmp/s2_renders');
+    if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);
     final frames = <(String, Widget)>[
       (
@@ -237,4 +245,117 @@ void main() {
     }
     expect(index, 56);
   });
+
+  testWidgets('wizard flow with motion and taps', (tester) async {
+    final out = Directory('/tmp/s2_wizard_motion');
+    if (out.existsSync()) out.deleteSync(recursive: true);
+    out.createSync(recursive: true);
+
+    final auth = FakeAuthRepository();
+    await boot(tester, auth: auth, documentPicker: _RecordingPicker());
+    tester.view.physicalSize = const Size(780, 1688);
+    tester.view.devicePixelRatio = 2;
+    tester.view.padding = FakeViewPadding.zero;
+    tester.view.viewPadding = FakeViewPadding.zero;
+    await tester.pump();
+
+    WelcomeMotion.enabled = true;
+    addTearDown(() => WelcomeMotion.enabled = false);
+    debugDisableShadows = false;
+
+    var frame = 0;
+    Future<void> hold(int count) async {
+      for (var i = 0; i < count; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byType(RepaintBoundary).first,
+        );
+        final name = frame.toString().padLeft(4, '0');
+        await tester.runAsync(() async {
+          final image = await boundary.toImage(pixelRatio: 1);
+          final data = await image.toByteData(format: ui.ImageByteFormat.png);
+          File(
+            '${out.path}/f_$name.png',
+          ).writeAsBytesSync(data!.buffer.asUint8List());
+          image.dispose();
+        });
+        frame++;
+      }
+    }
+
+    Future<void> tapText(String label) async {
+      final finder = find.text(label);
+      await tester.ensureVisible(finder);
+      await tester.pump(const Duration(milliseconds: 50));
+      await tester.tap(finder);
+      await hold(8);
+    }
+
+    try {
+      // Navigate without pumpAndSettle: a live speck never goes idle.
+      final context = tester.element(find.byType(Scaffold).first);
+      GoRouter.of(context).goNamed('register');
+      await hold(12);
+
+      final fields = find.byType(TextFormField);
+      await tester.enterText(fields.at(0), 'Juana');
+      await tester.enterText(fields.at(1), 'Dela Cruz');
+      await tester.enterText(fields.at(2), 'juana.delacruz@example.com');
+      await tester.enterText(fields.at(3), '09171234567');
+      await tester.enterText(fields.at(4), 'San Juan');
+      await tester.enterText(fields.at(5), 'Purok 3');
+      await tester.enterText(fields.at(6), 'Password1!');
+      await hold(14);
+      await tapText('Continue');
+
+      await tester.enterText(
+        find.byKey(const Key('email-code-field')),
+        '482190',
+      );
+      await hold(8);
+      await tapText('Confirm email');
+
+      await tapText(
+        'I have read and agree to the Terms of Use and the Privacy Notice.',
+      );
+      await tapText(
+        'I consent to Taytay LGU processing my personal data for account verification.',
+      );
+      await tapText('Continue');
+
+      await tester.tap(find.byKey(const Key('id-front-pick')));
+      await hold(8);
+      await tapText('Continue');
+
+      await tapText('Take selfie');
+      await tapText('Continue');
+
+      expect(find.text('Check your details'), findsOneWidget);
+      await hold(10);
+      await tapText('Submit for verification');
+      expect(find.text("You're all set, Juana!"), findsOneWidget);
+      await hold(24);
+      expect(frame, greaterThan(40));
+    } finally {
+      debugDisableShadows = true;
+    }
+  });
+}
+
+class _RecordingPicker implements DocumentPicker {
+  @override
+  Future<CapturedDocument?> pick(
+    DocumentSource source,
+    UploadPolicy policy,
+  ) async {
+    return CapturedDocument(
+      bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+      fileName: 'id_front.jpg',
+      mimeType: 'image/jpeg',
+      source: source,
+    );
+  }
+
+  @override
+  bool supports(DocumentSource source) => true;
 }

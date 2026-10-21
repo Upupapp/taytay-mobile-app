@@ -1,5 +1,6 @@
 import '../../../core/result/result.dart';
 import '../../../core/session/session_state.dart';
+import 'account_application.dart';
 import 'code_exchange.dart';
 
 /// What a completed authentication yields.
@@ -128,5 +129,41 @@ abstract interface class AuthRepository {
   /// The live repository declines: there is no citizen registration route.
   /// The dev mock returns an unverified session and does not upload the ID
   /// or the selfie. Those bytes stay on the device until a route exists.
+  ///
+  /// Prefer [createAccount], which keeps the password with the draft.
   Future<Result<AuthOutcome>> registerAccount({required String email});
+
+  /// Email and password for a new resident account.
+  ///
+  /// The live client declines with the same gap as [registerAccount]. The
+  /// password stays on [AccountApplication] and is not posted to a staff
+  /// token route. The dev mock accepts it and returns an unverified session.
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  });
+
+  /// Asks for an email check. A 6-digit code uses [sendEmailCode]. A provider
+  /// that sends a link uses this method; the published route is the same send,
+  /// because no separate link route exists.
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email});
+
+  /// Confirms either a 6-digit [code] or a verification [link].
+  ///
+  /// A code uses [verifyEmailCode]. A link has no published exchange, so the
+  /// live client declines without calling a staff route.
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  });
+
+  /// Asks for a password reset. The 6-digit path is [requestPasswordReset].
+  /// This name stays for a provider that sends a link instead of a code.
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email});
+
+  /// Names, mobile, barangay, and whether an ID and a selfie were captured.
+  ///
+  /// The bytes stay on the device. The live client declines: there is no
+  /// citizen upload route. The dev mock accepts the draft and stores nothing.
+  Future<Result<void>> submitProfile(AccountApplication application);
 }

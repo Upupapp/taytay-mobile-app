@@ -10,6 +10,7 @@ import '../../../../core/session/access_level.dart';
 import '../../../../core/session/push_registration.dart';
 import '../../../../core/session/session_state.dart';
 import '../../../../core/storage/public_cache.dart';
+import '../../../auth/domain/account_application.dart';
 import '../../../auth/domain/auth_repository.dart';
 import '../../../auth/domain/code_exchange.dart';
 import '../../../auth/domain/device_session_repository.dart';
@@ -222,6 +223,79 @@ class MockAuthRepository implements AuthRepository {
       Err<PasswordUpdated>(:final failure) =>
         Future<Result<PasswordUpdated>>.value(Err<PasswordUpdated>(failure)),
     };
+  }
+
+  @override
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  }) {
+    if (email.trim().isEmpty || password.isEmpty) {
+      return Future<Result<AuthOutcome>>.value(
+        const Err<AuthOutcome>(
+          ValidationFailure(
+            debugMessage: 'An email address and a password are required.',
+          ),
+        ),
+      );
+    }
+    return registerAccount(email: email);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email}) {
+    if (email != null && email.trim().isEmpty) {
+      return Future<Result<CodeAcceptance>>.value(
+        const Err<CodeAcceptance>(
+          ValidationFailure(debugMessage: 'An email address is required.'),
+        ),
+      );
+    }
+    return sendEmailCode();
+  }
+
+  @override
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  }) {
+    if (link != null && link.isNotEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(
+            debugMessage:
+                'An email link cannot be confirmed on the published route.',
+          ),
+        ),
+      );
+    }
+    if (code == null || code.isEmpty) {
+      return Future<Result<EmailVerified>>.value(
+        const Err<EmailVerified>(
+          ValidationFailure(debugMessage: 'A code is required.'),
+        ),
+      );
+    }
+    return verifyEmailCode(code: code);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email}) {
+    return requestPasswordReset(email: email);
+  }
+
+  @override
+  Future<Result<void>> submitProfile(AccountApplication application) {
+    if (application.email.trim().isEmpty || application.password.isEmpty) {
+      return Future<Result<void>>.value(
+        const Err<void>(
+          ValidationFailure(
+            debugMessage: 'An email address and a password are required.',
+          ),
+        ),
+      );
+    }
+    return _gate.respond<void>(null);
   }
 
   @override

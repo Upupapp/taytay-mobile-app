@@ -5,6 +5,7 @@ import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
+import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
 
@@ -252,6 +253,79 @@ class AuthApiRepository implements AuthRepository {
     return backendGapFailure<AuthOutcome>(
       BackendGap.residentSelfRegistration,
       'registerAccount',
+    );
+  }
+
+  @override
+  Future<Result<AuthOutcome>> createAccount({
+    required String email,
+    required String password,
+  }) async {
+    final Object _ = _apiClient.runtimeType;
+    if (email.trim().isEmpty || password.isEmpty) {
+      return const Err<AuthOutcome>(
+        ValidationFailure(
+          debugMessage: 'An email address and a password are required.',
+        ),
+      );
+    }
+    return backendGapFailure<AuthOutcome>(
+      BackendGap.residentSelfRegistration,
+      'createAccount',
+    );
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendEmailVerification({String? email}) {
+    if (email != null && email.trim().isEmpty) {
+      return Future<Result<CodeAcceptance>>.value(
+        const Err<CodeAcceptance>(
+          ValidationFailure(debugMessage: 'An email address is required.'),
+        ),
+      );
+    }
+    return sendEmailCode();
+  }
+
+  @override
+  Future<Result<EmailVerified>> confirmEmailVerification({
+    String? code,
+    String? link,
+  }) async {
+    if (link != null && link.isNotEmpty) {
+      return const Err<EmailVerified>(
+        ValidationFailure(
+          debugMessage:
+              'An email link cannot be confirmed on the published route.',
+        ),
+      );
+    }
+    if (code == null || code.isEmpty) {
+      return const Err<EmailVerified>(
+        ValidationFailure(debugMessage: 'A code is required.'),
+      );
+    }
+    return verifyEmailCode(code: code);
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> sendPasswordReset({required String email}) {
+    return requestPasswordReset(email: email);
+  }
+
+  @override
+  Future<Result<void>> submitProfile(AccountApplication application) async {
+    final Object _ = _apiClient.runtimeType;
+    if (application.email.trim().isEmpty || application.password.isEmpty) {
+      return const Err<void>(
+        ValidationFailure(
+          debugMessage: 'An email address and a password are required.',
+        ),
+      );
+    }
+    return backendGapFailure<void>(
+      BackendGap.residentSelfRegistration,
+      'submitProfile',
     );
   }
 
