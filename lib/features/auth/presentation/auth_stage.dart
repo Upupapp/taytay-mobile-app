@@ -25,6 +25,7 @@ class AuthStage extends StatelessWidget {
     this.curve = ThreadCurve.signIn,
     this.onBack,
     this.footer,
+    this.fieldCaption,
     this.bleed = false,
     super.key,
   });
@@ -47,6 +48,9 @@ class AuthStage extends StatelessWidget {
   final ThreadCurve curve;
   final VoidCallback? onBack;
   final Widget? footer;
+
+  /// Copy that sits on the field, above the sheet. `02-13` uses it.
+  final Widget? fieldCaption;
   final Widget child;
 
   /// `02-04` draws the sheet edge to edge, radius on the top corners only.
@@ -100,6 +104,13 @@ class AuthStage extends StatelessWidget {
               right: 20 + padding.right,
               child: _StepDots(step: step!, label: stepLabel ?? ''),
             ),
+          if (fieldCaption != null)
+            Positioned(
+              top: 346,
+              left: 24 + padding.left,
+              right: 24 + padding.right,
+              child: fieldCaption!,
+            ),
           if (wrapSheet)
             Positioned(
               top: top,
@@ -133,7 +144,7 @@ class AuthStage extends StatelessWidget {
 }
 
 /// Which mark sits on the field above the sheet.
-enum AuthArch { none, hall, hallShort, key, submitted }
+enum AuthArch { none, hall, hallShort, key, smallKey, lock, shield, submitted }
 
 class _Arch extends StatelessWidget {
   const _Arch({required this.kind});
@@ -146,6 +157,9 @@ class _Arch extends StatelessWidget {
       AuthArch.hall => const _HallArch(top: 112, height: 196),
       AuthArch.hallShort => const _HallArch(top: 112, height: 140),
       AuthArch.key => const _KeyArch(),
+      AuthArch.smallKey => const _SmallMark(icon: Icons.key_outlined),
+      AuthArch.lock => const _SmallMark(icon: Icons.lock_outline),
+      AuthArch.shield => const _ShieldMark(),
       AuthArch.submitted => const _SubmittedMark(),
       AuthArch.none => const SizedBox.shrink(),
     };
@@ -282,6 +296,140 @@ class _KeyArch extends StatelessWidget {
               Icons.key_outlined,
               size: 60,
               color: BrandColors.taytayBlue,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmallMark extends StatelessWidget {
+  const _SmallMark({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    const radius = BorderRadius.only(
+      topLeft: Radius.circular(55),
+      topRight: Radius.circular(55),
+      bottomLeft: Radius.circular(16),
+      bottomRight: Radius.circular(16),
+    );
+    return Stack(
+      children: <Widget>[
+        Positioned(
+          left: 146,
+          top: 124,
+          width: 110,
+          height: 110,
+          child: Transform.rotate(
+            angle: 4 * math.pi / 180,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: radius,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[
+                    Color(0xFF1E5BC6),
+                    Color(0xFF0B3D91),
+                    Color(0xFF062358),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 140,
+          top: 118,
+          width: 110,
+          height: 110,
+          child: DecoratedBox(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: radius,
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
+                BoxShadow(
+                  color: Color(0x33062358),
+                  blurRadius: 30,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Icon(icon, size: 44, color: BrandColors.taytayBlue),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ShieldMark extends StatelessWidget {
+  const _ShieldMark();
+
+  @override
+  Widget build(BuildContext context) {
+    const radius = BorderRadius.only(
+      topLeft: Radius.circular(90),
+      topRight: Radius.circular(90),
+      bottomLeft: Radius.circular(16),
+      bottomRight: Radius.circular(16),
+    );
+    return Stack(
+      children: <Widget>[
+        Positioned(
+          left: 111,
+          top: 132,
+          width: 180,
+          height: 180,
+          child: Transform.rotate(
+            angle: 4 * math.pi / 180,
+            child: const DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color(0xFF1E5BC6),
+                borderRadius: radius,
+              ),
+            ),
+          ),
+        ),
+        const Positioned(
+          left: 105,
+          top: 126,
+          width: 180,
+          height: 180,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: radius,
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
+                BoxShadow(
+                  color: Color(0x33062358),
+                  blurRadius: 30,
+                  offset: Offset(0, 14),
+                ),
+              ],
+            ),
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Color(0xFFE6F4EC),
+                  shape: BoxShape.circle,
+                ),
+                child: SizedBox(
+                  width: 108,
+                  height: 108,
+                  child: Icon(
+                    Icons.verified_user_outlined,
+                    size: 48,
+                    color: Color(0xFF0F7A4D),
+                  ),
+                ),
+              ),
             ),
           ),
         ),

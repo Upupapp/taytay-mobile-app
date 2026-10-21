@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,6 +10,7 @@ import '../../../core/design/typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_thread.dart';
+import '../domain/code_exchange.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 import 'sign_in_screen.dart';
@@ -63,8 +66,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     final controller = _controller;
     if (controller == null) return;
     final ok = await controller.requestPasswordReset(_identifier.text);
-    if (!mounted) return;
-    setState(() => _sent = ok);
+    if (!mounted || !ok) {
+      if (mounted) setState(() => _sent = false);
+      return;
+    }
+    final DateTime now = DateTime.now();
+    unawaited(
+      context.pushNamed(
+        AppRoute.resetCode.routeName,
+        extra: PasswordResetDraft(
+          email: _identifier.text.trim(),
+          issuedAt: now,
+          codeExpiresAt: now.add(CodeExchangeRules.codeLife),
+          resendAvailableAt: now.add(CodeExchangeRules.resendCooldown),
+        ),
+      ),
+    );
   }
 
   @override

@@ -42,9 +42,36 @@ class HomeQuickLink {
   String toString() => 'HomeQuickLink($id)';
 }
 
-/// `GET /home`: banners, shortcuts, and the ids of the news and services
-/// the server chose to feature. The rows themselves are fetched again from
-/// their own routes when a screen opens one.
+/// A published municipal hotline. The number is a public office line.
+@immutable
+class MunicipalHotline {
+  const MunicipalHotline({
+    required this.id,
+    required this.name,
+    required this.number,
+    required this.category,
+    required this.sortOrder,
+    required this.active,
+    this.createdAt,
+    this.updatedAt,
+  });
+
+  final String id;
+  final String name;
+  final String number;
+  final String category;
+  final int sortOrder;
+  final bool active;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  @override
+  String toString() => 'MunicipalHotline($id, $category)';
+}
+
+/// `GET /home`: banners, shortcuts, news, services, and hotlines.
+/// The rows themselves are fetched again from their own routes when a screen
+/// opens one. The hotline screen is still the later-sprint placeholder.
 @immutable
 class HomeFeed {
   const HomeFeed({
@@ -52,16 +79,19 @@ class HomeFeed {
     required this.quickLinks,
     required this.newsIds,
     required this.serviceSlugs,
+    this.hotlines = const <MunicipalHotline>[],
   });
 
   final List<HomeBanner> banners;
   final List<HomeQuickLink> quickLinks;
   final List<String> newsIds;
   final List<String> serviceSlugs;
+  final List<MunicipalHotline> hotlines;
 
   @override
   String toString() =>
-      'HomeFeed(${banners.length} banners, ${quickLinks.length} links)';
+      'HomeFeed(${banners.length} banners, ${quickLinks.length} links, '
+      '${hotlines.length} hotlines)';
 }
 
 /// A municipal office page. Public resident information.

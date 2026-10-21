@@ -6,9 +6,9 @@ import '../domain/office_messaging_repository.dart';
 /// Resident threads on the Taytay LGU IDS API.
 ///
 /// F31 is closed: `GET/POST /threads` and the message routes are in the
-/// contract. A thread carries an office slug and no topic, so [OfficeThread.topic]
-/// stays empty and the office name shown is the slug until a screen loads the
-/// office.
+/// contract. A thread carries `subject`, `last_message_preview`,
+/// `last_message_at` and `unread_count`. Starting one and replying both
+/// return `{thread, message}`.
 class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   const OfficeMessagingApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -70,32 +70,26 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     required String topic,
     required String body,
   }) async {
-    // Topic is not a ThreadStart field. It is not sent.
-    assert(officeId.isNotEmpty || body.isNotEmpty || topic.isNotEmpty);
-    final response = await _apiClient.send<OfficeThread?>(
+    final response = await _apiClient.send<OfficeMessage?>(
       method: HttpMethod.post,
       path: 'threads',
       authenticated: true,
-      body: <String, Object?>{'office_id': officeId, 'body': body},
-      decode: _decodeThread,
+      body: <String, Object?>{
+        'office_id': officeId,
+        'subject': topic,
+        'body': body,
+      },
+      decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),
     );
-    return response.flatMap((envelope) {
-      final OfficeThread? thread = envelope.data;
-      if (thread == null) {
-        return const Err<OfficeMessage>(
-          ContractFailure(debugMessage: 'Starting a thread returned no row.'),
-        );
-      }
-      return Ok<OfficeMessage>(
-        OfficeMessage(
-          id: thread.id,
-          threadId: thread.id,
-          body: body,
-          sentAt: thread.updatedAt,
-          fromResident: true,
-        ),
-      );
-    });
+    return response.flatMap(
+      (envelope) => envelope.data == null
+          ? const Err<OfficeMessage>(
+              ContractFailure(
+                debugMessage: 'Starting a thread returned no row.',
+              ),
+            )
+          : Ok<OfficeMessage>(envelope.data!),
+    );
   }
 
   @override
@@ -108,7 +102,7 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       path: 'threads/$threadId/messages',
       authenticated: true,
       body: <String, Object?>{'body': body},
-      decode: _decodeMessage,
+      decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),
     );
     return response.flatMap(
       (envelope) => envelope.data == null
@@ -147,20 +141,56 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     final Object? officeId = raw['office_id'];
     if (id is! String || id.isEmpty || officeId is! String) return null;
     final Object? slug = raw['office_slug'];
+    final Object? subject = raw['subject'];
+    final Object? preview = raw['last_message_preview'];
     final Object? updated = raw['updated_at'] ?? raw['created_at'];
+    final Object? unreadCount = raw['unread_count'];
+    final Object? resident = raw['resident_id'];
     return OfficeThread(
       id: id,
       officeId: officeId,
       officeName: slug is String ? slug : '',
       officeSlug: slug is String ? slug : '',
-      topic: '',
-      preview: '',
+      topic: subject is String ? subject : '',
+      preview: preview is String ? preview : '',
       status: raw['status'] is String ? raw['status'] as String : 'open',
       unread: raw['unread'] == true,
+      unreadCount: unreadCount is int ? unreadCount : 0,
+      residentId: resident is String ? resident : '',
+      lastMessageAt: DateTime.tryParse(
+        raw['last_message_at'] is String
+            ? raw['last_message_at'] as String
+            : '',
+      )?.toUtc(),
+      createdAt: DateTime.tryParse(
+        raw['created_at'] is String ? raw['created_at'] as String : '',
+      )?.toUtc(),
       updatedAt:
           DateTime.tryParse(updated is String ? updated : '')?.toUtc() ??
           DateTime.utc(2026, 10, 20, 1, 5),
       sample: false,
+    );
+  }
+
+  /// `POST /threads` and a reply both return `{thread, message}`.
+  static OfficeMessage? _decodeEnvelope(
+    Object? raw, {
+    required String fallbackBody,
+  }) {
+    if (raw is! Map<String, dynamic>) return null;
+    final OfficeMessage? message = _decodeMessage(raw['message'] ?? raw);
+    if (message != null && raw['message'] is Map<String, dynamic>) {
+      return message;
+    }
+    final OfficeThread? thread = _decodeThread(raw['thread']);
+    if (message != null && raw['thread_id'] is String) return message;
+    if (thread == null) return message;
+    return OfficeMessage(
+      id: message?.id ?? thread.id,
+      threadId: thread.id,
+      body: message?.body ?? fallbackBody,
+      sentAt: message?.sentAt ?? thread.updatedAt,
+      fromResident: true,
     );
   }
 

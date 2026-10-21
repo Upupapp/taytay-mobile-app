@@ -8,6 +8,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_controller.dart';
 
@@ -76,10 +77,78 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<Result<void>> requestPasswordReset({
-    required String identifier,
+  Future<Result<CodeAcceptance>> sendEmailCode() async {
+    requestCalls++;
+    if (requestOutcome case Err<void>(:final failure)) {
+      return Err<CodeAcceptance>(failure);
+    }
+    return const Ok<CodeAcceptance>(CodeAcceptance(accepted: true));
+  }
+
+  @override
+  Future<Result<EmailVerified>> verifyEmailCode({required String code}) async {
+    verifyCalls++;
+    codesSeen.add(code);
+    if (code.trim() == CodeExchangeRules.expiredSentinel) {
+      return const Err<EmailVerified>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'code': <String>[CodeExchangeRules.expired],
+          },
+        ),
+      );
+    }
+    return const Ok<EmailVerified>(EmailVerified(emailVerified: true));
+  }
+
+  @override
+  Future<Result<CodeAcceptance>> requestPasswordReset({
+    required String email,
   }) async {
-    return requestOutcome ?? const Ok<void>(null);
+    if (requestOutcome case Err<void>(:final failure)) {
+      return Err<CodeAcceptance>(failure);
+    }
+    return const Ok<CodeAcceptance>(CodeAcceptance(accepted: true));
+  }
+
+  @override
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  }) async {
+    codesSeen.add(code);
+    if (code.trim() == CodeExchangeRules.expiredSentinel) {
+      return const Err<PasswordResetGrant>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'code': <String>[CodeExchangeRules.expired],
+          },
+        ),
+      );
+    }
+    return Ok<PasswordResetGrant>(
+      PasswordResetGrant(
+        resetToken: 'example-reset-token-not-a-secret',
+        expiresAt: DateTime.utc(2026, 10, 21, 2),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  }) async {
+    if (!CodeExchangeRules.acceptablePassword(newPassword)) {
+      return const Err<PasswordUpdated>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'new_password': <String>[CodeExchangeRules.weak],
+          },
+        ),
+      );
+    }
+    return const Ok<PasswordUpdated>(PasswordUpdated(updated: true));
   }
 
   @override

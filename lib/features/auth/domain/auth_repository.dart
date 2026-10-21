@@ -1,5 +1,6 @@
 import '../../../core/result/result.dart';
 import '../../../core/session/session_state.dart';
+import 'code_exchange.dart';
 
 /// What a completed authentication yields.
 ///
@@ -86,16 +87,41 @@ abstract interface class AuthRepository {
   /// Email or mobile, plus a password, as `02-01` draws it.
   ///
   /// The live repository declines. The Node contract has no citizen password
-  /// route, and `POST /auth/tokens` is the staff console. The dev mock is the
-  /// only implementation that returns a session, until Clarence's Firebase
-  /// and Node endpoints exist. Nothing here sends a role or a permission.
+  /// route, and the staff token route is not this app's. The dev mock is the
+  /// only implementation that returns a session. Nothing here sends a role.
   Future<Result<AuthOutcome>> signInWithPassword({
     required String identifier,
     required String password,
   });
 
-  /// Asks for a reset code. The answer must not say whether the account exists.
-  Future<Result<void>> requestPasswordReset({required String identifier});
+  /// `POST /auth/email-otp/send`. Authenticated. No body. `202`.
+  ///
+  /// The code goes to the profile email. Registration asks for a code before
+  /// an account exists, so a live call can be refused; the screen still
+  /// advances and the dev mock accepts the same shape.
+  Future<Result<CodeAcceptance>> sendEmailCode();
+
+  /// `POST /auth/email-otp/verify` with `{code}`.
+  Future<Result<EmailVerified>> verifyEmailCode({required String code});
+
+  /// `POST /auth/password-reset/request` with `{email}`.
+  ///
+  /// A well-formed email is always accepted, whether or not an account exists.
+  Future<Result<CodeAcceptance>> requestPasswordReset({required String email});
+
+  /// `POST /auth/password-reset/verify` with `{email, code}`.
+  ///
+  /// Returns a reset token that expires after 15 minutes.
+  Future<Result<PasswordResetGrant>> verifyPasswordReset({
+    required String email,
+    required String code,
+  });
+
+  /// `POST /auth/password-reset/complete` with `{reset_token, new_password}`.
+  Future<Result<PasswordUpdated>> completePasswordReset({
+    required String resetToken,
+    required String newPassword,
+  });
 
   /// Creates a resident account and returns an unverified session.
   ///

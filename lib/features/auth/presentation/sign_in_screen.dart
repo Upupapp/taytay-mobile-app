@@ -162,7 +162,11 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               if (rejected) ...<Widget>[
                 const SizedBox(height: 10),
-                const _CredentialBanner(),
+                _CredentialBanner(
+                  attemptsLeft: widget.fixture == SignInFixture.error
+                      ? 2
+                      : controller?.passwordAttemptsShown ?? 2,
+                ),
               ],
               if (other != null) ...<Widget>[
                 const SizedBox(height: 10),
@@ -255,7 +259,9 @@ abstract final class AccountIdentifier {
 }
 
 class _CredentialBanner extends StatelessWidget {
-  const _CredentialBanner();
+  const _CredentialBanner({required this.attemptsLeft});
+
+  final int attemptsLeft;
 
   @override
   Widget build(BuildContext context) {
@@ -268,15 +274,15 @@ class _CredentialBanner extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFF3C1BE)),
         ),
-        child: const Row(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Icon(Icons.error_outline, size: 18, color: Color(0xFFB3261E)),
-            SizedBox(width: 10),
+            const Icon(Icons.error_outline, size: 18, color: Color(0xFFB3261E)),
+            const SizedBox(width: 10),
             Expanded(
               child: Text.rich(
                 TextSpan(
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontFamily: AppTypography.fontFamily,
                     fontSize: 12,
                     height: 1.45,
@@ -284,11 +290,14 @@ class _CredentialBanner extends StatelessWidget {
                     color: Color(0xFF7A1C16),
                   ),
                   children: <InlineSpan>[
-                    TextSpan(
+                    const TextSpan(
                       text: 'Incorrect email or password.\n',
                       style: TextStyle(fontWeight: AppTypography.black),
                     ),
-                    TextSpan(text: '2 attempts left before a 15-minute pause.'),
+                    TextSpan(
+                      text:
+                          '$attemptsLeft attempts left before a 15-minute pause.',
+                    ),
                   ],
                 ),
               ),

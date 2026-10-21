@@ -115,15 +115,14 @@ enum BackendGap {
     servedInstead: "a programme's requirement template, keyed differently",
   ),
 
-  /// **F13 — no route closes, erases or deletes an account.**
+  /// **F13 — historical. `POST /me/close` is now on the Node contract.**
   ///
-  /// `Audit` serves consents and acknowledgements, so most of the privacy screen
-  /// has somewhere to go. Closure does not: no module publishes it at the
-  /// baseline. Google Play and the App Store both require an in-app account
-  /// deletion path, so this is a launch blocker owned by TAB 22 — and it needs
-  /// the retention schedule from TAB 18 before it can even be specified, because
-  /// a municipal record cannot always simply be erased and the screen has to say
-  /// what is deleted and what is kept by law.
+  /// The PHP baseline published no closure route. The Node contract does:
+  /// `POST /api/v1/me/close` takes no body and returns the closed profile.
+  /// The privacy repository calls that route. The privacy screen still does
+  /// not offer deletion, because what a municipal record keeps is an LGU
+  /// retention decision and `canRequestDeletion` stays false. Nothing selects
+  /// this value.
   accountClosure(
     finding: 'F13',
     missing: 'account closure / erasure request',

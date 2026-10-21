@@ -64,6 +64,9 @@ void main() {
         AppRoute.signIn.path,
         AppRoute.register.path,
         AppRoute.forgotPassword.path,
+        AppRoute.resetCode.path,
+        AppRoute.setPassword.path,
+        AppRoute.passwordUpdated.path,
       ]) {
         expect(resolveRedirect(session: _guest, location: path), isNull);
       }
@@ -81,6 +84,18 @@ void main() {
           isNull,
           reason: session.accessLevel.name,
         );
+        for (final AppRoute route in <AppRoute>[
+          AppRoute.forgotPassword,
+          AppRoute.resetCode,
+          AppRoute.setPassword,
+          AppRoute.passwordUpdated,
+        ]) {
+          expect(
+            resolveRedirect(session: session, location: route.path),
+            isNull,
+            reason: '${session.accessLevel.name} ${route.name}',
+          );
+        }
       }
     });
   });
@@ -147,7 +162,7 @@ void main() {
     await tester.tap(find.text('Confirm email'));
     await tester.pumpAndSettle();
 
-    expect(find.text('That code expired. Send a new one.'), findsOneWidget);
+    expect(find.text('Nag-expire na ang code'), findsOneWidget);
     expect(find.text('Your data, protected'), findsNothing);
     expect(find.textContaining('debug'), findsNothing);
   });

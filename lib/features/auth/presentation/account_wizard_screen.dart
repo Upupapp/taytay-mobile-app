@@ -15,7 +15,9 @@ import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
+import '../domain/code_exchange.dart';
 import '../domain/sign_in_challenge.dart';
+import 'auth_bits.dart';
 import 'auth_stage.dart';
 
 /// Which `02` frame the wizard paints.
@@ -23,6 +25,7 @@ enum AccountFixture {
   live,
   personal,
   code,
+  codeExpired,
   terms,
   idCard,
   selfie,
@@ -67,6 +70,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   CapturedDocument? _front;
   bool _selfie = false;
   Map<String, String> _errors = <String, String>{};
+  bool _codeExpired = false;
 
   @override
   void initState() {
@@ -97,10 +101,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _terms = true;
       _privacy = true;
       _selfie = true;
-      _code.text = '4821';
+      _code.text = widget.fixture == AccountFixture.codeExpired ? '' : '4821';
     }
+    _codeExpired = widget.fixture == AccountFixture.codeExpired;
     _step = switch (widget.fixture) {
-      AccountFixture.code => _Step.code,
+      AccountFixture.code || AccountFixture.codeExpired => _Step.code,
       AccountFixture.terms => _Step.terms,
       AccountFixture.idCard => _Step.idCard,
       AccountFixture.selfie => _Step.selfie,
@@ -170,7 +175,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return errors;
   }
 
-  void _continue() {
+  Future<void> _continue() async {
     switch (_step) {
       case _Step.personal:
         final errors = _personalErrors();
@@ -179,20 +184,67 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           _summary.requestFocus();
           return;
         }
+        if (widget.fixture == AccountFixture.live) {
+          // The published send route needs a registered session. Registration
+          // is still before that account exists, so a refusal does not block
+          // the code step. The dev mock accepts the same empty body.
+          await AppDependencies.of(context).authRepository.sendEmailCode();
+          if (!mounted) return;
+        }
         setState(() => _step = _Step.code);
       case _Step.code:
+        if (_codeExpired) {
+          await _resendEmailCode();
+          return;
+        }
         final code = _code.text.trim();
         if (!RegExp(r'^\d{6}$').hasMatch(code)) {
           setState(() => _status = 'Enter the 6-digit code.');
           return;
         }
-        // Dev mock only. `000000` stands in for an expired code until the
-        // citizen OTP route exists. The copy is ours, not a server message.
-        if (code == '000000') {
-          setState(() => _status = 'That code expired. Send a new one.');
+        // `000000` is the expired stand-in. It does not spend an attempt and
+        // does not need the network, so the code step can show `02-04b`.
+        if (code == CodeExchangeRules.expiredSentinel) {
+          setState(() {
+            _codeExpired = true;
+            _code.clear();
+            _status = null;
+          });
           return;
         }
-        setState(() => _step = _Step.terms);
+        if (widget.fixture != AccountFixture.live) {
+          setState(() => _step = _Step.terms);
+          return;
+        }
+        setState(() => _busy = true);
+        final result = await AppDependencies.of(
+          context,
+        ).authRepository.verifyEmailCode(code: code);
+        if (!mounted) return;
+        switch (result) {
+          case Ok<EmailVerified>():
+            setState(() {
+              _busy = false;
+              _codeExpired = false;
+              _step = _Step.terms;
+            });
+          case Err<EmailVerified>(:final failure):
+            final List<String>? kinds = failure is ValidationFailure
+                ? failure.fieldErrors['code']
+                : null;
+            final bool expired =
+                kinds != null && kinds.contains(CodeExchangeRules.expired);
+            setState(() {
+              _busy = false;
+              if (expired) {
+                _codeExpired = true;
+                _code.clear();
+                _status = null;
+              } else {
+                _status = SignInFeedback.forFailure(failure).text;
+              }
+            });
+        }
       case _Step.terms:
         if (!_terms || !_privacy) {
           setState(
@@ -210,7 +262,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       case _Step.selfie:
         setState(() => _step = _Step.review);
       case _Step.review:
-        _submit();
+        await _submit();
       case _Step.submitted:
         context.goNamed(AppRoute.home.routeName);
     }
@@ -350,7 +402,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         widget.fixture == AccountFixture.errors
             ? SignInAtmosphere.errors
             : SignInAtmosphere.personal,
-      _Step.code => SignInAtmosphere.code,
+      _Step.code =>
+        _codeExpired ? SignInAtmosphere.codeExpired : SignInAtmosphere.code,
       _Step.terms => SignInAtmosphere.terms,
       _Step.idCard => SignInAtmosphere.idCard,
       _Step.selfie => SignInAtmosphere.selfie,
@@ -594,7 +647,20 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
+  Future<void> _resendEmailCode() async {
+    if (widget.fixture == AccountFixture.live) {
+      await AppDependencies.of(context).authRepository.sendEmailCode();
+      if (!mounted) return;
+    }
+    setState(() {
+      _codeExpired = false;
+      _code.clear();
+      _status = null;
+    });
+  }
+
   Widget _emailCode() {
+    if (_codeExpired) return _emailCodeExpired();
     final raw = _code.text.padRight(6);
     final address = _email.text.trim().isEmpty
         ? 'your email'
@@ -702,6 +768,70 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           'Change email address',
           fontSize: 12,
           onPressed: () => setState(() => _step = _Step.personal),
+        ),
+      ],
+    );
+  }
+
+  Widget _emailCodeExpired() {
+    final String address = _email.text.trim().isEmpty
+        ? AuthSample.email
+        : _email.text.trim();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const Center(
+          child: SizedBox(
+            width: 40,
+            height: 4,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color(0xFFE0D6B8),
+                borderRadius: BorderRadius.all(Radius.circular(2)),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        AuthCopy(
+          eyebrow: 'I-verify ang email',
+          title: 'Nag-expire na ang code',
+          subtitle:
+              'Valid lang ang code nang 10 minuto. Magpadala ng bago sa $address.',
+        ),
+        const SizedBox(height: 12),
+        const AuthNoticeBanner(
+          amber: true,
+          title: 'Hindi na magagamit ang lumang code. ',
+          detail: 'Bago ang code, may 5 subok ka ulit.',
+        ),
+        const SizedBox(height: 16),
+        const SixDigitRow(digits: ''),
+        const SizedBox(height: 8),
+        const Text(
+          'Puwede nang magpadala muli · Tingnan din ang spam folder',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 11,
+            fontWeight: AppTypography.body,
+            color: Color(0xFF5B6680),
+          ),
+        ),
+        const SizedBox(height: 16),
+        PrimaryButton(
+          kind: TaytayButtonKind.signIn,
+          label: 'Magpadala ng bagong code',
+          onPressed: _busy ? null : _resendEmailCode,
+        ),
+        const SizedBox(height: 10),
+        AuthTextLink(
+          'Palitan ang email address',
+          fontSize: 12,
+          onPressed: () => setState(() {
+            _codeExpired = false;
+            _step = _Step.personal;
+          }),
         ),
       ],
     );
