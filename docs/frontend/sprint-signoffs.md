@@ -108,7 +108,7 @@ S2 replaces the English one-time-code sign-in with `02-01` through `02-11`. Comp
 
 The thread and the 7s speck stay behind every `02` sheet. The curve is the SVG on that screen: sign-in `250→180`, reset `180→250`, the wizard flat at `136`, submitted `230→170`. Reduced motion hides the speck and keeps the thread. The capture runs with motion off, so the speck is not in the stills. Step dots sit on the dark header. Submitted has no dots. The debug session simulator is not on these screens.
 
-The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens.
+The mismatch table above is the review capture at 1170×2532, full frame, CIE76 ΔE above 6. `02-01` and `02-10` include the hall photograph. Side-by-sides are in `test/goldens/compare/s2/`. `02-12`, `02-12b`, and `02-13` are the designed screens. `flutter analyze` on `lib` and `test` was clean. `flutter test` passed 1572 tests, with 3 skipped (the recording tag).
 
 ### S2 deviations
 
