@@ -71,6 +71,17 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'health', 'platform_api_repository.dart'),
   BackendRoute('GET', 'home', 'node_citizen_api.dart'),
   BackendRoute('GET', 'hotlines', 'node_citizen_api.dart'),
+  BackendRoute('POST', 'households', 'resident_record_api_repository.dart'),
+  BackendRoute(
+    'GET',
+    'households/current',
+    'resident_record_api_repository.dart',
+  ),
+  BackendRoute(
+    'PATCH',
+    'households/current',
+    'resident_record_api_repository.dart',
+  ),
   BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),

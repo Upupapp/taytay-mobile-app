@@ -1004,6 +1004,12 @@ abstract class AppStrings {
   /// **'You need a Taytay LGU account to open your digital ID.'**
   String get gateSignInViewDigitalId;
 
+  /// First sentence of the sign-in gate for messaging an office.
+  ///
+  /// In en, this message translates to:
+  /// **'You need a Taytay LGU account to message offices.'**
+  String get gateSignInMessageOffice;
+
   /// Second sentence of the sign-in gate, the same for every intent.
   ///
   /// In en, this message translates to:
@@ -1051,6 +1057,12 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Taytay LGU needs to confirm who you are before you can open your digital ID.'**
   String get gateVerifyViewDigitalId;
+
+  /// First sentence of the verification gate for messaging an office.
+  ///
+  /// In en, this message translates to:
+  /// **'Taytay LGU needs to confirm who you are before you can message offices.'**
+  String get gateVerifyMessageOffice;
 
   /// Second sentence of the verification gate, the same for every intent.
   ///
@@ -1579,6 +1591,12 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'You can now open your digital ID.'**
   String get intentResumedViewDigitalId;
+
+  /// Shown when a held message intent can continue.
+  ///
+  /// In en, this message translates to:
+  /// **'You can now message offices.'**
+  String get intentResumedMessageOffice;
 
   /// Skip control on every welcome scene.
   ///

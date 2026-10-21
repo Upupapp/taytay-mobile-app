@@ -8,6 +8,7 @@ import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/session/access_policy.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
@@ -284,6 +285,7 @@ class _ShortcutSection extends StatelessWidget {
             intent: entry.$2,
             icon: entry.$3,
           ),
+        _MessageOfficeTile(session: session),
         const Divider(height: Spacing.xxl),
         Semantics(
           header: true,
@@ -375,6 +377,41 @@ class _CapabilityTile extends StatelessWidget {
       subtitle: requirement == null ? null : Text(requirement),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _open(context, verdict),
+    );
+  }
+}
+
+/// Message an office. The same unverified gate as the digital ID.
+class _MessageOfficeTile extends StatelessWidget {
+  const _MessageOfficeTile({required this.session});
+
+  final SessionState session;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        Icons.chat_bubble_outline,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: const Text('Message an office'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        final decision = AccessPolicy.evaluate(
+          session: session,
+          requirement: AccessRequirement.verified,
+        );
+        if (decision is AccessAllowed) {
+          context.goNamed(AppRoute.messagesInbox.routeName);
+          return;
+        }
+        AccessGateSheet.show(
+          context: context,
+          decision: decision,
+          intent: ResidentIntentKind.messageOffice,
+        );
+      },
     );
   }
 }

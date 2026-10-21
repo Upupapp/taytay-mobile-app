@@ -1070,7 +1070,7 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(BottomSheet),
-          matching: find.text('Verify your identity'),
+          matching: find.text('Verify your account to continue'),
         ),
         findsOneWidget,
       );

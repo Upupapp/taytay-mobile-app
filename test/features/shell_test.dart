@@ -301,7 +301,7 @@ void main() {
         initialLocation: '/requests/r-1/requirements',
       );
 
-      expect(find.text('Identity verification'), findsWidgets);
+      expect(find.text('Verification status'), findsWidgets);
       expect(find.text('Documents needed'), findsNothing);
     });
   });

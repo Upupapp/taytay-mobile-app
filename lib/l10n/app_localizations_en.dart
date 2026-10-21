@@ -553,6 +553,10 @@ class AppStringsEn extends AppStrings {
       'You need a Taytay LGU account to open your digital ID.';
 
   @override
+  String get gateSignInMessageOffice =>
+      'You need a Taytay LGU account to message offices.';
+
+  @override
   String get gateSignInTrailer =>
       'Signing in also lets you track anything you apply for.';
 
@@ -583,6 +587,10 @@ class AppStringsEn extends AppStrings {
   @override
   String get gateVerifyViewDigitalId =>
       'Taytay LGU needs to confirm who you are before you can open your digital ID.';
+
+  @override
+  String get gateVerifyMessageOffice =>
+      'Taytay LGU needs to confirm who you are before you can message offices.';
 
   @override
   String get gateVerifyTrailer => 'Verification is a one-time step.';
@@ -867,6 +875,9 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get intentResumedViewDigitalId => 'You can now open your digital ID.';
+
+  @override
+  String get intentResumedMessageOffice => 'You can now message offices.';
 
   @override
   String get welcomeSkip => 'Skip';

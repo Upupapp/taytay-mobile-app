@@ -40,6 +40,8 @@ import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/kyc_claim_screen.dart';
+import '../../features/verification/presentation/profile_wizard_page.dart';
+import '../../features/verification/presentation/profile_wizard_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
 import '../../shared/widgets/foundation_placeholder_screen.dart';
 import '../../shared/widgets/taytay_back_button.dart';
@@ -307,12 +309,53 @@ GoRouter buildAppRouter({
       GoRoute(
         path: AppRoute.verification.path,
         name: AppRoute.verification.routeName,
-        builder: (context, state) => const VerificationScreen(),
+        builder: (context, state) {
+          final bool pending =
+              state.uri.queryParameters['status'] == 'pending';
+          return VerificationScreen(preferPending: pending);
+        },
         routes: <RouteBase>[
           GoRoute(
             path: 'start',
             name: AppRoute.verificationClaim.routeName,
             builder: (context, state) => const KycClaimScreen(),
+          ),
+          GoRoute(
+            path: 'profile',
+            name: AppRoute.residentProfile.routeName,
+            builder: (context, state) => const ProfileWizardScreen(
+              step: ProfileWizardStep.overview,
+            ),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'personal',
+                name: AppRoute.residentProfilePersonal.routeName,
+                builder: (context, state) => const ProfileWizardScreen(
+                  step: ProfileWizardStep.personal,
+                ),
+              ),
+              GoRoute(
+                path: 'address',
+                name: AppRoute.residentProfileAddress.routeName,
+                builder: (context, state) => const ProfileWizardScreen(
+                  step: ProfileWizardStep.household,
+                ),
+              ),
+              GoRoute(
+                path: 'review',
+                name: AppRoute.residentProfileReview.routeName,
+                builder: (context, state) => const ProfileWizardScreen(
+                  step: ProfileWizardStep.review,
+                ),
+              ),
+              GoRoute(
+                path: 'submitted',
+                name: AppRoute.residentProfileSubmitted.routeName,
+                builder: (context, state) => const ProfileWizardScreen(
+                  step: ProfileWizardStep.submitted,
+                ),
+              ),
+            ],
           ),
         ],
       ),

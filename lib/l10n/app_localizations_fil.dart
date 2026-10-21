@@ -560,6 +560,10 @@ class AppStringsFil extends AppStrings {
       'Kailangan mo ng Taytay LGU account para buksan ang iyong digital ID.';
 
   @override
+  String get gateSignInMessageOffice =>
+      'Kailangan mo ng Taytay LGU account para magmensahe sa mga opisina.';
+
+  @override
   String get gateSignInTrailer =>
       'Sa pag-sign in, masusubaybayan mo rin ang anumang inaplayan mo.';
 
@@ -590,6 +594,10 @@ class AppStringsFil extends AppStrings {
   @override
   String get gateVerifyViewDigitalId =>
       'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago mo buksan ang iyong digital ID.';
+
+  @override
+  String get gateVerifyMessageOffice =>
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka magmensahe sa mga opisina.';
 
   @override
   String get gateVerifyTrailer => 'Isang beses lang ang verification.';
@@ -878,6 +886,10 @@ class AppStringsFil extends AppStrings {
   @override
   String get intentResumedViewDigitalId =>
       'Maaari mo nang buksan ang iyong digital ID.';
+
+  @override
+  String get intentResumedMessageOffice =>
+      'Maaari ka nang magmensahe sa mga opisina.';
 
   @override
   String get welcomeSkip => 'Laktawan';

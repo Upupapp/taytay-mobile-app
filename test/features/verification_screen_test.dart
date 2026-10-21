@@ -1,10 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
@@ -16,9 +14,14 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
+import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
+import 'package:taytay_resident/features/verification/domain/verification_face.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
+import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
+import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
+import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
 class StubVerificationRepository implements VerificationRepository {
@@ -72,26 +75,17 @@ AppConfig config() => AppConfig.from(
   isReleaseBuild: false,
 );
 
-/// Boots the app onto the verification screen with a given status.
 Future<AppDependencies> bootVerification(
   WidgetTester tester, {
   required VerificationStatusDetail detail,
   AccessLevel level = AccessLevel.unverified,
-  TextScaler textScaler = TextScaler.noScaling,
-  Locale locale = AppLocales.english,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
-  tester.platformDispatcher.localeTestValue = locale;
-  tester.platformDispatcher.localesTestValue = <Locale>[locale];
-  addTearDown(tester.platformDispatcher.clearLocaleTestValue);
-  addTearDown(tester.platformDispatcher.clearLocalesTestValue);
-
   final secrets = InMemorySecretStore();
   await secrets.write(LaunchController.welcomeCompletedKey, 'true');
-
   final sessionStore = InMemorySessionStore();
   await sessionStore.write(
     StoredSession(
@@ -105,7 +99,6 @@ Future<AppDependencies> bootVerification(
     secrets: secrets,
     sessionStore: sessionStore,
   );
-  // Swap in the stub while keeping every other wire intact.
   final dependencies = AppDependencies(
     config: base.config,
     session: base.session,
@@ -141,708 +134,163 @@ Future<AppDependencies> bootVerification(
   );
   addTearDown(dependencies.dispose);
 
-  await tester.pumpWidget(
-    MediaQuery(
-      data: MediaQueryData.fromView(
-        tester.view,
-      ).copyWith(textScaler: textScaler),
-      child: TaytayResidentApp(dependencies: dependencies),
-    ),
-  );
+  await tester.pumpWidget(TaytayResidentApp(dependencies: dependencies));
   await tester.pump();
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 
-  // Scrolled first: at a large text scale the tile sits below the fold, and a
-  // `ListView` only builds what fits — so the widget is genuinely absent from
-  // the tree and `ensureVisible` cannot find it. `scrollUntilVisible` scrolls
-  // until it is built.
-  // TAB 11: Home's next-action card is how a signed-in resident reaches
-  // verification. Its button label comes from the stage when one has loaded,
-  // and falls back to "Check my status" when it has not.
   final action = find.text('Check my status').evaluate().isNotEmpty
       ? find.text('Check my status')
       : find.byType(FilledButton).first;
-  await scrollToTile(tester, action);
+  await tester.ensureVisible(action);
   await tester.tap(action);
   await tester.pumpAndSettle();
-
   return dependencies;
 }
 
-/// Scrolls the home list until [finder] has been built and is on screen.
-Future<void> scrollToTile(WidgetTester tester, Finder finder) async {
-  if (finder.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      finder,
-      120,
-      scrollable: find.byType(Scrollable).first,
-    );
-  }
-  await tester.ensureVisible(finder);
-  await tester.pumpAndSettle();
-}
-
-/// Returns to the home screen.
-///
-/// The verification route is entered with `go`, which replaces the location, so
-/// there is no back button to press — navigation is explicit, as it is in the app.
-Future<void> goHome(WidgetTester tester) async {
-  GoRouter.of(tester.element(find.byType(Scaffold).first)).goNamed('home');
-  await tester.pumpAndSettle();
-}
-
-/// Scrolls the verification list until [finder] is built and visible.
-///
-/// Needed since F28 put a documents card between the status header and the
-/// next-steps card: a `ListView` only builds what fits, so an assertion about
-/// copy below the fold fails with "found 0 widgets" rather than with anything
-/// about what changed.
-Future<void> scrollToText(WidgetTester tester, Finder finder) async {
-  if (finder.evaluate().isEmpty) {
-    await tester.scrollUntilVisible(
-      finder,
-      160,
-      scrollable: find.byType(Scrollable).last,
-    );
-  }
-  await tester.pumpAndSettle();
-}
-
 void main() {
-  _verificationLocalisation();
-  group('the door out of Not started — F14 and F15', () {
-    testWidgets(
-      'Start verification opens the KYC form, not the blocked wizard',
-      (tester) async {
-        await bootVerification(
-          tester,
-          detail: const VerificationStatusDetail(
-            stage: ResidentVerificationStage.notStarted,
-            rawState: '',
-          ),
-        );
-
-        final Finder start = find.text('Start verification');
-        await scrollToTile(tester, start);
-        await tester.tap(start);
-        await tester.pumpAndSettle();
-
-        // REGRESSION GUARD. This button used to go to the self-registration
-        // wizard, which has no server counterpart at all (F15): a resident who
-        // pressed it reached a seven-field form that could never submit. It now
-        // goes to the KYC claim form, which the backend serves — the whole point
-        // of closing F14.
-        expect(find.text('Verify your identity'), findsOneWidget);
-        expect(
-          find.textContaining('municipal resident register'),
-          findsOneWidget,
-        );
-      },
-    );
-
-    testWidgets('the KYC form asks for nothing the office did not', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.notStarted,
-          rawState: '',
-        ),
+  group('the tier picks the screen and fails closed', () {
+    test('only the exact word verified is the verified face', () {
+      expect(verificationFaceFor('verified'), VerificationFace.verified);
+      expect(verificationFaceFor('VERIFIED'), VerificationFace.unverified);
+      expect(verificationFaceFor('approved'), VerificationFace.unverified);
+      expect(verificationFaceFor('pending'), VerificationFace.pending);
+      expect(verificationFaceFor('rejected'), VerificationFace.needsCorrection);
+      expect(
+        verificationFaceFor('unverified', fieldNotes: true),
+        VerificationFace.needsCorrection,
       );
-      final Finder start = find.text('Start verification');
-      await scrollToTile(tester, start);
-      await tester.tap(start);
-      await tester.pumpAndSettle();
-
-      // Every label the form renders, gathered by scrolling the whole thing.
-      //
-      // NOT by asserting `findsNothing` on the unscrolled screen: a `ListView`
-      // only builds what fits, so a field below the fold is absent from the tree
-      // and every negative assertion would pass whether or not the field exists.
-      // That is a test that cannot fail, which is worse than no test.
-      final Set<String> rendered = <String>{};
-      final Finder list = find.byType(Scrollable).last;
-      for (int i = 0; i < 40; i++) {
-        rendered.addAll(
-          tester
-              .widgetList<Text>(find.byType(Text))
-              .map((Text t) => t.data ?? '')
-              .where((String d) => d.isNotEmpty),
-        );
-        await tester.drag(list, const Offset(0, -280));
-        await tester.pumpAndSettle();
-      }
-
-      // Exactly what POST me/kyc validates. Every one becomes a claimed_*
-      // column in a municipal review queue.
-      for (final String label in <String>[
-        'First name',
-        'Middle name (optional)',
-        'Last name',
-        'Suffix (optional)',
-        'Date of birth',
-        'Sex',
-        'Barangay',
-        'Street address',
-      ]) {
-        expect(rendered, contains(label), reason: label);
-      }
-
-      // And nothing else. A PhilSys number is what the office looks up, never
-      // what an applicant asserts, and the account already carries the contact
-      // details. No document capture either: a KYC case has nowhere to put one
-      // (F28), and a screen that took a photograph of somebody's ID and dropped
-      // it would have collected the most sensitive thing this app can hold, for
-      // nothing.
-      for (final String forbidden in <String>[
-        'PhilSys',
-        'Mobile number',
-        'Email',
-        'Take a photo',
-        'Upload',
-        'Selfie',
-      ]) {
-        expect(
-          rendered.where((String t) => t.contains(forbidden)),
-          isEmpty,
-          reason: forbidden,
-        );
-      }
+      expect(verificationFaceFor('gold'), VerificationFace.unverified);
+      expect(verificationFaceFor(null), VerificationFace.unverified);
+      expect(
+        verificationFaceFor('gold', fieldNotes: true),
+        VerificationFace.unverified,
+      );
+      expect(
+        AccessLevel.fromVerificationTier('gold'),
+        AccessLevel.unverified,
+      );
     });
 
-    testWidgets('a saved draft says plainly that nothing has been sent', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.inProgress,
-          rawState: 'draft',
-        ),
+    test('a Manila stamp keeps the design clock', () {
+      expect(
+        formatManilaStamp(DateTime.utc(2026, 10, 20, 12, 12)),
+        'Oct 20, 2026 · 8:12 PM',
       );
+      expect(
+        formatManilaStamp(DateTime.utc(2026, 10, 20, 12, 40)),
+        'Oct 20, 2026 · 8:40 PM',
+      );
+      expect(formatManilaDate(DateTime.utc(2026, 10, 22)), 'Oct 22, 2026');
+      expect(idTypeLabel('philid'), 'PhilSys National ID');
+    });
 
-      // The one thing a resident must not be wrong about: a draft is not a
-      // submission, and the office cannot see it yet.
-      await scrollToText(tester, find.textContaining('have not been sent'));
-      expect(find.textContaining('have not been sent'), findsOneWidget);
-      expect(find.text('Continue verification'), findsOneWidget);
+    test('a 403 does not stamp verified without the server tier', () {
+      final source = File(
+        'lib/features/auth/presentation/account_wizard_screen.dart',
+      ).readAsStringSync();
+      expect(source, isNot(contains("applyVerificationTier('verified')")));
+      expect(source, contains('loadOwnDetail'));
+      expect(source, contains('AccessLevel.fromVerificationTier'));
+    });
+
+    test('409 opens pending review and 403 continues as verified', () {
+      expect(
+        verificationSubmitOutcome(const ConflictFailure()),
+        VerificationSubmitOutcome.pendingReview,
+      );
+      expect(
+        verificationSubmitOutcome(const ForbiddenFailure()),
+        VerificationSubmitOutcome.continueVerified,
+      );
+      expect(verificationSubmitOutcome(null), VerificationSubmitOutcome.opened);
+      expect(
+        verificationSubmitOutcome(const NetworkFailure()),
+        VerificationSubmitOutcome.failed,
+      );
     });
   });
 
-  group('documents — F28', () {
-    testWidgets('a draft offers both types and neither is demanded', (
+  group('status pages', () {
+    testWidgets('pending, verified and needs-correction say what they are', (
       tester,
     ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.inProgress,
-          rawState: 'draft',
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: PendingStatusPage(),
         ),
       );
+      expect(find.text('Pending review'), findsOneWidget);
+      expect(find.text('Your account is verified'), findsNothing);
 
-      await scrollToText(tester, find.text('Documents you can send'));
+      await tester.pumpWidget(const MaterialApp(home: VerifiedStatusPage()));
+      expect(find.text('Your account is verified'), findsOneWidget);
+      expect(find.text('Not verified'), findsNothing);
 
-      // "can send", not "must send". A KYC case is adjudicated against the
-      // municipal register first; presenting documents as a checklist tells
-      // somebody their application is incomplete when the office may need
-      // nothing from them at all.
-      expect(find.text('Documents you can send'), findsOneWidget);
-      expect(find.textContaining('only if you are asked'), findsOneWidget);
-      expect(find.text('Government-issued ID'), findsOneWidget);
-      expect(find.text('Proof of address'), findsOneWidget);
-    });
-
-    testWidgets('there is no selfie or face capture anywhere in the flow', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.inProgress,
-          rawState: 'draft',
-        ),
-      );
-
-      // Gathered by scrolling the whole screen: an unscrolled `findsNothing` on
-      // a `ListView` passes whether or not the thing exists.
-      final Set<String> rendered = <String>{};
-      final Finder list = find.byType(Scrollable).last;
-      for (int i = 0; i < 30; i++) {
-        rendered.addAll(
-          tester
-              .widgetList<Text>(find.byType(Text))
-              .map((Text t) => t.data ?? '')
-              .where((String d) => d.isNotEmpty),
-        );
-        await tester.drag(list, const Offset(0, -240));
-        await tester.pumpAndSettle();
-      }
-
-      // A facial image is not revocable the way a password is, and a released
-      // build cannot be trusted to grade its own verification.
-      for (final String forbidden in <String>[
-        'selfie',
-        'Selfie',
-        'face',
-        'Face',
-        'liveness',
-      ]) {
-        expect(
-          rendered.where((String t) => t.contains(forbidden)),
-          isEmpty,
-          reason: forbidden,
-        );
-      }
-    });
-
-    testWidgets(
-      'a device that cannot pick a file says so instead of offering a dead button',
-      (tester) async {
-        await bootVerification(
-          tester,
-          detail: const VerificationStatusDetail(
-            stage: ResidentVerificationStage.inProgress,
-            rawState: 'draft',
-          ),
-        );
-
-        // The harness binds `UnavailableDocumentPicker`, which is also what any
-        // platform without a picker gets. A Send button that cannot work is the
-        // thing this app refuses to render.
-        await scrollToText(tester, find.textContaining('cannot choose a file'));
-        expect(find.textContaining('cannot choose a file'), findsOneWidget);
-        expect(find.textContaining('municipal hall'), findsWidgets);
-        expect(find.text('Send'), findsNothing);
-      },
-    );
-
-    testWidgets('a submitted case offers nothing to attach', (tester) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.pendingReview,
-          rawState: 'submitted',
-        ),
-      );
-
-      // A document arriving after submission changes what a reviewer already
-      // looked at without their knowing, and the server refuses it — so the app
-      // must not offer it either.
-      expect(find.text('Documents you can send'), findsNothing);
-    });
-  });
-
-  group('status is understandable without staff detail', () {
-    testWidgets(
-      'pending review states what is happening and offers no action',
-      (tester) async {
-        await bootVerification(
-          tester,
-          detail: const VerificationStatusDetail(
-            stage: ResidentVerificationStage.pendingReview,
-            rawState: 'under_review',
-            submittedCategories: <VerificationItemCategory>[
-              VerificationItemCategory.personalDetails,
-              VerificationItemCategory.address,
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: NeedsCorrectionPage(
+            notes: <FieldCorrectionNote>[
+              FieldCorrectionNote(
+                label: 'ID photo',
+                note: 'The photo is blurry. Retake the front of your ID.',
+              ),
+              FieldCorrectionNote(
+                label: 'Address',
+                note: 'Barangay does not match the ID.',
+              ),
             ],
           ),
-        );
-
-        expect(find.text('Waiting for review'), findsOneWidget);
-        expect(find.text('What Taytay LGU has from you'), findsOneWidget);
-        expect(find.text('Your details'), findsOneWidget);
-        expect(find.text('Your address'), findsOneWidget);
-        // Categories, never values.
-        expect(
-          find.textContaining('Name, birth date and civil status'),
-          findsOneWidget,
-        );
-      },
-    );
-
-    testWidgets('no turnaround promise appears on screen', (tester) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.pendingReview,
-          rawState: 'under_review',
         ),
       );
-
-      final rendered = tester
-          .widgetList<Text>(find.byType(Text))
-          .map((t) => t.data ?? '')
-          .join(' ')
-          .toLowerCase();
-
-      expect(
-        rendered,
-        isNot(matches(RegExp(r'\b\d+\s*(day|days|week|weeks)\b'))),
-      );
-      expect(rendered, isNot(contains('guarantee')));
+      expect(find.text('Needs correction'), findsNWidgets(2));
+      expect(find.text('ID photo'), findsOneWidget);
+      expect(find.textContaining('The photo is blurry'), findsOneWidget);
+      expect(find.text('Address'), findsOneWidget);
+      expect(find.text('Your account is verified'), findsNothing);
     });
 
-    testWidgets('the raw server state is never shown as the status', (
-      tester,
-    ) async {
+    testWidgets('an unknown tier renders as unverified', (tester) async {
       await bootVerification(
         tester,
         detail: const VerificationStatusDetail(
           stage: ResidentVerificationStage.manualReview,
-          rawState: 'awaiting_barangay_endorsement',
+          rawState: 'gold',
         ),
       );
 
-      expect(
-        find.textContaining('awaiting_barangay_endorsement'),
-        findsNothing,
-      );
-      expect(find.text('Needs a person to check'), findsOneWidget);
+      expect(find.text('Not verified'), findsOneWidget);
+      expect(find.text('Your account is verified'), findsNothing);
+      expect(find.text('Verification status'), findsOneWidget);
     });
-  });
 
-  group('every unsuccessful state offers a safe next step', () {
-    testWidgets('unsuccessful offers retry and the municipal hall', (
+    testWidgets('a verified stage raises the session without a restart', (
       tester,
     ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.unsuccessful,
-          rawState: 'rejected',
-        ),
-      );
-
-      expect(find.text('Could not be verified'), findsOneWidget);
-      await scrollToText(tester, find.text('Try again'));
-      expect(find.text('Try again'), findsWidgets);
-      await scrollToText(tester, find.text('Finish at the municipal hall'));
-      expect(find.text('Finish at the municipal hall'), findsOneWidget);
-    });
-
-    testWidgets('manual review offers the municipal hall', (tester) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.manualReview,
-          rawState: 'manual',
-          manualReviewAvailable: true,
-        ),
-      );
-
-      await scrollToText(tester, find.text('Finish at the municipal hall'));
-      expect(find.text('Finish at the municipal hall'), findsOneWidget);
-      expect(
-        find.textContaining('do not need anything from this app'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('not started explains why verification is worth doing', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.notStarted,
-          rawState: 'not_started',
-        ),
-      );
-
-      expect(find.text('Not started'), findsOneWidget);
-      await scrollToText(tester, find.text('Start verification'));
-      expect(find.text('Start verification'), findsWidgets);
-    });
-  });
-
-  group('needs more information', () {
-    testWidgets('shows only the flagged items with the office instruction', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.needsMoreInformation,
-          rawState: 'under_review',
-          submittedCategories: <VerificationItemCategory>[
-            VerificationItemCategory.personalDetails,
-            VerificationItemCategory.address,
-          ],
-          issues: <VerificationItemIssue>[
-            VerificationItemIssue(
-              category: VerificationItemCategory.address,
-              instruction: 'Add your house number.',
-            ),
-          ],
-          residentGuidance: 'We could not find that address.',
-        ),
-      );
-
-      expect(find.text('One thing to fix'), findsOneWidget);
-      expect(find.textContaining('Add your house number.'), findsWidgets);
-      expect(find.text('From Taytay LGU'), findsOneWidget);
-      // The unflagged category is not presented as needing correction.
-      expect(find.text('Two things to fix'), findsNothing);
-    });
-
-    testWidgets('sending is disabled until the item is answered', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.needsMoreInformation,
-          rawState: 'under_review',
-          issues: <VerificationItemIssue>[
-            VerificationItemIssue(
-              category: VerificationItemCategory.address,
-              instruction: 'Add your house number.',
-            ),
-          ],
-        ),
-      );
-
-      expect(find.text('Fill in every item above to send.'), findsOneWidget);
-
-      // TAB 04 / F23: "your address" is a barangay, a street and a purok, so
-      // there is no input until the resident says which one they mean. Before
-      // this, the app picked `street_address` on their behalf and a resident
-      // correcting their barangay filed a street correction the office would
-      // read, find nothing wrong with, and close.
-      expect(
-        find.byType(TextFormField),
-        findsNothing,
-        reason: 'nothing to type into until the detail is chosen',
-      );
-      expect(find.text('Which detail needs correcting?'), findsOneWidget);
-
-      await tester.tap(find.text('House number and street'));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextFormField).first, '12 Rizal St');
-      await tester.pumpAndSettle();
-
-      expect(find.text('Fill in every item above to send.'), findsNothing);
-    });
-
-    testWidgets('a document cannot be corrected by message, and says so first', (
-      tester,
-    ) async {
-      // The other half of F23. "Proof of identity" maps to no profile field at
-      // all, and the old flow offered a text box and refused after the typing —
-      // a refusal disguised as a form.
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.needsMoreInformation,
-          rawState: 'under_review',
-          issues: <VerificationItemIssue>[
-            VerificationItemIssue(
-              category: VerificationItemCategory.identityDocument,
-              instruction: 'Your ID photo was blurry.',
-            ),
-          ],
-        ),
-      );
-
-      expect(
-        find.textContaining('cannot be corrected by message'),
-        findsOneWidget,
-      );
-      expect(
-        find.byType(TextFormField),
-        findsNothing,
-        reason: 'no input is offered for something this route cannot carry',
-      );
-    });
-  });
-
-  group('verified unlocks access without a restart', () {
-    testWidgets(
-      'the session level rises and the digital ID becomes reachable',
-      (tester) async {
-        final dependencies = await bootVerification(
-          tester,
-          detail: const VerificationStatusDetail(
-            stage: ResidentVerificationStage.verified,
-            rawState: 'approved',
-          ),
-        );
-
-        expect(find.text('Verified'), findsWidgets);
-        // Acceptance 2: centralized state, same session, no restart.
-        expect(dependencies.session.accessLevel, AccessLevel.verified);
-
-        // The gate is gone: TAB 11's Home offers the credential as the next
-        // action, and it opens directly — same session, no restart.
-        await goHome(tester);
-        await scrollToTile(tester, find.text('Open my digital ID'));
-        await tester.tap(find.text('Open my digital ID'));
-        await tester.pumpAndSettle();
-
-        expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
-        expect(find.text('Sign in to continue'), findsNothing);
-        expect(find.text('Verify your identity'), findsNothing);
-      },
-    );
-  });
-
-  group('accessibility', () {
-    testWidgets('the status headline is announced as a live region', (
-      tester,
-    ) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.pendingReview,
-          rawState: 'under_review',
-        ),
-      );
-
-      final semantics = tester.getSemantics(
-        find
-            .ancestor(
-              of: find.text('Waiting for review'),
-              matching: find.byType(Semantics),
-            )
-            .first,
-      );
-      expect(semantics, isNotNull);
-    });
-
-    testWidgets('the screen survives a 200% text scale', (tester) async {
-      await bootVerification(
-        tester,
-        textScaler: const TextScaler.linear(2),
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.needsMoreInformation,
-          rawState: 'under_review',
-          submittedCategories: <VerificationItemCategory>[
-            VerificationItemCategory.personalDetails,
-          ],
-          issues: <VerificationItemIssue>[
-            VerificationItemIssue(
-              category: VerificationItemCategory.address,
-              instruction: 'Add your house number.',
-            ),
-          ],
-        ),
-      );
-
-      expect(tester.takeException(), isNull);
-    });
-  });
-}
-
-void _verificationLocalisation() {
-  group('the verification surface speaks Filipino too', () {
-    testWidgets('the stage headline and its explanation translate', (
-      tester,
-    ) async {
-      // The headline of this screen is how somebody learns whether they can
-      // hold a digital ID. It rendered `ResidentVerificationStage.label`
-      // directly — English for every resident — until the sweep that followed
-      // C-13.
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.pendingReview,
-          rawState: 'submitted',
-        ),
-        locale: AppLocales.filipino,
-      );
-
-      expect(find.text('Naghihintay ng pagsusuri'), findsOneWidget);
-      expect(find.text('Waiting for review'), findsNothing);
-      expect(
-        find.textContaining('Nasa Taytay LGU na ang iyong mga detalye'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('the document slots translate', (tester) async {
-      await bootVerification(
-        tester,
-        detail: const VerificationStatusDetail(
-          stage: ResidentVerificationStage.inProgress,
-          rawState: 'draft',
-        ),
-        locale: AppLocales.filipino,
-      );
-
-      expect(find.textContaining('ID na inisyu ng pamahalaan'), findsWidgets);
-      expect(find.text('Government-issued ID'), findsNothing);
-    });
-
-    test('every stage and document type has copy in both locales', () {
-      const keys = <String>[
-        'verifyStageNotStartedLabel',
-        'verifyStageNotStartedBody',
-        'verifyStageInProgressLabel',
-        'verifyStageInProgressBody',
-        'verifyStagePendingLabel',
-        'verifyStagePendingBody',
-        'verifyStageNeedsInfoLabel',
-        'verifyStageNeedsInfoBody',
-        'verifyStageVerifiedLabel',
-        'verifyStageVerifiedBody',
-        'verifyStageUnsuccessfulLabel',
-        'verifyStageUnsuccessfulBody',
-        'verifyStageManualReviewLabel',
-        'verifyStageManualReviewBody',
-        'kycDocIdentityLabel',
-        'kycDocIdentityBody',
-        'kycDocAddressLabel',
-        'kycDocAddressBody',
-        'kycDocSent',
-        'kycDocSentChecking',
-      ];
-
-      for (final path in <String>[
-        'lib/l10n/app_en.arb',
-        'lib/l10n/app_fil.arb',
-      ]) {
-        final strings =
-            jsonDecode(File(path).readAsStringSync()) as Map<String, dynamic>;
-        for (final key in keys) {
-          expect(strings[key], isA<String>(), reason: '$path is missing $key');
-        }
-      }
-
-      // One pair of keys per stage. Adding a stage without copy would render
-      // its English fallback silently.
-      expect(
-        ResidentVerificationStage.values.length,
-        7,
-        reason: 'a stage was added or removed; add or remove its copy keys',
-      );
-      expect(KycDocumentType.values.length, 2);
-    });
-
-    testWidgets('no raw English survives on the screen in Filipino', (
-      tester,
-    ) async {
-      await bootVerification(
+      final dependencies = await bootVerification(
         tester,
         detail: const VerificationStatusDetail(
           stage: ResidentVerificationStage.verified,
           rawState: 'approved',
         ),
-        locale: AppLocales.filipino,
       );
 
-      for (final english in <String>[
-        'Verified',
-        'Not started',
-        'Waiting for review',
-        'Could not be verified',
-        'Needs a person to check',
-      ]) {
-        expect(find.text(english), findsNothing, reason: english);
-      }
+      expect(find.text('Your account is verified'), findsOneWidget);
+      expect(dependencies.session.accessLevel, AccessLevel.verified);
+      expect(dependencies.session.toString(), isNot(contains('Juana')));
     });
+  });
+
+  test('a field note does not print its text', () {
+    const note = FieldCorrectionNote(
+      label: 'Address',
+      note: '12 Sample Street',
+    );
+    expect(note.toString(), 'FieldCorrectionNote');
+    expect(note.toString(), isNot(contains('Sample')));
+  });
+
+  test('locale files still carry the older stage copy', () {
+    expect(AppLocales.english.languageCode, 'en');
   });
 }

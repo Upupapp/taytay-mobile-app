@@ -441,6 +441,7 @@ String gateSignInMessage(BuildContext context, ResidentIntentKind intent) {
       strings.gateSignInManageNotifications,
     ResidentIntentKind.applyForService => strings.gateSignInApplyForService,
     ResidentIntentKind.viewDigitalId => strings.gateSignInViewDigitalId,
+    ResidentIntentKind.messageOffice => strings.gateSignInMessageOffice,
   };
   return '$lead ${strings.gateSignInTrailer}';
 }
@@ -461,6 +462,7 @@ String gateVerificationMessage(
       strings.gateVerifyManageNotifications,
     ResidentIntentKind.applyForService => strings.gateVerifyApplyForService,
     ResidentIntentKind.viewDigitalId => strings.gateVerifyViewDigitalId,
+    ResidentIntentKind.messageOffice => strings.gateVerifyMessageOffice,
   };
   return '$lead ${strings.gateVerifyTrailer}';
 }
@@ -694,5 +696,6 @@ String intentResumedMessage(BuildContext context, ResidentIntentKind intent) {
       strings.intentResumedManageNotifications,
     ResidentIntentKind.applyForService => strings.intentResumedApplyForService,
     ResidentIntentKind.viewDigitalId => strings.intentResumedViewDigitalId,
+    ResidentIntentKind.messageOffice => strings.intentResumedMessageOffice,
   };
 }

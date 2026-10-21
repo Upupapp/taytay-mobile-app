@@ -209,6 +209,34 @@ enum AppRoute {
     AccessRequirement.authenticated,
   ),
 
+  /// Resident profile wizard. Authenticated, not verified: this is how a
+  /// resident becomes verified. The screen fetches its own record.
+  residentProfile(
+    'resident-profile',
+    '/verification/profile',
+    AccessRequirement.authenticated,
+  ),
+  residentProfilePersonal(
+    'resident-profile-personal',
+    '/verification/profile/personal',
+    AccessRequirement.authenticated,
+  ),
+  residentProfileAddress(
+    'resident-profile-address',
+    '/verification/profile/address',
+    AccessRequirement.authenticated,
+  ),
+  residentProfileReview(
+    'resident-profile-review',
+    '/verification/profile/review',
+    AccessRequirement.authenticated,
+  ),
+  residentProfileSubmitted(
+    'resident-profile-submitted',
+    '/verification/profile/submitted',
+    AccessRequirement.authenticated,
+  ),
+
   /// The resident's own assistance requests. Verified only: an assistance
   /// request is an act on the resident's civil record.
   requests('requests', '/requests', AccessRequirement.verified),

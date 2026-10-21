@@ -46,6 +46,14 @@ enum ResidentIntentKind {
     AccessRequirement.verified,
     'open your digital ID',
     destination: AppRoute.digitalId,
+  ),
+
+  /// Message a municipal office. Verified only. The screen is the S5 thread;
+  /// the gate in front of it is this sprint's.
+  messageOffice(
+    AccessRequirement.verified,
+    'message offices',
+    destination: AppRoute.messagesInbox,
   );
 
   const ResidentIntentKind(

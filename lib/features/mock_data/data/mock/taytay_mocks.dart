@@ -46,6 +46,7 @@ import '../../../verification/domain/kyc_claim.dart';
 import '../../../verification/domain/verification_repository.dart';
 import '../../../verification/domain/verification_status_detail.dart';
 import 'code_challenge_book.dart';
+import 'resident_record_mock.dart';
 
 /// Frozen instant for fixtures and goldens: 20 Oct 2026, 09:05 in Manila.
 final DateTime mockNow = DateTime.utc(2026, 10, 20, 1, 5);
@@ -793,6 +794,7 @@ class MockProfileRepository implements ResidentProfileRepository {
       ResidentProfileDetail(
         verificationTier: 'verified',
         emailVerified: false,
+        createdAt: MockResidentRecordRepository.sampleAccountCreatedAt,
         values: <ResidentProfileField, String>{
           ResidentProfileField.emailAddress: resident.email,
         },
@@ -879,9 +881,12 @@ class MockVerificationRepository implements VerificationRepository {
   @override
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() {
     return _gate.respond(
-      const VerificationStatusDetail(
+      VerificationStatusDetail(
         stage: ResidentVerificationStage.verified,
         rawState: 'approved',
+        idType: MockResidentRecordRepository.sampleIdType,
+        submittedAt: MockResidentRecordRepository.sampleSubmittedAt,
+        reviewedAt: MockResidentRecordRepository.sampleVerifiedAt,
       ),
     );
   }
