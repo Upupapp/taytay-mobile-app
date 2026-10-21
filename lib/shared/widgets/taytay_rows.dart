@@ -62,9 +62,15 @@ class StatusChip extends StatelessWidget {
 /// Marks a fact the LGU has not confirmed. The word SAMPLE is the signal;
 /// the gold is only a repeat of it.
 class SampleTag extends StatelessWidget {
-  const SampleTag({super.key, this.label = 'SAMPLE'});
+  const SampleTag({super.key, this.label = 'SAMPLE', this.lineHeight});
 
   final String label;
+
+  /// CSS `.sample` sets no line-height, so the chip's text is the font's
+  /// normal 1.26. Callers that sit in a measured line pass that. The default
+  /// keeps [AppTypography.labelStrong]'s 1.2, which the directory rows were
+  /// spaced with.
+  final double? lineHeight;
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +96,7 @@ class SampleTag extends StatelessWidget {
               style: AppTypography.labelStrong.copyWith(
                 color: BrandColors.warning,
                 letterSpacing: 0.6,
+                height: lineHeight,
               ),
             ),
           ),

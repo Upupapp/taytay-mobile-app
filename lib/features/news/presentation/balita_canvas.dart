@@ -509,10 +509,12 @@ class _StoryCard extends StatelessWidget {
           // padding 16 puts the photo on the design line, and bottom
           // padding 14 gives that pixel back so the next card does not move.
           // A text card keeps a 15 dp vertical padding, which lands on the
-          // same 16 dp inset the specimens were spaced with.
+          // same 16 dp inset the specimens were spaced with. The sample
+          // card is the stylesheet's 16 dp padding: its title has no
+          // margin-top, so the shorter inset would lift that title.
           padding: asset != null
               ? const EdgeInsets.fromLTRB(16, 16, 16, 14)
-              : const EdgeInsets.fromLTRB(16, 15, 16, 15),
+              : EdgeInsets.fromLTRB(16, sample ? 16 : 15, 16, sample ? 16 : 15),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -547,7 +549,9 @@ class _StoryCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         _Eyebrow(article: article),
-                        const SizedBox(height: 3),
+                        // Story cards set margin-top 3 on `.lt`. The sample
+                        // card's title does not.
+                        SizedBox(height: sample ? 0 : 3),
                         Text(article.title, style: _storyTitle),
                         SizedBox(height: asset != null ? 11 / 3 : 4),
                         Text(article.preview, style: _storySummary),
@@ -634,7 +638,11 @@ class _Eyebrow extends StatelessWidget {
             const TextSpan(text: ' · '),
             const WidgetSpan(
               alignment: PlaceholderAlignment.middle,
-              child: SampleTag(),
+              // `.sample` is 11 / 800 with no line-height, so the inline box
+              // is the font's normal 1.26 plus the 2 px padding and 1 px
+              // border. labelStrong is 1.2, which makes this line short and
+              // pulls the title up.
+              child: SampleTag(lineHeight: _cssNormal),
             ),
           ],
           if (date.isNotEmpty) TextSpan(text: ' · $date'),
@@ -738,13 +746,16 @@ class _ArticleBody extends StatelessWidget {
         const SizedBox(height: 6),
         Text(article.title, style: _articleTitle),
         const SizedBox(height: 8),
-        Text(lead, style: _lead),
+        // `.cs` lead is 14 / 1.6. The engine rounds 22.4 dp to 22.
+        _CssLines(lead, style: _lead),
         if ((presentation?.facts ?? const <BalitaFact>[])
             .isNotEmpty) ...<Widget>[
-          const SizedBox(height: 15),
+          // `.card` margin-top 12, padding 4 × 16. The border sits outside
+          // the padding.
+          const SizedBox(height: 12),
           Container(
             decoration: _card,
-            padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
             child: Column(
               children: <Widget>[
                 for (var i = 0; i < presentation!.facts.length; i++)
@@ -757,6 +768,9 @@ class _ArticleBody extends StatelessWidget {
           ),
         ],
         if ((presentation?.footer ?? '').isNotEmpty) ...<Widget>[
+          // The card's margin-bottom is 12 and the footer's margin-top is
+          // 4. Adjacent margins collapse to 12. `.cs` at 12px keeps
+          // line-height 1.5.
           const SizedBox(height: 12),
           Text(presentation!.footer!, style: _storySummary),
         ],
@@ -793,12 +807,27 @@ class _FactRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(
-                  fact.label,
-                  style: _credit.copyWith(fontWeight: FontWeight.w700),
+                // `.ls` is 12 / 700, margin 0, with no line-height, so the
+                // advance is the font's normal 1.26 (15.12 dp). The engine
+                // rounds that line to 15 dp and trims the remainder off the
+                // top. The label sits on the bottom of the CSS advance.
+                SizedBox(
+                  height: 12 * _cssNormal,
+                  width: double.infinity,
+                  child: Align(
+                    alignment: Alignment.bottomLeft,
+                    child: Text(
+                      fact.label,
+                      style: _credit.copyWith(fontWeight: FontWeight.w700),
+                      textHeightBehavior: _cssHalfLeading,
+                      strutStyle: _strutFor(
+                        _credit.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 2),
-                Text(fact.value, style: _factValue),
+                _CssLines(fact.value, style: _factValue),
               ],
             ),
           ),
@@ -1352,6 +1381,100 @@ const BoxDecoration _card = BoxDecoration(
     BoxShadow(color: Color(0x0A101828), blurRadius: 10, offset: Offset(0, 2)),
   ],
 );
+
+/// A paragraph whose line boxes are [TextStyle.fontSize] × [TextStyle.height].
+///
+/// The design sets `line-height: 1.6` on the article lead, which is 22.4 dp.
+/// SkParagraph rounds the line box to a whole logical pixel (`round(descent
+/// − ascent)`), so the lead is 22 dp and each further line is about 1 image
+/// px short at 3×. The strut keeps the CSS half-leading. Lines then sit on
+/// the unrounded advance, and the paragraph is `n` times that advance tall.
+class _CssLines extends StatelessWidget {
+  const _CssLines(this.text, {required this.style});
+
+  final String text;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final double? fontSize = style.fontSize;
+    final double? height = style.height;
+    final StrutStyle strut = _strutFor(style);
+    if (fontSize == null || height == null) {
+      return Text(text, style: style, strutStyle: strut);
+    }
+    final double step = fontSize * height;
+    if ((step - step.roundToDouble()).abs() < 0.001) {
+      return Text(text, style: style, strutStyle: strut);
+    }
+    return Semantics(
+      label: text,
+      child: ExcludeSemantics(
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final TextPainter painter = TextPainter(
+              text: TextSpan(text: text, style: style),
+              textDirection: Directionality.of(context),
+              textScaler: MediaQuery.textScalerOf(context),
+              textHeightBehavior: _cssHalfLeading,
+              strutStyle: strut,
+            )..layout(maxWidth: constraints.maxWidth);
+            final List<String> lines = <String>[];
+            var start = 0;
+            while (start < text.length) {
+              final TextRange range = painter.getLineBoundary(
+                TextPosition(offset: start),
+              );
+              if (range.end <= start) {
+                break;
+              }
+              lines.add(text.substring(range.start, range.end).trimRight());
+              start = range.end;
+            }
+            painter.dispose();
+            if (lines.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return SizedBox(
+              width: constraints.maxWidth,
+              height: step * lines.length,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: <Widget>[
+                  for (var i = 0; i < lines.length; i++)
+                    Positioned(
+                      top: step * i,
+                      left: 0,
+                      right: 0,
+                      child: Text(
+                        lines[i],
+                        maxLines: 1,
+                        softWrap: false,
+                        textHeightBehavior: _cssHalfLeading,
+                        strutStyle: strut,
+                        style: style,
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+StrutStyle _strutFor(TextStyle style) {
+  return StrutStyle(
+    fontFamily: style.fontFamily,
+    fontSize: style.fontSize,
+    fontWeight: style.fontWeight,
+    height: style.height,
+    leadingDistribution: TextLeadingDistribution.even,
+    forceStrutHeight: true,
+  );
+}
 
 /// Plus Jakarta Sans `line-height: normal` (hhea 1038 / -222).
 const double _cssNormal = 1.26;

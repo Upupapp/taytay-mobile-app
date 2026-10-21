@@ -228,7 +228,7 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 ## S6 Balita
 
-S6 is not approved. This section records the round-1 capture and the sync to backend `6f4c582`. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The round-1 commit is `18b00183c0eedd04225067b2f5b984340edb0903`. The first Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
+S6 is not approved. This section records the line-box correction, the round-1 capture, and the sync to backend `6f4c582`. It does not record approval words. The draft pull request is https://github.com/Upupapp/taytay-mobile-app/pull/8. The round-1 commit is `18b00183c0eedd04225067b2f5b984340edb0903`. The first Balita commit is `ad8e88e11f8696febdd8d9d80e8f974d72e18094`.
 
 Balita is the centre tab. `/news` and `/news/:postId` stay public, so a guest, an unverified resident, and a verified resident read the same list and the same article. The article header paints one translucent back disc, 44 dp across, with a 48 dp hit. The shell tab bar stays. This app does not call `POST /news`, `PATCH /news/{id}`, or `POST`/`DELETE /news/{id}/pin`.
 
@@ -241,20 +241,20 @@ The shared header title is a 16 dp block and the subtitle is 11 dp text on a 16 
 | Screen | Lines (build / design) | Max deviation (image px) | Mismatch |
 | --- | --- | --- | --- |
 | 06-01 News feed | 19 / 19 | 2 | 3.11% (92122/2962440) |
-| 06-02 Article, PWD | 18 / 18 | 5 | 3.02% (89526/2962440) |
-| 06-03 Advisories filter | 24 / 24 | 3 | 4.16% (123103/2962440) |
+| 06-02 Article, PWD | 18 / 18 | 2 | 2.26% (66876/2962440) |
+| 06-03 Advisories filter | 24 / 24 | 2 | 3.72% (110197/2962440) |
 | 06-04 Empty category | 11 / 11 | 2 | 1.94% (57345/2962440) |
 | 06-05 Loading | 6 / 6 | 1 | 6.09% (180432/2962440) |
-| 06-06 Article, RPT | 19 / 19 | 3 | 2.48% (73599/2962440) |
-| 06-07 Article, BOSS | 19 / 19 | 4 | 2.62% (77571/2962440) |
-| 06-08 Article, SMILE | 18 / 18 | 3 | 2.12% (62734/2962440) |
+| 06-06 Article, RPT | 19 / 19 | 2 | 2.03% (60099/2962440) |
+| 06-07 Article, BOSS | 19 / 19 | 1 | 2.09% (61927/2962440) |
+| 06-08 Article, SMILE | 18 / 18 | 2 | 2.44% (72255/2962440) |
 | 05-01 Office list | 24 / 24 | 2 | 3.25% (96208/2962440) |
 | 05-02 Office detail | 18 / 18 | 2 | 3.87% (114639/2962440) |
 | 05-04 Message thread | 17 / 17 | 2 | 4.38% (129816/2962440) |
 
-`06-01`, `06-04`, `06-05`, `05-01`, `05-02`, and `05-04` are within 2 image px. The others are not, and S6 stays unapproved.
+Every frame in the table is within 2 image px. S6 stays unapproved.
 
-Giving every card the border in its layout height moved each following card down by 2 dp, and the lower lines missed by more than they had. The cards keep a border-box inset on the sides. Vertical padding is chosen so the card keeps the height the specimens were spaced against. A photo card starts its content 1 dp lower, which is what brought `06-01` to 2 px. `06-07` is still up to 4 image px low on the facts block (1737 +3, 1943 +4, 2151 +3). That remainder is reported rather than shaved again. `06-02` is still 5 px high at the bottom of the PWD story (1896 −3, 1996 −3, 2135 −5). `06-03` has one line at 2081 −3. `06-06` is 3 px high at 1950 and 2157. `06-08` is 3 px high at 1339.
+The article lead is `.cs` at 14 / 500 / 1.6. The engine rounds 22.4 dp to 22, so each lead line sits on the unrounded 22.4 dp advance, with a strut at that leading (`forceStrutHeight`, even distribution). A fact value is `.lt` at 13 / 700 with no line-height, so the advance is the font's normal 1.26 (16.38 dp), placed the same way. A fact label is `.ls` at 12 / 700 on that same normal (15.12 dp); the rounded 15 dp line sits on the bottom of the 15.12 dp advance. The facts card uses the stylesheet's margin-top 12 and padding 4 × 16. The sample card uses padding 16 and no title margin. The SAMPLE chip's text is normal 1.26, so the eyebrow line is the inline box. `05-01`, `05-02`, and `05-04` were re-rendered after that chip change and stayed at max 2.
 
 The designed frames are specimens. `06-03` paints the pinned advisory, the RPT card, the SMILE card, and the weather sample together. A live Advisory filter is category equality and does not invent that mix. Cover assets, photo credit, a lead, fact rows, and the sample tag live on `BalitaPresentation`, and only the fixture sets them. A live article with no presentation shows the body.
 
@@ -269,7 +269,7 @@ Synced to backend `6f4c582`:
 
 Comments, reactions, and reports stay off the article page. Those calls still decline. The not-available copy is unchanged: "This announcement is not available" and "See all announcements". The bell goes to sign-in for a guest and to notifications for a signed-in resident. Icons are Lucide: the safety tile and the Command Center row use siren, the weather sample uses cloud-rain, and the empty category uses calendar-x. The BOSS "Opened" fact stays calendar.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (2891150 bytes, 61 frames) and `s6-filter.mp4` (3996678 bytes, 103 frames). The article clip scrolls the feed, shows "Saving a story is not available yet.", opens the PWD story, and comes back. The filter clip scrolls, opens Events, returns through See all announcements, opens an article, and comes back. `flutter analyze` was clean. `flutter test` passed 1619 tests, with 11 skipped (the recording and live tags).
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (2891150 bytes, 61 frames) and `s6-filter.mp4` (3996678 bytes, 103 frames). The article clip scrolls the feed, shows "Saving a story is not available yet.", opens the PWD story, and comes back. The filter clip scrolls, opens Events, returns through See all announcements, opens an article, and comes back. `flutter analyze` was clean. `flutter test` passed 1619 tests, with 11 skipped (the recording and live tags). The line-box capture kept that result.
 
 ## Contract gaps after the Node OpenAPI
 

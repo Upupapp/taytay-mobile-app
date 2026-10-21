@@ -653,7 +653,9 @@ void main() {
 
       expect(find.text('Classes suspended tomorrow'), findsOneWidget);
       expect(
-        find.text('All public schools in Taytay are closed on Tuesday.'),
+        find.bySemanticsLabel(
+          'All public schools in Taytay are closed on Tuesday.',
+        ),
         findsOneWidget,
       );
       expect(find.byType(TextField), findsNothing);
@@ -683,7 +685,9 @@ void main() {
 
       expect(find.text('Classes suspended tomorrow'), findsOneWidget);
       expect(
-        find.text('All public schools in Taytay are closed on Tuesday.'),
+        find.bySemanticsLabel(
+          'All public schools in Taytay are closed on Tuesday.',
+        ),
         findsOneWidget,
       );
       expect(find.text('Share'), findsNothing);
