@@ -424,6 +424,7 @@ class MockAnnouncementRepository implements AnnouncementRepository {
 
   Future<List<Announcement>> _items() async {
     final raw = await MockFixtures.list('announcements');
+    final Map<String, String> offices = await _officeLabels();
     return <Announcement>[
       for (final entry in raw)
         if (_asMap(entry) case final Map<String, Object?> map)
@@ -433,7 +434,7 @@ class MockAnnouncementRepository implements AnnouncementRepository {
             body: map['body']! as String,
             summary: map['summary'] as String?,
             category: map['category'] as String?,
-            author: map['author'] as String?,
+            author: _bylineOffice(map, offices),
             officeSlug: map['office_slug'] as String?,
             publishedAt: map['published_at'] is String
                 ? DateTime.tryParse(map['published_at']! as String)
@@ -453,6 +454,43 @@ class MockAnnouncementRepository implements AnnouncementRepository {
     ];
   }
 
+  /// Byline office: `short_name`, then `name`, then the slug. The announcement
+  /// `author` is only the fallback when the office row has neither label.
+  String? _bylineOffice(
+    Map<String, Object?> article,
+    Map<String, String> offices,
+  ) {
+    final Object? slug = article['office_slug'];
+    if (slug is String && offices[slug] != null) return offices[slug];
+    final Object? author = article['author'];
+    if (author is! String) return null;
+    final String trimmed = author.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// `short_name` when it is a string. Null falls through to `name`, then the id.
+  Future<Map<String, String>> _officeLabels() async {
+    final Map<String, Object?> json = await MockFixtures.object('offices');
+    final Object? rows = json['offices'];
+    if (rows is! List) return const <String, String>{};
+    final Map<String, String> labels = <String, String>{};
+    for (final Object? row in rows) {
+      if (row is! Map) continue;
+      final Object? id = row['id'];
+      if (id is! String || id.isEmpty) continue;
+      final String? shortName = _officeText(row['short_name']);
+      final String? name = _officeText(row['name']);
+      labels[id] = shortName ?? name ?? id;
+    }
+    return labels;
+  }
+
+  String? _officeText(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   @override
   Future<Result<Paginated<Announcement>>> listAnnouncements({
     int page = 1,
@@ -461,9 +499,8 @@ class MockAnnouncementRepository implements AnnouncementRepository {
   }) async {
     final List<Announcement> all = await _items();
     final String? chip = category?.trim();
-    final List<Announcement> matched = chip == null ||
-            chip.isEmpty ||
-            chip == 'Lahat'
+    final List<Announcement> matched =
+        chip == null || chip.isEmpty || chip == 'Lahat'
         ? all
         : all
               .where(

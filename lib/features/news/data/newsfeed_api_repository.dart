@@ -21,7 +21,10 @@ class NewsfeedApiRepository implements AnnouncementRepository {
   /// The cursor from the last list page. Page 1 starts again.
   String? _cursor;
 
-  /// Office slug to the name from `GET /offices`. Null until the first read.
+  /// Office slug to the label from a successful `GET /offices`.
+  ///
+  /// Null until that read succeeds. A failure stays null so the next list
+  /// tries again.
   Map<String, String>? _offices;
 
   static const String path = 'news';
@@ -328,7 +331,9 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     ];
   }
 
-  /// `name` is the office's published label. The news item has only the slug.
+  /// `short_name`, then `name`. The news item has only the slug.
+  ///
+  /// A failed read is not stored. The next list asks again.
   Future<Map<String, String>> _officeNames() async {
     final Map<String, String>? cached = _offices;
     if (cached != null) return cached;
@@ -345,8 +350,7 @@ class NewsfeedApiRepository implements AnnouncementRepository {
           );
       switch (response) {
         case Err<ApiEnvelope<Map<String, String>>>():
-          if (page == 0) return _offices = const <String, String>{};
-          return _offices = names;
+          return names;
         case Ok<ApiEnvelope<Map<String, String>>>(:final value):
           names.addAll(value.data);
           final String? next = value.pagination?.nextCursor;
@@ -367,10 +371,9 @@ class NewsfeedApiRepository implements AnnouncementRepository {
     for (final Object? item in data) {
       if (item is! Map) continue;
       final Object? slug = item['slug'];
-      final Object? name = item['name'];
-      if (slug is! String || slug.isEmpty || name is! String) continue;
-      final String label = name.trim();
-      if (label.isEmpty) continue;
+      if (slug is! String || slug.isEmpty) continue;
+      final String? label = _text(item['short_name']) ?? _text(item['name']);
+      if (label == null) continue;
       names[slug] = label;
     }
     return names;

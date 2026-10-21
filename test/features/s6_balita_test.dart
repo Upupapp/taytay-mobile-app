@@ -14,12 +14,16 @@ import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/mock/mock_behavior.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/sharing/share_service.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/directory/data/office_api_repository.dart';
+import 'package:taytay_resident/features/directory/domain/office.dart';
+import 'package:taytay_resident/features/mock_data/data/mock/taytay_mocks.dart';
 import 'package:taytay_resident/features/news/data/newsfeed_api_repository.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/balita_canvas.dart';
@@ -89,12 +93,12 @@ Map<String, Object?> _item({String status = 'published'}) => <String, Object?>{
   'published_at': '2026-07-15T02:00:00Z',
 };
 
-Announcement _story({String? shareUrl}) => Announcement(
+Announcement _story({String? shareUrl, String? author}) => Announcement(
   id: 'post-1',
   title: 'Barangay clean-up drive',
   body: 'Volunteers are welcome at the covered court on Saturday.',
   summary: 'Saturday at the covered court.',
-  author: 'Taytay Public Information Office',
+  author: author ?? 'Taytay Public Information Office',
   category: 'Community',
   publishedAt: DateTime.utc(2026, 8, 10),
   shareUrl: shareUrl,
@@ -117,9 +121,7 @@ class _Pages implements AnnouncementRepository {
     String? category,
   }) async {
     categories.add(category);
-    return Ok<Paginated<Announcement>>(
-      Paginated<Announcement>.single(posts),
-    );
+    return Ok<Paginated<Announcement>>(Paginated<Announcement>.single(posts));
   }
 
   @override
@@ -295,10 +297,9 @@ void main() {
       _ok(<Object?>[_item()]),
       _offices(),
     ]);
-    final Result<Paginated<Announcement>> listed =
-        await NewsfeedApiRepository(
-          apiClient: _client(transport),
-        ).listAnnouncements();
+    final Result<Paginated<Announcement>> listed = await NewsfeedApiRepository(
+      apiClient: _client(transport),
+    ).listAnnouncements();
     final Announcement post =
         (listed as Ok<Paginated<Announcement>>).value.items.single;
 
@@ -317,10 +318,9 @@ void main() {
       _ok(_item(status: 'draft')),
       _offices(),
     ]);
-    final Result<Announcement> loaded =
-        await NewsfeedApiRepository(
-          apiClient: _client(detail),
-        ).loadAnnouncement(post.id);
+    final Result<Announcement> loaded = await NewsfeedApiRepository(
+      apiClient: _client(detail),
+    ).loadAnnouncement(post.id);
     final Announcement draft = (loaded as Ok<Announcement>).value;
 
     expect(detail.requests.first.path, 'news/${post.id}');
@@ -367,10 +367,7 @@ void main() {
     await NewsfeedApiRepository(
       apiClient: _client(signedIn),
     ).listAnnouncements();
-    expect(
-      signedIn.requests.single.headers['Authorization'],
-      contains('tok'),
-    );
+    expect(signedIn.requests.single.headers['Authorization'], contains('tok'));
   });
 
   test('loadAnnouncement calls news/{id}', () async {
@@ -421,7 +418,10 @@ void main() {
     expect(items.last.coverUrl, isNull);
     expect(items.last.isPinned, isFalse);
     // The repository keeps the server's order. The feed lifts pinned items.
-    expect(items.map((Announcement item) => item.isPinned), <bool>[true, false]);
+    expect(items.map((Announcement item) => item.isPinned), <bool>[
+      true,
+      false,
+    ]);
   });
 
   test('GET /news/categories returns slug and label', () async {
@@ -445,12 +445,162 @@ void main() {
     expect(categories.first.label, 'Advisory');
   });
 
-  test('office_slug resolves to the office name and then stays cached', () async {
+  test(
+    'office_slug resolves to the office name and then stays cached',
+    () async {
+      final Map<String, Object?> article = _item();
+      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+        _ok(<Object?>[article]),
+        _offices(),
+        _ok(<Object?>[article]),
+      ]);
+      final NewsfeedApiRepository repository = NewsfeedApiRepository(
+        apiClient: _client(transport),
+      );
+
+      final Announcement first =
+          ((await repository.listAnnouncements())
+                  as Ok<Paginated<Announcement>>)
+              .value
+              .items
+              .single;
+      final Announcement second =
+          ((await repository.listAnnouncements())
+                  as Ok<Paginated<Announcement>>)
+              .value
+              .items
+              .single;
+
+      expect(first.author, 'MSWDO');
+      expect(first.officeSlug, 'mswdo');
+      expect(second.author, 'MSWDO');
+      expect(
+        transport.requests.map((ApiRequest request) => request.path),
+        <String>['news', 'offices', 'news'],
+      );
+    },
+  );
+
+  test('office_slug prefers short_name, then name', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[_item()]),
+      _ok(<Object?>[
+        <String, String>{
+          'id': '22222222-2222-4222-8222-222222222222',
+          'slug': 'mswdo',
+          'short_name': 'MSWDO',
+          'name': 'Municipal Social Welfare and Development Office of Taytay',
+        },
+      ]),
+    ]);
+    final Announcement article =
+        ((await NewsfeedApiRepository(
+                  apiClient: _client(transport),
+                ).listAnnouncements())
+                as Ok<Paginated<Announcement>>)
+            .value
+            .items
+            .single;
+
+    expect(article.author, 'MSWDO');
+  });
+
+  test('a null short_name falls back to the office name', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[_item()]),
+      _ok(<Object?>[
+        <String, Object?>{
+          'id': '22222222-2222-4222-8222-222222222222',
+          'slug': 'mswdo',
+          'short_name': null,
+          'name': 'Municipal Social Welfare and Development Office of Taytay',
+        },
+      ]),
+    ]);
+    final Announcement article =
+        ((await NewsfeedApiRepository(
+                  apiClient: _client(transport),
+                ).listAnnouncements())
+                as Ok<Paginated<Announcement>>)
+            .value
+            .items
+            .single;
+
+    expect(
+      article.author,
+      'Municipal Social Welfare and Development Office of Taytay',
+    );
+  });
+
+  test('GET /offices/{slug} reads short_name', () async {
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<String, Object?>{
+        'id': '22222222-2222-4222-8222-222222222222',
+        'slug': 'health',
+        'name': 'Municipal Health Office',
+        'short_name': 'MHO',
+        'created_at': '2026-01-01T00:00:00Z',
+        'updated_at': '2026-01-02T00:00:00Z',
+      }),
+      _ok(<String, Object?>{
+        'id': '55555555-5555-4555-8555-555555555555',
+        'slug': 'assessor',
+        'name': "Municipal Assessor's Office",
+        'short_name': null,
+        'created_at': '2026-01-01T00:00:00Z',
+        'updated_at': '2026-01-02T00:00:00Z',
+      }),
+    ]);
+    final OfficeApiRepository repository = OfficeApiRepository(
+      apiClient: _client(transport),
+    );
+
+    final Office health =
+        ((await repository.bySlug('health')) as Ok<Office?>).value!;
+    final Office assessor =
+        ((await repository.bySlug('assessor')) as Ok<Office?>).value!;
+
+    expect(
+      transport.requests.map((ApiRequest request) => request.path),
+      <String>['offices/health', 'offices/assessor'],
+    );
+    expect(health.shortName, 'MHO');
+    expect(health.name, 'Municipal Health Office');
+    expect(assessor.shortName, "Municipal Assessor's Office");
+    expect(assessor.id, 'assessor');
+  });
+
+  test('the dev mock byline uses the office short name', () async {
+    final MockAnnouncementRepository repository = MockAnnouncementRepository(
+      MockBehaviorController(
+        latency: Duration.zero,
+        failure: MockFailureMode.none,
+      ),
+    );
+    final List<Announcement> items =
+        ((await repository.listAnnouncements()) as Ok<Paginated<Announcement>>)
+            .value
+            .items;
+
+    expect(
+      items.map((Announcement item) => item.author),
+      containsAll(<String>['MSWDO', 'Treasury Office', 'BPLO', 'PIO']),
+    );
+  });
+
+  test('a failed offices read is retried on the next list', () async {
     final Map<String, Object?> article = _item();
     final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
       _ok(<Object?>[article]),
-      _offices(),
+      const Err<ApiHttpResponse>(NetworkFailure()),
       _ok(<Object?>[article]),
+      _ok(<Object?>[
+        <String, String>{
+          'id': '22222222-2222-4222-8222-222222222222',
+          'slug': 'mswdo',
+          'name': 'Municipal Social Welfare and Development Office of Taytay',
+        },
+      ]),
     ]);
     final NewsfeedApiRepository repository = NewsfeedApiRepository(
       apiClient: _client(transport),
@@ -467,12 +617,15 @@ void main() {
             .items
             .single;
 
-    expect(first.author, 'MSWDO');
+    expect(first.author, isNull);
     expect(first.officeSlug, 'mswdo');
-    expect(second.author, 'MSWDO');
+    expect(
+      second.author,
+      'Municipal Social Welfare and Development Office of Taytay',
+    );
     expect(
       transport.requests.map((ApiRequest request) => request.path),
-      <String>['news', 'offices', 'news'],
+      <String>['news', 'offices', 'news', 'offices'],
     );
   });
 
@@ -492,6 +645,28 @@ void main() {
 
     expect(article.author, isNull);
     expect(article.officeSlug, 'mswdo');
+  });
+
+  testWidgets('a long office name stays on one line', (tester) async {
+    const String office =
+        'Municipal Social Welfare and Development Office of Taytay';
+    await _pump(
+      tester,
+      BalitaCanvas(
+        frame: BalitaFrame.feed,
+        articles: <Announcement>[_story(author: office)],
+      ),
+    );
+
+    final RichText byline = tester.widget<RichText>(
+      find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is RichText && widget.text.toPlainText().contains(office),
+      ),
+    );
+    expect(byline.maxLines, 1);
+    expect(byline.overflow, TextOverflow.ellipsis);
+    expect(tester.getSize(find.byWidget(byline)).height, lessThanOrEqualTo(20));
   });
 
   testWidgets('bell, save, share, card, back and see-all are 48 dp', (
@@ -520,9 +695,9 @@ void main() {
       isTrue,
     );
     expect(
-      tester.widgetList<TaytayIcon>(find.byType(TaytayIcon)).map(
-        (TaytayIcon icon) => icon.icon,
-      ),
+      tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .map((TaytayIcon icon) => icon.icon),
       containsAll(<IconData>[TaytayIcons.bookmark, TaytayIcons.share]),
     );
 
@@ -564,6 +739,10 @@ void main() {
     expect(shared.url, isNull);
     expect(shared.text, isNot(contains('http')));
     expect(shared.text, contains('Taytay LGU'));
+
+    await tester.tap(find.byKey(const Key('balita-article-post-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Saving a story is not available yet.'), findsNothing);
   });
 
   testWidgets('an Advisory chip is sent as the lowercase slug', (tester) async {

@@ -368,10 +368,7 @@ class _FeedBody extends StatelessWidget {
         ),
         if (banner != null) ...<Widget>[
           _PinnedBanner(article: banner),
-          // 13, not 12: the first card under the pin sits 1 dp high on
-          // 06-03. The gap after that card gives the dp back, so the
-          // cards below stay where the specimen put them.
-          const SizedBox(height: 13),
+          const SizedBox(height: 12),
         ],
         for (var i = 0; i < articles.length; i++) ...<Widget>[
           _StoryCard(
@@ -380,18 +377,7 @@ class _FeedBody extends StatelessWidget {
             onSave: onSave == null ? null : () => onSave!(articles[i]),
             onShare: onShare == null ? null : () => onShare!(articles[i]),
           ),
-          // 14, not 12: on the open feed the third card's eyebrow otherwise
-          // sits in the fade dark enough to count as its own run. A sample
-          // card keeps the 12 dp gap the specimen uses.
-          SizedBox(
-            height: () {
-              final bool beforeSample =
-                  i + 1 < articles.length &&
-                  articles[i + 1].presentation?.sample == true;
-              final double gap = beforeSample ? 12 : 14;
-              return banner != null && i == 0 ? gap - 1 : gap;
-            }(),
-          ),
+          const SizedBox(height: 12),
         ],
       ],
     );
@@ -503,18 +489,12 @@ class _StoryCard extends StatelessWidget {
         onTap: onOpen,
         child: Container(
           decoration: _card,
-          // The border is outside this padding, so 16 dp of padding would
-          // start the content 17 dp from the card edge and make the card
-          // 2 dp taller. A photo card is 1 dp high in the specimens: top
-          // padding 16 puts the photo on the design line, and bottom
-          // padding 14 gives that pixel back so the next card does not move.
-          // A text card keeps a 15 dp vertical padding, which lands on the
-          // same 16 dp inset the specimens were spaced with. The sample
-          // card is the stylesheet's 16 dp padding: its title has no
-          // margin-top, so the shorter inset would lift that title.
+          // Photo cards and the skeleton use 16 dp. A text card's first
+          // line is on the specimen at a 15 dp top inset; 16 dp puts it
+          // 3 px low. The bottom inset is 16 dp.
           padding: asset != null
-              ? const EdgeInsets.fromLTRB(16, 16, 16, 14)
-              : EdgeInsets.fromLTRB(16, sample ? 16 : 15, 16, sample ? 16 : 15),
+              ? _cardPadding
+              : const EdgeInsets.fromLTRB(16, 15, 16, 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -552,8 +532,11 @@ class _StoryCard extends StatelessWidget {
                         // Story cards set margin-top 3 on `.lt`. The sample
                         // card's title does not.
                         SizedBox(height: sample ? 0 : 3),
-                        Text(article.title, style: _storyTitle),
-                        SizedBox(height: asset != null ? 11 / 3 : 4),
+                        if (asset != null)
+                          _CssLines(article.title, style: _storyTitle)
+                        else
+                          Text(article.title, style: _storyTitle),
+                        const SizedBox(height: 4),
                         Text(article.preview, style: _storySummary),
                       ],
                     ),
@@ -648,6 +631,8 @@ class _Eyebrow extends StatelessWidget {
           if (date.isNotEmpty) TextSpan(text: ' · $date'),
         ],
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }
@@ -671,7 +656,9 @@ class _PinnedBanner extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF2D77A)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      // The specimen banner is the height of a 15 dp top inset. The other
+      // three sides are the card's 16 dp.
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
       child: Row(
         children: <Widget>[
           const _Tile(
@@ -990,7 +977,7 @@ class _SkeletonCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: _card,
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
+      padding: _cardPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1371,6 +1358,10 @@ class _Cover extends StatelessWidget {
     return ClipRRect(borderRadius: BorderRadius.circular(radius), child: image);
   }
 }
+
+/// `.card` padding is 16 dp on every side. The 1 dp border is painted on
+/// that box; it is the inset, not a second padding.
+const EdgeInsets _cardPadding = EdgeInsets.all(16);
 
 const BoxDecoration _card = BoxDecoration(
   color: Colors.white,

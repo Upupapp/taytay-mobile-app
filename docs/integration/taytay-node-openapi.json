@@ -5489,6 +5489,7 @@
      "id",
      "name",
      "slug",
+     "short_name",
      "created_at",
      "updated_at"
     ],
@@ -5502,6 +5503,13 @@
      },
      "slug": {
       "type": "string"
+     },
+     "short_name": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Optional display label, such as MSWDO. Null when unset."
      },
      "description": {
       "type": [

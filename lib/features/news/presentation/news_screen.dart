@@ -30,6 +30,7 @@ class NewsScreen extends StatefulWidget {
 class _NewsScreenState extends State<NewsScreen> {
   NewsFeedController? _controller;
   final ScrollController _scroll = ScrollController();
+  GoRouter? _router;
   String _chip = BalitaChip.all.label;
   List<BalitaChip> _chips = BalitaChip.design;
 
@@ -44,6 +45,8 @@ class _NewsScreenState extends State<NewsScreen> {
     super.didChangeDependencies();
     if (_controller != null) return;
 
+    _router = GoRouter.of(context)
+      ..routerDelegate.addListener(_clearOutcomeOnLeave);
     _controller =
         NewsFeedController(
             repository: AppDependencies.of(context).announcementRepository,
@@ -87,6 +90,7 @@ class _NewsScreenState extends State<NewsScreen> {
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_clearOutcomeOnLeave);
     _scroll
       ..removeListener(_onScroll)
       ..dispose();
@@ -116,6 +120,15 @@ class _NewsScreenState extends State<NewsScreen> {
     setState(() => _chip = chip.label);
     final String slug = chip.slug.trim();
     await _controller?.applyCategory(slug.isEmpty ? null : slug);
+  }
+
+  /// The Save sentence lives on the root messenger. A route change would
+  /// otherwise keep it on the next screen.
+  void _clearOutcomeOnLeave() {
+    if (!mounted) return;
+    if (_router?.state.uri.path != AppRoute.news.path) {
+      ScaffoldMessenger.of(context).clearSnackBars();
+    }
   }
 
   void _save(Announcement article) {
