@@ -5,20 +5,25 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
-import '../../../shared/widgets/taytay_icon.dart';
 import 's3_chrome.dart';
 
 /// Which verified-only action the gate is explaining.
-enum VerifiedOnlyAction { digitalId, message, other }
+enum VerifiedOnlyAction {
+  // Which verified-only action the sheet is explaining.
+  digitalId,
+  message,
+  other,
+}
 
 /// Dark scrim over the whole messages page, header included.
 ///
 /// Tuned so the navy band and the office cards read at the design's dimmed
 /// values. It covers the first 300 px, which is the header.
 abstract final class GateScrim {
-  static const Color color = Color.fromRGBO(0, 24, 84, 0.34);
+  /// `rgba(6, 35, 88, .35)` over the messages page.
+  static const Color color = Color.fromRGBO(6, 35, 88, 0.35);
 
-  static Color at(double t) => Color.fromRGBO(0, 24, 84, 0.34 * t);
+  static Color at(double t) => Color.fromRGBO(6, 35, 88, 0.35 * t);
 }
 
 /// `03-04`. The same sheet for every verified-only action.
@@ -67,94 +72,75 @@ class UnverifiedGateSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final TextStyle body = s3Type(
+      13,
+      AppTypography.body,
+      BrandColors.textSecondary,
+      height: 1.5,
+    );
     return Material(
       color: BrandColors.surfaceCard,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        // Handle margin-top -8 against padding-top 22 lands the bar at 14.
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
         child: Column(
           mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
             const _DragHandle(),
-            const SizedBox(height: 26),
+            const SizedBox(height: 16),
             const IconTile(
               icon: TaytayIcons.lock,
               fill: BrandColors.chipAmberBg,
               ink: BrandColors.warning,
-              size: 28,
-              iconSize: 16,
+              size: 60,
+              iconSize: 28,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               title,
               textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
+              style: s3Type(18, AppTypography.black, BrandColors.textPrimary),
             ),
-            const SizedBox(height: 10),
-            Text(
-              _lead,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                height: 1.25,
-                color: BrandColors.textSecondary,
-                decoration: TextDecoration.none,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Wrap(
-              alignment: WrapAlignment.center,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              children: <Widget>[
-                const Text(
-                  'Your verification is',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.25,
-                    color: BrandColors.textSecondary,
-                    decoration: TextDecoration.none,
+            const SizedBox(height: 6),
+            Text.rich(
+              TextSpan(
+                style: body,
+                children: <InlineSpan>[
+                  TextSpan(text: '$_lead Your verification is '),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.baseline,
+                    baseline: TextBaseline.alphabetic,
+                    child: StatusChip(
+                      label: statusLabel,
+                      tone: StatusTone.pending,
+                    ),
                   ),
-                ),
-                StatusChip(label: statusLabel, tone: StatusTone.pending),
-              ],
+                ],
+              ),
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             PrimaryButton(
               label: 'Continue verification',
               onPressed: onContinue,
             ),
-            const SizedBox(height: 2),
-            TextButton(
-              onPressed: onDismiss,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, A11y.minTapTarget),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                foregroundColor: BrandColors.textSecondary,
-              ),
-              child: const Text(
-                'Not now',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  decoration: TextDecoration.none,
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 48,
+              width: double.infinity,
+              child: InkWell(
+                onTap: onDismiss,
+                child: Center(
+                  child: Text(
+                    'Not now',
+                    style: s3Type(
+                      15,
+                      AppTypography.black,
+                      BrandColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -170,16 +156,13 @@ class _DragHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 12,
-      child: Center(
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0xFFD6DCE8),
-            borderRadius: BorderRadius.all(Radius.circular(2)),
-          ),
-          child: SizedBox(width: 36, height: 4),
+    return const Center(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Color(0xFFD6DCE8),
+          borderRadius: BorderRadius.all(Radius.circular(2)),
         ),
+        child: SizedBox(width: 40, height: 4),
       ),
     );
   }
@@ -191,25 +174,33 @@ class GateBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ColoredBox(
+    return const ColoredBox(
       color: BrandColors.surface,
       child: Column(
         children: <Widget>[
-          const S3Header(title: 'Messages', subtitle: 'Municipal offices'),
+          S3Header(title: 'Messages', subtitle: 'Municipal offices'),
           Expanded(
-            child: ListView(
+            child: Padding(
               padding: s3PagePadding,
-              children: const <Widget>[
-                _OfficeCard(
-                  title: "Municipal Treasurer's Office",
-                  detail: 'Real property tax, payments',
-                ),
-                SizedBox(height: s3CardGap),
-                _OfficeCard(
-                  title: 'Business Permits & Licensing Office',
-                  detail: 'Permits and renewals',
-                ),
-              ],
+              child: Column(
+                children: <Widget>[
+                  Opacity(
+                    opacity: 0.55,
+                    child: _OfficeCard(
+                      title: "Municipal Treasurer's Office",
+                      detail: 'Real property tax, payments',
+                    ),
+                  ),
+                  SizedBox(height: s3CardGap),
+                  Opacity(
+                    opacity: 0.55,
+                    child: _OfficeCard(
+                      title: 'Business Permits & Licensing Office',
+                      detail: 'Permits and renewals',
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -244,36 +235,23 @@ class _OfficeCard extends StatelessWidget {
               children: <Widget>[
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    height: 1.25,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
                 Text(
                   detail,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    height: 1.25,
-                    color: BrandColors.textSecondary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    13,
+                    AppTypography.body,
+                    BrandColors.textSecondary,
+                    height: 1.5,
                   ),
                 ),
               ],
             ),
-          ),
-          const TaytayIcon(
-            icon: TaytayIcons.chevronRight,
-            semanticLabel: '',
-            excludeSemantics: true,
-            size: 18,
-            color: BrandColors.chevron,
           ),
         ],
       ),
@@ -283,11 +261,9 @@ class _OfficeCard extends StatelessWidget {
 
 /// `03-04` composed the way the design is drawn: dimmed list, then the sheet.
 ///
-/// The sheet's top edge is the design's y = 1579 device px.
+/// The sheet is anchored to the bottom, the way the design draws it.
 class UnverifiedGatePreview extends StatelessWidget {
   const UnverifiedGatePreview({super.key});
-
-  static const double sheetTop = 1579 / 3;
 
   @override
   Widget build(BuildContext context) {
@@ -296,7 +272,6 @@ class UnverifiedGatePreview extends StatelessWidget {
         GateBackdrop(),
         ModalBarrier(color: GateScrim.color, dismissible: false),
         Positioned(
-          top: sheetTop,
           left: 0,
           right: 0,
           bottom: 0,
@@ -304,7 +279,6 @@ class UnverifiedGatePreview extends StatelessWidget {
             action: VerifiedOnlyAction.message,
             onContinue: _noop,
             onDismiss: _noop,
-            fill: true,
           ),
         ),
       ],

@@ -33,45 +33,41 @@ class PendingStatusPage extends StatelessWidget {
       onBack: onBack,
       child: Column(
         children: <Widget>[
-          const S3Card(
+          S3Card(
             child: Column(
               children: <Widget>[
-                IconTile(
+                const IconTile(
                   icon: TaytayIcons.clock,
                   fill: BrandColors.chipAmberBg,
                   ink: BrandColors.warning,
                   size: 60,
                   iconSize: 28,
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Text(
                   "We're reviewing your account",
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
-                SizedBox(height: 6),
-                StatusChip(label: 'Pending review', tone: StatusTone.pending),
-                SizedBox(height: 6),
-                Text(
+                const SizedBox(height: 8),
+                const StatusChip(
+                  label: 'Pending review',
+                  tone: StatusTone.pending,
+                ),
+                const SizedBox(height: 6),
+                const S3Lines(
                   'Taytay LGU staff are checking your valid ID and '
                   'selfie. This usually takes 1–3 working days. No action '
                   'needed.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
-                    color: BrandColors.textSecondary,
-                    decoration: TextDecoration.none,
-                  ),
+                  size: 13,
+                  weight: AppTypography.body,
+                  color: BrandColors.textSecondary,
+                  height: 1.5,
+                  align: TextAlign.center,
                 ),
               ],
             ),
@@ -81,34 +77,30 @@ class PendingStatusPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'Progress',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 14),
                 Timeline(
                   steps: <TimelineStep>[
                     TimelineStep(
-                      icon: TaytayIcons.user,
+                      icon: TaytayIcons.check,
                       title: 'Account created',
                       detail: _orDash(accountCreated),
                       tone: TimelineTone.done,
                     ),
                     TimelineStep(
-                      icon: TaytayIcons.mail,
+                      icon: TaytayIcons.check,
                       title: 'Email confirmed',
                       detail: _orDash(email),
                       tone: TimelineTone.done,
                     ),
                     TimelineStep(
-                      icon: TaytayIcons.idCard,
+                      icon: TaytayIcons.check,
                       title: 'Valid ID and selfie received',
                       detail: _orDash(idType),
                       tone: TimelineTone.done,
@@ -133,29 +125,24 @@ class PendingStatusPage extends StatelessWidget {
           const SizedBox(height: s3CardGap),
           const S3Card(
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 IconTile(
-                  icon: TaytayIcons.newspaper,
+                  icon: TaytayIcons.info,
                   fill: BrandColors.chipBlueBg,
                   ink: BrandColors.taytayBlue,
-                  size: 36,
-                  iconSize: 18,
-                  radius: 10,
+                  size: 44,
+                  iconSize: 22,
+                  radius: 12,
                 ),
                 SizedBox(width: 12),
                 Expanded(
-                  child: Text(
+                  child: S3Lines(
                     'While pending you can browse services, '
                     'news and events, and use emergency hotlines.',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      height: 1.35,
-                      color: BrandColors.textSecondary,
-                      decoration: TextDecoration.none,
-                    ),
+                    size: 13,
+                    weight: AppTypography.body,
+                    color: BrandColors.textSecondary,
+                    height: 1.5,
                   ),
                 ),
               ],
@@ -198,6 +185,7 @@ class VerifiedStatusPage extends StatelessWidget {
         ? 'You now have full access to resident services.'
         : 'Verified by Taytay LGU on $verifiedOn. You now '
               'have full access to resident services.';
+    final int? percent = completeness;
     return _StatusScaffold(
       title: 'Verification status',
       onBack: onBack,
@@ -209,39 +197,32 @@ class VerifiedStatusPage extends StatelessWidget {
             child: Column(
               children: <Widget>[
                 const IconTile(
-                  icon: TaytayIcons.check,
+                  icon: TaytayIcons.badgeCheck,
                   fill: BrandColors.chipGreenBg,
                   ink: BrandColors.success,
-                  size: 56,
-                  iconSize: 26,
+                  size: 60,
+                  iconSize: 30,
                 ),
                 const SizedBox(height: 10),
-                const Text(
+                Text(
                   'Your account is verified',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.15,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 const StatusChip(label: 'Verified', tone: StatusTone.verified),
-                const SizedBox(height: 10),
-                Text(
+                const SizedBox(height: 6),
+                S3Lines(
                   body,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    height: 1.35,
-                    color: BrandColors.textSecondary,
-                    decoration: TextDecoration.none,
-                  ),
+                  size: 13,
+                  weight: AppTypography.body,
+                  color: BrandColors.textSecondary,
+                  height: 1.5,
+                  align: TextAlign.center,
                 ),
               ],
             ),
@@ -251,52 +232,56 @@ class VerifiedStatusPage extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'You can now',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 8),
-                const CheckLine(
-                  title: 'Request documents',
-                  detail: 'Certificates, clearances and permits',
-                ),
-                CheckLine(
-                  title: 'Message municipal offices',
-                  detail: 'Ask questions and follow up requests',
-                  onTap: onMessage,
-                ),
-                CheckLine(
-                  title: 'Use your Taytay digital ID',
-                  detail: 'Show it at the municipal hall',
-                  onTap: onDigitalId,
+                Timeline(
+                  steps: <TimelineStep>[
+                    const TimelineStep(
+                      icon: TaytayIcons.check,
+                      title: 'Request documents',
+                      detail: 'Certificates, clearances and permits',
+                      tone: TimelineTone.navy,
+                    ),
+                    TimelineStep(
+                      icon: TaytayIcons.check,
+                      title: 'Message municipal offices',
+                      detail: 'Ask questions and follow up requests',
+                      tone: TimelineTone.navy,
+                      onTap: onMessage,
+                    ),
+                    TimelineStep(
+                      icon: TaytayIcons.check,
+                      title: 'Use your Taytay digital ID',
+                      detail: 'Show it at the municipal hall',
+                      tone: TimelineTone.navy,
+                      onTap: onDigitalId,
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           const SizedBox(height: s3CardGap),
           S3Card(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: EdgeInsets.zero,
             child: InkWell(
               onTap: onProfile,
-              borderRadius: BorderRadius.circular(Radii.md),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Row(
                   children: <Widget>[
-                    const SizedBox(width: 8),
                     const IconTile(
                       icon: TaytayIcons.user,
-                      fill: BrandColors.chipBlueBg,
-                      ink: BrandColors.taytayBlue,
-                      size: 40,
-                      iconSize: 20,
+                      fill: BrandColors.chipGreyBg,
+                      ink: BrandColors.textSecondary,
+                      size: 44,
+                      iconSize: 22,
                       radius: 12,
                     ),
                     const SizedBox(width: 12),
@@ -304,42 +289,35 @@ class VerifiedStatusPage extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Text(
+                          Text(
                             'Complete your Resident Profile',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              height: 1.2,
-                              color: BrandColors.textPrimary,
-                              decoration: TextDecoration.none,
+                            style: s3Type(
+                              14,
+                              AppTypography.black,
+                              BrandColors.textPrimary,
                             ),
                           ),
-                          if (completeness != null)
-                            Text(
-                              '$completeness% complete',
-                              style: const TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                height: 1.2,
-                                color: BrandColors.inkGold,
-                                decoration: TextDecoration.none,
+                          if (percent != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: S3Lines(
+                                '$percent% complete',
+                                size: 13,
+                                weight: AppTypography.body,
+                                color: BrandColors.textSecondary,
+                                height: 1.5,
                               ),
                             ),
                         ],
                       ),
                     ),
-                    const TaytayIcon(
-                      icon: TaytayIcons.chevronRight,
-                      semanticLabel: '',
-                      excludeSemantics: true,
+                    const Icon(
+                      TaytayIcons.chevronRight,
                       size: 18,
-                      color: BrandColors.taytayBlue,
+                      color: BrandColors.chevron,
                     ),
-                    const SizedBox(width: 8),
                   ],
                 ),
               ),
@@ -375,6 +353,7 @@ class NeedsCorrectionPage extends StatelessWidget {
     final String shown = reason.trim().isEmpty
         ? 'Taytay LGU needs a correction before it can finish checking.'
         : reason.trim();
+    final String reviewed = reviewedOn.trim();
     return _StatusScaffold(
       title: 'Verification status',
       onBack: onBack,
@@ -393,8 +372,8 @@ class NeedsCorrectionPage extends StatelessWidget {
                       icon: TaytayIcons.triangleAlert,
                       fill: BrandColors.chipRedBg,
                       ink: BrandColors.danger,
-                      size: 40,
-                      iconSize: 20,
+                      size: 44,
+                      iconSize: 22,
                       radius: 12,
                     ),
                     SizedBox(width: 12),
@@ -406,14 +385,15 @@ class NeedsCorrectionPage extends StatelessWidget {
                             'Needs correction',
                             style: TextStyle(
                               fontFamily: AppTypography.fontFamily,
-                              fontSize: 18,
+                              fontSize: 14,
                               fontWeight: FontWeight.w800,
-                              height: 1.2,
+                              height: s3Line,
+                              leadingDistribution: TextLeadingDistribution.even,
                               color: BrandColors.textPrimary,
                               decoration: TextDecoration.none,
                             ),
                           ),
-                          SizedBox(height: 6),
+                          SizedBox(height: 4),
                           StatusChip(
                             label: 'Needs correction',
                             tone: StatusTone.correction,
@@ -423,62 +403,8 @@ class NeedsCorrectionPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFDF3F3),
-                    borderRadius: BorderRadius.circular(Radii.md),
-                    border: Border.all(
-                      color: BrandColors.danger.withValues(alpha: 0.25),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text(
-                          'REASON FROM TAYTAY LGU',
-                          style: TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.6,
-                            height: 1.2,
-                            color: BrandColors.textSecondary,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          shown,
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 1.35,
-                            color: BrandColors.textPrimary,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                        if (reviewedOn.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Reviewed $reviewedOn',
-                            style: const TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              height: 1.2,
-                              color: BrandColors.textMuted,
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
+                const SizedBox(height: 12),
+                _ReasonBox(reason: shown, reviewed: reviewed),
                 for (final FieldCorrectionNote note in notes) ...<Widget>[
                   const SizedBox(height: 10),
                   _FieldNote(note: note),
@@ -486,38 +412,76 @@ class NeedsCorrectionPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: s3CardGap),
+          // One logical px under the shared 12. The reason card's border
+          // box is that much taller than the design's card edge.
+          const SizedBox(height: 11),
           S3Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                const Text(
+                Text(
                   'Send a new valid ID',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    color: BrandColors.textPrimary,
-                    decoration: TextDecoration.none,
+                  style: s3Type(
+                    14,
+                    AppTypography.black,
+                    BrandColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 14),
-                const _FieldLabel('Type of ID', requiredMark: true),
-                const SizedBox(height: 6),
-                _ValueBox(value: _orDash(idType), chevron: true),
-                const SizedBox(height: 14),
-                const _FieldLabel('Front of ID', requiredMark: true),
-                const SizedBox(height: 6),
-                const _DashedUpload(label: 'Upload new photo'),
-                const SizedBox(height: 14),
-                const _FieldLabel('Back of ID (optional)'),
-                const SizedBox(height: 6),
-                const _DashedUpload(label: 'Add'),
-                const SizedBox(height: 14),
-                const _FieldLabel('Selfie'),
-                const SizedBox(height: 6),
-                const _KeptSelfie(),
+                S3Field(
+                  label: 'Type of ID',
+                  asterisk: true,
+                  value: _orDash(idType),
+                  chevron: true,
+                ),
+                const S3Field(
+                  label: 'Front of ID',
+                  asterisk: true,
+                  value: 'Upload new photo',
+                  dashed: true,
+                  leading: TaytayIcon(
+                    icon: TaytayIcons.plus,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: 16,
+                    color: BrandColors.taytayBlue,
+                  ),
+                ),
+                const S3Field(
+                  label: 'Back of ID (optional)',
+                  value: 'Add',
+                  dashed: true,
+                  leading: TaytayIcon(
+                    icon: TaytayIcons.plus,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: 16,
+                    color: BrandColors.taytayBlue,
+                  ),
+                ),
+                const S3Field(
+                  label: 'Selfie',
+                  value: 'Previous selfie kept',
+                  readOnly: true,
+                  leading: TaytayIcon(
+                    icon: TaytayIcons.check,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: 16,
+                    color: BrandColors.success,
+                  ),
+                  trailing: Text(
+                    'Retake',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      height: s3Line,
+                      leadingDistribution: TextLeadingDistribution.even,
+                      color: BrandColors.taytayBlue,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -541,32 +505,22 @@ class UnverifiedStatusPage extends StatelessWidget {
       onBack: onBack,
       footer: 'Start verification',
       onFooter: onStart,
-      child: const S3Card(
+      child: S3Card(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
               'Not verified',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 22,
-                fontWeight: FontWeight.w800,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
+              style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
             ),
-            SizedBox(height: 8),
-            Text(
+            const SizedBox(height: 6),
+            const S3Lines(
               'Taytay LGU has not confirmed this account. '
               'You can browse services while you complete your resident profile.',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                height: 1.4,
-                color: BrandColors.textSecondary,
-                decoration: TextDecoration.none,
-              ),
+              size: 13,
+              weight: AppTypography.body,
+              color: BrandColors.textSecondary,
+              height: 1.5,
             ),
           ],
         ),
@@ -577,76 +531,42 @@ class UnverifiedStatusPage extends StatelessWidget {
 
 String _orDash(String value) => value.trim().isEmpty ? '—' : value.trim();
 
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label, {this.requiredMark = false});
+/// Reason callout. The 3px danger border follows the 8px radius, so the
+/// run starts at the top of the curve rather than after a clipped bar.
+class _ReasonBox extends StatelessWidget {
+  const _ReasonBox({required this.reason, required this.reviewed});
 
-  final String label;
-  final bool requiredMark;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        text: label,
-        style: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-          height: 1.2,
-          color: BrandColors.textSecondary,
-          decoration: TextDecoration.none,
-        ),
-        children: <InlineSpan>[
-          if (requiredMark)
-            const TextSpan(
-              text: ' *',
-              style: TextStyle(color: BrandColors.danger),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ValueBox extends StatelessWidget {
-  const _ValueBox({required this.value, this.chevron = false});
-
-  final String value;
-  final bool chevron;
+  final String reason;
+  final String reviewed;
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.surface,
-        borderRadius: BorderRadius.circular(Radii.md),
-        border: Border.all(color: const Color(0xFFD5DCEC)),
-      ),
+    return CustomPaint(
+      painter: const _ReasonBorder(),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
+        padding: const EdgeInsets.fromLTRB(15, 10, 12, 10),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(
-              child: Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
-              ),
+            Text(
+              'REASON FROM TAYTAY LGU',
+              style: s3Type(11, AppTypography.black, BrandColors.danger),
             ),
-            if (chevron)
-              const TaytayIcon(
-                icon: TaytayIcons.chevronDown,
-                semanticLabel: '',
-                excludeSemantics: true,
-                size: 16,
-                color: BrandColors.textSecondary,
+            const SizedBox(height: 4),
+            S3Lines(
+              reason,
+              size: 13,
+              weight: AppTypography.body,
+              color: const Color(0xFF3A1A1A),
+              height: 1.5,
+            ),
+            if (reviewed.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 5),
+              Text(
+                'Reviewed $reviewed',
+                style: s3Type(11, FontWeight.w400, BrandColors.textSecondary),
               ),
+            ],
           ],
         ),
       ),
@@ -654,120 +574,34 @@ class _ValueBox extends StatelessWidget {
   }
 }
 
-class _DashedUpload extends StatelessWidget {
-  const _DashedUpload({required this.label});
+class _ReasonBorder extends CustomPainter {
+  const _ReasonBorder();
 
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const _DashBoxPainter(),
-      child: SizedBox(
-        height: 72,
-        child: Center(
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              const TaytayIcon(
-                icon: TaytayIcons.plus,
-                semanticLabel: '',
-                excludeSemantics: true,
-                size: 16,
-                color: BrandColors.taytayBlue,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  height: 1.2,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashBoxPainter extends CustomPainter {
-  const _DashBoxPainter();
+  static const Color _fill = Color(0xFFFDF3F3);
 
   @override
   void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = const Color(0xFFD5DCEC)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-    final Path path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(12)),
-      );
-    for (final metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final double next = distance + 5;
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + 4;
-      }
-    }
+    final RRect rect = RRect.fromRectAndRadius(
+      Offset.zero & size,
+      const Radius.circular(8),
+    );
+    canvas.drawRRect(rect, Paint()..color = _fill);
+    canvas.save();
+    canvas.clipRRect(rect);
+    // The left border, including the corner curve. CSS `border-left` does this.
+    canvas.clipRect(Rect.fromLTWH(0, 0, 8, size.height));
+    canvas.drawRRect(
+      rect.deflate(1.5),
+      Paint()
+        ..color = BrandColors.danger
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3,
+    );
+    canvas.restore();
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _KeptSelfie extends StatelessWidget {
-  const _KeptSelfie();
-
-  @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-      child: const Row(
-        children: <Widget>[
-          IconTile(
-            icon: TaytayIcons.check,
-            fill: BrandColors.success,
-            ink: Colors.white,
-            size: 28,
-            iconSize: 16,
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Previous selfie kept',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                height: 1.2,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-          Text(
-            'Retake',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-              height: 1.2,
-              color: BrandColors.taytayBlue,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _FieldNote extends StatelessWidget {
@@ -777,42 +611,22 @@ class _FieldNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.md),
-        border: Border.all(color: BrandColors.danger.withValues(alpha: 0.4)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              note.label,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              note.note,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                height: 1.3,
-                color: BrandColors.danger,
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          note.label,
+          style: s3Type(14, AppTypography.strong, BrandColors.textPrimary),
         ),
-      ),
+        const SizedBox(height: 4),
+        S3Lines(
+          note.note,
+          size: 13,
+          weight: AppTypography.body,
+          color: BrandColors.danger,
+          height: 1.5,
+        ),
+      ],
     );
   }
 }

@@ -8,6 +8,7 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/resident_record.dart';
 import 'manila_stamp.dart';
 import 's3_chrome.dart';
+import 's3_stroke.dart';
 
 /// The five resident-profile frames, `03-05` through `03-09`.
 enum ProfileWizardStep { overview, personal, household, review, submitted }
@@ -139,264 +140,329 @@ class _Overview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String name = record.displayName.isEmpty
-        ? 'Your name'
-        : record.displayName;
-    final String barangay = record.barangayName.isEmpty
-        ? 'Taytay'
-        : record.barangayName;
+    final String name = record.displayName;
     final (String chip, StatusTone tone) = switch (record.verificationTier) {
       'verified' => ('Verified', StatusTone.verified),
       'rejected' => ('Needs correction', StatusTone.correction),
       _ => ('Pending review', StatusTone.pending),
     };
+    final String place = <String>[
+      if (record.barangayName.isNotEmpty) 'Brgy. ${record.barangayName}',
+      record.municipality,
+      record.province,
+    ].where((String part) => part.isNotEmpty).join(', ');
     return Column(
       children: <Widget>[
         S3Card(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: BrandColors.chipBlueBg,
-                child: Text(
-                  _initials(record),
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: BrandColors.taytayBlue,
-                    decoration: TextDecoration.none,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                        color: BrandColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: <Widget>[
-                        Text(
-                          'Brgy. $barangay, Taytay',
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            height: 1.2,
-                            color: BrandColors.textSecondary,
-                            decoration: TextDecoration.none,
-                          ),
-                        ),
-                        StatusChip(label: chip, tone: tone),
-                      ],
-                    ),
-                    const Text(
-                      'Rizal',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        height: 1.2,
-                        color: BrandColors.textSecondary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 4),
-        S3Card(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  const Expanded(
-                    child: Text(
-                      'Profile completeness',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        height: 1.2,
-                        color: BrandColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
+                  _Avatar(initials: _initials(record)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          name.isEmpty ? 'Your name' : name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: s3Type(
+                            14,
+                            AppTypography.black,
+                            BrandColors.textPrimary,
+                          ),
+                        ),
+                        S3Lines(
+                          place,
+                          size: 13,
+                          weight: AppTypography.body,
+                          color: BrandColors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    '${record.completeness}%',
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      color: BrandColors.taytayBlue,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
+                  StatusChip(label: chip, tone: tone),
                 ],
               ),
-              const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(Radii.pill),
-                child: SizedBox(
-                  height: 8,
-                  child: LinearProgressIndicator(
-                    value: record.completeness / 100,
-                    backgroundColor: BrandColors.surfaceMuted,
-                    color: BrandColors.taytayBlue,
-                  ),
+              Padding(
+                padding: const EdgeInsets.only(top: 14, bottom: 6),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
+                        'Profile completeness',
+                        style: s3Type(
+                          12,
+                          AppTypography.black,
+                          BrandColors.fieldInk,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${record.completeness}%',
+                      style: s3Type(
+                        12,
+                        AppTypography.black,
+                        BrandColors.taytayBlue,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'Complete all sections to submit your profile to Taytay LGU.',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  height: 1.3,
-                  color: BrandColors.textSecondary,
-                  decoration: TextDecoration.none,
+              _Bar(value: record.completeness / 100),
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  'Complete all sections to submit your profile to Taytay LGU.',
+                  style: s3Type(11, FontWeight.w400, BrandColors.textSecondary),
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        _SectionCard(
-          icon: TaytayIcons.user,
-          title: 'Personal information',
-          chip: record.personalComplete ? 'Complete' : 'Not started',
-          tone: record.personalComplete
-              ? StatusTone.verified
-              : StatusTone.neutral,
-          onTap: onPersonal,
-        ),
-        const SizedBox(height: 10),
-        _SectionCard(
-          icon: TaytayIcons.house,
-          title: 'Household & address',
-          chip: record.householdStarted ? 'In progress' : 'Not started',
-          tone: record.householdStarted
-              ? StatusTone.pending
-              : StatusTone.neutral,
-          onTap: onHousehold,
-        ),
-        const SizedBox(height: 10),
-        const _SectionCard(
-          icon: TaytayIcons.fileText,
-          title: 'Supporting documents',
-          chip: 'Optional',
-          tone: StatusTone.neutral,
-        ),
-        const SizedBox(height: 10),
-        _SectionCard(
-          icon: TaytayIcons.badgeCheck,
-          title: 'Review & submit',
-          chip: 'Not started',
-          tone: StatusTone.neutral,
-          onTap: onReview,
+        const SizedBox(height: s3CardGap),
+        S3Card(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Column(
+            children: <Widget>[
+              _SectionRow(
+                icon: S3StrokeIcon.user,
+                title: 'Personal information',
+                chip: record.personalComplete ? 'Complete' : 'Not started',
+                tone: record.personalComplete
+                    ? StatusTone.verified
+                    : StatusTone.neutral,
+                onTap: onPersonal,
+              ),
+              _SectionRow(
+                icon: S3StrokeIcon.house,
+                title: 'Household & address',
+                chip: record.householdStarted ? 'In progress' : 'Not started',
+                tone: record.householdStarted
+                    ? StatusTone.pending
+                    : StatusTone.neutral,
+                onTap: onHousehold,
+              ),
+              const _SectionRow(
+                icon: S3StrokeIcon.paperclip,
+                title: 'Supporting documents',
+                chip: 'Optional',
+                tone: StatusTone.neutral,
+              ),
+              _SectionRow(
+                icon: S3StrokeIcon.listChecks,
+                title: 'Review & submit',
+                chip: 'Not started',
+                tone: StatusTone.neutral,
+                onTap: onReview,
+                last: true,
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 52,
+      height: 52,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: BrandColors.chipBlueBg,
+        shape: BoxShape.circle,
+      ),
+      child: Text(
+        initials,
+        style: s3Type(16, AppTypography.black, BrandColors.taytayBlue),
+      ),
+    );
+  }
+}
+
+class _Bar extends StatelessWidget {
+  const _Bar({required this.value});
+
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    final double fraction = value.clamp(0, 1);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(4),
+      child: SizedBox(
+        height: 8,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            const ColoredBox(color: Color(0xFFE6EAF2)),
+            FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: fraction,
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      BrandColors.taytayBlue,
+                      BrandColors.taytayBlueLight,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionRow extends StatelessWidget {
+  const _SectionRow({
     required this.icon,
     required this.title,
     required this.chip,
     required this.tone,
     this.onTap,
+    this.last = false,
   });
 
-  final IconData icon;
+  final S3StrokeIcon icon;
   final String title;
   final String chip;
   final StatusTone tone;
   final VoidCallback? onTap;
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
-    return S3Card(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.md),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-          child: Row(
-            children: <Widget>[
-              IconTile(
-                icon: icon,
-                fill: BrandColors.chipBlueBg,
-                ink: BrandColors.taytayBlue,
-                size: 40,
-                iconSize: 20,
-                radius: 12,
+    final Widget row = DecoratedBox(
+      decoration: BoxDecoration(
+        border: last
+            ? null
+            : const Border(bottom: BorderSide(color: Color(0xFFEEF1F6))),
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(0, 12, 0, last ? 12 : 12 + 5 / 3),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 38,
+              height: 38,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: BrandColors.chipBlueBg,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                        color: BrandColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    StatusChip(label: chip, tone: tone),
-                  ],
-                ),
+              child: identical(icon, S3StrokeIcon.listChecks)
+                  ? const Padding(
+                      padding: EdgeInsets.only(top: 2),
+                      child: S3StrokeIcon.listChecks,
+                    )
+                  : icon,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // The user glyph has a gap under the title. Height 1 keeps the
+                  // descender of "Personal" above that gap. Other rows keep the
+                  // 1.26 line so their icons stay joined to the title.
+                  identical(icon, S3StrokeIcon.user)
+                      ? SizedBox(
+                          height: 18,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2 / 3),
+                            child: Align(
+                              alignment: Alignment.topLeft,
+                              child: Text(
+                                title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: AppTypography.fontFamily,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1,
+                                  leadingDistribution:
+                                      TextLeadingDistribution.even,
+                                  color: BrandColors.fieldInk,
+                                  decoration: TextDecoration.none,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: s3Type(
+                            14,
+                            AppTypography.black,
+                            BrandColors.fieldInk,
+                          ),
+                        ),
+                  const SizedBox(height: 3),
+                  identical(icon, S3StrokeIcon.listChecks)
+                      ? Stack(
+                          clipBehavior: Clip.none,
+                          children: <Widget>[
+                            ExcludeSemantics(
+                              child: Visibility(
+                                visible: false,
+                                maintainSize: true,
+                                maintainState: true,
+                                maintainAnimation: true,
+                                child: StatusChip(
+                                  label: chip,
+                                  tone: tone,
+                                  icon: false,
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 2,
+                              left: 0,
+                              child: StatusChip(
+                                label: chip,
+                                tone: tone,
+                                icon: false,
+                              ),
+                            ),
+                          ],
+                        )
+                      : StatusChip(label: chip, tone: tone, icon: false),
+                ],
               ),
-              const SizedBox(width: 8),
-              const TaytayIcon(
-                icon: TaytayIcons.chevronRight,
-                semanticLabel: '',
-                excludeSemantics: true,
-                size: 18,
-                color: BrandColors.taytayBlue,
-              ),
-            ],
-          ),
+            ),
+            const TaytayIcon(
+              icon: TaytayIcons.chevronRight,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: 18,
+              color: BrandColors.chevron,
+            ),
+          ],
         ),
       ),
     );
+    final VoidCallback? tap = onTap;
+    if (tap == null) return row;
+    return InkWell(onTap: tap, child: row);
   }
 }
 
@@ -407,29 +473,64 @@ class _Personal extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String suffix = record.suffix.trim();
     return Column(
       children: <Widget>[
         S3Card(
           child: Column(
             children: <Widget>[
               _Pair(
-                left: _Field(label: 'First name', value: record.givenName),
-                right: _Field(label: 'Middle name', value: record.middleName),
-              ),
-              _Pair(
-                left: _Field(label: 'Last name', value: record.familyName),
-                right: _Field(label: 'Suffix', value: record.suffix),
-              ),
-              _Pair(
-                left: _Field(label: 'Sex', value: record.sex),
-                right: _Field(
-                  label: 'Birthdate',
-                  value: _birth(record.birthdate),
+                left: S3Field(
+                  label: 'First name',
+                  asterisk: true,
+                  value: _shown(record.givenName),
+                  top: 0,
+                ),
+                right: S3Field(
+                  label: 'Middle name',
+                  value: _shown(record.middleName),
+                  top: 0,
                 ),
               ),
               _Pair(
-                left: _Field(label: 'Civil status', value: record.civilStatus),
-                right: _Field(label: 'Age', value: _age(record.birthdate)),
+                left: S3Field(
+                  label: 'Last name',
+                  asterisk: true,
+                  value: _shown(record.familyName),
+                ),
+                right: S3Field(
+                  label: 'Suffix',
+                  value: suffix.isEmpty ? 'e.g. Jr.' : suffix,
+                  readOnly: suffix.isEmpty,
+                ),
+                narrowRight: true,
+              ),
+              _Pair(
+                left: S3Field(
+                  label: 'Sex',
+                  asterisk: true,
+                  value: _shown(record.sex),
+                  chevron: true,
+                ),
+                right: S3Field(
+                  label: 'Birthdate',
+                  asterisk: true,
+                  value: _birth(record.birthdate),
+                  trailing: S3StrokeIcon.calendar,
+                ),
+              ),
+              _Pair(
+                left: S3Field(
+                  label: 'Civil status',
+                  asterisk: true,
+                  value: _shown(record.civilStatus),
+                  chevron: true,
+                ),
+                right: S3Field(
+                  label: 'Age',
+                  value: _age(record.birthdate),
+                  readOnly: true,
+                ),
               ),
             ],
           ),
@@ -439,23 +540,26 @@ class _Personal extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              Text(
                 'Contact',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
+                style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
               ),
-              const SizedBox(height: 12),
-              _Field(
+              S3Field(
                 label: 'Mobile number',
-                value: record.mobile,
-                verified: record.mobileVerified,
+                asterisk: true,
+                value: _shown(record.mobile),
+                trailing: record.mobileVerified
+                    ? const StatusChip(
+                        label: 'Verified',
+                        tone: StatusTone.verified,
+                      )
+                    : null,
               ),
-              _Field(label: 'Email', value: record.email),
+              S3Field(
+                label: 'Email',
+                value: _shown(record.email),
+                readOnly: true,
+              ),
             ],
           ),
         ),
@@ -477,51 +581,66 @@ class _Household extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              Text(
                 'Address',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
+                style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
+              ),
+              S3Field(
+                label: 'Barangay',
+                asterisk: true,
+                value: _shown(record.barangayName),
+                chevron: true,
+                below: const Padding(
+                  padding: EdgeInsets.only(top: 5),
+                  child: Text(
+                    'Dolores · Muzon · San Isidro · San Juan · Santa Ana',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                      height: s3Line,
+                      leadingDistribution: TextLeadingDistribution.even,
+                      color: BrandColors.textSecondary,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
                 ),
               ),
-              const SizedBox(height: 12),
-              _Field(label: 'Barangay', value: record.barangayName),
-              const _BarangayChips(),
-              const SizedBox(height: 8),
               _Pair(
-                left: _Field(label: 'House no. / Street', value: record.street),
-                right: _Field(label: 'Purok / Sitio', value: record.purok),
+                left: S3Field(
+                  label: 'House no. / Street',
+                  asterisk: true,
+                  value: _shown(record.street),
+                ),
+                right: S3Field(
+                  label: 'Purok / Sitio',
+                  value: _purok(record.purok),
+                ),
+                narrowRight: true,
               ),
-              _Field(
+              S3Field(
                 label: 'Municipality / Province',
                 value: '${record.municipality}, ${record.province}',
+                readOnly: true,
               ),
-              const SizedBox(height: 4),
-              Text(
-                _streetLine(record),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              Text(
-                record.province,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  height: 1.3,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
+              Padding(
+                padding: const EdgeInsets.only(top: 10),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BrandColors.chipBlueBg,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 10 - 2 / 3),
+                    child: Text(
+                      record.addressLine,
+                      style: s3Type(
+                        12,
+                        AppTypography.strong,
+                        BrandColors.taytayBlue,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -532,86 +651,30 @@ class _Household extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const Text(
+              Text(
                 'Household',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
+                style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
               ),
-              const SizedBox(height: 12),
               _Pair(
-                left: _Field(
+                left: S3Field(
                   label: 'Years at this address',
-                  value: record.yearsAtAddress,
+                  asterisk: true,
+                  value: _shown(record.yearsAtAddress),
                 ),
-                right: _Field(
+                right: S3Field(
                   label: 'Household members',
-                  value: record.memberCount,
+                  value: _shown(record.memberCount),
                 ),
               ),
-              _Field(label: 'Residence type', value: record.residenceType),
+              S3Field(
+                label: 'Residence type',
+                value: _shown(record.residenceType),
+                chevron: true,
+              ),
             ],
           ),
         ),
       ],
-    );
-  }
-}
-
-class _BarangayChips extends StatelessWidget {
-  const _BarangayChips();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: <Widget>[
-        _BarangayChip('Dolores'),
-        _BarangayChip('Muzon'),
-        _BarangayChip('San Juan'),
-        _BarangayChip('Santa Ana'),
-      ],
-    );
-  }
-}
-
-class _BarangayChip extends StatelessWidget {
-  const _BarangayChip(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool selected = label == 'San Juan';
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: selected ? BrandColors.chipBlueBg : BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.pill),
-        border: Border.all(
-          color: selected ? BrandColors.taytayBlue : const Color(0xFFD5DCEC),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 13,
-            height: 1.2,
-            fontWeight: FontWeight.w600,
-            color: selected
-                ? BrandColors.taytayBlue
-                : BrandColors.textSecondary,
-            decoration: TextDecoration.none,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -649,11 +712,11 @@ class _Review extends StatelessWidget {
                 value: '${record.sex} · ${_birth(record.birthdate)}',
               ),
               _Line(label: 'Civil status', value: record.civilStatus),
-              _Line(label: 'Mobile', value: record.mobile),
+              _Line(label: 'Mobile', value: record.mobile, last: true),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: s3CardGap),
         S3Card(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -669,43 +732,76 @@ class _Review extends StatelessWidget {
                     '${record.barangayName}, ${record.municipality}, ${record.province}',
               ),
               _Line(label: 'Years at address', value: record.yearsAtAddress),
-              _Line(label: 'Household members', value: record.memberCount),
+              _Line(
+                label: 'Household members',
+                value: record.memberCount,
+                last: true,
+              ),
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: s3CardGap),
         S3Card(
-          padding: const EdgeInsets.fromLTRB(4, 8, 12, 8),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Checkbox(
-                value: certified,
-                onChanged: onCertified == null
-                    ? null
-                    : (bool? value) => onCertified!(value ?? false),
-                activeColor: BrandColors.taytayBlue,
-              ),
+              _ConsentBox(checked: certified, onChanged: onCertified),
+              const SizedBox(width: 10),
               const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: Text(
-                    'I certify that the information is true and correct, '
-                    'and I consent to its processing under the Data '
-                    'Privacy Act of 2012 per Taytay LGU\'s Privacy Notice.',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      height: 1.45,
-                      color: BrandColors.textSecondary,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
+                child: S3Lines(
+                  'I certify that the information is true and correct, '
+                  'and I consent to its processing under the Data '
+                  "Privacy Act of 2012 per Taytay LGU's Privacy Notice.",
+                  size: 13,
+                  weight: AppTypography.body,
+                  color: BrandColors.textSecondary,
+                  height: 1.5,
                 ),
               ),
             ],
           ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ConsentBox extends StatelessWidget {
+  const _ConsentBox({required this.checked, this.onChanged});
+
+  final bool checked;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget box = SizedBox(
+      width: 20,
+      height: 20,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: checked ? BrandColors.taytayBlue : BrandColors.surfaceCard,
+          borderRadius: const BorderRadius.all(Radius.circular(6)),
+          border: checked
+              ? null
+              : Border.all(color: BrandColors.taytayBlue, width: 1.5),
+        ),
+        child: checked
+            ? const Icon(TaytayIcons.check, size: 14, color: Colors.white)
+            : null,
+      ),
+    );
+    final ValueChanged<bool>? change = onChanged;
+    if (change == null) return box;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        box,
+        Positioned(
+          left: -14,
+          top: -14,
+          width: A11y.minTapTarget,
+          height: A11y.minTapTarget,
+          child: InkWell(onTap: () => change(!checked)),
         ),
       ],
     );
@@ -721,41 +817,42 @@ class _Submitted extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
-        const SizedBox(height: 45),
-        const S3Card(
+        const Padding(
+          padding: EdgeInsets.only(top: 60),
           child: Column(
             children: <Widget>[
               IconTile(
-                icon: TaytayIcons.check,
+                icon: TaytayIcons.circleCheck,
                 fill: BrandColors.chipGreenBg,
                 ink: BrandColors.success,
-                size: 60,
-                iconSize: 28,
+                size: 88,
+                iconSize: 44,
               ),
-              SizedBox(height: 42),
+              SizedBox(height: 16),
               Text(
                 'Profile submitted',
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.w800,
-                  height: 1.15,
+                  height: s3Line,
+                  leadingDistribution: TextLeadingDistribution.even,
                   color: BrandColors.textPrimary,
                   decoration: TextDecoration.none,
                 ),
               ),
-              SizedBox(height: 8),
-              Text(
-                "Your resident profile was sent to Taytay LGU. We'll "
-                'notify you when it has been reviewed.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
+              SizedBox(height: 6),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: S3Lines(
+                  "Your resident profile was sent to Taytay LGU. We'll "
+                  'notify you when it has been reviewed.',
+                  size: 13,
+                  weight: AppTypography.body,
                   color: BrandColors.textSecondary,
-                  decoration: TextDecoration.none,
+                  height: 1.5,
+                  align: TextAlign.center,
                 ),
               ),
               SizedBox(height: 10),
@@ -763,7 +860,7 @@ class _Submitted extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: s3CardGap),
+        const SizedBox(height: 26 + 2 / 3),
         S3Card(
           child: Timeline(
             steps: <TimelineStep>[
@@ -800,93 +897,81 @@ class _EditHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The label stays on one line. The 48 dp Edit target hangs off that
-    // line so the row keeps the design's height.
-    return SizedBox(
-      height: 28,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
-            ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
           ),
-          Positioned(
-            right: -8,
-            top: -10,
-            child: TextButton(
-              onPressed: onEdit,
-              style: TextButton.styleFrom(
-                minimumSize: const Size(48, A11y.minTapTarget),
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                foregroundColor: BrandColors.taytayBlue,
-              ),
-              child: const Text(
-                'Edit',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+        _EditLink(onEdit: onEdit),
+      ],
+    );
+  }
+}
+
+class _EditLink extends StatelessWidget {
+  const _EditLink({this.onEdit});
+
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget label = Text(
+      'Edit',
+      style: s3Type(12, AppTypography.black, BrandColors.taytayBlue),
+    );
+    final VoidCallback? tap = onEdit;
+    if (tap == null) return label;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: <Widget>[
+        label,
+        Positioned(
+          right: -12,
+          top: -16,
+          width: A11y.minTapTarget,
+          height: A11y.minTapTarget,
+          child: InkWell(onTap: tap),
+        ),
+      ],
     );
   }
 }
 
 class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
+  const _Line({required this.label, required this.value, this.last = false});
 
   final String label;
   final String value;
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
+    // 13×1.26 rounds to 16. The extra keeps the CSS pitch of 8 + 16.38.
+    // The last line has no trailing gap; that gap belongs to the next card.
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: EdgeInsets.only(
+        top: 8,
+        bottom: last ? 0 : 13 * s3Line - 16,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(
             label,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              height: 1.3,
-              color: BrandColors.textSecondary,
-              decoration: TextDecoration.none,
-            ),
+            style: s3Type(13, FontWeight.w400, BrandColors.textSecondary),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                height: 1.3,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
+              textAlign: TextAlign.right,
+              style: s3Type(13, AppTypography.strong, BrandColors.fieldInk),
             ),
           ),
         ],
@@ -896,88 +981,36 @@ class _Line extends StatelessWidget {
 }
 
 class _Pair extends StatelessWidget {
-  const _Pair({required this.left, required this.right});
+  const _Pair({
+    required this.left,
+    required this.right,
+    this.narrowRight = false,
+  });
 
   final Widget left;
   final Widget right;
+  final bool narrowRight;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Expanded(child: left),
-        const SizedBox(width: 12),
-        Expanded(child: right),
+        Expanded(flex: 5, child: left),
+        const SizedBox(width: 10),
+        Expanded(flex: narrowRight ? 3 : 5, child: right),
       ],
     );
   }
 }
 
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.label,
-    required this.value,
-    this.verified = false,
-  });
+String _shown(String value) => value.trim().isEmpty ? '—' : value.trim();
 
-  final String label;
-  final String value;
-  final bool verified;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(
-            label,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: BrandColors.textSecondary,
-              decoration: TextDecoration.none,
-            ),
-          ),
-          const SizedBox(height: 6),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              color: BrandColors.surface,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFD5DCEC)),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
-                      value.isEmpty ? '—' : value,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: BrandColors.textPrimary,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ),
-                  if (verified)
-                    const StatusChip(
-                      label: 'Verified',
-                      tone: StatusTone.verified,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+String _purok(String value) {
+  final String purok = value.trim();
+  if (purok.isEmpty) return '—';
+  if (purok.toLowerCase().startsWith('purok')) return purok;
+  return 'Purok $purok';
 }
 
 String _initials(ResidentRecord record) {
@@ -986,16 +1019,6 @@ String _initials(ResidentRecord record) {
   final String mark =
       '${given.isEmpty ? '' : given[0]}${family.isEmpty ? '' : family[0]}';
   return mark.isEmpty ? '?' : mark.toUpperCase();
-}
-
-String _streetLine(ResidentRecord record) {
-  final Iterable<String> parts = <String>[
-    record.street,
-    if (record.purok.isNotEmpty) 'Purok ${record.purok}',
-    if (record.barangayName.isNotEmpty) 'Brgy. ${record.barangayName}',
-    record.municipality,
-  ].where((String part) => part.isNotEmpty);
-  return parts.join(', ');
 }
 
 String _shortAddress(ResidentRecord record) {
@@ -1008,7 +1031,7 @@ String _shortAddress(ResidentRecord record) {
 
 String _birth(String iso) {
   final List<String> parts = iso.split('-');
-  if (parts.length != 3) return iso;
+  if (parts.length != 3) return iso.isEmpty ? '—' : iso;
   const List<String> months = <String>[
     'Jan',
     'Feb',
@@ -1031,7 +1054,7 @@ String _birth(String iso) {
 
 String _age(String iso) {
   final DateTime? parsed = DateTime.tryParse(iso);
-  if (parsed == null) return '';
+  if (parsed == null) return '—';
   final DateTime today = DateTime(2026, 10, 21);
   var age = today.year - parsed.year;
   if (today.month < parsed.month ||

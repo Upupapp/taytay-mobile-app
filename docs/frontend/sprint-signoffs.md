@@ -130,23 +130,23 @@ S3 is not approved. This section records the capture after the structure rebuild
 
 Status screens take the server tier through `AccessLevel.fromVerificationTier` and fail closed. Only the string `verified` is the verified face. `pending` is the pending face. `rejected` is needs-correction. Anything else, including an unknown tier, is unverified. A 409 from `POST /me/verification-requests` opens the pending-review screen. A 403 does not stamp the session verified. The wizard fetches `GET /me`, applies the server tier, and goes home only when that tier is verified. The profile wizard loads its own record and does not write it onto the session. Dates, the email, and the ID type come from `/me` and `/me/verification-requests/current`. `03-04` is the sheet for every verified-only action, including Message and Digital ID. The header is the translucent back disc and has no bell. `lib/features/verification` contains no `Transform.translate`.
 
-The line measure is the reviewer's dark-run rule: any pixel with mean channel under 110, columns 60–1110, y above 330, minimum run 8. Max deviation is the larger of the two nearest-neighbour distances, so an extra build run counts. Where the counts match, that figure is also the in-order pairing. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`. Counts do not all match, and no screen is inside 2 device px. That is the measurement, not a bar this capture clears.
+The line measure is the reviewer's dark-run rule: any pixel with mean channel under 110, columns 60–1110, y above 330, minimum run 8. Max deviation is the larger of the two nearest-neighbour distances, so an extra or a missing run counts. Where the counts match, that figure is also the in-order pairing. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame. Side-by-sides are design | render | heat in `test/goldens/compare/s3/`. On this capture every screen has the same run count as the design, and the symmetric nearest-neighbour distance is at most 2 device px. S3 is not approved.
 
 | Screen | Lines (build / design) | Max deviation | Mismatch |
 | --- | --- | --- | --- |
-| 03-01 Pending | 19 / 20 | 43 | 8.02% (237657/2962440) |
-| 03-02 Verified | 14 / 15 | 69 | 7.77% (230312/2962440) |
-| 03-03 Needs correction | 16 / 12 | 242 | 9.86% (292107/2962440) |
-| 03-04 Unverified gate | 10 / 8 | 107 | 8.59% (254558/2962440) |
-| 03-05 Profile overview | 11 / 15 | 79 | 12.76% (377887/2962440) |
-| 03-06 Personal info | 14 / 14 | 37 | 7.70% (228212/2962440) |
-| 03-07 Household address | 17 / 16 | 152 | 9.84% (291583/2962440) |
-| 03-08 Review | 15 / 15 | 29 | 8.06% (238788/2962440) |
-| 03-09 Submitted | 11 / 11 | 35 | 6.03% (178688/2962440) |
+| 03-01 Pending | 20 / 20 | 2 | 3.26% (96716/2962440) |
+| 03-02 Verified | 15 / 15 | 2 | 2.96% (87564/2962440) |
+| 03-03 Needs correction | 12 / 12 | 1 | 3.68% (109019/2962440) |
+| 03-04 Unverified gate | 8 / 8 | 1 | 2.12% (62728/2962440) |
+| 03-05 Profile overview | 15 / 15 | 2 | 3.40% (100784/2962440) |
+| 03-06 Personal info | 14 / 14 | 2 | 2.92% (86422/2962440) |
+| 03-07 Household address | 16 / 16 | 2 | 3.67% (108771/2962440) |
+| 03-08 Review | 15 / 15 | 1 | 2.82% (83468/2962440) |
+| 03-09 Submitted | 11 / 11 | 2 | 2.19% (64883/2962440) |
 
-The one-way figure (each design run to its nearest build run) is lower where the build has extra runs: 03-03 is 68, 03-04 is 43, 03-07 is 57. `03-04`'s sheet top is the design's y = 1579, and the first 300 px mismatch is 9.12%. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG.
+`03-04`'s sheet top is the design's y = 1579. The first 300 px of that frame still mismatch at 9.11% (31968/351000): the office list under the scrim. Per-field correction notes render when the office sent them. The golden leaves that list empty, which is the design PNG. Account created, email, ID type, the office note, the review date, and the submitted stamp are parameters. `VerificationScreen` fills them from `GET /me` and the current verification request. `ProfileWizardScreen` fills the submitted stamp from `GET me/verification-requests/current`. An empty value renders as an em dash, or as a generic sentence when the office sent no note. `lib/features/verification` does not contain `juana.delacruz@example.com`, `Oct 20, 2026`, `(sample)`, or `Transform.translate`. `test/features/s3_tap_target_test.dart` asserts that, and that every `IconButton`, `FilledButton`, `OutlinedButton`, `TextButton`, `InkWell`, and `GestureDetector` is at least 48×48 dp.
 
-Recordings are 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4`, `s3-gate.mp4`, `s3-wizard.mp4`. `flutter analyze` was clean. `flutter test` passed 1593 tests, with 5 skipped (the recording tag).
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, each under 15MB: `test/goldens/compare/s3/recordings/s3-status.mp4` (221083 bytes), `s3-gate.mp4` (107161 bytes), `s3-wizard.mp4` (334480 bytes). `flutter analyze` was clean. `flutter test` passed 1593 tests, with 5 skipped (the recording tag).
 
 ## Contract gaps after the Node OpenAPI
 
