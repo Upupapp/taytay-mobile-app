@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 
-/// Spacing for My Account, measured from the 08 frames at 3×.
+/// Spacing for My Account, taken from the 08 CSS.
 ///
-/// One logical pixel in the app is 3 device pixels on those PNGs. Each value
-/// is a whole dp taken from a repeating role, and every row of that role uses
-/// it. The frame cited on each token is where the distance was read.
+/// One CSS pixel is one logical pixel here, and three device pixels on the
+/// 08 PNGs. A value stays fractional when the CSS computed it that way.
+/// `line-height: normal` is an unset [TextStyle.height], not 1.2 or 1.0.
 abstract final class S8Space {
   /// Page inset. 08-01 card border sits at x = 48.
   static const double gutter = 16;
@@ -18,9 +18,8 @@ abstract final class S8Space {
   /// 1 dp card stroke plus 16.
   static const double cardPad = 16;
 
-  /// Vertical padding of the profile card. 08-01 the name ink starts 65 px
-  /// under the border, one dp more than [cardPad] once the line box is counted.
-  static const double profilePadY = 17;
+  /// Vertical padding of the profile card. CSS padding matches [cardPad].
+  static const double profilePadY = 16;
 
   /// Gap between stacked cards. 08-01 profile border ends at y = 668 and the
   /// next border starts at y = 704.
@@ -36,10 +35,8 @@ abstract final class S8Space {
   /// 08-02 header ends at y = 311 and the All pill starts at y = 396.
   static const double listInset = 28;
 
-  /// Thread inset under the header, down to the day chip.
-  ///
-  /// 08-07 header ends at y = 362 and the day chip fill starts at y = 431.
-  static const double threadInset = 23;
+  /// Thread inset under the header, down to the day chip. CSS 22.67 px.
+  static const double threadInset = 22.67;
 
   /// Day chip to the first bubble. 08-07 chip fill ends at y = 489, bubble at 526.
   static const double dayGap = 12;
@@ -55,15 +52,13 @@ abstract final class S8Space {
   /// 08-01 the divider ends at y = 920 and the next tile starts at y = 956.
   static const double rowPadY = 12;
 
-  /// Extra inset at the top and bottom of a card of tile rows.
+  /// Extra inset at the top and bottom of a card of rows.
   ///
-  /// 08-01 the first tile starts 45 px under the card border. [rowPadY] is
-  /// 36 px, and the same 9 px remains under the last tile. 08-04 matches.
-  static const double cardInsetY = 3;
+  /// CSS 2 px. Menu, settings, credit, inbox, and banner cards all use it.
+  static const double cardInsetY = 2;
 
-  /// Tile to the row title. 08-04 the tile ends at x = 231 and the title ink
-  /// starts at x = 270.
-  static const double iconGap = 13;
+  /// Tile to the row title. CSS 12 px.
+  static const double iconGap = 12;
 
   /// Title line to the meta line under it.
   ///
@@ -74,12 +69,13 @@ abstract final class S8Space {
   /// 1 dp hairline. 08-01 divider is y = 917–919, #EEF1F6.
   static const double divider = 1;
 
-  /// Filter pill. 08-02 All is y = 396–503.
+  /// Filter pill box. CSS height 36, with `padding: 0 14px`.
   static const double filterHeight = 36;
 
-  /// Horizontal padding of a filter pill.
+  /// Horizontal padding of a filter pill. CSS `padding: 0 14px` on 12 / 700.
   ///
-  /// 08-02 Unread is 205 px wide and the word is 123 px, 41 px on each side.
+  /// All computes to 44.59 px and Unread to 72.56 px, 7 px apart
+  /// ([filterGapX]).
   static const double filterPadX = 14;
 
   /// All pill to the inbox card. 08-02 pill ends at y = 504, card border at 540.
@@ -116,12 +112,11 @@ abstract final class S8Space {
   /// Vertical padding of the intro Replace chip. 08-10 that chip is 68 px tall.
   static const double introPadY = 4;
 
-  /// Vertical padding of the thread day chip. 08-07 the chip is 59 px tall
-  /// around a 12 px label.
-  static const double dayPadY = 2;
+  /// Day chip. CSS `padding: 3px 9px` around a 12 / 700 label at normal height.
+  static const double dayPadY = 3;
 
-  /// Horizontal padding of the day chip. 08-07 the chip is 126 px wide.
-  static const double dayPadX = 8;
+  /// Horizontal padding of the day chip.
+  static const double dayPadX = 9;
 
   /// Edit-field box. 08-03 borders run y = 810–941.
   static const double fieldHeight = 44;
@@ -138,17 +133,18 @@ abstract final class S8Space {
   /// Inside a field box, before the value.
   static const double fieldPadX = 12;
 
-  /// Section label to the card under it. 08-04 Notifications ink to the card.
+  /// Section label to the card under it.
+  ///
+  /// CSS `margin: 16px 0 8px` on a 15 / 800 label at normal line height.
+  /// Adjacent vertical margins collapse, so this is the 8 and [sectionBreak]
+  /// is the 16. They are not added.
   static const double sectionGap = 8;
 
-  /// Card to the next section label.
-  ///
-  /// 08-04 the first card border ends at y = 1074 and App starts at y = 1139.
-  /// 24 dp left the next card 21 px low once the card itself was the right height.
-  static const double sectionBreak = 17;
+  /// Card to the next section label. The collapsed margin-top of that label.
+  static const double sectionBreak = 16;
 
-  /// About seal. 08-05 seal artwork is y = 416–622.
-  static const double seal = 69;
+  /// About seal. CSS 72 px.
+  static const double seal = 72;
 
   /// Seal artwork to the app title. 08-05 the seal ends at y = 622 and the
   /// title ink starts at y = 673.
@@ -158,15 +154,11 @@ abstract final class S8Space {
   /// that note, starts 21 px low when this uses [fieldStack].
   static const double legalGap = 5;
 
-  /// Notice heading to its paragraph. 08-09 section titles start 218 px apart.
-  static const double noticeGap = 8;
+  /// Notice heading to its paragraph. CSS 4 px. The body under it is 13 / 1.5.
+  static const double noticeGap = 4;
 
-  /// Header to the draft chip. 08-09 the chip starts at y = 368, 57 px under
-  /// the header, while other pages use [pagePad].
-  static const double noticeInset = 19;
-
-  /// Draft chip. 08-09 the amber chip is y = 368–426.
-  static const double draftChip = 20;
+  /// Header to the draft chip. CSS 18.67 px.
+  static const double noticeInset = 18.67;
 
   /// Draft chip to the notice title. 08-09 the title ink starts at y = 477.
   static const double draftGap = 9;
@@ -177,22 +169,19 @@ abstract final class S8Space {
   /// Empty-state button to the footnote. 08-06 the footnote starts at y = 1304.
   static const double emptyNoteGap = 11;
 
-  /// Padding under the version lines. 08-05 the version ink ends at y = 830
-  /// and the card border at y = 886.
-  static const double aboutPadBottom = 19;
+  /// Padding under the version lines. CSS 16 px.
+  static const double aboutPadBottom = 16;
 
   /// Gap between privacy-notice blocks, not after the last one.
   ///
-  /// 08-09 the section titles start 218 px apart. 12 dp made each step 4 px long.
-  static const double blockGap = 11;
+  /// CSS 12 px. With [noticeGap] and a 13 / 1.5 body, each block is 72.67 px.
+  static const double blockGap = 12;
 
-  /// 14 px titles. 08-01 and 08-10 line step.
-  static const double titleLineHeight = 1.2;
+  /// Vertical padding of an 08-10 banner row, top and bottom. CSS 6 px.
+  /// Titles on those rows are 13 px.
+  static const double bannerPadY = 6;
 
-  /// 12 px single-line meta and bylines. 08-10 byline step is 45 px.
-  static const double metaLineHeight = 1.2;
-
-  /// 12 px inbox preview. 08-02 the two preview lines start 53 px apart.
+  /// 12 px inbox preview. The two preview lines use a 1.5 line height.
   static const double previewLineHeight = 1.5;
 
   /// 13 px notice body. 08-09 paragraph lines start 59 px apart.
@@ -206,8 +195,10 @@ abstract final class S8Space {
   /// 12 px version caption. 08-05 the two lines start 59 px apart.
   static const double versionLineHeight = 59 / 36;
 
-  /// 11 px Replace label.
-  static const double chipLineHeight = 1.2;
+  /// Chat bubble. CSS padding 10 px by 12 px, max-width 270 px.
+  static const double bubblePadY = 10;
+  static const double bubblePadX = 12;
+  static const double bubbleMaxWidth = 270;
 
   static const TextStyle preview = TextStyle(
     fontFamily: AppTypography.fontFamily,

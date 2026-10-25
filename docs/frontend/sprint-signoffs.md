@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. The 08 frames are the spacing source. Each value below is a named `S8Space` token, one per role, measured in dp from the PNGs at 3× (1 dp = 3 image pixels). Every row of a role uses that token. There is no per-row offset and no fraction fitted to a single edge. Round 2's structure stays: pills, tile colours, the badge-check mark, the inline Replace chip, the 08-10 titles, Display name hidden on the live editor, and `PATCH` with only the changed fields. A miss over 2 image pixels is reported with the design value and the measured value. The side-by-sides, the crops, and both clips are commit `68a7fe27734013b52d3704de237becd367a3f586`. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 3 takes spacing from the 08 CSS. One CSS pixel is one dp, and three image pixels on the PNGs. A value stays fractional when the CSS computed it that way. `line-height: normal` is an unset `TextStyle.height`. Every row of a role uses that token. There is no per-row offset. Round 2's structure stays: tile colours, the badge-check mark, Display name hidden on the live editor, and `PATCH` with only the changed fields. A miss over 2 image pixels is reported with the design value and the measured value. Pull request #10 stays a draft. This round is its own branch.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
@@ -362,27 +362,27 @@ Live reads are `GET /me`, `PATCH /me` (only the changed keys among `mobile`, `em
 
 The line measure is the same dark-run method as S7: a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Where the run counts differ, the in-order maximum is left blank and the runs are paired by eye under the table. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`, and a credit byline is its own line.
 
-`S8Space` (`lib/features/account/presentation/s8_space.dart`). Distances are whole dp. Line heights are the measured step divided by the font size.
+`S8Space` (`lib/features/account/presentation/s8_space.dart`). Distances are the CSS pixels. `normal` line height is not a multiplier.
 
 | Token | Value | Where it was read |
 | --- | --- | --- |
 | `gutter` | 16 dp | 08-01 card border at x = 48 |
 | `cardPad` | 16 dp | 08-01 tiles and hairlines, x = 99–1070 |
-| `profilePadY` | 17 dp | 08-01 name ink starts 65 px under the profile border |
+| `profilePadY` | 16 dp | profile card padding, same as `cardPad`. The 08-01 avatar is 56 |
 | `cardGap` | 12 dp | 08-01 profile border ends at y = 668, the next starts at y = 704 |
 | `pagePad` | 16 dp | 08-01 header ends at y = 311, profile card starts at y = 360 |
 | `listInset` | 28 dp | 08-02 header ends at y = 311, the All pill starts at y = 396 |
-| `threadInset` | 23 dp | 08-07 header ends at y = 362, the day-chip fill starts at y = 431 |
+| `threadInset` | 22.67 dp | CSS inset under the thread header |
 | `dayGap` | 12 dp | 08-07 chip fill ends at y = 489, the bubble starts at y = 526 |
 | `pageBottom` | 24 dp | 08-02, the list clearance above the tab bar |
 | `tile` | 44 dp | 08-01, 08-02, and 08-04 tiles are 132 px |
 | `rowPadY` | 12 dp | 08-01 divider ends at y = 920, the next tile starts at y = 956 |
-| `cardInsetY` | 3 dp | 08-01 first tile is 45 px under the border; `rowPadY` is 36 px |
-| `iconGap` | 13 dp | 08-04 tile ends at x = 231, title ink starts at x = 270 |
+| `cardInsetY` | 2 dp | top and bottom of menu, settings, credit, inbox, and banner cards |
+| `iconGap` | 12 dp | CSS gap from a tile to its title |
 | `titleGap` | 2 dp | 08-01 title ink at y = 774, subtitle at y = 832 |
 | `divider` | 1 dp | 08-01 hairline at y = 917–919 |
-| `filterHeight` | 36 dp | 08-02 All pill, y = 396–503 |
-| `filterPadX` | 14 dp | 08-02 Unread is 205 px wide, the word is 123 px |
+| `filterHeight` | 36 dp | filter pill box. Padding is `0 14` on 12 / 700 |
+| `filterPadX` | 14 dp | CSS. All is 44.59 wide, Unread is 72.56, 7 apart |
 | `filterGap` | 12 dp | 08-02 pill ends at y = 504, card border at y = 540 |
 | `filterGapX` | 7 dp | 08-02, 21 px from the All pill to the Unread pill |
 | `emptyLead` | 62 dp | 08-06 glyph starts at y = 696; the 24 dp slot insets the glyph 2 dp |
@@ -395,62 +395,62 @@ The line measure is the same dark-run method as S7: a row is dark when any pixel
 | `replacePadX` | 9 dp | 08-10 row chips are 186 px wide |
 | `replacePadY` | 3 dp | 08-10 row chips are 59 px tall around the 11 px label |
 | `introPadY` | 4 dp | 08-10 the sentence chip is 68 px tall |
-| `dayPadY` | 2 dp | 08-07 the day chip is 59 px tall around a 12 px label |
-| `dayPadX` | 8 dp | 08-07 the day chip is 126 px wide |
+| `dayPadY` | 3 dp | day chip `padding: 3px 9px`, 12 / 700, normal line height |
+| `dayPadX` | 9 dp | day chip horizontal padding |
 | `fieldHeight` | 44 dp | 08-03 field borders, y = 810–941 |
 | `labelGap` | 5 dp | 08-03, a label without a descender ends 24 px above the border |
 | `fieldStack` | 12 dp | 08-03, field border to the next label |
 | `legalGap` | 5 dp | 08-03, display-name border to the legal-name note |
 | `fieldPadX` | 12 dp | inside an 08-03 field |
 | `sectionGap` | 8 dp | 08-04, section label to the card under it |
-| `sectionBreak` | 17 dp | 08-04, first card ends at y = 1074 and App starts at y = 1139 |
-| `seal` | 69 dp | 08-05 seal artwork, y = 416–622 |
+| `sectionBreak` | 16 dp | section label `margin: 16px 0 8px`. This is the 16. It collapses with the 8, so the two are not added. The label is 15 / 800 at normal line height |
+| `seal` | 72 dp | CSS seal box. The 08-03 camera badge is 30 with a 3 px border at −2, −2 |
 | `sealGap` | 15 dp | 08-05 seal ends at y = 622, title ink at y = 673 |
-| `aboutPadBottom` | 19 dp | 08-05 version ink ends at y = 830, card border at y = 886 |
-| `noticeGap` | 8 dp | 08-09 section title to its paragraph |
-| `noticeInset` | 19 dp | 08-09 header ends at y = 311, draft chip starts at y = 368 |
-| `draftChip` | 20 dp | 08-09 draft chip is y = 368–426 |
-| `draftGap` | 9 dp | 08-09 title ink starts at y = 477 |
-| `blockGap` | 11 dp | 08-09 section titles start 218 px apart, and not after the last block |
-| `titleLineHeight` | 1.2 | 14 px titles on 08-01 and 08-10 |
-| `metaLineHeight` | 1.2 | 12 px meta. 08-10 bylines step 45 px |
-| `previewLineHeight` | 1.5 | 12 px inbox preview. 08-02 the two lines start 53 px apart |
+| `aboutPadBottom` | 16 dp | padding under the version lines |
+| `noticeGap` | 4 dp | notice heading to its 13 / 1.5 paragraph |
+| `noticeInset` | 18.67 dp | header to the draft chip |
+| `draftGap` | 9 dp | draft line to the notice title |
+| `blockGap` | 12 dp | between notice blocks, not after the last. CSS block pitch is 72.67 |
+| `bannerPadY` | 6 dp | 08-10 row padding, top and bottom. Titles on those rows are 13 / 800 |
+| `bubblePadY` | 10 dp | chat bubble padding, with `bubblePadX` 12 and max width 270 |
+| `bubblePadX` | 12 dp | chat bubble horizontal padding |
+| `bubbleMaxWidth` | 270 dp | chat bubble max width |
+| `previewLineHeight` | 1.5 | 12 px inbox preview |
 | `bodyLineHeight` | 1.5 | 13 px notice body. 08-09 lines start 59 px apart |
 | `threadLineHeight` | 56/39 | 13 px thread body. 08-07 office lines start 56 px apart. 08-08 uses the same step |
 | `versionLineHeight` | 59/36 | 12 px version caption. 08-05 the two lines start 59 px apart |
-| `chipLineHeight` | 1.2 | 11 px Replace label |
 
-The page wash still stops at 260/844. That ratio is the wash, and it is not a gap token. Banner rows apply `rowPadY` above the row and leave the bottom at 0, so the gap between banner rows is one 12 dp pad plus the 1 dp hairline. Menu, inbox, settings, and credit rows keep 12 dp on both sides: their tile pitch is 207 px on the design and on the render. Bubble padding stays 10 dp on every side. The composer padding stays 14, 10, 14, 24 and the timestamp padding stays 4, 6, 4, 10. Those three were not given their own tokens; the thread card edges below are what they produce together with `threadLineHeight`.
+The page wash still stops at 260/844. That ratio is the wash, and it is not a gap token. Banner rows use `bannerPadY` on both sides, and the Replace chip centres on the whole row, office label included. Menu, inbox, settings, and credit rows keep 12 dp on both sides. The composer padding stays 14, 10, 14, 24 and the timestamp padding stays 4, 6, 4, 10. The DRAFT chip hugs the word DRAFT. The period, and the rest of that line, sit after the chip.
 
 Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge at y 2262 is the 90 dp bar. Deviation is the start row, render minus design. Edit-field borders are `#D6DCE8` on white, so they are not counted as cards.
 
 | Screen | Lines (build / design) | Max in-order line | Max card edge | Mismatch |
 | --- | --- | --- | --- | --- |
-| 08-01 Account home | 14 / 14 | 4 | 1 | 4.39% (130160/2962440) |
-| 08-02 Messages inbox | 10 / 9 |  | 2 | 3.04% (90127/2962440) |
-| 08-03 Edit profile | 18 / 18 | 5 | 3 | 2.71% (80314/2962440) |
-| 08-04 Settings and privacy | 15 / 15 | 3 | 3 | 4.44% (131606/2962440) |
-| 08-05 Photo credits | 15 / 15 | 4 | 1 | 5.24% (155272/2962440) |
-| 08-06 Messages empty | 11 / 11 | 1 | 0 | 2.01% (59428/2962440) |
-| 08-07 Thread, MSWDO | 16 / 16 | 5 | 3 | 6.90% (204516/2962440) |
-| 08-08 Thread, Treasurer | 16 / 16 | 3 | 4 | 4.73% (140260/2962440) |
-| 08-09 Privacy notice | 22 / 22 | 7 | 3 | 6.16% (182425/2962440) |
-| 08-10 Office banners | 34 / 33 |  | 1 | 9.16% (271359/2962440) |
+| 08-01 Account home | 14 / 14 | 13 | 17 | 6.50% (192613/2962440) |
+| 08-02 Messages inbox | 10 / 9 |  | 13 | 3.71% (109996/2962440) |
+| 08-03 Edit profile | 18 / 18 | 5 | 3 | 2.66% (78681/2962440) |
+| 08-04 Settings and privacy | 15 / 15 | 15 | 12 | 4.93% (146078/2962440) |
+| 08-05 Photo credits | 15 / 15 | 15 | 13 | 6.16% (182375/2962440) |
+| 08-06 Messages empty | 11 / 11 | 1 | 0 | 2.01% (59582/2962440) |
+| 08-07 Thread, MSWDO | 16 / 16 | 10 | 8 | 7.01% (207723/2962440) |
+| 08-08 Thread, Treasurer | 16 / 16 | 64 | 60 | 6.96% (206042/2962440) |
+| 08-09 Privacy notice | 22 / 22 | 19 | 17 | 8.09% (239727/2962440) |
+| 08-10 Office banners | 33 / 33 | 12 | 1 | 7.95% (235536/2962440) |
 
 Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen. A blank max line means the run counts differ, so an in-order maximum would pair the wrong rows. Those screens are described under the table.
 
 These are the misses over 2 image pixels after the tokens above. The design value is first. The measured value is the render.
 
-- 08-01. Card edges are within 1 px, including the profile card and the menu tiles. The verified-pill ink is y 570, measured 566 (4 px). The location-to-pill ink step already matches, so a larger gap would move a step that is already right. Two later title runs are y 1188 and 1446, measured 1191 and 1449 (3 px).
-- 08-02. `filterPadX` is 14 dp from the Unread pill: the word is 123 px inside 205 px, 41 px on each side. At that pad the render is All 129 px wide against 134, and Unread 211 px against 205. One pad cannot land both, because All is wider in the design, relative to Unread, than Plus Jakarta draws it. The first office title is y 597, measured 586 (11 px). The second and third titles are y 835 and 1042, measured 837 and 1044. The card edges are within 2 px. The first row is the badge row. Its office line sits high inside a row whose tile, and the rows after it, already match. A card inset that drops the first title also drops those later titles. The Treasurer row is still one design run and two render runs, because the landmark glyph has a hole. That split is the extra run (10/9). Crops: `test/goldens/compare/s8/artifacts/08-02-filters.png`, `08-02-office-time.png`, and `08-02-landmark-time.png`.
-- 08-03. The four field borders match: y 810, 939, 1143, 1272, 1371, 1500, 1599, and 1728 on both. Card edges are y 699 and 1779, measured 702 and 1776 (3 px). The avatar ink is y 457, measured 452 (5 px). The save line is y 1818, measured 1815 (3 px). Those are glyph bounds inside boxes whose borders match. The specimen still shows Display name. The live screen does not.
-- 08-04. Every card edge is 3 px high: y 441, 1074, 1206, 1632, and 1764, measured 438, 1071, 1203, 1629, and 1761. One dark run is y 1923, measured 1920. That is 1 px past the bar on every settings card, from the section-label line box. `sectionGap` is shared with 08-05, whose cards are already within 1 px, so it stays 8 dp.
-- 08-05. Seal ink y 417, measured 413 (4 px). The 69 dp box is the token. The artwork does not fill it. The title is y 673, measured 674. The version lines are y 736 and 795, measured 735 and 795. Card edges are within 1 px. The version string still breaks before "mockup".
-- 08-06. The mark, the title, both body lines, the button, and the footnote are within 1 px. `emptyLead` is 62 dp because the Lucide glyph sits 2 dp inside the 24 dp slot. The design glyph starts at y 696 and fills that slot.
-- 08-07. Day-chip fill is y 431–489 (59 px), measured 435–491 (57 px). `dayPadY` of 2 dp is the whole dp nearest 59. 3 dp made the chip 63 px. The top is 4 px low. The first bubble is y 526, measured 528. The last content line is y 1746, measured 1751 (5 px). One card edge is y 1140, measured 1143 (3 px).
-- 08-08. One line is y 1389, measured 1386 (3 px). Card edges are y 800, 1032, 1342, and 1574, measured 798, 1032, 1338, and 1572. The 1342 edge is 4 px. The other three are within 2 px.
-- 08-09. The draft chip is y 368–426 (59 px), measured 369–428 (60 px). Section titles are y 682 and 900, measured 678 and 897 (4 px and 3 px). Body lines then step about 1 px long, and the last is y 1463, measured 1470 (7 px). The card bottom is y 1563, measured 1560 (3 px). Crop: `test/goldens/compare/s8/artifacts/08-09-sample.png`.
-- 08-10. The intro chip is y 360–427 (68×186), measured 361–426 (66×185). `introPadY` is its own token. Row chips use `replacePadY` and are 60 px against 59, 185 px wide against 186. The relief chip is centred on its row: design y 692–750, measured y 720–779 (28 px). That row's text block is taller than the design ink, so the centre sits low. The BFP chip is y 2049, measured 2048. The list card edge is y 575, measured 576. The first office line is y 612, measured 621 (9 px). The design still joins the BFP chip and the byline into one run. The render splits them, so the count stays 34 against 33. Crops: `08-10-replace-intro.png`, `08-10-replace-relief.png`, and `08-10-replace-bfp.png`.
+- 08-01. The avatar box is 56 dp on both. The profile card ends at y 665, measured 660 (5 px). Each menu card is then 6 px short, which is `cardInsetY` 2 against the PNG's extra dp, so the last menu edge is y 2048, measured 2031 (17 px).
+- 08-02. All is 36 dp tall on both. At `padding: 0 14` and 12 / 700 the render is 42.33 dp wide against the CSS 44.59 (design 44.67). Unread is about 68.3 dp against 72.56. Plus Jakarta draws both words narrower than the CSS widths, and one pad cannot add a different amount to each. The inbox card ends at y 1190, measured 1203 (13 px), the 2 dp inset on that card. The first office title is y 596, measured 595. The Treasurer row is still one design run and two render runs, because the landmark glyph has a hole (10/9). Crops: `test/goldens/compare/s8/artifacts/08-02-filters.png`, `08-02-office-time.png`, and `08-02-landmark-time.png`.
+- 08-03. The four field borders match. Card edges are y 699 and 1779, measured 702 and 1776 (3 px). The avatar ink is y 457, measured 452 (5 px). The camera badge is 30 with a 3 px border at −2, −2. The save line is y 1818, measured 1815 (3 px). The specimen still shows Display name. The live screen does not.
+- 08-04. The first card edge is y 441 on both. Each later card is 6 px short, again `cardInsetY` 2, so the last is y 1764, measured 1752 (12 px). Section labels are 15 / 800 at normal line height.
+- 08-05. The seal card edge is y 886, measured 885. The seal box is 72 dp. The artwork does not fill it, so the ink is y 417, measured 414. Each credit card is 6 px short from `cardInsetY`, and the last edge is y 2041, measured 2028 (13 px). The version string still breaks before "mockup".
+- 08-06. The mark, the title, both body lines, the button, and the footnote are within 1 px.
+- 08-07. Day-chip fill is y 431–489 (59 px), measured 434–496 (63 px). Padding is `3 9` on a 12 px label at normal line height, and that line box plus 6 dp of padding is 21 dp. The card edges sit 6 to 8 px low with that chip.
+- 08-08. The first two card edges are within 5 px. The third is y 1342, measured 1400 (58 px), and the fourth y 1574, measured 1634 (60 px). `bubbleMaxWidth` 270 wraps one treasurer bubble onto an extra line. The PNG fit that line in the previous 276 dp box.
+- 08-09. Notice titles step 222 px (74 dp) against the CSS 218 px (72.67). `noticeGap` is 4 and `blockGap` is 12, and the body is 13 / 1.5. The extra 1.33 dp is the Flutter line box. The first title is y 681, measured 662 (19 px), because the DRAFT chip now hugs the word and the period sits after it, so that line is shorter than the PNG's full-sentence pill. The card top is y 619, measured 602 (17 px). The card bottom is y 1563, measured 1550 (13 px). Crop: `test/goldens/compare/s8/artifacts/08-09-sample.png`.
+- 08-10. The list card edge is y 575, measured 576. Replace chips centre on the whole row, office label included. Rows are padded 6 / 6 and titles are 13 px. The dark runs stay paired, and the last line is 12 px off after the whole list. Crops: `08-10-replace-intro.png`, `08-10-replace-relief.png`, and `08-10-replace-bfp.png`.
 
 Round 1 structure:
 
@@ -500,4 +500,4 @@ Also still true:
 
 `ProfilePatch` from the live editor sends only changed `mobile`, `email`, and `barangay_id`. It does not send `name`, `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (472416 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (869344 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1645 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (482449 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (907061 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1645 tests, with 15 skipped (the recording and live tags).
