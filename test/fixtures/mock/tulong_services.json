@@ -24,7 +24,8 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         }
       ],
       "locations": [
@@ -39,15 +40,15 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "accessibility",
-        "tile": "blue",
-        "badge": "MSWDO · PWD",
         "hero_sample": false,
-        "source": "Cash gift steps: MSWDO Taytay post (Jul 2026). PWD ID requirements: SAMPLE.",
-        "layout": "standard",
-        "listed": true,
         "saved_label": "Saved Oct 20, 8:12 PM"
-      }
+      },
+      "icon_key": "accessibility",
+      "tile_color": "#0B3D91",
+      "badge": "MSWDO · PWD",
+      "legal_basis": "Cash gift steps: MSWDO Taytay post (Jul 2026). PWD ID requirements: SAMPLE.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111102",
@@ -73,7 +74,8 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         }
       ],
       "locations": [
@@ -88,15 +90,15 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "users",
-        "tile": "green",
-        "badge": "MSWDO · OSCA",
         "hero_sample": true,
-        "source": "Benefits: RA 9994. Taytay-specific requirements: SAMPLE, to confirm with MSWDO/OSCA.",
-        "layout": "standard",
-        "listed": true,
         "saved_label": "Saved Oct 18"
-      }
+      },
+      "icon_key": "users",
+      "tile_color": "#0F7A4D",
+      "badge": "MSWDO · OSCA",
+      "legal_basis": "Benefits: RA 9994. Taytay-specific requirements: SAMPLE, to confirm with MSWDO/OSCA.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111103",
@@ -122,7 +124,8 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         }
       ],
       "locations": [
@@ -137,14 +140,14 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "baby",
-        "tile": "gold",
-        "badge": "MSWDO · SOLO PARENT",
-        "hero_sample": true,
-        "source": "Law: RA 11861. Taytay-specific requirements: SAMPLE.",
-        "layout": "standard",
-        "listed": true
-      }
+        "hero_sample": true
+      },
+      "icon_key": "baby",
+      "tile_color": "#7A5E0C",
+      "badge": "MSWDO · SOLO PARENT",
+      "legal_basis": "Law: RA 11861. Taytay-specific requirements: SAMPLE.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111104",
@@ -174,7 +177,8 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         }
       ],
       "locations": [
@@ -189,14 +193,14 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "handCoins",
-        "tile": "red",
-        "badge": "MSWDO · AICS",
-        "hero_sample": false,
-        "source": "Requirements: DSWD AICS Citizen's Charter (national). Taytay MSWDO may ask for more.",
-        "layout": "standard",
-        "listed": true
-      }
+        "hero_sample": false
+      },
+      "icon_key": "hand-coins",
+      "tile_color": "#B3261E",
+      "badge": "MSWDO · AICS",
+      "legal_basis": "Requirements: DSWD AICS Citizen's Charter (national). Taytay MSWDO may ask for more.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111105",
@@ -226,7 +230,8 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         }
       ],
       "locations": [
@@ -241,14 +246,14 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "graduationCap",
-        "tile": "blue",
-        "badge": "MSWDO · EDUCATION",
-        "hero_sample": false,
-        "source": "Requirements: DSWD AICS educational assistance (national). Taytay-specific schedule: SAMPLE.",
-        "layout": "standard",
-        "listed": true
-      }
+        "hero_sample": false
+      },
+      "icon_key": "graduation-cap",
+      "tile_color": "#0B3D91",
+      "badge": "MSWDO · EDUCATION",
+      "legal_basis": "Requirements: DSWD AICS educational assistance (national). Taytay-specific schedule: SAMPLE.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111106",
@@ -270,11 +275,13 @@
       "contacts": [
         {
           "label": "Contact",
-          "value": "(02) 8284-4710 · 0921-284-3685"
+          "value": "(02) 8284-4710 · 0921-284-3685",
+          "type": "mobile"
         },
         {
           "label": "Anti-trafficking",
-          "value": "1343 Actionline · Taytay PNP 0998-598-5730"
+          "value": "1343 Actionline · Taytay PNP 0998-598-5730",
+          "type": "hotline"
         }
       ],
       "locations": [
@@ -289,14 +296,14 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "heart",
-        "tile": "red",
-        "badge": "MSWDO · PROTECTION",
-        "hero_sample": false,
-        "source": "Contacts: MSWDO Taytay post (Jul 2026); Taytay PNP from LGU hotlines.",
-        "layout": "standard",
-        "listed": true
-      }
+        "hero_sample": false
+      },
+      "icon_key": "heart",
+      "tile_color": "#B3261E",
+      "badge": "MSWDO · PROTECTION",
+      "legal_basis": "Contacts: MSWDO Taytay post (Jul 2026); Taytay PNP from LGU hotlines.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111107",
@@ -322,7 +329,8 @@
       "contacts": [
         {
           "label": "Facebook",
-          "value": "facebook.com/PESOTAYTAY"
+          "value": "facebook.com/PESOTAYTAY",
+          "type": "facebook"
         }
       ],
       "locations": [
@@ -337,15 +345,15 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "briefcase",
-        "tile": "green",
-        "badge": "PESO",
         "hero_sample": true,
-        "source": "Location and Facebook: PESO Taytay page. Requirements: SAMPLE.",
-        "layout": "standard",
-        "listed": true,
         "list_name": "Jobs & Employment (PESO)"
-      }
+      },
+      "icon_key": "briefcase",
+      "tile_color": "#0F7A4D",
+      "badge": "PESO",
+      "legal_basis": "Location and Facebook: PESO Taytay page. Requirements: SAMPLE.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111108",
@@ -367,7 +375,8 @@
       "contacts": [
         {
           "label": "Landline",
-          "value": "8284-4782 · tydo@taytayrizal.gov.ph"
+          "value": "8284-4782 · tydo@taytayrizal.gov.ph",
+          "type": "landline"
         }
       ],
       "locations": [
@@ -386,15 +395,15 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "users",
-        "tile": "gold",
-        "badge": "TYDO",
         "hero_sample": true,
-        "source": "Sources: taytayrizal.gov.ph (YORP, Youth Development Center). Requirements: SAMPLE.",
-        "layout": "standard",
-        "listed": true,
         "list_name": "Youth Programmes (TYDO)"
-      }
+      },
+      "icon_key": "users",
+      "tile_color": "#7A5E0C",
+      "badge": "TYDO",
+      "legal_basis": "Sources: taytayrizal.gov.ph (YORP, Youth Development Center). Requirements: SAMPLE.",
+      "hero_url": null,
+      "hidden_from_list": false
     },
     {
       "id": "11111111-1111-4111-8111-111111111109",
@@ -411,26 +420,25 @@
       "created_at": "2026-07-01T00:00:00Z",
       "updated_at": "2026-07-01T00:00:00Z",
       "presentation": {
-        "glyph": "accessibility",
-        "tile": "blue",
-        "badge": "FEATURED · MSWDO",
         "hero_sample": false,
-        "layout": "featured",
-        "headline": "2026 PWD Cash Gift:\nunclaimed payout",
-        "steps": [
-          "Go to the MSWD Office, Ground Floor, Municipal Hall, to validate a copy of your ID.",
-          "Proceed to the Treasury Office, 2nd Floor, to claim your benefit.",
-          "Bring the original and a photocopy of your updated, valid PWD ID."
-        ],
-        "listed": false,
         "header_title": "2026 PWD Cash Gift",
         "header_subtitle": "Tulong · featured",
-        "schedule_label": "Schedule",
-        "schedule_value": "Jul 31, 2026 (Fri), 8:00 AM – 4:00 PM",
         "questions_label": "Questions",
         "questions_value": "(02) 8284-4710 · 0921-284-3685",
         "share_label": "Share with a family member"
-      }
+      },
+      "icon_key": "accessibility",
+      "tile_color": "#0B3D91",
+      "badge": "FEATURED · MSWDO",
+      "hero_url": null,
+      "hidden_from_list": true,
+      "featured_headline": "2026 PWD Cash Gift:\nunclaimed payout",
+      "claim_steps": [
+        "Go to the MSWD Office, Ground Floor, Municipal Hall, to validate a copy of your ID.",
+        "Proceed to the Treasury Office, 2nd Floor, to claim your benefit.",
+        "Bring the original and a photocopy of your updated, valid PWD ID."
+      ],
+      "schedule": "Jul 31, 2026 (Fri), 8:00 AM – 4:00 PM"
     }
   ]
 }

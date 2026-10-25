@@ -25,10 +25,16 @@ The Tulong tab is a second reader of that same services contract. `/programs`
 and `/programs/:slug` call `GET /api/v1/services` and `GET /api/v1/services/{slug}`.
 Both are public. `GET /api/v1/programs` is still absent from the Node contract.
 `ProgramApiRepository` still declines that call, and Tulong does not make it.
-The pages are information only: there is no apply control. Icons, a SAMPLE flag,
-claim steps, and saved dates are not on `Service`, so the live decoder leaves
-them unset. The dev fixture may supply them. Staging and production refuse mock
-mode.
+The pages are information only: there is no apply control. `Service` publishes
+`icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps`,
+`featured_headline`, `schedule`, `hero_url`, and `hidden_from_list`. Contacts
+are `{type, label|null, value}`. The catalogue omits hidden services.
+`featured=true` returns featured services, including hidden ones, and a hidden
+service still opens by slug. The featured layout needs both a headline and a
+claim step. There is still no hours field on `Service` (hours come from
+`GET /offices`), no apply route, no SAMPLE flag, and no saved-at. `hero_url`
+is null until an image is stored; this app does not fetch
+`GET /services/{slug}/hero`. Staging and production refuse mock mode.
 
 ---
 

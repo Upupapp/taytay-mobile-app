@@ -23,12 +23,14 @@ class MockSocialServiceRepository implements SocialServiceRepository {
     String? query,
     int? limit,
     String? cursor,
+    bool featured = false,
   }) async {
     final List<SocialService> loaded = await _services();
     final String q = query?.trim().toLowerCase() ?? '';
     final List<SocialService> listed = <SocialService>[
       for (final SocialService service in loaded)
-        if (service.presentation?.listed != false && _matches(service, q))
+        if (_matches(service, q) &&
+            (featured ? service.featured : !service.hiddenFromList))
           service,
     ];
     final int size = (limit ?? 20).clamp(1, 50);

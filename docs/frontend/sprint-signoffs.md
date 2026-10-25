@@ -283,45 +283,47 @@ Live reads are `GET /services` and `GET /services/{slug}`, public, with the sess
 
 The line measure is `rev5.py`: every dark run from the top of the 1170×2532 frame. A row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, in image pixels. Side-by-sides are design | render | heat in `test/goldens/compare/s7/`. Mismatch is CIE76 ΔE above 6 over the full frame. `lib/features/tulong` contains no `Transform.translate`.
 
-| Screen | Lines (build / design) | Max deviation (image px) | Mismatch |
-| --- | --- | --- | --- |
-| 07-01 Programme list | 16 / 16 | 1 | 2.36% (70061/2962440) |
-| 07-02 OSCA | 19 / 19 | 2 | 3.51% (104094/2962440) |
-| 07-03 Social services centre | 18 / 18 | 2 | 3.90% (115541/2962440) |
-| 07-04 Featured programme | 18 / 18 | 2 | 4.90% (145249/2962440) |
-| 07-05 Offline | 14 / 14 | 2 | 2.25% (66587/2962440) |
-| 07-06 PWD assistance | 20 / 20 | 2 | 3.79% (112182/2962440) |
-| 07-07 Solo parent | 21 / 21 | 2 | 3.76% (111285/2962440) |
-| 07-08 AICS | 20 / 20 | 2 | 3.68% (109015/2962440) |
-| 07-09 Educational assistance | 22 / 22 | 2 | 3.39% (100432/2962440) |
-| 07-10 Women and children | 20 / 20 | 2 | 3.67% (108700/2962440) |
-| 07-11 PESO jobs | 19 / 19 | 2 | 4.24% (125565/2962440) |
-| 07-12 Youth | 20 / 20 | 2 | 4.35% (128988/2962440) |
+Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge is not a content card. Deviation is the start row, render minus design.
 
-Every frame is within 2 image pixels. Light mode and Plus Jakarta Sans only.
+| Screen | Lines (build / design) | Max line | Max card edge | Mismatch |
+| --- | --- | --- | --- | --- |
+| 07-01 Programme list | 16 / 16 | 1 | 0 | 2.15% (63758/2962440) |
+| 07-02 OSCA | 19 / 19 | 2 | 1 | 3.23% (95641/2962440) |
+| 07-03 Social services centre | 18 / 18 | 2 | 1 | 3.90% (115541/2962440) |
+| 07-04 Featured programme | 18 / 18 | 2 | 1 | 4.62% (136763/2962440) |
+| 07-05 Offline | 14 / 14 | 2 | 0 | 2.03% (60237/2962440) |
+| 07-06 PWD assistance | 20 / 20 | 2 | 0 | 3.64% (107825/2962440) |
+| 07-07 Solo parent | 21 / 21 | 2 | 1 | 3.47% (102838/2962440) |
+| 07-08 AICS | 20 / 20 | 2 | 1 | 3.39% (100527/2962440) |
+| 07-09 Educational assistance | 22 / 22 | 2 | 0 | 3.17% (94044/2962440) |
+| 07-10 Women and children | 20 / 20 | 2 | 1 | 3.38% (100243/2962440) |
+| 07-11 PESO jobs | 19 / 19 | 2 | 0 | 4.09% (121208/2962440) |
+| 07-12 Youth | 20 / 20 | 2 | 0 | 4.21% (124631/2962440) |
+
+Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only.
 
 `07-03` is the existing directory office page for MSWDO, inside the Tulong shell. The office fixture was not edited.
 
-Fields the Node `Service` object does not publish stay off the live decoder. The dev fixture may set them on `TulongPresentation`. A live page does not invent them:
+`Service` on taytay-backend `7293051` publishes the fields Tulong paints. The live decoder reads them. A colour that is not `#RGB` or `#RRGGBB` is left unset and the tile stays the blue pair. An unknown `icon_key` is `handHeart`. `users-round` is the users glyph.
 
-- No icon, tile colour, SAMPLE flag, badge, or legal-basis line. The hero chip uses the office `short_name`. There is no SAMPLE chip and no source line.
+- `icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps` (default `[]`), `featured_headline`, `schedule`, `hero_url`, and `hidden_from_list` are on the service. The hero chip is the badge, then the office `short_name`.
+- The featured layout is used only when `featured_headline` and at least one claim step are both present. `featured: true` alone stays on the standard page.
+- `GET /services` omits `hidden_from_list`. `GET /services?featured=true` returns featured services and includes ones hidden from the catalogue. A hidden service still opens by slug.
+- Contacts are `{type, label|null, value}` with type `facebook`, `landline`, `hotline`, `email`, or `mobile`. An unrecognised type is still shown. A label that names the anti-trafficking line keeps the siren glyph.
+- `hero_url` is stored. It is null until an image is stored. `GET /services/{slug}/hero` returns the bytes and this app does not fetch them. A null URL keeps the icon tile.
 - No hours field. A contact whose label contains "hour" is shown as sent. Otherwise the hours row uses `GET /offices` when that office has an hours string.
-- No claim steps, featured headline, or schedule. `featured` is a boolean. A live featured service uses the standard information page. The cash-gift layout is fixture presentation.
+- No SAMPLE flag. A live requirement is never marked sample. The dev fixture may still mark one.
 - No saved-pages resource and no saved-at. A live failure lists services already decoded in this process, newest first, at most 20, with the summary as the second line. Nothing is written to device storage. The offline specimen dates are fixture `saved_label`.
 - No apply or submit route.
-- `media_id` has no citizen media URL. This app does not call admin media routes. Service heroes are icon tiles.
-- Facebook, a landline, and the anti-trafficking line are contacts, shown only when the payload sends them.
-- No separate promotion resource. Promotion is the `featured` boolean plus the fixture layout.
-- No hide-from-list field. The fixture keeps the cash gift off the list with `presentation.listed: false`. A live featured service is listed.
 - Locations are `{name, address}` only.
 
 Message follows the directory gate. A guest sees "Sign in to continue". An unverified resident sees "Verify your account to message offices". A verified resident opens the existing composer at `/offices/:officeId/message`. Share sends the title and the body and does not invent a URL. Call and directions use the published phone and address. An empty phone or address is app copy, not the server message.
 
-The note under the list says "Information on municipal programmes. These are information pages, not applications." Its bottom padding is 11 dp where the stylesheet says 10, which is the one image pixel that puts the first list row on the specimen. Card content is inset 1 px on the left and the right so a 1 px border consumes width the way CSS `border-box` does. A vertical inset moves every line by 3 image pixels and is not used. The search field is drawn at 44 dp. Its hit target is 48 dp and does not move the ink. The list bell is the same: a 44 dp circle inside a 48 dp hit, so the header row stays the height of the specimen. A primary action label ellipsizes when a large text size no longer fits the button. At the specimen scale the label still sits in the centre. A requirement marked SAMPLE keeps the chip on the last text line when it fits. The youth list tile draws the Lucide users stroke itself, because the vendored icon font always leaves a light gap between the head and the shoulders and that gap splits a dark run the specimen keeps whole. OSCA and the saved rows stay on the font, where the specimen does split. That tile is the one icon in Tulong that is not drawn through `TaytayIcon`.
+The note under the list says "Information on municipal programmes. These are information pages, not applications." Its padding matches the stylesheet, 10 dp below the note. The list card is padded 3 dp on the top and the bottom, which is what puts that card's edges on the specimen. The requirements card gives 4 dp of the extra bottom padding back, and the facts card takes the same 4 image px as top padding, so the fact lines stay put while the borders move. The featured steps card and the card under it do the same. The saved-pages card is 2 dp taller at the bottom. Card content is inset 1 px on the left and the right so a 1 px border consumes width the way CSS `border-box` does. A vertical inset moves every line by 3 image pixels and is not used. The search field is drawn at 44 dp. Its hit target is 48 dp and does not move the ink. The list bell is the same: a 44 dp circle inside a 48 dp hit, so the header row stays the height of the specimen. A primary action label ellipsizes when a large text size no longer fits the button. At the specimen scale the label still sits in the centre. A requirement marked SAMPLE keeps the chip on the last text line when it fits. The youth list tile draws the Lucide users stroke itself, because the vendored icon font always leaves a light gap between the head and the shoulders and that gap splits a dark run the specimen keeps whole. OSCA and the saved rows stay on the font, where the specimen does split. That tile is the one icon in Tulong that is not drawn through `TaytayIcon`.
 
-Leaving `/news` still clears the Balita save message. That behaviour is covered by `test/features/s6_balita_test.dart`.
+Leaving `/news` still clears the Balita save message. `test/features/s6_balita_test.dart` saves a story, opens the article, and also leaves Balita for Home. The snackbar is gone in both cases.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1673809 bytes, 46 frames) and `s7-office.mp4` (2668969 bytes, 64 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1631 tests, with 13 skipped (the recording and live tags).
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1673809 bytes, 46 frames) and `s7-office.mp4` (2668969 bytes, 64 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1635 tests, with 13 skipped (the recording and live tags).
 
 ## Contract gaps after the Node OpenAPI
 

@@ -15,16 +15,47 @@ class ServiceRequirement {
   String toString() => 'ServiceRequirement(sample: $sample)';
 }
 
-/// A phone, a page, or another published contact. `{label, value}`.
+/// How a published contact is reached. An unrecognised wire value is
+/// [unknown] and is still shown.
+enum ServiceContactType {
+  facebook,
+  landline,
+  hotline,
+  email,
+  mobile,
+
+  /// A type string this app does not name. The contact is still shown.
+  unknown,
+}
+
+/// A phone, a page, or another published contact.
+///
+/// `type` and `value` are required on the wire. [label] may be null.
 @immutable
 class ServiceContact {
-  const ServiceContact({required this.label, required this.value});
+  const ServiceContact({required this.type, required this.value, this.label});
 
-  final String label;
+  final ServiceContactType type;
+  final String? label;
   final String value;
 
+  /// The label a resident reads. The server's label when it sent one,
+  /// otherwise a name for [type].
+  String get displayLabel {
+    final String? named = label?.trim();
+    if (named != null && named.isNotEmpty) return named;
+    return switch (type) {
+      ServiceContactType.facebook => 'Facebook',
+      ServiceContactType.landline => 'Landline',
+      ServiceContactType.hotline => 'Hotline',
+      ServiceContactType.email => 'Email',
+      ServiceContactType.mobile => 'Mobile',
+      ServiceContactType.unknown => 'Contact',
+    };
+  }
+
   @override
-  String toString() => 'ServiceContact()';
+  String toString() => 'ServiceContact(${type.name})';
 }
 
 /// A place the service names. `{name, address}`.
@@ -39,61 +70,26 @@ class ServiceLocation {
   String toString() => 'ServiceLocation()';
 }
 
-/// How a dev fixture asks the page to be drawn.
+/// Specimen chrome the `Service` schema does not publish.
 ///
-/// The Node `Service` schema has no icon, tile, badge, SAMPLE flag, source
-/// line, claim steps, schedule, or saved-at. Those stay here, and only the
-/// dev fixture sets them. A live service leaves [SocialService.presentation]
+/// Saved dates, the SAMPLE hero chip, a list name that differs from
+/// [SocialService.name], and the featured page's questions row. The dev
+/// fixture may set these. A live read leaves [SocialService.presentation]
 /// null.
-enum TulongLayout {
-  /// Who can avail, requirements, locations, and contacts.
-  standard,
-
-  /// The featured-programme specimen: steps, a schedule, and share.
-  featured,
-}
-
 @immutable
 class TulongPresentation {
   const TulongPresentation({
-    this.glyph = 'handHeart',
-    this.tile = 'blue',
-    this.badge,
     this.heroSample = false,
-    this.source,
-    this.layout = TulongLayout.standard,
-    this.headline,
-    this.steps = const <String>[],
-    this.listed = true,
     this.savedLabel,
     this.listName,
     this.headerTitle,
     this.headerSubtitle,
-    this.scheduleLabel,
-    this.scheduleValue,
     this.questionsLabel,
     this.questionsValue,
     this.shareLabel,
   });
 
-  /// Lucide name. Presentation chrome, not a server field.
-  final String glyph;
-
-  /// `blue`, `green`, `gold`, or `red`.
-  final String tile;
-
-  final String? badge;
   final bool heroSample;
-  final String? source;
-  final TulongLayout layout;
-
-  /// Featured headline. May contain a newline. Not a server field.
-  final String? headline;
-  final List<String> steps;
-
-  /// Fixture-only. The API has no "hide from list" field. A live service is
-  /// listed.
-  final bool listed;
 
   /// Fixture-only. The API has no saved-at.
   final String? savedLabel;
@@ -102,20 +98,41 @@ class TulongPresentation {
   final String? listName;
   final String? headerTitle;
   final String? headerSubtitle;
-  final String? scheduleLabel;
-  final String? scheduleValue;
   final String? questionsLabel;
   final String? questionsValue;
   final String? shareLabel;
 
   @override
-  String toString() => 'TulongPresentation(${layout.name})';
+  String toString() => 'TulongPresentation()';
+}
+
+/// Lucide name stored on a service.
+///
+/// Hyphens, underscores, and case are ignored. `users-round` is `users`.
+/// Anything else, including null and empty, is `handHeart`.
+String canonicalServiceIconKey(String? raw) {
+  final String compact = (raw ?? '').trim().toLowerCase().replaceAll(
+    RegExp(r'[\s_-]'),
+    '',
+  );
+  return switch (compact) {
+    'accessibility' => 'accessibility',
+    'users' || 'usersround' => 'users',
+    'baby' => 'baby',
+    'handcoins' => 'handCoins',
+    'graduationcap' => 'graduationCap',
+    'heart' => 'heart',
+    'briefcase' => 'briefcase',
+    'handheart' || '' => 'handHeart',
+    _ => 'handHeart',
+  };
 }
 
 /// One published social service. `GET /services` and `GET /services/{slug}`.
 ///
 /// Office name, short name, and hours are joined from `GET /offices`. They
-/// are not copied onto the service by the widget.
+/// are not copied onto the service by the widget. There is no hours field
+/// and no apply route on `Service`.
 @immutable
 class SocialService {
   const SocialService({
@@ -132,6 +149,15 @@ class SocialService {
     this.officeId,
     this.officeSlug,
     this.featured = false,
+    this.iconKey = 'handHeart',
+    this.tileColor,
+    this.badge,
+    this.legalBasis,
+    this.claimSteps = const <String>[],
+    this.featuredHeadline,
+    this.schedule,
+    this.heroUrl,
+    this.hiddenFromList = false,
     this.officeName,
     this.officeShortName,
     this.officeHours,
@@ -152,6 +178,26 @@ class SocialService {
   final String? officeId;
   final String? officeSlug;
   final bool featured;
+
+  /// Canonical Lucide key. See [canonicalServiceIconKey].
+  final String iconKey;
+
+  /// Opaque `#RRGGBB` as `0xAARRGGBB`. Null when the server sent nothing
+  /// or a colour this app will not paint.
+  final int? tileColor;
+  final String? badge;
+  final String? legalBasis;
+  final List<String> claimSteps;
+  final String? featuredHeadline;
+  final String? schedule;
+
+  /// Public URL of `GET /services/{slug}/hero` when an image is stored.
+  /// Null until then. This app does not fetch the bytes on the list.
+  final String? heroUrl;
+
+  /// Omitted from `GET /services` unless `featured=true`. Still readable
+  /// by slug.
+  final bool hiddenFromList;
 
   /// From `GET /offices`, when that read succeeded.
   final String? officeName;
@@ -181,17 +227,23 @@ class SocialService {
     return 'Tulong';
   }
 
-  /// The chip on the hero. A fixture badge wins. Otherwise the office short
-  /// name, which the server did send. Never an invented "MSWDO · OSCA".
+  /// The chip on the hero. The service badge wins. Otherwise the office
+  /// short name, which the server did send.
   String? get heroBadge {
-    final String? badge = presentation?.badge;
-    if (badge != null && badge.isNotEmpty) return badge;
+    final String? named = badge?.trim();
+    if (named != null && named.isNotEmpty) return named;
     final String? office = officeShortName;
     if (office != null && office.isNotEmpty) return office;
     return null;
   }
 
-  bool get showsFeaturedLayout => presentation?.layout == TulongLayout.featured;
+  /// The featured programme page. The `featured` boolean alone does not
+  /// switch the layout: both a headline and at least one claim step have
+  /// to be present.
+  bool get showsFeaturedLayout {
+    final String? headline = featuredHeadline?.trim();
+    return headline != null && headline.isNotEmpty && claimSteps.isNotEmpty;
+  }
 
   /// The second line on a saved row. A fixture date when one was supplied,
   /// otherwise the summary. No invented "Saved Oct 20".
@@ -201,15 +253,22 @@ class SocialService {
     return summary;
   }
 
-  /// Phone the Call button may dial. A contact wins over the office phone.
+  /// Phone the Call button may dial. A phone-shaped contact wins over the
+  /// office phone. Email and Facebook are not dialled.
   String? get dialable {
     for (final ServiceContact contact in contacts) {
-      final String label = contact.label.toLowerCase();
-      if (label.contains('phone') ||
+      final String label = contact.label?.toLowerCase() ?? '';
+      final bool phoneType =
+          contact.type == ServiceContactType.mobile ||
+          contact.type == ServiceContactType.landline ||
+          contact.type == ServiceContactType.hotline;
+      final bool phoneLabel =
+          label.contains('phone') ||
           label.contains('contact') ||
           label.contains('landline') ||
-          label.contains('question')) {
-        if (contact.value.trim().isNotEmpty) return contact.value.trim();
+          label.contains('question');
+      if ((phoneType || phoneLabel) && contact.value.trim().isNotEmpty) {
+        return contact.value.trim();
       }
     }
     final String? phone = officePhone;
@@ -245,6 +304,15 @@ class SocialService {
       officeId: officeId,
       officeSlug: officeSlug,
       featured: featured,
+      iconKey: iconKey,
+      tileColor: tileColor,
+      badge: badge,
+      legalBasis: legalBasis,
+      claimSteps: claimSteps,
+      featuredHeadline: featuredHeadline,
+      schedule: schedule,
+      heroUrl: heroUrl,
+      hiddenFromList: hiddenFromList,
       officeName: name ?? officeName,
       officeShortName: shortName ?? officeShortName,
       officeHours: hours ?? officeHours,

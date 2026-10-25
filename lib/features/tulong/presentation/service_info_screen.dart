@@ -151,7 +151,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
   Future<void> _share() async {
     final SocialService? service = _service;
     if (service == null) return;
-    final String headline = service.presentation?.headline ?? service.name;
+    final String headline = service.featuredHeadline ?? service.name;
     final ShareOutcome outcome = await AppDependencies.of(context).shareService
         .share(
           ShareableContent(

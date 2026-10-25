@@ -10,6 +10,7 @@ import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/mock/mock_behavior.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -22,8 +23,11 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/programs/data/program_api_repository.dart';
 import 'package:taytay_resident/features/tulong/data/mock_social_service_repository.dart';
 import 'package:taytay_resident/features/tulong/data/social_service_api_repository.dart';
+import 'package:taytay_resident/features/tulong/data/social_service_codec.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
+import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 class _Recording implements ApiTransport {
   _Recording(this.responses);
@@ -61,8 +65,12 @@ Map<String, Object?> _service({
   'summary': 'A synthetic summary',
   'details': 'Synthetic details for a test service.',
   'requirements': requirements,
-  'contacts': <Map<String, String>>[
-    <String, String>{'label': 'Contact', 'value': '555-0100'},
+  'contacts': <Map<String, Object?>>[
+    <String, Object?>{
+      'type': 'mobile',
+      'label': 'Contact',
+      'value': '555-0100',
+    },
   ],
   'locations': <Map<String, String>>[
     <String, String>{'name': 'Where', 'address': '1 Sample Street'},
@@ -170,7 +178,17 @@ void main() {
         'pwd-cash-gift',
       )).valueOrNull!;
       expect(gift.showsFeaturedLayout, isTrue);
+      expect(gift.hiddenFromList, isTrue);
+      expect(gift.featuredHeadline, contains('\n'));
+      expect(gift.claimSteps, hasLength(3));
+      expect(gift.heroUrl, isNull);
       expect(gift.toString(), 'SocialService(pwd-cash-gift)');
+      final List<SocialService> featured = (await repository.listServices(
+        featured: true,
+      )).valueOrNull!.items;
+      expect(featured.map((SocialService service) => service.slug), <String>[
+        'pwd-cash-gift',
+      ]);
     },
   );
 
@@ -235,6 +253,7 @@ void main() {
     expect(request.query['q'], 'sample');
     expect(request.query['limit'], '50');
     expect(request.query['cursor'], 'cursor-1');
+    expect(request.query.containsKey('featured'), isFalse);
     expect(request.query.keys, isNot(contains('role')));
     expect(request.query.keys, isNot(contains('is_admin')));
     expect(request.headers.keys, isNot(contains('role')));
@@ -250,6 +269,234 @@ void main() {
     expect(transport.requests.last.path, 'services/sample-assistance');
     expect(transport.requests.last.path.contains('programs'), isFalse);
   });
+
+  test('live fields decode, and presentation cannot invent them', () {
+    expect(canonicalServiceIconKey('users-round'), 'users');
+    expect(canonicalServiceIconKey('hand-coins'), 'handCoins');
+    expect(canonicalServiceIconKey('graduation-cap'), 'graduationCap');
+    expect(canonicalServiceIconKey('HAND_HEART'), 'handHeart');
+    expect(canonicalServiceIconKey('no-such-icon'), 'handHeart');
+    expect(canonicalServiceIconKey(null), 'handHeart');
+
+    final SocialService decoded = decodeSocialService(<String, Object?>{
+      'name': 'Sample',
+      'slug': 'sample',
+      'icon_key': 'users-round',
+      'tile_color': '#abc',
+      'badge': 'MSWDO',
+      'legal_basis': 'RA 7277',
+      'claim_steps': <Object?>[' one ', '', 4, 'two'],
+      'featured_headline': 'Line one\nLine two',
+      'schedule': 'Mon',
+      'hero_url': ' https://example.test/services/sample/hero ',
+      'hidden_from_list': true,
+      'featured': true,
+      'contacts': <Object?>[
+        <String, Object?>{
+          'type': 'email',
+          'label': null,
+          'value': 'desk@example.test',
+        },
+        <String, Object?>{'type': 'MOBILE', 'value': '555-0100'},
+        <String, Object?>{
+          'type': 'facebook',
+          'label': 'Page',
+          'value': 'facebook.com/example',
+        },
+        <String, Object?>{'type': 'pigeon', 'label': 'Desk', 'value': '1'},
+        <String, Object?>{'type': 'hotline', 'label': 'Empty', 'value': '  '},
+      ],
+      'presentation': <String, Object?>{
+        'badge': 'SHOULD NOT APPEAR',
+        'layout': 'featured',
+        'glyph': 'heart',
+      },
+    }, allowPresentation: false)!;
+
+    expect(decoded.iconKey, 'users');
+    expect(decoded.tileColor, 0xFFAABBCC);
+    expect(decoded.badge, 'MSWDO');
+    expect(decoded.legalBasis, 'RA 7277');
+    expect(decoded.claimSteps, <String>['one', 'two']);
+    expect(decoded.featuredHeadline, 'Line one\nLine two');
+    expect(decoded.schedule, 'Mon');
+    expect(decoded.heroUrl, 'https://example.test/services/sample/hero');
+    expect(decoded.hiddenFromList, isTrue);
+    expect(decoded.showsFeaturedLayout, isTrue);
+    expect(decoded.presentation, isNull);
+    expect(decoded.contacts, hasLength(4));
+    expect(decoded.contacts[0].type, ServiceContactType.email);
+    expect(decoded.contacts[0].label, isNull);
+    expect(decoded.contacts[0].displayLabel, 'Email');
+    expect(decoded.contacts[0].toString(), 'ServiceContact(email)');
+    expect(decoded.contacts[1].type, ServiceContactType.mobile);
+    expect(decoded.contacts[1].displayLabel, 'Mobile');
+    expect(decoded.contacts[2].type, ServiceContactType.facebook);
+    expect(decoded.contacts[3].type, ServiceContactType.unknown);
+    expect(decoded.dialable, '555-0100');
+
+    final SocialService full = decodeSocialService(<String, Object?>{
+      'name': 'Painted',
+      'slug': 'painted',
+      'tile_color': '#0B3D91',
+    }, allowPresentation: false)!;
+    expect(full.tileColor, 0xFF0B3D91);
+    expect(full.iconKey, 'handHeart');
+    expect(full.claimSteps, isEmpty);
+    expect(full.showsFeaturedLayout, isFalse);
+
+    for (final String bad in <String>[
+      'blue',
+      '#abcd',
+      '#GG0000',
+      'rgb(0,0,0)',
+    ]) {
+      expect(
+        decodeSocialService(<String, Object?>{
+          'name': 'Bad',
+          'slug': 'bad',
+          'tile_color': bad,
+          'featured': true,
+          'featured_headline': 'Only a headline',
+        }, allowPresentation: false)!.tileColor,
+        isNull,
+      );
+    }
+
+    final SocialService headlineOnly = decodeSocialService(<String, Object?>{
+      'name': 'Headline',
+      'slug': 'headline',
+      'featured': true,
+      'featured_headline': 'Only a headline',
+      'claim_steps': <String>[],
+    }, allowPresentation: false)!;
+    expect(headlineOnly.featured, isTrue);
+    expect(headlineOnly.showsFeaturedLayout, isFalse);
+  });
+
+  test(
+    'hidden services stay off the catalogue unless featured is asked',
+    () async {
+      Map<String, Object?> hiddenGift() => <String, Object?>{
+        ..._service(name: 'Gift', slug: 'gift', featured: true),
+        'hidden_from_list': true,
+        'featured_headline': 'Gift\nline',
+        'claim_steps': <String>['Bring an ID'],
+        'icon_key': 'not-a-lucide-name',
+      };
+      final _Recording transport = _Recording(<ApiHttpResponse>[
+        _envelope(<Object?>[
+          _service(name: 'Shown', slug: 'shown'),
+          hiddenGift(),
+          <String, Object?>{
+            ..._service(name: 'Quiet', slug: 'quiet'),
+            'hidden_from_list': true,
+            'featured': false,
+          },
+        ]),
+        _envelope(<Object?>[
+          _service(name: 'Shown', slug: 'shown'),
+          hiddenGift(),
+          <String, Object?>{
+            ..._service(name: 'Quiet', slug: 'quiet'),
+            'hidden_from_list': true,
+          },
+        ]),
+        _envelope(hiddenGift()),
+      ]);
+      final SocialServiceApiRepository repository = SocialServiceApiRepository(
+        apiClient: ApiClient(
+          config: _dev(),
+          transport: transport,
+          cache: PublicCache(),
+        ),
+      );
+
+      final List<SocialService> catalogue =
+          (await repository.listServices()).valueOrNull!.items;
+      expect(catalogue.map((SocialService service) => service.slug), <String>[
+        'shown',
+      ]);
+      expect(transport.requests.single.query.containsKey('featured'), isFalse);
+
+      final List<SocialService> featured = (await repository.listServices(
+        featured: true,
+      )).valueOrNull!.items;
+      expect(featured.map((SocialService service) => service.slug), <String>[
+        'gift',
+      ]);
+      expect(featured.single.showsFeaturedLayout, isTrue);
+      expect(featured.single.hiddenFromList, isTrue);
+      expect(featured.single.iconKey, 'handHeart');
+      expect(transport.requests.last.query['featured'], 'true');
+
+      final SocialService loaded = (await repository.loadService(
+        'gift',
+      )).valueOrNull!;
+      expect(loaded.slug, 'gift');
+      expect(loaded.hiddenFromList, isTrue);
+      expect(transport.requests.last.path, 'services/gift');
+    },
+  );
+
+  testWidgets(
+    'an unknown icon falls back, and a hotline label can stay a siren',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      const SocialService service = SocialService(
+        id: '11111111-1111-4111-8111-111111111199',
+        name: 'Sample',
+        slug: 'sample',
+        summary: 'A synthetic summary',
+        details: 'Synthetic details.',
+        iconKey: 'mystery',
+        officeName: 'Municipal Social Welfare and Development Office',
+        contacts: <ServiceContact>[
+          ServiceContact(
+            type: ServiceContactType.hotline,
+            label: 'Anti-trafficking',
+            value: '1343',
+          ),
+          ServiceContact(
+            type: ServiceContactType.email,
+            value: 'desk@example.test',
+          ),
+          ServiceContact(
+            type: ServiceContactType.facebook,
+            label: 'Facebook',
+            value: 'facebook.com/example',
+          ),
+          ServiceContact(
+            type: ServiceContactType.mobile,
+            label: 'Contact',
+            value: '555-0100',
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: TulongCanvas(frame: TulongFrame.detail, service: service),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final TaytayIcon hero = tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .singleWhere((TaytayIcon icon) => icon.size == 26);
+      expect(hero.icon, TaytayIcons.handHeart);
+      final Iterable<IconData> icons = tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .map((TaytayIcon icon) => icon.icon);
+      expect(icons, contains(TaytayIcons.siren));
+      expect(icons, contains(TaytayIcons.mail));
+      expect(icons, contains(TaytayIcons.messageSquare));
+      expect(icons, contains(TaytayIcons.phone));
+      expect(find.text('Email'), findsOneWidget);
+      expect(find.text('Anti-trafficking'), findsOneWidget);
+    },
+  );
 
   test('Tulong does not nudge lines with a translation', () {
     final Directory root = Directory('lib/features/tulong');

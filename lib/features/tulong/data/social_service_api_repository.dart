@@ -15,21 +15,17 @@ import 'social_service_codec.dart';
 ///
 /// Gaps, left unset rather than filled in:
 ///
-/// * No icon, tile colour, SAMPLE flag, badge, or source line. Presentation
-///   stays null. The hero chip falls back to the office `short_name`.
 /// * No hours on `Service`. A contact whose label contains "hour" is shown
 ///   as sent. Otherwise hours come from `GET /offices` `hours`, when that
 ///   string exists.
-/// * No claim steps, featured headline, or schedule. `featured` is a boolean.
-///   A live featured service uses the standard information page.
 /// * No saved-pages resource and no saved-at. [savedOnThisPhone] is the list
 ///   already loaded in this process. Nothing is written to device storage.
 /// * No apply or submit route.
-/// * `media_id` has no citizen media URL. Service heroes are icon tiles.
-/// * Facebook, landline, and anti-trafficking are contacts, shown only when
-///   the payload sends them.
-/// * No separate promotion resource. Promotion is the `featured` boolean.
-/// * No "hide from list" field. A live service is listed.
+/// * `hero_url` is stored. The bytes live at `GET /services/{slug}/hero`
+///   and are not fetched here. A null URL keeps the icon tile.
+/// * No SAMPLE flag. A live requirement is never marked sample.
+/// * Contacts are `{type, label|null, value}`. An unrecognised type is
+///   still shown.
 class SocialServiceApiRepository implements SocialServiceRepository {
   SocialServiceApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -49,6 +45,7 @@ class SocialServiceApiRepository implements SocialServiceRepository {
     String? query,
     int? limit,
     String? cursor,
+    bool featured = false,
   }) async {
     final String? q = query?.trim();
     final int size = (limit ?? 20).clamp(1, 50);
@@ -63,6 +60,7 @@ class SocialServiceApiRepository implements SocialServiceRepository {
             'limit': '$size',
             'cursor': ?(cursor ?? _cursor),
             'q': ?((q == null || q.isEmpty) ? null : q),
+            'featured': ?(featured ? 'true' : null),
           },
           decode: _decodeList,
         );
@@ -72,16 +70,20 @@ class SocialServiceApiRepository implements SocialServiceRepository {
       case Ok<ApiEnvelope<List<SocialService>>>(:final value):
         _cursor = value.pagination?.nextCursor;
         final List<SocialService> joined = await _withOffices(value.data);
-        _remember(joined);
+        final List<SocialService> visible = <SocialService>[
+          for (final SocialService service in joined)
+            if (featured ? service.featured : !service.hiddenFromList) service,
+        ];
+        _remember(visible);
         final PageMeta? page = value.pagination;
         if (page == null) {
           return Ok<Paginated<SocialService>>(
-            Paginated<SocialService>.single(joined),
+            Paginated<SocialService>.single(visible),
           );
         }
         return Ok<Paginated<SocialService>>(
           Paginated<SocialService>(
-            items: joined,
+            items: visible,
             page: page.page,
             perPage: page.perPage,
             total: page.total,

@@ -9,10 +9,15 @@ import 'social_service.dart';
 abstract interface class SocialServiceRepository {
   /// [query] is the `q` parameter. Empty is omitted.
   /// [limit] is clamped to 1–50. The spec default is 20.
+  ///
+  /// [featured] sends `featured=true`. That list is the featured services,
+  /// including ones hidden from the catalogue. The ordinary list omits
+  /// `hidden_from_list`.
   Future<Result<Paginated<SocialService>>> listServices({
     String? query,
     int? limit,
     String? cursor,
+    bool featured = false,
   });
 
   Future<Result<SocialService>> loadService(String slug);

@@ -14,8 +14,8 @@ enum TulongFrame { list, detail, offline, loading }
 /// The Tulong list, a service page, the featured specimen, and offline.
 ///
 /// The shell paints the tab bar. This canvas is the page above that bar.
-/// One detail layout covers every service. Featured steps are fixture
-/// presentation; a live service does not grow them.
+/// A service uses the featured layout when it has a featured headline and
+/// at least one claim step. The `featured` boolean alone does not.
 class TulongCanvas extends StatelessWidget {
   const TulongCanvas({
     required this.frame,
@@ -340,7 +340,7 @@ class _ListBody extends StatelessWidget {
           ),
         if (services.isNotEmpty)
           _Card(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+            padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
             child: Column(
               children: <Widget>[
                 for (var i = 0; i < services.length; i++)
@@ -366,7 +366,7 @@ class _Note extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Padding(
-      padding: EdgeInsets.fromLTRB(2, 10, 2, 11),
+      padding: EdgeInsets.fromLTRB(2, 10, 2, 10),
       child: _CssLines(copy, style: _noteStyle),
     );
   }
@@ -464,9 +464,7 @@ class _CompactRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(
-      service.presentation?.tile ?? 'blue',
-    );
+    final (Color background, Color foreground) = _tileColors(service.tileColor);
     return _Hit(
       hitKey: Key('tulong-open-${service.slug}'),
       label: service.listTitle,
@@ -485,12 +483,11 @@ class _CompactRow extends StatelessWidget {
               size: 40,
               radius: 12,
               background: background,
-              icon: _glyph(service.presentation?.glyph ?? 'handHeart'),
+              icon: _glyph(service.iconKey),
               color: foreground,
               iconSize: 20,
               lucideStroke:
-                  service.presentation?.glyph == 'users' &&
-                  service.presentation?.tile == 'gold',
+                  service.iconKey == 'users' && service.tileColor == _goldTile,
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -547,7 +544,7 @@ class _DetailBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String? source = service.presentation?.source;
+    final String? source = service.legalBasis;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -582,9 +579,7 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(
-      service.presentation?.tile ?? 'blue',
-    );
+    final (Color background, Color foreground) = _tileColors(service.tileColor);
     final String? badge = service.heroBadge;
     final bool sample = service.presentation?.heroSample ?? false;
     return ClipRRect(
@@ -611,9 +606,7 @@ class _Hero extends StatelessWidget {
                         size: 52,
                         radius: 16,
                         background: background,
-                        icon: _glyph(
-                          service.presentation?.glyph ?? 'handHeart',
-                        ),
+                        icon: _glyph(service.iconKey),
                         color: foreground,
                         iconSize: 26,
                       ),
@@ -654,7 +647,7 @@ class _Hero extends StatelessWidget {
               child: Opacity(
                 opacity: 0.12,
                 child: TaytayIcon(
-                  icon: _glyph(service.presentation?.glyph ?? 'handHeart'),
+                  icon: _glyph(service.iconKey),
                   size: 110,
                   color: BrandColors.sealGold,
                   semanticLabel: '',
@@ -738,7 +731,7 @@ class _AboutCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? eligibility = service.eligibility;
     return _Card(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 16 / 3),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -950,7 +943,9 @@ class _FactsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<_Fact> facts = _factsOf(service);
     return _Card(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+      // The 4 image px on top is what the card above gave up, so these
+      // lines stay put while the border moves up.
+      padding: const EdgeInsets.fromLTRB(16, 2 + 4 / 3, 16, 2),
       child: Column(
         children: <Widget>[
           for (var i = 0; i < facts.length; i++)
@@ -1003,7 +998,8 @@ List<_Fact> _factsOf(SocialService service) {
     );
   }
   final bool hoursContact = service.contacts.any(
-    (ServiceContact contact) => contact.label.toLowerCase().contains('hour'),
+    (ServiceContact contact) =>
+        (contact.label?.toLowerCase() ?? '').contains('hour'),
   );
   final String? hours = service.officeHours;
   if (!hoursContact && hours != null && hours.isNotEmpty) {
@@ -1012,9 +1008,9 @@ List<_Fact> _factsOf(SocialService service) {
   for (final ServiceContact contact in service.contacts) {
     rows.add(
       _Fact(
-        label: contact.label,
+        label: contact.displayLabel,
         value: contact.value,
-        icon: _contactIcon(contact.label),
+        icon: _contactIcon(contact),
       ),
     );
   }
@@ -1086,8 +1082,10 @@ class _FeaturedBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TulongPresentation? presentation = service.presentation;
-    final String headline = presentation?.headline ?? service.name;
-    final List<String> steps = presentation?.steps ?? const <String>[];
+    final String headline = service.featuredHeadline ?? service.name;
+    final List<String> steps = service.claimSteps;
+    final String? schedule = service.schedule;
+    final String? questions = presentation?.questionsValue;
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -1096,7 +1094,7 @@ class _FeaturedBody extends StatelessWidget {
         if (steps.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           _Card(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 3),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 5 / 3),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
@@ -1135,25 +1133,28 @@ class _FeaturedBody extends StatelessWidget {
             ),
           ),
         ],
-        if (presentation?.scheduleValue != null) ...<Widget>[
+        if (schedule != null || questions != null) ...<Widget>[
           const SizedBox(height: 12),
           _Card(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+            // Same 4 image px the steps card gave up, so the schedule
+            // line stays while this border moves up.
+            padding: const EdgeInsets.fromLTRB(16, 2 + 4 / 3, 16, 2),
             child: Column(
               children: <Widget>[
-                _FactRow(
-                  fact: _Fact(
-                    label: presentation?.scheduleLabel ?? 'Schedule',
-                    value: presentation!.scheduleValue!,
-                    icon: TaytayIcons.calendar,
-                  ),
-                  last: presentation.questionsValue == null,
-                ),
-                if (presentation.questionsValue != null)
+                if (schedule != null)
                   _FactRow(
                     fact: _Fact(
-                      label: presentation.questionsLabel ?? 'Questions',
-                      value: presentation.questionsValue!,
+                      label: 'Schedule',
+                      value: schedule,
+                      icon: TaytayIcons.calendar,
+                    ),
+                    last: questions == null,
+                  ),
+                if (questions != null)
+                  _FactRow(
+                    fact: _Fact(
+                      label: presentation?.questionsLabel ?? 'Questions',
+                      value: questions,
                       icon: TaytayIcons.phone,
                     ),
                     last: true,
@@ -1216,7 +1217,7 @@ class _FeaturedHero extends StatelessWidget {
               child: Opacity(
                 opacity: 0.18,
                 child: TaytayIcon(
-                  icon: _glyph(service.presentation?.glyph ?? 'accessibility'),
+                  icon: _glyph(service.iconKey),
                   size: 120,
                   color: BrandColors.sealGold,
                   semanticLabel: '',
@@ -1327,7 +1328,7 @@ class _OfflineBody extends StatelessWidget {
             child: Text('Saved pages', style: _sectionTitle),
           ),
           _Card(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 2),
+            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
             child: Column(
               children: <Widget>[
                 for (var i = 0; i < saved.length; i++)
@@ -1354,9 +1355,7 @@ class _SavedRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(
-      service.presentation?.tile ?? 'blue',
-    );
+    final (Color background, Color foreground) = _tileColors(service.tileColor);
     final bool sample = service.presentation?.heroSample ?? false;
     return _Hit(
       hitKey: Key('tulong-open-${service.slug}'),
@@ -1375,7 +1374,7 @@ class _SavedRow extends StatelessWidget {
               size: 44,
               radius: 12,
               background: background,
-              icon: _glyph(service.presentation?.glyph ?? 'handHeart'),
+              icon: _glyph(service.iconKey),
               color: foreground,
               iconSize: 20,
               dropIcon: true,
@@ -2026,13 +2025,27 @@ const TextStyle _stepNumber = TextStyle(
   decoration: TextDecoration.none,
 );
 
-(Color, Color) _tileColors(String tile) {
+/// Brand gold `#7A5E0C`. The youth list tile draws the Lucide stroke only
+/// for the users glyph on this colour.
+const int _goldTile = 0xFF7A5E0C;
+
+(Color, Color) _tileColors(int? tile) {
   return switch (tile) {
-    'green' => (BrandColors.chipGreenBg, BrandColors.success),
-    'gold' => (BrandColors.chipGoldBg, BrandColors.inkGold),
-    'red' => (BrandColors.chipRedBg, BrandColors.danger),
-    _ => (BrandColors.chipBlueBg, BrandColors.taytayBlue),
+    0xFF0F7A4D => (BrandColors.chipGreenBg, BrandColors.success),
+    _goldTile => (BrandColors.chipGoldBg, BrandColors.inkGold),
+    0xFFB3261E => (BrandColors.chipRedBg, BrandColors.danger),
+    0xFF0B3D91 => (BrandColors.chipBlueBg, BrandColors.taytayBlue),
+    null => (BrandColors.chipBlueBg, BrandColors.taytayBlue),
+    final int value => (_lightTile(value), Color(value)),
   };
+}
+
+Color _lightTile(int argb) {
+  final int red = (argb >> 16) & 0xFF;
+  final int green = (argb >> 8) & 0xFF;
+  final int blue = argb & 0xFF;
+  int mix(int channel) => (channel * 0.14 + 255 * 0.86).round().clamp(0, 255);
+  return Color.fromARGB(255, mix(red), mix(green), mix(blue));
 }
 
 IconData _glyph(String name) {
@@ -2049,23 +2062,30 @@ IconData _glyph(String name) {
   };
 }
 
-IconData _contactIcon(String label) {
-  final String lower = label.toLowerCase();
+IconData _contactIcon(ServiceContact contact) {
+  final String lower = contact.label?.toLowerCase() ?? '';
   if (lower.contains('hour')) return TaytayIcons.clock;
-  if (lower.contains('schedule') || lower.contains('calendar')) {
-    return TaytayIcons.calendar;
+  if (lower.contains('traffick') || lower.contains('siren')) {
+    return TaytayIcons.siren;
   }
   if (lower.contains('facebook') || lower.contains('message')) {
     return TaytayIcons.messageSquare;
   }
-  if (lower.contains('traffick') || lower.contains('siren')) {
-    return TaytayIcons.siren;
+  if (lower.contains('schedule') || lower.contains('calendar')) {
+    return TaytayIcons.calendar;
   }
-  if (lower.contains('phone') ||
-      lower.contains('contact') ||
-      lower.contains('landline') ||
-      lower.contains('question')) {
-    return TaytayIcons.phone;
-  }
-  return TaytayIcons.mapPin;
+  return switch (contact.type) {
+    ServiceContactType.email => TaytayIcons.mail,
+    ServiceContactType.facebook => TaytayIcons.messageSquare,
+    ServiceContactType.landline ||
+    ServiceContactType.hotline ||
+    ServiceContactType.mobile => TaytayIcons.phone,
+    ServiceContactType.unknown =>
+      lower.contains('phone') ||
+              lower.contains('contact') ||
+              lower.contains('landline') ||
+              lower.contains('question')
+          ? TaytayIcons.phone
+          : TaytayIcons.mapPin,
+  };
 }
