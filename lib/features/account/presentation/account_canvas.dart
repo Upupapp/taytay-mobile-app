@@ -820,9 +820,9 @@ class _HomeBody extends StatelessWidget {
           _Card(
             padding: const EdgeInsets.fromLTRB(
               S8Space.cardPad,
+              S8Space.profilePadY,
               S8Space.cardPad,
-              S8Space.cardPad,
-              S8Space.cardPad,
+              S8Space.profilePadY,
             ),
             child: Row(
               children: <Widget>[
@@ -898,7 +898,7 @@ class _MenuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _Card(
-      padding: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
       child: Column(
         children: <Widget>[
           for (var i = 0; i < rows.length; i++) ...<Widget>[
@@ -1136,7 +1136,7 @@ class _EmptyInbox extends StatelessWidget {
           textAlign: TextAlign.center,
           style: _emptyTitle,
         ),
-        const SizedBox(height: S8Space.titleGap),
+        const SizedBox(height: S8Space.emptyBodyGap),
         const Text(
           'Questions you send to municipal offices and their replies '
           'will appear here.',
@@ -1158,7 +1158,7 @@ class _EmptyInbox extends StatelessWidget {
             onTap: onMessageOffice,
           ),
         ),
-        const SizedBox(height: S8Space.cardGap),
+        const SizedBox(height: S8Space.emptyNoteGap),
         const Text(
           'Messaging is available to verified residents.',
           textAlign: TextAlign.center,
@@ -1193,7 +1193,7 @@ class _InboxError extends StatelessWidget {
           textAlign: TextAlign.center,
           style: _emptyTitle,
         ),
-        const SizedBox(height: S8Space.titleGap),
+        const SizedBox(height: S8Space.emptyBodyGap),
         const Text(
           'Taytay LGU could not be reached. You can try again.',
           textAlign: TextAlign.center,
@@ -1243,7 +1243,11 @@ class _EditBody extends StatelessWidget {
               for (var i = 0; i < fields.length; i++) ...<Widget>[
                 _EditField(
                   field: fields[i],
-                  padBottom: i == fields.length - 1 ? 0 : S8Space.fieldStack,
+                  padBottom: i == fields.length - 1
+                      ? 0
+                      : fields[i].label == 'Display name'
+                      ? S8Space.legalGap
+                      : S8Space.fieldStack,
                 ),
                 if (fields[i].label == 'Display name') ...<Widget>[
                   _LegalNameNote(onTap: onLegalName),
@@ -1377,7 +1381,7 @@ class _SettingsBody extends StatelessWidget {
           const _SectionLabel('Notifications'),
           const SizedBox(height: S8Space.sectionGap),
           _Card(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
             child: _InsetRows(
               children: <Widget>[
                 for (final AccountToggle toggle in toggles)
@@ -1389,7 +1393,7 @@ class _SettingsBody extends StatelessWidget {
           const _SectionLabel('App'),
           const SizedBox(height: S8Space.sectionGap),
           _Card(
-            padding: EdgeInsets.zero,
+            padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
             child: _InsetRows(
               children: <Widget>[
                 _LinkRow(
@@ -1416,7 +1420,7 @@ class _SettingsBody extends StatelessWidget {
           const SizedBox(height: S8Space.sectionGap),
           Expanded(
             child: _Card(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
               child: _InsetRows(
                 children: <Widget>[
                   _LinkRow(
@@ -1502,7 +1506,12 @@ class _AboutBody extends StatelessWidget {
       ),
       children: <Widget>[
         const _Card(
-          padding: EdgeInsets.all(S8Space.cardPad),
+          padding: EdgeInsets.fromLTRB(
+            S8Space.cardPad,
+            S8Space.cardPad,
+            S8Space.cardPad,
+            S8Space.aboutPadBottom,
+          ),
           child: Column(
             children: <Widget>[
               SizedBox(
@@ -1514,7 +1523,7 @@ class _AboutBody extends StatelessWidget {
                   semanticLabel: 'Seal of Taytay, Rizal',
                 ),
               ),
-              SizedBox(height: S8Space.cardGap),
+              SizedBox(height: S8Space.sealGap),
               Text(
                 'Taytay Resident App',
                 textAlign: TextAlign.center,
@@ -1541,7 +1550,7 @@ class _AboutBody extends StatelessWidget {
         const _SectionLabel('Photo credits'),
         const SizedBox(height: S8Space.sectionGap),
         _Card(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -1554,7 +1563,7 @@ class _AboutBody extends StatelessWidget {
         ),
         const SizedBox(height: S8Space.cardGap),
         _Card(
-          padding: EdgeInsets.zero,
+          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
           child: _LinkRow(
             title: 'Office banner photos',
             subtitle: PhotoCredits.officeBannerSummary,
@@ -1568,7 +1577,7 @@ class _AboutBody extends StatelessWidget {
         const _SectionLabel('About'),
         const SizedBox(height: S8Space.sectionGap),
         const _Card(
-          padding: EdgeInsets.zero,
+          padding: EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
           child: _LinkRow(
             title: 'Municipal seal',
             subtitle: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
@@ -1638,7 +1647,7 @@ class _PrivacyBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(
         S8Space.gutter,
-        S8Space.pagePad,
+        S8Space.noticeInset,
         S8Space.gutter,
         S8Space.pageBottom,
       ),
@@ -1649,7 +1658,7 @@ class _PrivacyBody extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               _DraftBanner(),
-              SizedBox(height: S8Space.titleGap),
+              SizedBox(height: S8Space.draftGap),
               Text('Privacy Notice', style: _noticeTitle),
               SizedBox(height: S8Space.titleGap),
               Text(
@@ -1668,18 +1677,21 @@ class _PrivacyBody extends StatelessWidget {
                           'Name, contact details, address, valid ID and selfie, '
                           'and messages you send to offices.',
                     ),
+                    SizedBox(height: S8Space.blockGap),
                     _NoticeBlock(
                       title: 'Why',
                       body:
                           'To verify that you are a Taytay resident and to '
                           'deliver the services you request.',
                     ),
+                    SizedBox(height: S8Space.blockGap),
                     _NoticeBlock(
                       title: 'Who can see it',
                       body:
                           'Authorised LGU staff of the office you deal with. '
                           'Not sold or shared for marketing.',
                     ),
+                    SizedBox(height: S8Space.blockGap),
                     _NoticeBlock(
                       title: 'Your rights',
                       body:
@@ -1781,30 +1793,27 @@ class _NoticeBlock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget? trailing = this.trailing;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(title, style: _rowTitle),
-          const SizedBox(height: S8Space.labelGap),
-          if (trailing == null)
-            Text(body, style: _noticeBody)
-          else
-            Text.rich(
-              TextSpan(
-                style: _noticeBody,
-                children: <InlineSpan>[
-                  TextSpan(text: '$body '),
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: trailing,
-                  ),
-                ],
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(title, style: _rowTitle),
+        const SizedBox(height: S8Space.noticeGap),
+        if (trailing == null)
+          Text(body, style: _noticeBody)
+        else
+          Text.rich(
+            TextSpan(
+              style: _noticeBody,
+              children: <InlineSpan>[
+                TextSpan(text: '$body '),
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: trailing,
+                ),
+              ],
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -1879,7 +1888,7 @@ class _BannerIntro extends StatelessWidget {
           TextSpan(text: 'All from Wikimedia Commons. Photos marked '),
           WidgetSpan(
             alignment: PlaceholderAlignment.middle,
-            child: _ReplaceMark(),
+            child: _ReplaceMark(intro: true),
           ),
           TextSpan(
             text:
@@ -1982,21 +1991,24 @@ class _BannerRow extends StatelessWidget {
 
 /// Amber Replace chip, sitting on the right of the title row.
 class _ReplaceMark extends StatelessWidget {
-  const _ReplaceMark();
+  const _ReplaceMark({this.intro = false});
+
+  /// The sentence chip is taller than the chip on a credit row.
+  final bool intro;
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
         color: BrandColors.chipAmberBg,
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: S8Space.replacePadX,
-          vertical: S8Space.replacePadY,
+          vertical: intro ? S8Space.introPadY : S8Space.replacePadY,
         ),
-        child: Text(
+        child: const Text(
           'Replace',
           style: TextStyle(
             fontFamily: AppTypography.fontFamily,
@@ -2309,8 +2321,8 @@ class _Chip extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.replacePadX,
-          vertical: S8Space.replacePadY,
+          horizontal: S8Space.dayPadX,
+          vertical: S8Space.dayPadY,
         ),
         child: Text(label, style: _label),
       ),
@@ -2412,16 +2424,22 @@ class _DraftBanner extends StatelessWidget {
           color: BrandColors.chipAmberBg,
           borderRadius: BorderRadius.all(Radius.circular(999)),
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Text(
-            'DRAFT · LGU-approved text to be inserted',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: BrandColors.warning,
-              decoration: TextDecoration.none,
+        child: SizedBox(
+          height: S8Space.draftChip,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Center(
+              child: Text(
+                'DRAFT · LGU-approved text to be inserted',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  color: BrandColors.warning,
+                  decoration: TextDecoration.none,
+                ),
+              ),
             ),
           ),
         ),
