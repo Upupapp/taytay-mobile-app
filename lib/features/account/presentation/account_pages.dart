@@ -11,7 +11,9 @@ import '../../messaging/domain/office_messaging_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../registration/domain/registration_domain.dart';
+import '../domain/account_password_client.dart';
 import 'account_canvas.dart';
+import 'change_password_form.dart';
 
 /// Office inbox. Verified. The shell keeps the tab bar.
 class MessagesInboxScreen extends StatefulWidget {
@@ -350,28 +352,43 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           locked: true,
         ),
       ],
+      changePasswordSubtitle: 'Current password, then a new one',
+      showDataExport: false,
       onLanguage: () => AppDialog.acknowledge(
         context: context,
         title: 'Language',
         message: 'The app follows the language of this phone.',
       ),
-      onChangePassword: () => AppDialog.acknowledge(
-        context: context,
-        title: 'Change password',
-        message:
-            'There is no in-session password change. Reset it from the '
-            'sign-in screen.',
-      ),
+      onChangePassword: () => _changePassword(context),
       onPrivacy: () => context.goNamed(AppRoute.profileNotice.routeName),
-      onExport: () => AppDialog.acknowledge(
-        context: context,
-        title: 'Request a copy of my data',
-        message:
-            'A copy of your data is not available from the app yet. Contact '
-            'the LGU Data Protection Officer.',
-      ),
     );
   }
+}
+
+Future<void> _changePassword(BuildContext context) async {
+  final AccountPasswordClient client = AppDependencies.of(
+    context,
+  ).accountPasswordClient;
+  await showDialog<void>(
+    context: context,
+    builder: (BuildContext dialogContext) {
+      return AlertDialog(
+        scrollable: true,
+        title: const Text('Change password'),
+        content: ChangePasswordForm(
+          client: client,
+          onDone: () {
+            Navigator.of(dialogContext).pop();
+            AppDialog.acknowledge(
+              context: context,
+              title: 'Password updated',
+              message: 'Use the new password the next time you sign in.',
+            );
+          },
+        ),
+      );
+    },
+  );
 }
 
 /// RA 10173 notice. Fixed copy, marked draft. It reads nothing.
@@ -386,13 +403,7 @@ class PrivacyNoticeScreen extends StatelessWidget {
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
-      onExport: () => AppDialog.acknowledge(
-        context: context,
-        title: 'Request a copy of my data',
-        message:
-            'A copy of your data is not available from the app yet. Contact '
-            'the LGU Data Protection Officer.',
-      ),
+      showDataExport: false,
     );
   }
 }

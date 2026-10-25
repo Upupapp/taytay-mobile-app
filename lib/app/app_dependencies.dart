@@ -24,6 +24,9 @@ import '../core/storage/keystore_session_store.dart';
 import '../core/storage/public_cache.dart';
 import '../core/storage/secure_secret_store.dart';
 import '../core/telemetry/telemetry.dart';
+import '../features/account/data/firebase_account_password_client.dart';
+import '../features/account/data/mock_account_password_client.dart';
+import '../features/account/domain/account_password_client.dart';
 import '../features/auth/data/auth_api_repository.dart';
 import '../features/auth/data/session_api_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
@@ -110,6 +113,7 @@ class AppDependencies {
     this.mockBehavior,
     SocialServiceRepository? socialServices,
     OfficeMessagingRepository? officeMessaging,
+    AccountPasswordClient? passwordClient,
     this.clock = DateTime.now,
     this.onDispose,
   }) : officeMessagingRepository =
@@ -117,6 +121,8 @@ class AppDependencies {
            OfficeMessagingApiRepository(apiClient: apiClient),
        socialServiceRepository =
            socialServices ?? SocialServiceApiRepository(apiClient: apiClient),
+       accountPasswordClient =
+           passwordClient ?? const FirebaseAccountPasswordClient(),
        citizenApi = NodeCitizenApi(apiClient: apiClient);
 
   /// Builds the production graph.
@@ -344,6 +350,9 @@ class AppDependencies {
       officeMessaging: mock == null
           ? OfficeMessagingApiRepository(apiClient: apiClient)
           : MockOfficeMessagingRepository(mock),
+      passwordClient: mock == null
+          ? const FirebaseAccountPasswordClient()
+          : MockAccountPasswordClient(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
   }
@@ -477,6 +486,9 @@ class AppDependencies {
   /// Resident-to-office messages. Live calls are the thread routes (F31 closed).
   /// A dev mock build supplies synthetic threads.
   final OfficeMessagingRepository officeMessagingRepository;
+
+  /// In-session password change. Firebase on a live build, a mock in dev.
+  final AccountPasswordClient accountPasswordClient;
 
   /// Home, offices, and media on the Node contract.
   final NodeCitizenApi citizenApi;

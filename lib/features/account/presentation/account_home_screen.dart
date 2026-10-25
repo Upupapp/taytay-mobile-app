@@ -12,6 +12,7 @@ import '../../../core/session/access_policy.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
+import '../domain/profile_completion.dart';
 import 'account_canvas.dart';
 
 /// My Account.
@@ -143,7 +144,9 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
     return <AccountMenuRow>[
       AccountMenuRow(
         title: 'Resident Profile',
-        subtitle: 'Name, contact, barangay',
+        subtitle: _detail == null
+            ? 'Name, contact, barangay'
+            : '${profileCompletionPercent(_detail!)}% complete',
         icon: TaytayIcons.user,
         tile: BrandColors.chipBlueBg,
         iconColor: BrandColors.taytayBlue,

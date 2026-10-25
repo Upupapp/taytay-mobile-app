@@ -921,7 +921,10 @@ class MockProfileRepository implements ResidentProfileRepository {
         emailVerified: false,
         createdAt: MockResidentRecordRepository.sampleAccountCreatedAt,
         values: <ResidentProfileField, String>{
+          ResidentProfileField.fullName: resident.displayName,
           ResidentProfileField.emailAddress: resident.email,
+          ResidentProfileField.mobileNumber: resident.mobile,
+          ResidentProfileField.barangay: resident.barangay,
         },
       ),
     );

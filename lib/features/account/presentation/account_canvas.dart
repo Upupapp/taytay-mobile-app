@@ -143,9 +143,11 @@ class AccountCanvas extends StatelessWidget {
     this.toggles = AccountSpecimen.toggles,
     this.onLanguage,
     this.onChangePassword,
+    this.changePasswordSubtitle = 'From the sign-in screen',
     this.onPrivacy,
     this.onBanners,
     this.onExport,
+    this.showDataExport = true,
     this.bubbles = AccountSpecimen.mswdoBubbles,
     this.dayLabel = 'Mon',
     this.onSend,
@@ -176,6 +178,11 @@ class AccountCanvas extends StatelessWidget {
   final List<AccountToggle> toggles;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
+  final String changePasswordSubtitle;
+
+  /// The design draws a data-export row. The API has no such route, so the
+  /// live screens pass false and the row is not shown.
+  final bool showDataExport;
   final VoidCallback? onPrivacy;
   final VoidCallback? onBanners;
   final VoidCallback? onExport;
@@ -258,8 +265,10 @@ class AccountCanvas extends StatelessWidget {
         toggles: toggles,
         onLanguage: onLanguage,
         onChangePassword: onChangePassword,
+        changePasswordSubtitle: changePasswordSubtitle,
         onPrivacy: onPrivacy,
         onExport: onExport,
+        showDataExport: showDataExport,
       ),
       AccountFrame.about => _AboutBody(credits: credits, onBanners: onBanners),
       AccountFrame.thread => _ThreadBody(
@@ -267,7 +276,10 @@ class AccountCanvas extends StatelessWidget {
         dayLabel: dayLabel,
         onSend: onSend,
       ),
-      AccountFrame.privacy => _PrivacyBody(onExport: onExport),
+      AccountFrame.privacy => _PrivacyBody(
+        onExport: onExport,
+        showDataExport: showDataExport,
+      ),
       AccountFrame.banners => _BannersBody(credits: credits),
     };
   }
@@ -1166,15 +1178,19 @@ class _SettingsBody extends StatelessWidget {
     required this.toggles,
     this.onLanguage,
     this.onChangePassword,
+    this.changePasswordSubtitle = 'From the sign-in screen',
     this.onPrivacy,
     this.onExport,
+    this.showDataExport = true,
   });
 
   final List<AccountToggle> toggles;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
+  final String changePasswordSubtitle;
   final VoidCallback? onPrivacy;
   final VoidCallback? onExport;
+  final bool showDataExport;
 
   @override
   Widget build(BuildContext context) {
@@ -1216,7 +1232,7 @@ class _SettingsBody extends StatelessWidget {
                 ),
                 _LinkRow(
                   title: 'Change password',
-                  subtitle: 'From the sign-in screen',
+                  subtitle: changePasswordSubtitle,
                   icon: TaytayIcons.lock,
                   tile: const Color(0xFFFFF4D6),
                   color: BrandColors.warning,
@@ -1246,14 +1262,15 @@ class _SettingsBody extends StatelessWidget {
                     color: BrandColors.success,
                     onTap: onPrivacy,
                   ),
-                  _LinkRow(
-                    title: 'Request a copy of my data',
-                    subtitle: 'Right to access',
-                    icon: TaytayIcons.shield,
-                    tile: const Color(0xFFEAF0FB),
-                    color: BrandColors.taytayBlue,
-                    onTap: onExport,
-                  ),
+                  if (showDataExport)
+                    _LinkRow(
+                      title: 'Request a copy of my data',
+                      subtitle: 'Right to access',
+                      icon: TaytayIcons.shield,
+                      tile: const Color(0xFFEAF0FB),
+                      color: BrandColors.taytayBlue,
+                      onTap: onExport,
+                    ),
                 ],
               ),
             ),
@@ -1471,9 +1488,10 @@ class _CreditRow extends StatelessWidget {
 }
 
 class _PrivacyBody extends StatelessWidget {
-  const _PrivacyBody({this.onExport});
+  const _PrivacyBody({this.onExport, this.showDataExport = true});
 
   final VoidCallback? onExport;
+  final bool showDataExport;
 
   @override
   Widget build(BuildContext context) {
@@ -1529,12 +1547,14 @@ class _PrivacyBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        _OutlineButton(
-          label: 'Request a copy of my data',
-          icon: TaytayIcons.shield,
-          onTap: onExport,
-        ),
+        if (showDataExport) ...<Widget>[
+          const SizedBox(height: 12),
+          _OutlineButton(
+            label: 'Request a copy of my data',
+            icon: TaytayIcons.shield,
+            onTap: onExport,
+          ),
+        ],
       ],
     );
   }

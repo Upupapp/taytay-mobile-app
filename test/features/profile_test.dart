@@ -584,6 +584,52 @@ void main() {
     // tester updates the existing State rather than creating a new one, and the
     // router is a `late final` built from the first session — so a second boot
     // would silently keep the first resident's access level.
+    testWidgets('a verified home paints the fill ratio from the record', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+      );
+
+      expect(find.text('50% complete'), findsOneWidget);
+    });
+
+    testWidgets('settings hides email delivery and a data export', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+        location: '/profile/settings',
+      );
+
+      expect(find.text('Push and email'), findsNothing);
+      expect(find.text('Request a copy of my data'), findsNothing);
+      expect(find.text('Push notifications'), findsWidgets);
+      expect(find.text('Current password, then a new one'), findsOneWidget);
+    });
+
+    testWidgets('edit profile verifies email only', (tester) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: const ResidentProfileDetail(
+          values: <ResidentProfileField, String>{
+            ResidentProfileField.mobileNumber: '09170000000',
+            ResidentProfileField.emailAddress: 'ana@example.test',
+            ResidentProfileField.fullName: 'Ana Dela Cruz',
+          },
+          emailVerified: true,
+        ),
+        location: '/profile/edit',
+      );
+
+      expect(find.text('Verified'), findsOneWidget);
+    });
+
     testWidgets('the badge says verified for a verified resident', (
       tester,
     ) async {

@@ -93,8 +93,9 @@ class TaytayTextField extends StatelessWidget {
               obscureText: obscureText,
               onChanged: onChanged,
               keyboardType: keyboardType,
-              expands: true,
-              maxLines: null,
+              // An obscured field cannot expand: Flutter requires one line.
+              expands: !obscureText,
+              maxLines: obscureText ? 1 : null,
               textAlignVertical: TextAlignVertical.center,
               style: AppTypography.fieldValue.copyWith(
                 color: BrandColors.fieldInk,

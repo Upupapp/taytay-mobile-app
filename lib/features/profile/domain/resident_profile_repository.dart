@@ -7,23 +7,9 @@ import 'resident_profile_detail.dart';
 ///
 /// ---
 ///
-/// **There is no completion percentage here, and adding one needs a contract.**
-/// TAB 12 removed the field it used to carry. Two reasons, in order:
-///
-/// 1. **No authoritative definition exists.** The `ResidentProfile` module
-///    publishes no endpoint and no notion of "complete", so any figure would be
-///    computed from the fields *this build* happens to know — which drifts from
-///    what the LGU actually requires the moment either changes, and would count
-///    staff-only fields a resident will never be shown.
-/// 2. **A number invites the wrong behaviour.** "Your profile is 60% complete"
-///    reads as an instruction on a government service, and a resident who
-///    chases it to 100% may be handing over data the LGU never asked them for —
-///    the opposite of minimisation.
-///
-/// If the backend ever defines completeness, it arrives as a server-supplied
-/// field here and the app renders what it is told. Until then the screen shows
-/// what is on file and what is not, which is the same information without the
-/// false precision.
+/// This summary does not carry a fill ratio. The account home computes one
+/// from the profile columns the resident can fill. A server-supplied figure
+/// would replace that ratio if the API ever published one.
 @immutable
 class ResidentProfileSummary {
   const ResidentProfileSummary({

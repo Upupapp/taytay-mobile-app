@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. The screens, side-by-sides, and recordings are commit `cdd4adf1f79c5737848270ac1125aae364b550ff`. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. The side-by-sides are commit `cdd4adf1f79c5737848270ac1125aae364b550ff`. They were re-rendered after the client answers below and are byte-identical, so those files are unchanged. The recordings were captured again because the live home and the live settings changed. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
@@ -379,21 +379,28 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 
 Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
 
-The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`) plus the S7 service fields already in the app. These designs still ask for data that contract does not publish:
+The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`) plus the S7 service fields already in the app. Clarence's answers for this sprint are applied on the client. These three stay out until backend PR #2 sends the spec:
 
-- No profile completion field. The specimen "60% complete" is fixture copy. The live home does not paint it.
-- No verification decided-at on `UserProfile`. The specimen date is fixture copy.
-- `email_verified` is on the profile. There is no `mobile_verified`. The live edit screen paints the email chip only. The specimen paints both.
-- Notification types are `verification_decided` and `message_received`, each `in_app` and `push`. There is no balita type, no emergency type, and no email channel. The Balita and emergency rows stay on and are not written. The live office-reply subtitle is "Push notifications". The specimen still says "Push and email".
-- No in-session change-password route. The reset flow exists. This app does not call the staff token route.
-- No data-export route. "Request a copy of my data" has nowhere to send.
-- No privacy-notice body and no photo-credit fields. The notice is fixed DRAFT copy until the LGU supplies it. Credits list every bundled photograph; the test compares the list to the asset manifest.
+- `verification_decided_at` on `GET /me`. The specimen date on 08-01 stays fixture copy. The live verification subtitle stays "Verified".
+- Balita and emergency preference types, each `in_app` and `push`. Those two rows stay locked on and are not written.
+- `privacy_notice` with `version`, `updated_at`, and `body_markdown` in `GET /app/config`. The notice stays the fixed DRAFT copy.
+
+Applied now:
+
+- Profile completion is computed on the client. The API does not publish a figure. Ten resident-fillable `GET /me` columns count: name, birthdate, sex, mobile, email, barangay, street, the free-text address, purok, and an avatar. System columns are left out. The live home paints the rounded percent. The specimen "60% complete" stays fixture copy, so 08-01 is unchanged. `profileCompletionPercent` is covered at 0, 60, and 100.
+- There is no phone verification. The live edit screen paints the email chip only. The specimen still paints a mobile chip, so 08-03 is unchanged.
+- There is no email notification channel. Live toggle subtitles say "Push notifications". The specimen still says "Push and email", so 08-04 is unchanged.
+- Change password uses the Firebase client: `reauthenticateWithCredential`, then `updatePassword`. A dev mock build and the tests use `MockAccountPasswordClient` and do not talk to Firebase. Field errors are app copy. Data export is out of scope: the live settings row and the live privacy-notice button are hidden. The specimen still shows both, so 08-04 and 08-09 are unchanged.
+- Photo credits stay on the bundled manifest. The test compares the list to the asset keys.
+- A thread label joins `GET /offices` and uses `short_name` when that field is a non-empty string, then `name`. A failed offices read leaves the slug.
+
+Also still true:
+
 - No SAMPLE flag on threads. The fixture may mark one. A live thread is never marked sample.
-- A thread publishes `office_slug`. The short name comes from the messaging repository and `GET /offices`.
 - Avatar upload exists. There is no "reviewed by the LGU" status. The edit screen shows that sentence as copy.
 - A digital-ID resource exists. 08-01 does not show it, and this sprint adds no digital-ID row. The existing row stays on `/profile/record`.
 - The design says "14 photos". That is the office-banner count (the hall, shared, plus 13 office-only photographs). The manifest has 16 photographs, because the three welcome photographs are credited on 08-05 and the hall is in both lists. The office-banner summary uses the office-banner length.
 
 `ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (461861 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (886876 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1615 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (465932 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (868378 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, and the live settings and notice hide data export. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1627 tests, with 15 skipped (the recording and live tags).

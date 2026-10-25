@@ -4,9 +4,45 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/assets/asset_manifest.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/features/account/data/firebase_account_password_client.dart';
+import 'package:taytay_resident/features/account/data/mock_account_password_client.dart';
 import 'package:taytay_resident/features/account/domain/photo_credit.dart';
+import 'package:taytay_resident/features/account/domain/profile_completion.dart';
 import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
+import 'package:taytay_resident/features/account/presentation/change_password_form.dart';
+import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+
+class _RecordingUser implements SignedInPasswordUser {
+  _RecordingUser({this.rejectCurrent = false});
+
+  final bool rejectCurrent;
+  final List<String> calls = <String>[];
+
+  @override
+  String? get email => 'juana@example.com';
+
+  @override
+  Future<void> reauthenticate(String password) async {
+    calls.add('reauthenticate');
+    if (rejectCurrent) {
+      throw const PasswordChangeException(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'current_password': <String>['That password does not match.'],
+          },
+        ),
+      );
+    }
+  }
+
+  @override
+  Future<void> updatePassword(String password) async {
+    calls.add('update');
+  }
+}
 
 void main() {
   test('photo credits name every bundled photograph', () {
@@ -25,6 +61,161 @@ void main() {
       reason: 'a photograph is credited twice',
     );
   });
+
+  test('profile completion counts the ten resident columns', () {
+    expect(profileCompletionPercent(const ResidentProfileDetail()), 0);
+    expect(
+      profileCompletionPercent(
+        const ResidentProfileDetail(
+          values: <ResidentProfileField, String>{
+            ResidentProfileField.fullName: 'Juana Dela Cruz',
+            ResidentProfileField.birthDate: '1992-03-14',
+            ResidentProfileField.sex: 'female',
+            ResidentProfileField.mobileNumber: '09170000000',
+            ResidentProfileField.emailAddress: 'juana@example.com',
+            ResidentProfileField.barangay: 'barangay-sample',
+          },
+        ),
+      ),
+      60,
+    );
+    expect(
+      profileCompletionPercent(
+        const ResidentProfileDetail(
+          values: <ResidentProfileField, String>{
+            ResidentProfileField.fullName: 'Juana Dela Cruz',
+            ResidentProfileField.birthDate: '1992-03-14',
+            ResidentProfileField.sex: 'female',
+            ResidentProfileField.mobileNumber: '09170000000',
+            ResidentProfileField.emailAddress: 'juana@example.com',
+            ResidentProfileField.barangay: 'barangay-sample',
+            ResidentProfileField.streetAddress: '1 Sample St',
+            ResidentProfileField.purokOrSitio: '1',
+          },
+          hasStreetLine: true,
+          hasFreeAddress: true,
+          hasAvatar: true,
+        ),
+      ),
+      100,
+    );
+    const ResidentProfileDetail withSystemOnly = ResidentProfileDetail(
+      emailVerified: true,
+      closed: true,
+    );
+    expect(profileCompletionPercent(withSystemOnly), 0);
+  });
+
+  test('a dev password change stays on the mock', () async {
+    final MockAccountPasswordClient client = MockAccountPasswordClient();
+    final Result<void> wrong = await client.changePassword(
+      currentPassword: 'wrong-password',
+      newPassword: 'Newpass1',
+    );
+    expect(wrong, isA<Err<void>>());
+    expect(
+      (wrong as Err<void>).failure,
+      isA<ValidationFailure>().having(
+        (ValidationFailure failure) =>
+            failure.firstErrorFor('current_password'),
+        'current',
+        'That password does not match.',
+      ),
+    );
+
+    final Result<void> updated = await client.changePassword(
+      currentPassword: 'password-sample',
+      newPassword: 'Newpass1',
+    );
+    expect(updated, isA<Ok<void>>());
+    expect(client.currentPassword, 'Newpass1');
+
+    final Result<void> again = await client.changePassword(
+      currentPassword: 'password-sample',
+      newPassword: 'Newpass2',
+    );
+    expect(again, isA<Err<void>>());
+  });
+
+  test('Firebase reauthenticates before it updates the password', () async {
+    final _RecordingUser user = _RecordingUser();
+    final FirebaseAccountPasswordClient client = FirebaseAccountPasswordClient(
+      session: user,
+    );
+    final Result<void> result = await client.changePassword(
+      currentPassword: 'password-sample',
+      newPassword: 'Newpass1',
+    );
+    expect(result, isA<Ok<void>>());
+    expect(user.calls, <String>['reauthenticate', 'update']);
+  });
+
+  test('a rejected current password does not call updatePassword', () async {
+    final _RecordingUser user = _RecordingUser(rejectCurrent: true);
+    final Result<void> result =
+        await FirebaseAccountPasswordClient(session: user).changePassword(
+          currentPassword: 'wrong-password',
+          newPassword: 'Newpass1',
+        );
+    expect(result, isA<Err<void>>());
+    expect(user.calls, <String>['reauthenticate']);
+  });
+
+  test(
+    'the Firebase client is the only account file that talks to Firebase',
+    () {
+      final String source = File(
+        'lib/features/account/data/firebase_account_password_client.dart',
+      ).readAsStringSync();
+      expect(source, contains('reauthenticateWithCredential'));
+      expect(source, contains('updatePassword'));
+      final List<String> others = <String>[];
+      for (final File file in Directory(
+        'lib/features/account',
+      ).listSync(recursive: true).whereType<File>()) {
+        if (!file.path.endsWith('.dart')) continue;
+        if (file.path.endsWith('firebase_account_password_client.dart')) {
+          continue;
+        }
+        if (file.readAsStringSync().contains('package:firebase_auth')) {
+          others.add(file.path);
+        }
+      }
+      expect(others, isEmpty);
+    },
+  );
+
+  test(
+    'live account screens hide phone verification, email, and data export',
+    () {
+      final String source = File(
+        'lib/features/account/presentation/account_pages.dart',
+      ).readAsStringSync();
+      final String edit = source
+          .split('class EditProfileScreen')
+          .last
+          .split('class AccountSettingsScreen')
+          .first;
+      final String settings = source
+          .split('class AccountSettingsScreen')
+          .last
+          .split('class PrivacyNoticeScreen')
+          .first;
+      final String notice = source
+          .split('class PrivacyNoticeScreen')
+          .last
+          .split('class PhotoCreditsScreen')
+          .first;
+      expect(edit, isNot(contains('verified: true')));
+      expect(edit, contains('verified: _emailVerified'));
+      expect(settings, isNot(contains('Push and email')));
+      expect(settings, contains('Push notifications'));
+      expect(settings, contains('showDataExport: false'));
+      expect(settings, isNot(contains('Request a copy of my data')));
+      expect(notice, contains('showDataExport: false'));
+      expect(notice, isNot(contains('Request a copy of my data')));
+    },
+  );
 
   test('the privacy notice reads nothing about a person', () {
     final String source = File(
@@ -53,6 +244,29 @@ void main() {
       }
     }
     expect(offenders, isEmpty, reason: offenders.join('\n'));
+  });
+
+  testWidgets('the password form reports a mismatch and a mock success', (
+    tester,
+  ) async {
+    final MockAccountPasswordClient client = MockAccountPasswordClient();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: ChangePasswordForm(client: client)),
+      ),
+    );
+    await tester.enterText(find.byType(TextField).at(0), 'password-sample');
+    await tester.enterText(find.byType(TextField).at(1), 'Newpass1');
+    await tester.enterText(find.byType(TextField).at(2), 'Otherpass1');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+    expect(find.text('Those passwords do not match.'), findsOneWidget);
+    expect(client.currentPassword, 'password-sample');
+
+    await tester.enterText(find.byType(TextField).at(2), 'Newpass1');
+    await tester.tap(find.text('Save password'));
+    await tester.pump();
+    expect(client.currentPassword, 'Newpass1');
   });
 
   testWidgets('the back control is 48 dp and a home row is at least that', (
