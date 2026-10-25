@@ -12,7 +12,7 @@ This file records that the words were looked for. It does not invent them.
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
 | S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
 | S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | 5d9d4c41377749b73d301771c3f87d4dc8467c95 | No approval words. |
-| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | cdafeab1e69a801f3c5d479bcb422be6d2919697 | No approval words. |
+| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | cedf0e4f29ffa07755de3a7fe0f0f3adeb6c3ee8 | No approval words. |
 
 ## S0 pixel match
 
@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. This pass puts the inbox timestamp, the SAMPLE chip, and the Replace chips where the designs draw them. The side-by-sides, the placement crops, and both clips are in the evidence commit named in the index. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. This pass puts the inbox timestamp, the SAMPLE chip, and the Replace chips where the designs draw them. The side-by-sides, the placement crops, and both clips are commit `cedf0e4f29ffa07755de3a7fe0f0f3adeb6c3ee8`. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
