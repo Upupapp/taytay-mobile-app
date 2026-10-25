@@ -25,7 +25,6 @@ import 'package:taytay_resident/features/news/domain/announcement_repository.dar
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
-import 'package:taytay_resident/features/services/domain/assistance_intake.dart';
 import 'package:taytay_resident/features/services/domain/service_request_repository.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
@@ -62,21 +61,6 @@ class CountingRequestRepository implements ServiceRequestRepository {
     listCalls++;
     return const Err<Paginated<AssistanceHistoryEntry>>(ServerFailure());
   }
-
-  @override
-  Future<Result<AssistanceIntakeForm>> loadIntakeForm(
-    String serviceCode,
-  ) async => const Err<AssistanceIntakeForm>(ServerFailure());
-
-  @override
-  Future<Result<ServiceRequest>> submitRequest({
-    required String serviceCode,
-    required String narrative,
-    required Map<String, Object?> answers,
-    required List<String> consentKeys,
-    required List<String> attachmentIds,
-    required String idempotencyKey,
-  }) async => const Err<ServiceRequest>(ServerFailure());
 
   @override
   Future<Result<void>> cancelOwnRequest({

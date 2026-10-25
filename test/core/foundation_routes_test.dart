@@ -65,6 +65,7 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.requestDetail: <String, String>{'requestId': 'req-sample-1'},
   AppRoute.requestRequirements: <String, String>{'requestId': 'req-sample-1'},
   AppRoute.programDetail: <String, String>{'programId': 'aics'},
+  AppRoute.tulongOffice: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeDetail: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeCompose: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeMessageSent: <String, String>{'officeId': 'mswdo'},
@@ -240,7 +241,13 @@ void main() {
       if (route == AppRoute.splash || route == AppRoute.signIn) continue;
       _go(tester, _openLocation(route));
       await tester.pumpAndSettle();
-      expect(_currentPath(tester), _openLocation(route), reason: route.name);
+      final String landed =
+          route == AppRoute.serviceDetail || route == AppRoute.applyForService
+          ? AppRoute.programDetail.location(<String, String>{
+              'programId': _sampleArguments[route]!['serviceCode']!,
+            })
+          : _openLocation(route);
+      expect(_currentPath(tester), landed, reason: route.name);
       _expectBackButtons(route);
       if (_wovenHeaderRoutes.contains(route)) {
         expect(

@@ -87,12 +87,11 @@ void main() {
   group('the funnels TAB 16 names are actually recorded', () {
     test('each has a call site, not merely an enum value', () {
       // The finding this TAB started from: the vocabulary was complete and
-      // nothing recorded it. Five flows, zero call sites — declared telemetry
-      // that would have reported an empty funnel as a quiet one.
+      // nothing recorded it. Declared telemetry would have reported an empty
+      // funnel as a quiet one. Assistance applications are not filed in this
+      // app, so that flow has no recorder.
       final Map<TelemetryFlow, String> owners = <TelemetryFlow, String>{
         TelemetryFlow.signIn: 'lib/features/auth/data/auth_api_repository.dart',
-        TelemetryFlow.assistanceApplication:
-            'lib/features/services/data/assistance_api_repository.dart',
         TelemetryFlow.documentUpload:
             'lib/features/requirements/data/requirement_api_repository.dart',
         TelemetryFlow.eventRegistration:

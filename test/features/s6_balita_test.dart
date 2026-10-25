@@ -745,6 +745,19 @@ void main() {
     expect(find.text('Saving a story is not available yet.'), findsNothing);
   });
 
+  testWidgets('saving a story clears when the resident leaves Balita', (
+    tester,
+  ) async {
+    await _boot(tester, repository: _Pages(<Announcement>[_story()]));
+    await tester.tap(find.byKey(const Key('balita-save-post-1')));
+    await tester.pumpAndSettle();
+    expect(find.text('Saving a story is not available yet.'), findsOneWidget);
+
+    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/home');
+    await tester.pumpAndSettle();
+    expect(find.text('Saving a story is not available yet.'), findsNothing);
+  });
+
   testWidgets('an Advisory chip is sent as the lowercase slug', (tester) async {
     final _Pages pages = _Pages(<Announcement>[_story()]);
     await _boot(tester, repository: pages);

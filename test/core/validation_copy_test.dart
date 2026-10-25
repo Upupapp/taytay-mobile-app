@@ -83,10 +83,19 @@ void main() {
   };
 
   test('the scan finds FieldError constructions at all', () {
+    // The floor is the number of `FieldError(` matches still in `lib/`.
+    //
+    // Removing in-app applications deleted `assistance_intake_validation.dart`
+    // (seven constructions) and the intake screen (one `localisedFieldError(`
+    // call). The scan finds 24. A smaller number means the scanner stopped
+    // matching, unless a later change removed constructions on purpose and
+    // recorded that here.
     expect(
       fieldErrors().length,
-      greaterThanOrEqualTo(25),
-      reason: 'the scan has stopped matching; fix it, do not lower this',
+      greaterThanOrEqualTo(24),
+      reason:
+          'the scan must still find the 24 FieldError( matches that remain '
+          'after the assistance intake was deleted',
     );
   });
 

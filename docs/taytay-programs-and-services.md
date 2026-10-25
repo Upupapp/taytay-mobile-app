@@ -21,6 +21,21 @@ resident is told before the request rather than by a `401`.
 The service catalogue is the one repository in this app backed by a real,
 implemented endpoint — which makes it the surface that carries acceptance 1.
 
+The Tulong tab is a second reader of that same services contract. `/programs`
+and `/programs/:slug` call `GET /api/v1/services` and `GET /api/v1/services/{slug}`.
+Both are public. `GET /api/v1/programs` is still absent from the Node contract.
+`ProgramApiRepository` still declines that call, and Tulong does not make it.
+The pages are information only: there is no apply control. `/services/:serviceCode` and `/apply/:serviceCode` redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone. `Service` publishes
+`icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps`,
+`featured_headline`, `schedule`, `hero_url`, and `hidden_from_list`. Contacts
+are `{type, label|null, value}`. The catalogue omits hidden services.
+`featured=true` returns featured services, including hidden ones, and a hidden
+service still opens by slug. The featured layout needs both a headline and a
+claim step. There is still no hours field on `Service` (hours come from
+`GET /offices`), no apply route, no SAMPLE flag, and no saved-at. `hero_url`
+is null until an image is stored; this app does not fetch
+`GET /services/{slug}/hero`. Staging and production refuse mock mode.
+
 ---
 
 ## 2. Guests can use the directory — acceptance 1
@@ -127,6 +142,10 @@ app.
 
 ## 6. Access-aware CTAs that never act by themselves
 
+The catalogue detail and the assistance intake are no longer routed.
+`/services/:serviceCode` and `/apply/:serviceCode` open the Tulong page, which
+has no apply control.
+
 | Session | Tapping "How to apply" |
 | --- | --- |
 | Guest | Sign-in gate, intent held |
@@ -150,7 +169,9 @@ is submitted by tapping this."*
 `/services/:serviceCode` and `/programs/:programCode`, both using the **stable
 code** rather than the UUID. A code is what a municipal office quotes, it is
 legible in a link, it survives a re-seed of the catalogue, and it fits the
-deep-link character class unchanged.
+deep-link character class unchanged. Opening `/services/:serviceCode` or
+`/apply/:serviceCode` redirects to `/programs/:serviceCode`. That page is the
+Tulong information page.
 
 Both are registered as `DeepLink` targets (`service`, `program`, `programs`), so
 they inherit TAB 10's rules whole: an allow-listed target, one bounded

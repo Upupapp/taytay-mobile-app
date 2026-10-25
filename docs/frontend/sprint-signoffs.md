@@ -273,6 +273,58 @@ Comments, reactions, and reports stay off the article page. Those calls still de
 
 Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s6/recordings/s6-article.mp4` (2179907 bytes, 61 frames) and `s6-filter.mp4` (2977029 bytes, 103 frames). The article clip scrolls the feed, shows "Saving a story is not available yet.", opens the PWD story, and comes back. The filter clip scrolls, opens Events, returns through See all announcements, opens an article, and comes back. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1625 tests, with 11 skipped (the recording and live tags).
 
+## S7 Tulong
+
+S7 is not approved. This section records the information pages for municipal social services. It does not record approval words.
+
+Tulong is the shell tab at `/programs`. The list and each programme page are public, so a guest, an unverified resident, and a verified resident read the same pages. The list is a shell root and has no back button. Every programme page and the social services centre use `TaytayBackButton` (44 dp disc, 48 dp hit). There is no apply control and no submit. `/services/:serviceCode` and `/apply/:serviceCode` both redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone.
+
+Live reads are `GET /services` and `GET /services/{slug}`, public, with the session token attached when one exists. Office hours and the short name come from `GET /offices`. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) reads `test/fixtures/mock/tulong_services.json`. Staging and production refuse mock mode. `GET /programs` is still absent. `ProgramApiRepository` still declines that call and Tulong does not make it.
+
+The line measure is `rev5.py`: every dark run from the top of the 1170×2532 frame. A row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, in image pixels. Side-by-sides are design | render | heat in `test/goldens/compare/s7/`. Mismatch is CIE76 ΔE above 6 over the full frame. `lib/features/tulong` contains no `Transform.translate`.
+
+Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge is not a content card. Deviation is the start row, render minus design.
+
+| Screen | Lines (build / design) | Max line | Max card edge | Mismatch |
+| --- | --- | --- | --- | --- |
+| 07-01 Programme list | 16 / 16 | 1 | 0 | 2.14% (63297/2962440) |
+| 07-02 OSCA | 19 / 19 | 2 | 1 | 3.23% (95641/2962440) |
+| 07-03 Social services centre | 18 / 18 | 2 | 1 | 3.90% (115541/2962440) |
+| 07-04 Featured programme | 18 / 18 | 2 | 1 | 4.62% (136763/2962440) |
+| 07-05 Offline | 14 / 14 | 2 | 0 | 2.03% (60237/2962440) |
+| 07-06 PWD assistance | 20 / 20 | 2 | 0 | 3.64% (107825/2962440) |
+| 07-07 Solo parent | 21 / 21 | 2 | 1 | 3.47% (102838/2962440) |
+| 07-08 AICS | 20 / 20 | 2 | 1 | 3.39% (100527/2962440) |
+| 07-09 Educational assistance | 22 / 22 | 2 | 0 | 3.17% (94044/2962440) |
+| 07-10 Women and children | 20 / 20 | 2 | 1 | 3.18% (94262/2962440) |
+| 07-11 PESO jobs | 19 / 19 | 2 | 0 | 3.70% (109504/2962440) |
+| 07-12 Youth | 20 / 20 | 2 | 0 | 3.50% (103818/2962440) |
+
+Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only.
+
+`07-03` is the existing directory office page for MSWDO, inside the Tulong shell. The office fixture was not edited.
+
+`Service` on taytay-backend `7293051` publishes the fields Tulong paints. The live decoder reads them. A colour that is not `#RGB` or `#RRGGBB` is left unset and the tile stays the blue pair. An unknown `icon_key` is `handHeart`. `users-round` is Lucide codepoint 58478. The vendored font names that glyph `users-2`.
+
+- `icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps` (default `[]`), `featured_headline`, `schedule`, `hero_url`, and `hidden_from_list` are on the service. The hero chip is the badge, then the office `short_name`.
+- The featured layout is used only when `featured_headline` and at least one claim step are both present. `featured: true` alone stays on the standard page.
+- `GET /services` omits `hidden_from_list`. `GET /services?featured=true` returns featured services and includes ones hidden from the catalogue. A hidden service still opens by slug.
+- Contacts are `{type, label|null, value}` with type `facebook`, `landline`, `hotline`, `email`, or `mobile`. An unrecognised type is still shown. A label that names the anti-trafficking line keeps the siren glyph.
+- `hero_url` is stored. It is null until an image is stored. `GET /services/{slug}/hero` returns the bytes and this app does not fetch them. A null URL keeps the icon tile.
+- No hours field. A contact whose label contains "hour" is shown as sent. Otherwise the hours row uses `GET /offices` when that office has an hours string.
+- No SAMPLE flag. A live requirement is never marked sample. The dev fixture may still mark one.
+- No saved-pages resource and no saved-at. A live failure lists services already decoded in this process, newest first, at most 20, with the summary as the second line. Nothing is written to device storage. The offline specimen dates are fixture `saved_label`.
+- No apply or submit control. `/services/:serviceCode` and `/apply/:serviceCode` both redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone.
+- Locations are `{name, address}` only.
+
+Message follows the directory gate. A guest sees "Sign in to continue". An unverified resident sees "Verify your account to message offices". A verified resident opens the existing composer at `/offices/:officeId/message`. Share sends the title and the body and does not invent a URL. Call and directions use the published phone and address. An empty phone or address is app copy, not the server message.
+
+The note under the list says "Information on municipal programmes. These are information pages, not applications." Its padding matches the stylesheet, 10 dp below the note. The list card is padded 3 dp on the top and the bottom, which is what puts that card's edges on the specimen. The requirements card gives 4 dp of the extra bottom padding back, and the facts card takes the same 4 image px as top padding, so the fact lines stay put while the borders move. The featured steps card and the card under it do the same. The saved-pages card is 2 dp taller at the bottom. Card content is inset 1 px on the left and the right so a 1 px border consumes width the way CSS `border-box` does. A vertical inset moves every line by 3 image pixels and is not used. The search field is drawn at 44 dp. Its hit target is 48 dp and does not move the ink. The list bell is the same: a 44 dp circle inside a 48 dp hit, so the header row stays the height of the specimen. A primary action label ellipsizes when a large text size no longer fits the button. At the specimen scale the label still sits in the centre. A requirement marked SAMPLE keeps the chip on the last text line when it fits. Women and children use Lucide heart-pulse. PESO uses briefcase-business. Youth uses `users-round` (codepoint 58478, font name `users-2`) through `TaytayIcon` on the list tile, the page tile, and the watermark. OSCA stays on the `users` glyph. Side-by-sides for `07-01` and `07-12` were repainted after that glyph change. Both stay within 2 image pixels on lines and on card edges.
+
+Leaving `/news` still clears the Balita save message. `test/features/s6_balita_test.dart` saves a story, opens the article, and also leaves Balita for Home. The snackbar is gone in both cases.
+
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps, so playback is real time: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1425612 bytes, 210 frames, 7.0 s) and `s7-office.mp4` (2522864 bytes, 300 frames, 10.0 s). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both play the route transition through. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1611 tests, with 13 skipped (the recording and live tags).
+
 ## Contract gaps after the Node OpenAPI
 
 F31 is closed. `GET/POST /threads`, messages, mark-read, and close are citizen routes and the live repository calls them.
@@ -288,7 +340,7 @@ These designs still need data the spec does not publish. The calls decline with 
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.
 - Household (`03-07`). `PATCH /me` sends `street` and `purok`. The resident household calls are `GET` and `PATCH /households/current` and `POST /households`. Years at the address, residence type, and member count are not on the spec, so the live repository does not send them. The dev mock does. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
-- Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
+- Assistance intake and submit. `/apply/:serviceCode` redirects to `/programs/:slug`. Requirements on an existing case stay in the app and still decline. Tulong is `GET /services` and `GET /services/{slug}`.
 - Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.
 - `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.

@@ -79,12 +79,11 @@ go and verify themselves is nonsense.
 
 ## 4. The form is the office's
 
-Fields and consents are server-defined, using the same `ServerField` /
-`ServerConsent` shapes the assistance intake uses. Those types moved to
-`core/forms/server_form.dart` for this TAB: duplicating them would have produced
-two enums and two `isRenderable` rules over one concept, which is the drift D-79
-already records. `assistance_intake.dart` aliases the old names, so TAB 15 reads
-exactly as it did.
+Fields and consents are server-defined `ServerField` and `ServerConsent`
+values. Those types live in `core/forms/server_form.dart`: duplicating them
+would have produced two enums and two `isRenderable` rules over one concept,
+which is the drift D-79 already records. The assistance intake that first used
+these names is gone. Event registration is the feature that renders them.
 
 An **unrenderable field blocks registration** rather than being skipped —
 registering somebody without an answer the office requires produces a place they

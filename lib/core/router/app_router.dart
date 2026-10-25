@@ -29,17 +29,15 @@ import '../../features/platform/presentation/blocking_notice_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
-import '../../features/programs/presentation/program_detail_screen.dart';
-import '../../features/programs/presentation/programs_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
-import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
-import '../../features/services/presentation/service_detail_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/tulong/presentation/service_info_screen.dart';
+import '../../features/tulong/presentation/tulong_screen.dart';
 import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
@@ -209,12 +207,18 @@ GoRouter buildAppRouter({
                 name: AppRoute.services.routeName,
                 builder: (context, state) => const DirectoryScreen(),
                 routes: <RouteBase>[
+                  // The old catalogue detail opened an apply screen. Tulong
+                  // is information only, so this address opens that page.
                   GoRoute(
                     path: ':serviceCode',
                     name: AppRoute.serviceDetail.routeName,
-                    builder: (context, state) => ServiceDetailScreen(
-                      serviceCode: state.pathParameters['serviceCode'] ?? '',
-                    ),
+                    redirect: (context, state) {
+                      final String code =
+                          state.pathParameters['serviceCode'] ?? '';
+                      return AppRoute.programDetail.location(<String, String>{
+                        'programId': code,
+                      });
+                    },
                   ),
                 ],
               ),
@@ -268,13 +272,21 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: AppRoute.programs.path,
                 name: AppRoute.programs.routeName,
-                builder: (context, state) => const ProgramsScreen(),
+                builder: (context, state) => const TulongScreen(),
                 routes: <RouteBase>[
+                  // Before `:programId`, so `office` is not read as a slug.
+                  GoRoute(
+                    path: 'office/:officeId',
+                    name: AppRoute.tulongOffice.routeName,
+                    builder: (context, state) => OfficeDetailScreen(
+                      officeId: state.pathParameters['officeId'] ?? '',
+                    ),
+                  ),
                   GoRoute(
                     path: ':programId',
                     name: AppRoute.programDetail.routeName,
-                    builder: (context, state) => ProgramDetailScreen(
-                      programId: state.pathParameters['programId'] ?? '',
+                    builder: (context, state) => ServiceInfoScreen(
+                      slug: state.pathParameters['programId'] ?? '',
                     ),
                   ),
                 ],
@@ -428,15 +440,17 @@ GoRouter buildAppRouter({
           ),
         ],
       ),
-      // Full-screen by intent: a resident part-way through an application
-      // should not have a navigation bar under their thumb inviting them out
-      // of it.
+      // The old application address. Tulong is information only, so this
+      // opens the programme page for the same slug.
       GoRoute(
         path: AppRoute.applyForService.path,
         name: AppRoute.applyForService.routeName,
-        builder: (context, state) => AssistanceIntakeScreen(
-          serviceCode: state.pathParameters['serviceCode'] ?? '',
-        ),
+        redirect: (context, state) {
+          final String code = state.pathParameters['serviceCode'] ?? '';
+          return AppRoute.programDetail.location(<String, String>{
+            'programId': code,
+          });
+        },
       ),
       GoRoute(
         path: AppRoute.household.path,

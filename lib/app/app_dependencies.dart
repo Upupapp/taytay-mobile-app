@@ -60,6 +60,9 @@ import '../features/services/domain/service_catalog_repository.dart';
 import '../features/services/domain/service_request_repository.dart';
 import '../features/settings/data/privacy_api_repository.dart';
 import '../features/settings/domain/account_controls.dart';
+import '../features/tulong/data/mock_social_service_repository.dart';
+import '../features/tulong/data/social_service_api_repository.dart';
+import '../features/tulong/domain/social_service_repository.dart';
 import '../features/verification/data/kyc_api_repository.dart';
 import '../features/verification/data/resident_record_api_repository.dart';
 import '../features/verification/domain/resident_record_repository.dart';
@@ -105,12 +108,15 @@ class AppDependencies {
     required this.accountControlsRepository,
     required this.platform,
     this.mockBehavior,
+    SocialServiceRepository? socialServices,
     OfficeMessagingRepository? officeMessaging,
     this.clock = DateTime.now,
     this.onDispose,
   }) : officeMessagingRepository =
            officeMessaging ??
            OfficeMessagingApiRepository(apiClient: apiClient),
+       socialServiceRepository =
+           socialServices ?? SocialServiceApiRepository(apiClient: apiClient),
        citizenApi = NodeCitizenApi(apiClient: apiClient);
 
   /// Builds the production graph.
@@ -284,6 +290,9 @@ class AppDependencies {
       programRepository: mock == null
           ? ProgramApiRepository(apiClient: apiClient)
           : MockProgramRepository(mock),
+      socialServices: mock == null
+          ? SocialServiceApiRepository(apiClient: apiClient)
+          : MockSocialServiceRepository(mock),
       announcementRepository: mock == null
           ? NewsfeedApiRepository(apiClient: apiClient)
           : MockAnnouncementRepository(mock),
@@ -398,10 +407,12 @@ class AppDependencies {
   final PlatformRepository platformRepository;
   final ServiceCatalogRepository serviceCatalogRepository;
 
-  /// Assistance programmes, in the citizen projection. Bearer-authenticated by
-  /// contract, and `planned`, so the shipped implementation declines rather than
-  /// inventing an offer of public money in the LGU's name.
+  /// Assistance programmes. The Node contract has no programme resource.
+  /// Tulong reads [socialServiceRepository] instead. This one still declines.
   final ProgramRepository programRepository;
+
+  /// Published social services. `GET /services`. Public.
+  final SocialServiceRepository socialServiceRepository;
 
   /// Public municipal content. Both endpoints are committed and `planned`, so
   /// both shipped implementations decline rather than inventing announcements

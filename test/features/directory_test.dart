@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
-import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/router/deep_link.dart';
@@ -260,6 +259,7 @@ Future<BootedDirectory> bootDirectory(
     registrationRepository: base.registrationRepository,
     barangayDirectory: base.barangayDirectory,
     platform: base.platform,
+    socialServices: base.socialServiceRepository,
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);
@@ -862,20 +862,30 @@ void main() {
       expect(find.textContaining('Business One Stop Shop'), findsOneWidget);
     });
 
-    testWidgets('a guest opening a service deep link is not gated', (
+    testWidgets('a guest opening a service deep link lands on Tulong', (
       tester,
     ) async {
-      await bootDirectory(tester, location: '/services/CEDULA');
+      await bootDirectory(tester, location: '/services/pwd-assistance');
 
-      expect(find.text('Community tax certificate'), findsOneWidget);
+      expect(
+        GoRouter.of(
+          tester.element(find.byType(Scaffold).first),
+        ).routerDelegate.currentConfiguration.uri.path,
+        '/programs/pwd-assistance',
+      );
+      expect(find.text('PWD Assistance'), findsWidgets);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
+      expect(find.text('Apply for this service'), findsNothing);
     });
 
-    testWidgets('an unknown code says so and offers the list', (tester) async {
+    testWidgets('an unknown service code lands on the Tulong page', (
+      tester,
+    ) async {
       await bootDirectory(tester, location: '/services/NOPE');
 
-      expect(find.text('This service is not available'), findsOneWidget);
-      expect(find.text('See all services'), findsOneWidget);
+      expect(find.text('This programme is not available'), findsOneWidget);
+      expect(find.text('Apply for this service'), findsNothing);
+      expect(find.text('See all services'), findsNothing);
     });
 
     testWidgets('a query with no office match is a different sentence', (
@@ -898,181 +908,22 @@ void main() {
     });
   });
 
-  group('programmes are public, and a guest reads them', () {
-    // Inverted at TAB 07, and the inversion is the finding. These tests used to
-    // assert that a guest was sent to sign in and issued no request — the app's
-    // own rule, not the server's. `GET programs` carries no `auth:sanctum`, so
-    // the effect was to withhold published municipal information from the
-    // residents least likely to already have an account.
-    testWidgets('a guest sees the list and the request is made', (
-      tester,
-    ) async {
-      final booted = await bootDirectory(
-        tester,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs',
-      );
+  group('Tulong is public, and a guest reads it', () {
+    testWidgets('a guest sees the social services list', (tester) async {
+      await bootDirectory(tester, location: '/programs');
 
-      expect(booted.programs.listCalls, 1);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
-      expect(
-        find.text('Assistance to Individuals in Crisis Situation'),
-        findsOneWidget,
-      );
+      expect(find.text('PWD Assistance'), findsOneWidget);
+      expect(find.textContaining('How to apply'), findsNothing);
+      expect(find.text('Apply'), findsNothing);
     });
 
-    testWidgets('a signed-in resident sees the list and the guidance notice', (
-      tester,
-    ) async {
-      final booted = await bootDirectory(
-        tester,
-        level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs',
-      );
+    testWidgets('a guest deep-linking to a service reaches it', (tester) async {
+      await bootDirectory(tester, location: '/programs/aics');
 
-      expect(booted.programs.listCalls, 1);
-      expect(find.text('These are guidelines, not a decision'), findsOneWidget);
-      expect(
-        find.text('Assistance to Individuals in Crisis Situation'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('a guest deep-linking to a programme reaches it', (
-      tester,
-    ) async {
-      final booted = await bootDirectory(
-        tester,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-
-      expect(booted.programs.detailCalls, 1);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
-    });
-  });
-
-  group('programme detail is guidance, never a verdict — acceptance 2', () {
-    testWidgets('eligibility is labelled as guidelines in the heading', (
-      tester,
-    ) async {
-      await bootDirectory(
-        tester,
-        level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-
-      expect(find.text('Who this is meant to help'), findsOneWidget);
-      expect(
-        find.textContaining('Staff decide each application individually'),
-        findsOneWidget,
-      );
-      expect(find.text('A resident of Taytay, Rizal'), findsOneWidget);
-    });
-
-    testWidgets('nothing on the screen promises approval', (tester) async {
-      await bootDirectory(
-        tester,
-        level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-      final rendered = renderedText(tester);
-
-      // Phrases, not words: the correct copy says "whether you qualify is
-      // decided by staff", which contains "you qualify" and must not trip.
-      for (final promise in <String>[
-        'you qualify for',
-        'you are eligible',
-        'you will receive',
-        'has been approved',
-        'guaranteed',
-        'you will get',
-      ]) {
-        expect(rendered, isNot(contains(promise)), reason: promise);
-      }
-      expect(rendered, contains('cannot tell you the outcome in advance'));
-    });
-
-    testWidgets('requirements and details render only published fields', (
-      tester,
-    ) async {
-      await bootDirectory(
-        tester,
-        level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-
-      await reveal(tester, find.text('What to bring'));
-      expect(find.text('Valid government-issued ID'), findsOneWidget);
-      // A conditional requirement says when it applies, right next to itself.
-      expect(find.text('If it applies'), findsOneWidget);
-      expect(find.text('If your address is not on your ID'), findsOneWidget);
-
-      await reveal(tester, find.text('Details'));
-      expect(find.text('AICS'), findsOneWidget);
-      // Told plainly, because an applicant deciding whether to travel deserves
-      // to know when the LGU does not control the answer.
-      expect(find.text('Taytay LGU'), findsOneWidget);
-      expect(find.text('about 7 days'), findsOneWidget);
-
-      // The citizen projection publishes no figure and no legal basis, so
-      // neither has anywhere to appear.
-      expect(find.textContaining('PHP'), findsNothing);
-      expect(find.textContaining('Ordinance'), findsNothing);
-    });
-
-    testWidgets('the CTA explains and submits nothing', (tester) async {
-      await bootDirectory(
-        tester,
-        level: AccessLevel.verified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-
-      await reveal(tester, find.text('Nothing is submitted by tapping this.'));
-      expect(
-        find.text('Nothing is submitted by tapping this.'),
-        findsOneWidget,
-      );
-
-      // Scoped to the button: "Where to apply" sits above it as a detail row.
-      await tester.tap(find.widgetWithText(FilledButton, 'How to apply'));
-      await tester.pumpAndSettle();
-
-      // Guidance, not a submission — there is no endpoint to submit to.
-      expect(find.textContaining('not switched on yet'), findsOneWidget);
-    });
-
-    testWidgets('an unverified resident meets the verification gate', (
-      tester,
-    ) async {
-      final booted = await bootDirectory(
-        tester,
-        level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
-      );
-
-      await reveal(tester, find.text('Nothing is submitted by tapping this.'));
-      await tester.tap(find.widgetWithText(FilledButton, 'How to apply'));
-      await tester.pumpAndSettle();
-
-      expect(
-        find.descendant(
-          of: find.byType(BottomSheet),
-          matching: find.text('Verify your account to continue'),
-        ),
-        findsOneWidget,
-      );
-      // The gate holds the intent; it does not act on it.
-      expect(
-        booted.dependencies.intents.pending?.kind,
-        ResidentIntentKind.applyForService,
-      );
+      expect(find.text('Who can avail'), findsOneWidget);
+      expect(find.textContaining('How to apply'), findsNothing);
     });
   });
 
@@ -1088,12 +939,11 @@ void main() {
       expect(find.text('Municipal offices'), findsOneWidget);
     });
 
-    testWidgets('programme detail survives a 200% text scale', (tester) async {
+    testWidgets('a service page survives a 200% text scale', (tester) async {
       await bootDirectory(
         tester,
         level: AccessLevel.unverified,
-        programs: <AssistanceProgram>[aics()],
-        location: '/programs/prog-aics-0001',
+        location: '/programs/aics',
         textScaler: const TextScaler.linear(2),
         size: const Size(400, 4000),
       );

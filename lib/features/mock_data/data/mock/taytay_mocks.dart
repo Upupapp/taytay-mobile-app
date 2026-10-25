@@ -36,7 +36,6 @@ import '../../../registration/domain/registration_domain.dart';
 import '../../../requirements/domain/resident_requirement.dart';
 import '../../../services/domain/assistance_case.dart';
 import '../../../services/domain/assistance_history.dart';
-import '../../../services/domain/assistance_intake.dart';
 import '../../../services/domain/lgu_service.dart';
 import '../../../services/domain/service_catalog_repository.dart';
 import '../../../services/domain/service_request_repository.dart';
@@ -1215,27 +1214,6 @@ class MockServiceRequestRepository implements ServiceRequestRepository {
       ]),
     );
   }
-
-  @override
-  Future<Result<AssistanceIntakeForm>> loadIntakeForm(String serviceCode) {
-    return _gate.respond(
-      AssistanceIntakeForm(
-        serviceCode: serviceCode,
-        serviceName: 'SAMPLE service',
-        narrativePrompt: 'SAMPLE. This form is not sent to the LGU.',
-      ),
-    );
-  }
-
-  @override
-  Future<Result<ServiceRequest>> submitRequest({
-    required String serviceCode,
-    required String narrative,
-    required Map<String, Object?> answers,
-    required List<String> consentKeys,
-    required List<String> attachmentIds,
-    required String idempotencyKey,
-  }) => _gate.respond(_request('req-sample-new'));
 
   @override
   Future<Result<void>> cancelOwnRequest({

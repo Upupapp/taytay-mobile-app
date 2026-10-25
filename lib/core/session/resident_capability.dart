@@ -120,20 +120,15 @@ enum ResidentCapability {
     route: AppRoute.requests,
   ),
 
-  /// Filing an application for a municipal service.
+  /// Filing an application. The resident app does not do this.
   ///
-  /// **Separate from [trackAssistanceRequests] on purpose**, even though both
-  /// are verified-only and both belong to `ServiceDelivery`. Reading the status
-  /// of something already filed and creating a new obligation on the resident's
-  /// civil record are different acts, and an LGU that later opens one before the
-  /// other — status first, applications when the office has capacity — can do it
-  /// by changing one line here rather than by splitting a capability under
-  /// pressure.
+  /// Kept so the capability list still names the act, and so a later build can
+  /// point it at a route again. There is no screen. `/apply/:serviceCode`
+  /// redirects to the Tulong page.
   applyForAssistance(
     AccessRequirement.verified,
     'Apply for a municipal service',
     BackendAvailability.planned,
-    route: AppRoute.applyForService,
   ),
 
   /// Sending the documents an office asked for on an existing request.

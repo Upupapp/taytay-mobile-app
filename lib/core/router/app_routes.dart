@@ -63,10 +63,12 @@ enum AppRoute {
   /// browse it before registering".
   services('services', '/services', AccessRequirement.public),
 
-  /// One catalogue entry, addressed by its stable code rather than its UUID.
+  /// Old catalogue address. It redirects to the Tulong page for the same slug.
   ///
   /// A code is what a municipal office quotes, it is legible in a link, and it
   /// survives a re-seed of the catalogue. Public, like the list it comes from.
+  /// The address stays so an old link still opens a programme page. It does
+  /// not open an application.
   serviceDetail(
     'service-detail',
     '/services/:serviceCode',
@@ -257,41 +259,40 @@ enum AppRoute {
     parameters: <String>['requestId'],
   ),
 
-  /// Applying for one service. Verified only, like the requests it produces.
+  /// Old application address. It redirects to the Tulong page for the same slug.
   ///
-  /// **A top-level path, not a child of `/services/:serviceCode`.** The
-  /// catalogue is public and this is not, so nesting would put a verified-only
-  /// route inside a public branch — reachable, but only because the guard says
-  /// no on the way in. Keeping the boundary visible in the path means a reader
-  /// can see which parts of the app are open by looking at the table.
-  ///
-  /// It is also full-screen rather than a shell destination: a resident
-  /// part-way through an application should not be invited to wander into
-  /// another tab by a navigation bar under their thumb.
+  /// Public, like the page it opens. An old link must not stop at sign-in on
+  /// the way to information the municipality already publishes.
   applyForService(
     'apply-for-service',
     '/apply/:serviceCode',
-    AccessRequirement.verified,
+    AccessRequirement.public,
     parameters: <String>['serviceCode'],
   ),
 
-  /// Assistance programmes. **Authenticated**, because the committed citizen
-  /// row is `GET /api/v1/programs?status=active` with bearer auth — unlike the
-  /// service catalogue, which is public. The line is the server's.
-  /// Public, because the server publishes it that way.
+  /// Tulong, the social-services list. Public: `GET /api/v1/services`.
   ///
-  /// This route required an account until TAB 07. `GET programs` carries no
-  /// `auth:sanctum` and never has — so the app was withholding information the
-  /// municipality had deliberately made public, from exactly the residents least
-  /// likely to already have an account.
+  /// The path stays `/programs` so existing links keep working. The Node
+  /// contract has no programme resource. This screen does not call it.
   programs('programs', '/programs', AccessRequirement.public),
 
-  /// One programme, by its stable code.
+  /// One social service, by slug. The parameter name stays `programId`.
   programDetail(
     'program-detail',
     '/programs/:programId',
     AccessRequirement.public,
     parameters: <String>['programId'],
+  ),
+
+  /// An office opened from a Tulong page, so the tab stays on Tulong.
+  ///
+  /// The same public office page the directory shows. Registered under
+  /// `/programs` rather than `/offices` for that reason alone.
+  tulongOffice(
+    'tulong-office',
+    '/programs/office/:officeId',
+    AccessRequirement.public,
+    parameters: <String>['officeId'],
   ),
 
   /// The resident's own household and family summary. Verified only: it is a
