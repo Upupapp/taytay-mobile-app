@@ -412,8 +412,32 @@ void main() {
         expect(detail?.emailVerified, isFalse);
         expect(detail?.rejectionReason, 'notes from a reviewer');
         expect(detail?.closed, isFalse);
+        expect(detail?.verificationDecidedAt, isNull);
       },
     );
+
+    test('a decision time is kept and a null one is not invented', () async {
+      Future<ResidentProfileDetail?> read(Object? decided) async {
+        final repository = ResidentProfileApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: _OneResponse(<String, dynamic>{
+              'name': 'Ana Reyes',
+              'verification_status': 'verified',
+              'verification_decided_at': decided,
+            }),
+            accessTokenProvider: () async => 'tok',
+          ),
+        );
+        return (await repository.loadOwnDetail()).valueOrNull;
+      }
+
+      final ResidentProfileDetail? dated = await read(
+        '2026-10-21T16:00:00.000Z',
+      );
+      expect(dated?.verificationDecidedAt, DateTime.utc(2026, 10, 21, 16));
+      expect((await read(null))?.verificationDecidedAt, isNull);
+    });
 
     test('the production decoder names no staff-only key', () {
       const source =
@@ -608,8 +632,26 @@ void main() {
 
       expect(find.text('Push and email'), findsNothing);
       expect(find.text('Request a copy of my data'), findsNothing);
+      expect(find.text('Always on for MDRRMO alerts'), findsNothing);
       expect(find.text('Push notifications'), findsWidgets);
       expect(find.text('Current password, then a new one'), findsOneWidget);
+    });
+
+    testWidgets('the home paints the decision date when the record has one', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: ResidentProfileDetail(
+          verificationDecidedAt: DateTime.utc(2026, 10, 21, 16),
+          values: const <ResidentProfileField, String>{
+            ResidentProfileField.fullName: 'Ana Dela Cruz',
+          },
+        ),
+      );
+
+      expect(find.text('Verified · Oct 22, 2026'), findsOneWidget);
     });
 
     testWidgets('edit profile verifies email only', (tester) async {

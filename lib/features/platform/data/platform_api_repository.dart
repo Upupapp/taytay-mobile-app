@@ -3,6 +3,7 @@ import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
 import '../domain/app_bootstrap.dart';
 import '../domain/platform_repository.dart';
+import '../domain/privacy_notice.dart';
 
 /// Talks to `GET /api/v1/health` and `GET /api/v1/app/config`.
 ///
@@ -86,6 +87,7 @@ class PlatformApiRepository implements PlatformRepository {
       updatedAt: DateTime.tryParse(
         map['updated_at'] is String ? map['updated_at'] as String : '',
       )?.toUtc(),
+      privacyNotice: _notice(map['privacy_notice']),
       serverTime: DateTime.tryParse(
         map['server_time'] is String ? map['server_time'] as String : '',
       )?.toUtc(),
@@ -107,6 +109,21 @@ class PlatformApiRepository implements PlatformRepository {
       service: _string(map['service']) ?? 'unknown',
       status: _string(map['status']) ?? 'unknown',
       apiVersion: _string(map['api_version']) ?? 'unknown',
+    );
+  }
+
+  static PrivacyNotice _notice(Object? raw) {
+    if (raw is! Map) return PrivacyNotice.missing;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : Map<String, dynamic>.from(raw);
+    final Object? body = map['body_markdown'];
+    return PrivacyNotice(
+      version: _string(map['version']) ?? '',
+      updatedAt: DateTime.tryParse(
+        map['updated_at'] is String ? map['updated_at'] as String : '',
+      )?.toUtc(),
+      bodyMarkdown: body is String ? body : '',
     );
   }
 

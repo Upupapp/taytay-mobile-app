@@ -92,8 +92,9 @@ class ResidentNotification {
 
 /// One row of `GET /me/notification-preferences`.
 ///
-/// The spec publishes two types: `verification_decided` and `message_received`.
-/// Each has `in_app` and `push`. SMS and email are not on this contract.
+/// The spec publishes `verification_decided`, `message_received`, `balita`, and
+/// `emergency`. Each has `in_app` and `push`. SMS and email are not on this
+/// contract. A missing row is on: both flags default to true.
 @immutable
 class ChannelPreference {
   const ChannelPreference({
@@ -108,6 +109,55 @@ class ChannelPreference {
 
   @override
   String toString() => 'ChannelPreference($type, inApp: $inApp, push: $push)';
+}
+
+/// Types `GET /me/notification-preferences` publishes, in wire order.
+const List<String> preferenceTypes = <String>[
+  'verification_decided',
+  'message_received',
+  'balita',
+  'emergency',
+];
+
+/// Whether [type] is on. An absent row is on.
+bool preferenceEnabled(List<ChannelPreference> channels, String type) {
+  for (final ChannelPreference channel in channels) {
+    if (channel.type == type) return channel.push;
+  }
+  return true;
+}
+
+/// A copy of [channels] with [type] set.
+///
+/// [pushOnly] keeps `in_app` when the row already exists. Balita and emergency
+/// write both flags, because the settings row is the whole preference.
+List<ChannelPreference> writePreference(
+  List<ChannelPreference> channels, {
+  required String type,
+  required bool on,
+  bool pushOnly = false,
+}) {
+  var found = false;
+  final List<ChannelPreference> next = <ChannelPreference>[
+    for (final ChannelPreference channel in channels)
+      if (channel.type == type)
+        ChannelPreference(
+          type: type,
+          inApp: pushOnly ? channel.inApp : on,
+          push: on,
+        )
+      else
+        channel,
+  ];
+  for (final ChannelPreference channel in next) {
+    if (channel.type == type) found = true;
+  }
+  if (!found) {
+    next.add(
+      ChannelPreference(type: type, inApp: pushOnly ? true : on, push: on),
+    );
+  }
+  return next;
 }
 
 /// Which channels a resident wants to be contacted on, and about what.

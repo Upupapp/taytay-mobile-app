@@ -7,12 +7,16 @@ import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/account/data/firebase_account_password_client.dart';
 import 'package:taytay_resident/features/account/data/mock_account_password_client.dart';
+import 'package:taytay_resident/features/account/domain/notice_markdown.dart';
 import 'package:taytay_resident/features/account/domain/photo_credit.dart';
 import 'package:taytay_resident/features/account/domain/profile_completion.dart';
 import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
 import 'package:taytay_resident/features/account/presentation/change_password_form.dart';
+import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
+import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
+import 'package:taytay_resident/features/profile/domain/verification_decision.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 class _RecordingUser implements SignedInPasswordUser {
@@ -104,6 +108,71 @@ void main() {
       closed: true,
     );
     expect(profileCompletionPercent(withSystemOnly), 0);
+  });
+
+  test('a decision instant is the Manila calendar date', () {
+    expect(manilaDecisionDate(null), isNull);
+    expect(manilaDecisionDate(DateTime.utc(2026, 10, 21, 16)), 'Oct 22, 2026');
+    expect(manilaDecisionDate(DateTime.utc(2026, 10, 22, 20)), 'Oct 23, 2026');
+  });
+
+  test('balita and emergency write both flags and default on', () {
+    expect(preferenceEnabled(const <ChannelPreference>[], 'balita'), isTrue);
+    final List<ChannelPreference> written = writePreference(
+      const <ChannelPreference>[
+        ChannelPreference(type: 'balita', inApp: true, push: true),
+      ],
+      type: 'emergency',
+      on: false,
+    );
+    final ChannelPreference emergency = written.firstWhere(
+      (ChannelPreference channel) => channel.type == 'emergency',
+    );
+    expect(emergency.inApp, isFalse);
+    expect(emergency.push, isFalse);
+    final List<ChannelPreference> office = writePreference(
+      written,
+      type: 'message_received',
+      on: false,
+      pushOnly: true,
+    );
+    final ChannelPreference replies = office.firstWhere(
+      (ChannelPreference channel) => channel.type == 'message_received',
+    );
+    expect(replies.inApp, isTrue);
+    expect(replies.push, isFalse);
+  });
+
+  test('placeholder and a missing notice keep the bundled draft', () {
+    expect(PrivacyNotice.missing.usesBundledDraft, isTrue);
+    expect(
+      const PrivacyNotice(
+        version: 'placeholder',
+        bodyMarkdown: 'Do not show this.',
+      ).usesBundledDraft,
+      isTrue,
+    );
+    expect(
+      const PrivacyNotice(
+        version: '2026-10',
+        bodyMarkdown: '## What we collect\n\nName.',
+      ).usesBundledDraft,
+      isFalse,
+    );
+  });
+
+  test('notice markdown keeps headings, bold, and the link label', () {
+    final List<NoticeLine> lines = parseNoticeMarkdown(
+      '## What we collect\n\n**Name** and address.\n\n- A [selfie](https://example.test)\n',
+    );
+    expect(lines, hasLength(3));
+    expect(lines[0].heading, isTrue);
+    expect(lines[0].plain, 'What we collect');
+    expect(lines[1].runs[0].strong, isTrue);
+    expect(lines[1].plain, 'Name and address.');
+    expect(lines[2].bullet, isTrue);
+    expect(lines[2].plain, 'A selfie');
+    expect(lines[2].plain, isNot(contains('example.test')));
   });
 
   test('a dev password change stays on the mock', () async {
@@ -217,15 +286,16 @@ void main() {
     },
   );
 
-  test('the privacy notice reads nothing about a person', () {
+  test('the privacy notice reads the public config and nothing personal', () {
     final String source = File(
       'lib/features/account/presentation/account_pages.dart',
     ).readAsStringSync();
     final String notice = source.split('class PrivacyNoticeScreen').last;
     final String body = notice.split('class PhotoCreditsScreen').first;
-    expect(body, isNot(contains('Repository')));
+    expect(body, contains('loadBootstrap'));
     expect(body, isNot(contains('session')));
-    expect(body, isNot(contains('AppDependencies')));
+    expect(body, isNot(contains('ResidentProfile')));
+    expect(body, isNot(contains('loadOwn')));
   });
 
   test('account sources do not send an authority field', () {
@@ -244,6 +314,27 @@ void main() {
       }
     }
     expect(offenders, isEmpty, reason: offenders.join('\n'));
+  });
+
+  testWidgets('a published notice replaces the bundled draft', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: AccountCanvas(
+            frame: AccountFrame.privacy,
+            title: 'Privacy Notice',
+            showBack: true,
+            showDataExport: false,
+            noticeMarkdown:
+                '## What we collect\n\n**Name** and address.\n\n- A selfie',
+          ),
+        ),
+      ),
+    );
+    expect(find.textContaining('DRAFT'), findsNothing);
+    expect(find.textContaining('What we collect'), findsOneWidget);
+    expect(find.textContaining('Name and address.'), findsOneWidget);
+    expect(find.textContaining('A selfie'), findsOneWidget);
   });
 
   testWidgets('the password form reports a mismatch and a mock success', (

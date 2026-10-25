@@ -358,7 +358,7 @@ My Account is the shell tab at `/profile`. A guest and an unverified resident ke
 
 `/profile` is a shell root and has no back button. Every other account screen uses `TaytayBackButton` (44 dp disc, 48 dp hit). The inbox stays on the My Account branch, so the tab bar remains. The thread stays on that same branch. The shell hides the bar for `/messages/`, so the thread fills the phone, and coming back does not build a second shell during the transition.
 
-Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, and `GET /me/notification-preferences`. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. The privacy notice is fixed copy and reads no repository. Photo credits are generated from the bundled photograph manifest.
+Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, `GET /me/notification-preferences`, and `GET /app/config` for the privacy notice. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. Photo credits are generated from the bundled photograph manifest.
 
 The line measure is the same dark-run method as S7 (`rev5.py`): a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`.
 
@@ -379,11 +379,10 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 
 Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
 
-The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`) plus the S7 service fields already in the app. Clarence's answers for this sprint are applied on the client. These three stay out until backend PR #2 sends the spec:
+The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`), now including the fields from backend `3e3b110`. The specimen date on 08-01 stays fixture copy. The live home paints `verification_decided_at` as a Manila calendar date when the field is an ISO time, and leaves the subtitle "Verified" when it is null.
 
-- `verification_decided_at` on `GET /me`. The specimen date on 08-01 stays fixture copy. The live verification subtitle stays "Verified".
-- Balita and emergency preference types, each `in_app` and `push`. Those two rows stay locked on and are not written.
-- `privacy_notice` with `version`, `updated_at`, and `body_markdown` in `GET /app/config`. The notice stays the fixed DRAFT copy.
+- Balita and emergency are preference types, each `in_app` and `push`, defaulting to on. The live settings rows write both flags. The specimen emergency row stays locked, so 08-04 is unchanged.
+- `GET /app/config` publishes `privacy_notice` with `version`, `updated_at`, and `body_markdown`. A published version is rendered on the live notice. Version `placeholder`, a missing object, or an empty body keeps the bundled DRAFT, so 08-09 is unchanged. The dev mock sends `placeholder`.
 
 Applied now:
 
@@ -403,4 +402,4 @@ Also still true:
 
 `ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (465932 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (868378 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, and the live settings and notice hide data export. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1627 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (469888 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (849107 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent and the decision date. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder`. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1636 tests, with 15 skipped (the recording and live tags).

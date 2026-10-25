@@ -253,8 +253,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 }
 
-/// Notification, language and privacy rows. Balita and emergency are not
-/// preference types on the API, so those rows do not write.
+/// Notification, language and privacy rows.
+///
+/// Balita and emergency are `in_app` and `push` preferences. The row writes
+/// both. An absent row is on.
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
 
@@ -265,6 +267,8 @@ class AccountSettingsScreen extends StatefulWidget {
 class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool _started = false;
   bool _officeReplies = true;
+  bool _balita = true;
+  bool _emergency = true;
 
   @override
   void didChangeDependencies() {
@@ -280,15 +284,20 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     ).notificationRepository.loadPreferences();
     if (!mounted) return;
     if (result case Ok(:final value)) {
-      for (final ChannelPreference channel in value.channels) {
-        if (channel.type == 'message_received') {
-          setState(() => _officeReplies = channel.push);
-        }
-      }
+      setState(() {
+        _officeReplies = preferenceEnabled(value.channels, 'message_received');
+        _balita = preferenceEnabled(value.channels, 'balita');
+        _emergency = preferenceEnabled(value.channels, 'emergency');
+      });
     }
   }
 
-  Future<void> _setOfficeReplies(bool on) async {
+  Future<void> _setChannel(
+    String type,
+    bool on, {
+    required bool pushOnly,
+    required void Function(bool value) apply,
+  }) async {
     final dependencies = AppDependencies.of(context);
     final Result<NotificationPreferences> loaded = await dependencies
         .notificationRepository
@@ -296,23 +305,17 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     if (!mounted || loaded is Err<NotificationPreferences>) return;
     final NotificationPreferences current =
         (loaded as Ok<NotificationPreferences>).value;
-    final List<ChannelPreference> channels = <ChannelPreference>[
-      for (final ChannelPreference channel in current.channels)
-        if (channel.type == 'message_received')
-          ChannelPreference(type: channel.type, inApp: channel.inApp, push: on)
-        else
-          channel,
-    ];
-    if (!channels.any((ChannelPreference c) => c.type == 'message_received')) {
-      channels.add(
-        ChannelPreference(type: 'message_received', inApp: true, push: on),
-      );
-    }
-    setState(() => _officeReplies = on);
+    final List<ChannelPreference> channels = writePreference(
+      current.channels,
+      type: type,
+      on: on,
+      pushOnly: pushOnly,
+    );
+    setState(() => apply(on));
     final Result<void> saved = await dependencies.notificationRepository
         .updatePreferences(current.copyWith(channels: channels));
     if (!mounted) return;
-    if (saved is Err<void>) setState(() => _officeReplies = !on);
+    if (saved is Err<void>) setState(() => apply(!on));
   }
 
   @override
@@ -324,14 +327,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       toggles: <AccountToggle>[
-        const AccountToggle(
+        AccountToggle(
           title: 'Balita & advisories',
           subtitle: 'Push notifications',
           icon: TaytayIcons.newspaper,
           tile: BrandColors.chipBlueBg,
           iconColor: BrandColors.taytayBlue,
-          on: true,
-          locked: true,
+          on: _balita,
+          onChanged: (bool on) => _setChannel(
+            'balita',
+            on,
+            pushOnly: false,
+            apply: (bool value) => _balita = value,
+          ),
         ),
         AccountToggle(
           title: 'Office replies',
@@ -340,16 +348,26 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           tile: BrandColors.chipGreenBg,
           iconColor: BrandColors.success,
           on: _officeReplies,
-          onChanged: _setOfficeReplies,
+          onChanged: (bool on) => _setChannel(
+            'message_received',
+            on,
+            pushOnly: true,
+            apply: (bool value) => _officeReplies = value,
+          ),
         ),
-        const AccountToggle(
+        AccountToggle(
           title: 'Emergency alerts',
-          subtitle: 'Always on for MDRRMO alerts',
+          subtitle: 'Push notifications',
           icon: TaytayIcons.siren,
           tile: BrandColors.chipRedBg,
           iconColor: BrandColors.danger,
-          on: true,
-          locked: true,
+          on: _emergency,
+          onChanged: (bool on) => _setChannel(
+            'emergency',
+            on,
+            pushOnly: false,
+            apply: (bool value) => _emergency = value,
+          ),
         ),
       ],
       changePasswordSubtitle: 'Current password, then a new one',
@@ -391,9 +409,39 @@ Future<void> _changePassword(BuildContext context) async {
   );
 }
 
-/// RA 10173 notice. Fixed copy, marked draft. It reads nothing.
-class PrivacyNoticeScreen extends StatelessWidget {
+/// RA 10173 notice. The bundled draft stands in until `GET /app/config`
+/// publishes a privacy notice whose version is not `placeholder`.
+class PrivacyNoticeScreen extends StatefulWidget {
   const PrivacyNoticeScreen({super.key});
+
+  @override
+  State<PrivacyNoticeScreen> createState() => _PrivacyNoticeScreenState();
+}
+
+class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
+  bool _started = false;
+  String? _markdown;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    _load();
+  }
+
+  Future<void> _load() async {
+    final result = await AppDependencies.of(
+      context,
+    ).platformRepository.loadBootstrap();
+    if (!mounted) return;
+    if (result case Ok(:final value)) {
+      final notice = value.privacyNotice;
+      if (!notice.usesBundledDraft) {
+        setState(() => _markdown = notice.bodyMarkdown);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -404,6 +452,7 @@ class PrivacyNoticeScreen extends StatelessWidget {
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       showDataExport: false,
+      noticeMarkdown: _markdown,
     );
   }
 }

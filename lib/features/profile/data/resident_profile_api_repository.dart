@@ -214,6 +214,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     final Object? reason = map['rejection_reason'];
     final Object? closedAt = map['closed_at'];
     final Object? createdAt = map['created_at'];
+    final Object? decidedAt = map['verification_decided_at'];
 
     // WHO MAY CHANGE WHAT IS THE OFFICE'S ANSWER, AND IT IS ON THE WIRE (C-13).
     //
@@ -252,6 +253,9 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
       closedAt: DateTime.tryParse(closedAt is String ? closedAt : '')?.toUtc(),
       createdAt: DateTime.tryParse(
         createdAt is String ? createdAt : '',
+      )?.toUtc(),
+      verificationDecidedAt: DateTime.tryParse(
+        decidedAt is String ? decidedAt : '',
       )?.toUtc(),
     );
   }

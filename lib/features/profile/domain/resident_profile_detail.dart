@@ -36,6 +36,7 @@ class ResidentProfileDetail {
     this.closed = false,
     this.closedAt,
     this.createdAt,
+    this.verificationDecidedAt,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -85,6 +86,13 @@ class ResidentProfileDetail {
 
   /// `created_at` on `GET /me`. When the account was opened.
   final DateTime? createdAt;
+
+  /// `verification_decided_at` on `GET /me`.
+  ///
+  /// An ISO time when the LGU has verified or rejected the resident, and null
+  /// otherwise. The instant is not personal copy and is not included in
+  /// [toString].
+  final DateTime? verificationDecidedAt;
 
   /// Who may change [field], preferring the office's answer.
   ///

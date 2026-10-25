@@ -12,6 +12,7 @@ import '../../../core/session/access_policy.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
+import '../../profile/domain/verification_decision.dart';
 import '../domain/profile_completion.dart';
 import 'account_canvas.dart';
 
@@ -20,8 +21,8 @@ import 'account_canvas.dart';
 /// A guest and an unverified resident keep the account centre: it is the
 /// sign-in prompt and the verification card, and it fetches nothing for a
 /// guest. A verified resident sees the 08-01 home. The name and the tier come
-/// from the server. A completion percentage and a decision date are not on
-/// the profile, so this screen does not invent them.
+/// from the server. The fill ratio and the decision date are computed from
+/// the profile the screen just loaded.
 class AccountHomeScreen extends StatefulWidget {
   const AccountHomeScreen({super.key});
 
@@ -141,6 +142,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   }
 
   List<AccountMenuRow> _menu(BuildContext context) {
+    final String? decided = manilaDecisionDate(_detail?.verificationDecidedAt);
     return <AccountMenuRow>[
       AccountMenuRow(
         title: 'Resident Profile',
@@ -162,7 +164,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
       ),
       AccountMenuRow(
         title: 'Verification status',
-        subtitle: 'Verified',
+        subtitle: decided == null ? 'Verified' : 'Verified · $decided',
         icon: TaytayIcons.badgeCheck,
         tile: BrandColors.chipAmberBg,
         iconColor: BrandColors.warning,

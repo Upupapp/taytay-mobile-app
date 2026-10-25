@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import 'privacy_notice.dart';
+
 /// What the server says a client needs before it knows anything else.
 ///
 /// ---
@@ -29,6 +31,7 @@ class AppBootstrap {
     this.privacyVersion = '',
     this.termsVersion = '',
     this.updatedAt,
+    this.privacyNotice = PrivacyNotice.missing,
   });
 
   /// What the app assumes before the server has answered, and after a failure.
@@ -82,6 +85,9 @@ class AppBootstrap {
 
   /// `updated_at` from `GET /app/config`.
   final DateTime? updatedAt;
+
+  /// `privacy_notice` from `GET /app/config`. Missing means the bundled draft.
+  final PrivacyNotice privacyNotice;
 
   /// How far the device clock is from the server's, when both are known.
   ///

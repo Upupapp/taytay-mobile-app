@@ -7,6 +7,7 @@ import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../domain/notice_markdown.dart';
 import '../domain/photo_credit.dart';
 
 /// Which My Account frame the canvas is painting.
@@ -148,6 +149,7 @@ class AccountCanvas extends StatelessWidget {
     this.onBanners,
     this.onExport,
     this.showDataExport = true,
+    this.noticeMarkdown,
     this.bubbles = AccountSpecimen.mswdoBubbles,
     this.dayLabel = 'Mon',
     this.onSend,
@@ -183,6 +185,9 @@ class AccountCanvas extends StatelessWidget {
   /// The design draws a data-export row. The API has no such route, so the
   /// live screens pass false and the row is not shown.
   final bool showDataExport;
+
+  /// Published `body_markdown`. Null keeps the bundled draft.
+  final String? noticeMarkdown;
   final VoidCallback? onPrivacy;
   final VoidCallback? onBanners;
   final VoidCallback? onExport;
@@ -276,10 +281,10 @@ class AccountCanvas extends StatelessWidget {
         dayLabel: dayLabel,
         onSend: onSend,
       ),
-      AccountFrame.privacy => _PrivacyBody(
-        onExport: onExport,
-        showDataExport: showDataExport,
-      ),
+      AccountFrame.privacy =>
+        noticeMarkdown == null
+            ? _PrivacyBody(onExport: onExport, showDataExport: showDataExport)
+            : _PublishedNotice(markdown: noticeMarkdown!),
       AccountFrame.banners => _BannersBody(credits: credits),
     };
   }
@@ -1555,6 +1560,59 @@ class _PrivacyBody extends StatelessWidget {
             onTap: onExport,
           ),
         ],
+      ],
+    );
+  }
+}
+
+class _PublishedNotice extends StatelessWidget {
+  const _PublishedNotice({required this.markdown});
+
+  final String markdown;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<NoticeLine> lines = parseNoticeMarkdown(markdown);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 22 / 3, 16, 24),
+      children: <Widget>[
+        const Text('Privacy Notice', style: _noticeTitle),
+        const SizedBox(height: 10 / 3),
+        const Text(
+          'Republic Act No. 10173, Data Privacy Act of 2012',
+          style: _meta,
+        ),
+        const SizedBox(height: 35 / 3),
+        _Card(
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              for (final NoticeLine line in lines) ...<Widget>[
+                Text.rich(
+                  TextSpan(
+                    children: <InlineSpan>[
+                      if (line.bullet)
+                        const TextSpan(text: '• ', style: _noticeBody),
+                      for (final NoticeRun run in line.runs)
+                        TextSpan(
+                          text: run.text,
+                          style: line.heading
+                              ? _rowTitle
+                              : _noticeBody.copyWith(
+                                  fontWeight: run.strong
+                                      ? FontWeight.w700
+                                      : _noticeBody.fontWeight,
+                                ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        ),
       ],
     );
   }
