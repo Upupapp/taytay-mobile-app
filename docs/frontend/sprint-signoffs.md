@@ -323,7 +323,7 @@ The note under the list says "Information on municipal programmes. These are inf
 
 Leaving `/news` still clears the Balita save message. `test/features/s6_balita_test.dart` saves a story, opens the article, and also leaves Balita for Home. The snackbar is gone in both cases.
 
-Recordings were captured from this build at 1170×2532, motion on, no environment banner, 8 fps, each under 15MB: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1673809 bytes, 46 frames) and `s7-office.mp4` (2668969 bytes, 64 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1635 tests, with 13 skipped (the recording and live tags).
+Recordings were captured from this build at 1170×2532, motion on, no environment banner, 30 fps: `test/goldens/compare/s7/recordings/s7-detail.mp4` (3134029 bytes, 223 frames) and `s7-office.mp4` (5028433 bytes, 313 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. These are new captures, not the earlier 8 fps clips. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1637 tests, with 13 skipped (the recording and live tags).
 
 ## Contract gaps after the Node OpenAPI
 
