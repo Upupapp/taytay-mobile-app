@@ -33,7 +33,6 @@ import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
-import '../../features/services/presentation/service_detail_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
@@ -209,12 +208,18 @@ GoRouter buildAppRouter({
                 name: AppRoute.services.routeName,
                 builder: (context, state) => const DirectoryScreen(),
                 routes: <RouteBase>[
+                  // The old catalogue detail opened an apply screen. Tulong
+                  // is information only, so this address opens that page.
                   GoRoute(
                     path: ':serviceCode',
                     name: AppRoute.serviceDetail.routeName,
-                    builder: (context, state) => ServiceDetailScreen(
-                      serviceCode: state.pathParameters['serviceCode'] ?? '',
-                    ),
+                    redirect: (context, state) {
+                      final String code =
+                          state.pathParameters['serviceCode'] ?? '';
+                      return AppRoute.programDetail.location(<String, String>{
+                        'programId': code,
+                      });
+                    },
                   ),
                 ],
               ),

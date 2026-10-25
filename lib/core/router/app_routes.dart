@@ -63,10 +63,12 @@ enum AppRoute {
   /// browse it before registering".
   services('services', '/services', AccessRequirement.public),
 
-  /// One catalogue entry, addressed by its stable code rather than its UUID.
+  /// Old catalogue address. It redirects to the Tulong page for the same slug.
   ///
   /// A code is what a municipal office quotes, it is legible in a link, and it
   /// survives a re-seed of the catalogue. Public, like the list it comes from.
+  /// The address stays so an old link still opens a programme page. It does
+  /// not open an application.
   serviceDetail(
     'service-detail',
     '/services/:serviceCode',

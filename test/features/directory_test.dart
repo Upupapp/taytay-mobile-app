@@ -862,20 +862,30 @@ void main() {
       expect(find.textContaining('Business One Stop Shop'), findsOneWidget);
     });
 
-    testWidgets('a guest opening a service deep link is not gated', (
+    testWidgets('a guest opening a service deep link lands on Tulong', (
       tester,
     ) async {
-      await bootDirectory(tester, location: '/services/CEDULA');
+      await bootDirectory(tester, location: '/services/pwd-assistance');
 
-      expect(find.text('Community tax certificate'), findsOneWidget);
+      expect(
+        GoRouter.of(
+          tester.element(find.byType(Scaffold).first),
+        ).routerDelegate.currentConfiguration.uri.path,
+        '/programs/pwd-assistance',
+      );
+      expect(find.text('PWD Assistance'), findsWidgets);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
+      expect(find.text('Apply for this service'), findsNothing);
     });
 
-    testWidgets('an unknown code says so and offers the list', (tester) async {
+    testWidgets('an unknown service code lands on the Tulong page', (
+      tester,
+    ) async {
       await bootDirectory(tester, location: '/services/NOPE');
 
-      expect(find.text('This service is not available'), findsOneWidget);
-      expect(find.text('See all services'), findsOneWidget);
+      expect(find.text('This programme is not available'), findsOneWidget);
+      expect(find.text('Apply for this service'), findsNothing);
+      expect(find.text('See all services'), findsNothing);
     });
 
     testWidgets('a query with no office match is a different sentence', (

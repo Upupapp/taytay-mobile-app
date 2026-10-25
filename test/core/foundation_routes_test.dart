@@ -241,7 +241,12 @@ void main() {
       if (route == AppRoute.splash || route == AppRoute.signIn) continue;
       _go(tester, _openLocation(route));
       await tester.pumpAndSettle();
-      expect(_currentPath(tester), _openLocation(route), reason: route.name);
+      final String landed = route == AppRoute.serviceDetail
+          ? AppRoute.programDetail.location(<String, String>{
+              'programId': _sampleArguments[route]!['serviceCode']!,
+            })
+          : _openLocation(route);
+      expect(_currentPath(tester), landed, reason: route.name);
       _expectBackButtons(route);
       if (_wovenHeaderRoutes.contains(route)) {
         expect(

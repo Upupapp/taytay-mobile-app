@@ -486,7 +486,6 @@ class _CompactRow extends StatelessWidget {
               icon: _glyph(service.iconKey),
               color: foreground,
               iconSize: 20,
-              lucideStroke: service.iconKey == 'usersRound',
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1458,7 +1457,6 @@ class _Tile extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.iconSize,
-    this.lucideStroke = false,
     this.dropIcon = false,
   });
 
@@ -1468,7 +1466,6 @@ class _Tile extends StatelessWidget {
   final IconData icon;
   final Color color;
   final double iconSize;
-  final bool lucideStroke;
 
   /// The Lucide users glyph has a neck the SVG stroke does not. One pixel
   /// down puts that gap on the specimen's subtitle row.
@@ -1487,72 +1484,16 @@ class _Tile extends StatelessWidget {
       child: Padding(
         // Centering a child that is 2 px taller on top drops the glyph 1 px.
         padding: dropIcon ? const EdgeInsets.only(top: 2) : EdgeInsets.zero,
-        child: lucideStroke
-            ? _UsersMark(size: iconSize, color: color)
-            : TaytayIcon(
-                icon: icon,
-                size: iconSize,
-                color: color,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
+        child: TaytayIcon(
+          icon: icon,
+          size: iconSize,
+          color: color,
+          semanticLabel: '',
+          excludeSemantics: true,
+        ),
       ),
     );
   }
-}
-
-/// The list tile for `users-round`. The vendored Lucide font has no
-/// users-round glyph; its `users` glyph leaves a light gap between the head
-/// and the shoulders. This stroke is the Lucide users-round outline.
-class _UsersMark extends StatelessWidget {
-  const _UsersMark({required this.size, required this.color});
-
-  final double size;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(size: Size.square(size), painter: _UsersPainter(color));
-  }
-}
-
-class _UsersPainter extends CustomPainter {
-  const _UsersPainter(this.color);
-
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double s = size.width / 24;
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2 * s
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final Path shoulders = Path()
-      ..moveTo(18 * s, 21 * s)
-      ..arcToPoint(
-        Offset(2 * s, 21 * s),
-        radius: Radius.circular(8 * s),
-        clockwise: false,
-      );
-    canvas.drawPath(shoulders, paint);
-    canvas.drawCircle(Offset(10 * s, 8 * s), 5 * s, paint);
-    final Path second = Path()
-      ..moveTo(22 * s, 20 * s)
-      ..cubicTo(22 * s, 16.63 * s, 20 * s, 13.5 * s, 18 * s, 12 * s)
-      ..arcToPoint(
-        Offset(17.55 * s, 3.7 * s),
-        radius: Radius.circular(5 * s),
-        clockwise: false,
-      );
-    canvas.drawPath(second, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _UsersPainter oldDelegate) =>
-      oldDelegate.color != color;
 }
 
 class _PrimaryButton extends StatelessWidget {
@@ -2058,9 +1999,8 @@ IconData _glyph(String name) {
     'heartPulse' => TaytayIcons.heartPulse,
     'briefcase' => TaytayIcons.briefcase,
     'briefcaseBusiness' => TaytayIcons.briefcaseBusiness,
-    // The font has no users-round outline. The list tile paints that stroke
-    // itself when the key is usersRound. Other tiles use the users glyph.
-    'usersRound' => TaytayIcons.users,
+    // Font name `users-2`, codepoint 58478. The design calls it users-round.
+    'usersRound' => TaytayIcons.usersRound,
     'wifiOff' => TaytayIcons.wifiOff,
     _ => TaytayIcons.handHeart,
   };

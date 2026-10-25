@@ -218,8 +218,8 @@ class _ServiceCard extends StatelessWidget {
     return AppCard(
       onTap: () => context.goNamed(
         AppRoute.serviceDetail.routeName,
-        // The stable code, not the UUID: it is what an office quotes, it is
-        // legible in a link, and it survives a re-seed of the catalogue.
+        // The stable code, not the UUID. The route redirects to the Tulong
+        // page for that code. It does not open an application.
         pathParameters: <String, String>{'serviceCode': service.code},
       ),
       semanticLabel: service.name,

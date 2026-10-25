@@ -529,7 +529,7 @@ void main() {
     },
   );
 
-  testWidgets('the youth list mark follows users-round, not the tile colour', (
+  testWidgets('users-round is the vendored users-2 glyph on every tile', (
     WidgetTester tester,
   ) async {
     Future<void> pumpRow(String iconKey, int tile) {
@@ -572,9 +572,58 @@ void main() {
     await pumpRow('usersRound', 0xFF0B3D91);
     expect(
       tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where(youthMark),
-      hasLength(1),
+      isEmpty,
     );
+    expect(TaytayIcons.usersRound.codePoint, 58478);
+    expect(
+      tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .where((TaytayIcon icon) => icon.size == 20)
+          .single
+          .icon,
+      TaytayIcons.usersRound,
+    );
+
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: TulongCanvas(
+          frame: TulongFrame.detail,
+          service: SocialService(
+            id: '11111111-1111-4111-8111-111111111108',
+            name: 'Youth Programmes',
+            slug: 'youth',
+            summary: 'Youth groups',
+            details: 'Synthetic details.',
+            iconKey: 'usersRound',
+            tileColor: 0xFF0B3D91,
+          ),
+        ),
+      ),
+    );
+    final Iterable<double> youthSizes = tester
+        .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+        .where((TaytayIcon icon) => icon.icon == TaytayIcons.usersRound)
+        .map((TaytayIcon icon) => icon.size);
+    expect(youthSizes, containsAll(<double>[26, 110]));
   });
+
+  testWidgets(
+    'the old service route lands on the Tulong page and has no apply control',
+    (WidgetTester tester) async {
+      await _boot(tester, location: '/services/pwd-assistance');
+      expect(
+        GoRouter.of(
+          tester.element(find.byType(Scaffold).first),
+        ).routerDelegate.currentConfiguration.uri.path,
+        '/programs/pwd-assistance',
+      );
+      expect(find.text('PWD Assistance'), findsWidgets);
+      expect(find.text('Who can avail'), findsOneWidget);
+      expect(find.text('Apply for this service'), findsNothing);
+      expect(find.textContaining('Apply'), findsNothing);
+      expect(find.textContaining('Submit'), findsNothing);
+    },
+  );
 
   test('Tulong does not nudge lines with a translation', () {
     final Directory root = Directory('lib/features/tulong');

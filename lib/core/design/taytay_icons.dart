@@ -141,6 +141,9 @@ abstract final class TaytayIcons {
 
   static const IconData users = IconData(57764, fontFamily: 'Lucide');
 
+  /// Lucide `users-round`. The vendored font still names this glyph `users-2`.
+  static const IconData usersRound = IconData(58478, fontFamily: 'Lucide');
+
   static const IconData heart = IconData(57586, fontFamily: 'Lucide');
 
   /// Lucide `heart-pulse`. Women and children on the Tulong list.
