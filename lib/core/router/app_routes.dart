@@ -138,6 +138,37 @@ enum AppRoute {
     AccessRequirement.public,
   ),
 
+  /// The canonical record: fields the resident owns and fields only the LGU
+  /// can change. Authenticated. The designed home links here for a legal-name
+  /// change, which this screen does not overwrite.
+  profileRecord(
+    'profile-record',
+    '/profile/record',
+    AccessRequirement.authenticated,
+  ),
+
+  /// Display name, mobile, email and barangay. Authenticated.
+  profileEdit('profile-edit', '/profile/edit', AccessRequirement.authenticated),
+
+  /// Notifications, language and the privacy notice. Authenticated: the
+  /// office-reply switch is a preference about one person.
+  profileSettings(
+    'profile-settings',
+    '/profile/settings',
+    AccessRequirement.authenticated,
+  ),
+
+  /// The Data Privacy Act notice. Public, and fixed copy: opening it
+  /// discloses nothing.
+  profileNotice('profile-notice', '/profile/notice', AccessRequirement.public),
+
+  /// Office-banner credits. Public, same reason as [photoCredits].
+  profileBanners(
+    'profile-banners',
+    '/profile/photo-credits/offices',
+    AccessRequirement.public,
+  ),
+
   // ---------------------------------------------------------------------------
   // Destinations reached from inside the shell.
   // ---------------------------------------------------------------------------
@@ -371,10 +402,12 @@ enum AppRoute {
     parameters: <String>['officeId'],
   ),
 
-  /// The resident's office-message inbox. Verified only, same gap as compose.
-  messagesInbox('messages', '/messages', AccessRequirement.verified),
+  /// The resident's office-message inbox. Verified only. It stays on the
+  /// My Account branch so the tab bar remains.
+  messagesInbox('messages', '/profile/messages', AccessRequirement.verified),
 
-  /// One thread. Verified only.
+  /// One thread. Verified only. It stays on the My Account branch. The shell
+  /// hides the tab bar, so the thread still fills the phone.
   messageThread(
     'message-thread',
     '/messages/:threadId',
@@ -385,7 +418,7 @@ enum AppRoute {
   /// Photo credits. Public: it is a list of licences, not a person's record.
   photoCredits(
     'photo-credits',
-    '/about/photo-credits',
+    '/profile/photo-credits',
     AccessRequirement.public,
   ),
 

@@ -104,6 +104,15 @@ abstract final class TaytayIcons {
   /// Lucide `log-in`. The sign-in gate's primary action.
   static const IconData logIn = IconData(57613, fontFamily: 'Lucide');
 
+  /// Lucide `log-out`. Sign out on My Account.
+  static const IconData logOut = IconData(57614, fontFamily: 'Lucide');
+
+  /// Lucide `image`. Photo credits.
+  static const IconData image = IconData(57590, fontFamily: 'Lucide');
+
+  /// Lucide `languages`. The language row in Settings.
+  static const IconData languages = IconData(57598, fontFamily: 'Lucide');
+
   /// Lucide `bookmark`. Save on a Balita card.
   static const IconData bookmark = IconData(57440, fontFamily: 'Lucide');
 

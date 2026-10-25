@@ -284,9 +284,9 @@ void main() {
       await boot(tester, level: AccessLevel.verified);
       await tapDestination(tester, 'My Account');
 
-      // Access is fine; the LGU has not switched these on. Different sentence.
-      await scrollProfile(tester, find.text('Not available yet'));
-      expect(find.text('Not available yet'), findsWidgets);
+      // The tier is the session's. A failed record read still says verified,
+      // and it does not ask this resident to verify again.
+      expect(find.text('Verified by Taytay LGU'), findsOneWidget);
       expect(find.text('Verification required'), findsNothing);
     });
 

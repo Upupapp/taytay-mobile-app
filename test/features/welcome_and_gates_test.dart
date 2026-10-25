@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
@@ -105,6 +106,14 @@ Future<void> openAccountEntry(WidgetTester tester) async {
 Future<void> openProfileShortcut(WidgetTester tester, String label) async {
   await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
+  // The verified home is 08-01. The older capability rows live on the record.
+  if (find.widgetWithText(AppBar, 'Profile').evaluate().isEmpty &&
+      find.text(label).evaluate().isEmpty) {
+    GoRouter.of(
+      tester.element(find.byType(Scaffold).first),
+    ).go('/profile/record');
+    await tester.pumpAndSettle();
+  }
   await revealInProfile(tester, find.text(label));
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();

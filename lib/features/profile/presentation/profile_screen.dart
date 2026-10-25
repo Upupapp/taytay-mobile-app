@@ -14,6 +14,7 @@ import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/profile_fields.dart';
 import '../domain/resident_profile_detail.dart';
 import 'profile_field_list.dart';
@@ -42,7 +43,11 @@ import 'profile_field_list.dart';
 /// destinations, so it must open for someone with no account — and for them it
 /// is the explanation of what an account is for, not a locked door.
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
+  const ProfileScreen({this.showBack = false, super.key});
+
+  /// True when this screen is not the My Account root. The root has no back
+  /// control. The resident record, reached from Edit profile, does.
+  final bool showBack;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -102,6 +107,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return Scaffold(
           appBar: AppBar(
             automaticallyImplyLeading: false,
+            leading: widget.showBack ? const TaytayBackButton() : null,
             title: const Text('Profile'),
           ),
           body: SafeArea(

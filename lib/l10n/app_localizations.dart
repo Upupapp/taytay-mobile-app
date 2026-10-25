@@ -113,13 +113,13 @@ abstract class AppStrings {
   /// Shell destination: the municipal service catalogue.
   ///
   /// In en, this message translates to:
-  /// **'Services'**
+  /// **'Directory'**
   String get navServices;
 
   /// Shell destination: LGU announcements.
   ///
   /// In en, this message translates to:
-  /// **'News'**
+  /// **'Balita'**
   String get navNews;
 
   /// Shell destination: social welfare programmes.
@@ -131,7 +131,7 @@ abstract class AppStrings {
   /// Shell destination: the resident's own account.
   ///
   /// In en, this message translates to:
-  /// **'Profile'**
+  /// **'My Account'**
   String get navProfile;
 
   /// Retries whatever just failed.
@@ -1004,7 +1004,7 @@ abstract class AppStrings {
   /// **'You need a Taytay LGU account to open your digital ID.'**
   String get gateSignInViewDigitalId;
 
-  /// First sentence of the sign-in gate for messaging an office.
+  /// No description provided for @gateSignInMessageOffice.
   ///
   /// In en, this message translates to:
   /// **'You need a Taytay LGU account to message offices.'**
@@ -1058,7 +1058,7 @@ abstract class AppStrings {
   /// **'Taytay LGU needs to confirm who you are before you can open your digital ID.'**
   String get gateVerifyViewDigitalId;
 
-  /// First sentence of the verification gate for messaging an office.
+  /// No description provided for @gateVerifyMessageOffice.
   ///
   /// In en, this message translates to:
   /// **'Taytay LGU needs to confirm who you are before you can message offices.'**
@@ -1592,7 +1592,7 @@ abstract class AppStrings {
   /// **'You can now open your digital ID.'**
   String get intentResumedViewDigitalId;
 
-  /// Shown when a held message intent can continue.
+  /// No description provided for @intentResumedMessageOffice.
   ///
   /// In en, this message translates to:
   /// **'You can now message offices.'**

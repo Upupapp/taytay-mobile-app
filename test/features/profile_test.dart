@@ -523,6 +523,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       expect(find.text('Your account details'), findsWidgets);
@@ -541,6 +542,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       // The distinction is legible before anything is tapped, and carried by
@@ -557,6 +559,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       expect(find.text('Ana Dela Cruz'), findsOneWidget);
@@ -612,6 +615,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       await reveal(tester, find.text('Full name'));
@@ -849,7 +853,11 @@ void main() {
 
   group('withheld shortcuts stay withheld', () {
     testWidgets('no notification-preferences control appears', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
       final rendered = renderedText(tester);
 
       // §11 of the matrix has an inbox, mark-read and device registration, and
@@ -866,7 +874,11 @@ void main() {
     testWidgets('the household shortcut states it is unavailable', (
       tester,
     ) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
 
       await reveal(tester, find.text('See your household summary'));
       // Declared, and honestly reported — TAB 10's decision, unchanged.
@@ -874,12 +886,20 @@ void main() {
     });
 
     testWidgets('the assistance-history shortcut is present', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
       expect(find.text('Track your assistance requests'), findsOneWidget);
     });
 
     testWidgets('help and privacy are reachable from Profile', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
 
       await reveal(tester, find.text('Help and support'));
       expect(find.text('Privacy and your data'), findsOneWidget);
@@ -893,6 +913,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         textScaler: const TextScaler.linear(2),
         size: const Size(400, 3000),
       );
@@ -927,6 +948,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         size: const Size(1000, 1600),
       );
 
@@ -1065,6 +1087,7 @@ void _profileLocalisation() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         locale: AppLocales.filipino,
         size: const Size(400, 3000),
       );

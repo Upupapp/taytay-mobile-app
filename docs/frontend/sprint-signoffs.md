@@ -12,6 +12,7 @@ This file records that the words were looked for. It does not invent them.
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
 | S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
 | S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | 5d9d4c41377749b73d301771c3f87d4dc8467c95 | No approval words. |
+| S8 My Account | In review, not approved | | | No approval words. |
 
 ## S0 pixel match
 
@@ -348,3 +349,51 @@ These designs still need data the spec does not publish. The calls decline with 
 - Welcome copy, photo credits, and a bundled hall photograph. None of those are API fields.
 - `UserProfile.role` and `office_id` come back and are ignored. `rejection_reason` is kept off `toString`. The needs-correction screen shows it as the office's note to the resident. `email_verified` is on the profile model. A thread's `resident_id` is the signed-in account and is not stored.
 - Verification is `POST /me/verification-requests` (multipart `id_type`, `id_front`, optional `id_back`, `selfie`) and `GET /me/verification-requests/current`. It is not the old multi-step case with a documents list.
+
+## S8 My Account
+
+S8 is not approved. This section records the My Account screens. It does not record approval words.
+
+My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
+
+`/profile` is a shell root and has no back button. Every other account screen uses `TaytayBackButton` (44 dp disc, 48 dp hit). The inbox stays on the My Account branch, so the tab bar remains. The thread stays on that same branch. The shell hides the bar for `/messages/`, so the thread fills the phone, and coming back does not build a second shell during the transition.
+
+Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, and `GET /me/notification-preferences`. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. The privacy notice is fixed copy and reads no repository. Photo credits are generated from the bundled photograph manifest.
+
+The line measure is the same dark-run method as S7 (`rev5.py`): a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`.
+
+Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge at y 2262 is the 90 dp bar. Deviation is the start row, render minus design.
+
+| Screen | Lines (build / design) | Max line | Max card edge | Mismatch |
+| --- | --- | --- | --- | --- |
+| 08-01 Account home | 14 / 14 | 2 | 0 | 7.23% (214328/2962440) |
+| 08-02 Messages inbox | 9 / 9 | 1 | 1 | 4.19% (124051/2962440) |
+| 08-03 Edit profile | 18 / 18 | 2 | 2 | 4.91% (145598/2962440) |
+| 08-04 Settings and privacy | 15 / 15 | 2 | 2 | 7.00% (207470/2962440) |
+| 08-05 Photo credits | 15 / 15 | 2 | 1 | 7.90% (233996/2962440) |
+| 08-06 Messages empty | 11 / 11 | 1 | 0 | 1.99% (59070/2962440) |
+| 08-07 Thread, MSWDO | 16 / 16 | 2 | 1 | 6.53% (193507/2962440) |
+| 08-08 Thread, Treasurer | 16 / 16 | 2 | 2 | 4.67% (138448/2962440) |
+| 08-09 Privacy notice | 22 / 22 | 2 | 0 | 8.47% (251042/2962440) |
+| 08-10 Office banners | 33 / 33 | 2 | 0 | 9.56% (283203/2962440) |
+
+Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
+
+The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`) plus the S7 service fields already in the app. These designs still ask for data that contract does not publish:
+
+- No profile completion field. The specimen "60% complete" is fixture copy. The live home does not paint it.
+- No verification decided-at on `UserProfile`. The specimen date is fixture copy.
+- `email_verified` is on the profile. There is no `mobile_verified`. The live edit screen paints the email chip only. The specimen paints both.
+- Notification types are `verification_decided` and `message_received`, each `in_app` and `push`. There is no balita type, no emergency type, and no email channel. The Balita and emergency rows stay on and are not written. The live office-reply subtitle is "Push notifications". The specimen still says "Push and email".
+- No in-session change-password route. The reset flow exists. This app does not call the staff token route.
+- No data-export route. "Request a copy of my data" has nowhere to send.
+- No privacy-notice body and no photo-credit fields. The notice is fixed DRAFT copy until the LGU supplies it. Credits list every bundled photograph; the test compares the list to the asset manifest.
+- No SAMPLE flag on threads. The fixture may mark one. A live thread is never marked sample.
+- A thread publishes `office_slug`. The short name comes from the messaging repository and `GET /offices`.
+- Avatar upload exists. There is no "reviewed by the LGU" status. The edit screen shows that sentence as copy.
+- A digital-ID resource exists. 08-01 does not show it, and this sprint adds no digital-ID row. The existing row stays on `/profile/record`.
+- The design says "14 photos". That is the office-banner count (the hall, shared, plus 13 office-only photographs). The manifest has 16 photographs, because the three welcome photographs are credited on 08-05 and the hall is in both lists. The office-banner summary uses the office-banner length.
+
+`ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
+
+Recordings were captured from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (461861 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (886876 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1615 tests, with 15 skipped (the recording and live tags).

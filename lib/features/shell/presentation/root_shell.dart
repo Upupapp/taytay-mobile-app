@@ -78,38 +78,38 @@ class RootShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // LayoutBuilder rather than MediaQuery: the shell must respond to the space
-    // it is actually given, which on a foldable or in split-screen is not the
-    // size of the window.
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final layout = ShellLayout.forWidth(constraints.maxWidth);
-        // One resumer for the whole shell, not one per branch: a held intent is
-        // a single app-wide fact, and duplicating the resumer would replay it
-        // once per branch that happened to be alive.
-        return IntentResumer(
-          child: layout.usesRail
-              ? _RailScaffold(
-                  layout: layout,
-                  selectedIndex: navigationShell.currentIndex,
-                  onSelected: (index) => _goToBranch(context, index),
-                  child: navigationShell,
-                )
-              : _BarScaffold(
-                  selectedIndex: navigationShell.currentIndex,
-                  onSelected: (index) => _goToBranch(context, index),
-                  child: navigationShell,
-                ),
-        );
-      },
+    // The shell is full-bleed, so the window width is the space it is given.
+    // This is read during build. A LayoutBuilder here rebuilds the branch
+    // navigator during layout, and that reparent marks the bar inset dirty
+    // while none of its ancestors is laying out.
+    final layout = ShellLayout.forWidth(MediaQuery.sizeOf(context).width);
+    // One resumer for the whole shell, not one per branch: a held intent is
+    // a single app-wide fact, and duplicating the resumer would replay it
+    // once per branch that happened to be alive.
+    return IntentResumer(
+      child: layout.usesRail
+          ? _RailScaffold(
+              layout: layout,
+              selectedIndex: navigationShell.currentIndex,
+              onSelected: (index) => _goToBranch(context, index),
+              child: navigationShell,
+            )
+          : _BarScaffold(
+              selectedIndex: navigationShell.currentIndex,
+              onSelected: (index) => _goToBranch(context, index),
+              child: navigationShell,
+            ),
     );
   }
 }
 
-/// Compose and a thread fill the phone. The confirmation keeps the bar.
+/// A thread and office compose fill the phone. The sent screen keeps the bar.
+///
+/// The inbox lives at `/profile/messages` and keeps the bar. Matching the
+/// substring `message` would hide it, because "messages" contains "message".
 bool _fullScreen(String path) {
   if (path.startsWith('/messages/')) return true;
-  return path.contains('/message') && !path.endsWith('/message/sent');
+  return RegExp(r'^/offices/[^/]+/message$').hasMatch(path);
 }
 
 /// Compact: bottom navigation.
