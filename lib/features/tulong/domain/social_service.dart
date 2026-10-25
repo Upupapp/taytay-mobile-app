@@ -108,8 +108,9 @@ class TulongPresentation {
 
 /// Lucide name stored on a service.
 ///
-/// Hyphens, underscores, and case are ignored. `users-round` is `users`.
-/// Anything else, including null and empty, is `handHeart`.
+/// Hyphens, underscores, and case are ignored. `users-round` stays
+/// `usersRound`; it is not `users`. An unknown name, including null and
+/// empty, is `handHeart`.
 String canonicalServiceIconKey(String? raw) {
   final String compact = (raw ?? '').trim().toLowerCase().replaceAll(
     RegExp(r'[\s_-]'),
@@ -117,11 +118,14 @@ String canonicalServiceIconKey(String? raw) {
   );
   return switch (compact) {
     'accessibility' => 'accessibility',
-    'users' || 'usersround' => 'users',
+    'usersround' => 'usersRound',
+    'users' => 'users',
     'baby' => 'baby',
     'handcoins' => 'handCoins',
     'graduationcap' => 'graduationCap',
+    'heartpulse' => 'heartPulse',
     'heart' => 'heart',
+    'briefcasebusiness' => 'briefcaseBusiness',
     'briefcase' => 'briefcase',
     'handheart' || '' => 'handHeart',
     _ => 'handHeart',

@@ -486,8 +486,7 @@ class _CompactRow extends StatelessWidget {
               icon: _glyph(service.iconKey),
               color: foreground,
               iconSize: 20,
-              lucideStroke:
-                  service.iconKey == 'users' && service.tileColor == _goldTile,
+              lucideStroke: service.iconKey == 'usersRound',
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -1502,8 +1501,9 @@ class _Tile extends StatelessWidget {
   }
 }
 
-/// The list specimen's users glyph is the Lucide stroke, whose head and
-/// shoulders meet. The icon font leaves a light gap there on every row.
+/// The list tile for `users-round`. The vendored Lucide font has no
+/// users-round glyph; its `users` glyph leaves a light gap between the head
+/// and the shoulders. This stroke is the Lucide users-round outline.
 class _UsersMark extends StatelessWidget {
   const _UsersMark({required this.size, required this.color});
 
@@ -2025,8 +2025,7 @@ const TextStyle _stepNumber = TextStyle(
   decoration: TextDecoration.none,
 );
 
-/// Brand gold `#7A5E0C`. The youth list tile draws the Lucide stroke only
-/// for the users glyph on this colour.
+/// Brand gold `#7A5E0C`.
 const int _goldTile = 0xFF7A5E0C;
 
 (Color, Color) _tileColors(int? tile) {
@@ -2056,7 +2055,12 @@ IconData _glyph(String name) {
     'handCoins' => TaytayIcons.handCoins,
     'graduationCap' => TaytayIcons.graduationCap,
     'heart' => TaytayIcons.heart,
+    'heartPulse' => TaytayIcons.heartPulse,
     'briefcase' => TaytayIcons.briefcase,
+    'briefcaseBusiness' => TaytayIcons.briefcaseBusiness,
+    // The font has no users-round outline. The list tile paints that stroke
+    // itself when the key is usersRound. Other tiles use the users glyph.
+    'usersRound' => TaytayIcons.users,
     'wifiOff' => TaytayIcons.wifiOff,
     _ => TaytayIcons.handHeart,
   };

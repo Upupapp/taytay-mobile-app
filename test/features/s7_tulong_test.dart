@@ -270,14 +270,45 @@ void main() {
     expect(transport.requests.last.path.contains('programs'), isFalse);
   });
 
-  test('live fields decode, and presentation cannot invent them', () {
-    expect(canonicalServiceIconKey('users-round'), 'users');
-    expect(canonicalServiceIconKey('hand-coins'), 'handCoins');
-    expect(canonicalServiceIconKey('graduation-cap'), 'graduationCap');
-    expect(canonicalServiceIconKey('HAND_HEART'), 'handHeart');
-    expect(canonicalServiceIconKey('no-such-icon'), 'handHeart');
-    expect(canonicalServiceIconKey(null), 'handHeart');
+  test(
+    'service icon keys map onto Lucide names, and unknown keys fall back',
+    () {
+      const Map<String, String> keys = <String, String>{
+        'accessibility': 'accessibility',
+        'users': 'users',
+        'users-round': 'usersRound',
+        'users_round': 'usersRound',
+        'Users-Round': 'usersRound',
+        'baby': 'baby',
+        'hand-coins': 'handCoins',
+        'handcoins': 'handCoins',
+        'graduation-cap': 'graduationCap',
+        'graduationcap': 'graduationCap',
+        'heart': 'heart',
+        'heart-pulse': 'heartPulse',
+        'heartpulse': 'heartPulse',
+        'briefcase': 'briefcase',
+        'briefcase-business': 'briefcaseBusiness',
+        'briefcasebusiness': 'briefcaseBusiness',
+        'hand-heart': 'handHeart',
+        'handheart': 'handHeart',
+        'HAND_HEART': 'handHeart',
+        '': 'handHeart',
+      };
+      for (final MapEntry<String, String> entry in keys.entries) {
+        expect(
+          canonicalServiceIconKey(entry.key),
+          entry.value,
+          reason: entry.key,
+        );
+      }
+      expect(canonicalServiceIconKey(null), 'handHeart');
+      expect(canonicalServiceIconKey('no-such-icon'), 'handHeart');
+      expect(canonicalServiceIconKey('wifi-off'), 'handHeart');
+    },
+  );
 
+  test('live fields decode, and presentation cannot invent them', () {
     final SocialService decoded = decodeSocialService(<String, Object?>{
       'name': 'Sample',
       'slug': 'sample',
@@ -313,7 +344,7 @@ void main() {
       },
     }, allowPresentation: false)!;
 
-    expect(decoded.iconKey, 'users');
+    expect(decoded.iconKey, 'usersRound');
     expect(decoded.tileColor, 0xFFAABBCC);
     expect(decoded.badge, 'MSWDO');
     expect(decoded.legalBasis, 'RA 7277');
@@ -497,6 +528,53 @@ void main() {
       expect(find.text('Anti-trafficking'), findsOneWidget);
     },
   );
+
+  testWidgets('the youth list mark follows users-round, not the tile colour', (
+    WidgetTester tester,
+  ) async {
+    Future<void> pumpRow(String iconKey, int tile) {
+      return tester.pumpWidget(
+        MaterialApp(
+          home: TulongCanvas(
+            frame: TulongFrame.list,
+            services: <SocialService>[
+              SocialService(
+                id: '11111111-1111-4111-8111-111111111108',
+                name: 'Youth Programmes',
+                slug: 'youth',
+                summary: 'Youth groups',
+                details: 'Synthetic details.',
+                iconKey: iconKey,
+                tileColor: tile,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    bool youthMark(CustomPaint paint) => paint.size == const Size.square(20);
+
+    await pumpRow('users', 0xFF7A5E0C);
+    expect(
+      tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where(youthMark),
+      isEmpty,
+    );
+    expect(
+      tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .where((TaytayIcon icon) => icon.size == 20)
+          .single
+          .icon,
+      TaytayIcons.users,
+    );
+
+    await pumpRow('usersRound', 0xFF0B3D91);
+    expect(
+      tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where(youthMark),
+      hasLength(1),
+    );
+  });
 
   test('Tulong does not nudge lines with a translation', () {
     final Directory root = Directory('lib/features/tulong');

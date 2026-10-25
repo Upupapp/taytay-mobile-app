@@ -287,7 +287,7 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 
 | Screen | Lines (build / design) | Max line | Max card edge | Mismatch |
 | --- | --- | --- | --- | --- |
-| 07-01 Programme list | 16 / 16 | 1 | 0 | 2.15% (63758/2962440) |
+| 07-01 Programme list | 16 / 16 | 1 | 0 | 2.13% (63025/2962440) |
 | 07-02 OSCA | 19 / 19 | 2 | 1 | 3.23% (95641/2962440) |
 | 07-03 Social services centre | 18 / 18 | 2 | 1 | 3.90% (115541/2962440) |
 | 07-04 Featured programme | 18 / 18 | 2 | 1 | 4.62% (136763/2962440) |
@@ -296,8 +296,8 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 | 07-07 Solo parent | 21 / 21 | 2 | 1 | 3.47% (102838/2962440) |
 | 07-08 AICS | 20 / 20 | 2 | 1 | 3.39% (100527/2962440) |
 | 07-09 Educational assistance | 22 / 22 | 2 | 0 | 3.17% (94044/2962440) |
-| 07-10 Women and children | 20 / 20 | 2 | 1 | 3.38% (100243/2962440) |
-| 07-11 PESO jobs | 19 / 19 | 2 | 0 | 4.09% (121208/2962440) |
+| 07-10 Women and children | 20 / 20 | 2 | 1 | 3.18% (94262/2962440) |
+| 07-11 PESO jobs | 19 / 19 | 2 | 0 | 3.70% (109504/2962440) |
 | 07-12 Youth | 20 / 20 | 2 | 0 | 4.21% (124631/2962440) |
 
 Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only.
@@ -319,7 +319,7 @@ Every frame is within 2 image pixels on both lines and card edges. Light mode an
 
 Message follows the directory gate. A guest sees "Sign in to continue". An unverified resident sees "Verify your account to message offices". A verified resident opens the existing composer at `/offices/:officeId/message`. Share sends the title and the body and does not invent a URL. Call and directions use the published phone and address. An empty phone or address is app copy, not the server message.
 
-The note under the list says "Information on municipal programmes. These are information pages, not applications." Its padding matches the stylesheet, 10 dp below the note. The list card is padded 3 dp on the top and the bottom, which is what puts that card's edges on the specimen. The requirements card gives 4 dp of the extra bottom padding back, and the facts card takes the same 4 image px as top padding, so the fact lines stay put while the borders move. The featured steps card and the card under it do the same. The saved-pages card is 2 dp taller at the bottom. Card content is inset 1 px on the left and the right so a 1 px border consumes width the way CSS `border-box` does. A vertical inset moves every line by 3 image pixels and is not used. The search field is drawn at 44 dp. Its hit target is 48 dp and does not move the ink. The list bell is the same: a 44 dp circle inside a 48 dp hit, so the header row stays the height of the specimen. A primary action label ellipsizes when a large text size no longer fits the button. At the specimen scale the label still sits in the centre. A requirement marked SAMPLE keeps the chip on the last text line when it fits. The youth list tile draws the Lucide users stroke itself, because the vendored icon font always leaves a light gap between the head and the shoulders and that gap splits a dark run the specimen keeps whole. OSCA and the saved rows stay on the font, where the specimen does split. That tile is the one icon in Tulong that is not drawn through `TaytayIcon`.
+The note under the list says "Information on municipal programmes. These are information pages, not applications." Its padding matches the stylesheet, 10 dp below the note. The list card is padded 3 dp on the top and the bottom, which is what puts that card's edges on the specimen. The requirements card gives 4 dp of the extra bottom padding back, and the facts card takes the same 4 image px as top padding, so the fact lines stay put while the borders move. The featured steps card and the card under it do the same. The saved-pages card is 2 dp taller at the bottom. Card content is inset 1 px on the left and the right so a 1 px border consumes width the way CSS `border-box` does. A vertical inset moves every line by 3 image pixels and is not used. The search field is drawn at 44 dp. Its hit target is 48 dp and does not move the ink. The list bell is the same: a 44 dp circle inside a 48 dp hit, so the header row stays the height of the specimen. A primary action label ellipsizes when a large text size no longer fits the button. At the specimen scale the label still sits in the centre. A requirement marked SAMPLE keeps the chip on the last text line when it fits. Women and children use Lucide heart-pulse. PESO uses briefcase-business. The youth list tile is `users-round`. The vendored font has no users-round glyph, so that list tile draws the Lucide stroke itself, chosen by the icon key and not by the tile colour. The font's users glyph leaves a light gap between the head and the shoulders, and OSCA stays on that glyph, where the specimen does split. The youth list tile is the one icon in Tulong that is not drawn through `TaytayIcon`.
 
 Leaving `/news` still clears the Balita save message. `test/features/s6_balita_test.dart` saves a story, opens the article, and also leaves Balita for Home. The snackbar is gone in both cases.
 

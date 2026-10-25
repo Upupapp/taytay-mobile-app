@@ -127,6 +127,12 @@ abstract final class TaytayIcons {
 
   static const IconData briefcase = IconData(57442, fontFamily: 'Lucide');
 
+  /// Lucide `briefcase-business`. PESO on the Tulong list.
+  static const IconData briefcaseBusiness = IconData(
+    58837,
+    fontFamily: 'Lucide',
+  );
+
   static const IconData accessibility = IconData(58007, fontFamily: 'Lucide');
 
   static const IconData baby = IconData(58062, fontFamily: 'Lucide');
@@ -136,6 +142,9 @@ abstract final class TaytayIcons {
   static const IconData users = IconData(57764, fontFamily: 'Lucide');
 
   static const IconData heart = IconData(57586, fontFamily: 'Lucide');
+
+  /// Lucide `heart-pulse`. Women and children on the Tulong list.
+  static const IconData heartPulse = IconData(58222, fontFamily: 'Lucide');
 
   static const IconData circleUser = IconData(58465, fontFamily: 'Lucide');
 

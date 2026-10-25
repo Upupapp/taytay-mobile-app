@@ -298,7 +298,7 @@
       "presentation": {
         "hero_sample": false
       },
-      "icon_key": "heart",
+      "icon_key": "heart-pulse",
       "tile_color": "#B3261E",
       "badge": "MSWDO · PROTECTION",
       "legal_basis": "Contacts: MSWDO Taytay post (Jul 2026); Taytay PNP from LGU hotlines.",
@@ -348,7 +348,7 @@
         "hero_sample": true,
         "list_name": "Jobs & Employment (PESO)"
       },
-      "icon_key": "briefcase",
+      "icon_key": "briefcase-business",
       "tile_color": "#0F7A4D",
       "badge": "PESO",
       "legal_basis": "Location and Facebook: PESO Taytay page. Requirements: SAMPLE.",
@@ -398,7 +398,7 @@
         "hero_sample": true,
         "list_name": "Youth Programmes (TYDO)"
       },
-      "icon_key": "users",
+      "icon_key": "users-round",
       "tile_color": "#7A5E0C",
       "badge": "TYDO",
       "legal_basis": "Sources: taytayrizal.gov.ph (YORP, Youth Development Center). Requirements: SAMPLE.",
