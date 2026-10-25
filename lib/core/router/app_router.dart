@@ -29,8 +29,6 @@ import '../../features/platform/presentation/blocking_notice_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
-import '../../features/programs/presentation/program_detail_screen.dart';
-import '../../features/programs/presentation/programs_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_intake_screen.dart';
@@ -40,6 +38,8 @@ import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
 import '../../features/splash/presentation/splash_screen.dart';
+import '../../features/tulong/presentation/service_info_screen.dart';
+import '../../features/tulong/presentation/tulong_screen.dart';
 import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
@@ -268,13 +268,21 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: AppRoute.programs.path,
                 name: AppRoute.programs.routeName,
-                builder: (context, state) => const ProgramsScreen(),
+                builder: (context, state) => const TulongScreen(),
                 routes: <RouteBase>[
+                  // Before `:programId`, so `office` is not read as a slug.
+                  GoRoute(
+                    path: 'office/:officeId',
+                    name: AppRoute.tulongOffice.routeName,
+                    builder: (context, state) => OfficeDetailScreen(
+                      officeId: state.pathParameters['officeId'] ?? '',
+                    ),
+                  ),
                   GoRoute(
                     path: ':programId',
                     name: AppRoute.programDetail.routeName,
-                    builder: (context, state) => ProgramDetailScreen(
-                      programId: state.pathParameters['programId'] ?? '',
+                    builder: (context, state) => ServiceInfoScreen(
+                      slug: state.pathParameters['programId'] ?? '',
                     ),
                   ),
                 ],

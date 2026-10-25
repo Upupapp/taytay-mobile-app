@@ -21,6 +21,15 @@ resident is told before the request rather than by a `401`.
 The service catalogue is the one repository in this app backed by a real,
 implemented endpoint — which makes it the surface that carries acceptance 1.
 
+The Tulong tab is a second reader of that same services contract. `/programs`
+and `/programs/:slug` call `GET /api/v1/services` and `GET /api/v1/services/{slug}`.
+Both are public. `GET /api/v1/programs` is still absent from the Node contract.
+`ProgramApiRepository` still declines that call, and Tulong does not make it.
+The pages are information only: there is no apply control. Icons, a SAMPLE flag,
+claim steps, and saved dates are not on `Service`, so the live decoder leaves
+them unset. The dev fixture may supply them. Staging and production refuse mock
+mode.
+
 ---
 
 ## 2. Guests can use the directory — acceptance 1

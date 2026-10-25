@@ -178,10 +178,7 @@ void main() {
       expect(find.text('Municipal news'), findsOneWidget);
 
       await tapDestination(tester, 'Tulong');
-      expect(
-        find.widgetWithText(AppBar, 'Assistance programmes'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Social services'), findsWidgets);
 
       await tapDestination(tester, 'My Account');
       expect(find.widgetWithText(AppBar, 'Profile'), findsOneWidget);
@@ -249,10 +246,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(
-        find.widgetWithText(AppBar, 'Assistance programmes'),
-        findsOneWidget,
-      );
+      expect(find.textContaining('Social services'), findsWidgets);
     });
   });
 

@@ -1,0 +1,436 @@
+{
+  "services": [
+    {
+      "id": "11111111-1111-4111-8111-111111111101",
+      "name": "PWD Assistance",
+      "slug": "pwd-assistance",
+      "summary": "PWD ID, 2026 Cash Gift, benefits",
+      "details": "PWD ID, the 2026 PWD Cash Gift and benefits for persons with disability under the Magna Carta for Disabled Persons (RA 7277, as amended).",
+      "eligibility": "Taytay residents with a permanent disability.",
+      "requirements": [
+        {
+          "text": "Original and photocopy of your updated PWD ID (for the cash gift)",
+          "sample": false
+        },
+        {
+          "text": "For a new PWD ID: medical certificate or certificate of disability",
+          "sample": true
+        },
+        {
+          "text": "1×1 ID photo",
+          "sample": true
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "accessibility",
+        "tile": "blue",
+        "badge": "MSWDO · PWD",
+        "hero_sample": false,
+        "source": "Cash gift steps: MSWDO Taytay post (Jul 2026). PWD ID requirements: SAMPLE.",
+        "layout": "standard",
+        "listed": true,
+        "saved_label": "Saved Oct 20, 8:12 PM"
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111102",
+      "name": "Senior Citizens (OSCA)",
+      "slug": "senior-citizens",
+      "summary": "Senior citizen ID, RA 9994 benefits",
+      "details": "Senior Citizen ID and benefits for residents aged 60 and above under the Expanded Senior Citizens Act (RA 9994), including discounts on medicines and fares.",
+      "eligibility": "Taytay residents aged 60 or older.",
+      "requirements": [
+        {
+          "text": "Valid ID or birth certificate showing age",
+          "sample": false
+        },
+        {
+          "text": "Proof of residency (e.g. barangay certificate)",
+          "sample": false
+        },
+        {
+          "text": "1×1 ID photo",
+          "sample": false
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "users",
+        "tile": "green",
+        "badge": "MSWDO · OSCA",
+        "hero_sample": true,
+        "source": "Benefits: RA 9994. Taytay-specific requirements: SAMPLE, to confirm with MSWDO/OSCA.",
+        "layout": "standard",
+        "listed": true,
+        "saved_label": "Saved Oct 18"
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111103",
+      "name": "Solo Parents",
+      "slug": "solo-parents",
+      "summary": "Solo Parent ID, RA 11861 benefits",
+      "details": "Solo Parent ID and benefits under the Expanded Solo Parents Welfare Act (RA 11861).",
+      "eligibility": "Parents raising a child alone, as defined by RA 11861 (e.g. widowed, separated, or spouse detained or abroad).",
+      "requirements": [
+        {
+          "text": "Barangay certificate of residency",
+          "sample": false
+        },
+        {
+          "text": "Birth certificates of the children",
+          "sample": false
+        },
+        {
+          "text": "Proof of solo parent status (e.g. death certificate, court decree)",
+          "sample": true
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "baby",
+        "tile": "gold",
+        "badge": "MSWDO · SOLO PARENT",
+        "hero_sample": true,
+        "source": "Law: RA 11861. Taytay-specific requirements: SAMPLE.",
+        "layout": "standard",
+        "listed": true
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111104",
+      "name": "Crisis Assistance (AICS)",
+      "slug": "aics",
+      "summary": "Medical, burial, food & transport aid",
+      "details": "Assistance to Individuals in Crisis Situation: medical, burial, food and transport aid, after a social worker's assessment.",
+      "eligibility": "Individuals and families in crisis, as assessed by a social worker.",
+      "requirements": [
+        {
+          "text": "One valid ID of the client",
+          "sample": false
+        },
+        {
+          "text": "Medical: medical certificate or clinical abstract, and bill or prescription",
+          "sample": false
+        },
+        {
+          "text": "Burial: death certificate and funeral contract",
+          "sample": false
+        },
+        {
+          "text": "Barangay certificate of indigency or residency",
+          "sample": false
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "handCoins",
+        "tile": "red",
+        "badge": "MSWDO · AICS",
+        "hero_sample": false,
+        "source": "Requirements: DSWD AICS Citizen's Charter (national). Taytay MSWDO may ask for more.",
+        "layout": "standard",
+        "listed": true
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111105",
+      "name": "Educational Assistance",
+      "slug": "educational-assistance",
+      "summary": "Help with school expenses",
+      "details": "Help with school expenses for students from families in need. Not for graduate studies.",
+      "eligibility": "Students from indigent or vulnerable families, as assessed by a social worker.",
+      "requirements": [
+        {
+          "text": "Certificate of enrolment or registration form",
+          "sample": false
+        },
+        {
+          "text": "Validated school ID of the student",
+          "sample": false
+        },
+        {
+          "text": "Barangay certificate of indigency or residency",
+          "sample": false
+        },
+        {
+          "text": "Valid ID of the parent or claimant",
+          "sample": false
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "graduationCap",
+        "tile": "blue",
+        "badge": "MSWDO · EDUCATION",
+        "hero_sample": false,
+        "source": "Requirements: DSWD AICS educational assistance (national). Taytay-specific schedule: SAMPLE.",
+        "layout": "standard",
+        "listed": true
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111106",
+      "name": "Women & Children",
+      "slug": "women-children",
+      "summary": "Protection and referral services",
+      "details": "Protection, counselling and referral for women and children, including victims of abuse and human trafficking.",
+      "eligibility": "Any woman or child at risk, or anyone reporting a case.",
+      "requirements": [
+        {
+          "text": "No documents needed to ask for help",
+          "sample": false
+        },
+        {
+          "text": "Bring any ID or reports you have (optional)",
+          "sample": false
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Contact",
+          "value": "(02) 8284-4710 · 0921-284-3685"
+        },
+        {
+          "label": "Anti-trafficking",
+          "value": "1343 Actionline · Taytay PNP 0998-598-5730"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "MSWD Office, Ground Floor, Municipal Hall"
+        }
+      ],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "heart",
+        "tile": "red",
+        "badge": "MSWDO · PROTECTION",
+        "hero_sample": false,
+        "source": "Contacts: MSWDO Taytay post (Jul 2026); Taytay PNP from LGU hotlines.",
+        "layout": "standard",
+        "listed": true
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111107",
+      "name": "Jobs & Employment",
+      "slug": "peso-jobs",
+      "summary": "Job vacancies, referrals, job fairs",
+      "details": "Free job matching, referrals and job fairs from the Public Employment Service Office.",
+      "eligibility": "Job seekers in Taytay, including first-time job seekers.",
+      "requirements": [
+        {
+          "text": "Updated résumé or bio-data",
+          "sample": true
+        },
+        {
+          "text": "Valid ID",
+          "sample": true
+        },
+        {
+          "text": "Certificates or diplomas, if any",
+          "sample": true
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Facebook",
+          "value": "facebook.com/PESOTAYTAY"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Where",
+          "address": "4th Floor, New Taytay Municipal Building"
+        }
+      ],
+      "category": "jobs",
+      "office_slug": "peso",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "briefcase",
+        "tile": "green",
+        "badge": "PESO",
+        "hero_sample": true,
+        "source": "Location and Facebook: PESO Taytay page. Requirements: SAMPLE.",
+        "layout": "standard",
+        "listed": true,
+        "list_name": "Jobs & Employment (PESO)"
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111108",
+      "name": "Youth Programmes",
+      "slug": "youth",
+      "summary": "Youth groups, Youth Center",
+      "details": "Youth Organization Registration Program (YORP), the Youth Development Center and other youth services.",
+      "eligibility": "Taytay youth and youth-led or youth-serving organisations.",
+      "requirements": [
+        {
+          "text": "For YORP: organisation details and officers list",
+          "sample": true
+        },
+        {
+          "text": "Valid ID of the representative",
+          "sample": true
+        }
+      ],
+      "contacts": [
+        {
+          "label": "Landline",
+          "value": "8284-4782 · tydo@taytayrizal.gov.ph"
+        }
+      ],
+      "locations": [
+        {
+          "name": "Main office",
+          "address": "3rd Floor, Manila East Arcade II, Brgy. San Juan"
+        },
+        {
+          "name": "Youth Center",
+          "address": "C6-Ejercito Ave., Brgy. Sta. Ana"
+        }
+      ],
+      "category": "youth",
+      "office_slug": "tydo",
+      "featured": false,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "users",
+        "tile": "gold",
+        "badge": "TYDO",
+        "hero_sample": true,
+        "source": "Sources: taytayrizal.gov.ph (YORP, Youth Development Center). Requirements: SAMPLE.",
+        "layout": "standard",
+        "listed": true,
+        "list_name": "Youth Programmes (TYDO)"
+      }
+    },
+    {
+      "id": "11111111-1111-4111-8111-111111111109",
+      "name": "2026 PWD Cash Gift",
+      "slug": "pwd-cash-gift",
+      "summary": "Beneficiaries who haven't claimed yet can still receive their cash gift.",
+      "details": "Beneficiaries who haven't claimed yet can still receive their cash gift.",
+      "requirements": [],
+      "contacts": [],
+      "locations": [],
+      "category": "social",
+      "office_slug": "mswdo",
+      "featured": true,
+      "created_at": "2026-07-01T00:00:00Z",
+      "updated_at": "2026-07-01T00:00:00Z",
+      "presentation": {
+        "glyph": "accessibility",
+        "tile": "blue",
+        "badge": "FEATURED · MSWDO",
+        "hero_sample": false,
+        "layout": "featured",
+        "headline": "2026 PWD Cash Gift:\nunclaimed payout",
+        "steps": [
+          "Go to the MSWD Office, Ground Floor, Municipal Hall, to validate a copy of your ID.",
+          "Proceed to the Treasury Office, 2nd Floor, to claim your benefit.",
+          "Bring the original and a photocopy of your updated, valid PWD ID."
+        ],
+        "listed": false,
+        "header_title": "2026 PWD Cash Gift",
+        "header_subtitle": "Tulong · featured",
+        "schedule_label": "Schedule",
+        "schedule_value": "Jul 31, 2026 (Fri), 8:00 AM – 4:00 PM",
+        "questions_label": "Questions",
+        "questions_value": "(02) 8284-4710 · 0921-284-3685",
+        "share_label": "Share with a family member"
+      }
+    }
+  ]
+}

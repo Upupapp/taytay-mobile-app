@@ -65,6 +65,7 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.requestDetail: <String, String>{'requestId': 'req-sample-1'},
   AppRoute.requestRequirements: <String, String>{'requestId': 'req-sample-1'},
   AppRoute.programDetail: <String, String>{'programId': 'aics'},
+  AppRoute.tulongOffice: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeDetail: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeCompose: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeMessageSent: <String, String>{'officeId': 'mswdo'},
