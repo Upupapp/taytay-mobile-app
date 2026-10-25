@@ -13,7 +13,6 @@ import 'package:taytay_resident/features/events/data/event_api_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_registration.dart';
 import 'package:taytay_resident/features/requirements/data/requirement_api_repository.dart';
 import 'package:taytay_resident/features/requirements/domain/resident_requirement.dart';
-import 'package:taytay_resident/features/services/data/assistance_api_repository.dart';
 
 /// The failure paths TAB 23 names, tested deliberately rather than hoped for.
 ///
@@ -270,50 +269,6 @@ void main() {
         failure.residentMessage.toLowerCase(),
         isNot(contains('connection')),
       );
-    });
-  });
-
-  group('a duplicate submit produces one case', () {
-    test('the retry carries the same key the first attempt did', () async {
-      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
-        ok(<String, Object?>{'id': 'draft-1'}, status: 201),
-        const Err<ApiHttpResponse>(TimeoutFailure()),
-        ok(<String, Object?>{'id': 'draft-1'}, status: 201),
-        ok(<String, Object?>{
-          'id': 'case-9',
-          'status': 'submitted',
-        }, status: 201),
-      ]);
-      final AssistanceApiRepository repository = AssistanceApiRepository(
-        apiClient: ApiClient(
-          config: config(),
-          transport: transport,
-          accessTokenProvider: () async => 'tok',
-        ),
-      );
-
-      // Submit, lose the response, submit again — the resident tapping twice
-      // because the first attempt appeared to do nothing.
-      await repository.submitRequest(
-        serviceCode: 'AICS',
-        narrative: 'x',
-        answers: const <String, Object?>{},
-        consentKeys: const <String>[],
-        attachmentIds: const <String>[],
-        idempotencyKey: 'one-draft',
-      );
-      await repository.submitRequest(
-        serviceCode: 'AICS',
-        narrative: 'x',
-        answers: const <String, Object?>{},
-        consentKeys: const <String>[],
-        attachmentIds: const <String>[],
-        idempotencyKey: 'one-draft',
-      );
-
-      // Assistance intake is not on the Node contract. Both taps decline
-      // and neither one opens a case.
-      expect(transport.requests, isEmpty);
     });
   });
 

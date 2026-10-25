@@ -25,7 +25,7 @@ The Tulong tab is a second reader of that same services contract. `/programs`
 and `/programs/:slug` call `GET /api/v1/services` and `GET /api/v1/services/{slug}`.
 Both are public. `GET /api/v1/programs` is still absent from the Node contract.
 `ProgramApiRepository` still declines that call, and Tulong does not make it.
-The pages are information only: there is no apply control. `/services/:serviceCode` redirects to `/programs/:slug`, and the catalogue detail screen that offered an apply button is gone. `Service` publishes
+The pages are information only: there is no apply control. `/services/:serviceCode` and `/apply/:serviceCode` redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone. `Service` publishes
 `icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps`,
 `featured_headline`, `schedule`, `hero_url`, and `hidden_from_list`. Contacts
 are `{type, label|null, value}`. The catalogue omits hidden services.
@@ -142,8 +142,9 @@ app.
 
 ## 6. Access-aware CTAs that never act by themselves
 
-The catalogue detail that carried the button below is no longer routed.
-`/services/:serviceCode` opens the Tulong page, which has no apply control.
+The catalogue detail and the assistance intake are no longer routed.
+`/services/:serviceCode` and `/apply/:serviceCode` open the Tulong page, which
+has no apply control.
 
 | Session | Tapping "How to apply" |
 | --- | --- |
@@ -168,8 +169,9 @@ is submitted by tapping this."*
 `/services/:serviceCode` and `/programs/:programCode`, both using the **stable
 code** rather than the UUID. A code is what a municipal office quotes, it is
 legible in a link, it survives a re-seed of the catalogue, and it fits the
-deep-link character class unchanged. Opening `/services/:serviceCode` redirects
-to `/programs/:serviceCode`. That page is the Tulong information page.
+deep-link character class unchanged. Opening `/services/:serviceCode` or
+`/apply/:serviceCode` redirects to `/programs/:serviceCode`. That page is the
+Tulong information page.
 
 Both are registered as `DeepLink` targets (`service`, `program`, `programs`), so
 they inherit TAB 10's rules whole: an allow-listed target, one bounded

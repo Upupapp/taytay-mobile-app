@@ -1,12 +1,11 @@
 # Taytay resident mobile — assistance request intake
 
-How a verified resident files an application, and the several places this flow
-deliberately refuses to be clever.
+The resident app no longer files an application. `/apply/:serviceCode` redirects
+to `/programs/:slug`. The intake screen, its form, its controller, and the
+submit client are gone. What follows is the historical design.
 
-Implemented in `lib/features/services/` — `domain/assistance_intake.dart`,
-`domain/assistance_intake_validation.dart`,
-`presentation/assistance_intake_controller.dart`,
-`presentation/assistance_intake_screen.dart`.
+How a verified resident used to file an application, and the several places this
+flow deliberately refused to be clever.
 
 ---
 

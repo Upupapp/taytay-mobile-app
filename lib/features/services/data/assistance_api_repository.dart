@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import '../../../core/api/api_client.dart';
 
 import '../../../core/api/backend_gap.dart';
@@ -8,7 +6,6 @@ import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/assistance_case.dart';
 import '../domain/assistance_history.dart';
-import '../domain/assistance_intake.dart';
 import '../domain/service_request_repository.dart';
 
 /// Talks to the resident's own assistance drafts and cases.
@@ -60,31 +57,6 @@ class AssistanceApiRepository implements ServiceRequestRepository {
   }
 
   @override
-  Future<Result<ServiceRequest>> submitRequest({
-    required String serviceCode,
-    required String narrative,
-    required Map<String, Object?> answers,
-    required List<String> consentKeys,
-    required List<String> attachmentIds,
-    required String idempotencyKey,
-  }) async {
-    final Object _ = _apiClient.runtimeType;
-    unawaited(
-      _telemetry?.record(
-            const FlowStep(
-              flow: TelemetryFlow.assistanceApplication,
-              stage: TelemetryStage.blocked,
-            ),
-          ) ??
-          Future<bool>.value(false),
-    );
-    return backendGapFailure<ServiceRequest>(
-      BackendGap.absentOnNodeContract,
-      'submitRequest',
-    );
-  }
-
-  @override
   Future<Result<void>> cancelOwnRequest({
     required String id,
     required String idempotencyKey,
@@ -94,24 +66,6 @@ class AssistanceApiRepository implements ServiceRequestRepository {
     return backendGapFailure<void>(
       BackendGap.absentOnNodeContract,
       'cancelOwnRequest',
-    );
-  }
-
-  @override
-  Future<Result<AssistanceIntakeForm>> loadIntakeForm(
-    String serviceCode,
-  ) async {
-    // F24. There is no per-service intake-form endpoint. The closest thing the
-    // contract publishes is a programme's requirement template, which TAB 07
-    // wired — but it is keyed by programme UUID, not by service code, and it
-    // describes documents to bring rather than questions to answer.
-    //
-    // Hardcoding a question list here is what the app's own `assistance_intake`
-    // doc already refuses: a form the office never agreed to, collecting answers
-    // nobody reads.
-    return backendGapFailure<AssistanceIntakeForm>(
-      BackendGap.assistanceIntakeForm,
-      'loadIntakeForm($serviceCode)',
     );
   }
 

@@ -12,8 +12,8 @@
 /// Duplicating it would have produced two enums, two `isRenderable` rules and
 /// two switches over the same concept — and two switches over one concept drift,
 /// which is the lesson already written down as D-79. So the shape moved here,
-/// where a feature is allowed to depend on it, and `assistance_intake.dart`
-/// aliases the old names so nothing that already used them had to change.
+/// where a feature is allowed to depend on it. The assistance intake that
+/// first used these names is gone.
 ///
 /// The rule the type exists to protect is unchanged: **the app renders what the
 /// office asked for and invents nothing.** A form a client authors drifts the

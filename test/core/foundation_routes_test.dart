@@ -241,7 +241,8 @@ void main() {
       if (route == AppRoute.splash || route == AppRoute.signIn) continue;
       _go(tester, _openLocation(route));
       await tester.pumpAndSettle();
-      final String landed = route == AppRoute.serviceDetail
+      final String landed =
+          route == AppRoute.serviceDetail || route == AppRoute.applyForService
           ? AppRoute.programDetail.location(<String, String>{
               'programId': _sampleArguments[route]!['serviceCode']!,
             })

@@ -3,17 +3,13 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/intent/resident_intent.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
-import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/capability_gate.dart';
-import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/assistance_program.dart';
@@ -35,10 +31,8 @@ import 'programs_screen.dart';
 /// the counter, and an app that says "closed" sends somebody away from help they
 /// could still have received. Availability is backend-driven (acceptance 3).
 ///
-/// **The CTA explains; it never submits.** `POST /me/assistance-requests` is
-/// `planned`, so there is nothing to send — and a resident who has just come
-/// back through a sign-in gate must be shown what applying involves rather than
-/// have it done in their name.
+/// This screen is not routed. The resident app does not file an application
+/// from it.
 class ProgramDetailScreen extends StatefulWidget {
   const ProgramDetailScreen({required this.programId, super.key});
 
@@ -83,35 +77,6 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
     });
   }
 
-  Future<void> _apply(AssistanceProgram program) async {
-    final dependencies = AppDependencies.of(context);
-    final verdict = CapabilityService.evaluate(
-      session: dependencies.session.state,
-      capability: ResidentCapability.trackAssistanceRequests,
-    );
-
-    if (verdict is CapabilityUsable || verdict is CapabilityNotYetAvailable) {
-      dependencies.intents.remember(
-        ResidentIntentKind.applyForService,
-        targetId: program.code,
-      );
-      if (!mounted) return;
-      Outcome.problem(
-        context,
-        'Applying in this app is not switched on yet. Bring the documents '
-        'listed here to the Taytay municipal hall.',
-      );
-      return;
-    }
-
-    await AccessGateSheet.showForCapability(
-      context: context,
-      verdict: verdict,
-      intent: ResidentIntentKind.applyForService,
-      targetId: program.code,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final program = _program;
@@ -133,7 +98,6 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
             (_, _, null) => const _NotAvailable(),
             (_, _, final AssistanceProgram loaded) => _Detail(
               program: loaded,
-              onApply: () => _apply(loaded),
             ),
           },
         ),
@@ -143,10 +107,9 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 }
 
 class _Detail extends StatelessWidget {
-  const _Detail({required this.program, required this.onApply});
+  const _Detail({required this.program});
 
   final AssistanceProgram program;
-  final VoidCallback onApply;
 
   @override
   Widget build(BuildContext context) {
@@ -284,17 +247,6 @@ class _Detail extends StatelessWidget {
               'Taytay LGU staff assess every application against the current '
               'rules and the documents you bring. This app cannot tell you the '
               'outcome in advance, and nothing here is a promise of approval.',
-        ),
-        const SizedBox(height: Spacing.xl),
-
-        AppButton(label: 'How to apply', onPressed: onApply),
-        const SizedBox(height: Spacing.sm),
-        Text(
-          'Nothing is submitted by tapping this.',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
         ),
       ],
     );

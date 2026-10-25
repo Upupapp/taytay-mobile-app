@@ -259,21 +259,14 @@ enum AppRoute {
     parameters: <String>['requestId'],
   ),
 
-  /// Applying for one service. Verified only, like the requests it produces.
+  /// Old application address. It redirects to the Tulong page for the same slug.
   ///
-  /// **A top-level path, not a child of `/services/:serviceCode`.** The
-  /// catalogue is public and this is not, so nesting would put a verified-only
-  /// route inside a public branch — reachable, but only because the guard says
-  /// no on the way in. Keeping the boundary visible in the path means a reader
-  /// can see which parts of the app are open by looking at the table.
-  ///
-  /// It is also full-screen rather than a shell destination: a resident
-  /// part-way through an application should not be invited to wander into
-  /// another tab by a navigation bar under their thumb.
+  /// Public, like the page it opens. An old link must not stop at sign-in on
+  /// the way to information the municipality already publishes.
   applyForService(
     'apply-for-service',
     '/apply/:serviceCode',
-    AccessRequirement.verified,
+    AccessRequirement.public,
     parameters: <String>['serviceCode'],
   ),
 

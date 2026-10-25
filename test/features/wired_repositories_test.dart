@@ -17,7 +17,6 @@ import 'package:taytay_resident/features/notifications/domain/notification_repos
 import 'package:taytay_resident/features/services/data/assistance_api_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
-import 'package:taytay_resident/features/services/domain/service_request_repository.dart';
 
 /// Wire tests for the repositories TABs 05 and 08–13 wired.
 ///
@@ -107,24 +106,6 @@ void main() {
   });
 
   group('assistance — the key goes on the irreversible call only', () {
-    test('submitting declines and sends no draft', () async {
-      final Result<ServiceRequest> result =
-          await AssistanceApiRepository(
-            apiClient: clientFor(transport),
-          ).submitRequest(
-            serviceCode: 'AICS',
-            narrative: 'Roof damaged by a storm.',
-            answers: const <String, Object?>{},
-            consentKeys: const <String>['privacy-2026'],
-            attachmentIds: const <String>[],
-            idempotencyKey: 'submit-once',
-          );
-
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
-      expect(transport.requests, isEmpty);
-    });
-
     test('history declines for both scopes', () async {
       final AssistanceApiRepository repository = AssistanceApiRepository(
         apiClient: clientFor(transport),

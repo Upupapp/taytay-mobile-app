@@ -31,7 +31,6 @@ import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
-import '../../features/services/presentation/assistance_intake_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
@@ -441,15 +440,17 @@ GoRouter buildAppRouter({
           ),
         ],
       ),
-      // Full-screen by intent: a resident part-way through an application
-      // should not have a navigation bar under their thumb inviting them out
-      // of it.
+      // The old application address. Tulong is information only, so this
+      // opens the programme page for the same slug.
       GoRoute(
         path: AppRoute.applyForService.path,
         name: AppRoute.applyForService.routeName,
-        builder: (context, state) => AssistanceIntakeScreen(
-          serviceCode: state.pathParameters['serviceCode'] ?? '',
-        ),
+        redirect: (context, state) {
+          final String code = state.pathParameters['serviceCode'] ?? '';
+          return AppRoute.programDetail.location(<String, String>{
+            'programId': code,
+          });
+        },
       ),
       GoRoute(
         path: AppRoute.household.path,

@@ -277,7 +277,7 @@ Recordings were captured from this build at 1170×2532, motion on, no environmen
 
 S7 is not approved. This section records the information pages for municipal social services. It does not record approval words.
 
-Tulong is the shell tab at `/programs`. The list and each programme page are public, so a guest, an unverified resident, and a verified resident read the same pages. The list is a shell root and has no back button. Every programme page and the social services centre use `TaytayBackButton` (44 dp disc, 48 dp hit). There is no apply control and no submit. The old assistance intake screens stay in the tree and are not linked from these pages.
+Tulong is the shell tab at `/programs`. The list and each programme page are public, so a guest, an unverified resident, and a verified resident read the same pages. The list is a shell root and has no back button. Every programme page and the social services centre use `TaytayBackButton` (44 dp disc, 48 dp hit). There is no apply control and no submit. `/services/:serviceCode` and `/apply/:serviceCode` both redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone.
 
 Live reads are `GET /services` and `GET /services/{slug}`, public, with the session token attached when one exists. Office hours and the short name come from `GET /offices`. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) reads `test/fixtures/mock/tulong_services.json`. Staging and production refuse mock mode. `GET /programs` is still absent. `ProgramApiRepository` still declines that call and Tulong does not make it.
 
@@ -314,7 +314,7 @@ Every frame is within 2 image pixels on both lines and card edges. Light mode an
 - No hours field. A contact whose label contains "hour" is shown as sent. Otherwise the hours row uses `GET /offices` when that office has an hours string.
 - No SAMPLE flag. A live requirement is never marked sample. The dev fixture may still mark one.
 - No saved-pages resource and no saved-at. A live failure lists services already decoded in this process, newest first, at most 20, with the summary as the second line. Nothing is written to device storage. The offline specimen dates are fixture `saved_label`.
-- No apply or submit control on a Tulong page. `/services/:serviceCode` redirects to `/programs/:slug`. The catalogue detail screen that offered an apply button is gone. `/apply/:serviceCode` is still the assistance intake and is not linked from these pages.
+- No apply or submit control. `/services/:serviceCode` and `/apply/:serviceCode` both redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone.
 - Locations are `{name, address}` only.
 
 Message follows the directory gate. A guest sees "Sign in to continue". An unverified resident sees "Verify your account to message offices". A verified resident opens the existing composer at `/offices/:officeId/message`. Share sends the title and the body and does not invent a URL. Call and directions use the published phone and address. An empty phone or address is app copy, not the server message.
@@ -323,7 +323,7 @@ The note under the list says "Information on municipal programmes. These are inf
 
 Leaving `/news` still clears the Balita save message. `test/features/s6_balita_test.dart` saves a story, opens the article, and also leaves Balita for Home. The snackbar is gone in both cases.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner, 30 fps, because the list in both clips shows the youth icon: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1261177 bytes, 60 frames) and `s7-office.mp4` (2169862 bytes, 71 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. Each captured frame keeps the pump interval it was shot at (125 ms on the settled pages, 20 ms through the transition) and the file is 30 fps. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1638 tests, with 13 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner, 30 fps, because the list in both clips shows the youth icon: `test/goldens/compare/s7/recordings/s7-detail.mp4` (1261177 bytes, 60 frames) and `s7-office.mp4` (2169862 bytes, 71 frames). The detail clip opens PWD assistance and comes back to the list. The office clip opens PWD assistance, opens the social services centre, and comes back. Both use the real route transition. Each captured frame keeps the pump interval it was shot at (125 ms on the settled pages, 20 ms through the transition) and the file is 30 fps. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1611 tests, with 13 skipped (the recording and live tags). Removing in-app applications did not change the list, the PWD page, or the office page, so those clips were left as recorded.
 
 ## Contract gaps after the Node OpenAPI
 
@@ -340,7 +340,7 @@ These designs still need data the spec does not publish. The calls decline with 
 - Digital ID and QR (`01-02`, account). No credential resource.
 - Events catalogue and registration. No events resource.
 - Household (`03-07`). `PATCH /me` sends `street` and `purok`. The resident household calls are `GET` and `PATCH /households/current` and `POST /households`. Years at the address, residence type, and member count are not on the spec, so the live repository does not send them. The dev mock does. Barangay is an id from `GET /barangays` (`id`, `code`, `name` only — no phone).
-- Assistance intake, drafts, requirements, and document checklists. Tulong is `GET /services` and `GET /services/{slug}`. There is no apply route.
+- Assistance intake and submit. `/apply/:serviceCode` redirects to `/programs/:slug`. Requirements on an existing case stay in the app and still decline. Tulong is `GET /services` and `GET /services/{slug}`.
 - Notification types beyond `verification_decided` and `message_received`. Preferences are those two rows, each with `in_app` and `push`. The screen's older categories stay in the app and are not sent as extra wire types. SMS and email are not on the preference contract.
 - News comments, reactions, and reports. A resident reads `GET /news`. This app does not call `POST /news` or `PATCH /news`.
 - `GET /app/config` does not carry the older bootstrap service name, API version, timezone, channel, or page size. Those stay client defaults. `feature_flags` are strings.

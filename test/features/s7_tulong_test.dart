@@ -625,6 +625,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    'the old apply route lands on the PWD page and has no apply control',
+    (WidgetTester tester) async {
+      await _boot(tester, location: '/apply/pwd-assistance');
+      expect(
+        GoRouter.of(
+          tester.element(find.byType(Scaffold).first),
+        ).routerDelegate.currentConfiguration.uri.path,
+        '/programs/pwd-assistance',
+      );
+      expect(find.text('PWD Assistance'), findsWidgets);
+      expect(find.text('Who can avail'), findsOneWidget);
+      expect(find.text('Apply for this service'), findsNothing);
+      expect(find.text('How to apply'), findsNothing);
+      expect(find.textContaining('Apply'), findsNothing);
+      expect(find.textContaining('Submit'), findsNothing);
+    },
+  );
+
   test('Tulong does not nudge lines with a translation', () {
     final Directory root = Directory('lib/features/tulong');
     final Iterable<File> sources = root
