@@ -12,7 +12,7 @@ This file records that the words were looked for. It does not invent them.
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
 | S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
 | S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | 5d9d4c41377749b73d301771c3f87d4dc8467c95 | No approval words. |
-| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | c1c00f3c4d711873bf9f0fbc5331d6e27458d281 | No approval words. |
+| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | 68a7fe27734013b52d3704de237becd367a3f586 | No approval words. |
 
 ## S0 pixel match
 
@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. The 08 frames are the spacing source. Each value below is a named `S8Space` token, one per role, measured in dp from the PNGs at 3× (1 dp = 3 image pixels). Every row of a role uses that token. There is no per-row offset and no fraction fitted to a single edge. Round 2's structure stays: pills, tile colours, the badge-check mark, the inline Replace chip, the 08-10 titles, Display name hidden on the live editor, and `PATCH` with only the changed fields. A miss over 2 image pixels is reported with the design value and the measured value. The side-by-sides, the crops, and both clips are in this revision. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. The 08 frames are the spacing source. Each value below is a named `S8Space` token, one per role, measured in dp from the PNGs at 3× (1 dp = 3 image pixels). Every row of a role uses that token. There is no per-row offset and no fraction fitted to a single edge. Round 2's structure stays: pills, tile colours, the badge-check mark, the inline Replace chip, the 08-10 titles, Display name hidden on the live editor, and `PATCH` with only the changed fields. A miss over 2 image pixels is reported with the design value and the measured value. The side-by-sides, the crops, and both clips are commit `68a7fe27734013b52d3704de237becd367a3f586`. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
