@@ -187,18 +187,19 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _started = false;
-  final TextEditingController _name = TextEditingController();
   final TextEditingController _mobile = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  String _mobileOriginal = '';
+  String _emailOriginal = '';
   String _barangay = '';
   String? _barangayId;
+  String? _barangayIdOriginal;
   List<Barangay> _barangays = const <Barangay>[];
   bool _emailVerified = false;
   String? _idempotencyKey;
 
   @override
   void dispose() {
-    _name.dispose();
     _mobile.dispose();
     _email.dispose();
     super.dispose();
@@ -217,9 +218,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final result = await dependencies.residentProfileRepository.loadOwnDetail();
     if (!mounted) return;
     if (result case Ok(:final value)) {
-      _name.text = value.valueOf(ResidentProfileField.fullName) ?? '';
-      _mobile.text = value.valueOf(ResidentProfileField.mobileNumber) ?? '';
-      _email.text = value.valueOf(ResidentProfileField.emailAddress) ?? '';
+      final String mobile =
+          value.valueOf(ResidentProfileField.mobileNumber) ?? '';
+      final String email =
+          value.valueOf(ResidentProfileField.emailAddress) ?? '';
+      _mobile.text = mobile;
+      _email.text = email;
+      _mobileOriginal = mobile.trim();
+      _emailOriginal = email.trim();
       setState(() {
         _barangay = value.valueOf(ResidentProfileField.barangay) ?? '';
         _emailVerified = value.emailVerified;
@@ -235,6 +241,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         for (final Barangay barangay in value) {
           if (barangay.name == _barangay) _barangayId = barangay.id;
         }
+        _barangayIdOriginal = _barangayId;
       });
     }
   }
@@ -264,15 +271,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Future<void> _save() async {
+    final Map<String, Object?> changes = <String, Object?>{};
+    final String mobile = _mobile.text.trim();
+    final String email = _email.text.trim();
+    if (mobile != _mobileOriginal) changes['mobile'] = mobile;
+    if (email != _emailOriginal) changes['email'] = email;
+    if (_barangayId != null && _barangayId != _barangayIdOriginal) {
+      changes['barangay_id'] = _barangayId;
+    }
+    // ProfilePatch.name is the legal name. There is no display-name field.
+    if (changes.isEmpty) {
+      await AppDialog.acknowledge(
+        context: context,
+        title: 'Nothing was changed',
+        message: 'Your profile was not updated. You can try again.',
+      );
+      return;
+    }
+    if (!mounted) return;
     final dependencies = AppDependencies.of(context);
     _idempotencyKey ??= DateTime.now().microsecondsSinceEpoch.toString();
     final result = await dependencies.residentProfileRepository.submitOwnUpdate(
-      changes: <String, Object?>{
-        'name': _name.text.trim(),
-        'mobile': _mobile.text.trim(),
-        'email': _email.text.trim(),
-        if (_barangayId != null) 'barangay_id': _barangayId,
-      },
+      changes: changes,
       idempotencyKey: _idempotencyKey!,
     );
     if (!mounted) return;
@@ -299,11 +319,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       onLegalName: () => context.goNamed(AppRoute.profileRecord.routeName),
       fields: <AccountField>[
-        AccountField(
-          label: 'Display name',
-          value: _name.text,
-          controller: _name,
-        ),
         AccountField(
           label: 'Mobile number',
           value: _mobile.text,
@@ -419,8 +434,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           title: 'Office replies',
           subtitle: 'Push notifications',
           icon: TaytayIcons.messageSquare,
-          tile: BrandColors.chipGreenBg,
-          iconColor: BrandColors.success,
+          tile: BrandColors.chipBlueBg,
+          iconColor: BrandColors.taytayBlue,
           on: _officeReplies,
           onChanged: (bool on) => _setChannel(
             'message_received',

@@ -440,7 +440,8 @@ void main() {
     expect(credits['sk_council']!.title, 'Sangguniang Kabataan council');
     expect(credits['sk_council']!.offices, <String>['TYDO']);
     expect(credits['sk_council']!.replace, isTrue);
-    expect(credits['vaccination']!.title, 'Vaccination');
+    expect(credits['sk_court']!.title, 'SK basketball court');
+    expect(credits['vaccination']!.title, 'Vaccination, Camarines Sur');
     expect(credits['vaccination']!.replace, isTrue);
     expect(credits['vaccination']!.licence, 'Public domain (PH gov)');
     expect(credits['rescue_vehicle']!.title, 'Rescue vehicle, Bula');
@@ -508,78 +509,142 @@ void main() {
     expect(find.text('No messages yet'), findsNothing);
   });
 
-  testWidgets('Save sends the edited profile fields', (tester) async {
-    final _RecordingProfile profile = _RecordingProfile(
-      detail: const ResidentProfileDetail(
-        values: <ResidentProfileField, String>{
-          ResidentProfileField.fullName: 'Juana Dela Cruz',
-          ResidentProfileField.mobileNumber: '09170000000',
-          ResidentProfileField.emailAddress: 'juana@example.com',
-          ResidentProfileField.barangay: 'San Juan',
-        },
-        emailVerified: true,
-      ),
+  test('the design specimen still paints Display name', () {
+    expect(
+      AccountSpecimen.fields.map((AccountField field) => field.label),
+      contains('Display name'),
     );
-    final AppDependencies dependencies = await _accountDependencies(
-      profile: profile,
-      barangays: const <Barangay>[
-        Barangay(id: 'brgy-san-juan', name: 'San Juan'),
-      ],
-    );
-    addTearDown(dependencies.dispose);
-    final GoRouter router = GoRouter(
-      initialLocation: '/edit',
-      routes: <RouteBase>[
-        GoRoute(
-          path: '/edit',
-          builder: (BuildContext context, GoRouterState state) {
-            return const EditProfileScreen();
-          },
-        ),
-        GoRoute(
-          path: '/profile',
-          name: AppRoute.profile.routeName,
-          builder: (BuildContext context, GoRouterState state) {
-            return const Scaffold(body: Text('saved'));
-          },
-        ),
-        GoRoute(
-          path: '/profile/record',
-          name: AppRoute.profileRecord.routeName,
-          builder: (BuildContext context, GoRouterState state) {
-            return const SizedBox.shrink();
-          },
-        ),
-      ],
-    );
-    addTearDown(router.dispose);
-    tester.view.physicalSize = const Size(800, 1600);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      AppDependenciesScope(
-        dependencies: dependencies,
-        child: MaterialApp.router(routerConfig: router),
-      ),
-    );
-    await tester.pump();
-    await tester.enterText(find.byType(TextField).at(0), 'Ana Santos');
-    await tester.enterText(find.byType(TextField).at(1), '09171111111');
-    await tester.enterText(find.byType(TextField).at(2), 'ana@example.com');
-    final Finder save = find.byWidgetPredicate(
-      (Widget widget) => widget is Text && widget.data == 'Save changes',
-    );
-    await tester.tap(save);
-    await tester.pump();
-    await tester.pump();
-
-    expect(profile.changes, hasLength(1));
-    expect(profile.changes.single['name'], 'Ana Santos');
-    expect(profile.changes.single['mobile'], '09171111111');
-    expect(profile.changes.single['email'], 'ana@example.com');
-    expect(profile.changes.single['barangay_id'], 'brgy-san-juan');
-    expect(profile.idempotencyKeys, hasLength(1));
   });
+
+  testWidgets(
+    'Save sends only changed profile fields and never the legal name',
+    (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      Future<_RecordingProfile> open(
+        WidgetTester tester, {
+        required String mobile,
+        required String email,
+      }) async {
+        final _RecordingProfile profile = _RecordingProfile(
+          detail: ResidentProfileDetail(
+            values: <ResidentProfileField, String>{
+              ResidentProfileField.fullName: 'Juana Dela Cruz',
+              ResidentProfileField.mobileNumber: mobile,
+              ResidentProfileField.emailAddress: email,
+              ResidentProfileField.barangay: 'San Juan',
+            },
+            emailVerified: true,
+          ),
+        );
+        final AppDependencies dependencies = await _accountDependencies(
+          profile: profile,
+          barangays: const <Barangay>[
+            Barangay(id: 'brgy-san-juan', name: 'San Juan'),
+            Barangay(id: 'brgy-dolores', name: 'Dolores'),
+          ],
+        );
+        addTearDown(dependencies.dispose);
+        final GoRouter router = GoRouter(
+          initialLocation: '/edit',
+          routes: <RouteBase>[
+            GoRoute(
+              path: '/edit',
+              builder: (BuildContext context, GoRouterState state) {
+                return const EditProfileScreen();
+              },
+            ),
+            GoRoute(
+              path: '/profile',
+              name: AppRoute.profile.routeName,
+              builder: (BuildContext context, GoRouterState state) {
+                return const Scaffold(body: Text('saved'));
+              },
+            ),
+            GoRoute(
+              path: '/profile/record',
+              name: AppRoute.profileRecord.routeName,
+              builder: (BuildContext context, GoRouterState state) {
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          AppDependenciesScope(
+            dependencies: dependencies,
+            child: MaterialApp.router(routerConfig: router),
+          ),
+        );
+        await tester.pump();
+        expect(find.text('Display name'), findsNothing);
+        return profile;
+      }
+
+      final Finder save = find.byWidgetPredicate(
+        (Widget widget) => widget is Text && widget.data == 'Save changes',
+      );
+
+      final _RecordingProfile unchanged = await open(
+        tester,
+        mobile: '09170000000',
+        email: 'juana@example.com',
+      );
+      await tester.tap(save);
+      await tester.pump();
+      await tester.pump();
+      expect(unchanged.changes, isEmpty);
+      expect(find.text('Nothing was changed'), findsOneWidget);
+
+      final _RecordingProfile mobileOnly = await open(
+        tester,
+        mobile: '09170000000',
+        email: 'juana@example.com',
+      );
+      await tester.enterText(find.byType(TextField).at(0), '09171111111');
+      await tester.tap(save);
+      await tester.pump();
+      await tester.pump();
+      expect(mobileOnly.changes, hasLength(1));
+      expect(mobileOnly.changes.single.keys, <String>['mobile']);
+      expect(mobileOnly.changes.single['mobile'], '09171111111');
+      expect(mobileOnly.changes.single.containsKey('name'), isFalse);
+
+      final _RecordingProfile emailOnly = await open(
+        tester,
+        mobile: '09170000000',
+        email: 'juana@example.com',
+      );
+      await tester.enterText(find.byType(TextField).at(1), 'ana@example.com');
+      await tester.tap(save);
+      await tester.pump();
+      await tester.pump();
+      expect(emailOnly.changes, hasLength(1));
+      expect(emailOnly.changes.single.keys, <String>['email']);
+      expect(emailOnly.changes.single['email'], 'ana@example.com');
+      expect(emailOnly.changes.single.containsKey('name'), isFalse);
+
+      final _RecordingProfile barangayOnly = await open(
+        tester,
+        mobile: '09170000000',
+        email: 'juana@example.com',
+      );
+      await tester.tap(find.text('San Juan'));
+      await tester.pump();
+      await tester.tap(find.text('Dolores'));
+      await tester.pump();
+      await tester.tap(save);
+      await tester.pump();
+      await tester.pump();
+      expect(barangayOnly.changes, hasLength(1));
+      expect(barangayOnly.changes.single.keys, <String>['barangay_id']);
+      expect(barangayOnly.changes.single['barangay_id'], 'brgy-dolores');
+      expect(barangayOnly.changes.single.containsKey('name'), isFalse);
+    },
+  );
 
   testWidgets('the inbox sample line is only on when mock data is', (
     tester,

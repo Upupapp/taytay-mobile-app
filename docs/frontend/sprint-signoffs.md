@@ -352,13 +352,13 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. This pass puts the inbox timestamp, the SAMPLE chip, and the Replace chips where the designs draw them. The side-by-sides, the placement crops, and both clips are commit `cedf0e4f29ffa07755de3a7fe0f0f3adeb6c3ee8`. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 2 removes the fitted spacing and paints the review's structure: pills, tiles, the badge-check mark, the inline Replace chip, and a profile save that does not write the legal name. Spacing is the 4-point scale (`Spacing`) and the type roles (`.lt` 14/800/1.2, `.ls` 12/500/1.2, `.sub` 13/500/1.5, `.pill` 11/800/1.2). A miss outside 2 image pixels is reported below. It is not closed with a fraction. The side-by-sides, the crops, and both clips are the round-2 commit named in the index. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
 `/profile` is a shell root and has no back button. Every other account screen uses `TaytayBackButton` (44 dp disc, 48 dp hit). The inbox stays on the My Account branch, so the tab bar remains. The thread stays on that same branch. The shell hides the bar for `/messages/`, so the thread fills the phone, and coming back does not build a second shell during the transition.
 
-Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, `GET /me/notification-preferences`, and `GET /app/config` for the privacy notice. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. Photo credits stay on the bundled photograph manifest.
+Live reads are `GET /me`, `PATCH /me` (only the changed keys among `mobile`, `email`, and `barangay_id`), `GET /threads`, `GET /me/notification-preferences`, and `GET /app/config` for the privacy notice. `ProfilePatch` has no display-name field. `name` is the legal name, so the live editor does not show Display name and never sends `name`. The specimen still paints Display name, because 08-03 does. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. Photo credits stay on the bundled photograph manifest.
 
 The line measure is the same dark-run method as S7: a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Where the render has one extra run, the in-order maximum is left blank and the remainder is described under the table. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`, and a credit byline is its own line.
 
@@ -366,47 +366,49 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 
 | Screen | Lines (build / design) | Max in-order line | Max card edge | Mismatch |
 | --- | --- | --- | --- | --- |
-| 08-01 Account home | 14 / 14 | 2 | 0 | 5.67% (168104/2962440) |
-| 08-02 Messages inbox | 9 / 9 | 1 | 1 | 2.54% (75390/2962440) |
-| 08-03 Edit profile | 18 / 18 | 2 | 0 | 3.98% (118051/2962440) |
-| 08-04 Settings and privacy | 15 / 15 | 2 | 2 | 6.23% (184685/2962440) |
-| 08-05 Photo credits | 15 / 15 | 1 | 2 | 6.47% (191709/2962440) |
-| 08-06 Messages empty | 11 / 11 | 1 | 0 | 1.94% (57539/2962440) |
-| 08-07 Thread, MSWDO | 16 / 16 | 1 | 2 | 6.47% (191678/2962440) |
-| 08-08 Thread, Treasurer | 16 / 16 | 2 | 2 | 4.66% (138011/2962440) |
-| 08-09 Privacy notice | 22 / 22 | 2 | 1 | 6.86% (203098/2962440) |
-| 08-10 Office banners | 33 / 33 | 1 | 2 | 6.25% (185106/2962440) |
+| 08-01 Account home | 14 / 14 | 43 | 53 | 9.94% (294391/2962440) |
+| 08-02 Messages inbox | 10 / 9 |  | 12 | 2.98% (88152/2962440) |
+| 08-03 Edit profile | 18 / 18 | 59 | 54 | 10.85% (321278/2962440) |
+| 08-04 Settings and privacy | 15 / 15 | 54 | 45 | 8.37% (248081/2962440) |
+| 08-05 Photo credits | 16 / 15 |  | 61 | 10.61% (314451/2962440) |
+| 08-06 Messages empty | 11 / 11 | 12 | 0 | 3.34% (98887/2962440) |
+| 08-07 Thread, MSWDO | 16 / 16 | 38 | 32 | 9.75% (288915/2962440) |
+| 08-08 Thread, Treasurer | 16 / 16 | 35 | 31 | 7.38% (218691/2962440) |
+| 08-09 Privacy notice | 22 / 22 | 47 | 45 | 8.10% (239847/2962440) |
+| 08-10 Office banners | 30 / 33 |  | 1 | 10.47% (310077/2962440) |
 
-Every screen's line count matches the design. Every in-order line start and every card edge is within 2 image pixels. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
+Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen. A blank max line means the run counts differ, so an in-order maximum would pair the wrong rows. Those screens are described under the table.
 
-08-02 right-aligns the timestamp in the trailing column. On the BPLO row it sits on the office line (ink y 614–640 against the design's 615–641, x 931–1067 on both) and the count sits under it, beside the wrapped preview. On MSWDO and Treasurer it sits in the gap between the office name and the preview (within 3 px). The Treasurer glyph is the design's landmark. It still has a gap between the roof and the columns. "Oct 12" occupies that gap, which is where the design draws it, so the row stays one dark run. Nothing was moved to close the counter. Crops: `test/goldens/compare/s8/artifacts/08-02-landmark-time.png` and `08-02-office-time.png`.
+The misses are the design value against the token that replaced the fitted number. They were not pulled back onto the frame.
 
-08-03 keeps the specimen mobile chip, because the design paints it. The field stack matches the design: card padding, the gap from each label to its field, and the value inset put every line within 2 px. Card edges and the Save button sit on the design rows. The live edit screen still hides the mobile chip.
-
-08-04's privacy subtitle uses a line height that centres the title and the subtitle on the design rows. 08-07 and 08-08 set the day pill's padding and the spacer under it. Those lines are within 2 px, and the bubble cards stay within 2 px.
-
-08-09 draws the SAMPLE chip at the end of the last line of "Your rights", which is where the design draws it. The amber box is y 1450–1509, x 700–892, against the design's y 1448–1514, x 695–887. The top is 2 px low and the left edge is 5 px to the right. The chip is 7 px shorter than the design chip. It shares that line, so it is not its own dark run, and the design's chip is not its own run either. Crop: `test/goldens/compare/s8/artifacts/08-09-sample.png`.
-
-08-10 right-aligns each Replace chip on the title and the first credit line. A wrapped second credit line sits below the chip. The relief chip is y 693–754, x 886–1070, against the design's y 692–750, x 885–1070. The BFP chip is y 2050–2111, x 886–1070, against y 2049–2107, x 885–1070. Right edges match. The BFP chip overlaps the title and the first byline line because that is where the design draws it, and those two inks are one run on both images. The chip was not dropped onto the byline to produce the run. Crops: `test/goldens/compare/s8/artifacts/08-10-replace-relief.png` and `08-10-replace-bfp.png`.
+- List rows use a 44 dp tile and `Spacing.md` (12) vertical padding, which is `.li`. The home and settings stacks still start high: 08-01's first menu line is 563 against 570, and the sign-out card edge is 1956 against 2009 (53 px). 08-04's first row is 500 against 511, and the privacy card edge is 1719 against 1764 (45 px). Row titles are `.lt` (14/800/1.2). Settings dividers are inset by `Spacing.lg` and land on the design's x 99–1070.
+- 08-02's list inset is `Spacing.xxl` (32). The All pill is y 408–515, x 48–188, against the design's y 396–503, x 48–181. The height matches (108 px). The top is 12 px low and the pill is 7 px wider. `Spacing.xl` (24) would put the same pill 12 px high. The removed 28 dp inset is not on the scale. Unread is a white pill with a `#E7EBF3` border, y 408–515, x 214–436, against y 399–499, x 209–413. The Treasurer row starts at 1041 on both images and splits into 1041–1097 and 1103–1136, because the landmark glyph still has a hole and the timestamp is not moved onto it. That is the extra run (10/9). BPLO starts at 598 against 596. MSWDO starts at 834 on both. Crops: `test/goldens/compare/s8/artifacts/08-02-landmark-time.png`, `08-02-office-time.png`, and `08-02-filters.png`.
+- 08-03's field stack uses `Spacing.lg` card padding and `Spacing.md` between fields. The card edge is 1833 against 1779 (54 px). The last line is 1872 against 1818 (54 px). The specimen still shows Display name. The live screen does not.
+- 08-06's gap under the empty mark is `Spacing.xxl` (32). The title run is 885 against 896 (11 px). The frame's gap is about 40 dp, which is between `Spacing.xxl` (32) and `Spacing.xxxl` (48). Card edges match.
+- 08-07 and 08-08 use `.sub` line height 1.5 (13/500) and a day-pill gap of `Spacing.sm`. The bubble card edges finish 32 px and 31 px low (1446 against 1414, and 1605 against 1574). The removed line height was 56/39.
+- 08-09's notice card uses `Spacing.lg` padding. Its border run is (1608, 1610) against the design's (1563, 1565), 45 px low. The SAMPLE chip stays at the end of "Your rights", after one space. The amber box is y 1467–1526, x 706–898, against y 1448–1514, x 695–887. The top is 19 px low, the left edge is 11 px to the right, and the chip is 7 px shorter (60 against 67). The width matches (193 px). Crop: `test/goldens/compare/s8/artifacts/08-09-sample.png`.
+- 08-10's list card border is (576, 578) against (575, 577). That is the edge that was 593 against 596. The intro Replace chip is inside the sentence: y 361–426, x 903–1082, against y 360–427, x 909–1094. The top matches within 1 px. The chip is 2 px shorter (66 against 68) and 6 px to the left. The relief row chip is centred on the title and the byline, with no extra offset: y 723–788, x 891–1070, against y 692–750, x 885–1070. The right edge matches. The top is 31 px low. Both chips use `Spacing.sm` horizontal and `Spacing.xs` vertical padding around `.pill` (11/800/1.2), so they are 66 px tall against the row chip's 59 px (7 px) and 180 px wide against 186 px. The design's second chip, y 2049–2107, is below the rows this spacing paints, so the render has 30 runs against 33. Crops: `08-10-replace-intro.png`, `08-10-replace-relief.png`, and `08-10-replace-bfp.png`.
+- 08-05 has 16 runs against 15, and its last card edge is 1980 against 2041 (61 px). The credit rows use the same 44 dp tile and `Spacing.md` padding. The version line keeps the hard break before "mockup" and uses `.ls` line height 1.2. The removed height was 59/36.
+- One ratio remains, and it is not a gap: the page wash stops at 260/844, the top 260 dp of the 844 dp frame.
 
 Round 1 structure:
 
-- 08-01: Resident Profile is the id-card icon. Verification is a shield on a green tile. Privacy is a lock on blue. Photo credits and Messages are blue tiles. Messages carries a count badge. The bell has an unread dot. The Verified badge includes a check.
-- 08-02: the All chip is a blue circle with the word All. The BPLO row carries a 1 badge.
-- 08-03: an 80 dp JD avatar with a camera badge, bordered fields, and Verified checks. Save has no extra check. Live fields are text fields, and Save sends the edits.
-- 08-04: Balita is a bell. Change password is a blue tile with no subtitle. Section headers are bold title case (Notifications, App, Privacy).
-- 08-05: the same header. Each credit row is a 40 dp image tile, a title, a separate byline, an external-link icon, and a divider. The seal row is a blue shield. The banner row is the images icon. The design pixels for those welcome rows are the icon on a blue tile.
+- 08-01: Resident Profile is the id-card icon. Verification is a shield on a green tile. Privacy is a lock on blue. Photo credits and Messages are blue tiles. Messages carries a count badge. The bell has an unread dot. The JD initials are taytay blue at extra-bold (`.lt`). Verified uses the Lucide badge-check icon.
+- 08-02: All is a blue pill. Unread is a white pill with a `#E7EBF3` border. BPLO uses the briefcase icon and carries a 1 badge. The Treasurer tile is blue.
+- 08-03: an 80 dp JD avatar with a camera badge, bordered fields, and Verified chips that use badge-check. Save has no extra check. The specimen keeps Display name. The live screen does not, and Save sends only the fields that changed.
+- 08-04: Balita, Office replies, and Privacy Notice are blue tiles. Emergency stays red. Change password is a blue tile with no subtitle. Section headers are bold title case (Notifications, App, Privacy). Row titles are `.lt` (14/800). Dividers are inset by `Spacing.lg`.
+- 08-05: the same header. Each credit row is a 44 dp image tile, a title, a separate byline, an external-link icon, and a divider. The seal row is a blue shield. The banner row is the images icon. The design pixels for those welcome rows are the icon on a blue tile.
 - 08-07 and 08-08: the day label is a small pill.
 - 08-09: an amber DRAFT pill, a SAMPLE chip, a download icon, and a bold button label.
 - 08-10: blue bold office labels, amber right-aligned Replace chips, and row dividers.
 
 Data export is in the design and out of scope on the API. 08-04 draws "Request a copy" and 08-09 draws the outline button. Clarence said data export is out of scope, and there is no export route. The specimen keeps both rows so the stills match the design. Live settings and the live notice pass `showDataExport: false`, so a resident never sees the row and the app never sends an export request. This is the flag for that row.
 
-The five people photographs are marked Replace: DSWD relief, BFP rescuers, TESDA skills training, Sangguniang Kabataan council, and Vaccination. Titles, offices, and licences follow the design, including "Rescue vehicle, Bula", "Sangguniang Kabataan council", "Barangay health center, Bula", TYDO, and "Public domain (PH gov)".
+The five people photographs are marked Replace: DSWD relief, BFP rescuers, TESDA skills training, Sangguniang Kabataan council, and Vaccination, Camarines Sur. The youth-court title is "SK basketball court". Titles, offices, and licences follow the design, including "Rescue vehicle, Bula", "Sangguniang Kabataan council", "Barangay health center, Bula", TYDO, and "Public domain (PH gov)".
 
 The SAMPLE line on the live inbox and the live thread is painted only when `usesMockData` is on. The day chip is omitted when the live screen passes an empty day label.
 
-Edit profile uses real text fields. Save sends `PATCH /me` with `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. A test covers that map.
+Edit profile uses real text fields for mobile and email, and a barangay picker. Display name is not on the live screen: `ProfilePatch` has `name` and no display-name field, and `name` is the legal name. Save sends `PATCH /me` with only the keys that changed among `mobile`, `email`, and `barangay_id`. An unchanged form does not call the repository. A test covers each of those maps, and that `name` is absent. The specimen field stays so 08-03 still shows the design's four fields.
 
 A failed inbox load shows "Messages did not load" and a Retry button. The empty-list copy stays for a successful empty list. A test covers the failure.
 
@@ -435,6 +437,6 @@ Also still true:
 - A digital-ID resource exists. 08-01 does not show it, and this sprint adds no digital-ID row. The existing row stays on `/profile/record`.
 - The design says "14 photos". That is the office-banner count (the hall, shared, plus 13 office-only photographs). The manifest has 16 photographs, because the three welcome photographs are credited on 08-05 and the hall is in both lists. The office-banner summary uses the office-banner length.
 
-`ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
+`ProfilePatch` from the live editor sends only changed `mobile`, `email`, and `barangay_id`. It does not send `name`, `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (482130 bytes, 124 frames, 4.133 s) and `s8-settings.mp4` (896954 bytes, 124 frames, 4.133 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1644 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (482948 bytes, 124 frames, 4.133 s) and `s8-settings.mp4` (853277 bytes, 124 frames, 4.133 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1645 tests, with 15 skipped (the recording and live tags).

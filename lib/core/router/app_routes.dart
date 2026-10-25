@@ -147,7 +147,8 @@ enum AppRoute {
     AccessRequirement.authenticated,
   ),
 
-  /// Display name, mobile, email and barangay. Authenticated.
+  /// Mobile, email and barangay. Authenticated. ProfilePatch has no
+  /// display-name field; `name` is the legal name and is not edited here.
   profileEdit('profile-edit', '/profile/edit', AccessRequirement.authenticated),
 
   /// Notifications, language and the privacy notice. Authenticated: the

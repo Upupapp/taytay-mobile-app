@@ -140,7 +140,7 @@ abstract final class PhotoCredits {
     ),
     PhotoCredit(
       assetKey: 'sk_court',
-      title: 'A youth sports court',
+      title: 'SK basketball court',
       author: 'Iloilo Wanderer',
       licence: 'CC BY-SA 3.0',
       offices: <String>['TYDO'],
@@ -154,7 +154,7 @@ abstract final class PhotoCredits {
     ),
     PhotoCredit(
       assetKey: 'vaccination',
-      title: 'Vaccination',
+      title: 'Vaccination, Camarines Sur',
       author: 'Province of Camarines Sur',
       licence: 'Public domain (PH gov)',
       offices: <String>['HEALTH'],

@@ -402,7 +402,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_skhoop.jpg. Iloilo Wanderer, CC BY-SA 3.0. '
           'Credit is shown on the youth office page. Not precached.',
-      semanticLabel: 'Photo: a youth sports court',
+      semanticLabel: 'Photo: SK basketball court',
       sha256:
           '939e18a541b46f28b9f23ea6e858bcd3b49b9320b42a04d03183787e1595682c',
     ),
@@ -429,7 +429,7 @@ abstract final class AppAssets {
           'Design source src/ph_vaccine.jpg. Province of Camarines Sur, '
           'public domain. Credit is shown on the health office page. '
           'Not precached.',
-      semanticLabel: 'Photo: Vaccination',
+      semanticLabel: 'Photo: Vaccination, Camarines Sur',
       sha256:
           '288f8151506341175c98989a2c63335ae3da8497a81832f8ac5c2194abedf473',
     ),

@@ -30,6 +30,6 @@ the sentence in `test/fixtures/mock/offices.json`. The hall inset reuses
 | `assets/photos/rescue_vehicle.jpg` | MDRRMO | FroyAgta · CC BY-SA 4.0 · Rescue vehicle, Bula |
 | `assets/photos/skills_training.jpg` | PESO | Presidential Communications Office · Public domain (PH gov) · TESDA skills training · Replace |
 | `assets/photos/sk_council.jpg` | TYDO | Halimawsabanga · CC BY-SA 4.0 · Sangguniang Kabataan council · Replace |
-| `assets/photos/sk_court.jpg` | TYDO | Iloilo Wanderer · CC BY-SA 3.0 |
+| `assets/photos/sk_court.jpg` | TYDO | Iloilo Wanderer · CC BY-SA 3.0 · SK basketball court |
 | `assets/photos/health_centre.jpg` | Health Office | FroyAgta · CC BY-SA 4.0 · Barangay health center, Bula |
-| `assets/photos/vaccination.jpg` | Health Office | Province of Camarines Sur · Public domain (PH gov) · Vaccination · Replace |
+| `assets/photos/vaccination.jpg` | Health Office | Province of Camarines Sur · Public domain (PH gov) · Vaccination, Camarines Sur · Replace |
