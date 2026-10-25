@@ -25,6 +25,8 @@ class MessagesInboxScreen extends StatefulWidget {
 
 class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   bool _started = false;
+  bool _loading = true;
+  bool _failed = false;
   List<OfficeThread> _threads = const <OfficeThread>[];
 
   @override
@@ -41,22 +43,39 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
     ).officeMessagingRepository.listThreads();
     if (!mounted) return;
     setState(() {
-      _threads = switch (result) {
-        Ok(:final value) => value,
-        Err() => const <OfficeThread>[],
-      };
+      _loading = false;
+      switch (result) {
+        case Ok(:final value):
+          _threads = value;
+          _failed = false;
+        case Err():
+          _threads = const <OfficeThread>[];
+          _failed = true;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool empty = _threads.isEmpty;
+    if (_loading) {
+      return const ColoredBox(
+        color: BrandColors.surface,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    final AccountFrame frame = _failed
+        ? AccountFrame.inboxError
+        : _threads.isEmpty
+        ? AccountFrame.inboxEmpty
+        : AccountFrame.inbox;
     return AccountCanvas(
-      frame: empty ? AccountFrame.inboxEmpty : AccountFrame.inbox,
+      frame: frame,
       title: 'Messages',
       showBack: true,
+      showSampleNote: AppDependencies.of(context).config.usesMockData,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       onBell: () => context.goNamed(AppRoute.notifications.routeName),
+      onInboxRetry: _load,
       inbox: <AccountInboxRow>[
         for (final OfficeThread thread in _threads)
           AccountInboxRow(
@@ -66,6 +85,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
             icon: TaytayIcons.messageSquare,
             tile: BrandColors.chipBlueBg,
             iconColor: BrandColors.taytayBlue,
+            badge: thread.unreadCount > 0 ? '${thread.unreadCount}' : null,
             onTap: () => context.goNamed(
               AppRoute.messageThread.routeName,
               pathParameters: <String, String>{'threadId': thread.id},
@@ -138,6 +158,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool mock = AppDependencies.of(context).config.usesMockData;
     return Scaffold(
       backgroundColor: BrandColors.surface,
       body: AccountCanvas(
@@ -148,6 +169,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
         showBack: true,
         showBell: false,
         onBack: () => context.goNamed(AppRoute.messagesInbox.routeName),
+        showSampleNote: mock,
         bubbles: _bubbles,
         dayLabel: '',
       ),
@@ -165,13 +187,22 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _started = false;
-  String _name = '';
-  String _mobile = '';
-  String _email = '';
+  final TextEditingController _name = TextEditingController();
+  final TextEditingController _mobile = TextEditingController();
+  final TextEditingController _email = TextEditingController();
   String _barangay = '';
   String? _barangayId;
+  List<Barangay> _barangays = const <Barangay>[];
   bool _emailVerified = false;
   String? _idempotencyKey;
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _mobile.dispose();
+    _email.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -186,10 +217,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final result = await dependencies.residentProfileRepository.loadOwnDetail();
     if (!mounted) return;
     if (result case Ok(:final value)) {
+      _name.text = value.valueOf(ResidentProfileField.fullName) ?? '';
+      _mobile.text = value.valueOf(ResidentProfileField.mobileNumber) ?? '';
+      _email.text = value.valueOf(ResidentProfileField.emailAddress) ?? '';
       setState(() {
-        _name = value.valueOf(ResidentProfileField.fullName) ?? '';
-        _mobile = value.valueOf(ResidentProfileField.mobileNumber) ?? '';
-        _email = value.valueOf(ResidentProfileField.emailAddress) ?? '';
         _barangay = value.valueOf(ResidentProfileField.barangay) ?? '';
         _emailVerified = value.emailVerified;
       });
@@ -199,12 +230,37 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         .listBarangays();
     if (!mounted) return;
     if (barangays case Ok(:final value)) {
-      for (final Barangay barangay in value) {
-        if (barangay.name == _barangay) {
-          setState(() => _barangayId = barangay.id);
+      setState(() {
+        _barangays = value;
+        for (final Barangay barangay in value) {
+          if (barangay.name == _barangay) _barangayId = barangay.id;
         }
-      }
+      });
     }
+  }
+
+  Future<void> _pickBarangay() async {
+    if (_barangays.isEmpty) return;
+    final Barangay? picked = await showDialog<Barangay>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return SimpleDialog(
+          title: const Text('Barangay'),
+          children: <Widget>[
+            for (final Barangay barangay in _barangays)
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(dialogContext).pop(barangay),
+                child: Text(barangay.name),
+              ),
+          ],
+        );
+      },
+    );
+    if (picked == null || !mounted) return;
+    setState(() {
+      _barangay = picked.name;
+      _barangayId = picked.id;
+    });
   }
 
   Future<void> _save() async {
@@ -212,9 +268,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _idempotencyKey ??= DateTime.now().microsecondsSinceEpoch.toString();
     final result = await dependencies.residentProfileRepository.submitOwnUpdate(
       changes: <String, Object?>{
-        'name': _name,
-        'mobile_number': _mobile,
-        'email': _email,
+        'name': _name.text.trim(),
+        'mobile': _mobile.text.trim(),
+        'email': _email.text.trim(),
         if (_barangayId != null) 'barangay_id': _barangayId,
       },
       idempotencyKey: _idempotencyKey!,
@@ -243,10 +299,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       onLegalName: () => context.goNamed(AppRoute.profileRecord.routeName),
       fields: <AccountField>[
-        AccountField(label: 'Display name', value: _name),
-        AccountField(label: 'Mobile', value: _mobile),
-        AccountField(label: 'Email', value: _email, verified: _emailVerified),
-        AccountField(label: 'Barangay', value: _barangay, chevron: true),
+        AccountField(
+          label: 'Display name',
+          value: _name.text,
+          controller: _name,
+        ),
+        AccountField(
+          label: 'Mobile number',
+          value: _mobile.text,
+          controller: _mobile,
+        ),
+        AccountField(
+          label: 'Email',
+          value: _email.text,
+          controller: _email,
+          verified: _emailVerified,
+        ),
+        AccountField(
+          label: 'Barangay',
+          value: _barangay,
+          chevron: true,
+          onTap: _pickBarangay,
+        ),
       ],
       onSave: _save,
     );
@@ -330,7 +404,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         AccountToggle(
           title: 'Balita & advisories',
           subtitle: 'Push notifications',
-          icon: TaytayIcons.newspaper,
+          icon: TaytayIcons.bell,
           tile: BrandColors.chipBlueBg,
           iconColor: BrandColors.taytayBlue,
           on: _balita,
@@ -370,7 +444,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           ),
         ),
       ],
-      changePasswordSubtitle: 'Current password, then a new one',
+      changePasswordSubtitle: '',
       showDataExport: false,
       onLanguage: () => AppDialog.acknowledge(
         context: context,
@@ -420,7 +494,9 @@ class PrivacyNoticeScreen extends StatefulWidget {
 
 class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
   bool _started = false;
+  bool _ready = false;
   String? _markdown;
+  bool _draft = false;
 
   @override
   void didChangeDependencies() {
@@ -431,20 +507,33 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
   }
 
   Future<void> _load() async {
-    final result = await AppDependencies.of(
-      context,
-    ).platformRepository.loadBootstrap();
+    final dependencies = AppDependencies.of(context);
+    final bool production = dependencies.config.environment.isProduction;
+    final result = await dependencies.platformRepository.loadBootstrap();
     if (!mounted) return;
-    if (result case Ok(:final value)) {
-      final notice = value.privacyNotice;
-      if (!notice.usesBundledDraft) {
-        setState(() => _markdown = notice.bodyMarkdown);
+    setState(() {
+      _ready = true;
+      if (result case Ok(:final value)) {
+        final notice = value.privacyNotice;
+        if (!notice.usesBundledDraft) {
+          _markdown = notice.bodyMarkdown;
+        } else if (!production) {
+          _draft = true;
+        }
+      } else if (!production) {
+        _draft = true;
       }
-    }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_ready) {
+      return const ColoredBox(
+        color: BrandColors.surface,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
     return AccountCanvas(
       frame: AccountFrame.privacy,
       title: 'Privacy Notice',
@@ -452,6 +541,7 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       showDataExport: false,
+      showBundledDraft: _draft,
       noticeMarkdown: _markdown,
     );
   }

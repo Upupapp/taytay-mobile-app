@@ -12,7 +12,7 @@ This file records that the words were looked for. It does not invent them.
 | S4 Shell and Home | Approved by design review | https://github.com/Upupapp/taytay-mobile-app/pull/6 | 68f5687a086ae536302ced32c88a77e751ef8502 | Ui/Ux Taytay approved S4 at tip 68f5687. Merged to main at d2636260207fb07c7cbcf2eadcfcf4529b9369ee. |
 | S5 Directory | Approved by the owner | https://github.com/Upupapp/taytay-mobile-app/pull/7 | efa968afcae305ccaf832694fb692b76a799a512 | The owner approved S5 at efa968a. Merged to main at 47717668dc51c82ed8bdce8168e7efc7bed22a1f. |
 | S6 Balita | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/8 | 5d9d4c41377749b73d301771c3f87d4dc8467c95 | No approval words. |
-| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | cdd4adf1f79c5737848270ac1125aae364b550ff | No approval words. |
+| S8 My Account | In review, not approved | https://github.com/Upupapp/taytay-mobile-app/pull/10 | PIXELCOMMIT | No approval words. |
 
 ## S0 pixel match
 
@@ -352,54 +352,87 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. The side-by-sides are commit `cdd4adf1f79c5737848270ac1125aae364b550ff`. They were re-rendered after the client answers below and are byte-identical, so those files are unchanged. The recordings were captured again because the live home and the live settings changed. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. The side-by-sides and both clips are commit `PIXELCOMMIT`. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
 `/profile` is a shell root and has no back button. Every other account screen uses `TaytayBackButton` (44 dp disc, 48 dp hit). The inbox stays on the My Account branch, so the tab bar remains. The thread stays on that same branch. The shell hides the bar for `/messages/`, so the thread fills the phone, and coming back does not build a second shell during the transition.
 
-Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, `GET /me/notification-preferences`, and `GET /app/config` for the privacy notice. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. Photo credits are generated from the bundled photograph manifest.
+Live reads are `GET /me`, `PATCH /me` (`name`, `mobile`, `email`, `barangay_id`), `GET /threads`, `GET /me/notification-preferences`, and `GET /app/config` for the privacy notice. The dev mock (`TAYTAY_ENV=dev` and `TAYTAY_DATA=mock`) supplies the synthetic resident. Staging and production refuse mock mode. Photo credits stay on the bundled photograph manifest.
 
-The line measure is the same dark-run method as S7 (`rev5.py`): a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`.
+The line measure is the same dark-run method as S7: a row is dark when any pixel from x 60 to 1110 has a mean RGB below 110. A run shorter than 8 rows is dropped. Pairing is in order. Deviation is the start row, render minus design. Where the render has one extra run, the in-order maximum is left blank and the remainder is described under the table. Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s8/`. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). `lib/features/account` contains no `Transform.translate`, and a credit byline is its own line.
 
-Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge at y 2262 is the 90 dp bar. Deviation is the start row, render minus design.
+Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more than 400 of those pixels in x 120–1050). A run of those rows is one edge. The tab-bar edge at y 2262 is the 90 dp bar. Deviation is the start row, render minus design. Edit-field borders are `#D6DCE8` on white, so they are not counted as cards.
 
-| Screen | Lines (build / design) | Max line | Max card edge | Mismatch |
+| Screen | Lines (build / design) | Max in-order line | Max card edge | Mismatch |
 | --- | --- | --- | --- | --- |
-| 08-01 Account home | 14 / 14 | 2 | 0 | 7.23% (214328/2962440) |
-| 08-02 Messages inbox | 9 / 9 | 1 | 1 | 4.19% (124051/2962440) |
-| 08-03 Edit profile | 18 / 18 | 2 | 2 | 4.91% (145598/2962440) |
-| 08-04 Settings and privacy | 15 / 15 | 2 | 2 | 7.00% (207470/2962440) |
-| 08-05 Photo credits | 15 / 15 | 2 | 1 | 7.90% (233996/2962440) |
-| 08-06 Messages empty | 11 / 11 | 1 | 0 | 1.99% (59070/2962440) |
-| 08-07 Thread, MSWDO | 16 / 16 | 2 | 1 | 6.53% (193507/2962440) |
-| 08-08 Thread, Treasurer | 16 / 16 | 2 | 2 | 4.67% (138448/2962440) |
-| 08-09 Privacy notice | 22 / 22 | 2 | 0 | 8.47% (251042/2962440) |
-| 08-10 Office banners | 33 / 33 | 2 | 0 | 9.56% (283203/2962440) |
+| 08-01 Account home | 14 / 14 | 2 | 0 | 5.67% (168104/2962440) |
+| 08-02 Messages inbox | 10 / 9 | — | 0 | 4.16% (123207/2962440) |
+| 08-03 Edit profile | 18 / 18 | 20 | 0 | 5.43% (160990/2962440) |
+| 08-04 Settings and privacy | 15 / 15 | 4 | 2 | 6.24% (184748/2962440) |
+| 08-05 Photo credits | 15 / 15 | 1 | 2 | 6.47% (191709/2962440) |
+| 08-06 Messages empty | 11 / 11 | 1 | 0 | 1.94% (57539/2962440) |
+| 08-07 Thread, MSWDO | 16 / 16 | 4 | 2 | 6.48% (191928/2962440) |
+| 08-08 Thread, Treasurer | 16 / 16 | 4 | 2 | 4.67% (138261/2962440) |
+| 08-09 Privacy notice | 23 / 22 | — | 1 | 8.10% (240007/2962440) |
+| 08-10 Office banners | 34 / 33 | — | 2 | 10.02% (296779/2962440) |
 
-Every frame is within 2 image pixels on both lines and card edges. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
+08-01, 08-05, and 08-06 are within 2 image pixels on both lines and card edges. 08-04, 08-07, and 08-08 keep every card edge within 2 px. One settings line on 08-04 starts 4 px off. The day pill on 08-07 and 08-08 starts 4 px late, while the bubble cards sit within 2 px the other way, so the list padding stays. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
 
-The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`), now including the fields from backend `3e3b110`. The specimen date on 08-01 stays fixture copy. The live home paints `verification_decided_at` as a Manila calendar date when the field is an ISO time, and leaves the subtitle "Verified" when it is null.
+08-02 card edges are exact. The real row starts (596, 833, 1040, 1251) match the design (596, 834, 1041, 1252) within 1 px. The landmark glyph has a 1 px hole at y 1071, so the dark-run counter splits that one row into two. The title and the preview stay on separate lines.
 
-- Balita and emergency are preference types, each `in_app` and `push`, defaulting to on. The live settings rows write both flags. The specimen emergency row stays locked, so 08-04 is unchanged.
-- `GET /app/config` publishes `privacy_notice` with `version`, `updated_at`, and `body_markdown`. A published version is rendered on the live notice. Version `placeholder`, a missing object, or an empty body keeps the bundled DRAFT, so 08-09 is unchanged. The dev mock sends `placeholder`.
+08-03 card edges are exact, and the Save button sits on the design line. Line starts around the mobile label reach +20 px and then taper. A uniform shift would move the button.
+
+08-09 card edges are within 1 px and the body lines are within 2 px until the SAMPLE chip and the export button add one extra dark run. The nearest-neighbour tail is 93 px because that extra run shifts the zip. The body itself is not 93 px off.
+
+08-10 card edges are within 2 px. The row pitch is a little short, so the error decreases down the list, and one extra line puts the tail zip off. Nearest neighbour there is 33 px. The two-line titles and the Replace chips are real rows.
+
+Round 1 structure:
+
+- 08-01: Resident Profile is the id-card icon. Verification is a shield on a green tile. Privacy is a lock on blue. Photo credits and Messages are blue tiles. Messages carries a count badge. The bell has an unread dot. The Verified badge includes a check.
+- 08-02: the All chip is a blue circle with the word All. The BPLO row carries a 1 badge.
+- 08-03: an 80 dp JD avatar with a camera badge, bordered fields, and Verified checks. Save has no extra check. Live fields are text fields, and Save sends the edits.
+- 08-04: Balita is a bell. Change password is a blue tile with no subtitle. Section headers are bold title case (Notifications, App, Privacy).
+- 08-05: the same header. Each credit row is a 40 dp image tile, a title, a separate byline, an external-link icon, and a divider. The seal row is a blue shield. The banner row is the images icon. The design pixels for those welcome rows are the icon on a blue tile.
+- 08-07 and 08-08: the day label is a small pill.
+- 08-09: an amber DRAFT pill, a SAMPLE chip, a download icon, and a bold button label.
+- 08-10: blue bold office labels, amber right-aligned Replace chips, and row dividers.
+
+Data export is in the design and out of scope on the API. 08-04 draws "Request a copy" and 08-09 draws the outline button. Clarence said data export is out of scope, and there is no export route. The specimen keeps both rows so the stills match the design. Live settings and the live notice pass `showDataExport: false`, so a resident never sees the row and the app never sends an export request. This is the flag for that row.
+
+The five people photographs are marked Replace: DSWD relief, BFP rescuers, TESDA skills training, Sangguniang Kabataan council, and Vaccination. Titles, offices, and licences follow the design, including "Rescue vehicle, Bula", "Sangguniang Kabataan council", "Barangay health center, Bula", TYDO, and "Public domain (PH gov)".
+
+The SAMPLE line on the live inbox and the live thread is painted only when `usesMockData` is on. The day chip is omitted when the live screen passes an empty day label.
+
+Edit profile uses real text fields. Save sends `PATCH /me` with `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. A test covers that map.
+
+A failed inbox load shows "Messages did not load" and a Retry button. The empty-list copy stays for a successful empty list. A test covers the failure.
+
+The bundled DRAFT notice is painted only outside production, and only when the published version is `placeholder`, the object is missing, the body is empty, or the load fails. Production uses `body_markdown` when that body is published, and otherwise shows the pending sentence with no DRAFT pill and no SAMPLE chip. The 08-09 still keeps the draft because the specimen default is the design.
+
+The About version string still breaks before "mockup". That break stays for S9.
+
+The attached `openapi_7293051.json` was not in this workspace. Account models follow the committed Node OpenAPI (`docs/integration/taytay-node-openapi.json`), including the fields from backend `3e3b110`. The specimen date on 08-01 stays fixture copy. The live home paints `verification_decided_at` as a Manila calendar date when the field is an ISO time, and leaves the subtitle "Verified" when it is null.
+
+- Balita and emergency are preference types, each `in_app` and `push`, defaulting to on. The live settings rows write both flags. The specimen emergency row stays locked.
+- `GET /app/config` publishes `privacy_notice` with `version`, `updated_at`, and `body_markdown`. A published version is rendered on the live notice in every environment. The dev mock sends `placeholder`.
 
 Applied now:
 
-- Profile completion is computed on the client. The API does not publish a figure. Ten resident-fillable `GET /me` columns count: name, birthdate, sex, mobile, email, barangay, street, the free-text address, purok, and an avatar. System columns are left out. The live home paints the rounded percent. The specimen "60% complete" stays fixture copy, so 08-01 is unchanged. `profileCompletionPercent` is covered at 0, 60, and 100.
-- There is no phone verification. The live edit screen paints the email chip only. The specimen still paints a mobile chip, so 08-03 is unchanged.
-- There is no email notification channel. Live toggle subtitles say "Push notifications". The specimen still says "Push and email", so 08-04 is unchanged.
-- Change password uses the Firebase client: `reauthenticateWithCredential`, then `updatePassword`. A dev mock build and the tests use `MockAccountPasswordClient` and do not talk to Firebase. Field errors are app copy. Data export is out of scope: the live settings row and the live privacy-notice button are hidden. The specimen still shows both, so 08-04 and 08-09 are unchanged.
+- Profile completion is computed on the client. The API does not publish a figure. Ten resident-fillable `GET /me` columns count: name, birthdate, sex, mobile, email, barangay, street, the free-text address, purok, and an avatar. System columns are left out. The live home paints the rounded percent. The specimen "60% complete" stays fixture copy. `profileCompletionPercent` is covered at 0, 60, and 100.
+- There is no phone verification. The live edit screen paints the email chip only. The specimen still paints a mobile chip.
+- There is no email notification channel. Live toggle subtitles say "Push notifications". The specimen still says "Push and email".
+- Change password uses the Firebase client: `reauthenticateWithCredential`, then `updatePassword`. A dev mock build and the tests use `MockAccountPasswordClient` and do not talk to Firebase. Field errors are app copy. The live change-password row has no subtitle.
 - Photo credits stay on the bundled manifest. The test compares the list to the asset keys.
 - A thread label joins `GET /offices` and uses `short_name` when that field is a non-empty string, then `name`. A failed offices read leaves the slug.
 
 Also still true:
 
-- No SAMPLE flag on threads. The fixture may mark one. A live thread is never marked sample.
+- A live thread is never marked sample. The mock may mark one, and the SAMPLE line follows `usesMockData`.
 - Avatar upload exists. There is no "reviewed by the LGU" status. The edit screen shows that sentence as copy.
 - A digital-ID resource exists. 08-01 does not show it, and this sprint adds no digital-ID row. The existing row stays on `/profile/record`.
 - The design says "14 photos". That is the office-banner count (the hall, shared, plus 13 office-only photographs). The manifest has 16 photographs, because the three welcome photographs are credited on 08-05 and the hall is in both lists. The office-banner summary uses the office-banner length.
 
 `ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (469888 bytes, 124 frames, 4.13 s) and `s8-settings.mp4` (849107 bytes, 124 frames, 4.13 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent and the decision date. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder`. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1636 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (484446 bytes, 124 frames, 4.133 s) and `s8-settings.mp4` (898585 bytes, 124 frames, 4.133 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1641 tests, with 15 skipped (the recording and live tags).

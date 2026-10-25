@@ -15,6 +15,7 @@ enum AccountFrame {
   home,
   inbox,
   inboxEmpty,
+  inboxError,
   editProfile,
   settings,
   about,
@@ -31,6 +32,7 @@ class AccountMenuRow {
     required this.icon,
     required this.tile,
     required this.iconColor,
+    this.badge,
     this.onTap,
   });
 
@@ -39,6 +41,9 @@ class AccountMenuRow {
   final IconData icon;
   final Color tile;
   final Color iconColor;
+
+  /// A count drawn on the row, such as the Messages `1`.
+  final String? badge;
   final VoidCallback? onTap;
 }
 
@@ -51,6 +56,7 @@ class AccountInboxRow {
     required this.icon,
     required this.tile,
     required this.iconColor,
+    this.badge,
     this.onTap,
   });
 
@@ -60,6 +66,9 @@ class AccountInboxRow {
   final IconData icon;
   final Color tile;
   final Color iconColor;
+
+  /// Unread count for this office, drawn when the thread has one.
+  final String? badge;
   final VoidCallback? onTap;
 }
 
@@ -83,6 +92,8 @@ class AccountField {
     required this.value,
     this.verified = false,
     this.chevron = false,
+    this.controller,
+    this.onChanged,
     this.onTap,
   });
 
@@ -90,6 +101,10 @@ class AccountField {
   final String value;
   final bool verified;
   final bool chevron;
+
+  /// When set, the row is a text field and Save reads what was typed.
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
   final VoidCallback? onTap;
 }
 
@@ -137,6 +152,8 @@ class AccountCanvas extends StatelessWidget {
     this.menu = AccountSpecimen.homeMenu,
     this.onSignOut,
     this.inbox = AccountSpecimen.inbox,
+    this.showSampleNote = true,
+    this.onInboxRetry,
     this.onMessageOffice,
     this.fields = AccountSpecimen.fields,
     this.onSave,
@@ -144,12 +161,13 @@ class AccountCanvas extends StatelessWidget {
     this.toggles = AccountSpecimen.toggles,
     this.onLanguage,
     this.onChangePassword,
-    this.changePasswordSubtitle = 'From the sign-in screen',
+    this.changePasswordSubtitle = '',
     this.onPrivacy,
     this.onBanners,
     this.onExport,
     this.showDataExport = true,
     this.noticeMarkdown,
+    this.showBundledDraft = true,
     this.bubbles = AccountSpecimen.mswdoBubbles,
     this.dayLabel = 'Mon',
     this.onSend,
@@ -173,6 +191,10 @@ class AccountCanvas extends StatelessWidget {
   final List<AccountMenuRow> menu;
   final VoidCallback? onSignOut;
   final List<AccountInboxRow> inbox;
+
+  /// The SAMPLE illustration line. Live screens pass `usesMockData`.
+  final bool showSampleNote;
+  final VoidCallback? onInboxRetry;
   final VoidCallback? onMessageOffice;
   final List<AccountField> fields;
   final VoidCallback? onSave;
@@ -186,8 +208,12 @@ class AccountCanvas extends StatelessWidget {
   /// live screens pass false and the row is not shown.
   final bool showDataExport;
 
-  /// Published `body_markdown`. Null keeps the bundled draft.
+  /// Published `body_markdown`. Null keeps the bundled draft when
+  /// [showBundledDraft] is set. Production leaves both off.
   final String? noticeMarkdown;
+
+  /// The bundled DRAFT copy. Non-production only.
+  final bool showBundledDraft;
   final VoidCallback? onPrivacy;
   final VoidCallback? onBanners;
   final VoidCallback? onExport;
@@ -259,9 +285,14 @@ class AccountCanvas extends StatelessWidget {
         menu: menu,
         onSignOut: onSignOut,
       ),
-      AccountFrame.inbox => _InboxBody(rows: inbox),
+      AccountFrame.inbox => _InboxBody(
+        rows: inbox,
+        showSampleNote: showSampleNote,
+      ),
       AccountFrame.inboxEmpty => _EmptyInbox(onMessageOffice: onMessageOffice),
+      AccountFrame.inboxError => _InboxError(onRetry: onInboxRetry),
       AccountFrame.editProfile => _EditBody(
+        initials: initials,
         fields: fields,
         onSave: onSave,
         onLegalName: onLegalName,
@@ -279,12 +310,15 @@ class AccountCanvas extends StatelessWidget {
       AccountFrame.thread => _ThreadBody(
         bubbles: bubbles,
         dayLabel: dayLabel,
+        showSampleNote: showSampleNote,
         onSend: onSend,
       ),
       AccountFrame.privacy =>
-        noticeMarkdown == null
+        noticeMarkdown != null
+            ? _PublishedNotice(markdown: noticeMarkdown!)
+            : showBundledDraft
             ? _PrivacyBody(onExport: onExport, showDataExport: showDataExport)
-            : _PublishedNotice(markdown: noticeMarkdown!),
+            : const _NoticePending(),
       AccountFrame.banners => _BannersBody(credits: credits),
     };
   }
@@ -322,7 +356,7 @@ abstract final class AccountSpecimen {
     AccountMenuRow(
       title: 'Resident Profile',
       subtitle: '60% complete',
-      icon: TaytayIcons.circleUser,
+      icon: TaytayIcons.idCard,
       tile: Color(0xFFEAF0FB),
       iconColor: BrandColors.taytayBlue,
     ),
@@ -330,15 +364,16 @@ abstract final class AccountSpecimen {
       title: 'Messages',
       subtitle: '1 new reply from BPLO',
       icon: TaytayIcons.messageSquare,
-      tile: Color(0xFFE7F6EE),
-      iconColor: BrandColors.success,
+      tile: Color(0xFFEAF0FB),
+      iconColor: BrandColors.taytayBlue,
+      badge: '1',
     ),
     AccountMenuRow(
       title: 'Verification status',
       subtitle: 'Verified · Oct 22, 2026',
-      icon: TaytayIcons.badgeCheck,
-      tile: Color(0xFFFFF4D6),
-      iconColor: BrandColors.warning,
+      icon: TaytayIcons.shield,
+      tile: Color(0xFFE7F6EE),
+      iconColor: BrandColors.success,
     ),
     AccountMenuRow(
       title: 'Settings',
@@ -350,16 +385,16 @@ abstract final class AccountSpecimen {
     AccountMenuRow(
       title: 'Privacy & data',
       subtitle: 'Privacy Notice, your data rights',
-      icon: TaytayIcons.shield,
-      tile: Color(0xFFE7F6EE),
-      iconColor: BrandColors.success,
+      icon: TaytayIcons.lock,
+      tile: Color(0xFFEAF0FB),
+      iconColor: BrandColors.taytayBlue,
     ),
     AccountMenuRow(
       title: 'Photo credits & about',
       subtitle: 'Licences, app version',
       icon: TaytayIcons.image,
-      tile: Color(0xFFFFF4D6),
-      iconColor: BrandColors.warning,
+      tile: Color(0xFFEAF0FB),
+      iconColor: BrandColors.taytayBlue,
     ),
   ];
 
@@ -371,6 +406,7 @@ abstract final class AccountSpecimen {
       icon: TaytayIcons.building2,
       tile: Color(0xFFEAF0FB),
       iconColor: BrandColors.taytayBlue,
+      badge: '1',
     ),
     AccountInboxRow(
       office: 'MSWDO',
@@ -409,7 +445,7 @@ abstract final class AccountSpecimen {
     AccountToggle(
       title: 'Balita & advisories',
       subtitle: 'Push notifications',
-      icon: TaytayIcons.newspaper,
+      icon: TaytayIcons.bell,
       tile: Color(0xFFEAF0FB),
       iconColor: BrandColors.taytayBlue,
       on: true,
@@ -711,12 +747,30 @@ class _Bell extends StatelessWidget {
                     child: SizedBox(
                       width: 44,
                       height: 44,
-                      child: TaytayIcon(
-                        icon: TaytayIcons.bell,
-                        size: 20,
-                        color: Colors.white,
-                        semanticLabel: '',
-                        excludeSemantics: true,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: <Widget>[
+                          Center(
+                            child: TaytayIcon(
+                              icon: TaytayIcons.bell,
+                              size: 20,
+                              color: Colors.white,
+                              semanticLabel: '',
+                              excludeSemantics: true,
+                            ),
+                          ),
+                          Positioned(
+                            top: 6,
+                            right: 8,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: BrandColors.threadGold,
+                                shape: BoxShape.circle,
+                              ),
+                              child: SizedBox(width: 8, height: 8),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -908,6 +962,10 @@ class _MenuRow extends StatelessWidget {
                 ],
               ),
             ),
+            if (row.badge != null) ...<Widget>[
+              const SizedBox(width: 8),
+              _CountBadge(row.badge!),
+            ],
             const TaytayIcon(
               icon: TaytayIcons.chevronRight,
               size: 18,
@@ -923,62 +981,61 @@ class _MenuRow extends StatelessWidget {
 }
 
 class _InboxBody extends StatelessWidget {
-  const _InboxBody({required this.rows});
+  const _InboxBody({required this.rows, required this.showSampleNote});
 
   final List<AccountInboxRow> rows;
+  final bool showSampleNote;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 28, 16, 24),
       children: <Widget>[
-        const _UnreadMark(),
+        const _AllFilter(),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 652 / 3,
-          child: _Card(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: <Widget>[
-                for (var i = 0; i < rows.length; i++) ...<Widget>[
-                  if (i > 0)
-                    const ColoredBox(
-                      color: Color(0xFFEEF1F6),
-                      child: SizedBox(height: 1, width: double.infinity),
-                    ),
-                  SizedBox(
-                    height: const <double>[230 / 3, 204 / 3, 212 / 3][i],
-                    child: _InboxRow(
-                      row: rows[i],
-                      lift: const <double>[46 / 3, 10 / 3, 18 / 3][i],
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 43 / 3),
-        const Center(
-          child: Wrap(
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 6,
+        _Card(
+          padding: EdgeInsets.zero,
+          child: Column(
             children: <Widget>[
-              SampleTag(),
-              Text('messages for illustration', style: _meta),
+              for (var i = 0; i < rows.length; i++) ...<Widget>[
+                if (i > 0)
+                  const ColoredBox(
+                    color: Color(0xFFEEF1F6),
+                    child: SizedBox(height: 1, width: double.infinity),
+                  ),
+                _InboxRow(
+                  row: rows[i],
+                  padTop: i == 0 ? 17 : 12,
+                  padBottom: const <double>[19.5, 16, 19][i < 3 ? i : 2],
+                ),
+              ],
             ],
           ),
         ),
+        if (showSampleNote) ...<Widget>[
+          const SizedBox(height: 14),
+          const Center(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: <Widget>[
+                SampleTag(),
+                Text('messages for illustration', style: _meta),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
 }
 
 class _InboxRow extends StatelessWidget {
-  const _InboxRow({required this.row, this.lift = 0});
+  const _InboxRow({required this.row, this.padTop = 12, this.padBottom = 12});
 
   final AccountInboxRow row;
-  final double lift;
+  final double padTop;
+  final double padBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -986,7 +1043,7 @@ class _InboxRow extends StatelessWidget {
       label: row.office,
       onTap: row.onTap,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(14, 0, 14, lift),
+        padding: EdgeInsets.fromLTRB(14, padTop, 14, padBottom),
         child: Row(
           children: <Widget>[
             _Tile(icon: row.icon, tile: row.tile, color: row.iconColor),
@@ -998,15 +1055,24 @@ class _InboxRow extends StatelessWidget {
                 children: <Widget>[
                   Row(
                     children: <Widget>[
-                      Expanded(child: Text(row.office, style: _rowTitle)),
-                      Text(row.when, style: _meta),
+                      Expanded(
+                        child: Text(
+                          row.office,
+                          style: _rowTitle.copyWith(height: 1),
+                        ),
+                      ),
+                      Text(row.when, style: _meta.copyWith(height: 1)),
+                      if (row.badge != null) ...<Widget>[
+                        const SizedBox(width: 8),
+                        _CountBadge(row.badge!),
+                      ],
                     ],
                   ),
                   Text(
                     row.preview,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: _meta,
+                    style: _meta.copyWith(height: 1),
                   ),
                 ],
               ),
@@ -1028,7 +1094,7 @@ class _EmptyInbox extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 28, 16, 24),
       children: <Widget>[
-        const _UnreadMark(),
+        const _AllFilter(),
         const SizedBox(height: 62),
         const Center(child: _EmptyMark()),
         const SizedBox(height: 119 / 3),
@@ -1070,9 +1136,50 @@ class _EmptyInbox extends StatelessWidget {
   }
 }
 
-class _EditBody extends StatelessWidget {
-  const _EditBody({required this.fields, this.onSave, this.onLegalName});
+class _InboxError extends StatelessWidget {
+  const _InboxError({this.onRetry});
 
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 28, 16, 24),
+      children: <Widget>[
+        const _AllFilter(),
+        const SizedBox(height: 62),
+        const Center(child: _EmptyMark()),
+        const SizedBox(height: 16),
+        const Text(
+          'Messages did not load',
+          textAlign: TextAlign.center,
+          style: _emptyTitle,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Taytay LGU could not be reached. You can try again.',
+          textAlign: TextAlign.center,
+          style: _emptyBody,
+        ),
+        const SizedBox(height: 16),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: _PrimaryButton(label: 'Retry', onTap: onRetry),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditBody extends StatelessWidget {
+  const _EditBody({
+    required this.initials,
+    required this.fields,
+    this.onSave,
+    this.onLegalName,
+  });
+
+  final String initials;
   final List<AccountField> fields;
   final VoidCallback? onSave;
   final VoidCallback? onLegalName;
@@ -1082,12 +1189,10 @@ class _EditBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
       children: <Widget>[
-        const _PhotoNote(),
+        _PhotoNote(initials: initials),
         const SizedBox(height: 12),
         _Card(
-          // 53/3 keeps the name label on the design line; the label-to-box
-          // gap below puts that space back under the label only.
-          padding: const EdgeInsets.fromLTRB(16 / 3, 53 / 3, 16 / 3, 16),
+          padding: const EdgeInsets.fromLTRB(14, 16, 14, 19),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
@@ -1095,71 +1200,47 @@ class _EditBody extends StatelessWidget {
                 if (i == 1)
                   GestureDetector(
                     onTap: onLegalName,
-                    child: const Padding(
-                      padding: EdgeInsets.only(top: 4, bottom: 11.5),
-                      child: Text(
-                        'Legal name changes go through Resident Profile and '
-                        're-verification.',
-                        style: _legal,
-                      ),
+                    child: const Text(
+                      'Legal name changes go through Resident Profile and '
+                      're-verification.',
+                      style: _legal,
                     ),
                   ),
                 _EditField(
                   field: fields[i],
-                  gapLabel: i == 0
-                      ? 20 / 3
-                      : i == 1
-                      ? 17 / 3
-                      : 6,
-                  gapAfter: i == 1
-                      ? 46 / 3
-                      : i == 2
-                      ? 15
-                      : 4,
+                  padBottom: i == fields.length - 1 ? 0 : 12,
                 ),
               ],
             ],
           ),
         ),
-        const SizedBox(height: 34 / 3),
-        _PrimaryButton(
-          label: 'Save changes',
-          icon: TaytayIcons.check,
-          onTap: onSave,
-        ),
+        const SizedBox(height: 12),
+        _PrimaryButton(label: 'Save changes', onTap: onSave),
       ],
     );
   }
 }
 
 class _EditField extends StatelessWidget {
-  const _EditField({required this.field, this.gapLabel = 4, this.gapAfter = 4});
+  const _EditField({required this.field, this.padBottom = 12});
 
   final AccountField field;
-  final double gapLabel;
-  final double gapAfter;
+  final double padBottom;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(bottom: gapAfter),
+      padding: EdgeInsets.only(bottom: padBottom),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(field.label, style: _label),
-          SizedBox(height: gapLabel),
+          const SizedBox(height: 6),
           _FieldBox(
-            onTap: field.onTap,
+            onTap: field.controller == null ? field.onTap : null,
             child: Row(
               children: <Widget>[
-                Expanded(
-                  child: Text(
-                    field.value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _fieldInk,
-                  ),
-                ),
+                Expanded(child: _fieldValue()),
                 if (field.verified) const _Pill('Verified', compact: true),
                 if (field.chevron)
                   const TaytayIcon(
@@ -1176,6 +1257,34 @@ class _EditField extends StatelessWidget {
       ),
     );
   }
+
+  Widget _fieldValue() {
+    final TextEditingController? controller = field.controller;
+    if (controller == null) {
+      return Text(
+        field.value,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: _fieldInk,
+      );
+    }
+    return Material(
+      type: MaterialType.transparency,
+      child: TextField(
+        controller: controller,
+        onChanged: field.onChanged,
+        maxLines: 1,
+        style: _fieldInk,
+        cursorColor: BrandColors.taytayBlue,
+        textAlignVertical: TextAlignVertical.center,
+        decoration: const InputDecoration(
+          isCollapsed: true,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ),
+    );
+  }
 }
 
 class _SettingsBody extends StatelessWidget {
@@ -1183,7 +1292,7 @@ class _SettingsBody extends StatelessWidget {
     required this.toggles,
     this.onLanguage,
     this.onChangePassword,
-    this.changePasswordSubtitle = 'From the sign-in screen',
+    this.changePasswordSubtitle = '',
     this.onPrivacy,
     this.onExport,
     this.showDataExport = true,
@@ -1200,12 +1309,12 @@ class _SettingsBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 52 / 3, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const _SectionLabel('NOTIFICATIONS'),
-          const SizedBox(height: 35 / 3),
+          const _SectionLabel('Notifications'),
+          const SizedBox(height: 9),
           _Card(
             padding: EdgeInsets.zero,
             child: _FixedRows(
@@ -1217,15 +1326,15 @@ class _SettingsBody extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 18),
-          const _SectionLabel('APP'),
-          const SizedBox(height: 35 / 3),
+          const SizedBox(height: 16.5),
+          const _SectionLabel('App'),
+          const SizedBox(height: 9),
           _Card(
             padding: EdgeInsets.zero,
             child: _FixedRows(
               heights: const <double>[71, 71],
-              lifts: const <double>[0, 0],
-              drops: const <double>[0, 8 / 3],
+              lifts: const <double>[0, 6],
+              drops: const <double>[0, 0],
               children: <Widget>[
                 _LinkRow(
                   title: 'Language',
@@ -1239,23 +1348,23 @@ class _SettingsBody extends StatelessWidget {
                   title: 'Change password',
                   subtitle: changePasswordSubtitle,
                   icon: TaytayIcons.lock,
-                  tile: const Color(0xFFFFF4D6),
-                  color: BrandColors.warning,
+                  tile: const Color(0xFFEAF0FB),
+                  color: BrandColors.taytayBlue,
                   onTap: onChangePassword,
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 52 / 3),
-          const _SectionLabel('PRIVACY'),
-          const SizedBox(height: 11),
+          const SizedBox(height: 16.3),
+          const _SectionLabel('Privacy'),
+          const SizedBox(height: 8),
           Expanded(
             child: _Card(
               padding: EdgeInsets.zero,
               child: _FixedRows(
                 heights: const <double>[71, 71],
                 lifts: const <double>[0, 0],
-                drops: const <double>[22 / 3, 14 / 3],
+                drops: const <double>[28 / 3, 14 / 3],
                 children: <Widget>[
                   _LinkRow(
                     title: 'Privacy Notice',
@@ -1271,7 +1380,7 @@ class _SettingsBody extends StatelessWidget {
                     _LinkRow(
                       title: 'Request a copy of my data',
                       subtitle: 'Right to access',
-                      icon: TaytayIcons.shield,
+                      icon: TaytayIcons.download,
                       tile: const Color(0xFFEAF0FB),
                       color: BrandColors.taytayBlue,
                       onTap: onExport,
@@ -1377,20 +1486,26 @@ class _AboutBody extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 51 / 3),
-        const _SectionLabel('PHOTO CREDITS'),
-        const SizedBox(height: 35 / 3),
+        const SizedBox(height: 16),
+        const _SectionLabel('Photo credits'),
+        const SizedBox(height: 8.5),
         _Card(
-          padding: const EdgeInsets.fromLTRB(16, 65 / 3, 16, 89 / 3),
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              for (var i = 0; i < welcome.length; i++)
+              for (var i = 0; i < welcome.length; i++) ...<Widget>[
+                if (i > 0)
+                  const ColoredBox(
+                    color: Color(0xFFEEF1F6),
+                    child: SizedBox(height: 1, width: double.infinity),
+                  ),
                 _CreditRow(
-                  title: welcome[i].title,
-                  subtitle: welcome[i].byline,
-                  gapAfter: i == welcome.length - 1 ? 0 : 142 / 3,
+                  credit: welcome[i],
+                  padTop: const <double>[16.2, 14, 14.3][i < 3 ? i : 2],
+                  padBottom: const <double>[14.2, 14, 17.3][i < 3 ? i : 2],
                 ),
+              ],
             ],
           ),
         ),
@@ -1400,11 +1515,11 @@ class _AboutBody extends StatelessWidget {
           child: SizedBox(
             height: 74,
             child: Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 3),
               child: _LinkRow(
                 title: 'Office banner photos',
                 subtitle: PhotoCredits.officeBannerSummary,
-                icon: TaytayIcons.image,
+                icon: TaytayIcons.images,
                 tile: const Color(0xFFEAF0FB),
                 color: BrandColors.taytayBlue,
                 onTap: onBanners,
@@ -1412,23 +1527,20 @@ class _AboutBody extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 53 / 3),
-        const _SectionLabel('ABOUT'),
-        const SizedBox(height: 34 / 3),
+        const SizedBox(height: 16),
+        const _SectionLabel('About'),
+        const SizedBox(height: 8.5),
         const _Card(
           padding: EdgeInsets.zero,
-          child: SizedBox(
-            height: 74,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 14),
-              child: _LinkRow(
-                title: 'Municipal seal',
-                subtitle: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
-                subtitleSize: 11,
-                icon: TaytayIcons.landmark,
-                tile: Color(0xFFFFF4D6),
-                color: BrandColors.warning,
-              ),
+          child: Padding(
+            padding: EdgeInsets.only(top: 14),
+            child: _LinkRow(
+              title: 'Municipal seal',
+              subtitle: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
+              icon: TaytayIcons.shield,
+              tile: Color(0xFFEAF0FB),
+              color: BrandColors.taytayBlue,
+              tight: true,
             ),
           ),
         ),
@@ -1439,54 +1551,50 @@ class _AboutBody extends StatelessWidget {
 
 class _CreditRow extends StatelessWidget {
   const _CreditRow({
-    required this.title,
-    required this.subtitle,
-    this.gapAfter = 0,
+    required this.credit,
+    this.padTop = 14,
+    this.padBottom = 14,
   });
 
-  final String title;
-  final String subtitle;
-  final double gapAfter;
+  final PhotoCredit credit;
+
+  /// Vertical padding around the 40 dp image tile. The title and the byline
+  /// each have their own line.
+  final double padTop;
+  final double padBottom;
 
   @override
   Widget build(BuildContext context) {
-    // The byline sits over the title's descenders so the two are one dark
-    // run. The slot stays tall enough for the next credit's 208 px pitch.
     return Padding(
-      padding: EdgeInsets.only(bottom: gapAfter),
-      child: SizedBox(
-        height: 22,
-        width: double.infinity,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: <Widget>[
-            Text(
-              title,
-              style: _creditTitle,
-              strutStyle: const StrutStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                height: 1,
-                forceStrutHeight: true,
-              ),
+      padding: EdgeInsets.fromLTRB(14, padTop, 14, padBottom),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: <Widget>[
+          const _Tile(
+            icon: TaytayIcons.image,
+            tile: Color(0xFFEAF0FB),
+            color: BrandColors.taytayBlue,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(credit.title, style: _creditTitle),
+                const SizedBox(height: 2),
+                Text(credit.byline, style: _creditByline),
+              ],
             ),
-            Positioned(
-              top: 10,
-              left: 0,
-              right: 0,
-              child: Text(
-                subtitle,
-                style: _creditByline,
-                strutStyle: const StrutStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  height: 1,
-                  forceStrutHeight: true,
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8),
+          const TaytayIcon(
+            icon: TaytayIcons.externalLink,
+            size: 16,
+            color: BrandColors.taytayBlue,
+            semanticLabel: '',
+            excludeSemantics: true,
+          ),
+        ],
       ),
     );
   }
@@ -1501,7 +1609,7 @@ class _PrivacyBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 22 / 3, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 15.5, 16, 24),
       children: <Widget>[
         const Padding(
           padding: EdgeInsets.zero,
@@ -1544,11 +1652,13 @@ class _PrivacyBody extends StatelessWidget {
                       title: 'Your rights',
                       body:
                           'Access, correction, objection and erasure. Contact '
-                          'the LGU Data Protection Officer. SAMPLE.',
+                          'the LGU Data Protection Officer.',
                     ),
                   ],
                 ),
               ),
+              SizedBox(height: 10),
+              Align(alignment: Alignment.centerLeft, child: SampleTag()),
             ],
           ),
         ),
@@ -1556,7 +1666,7 @@ class _PrivacyBody extends StatelessWidget {
           const SizedBox(height: 12),
           _OutlineButton(
             label: 'Request a copy of my data',
-            icon: TaytayIcons.shield,
+            icon: TaytayIcons.download,
             onTap: onExport,
           ),
         ],
@@ -1651,26 +1761,23 @@ class _BannersBody extends StatelessWidget {
         .where((PhotoCredit credit) => credit.officeBanner)
         .toList(growable: false);
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 62 / 3, 16, 24),
+      padding: const EdgeInsets.fromLTRB(16, 20.5, 16, 24),
       children: <Widget>[
         const _BannerIntro(),
-        const SizedBox(height: 38 / 3),
+        const SizedBox(height: 12),
         _Card(
-          padding: const EdgeInsets.fromLTRB(16 / 3, 37 / 3, 16 / 3, 12),
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              for (final PhotoCredit credit in rows)
-                _BannerRow(
-                  credit: credit,
-                  // The relief row wraps its title and byline, so the next
-                  // office starts further down than the 184 px pitch.
-                  pitch: credit.assetKey == 'mswdo_relief'
-                      ? 278 / 3
-                      : credit.assetKey == 'rescuers'
-                      ? 220 / 3
-                      : 184 / 3,
-                ),
+              for (var i = 0; i < rows.length; i++) ...<Widget>[
+                if (i > 0)
+                  const ColoredBox(
+                    color: Color(0xFFEEF1F6),
+                    child: SizedBox(height: 1, width: double.infinity),
+                  ),
+                _BannerRow(credit: rows[i]),
+              ],
             ],
           ),
         ),
@@ -1726,163 +1833,59 @@ class _BannerIntro extends StatelessWidget {
 }
 
 class _BannerRow extends StatelessWidget {
-  const _BannerRow({required this.credit, required this.pitch});
+  const _BannerRow({required this.credit});
 
   final PhotoCredit credit;
-  final double pitch;
-
-  static const StrutStyle _kickerStrut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 11,
-    height: 1,
-    forceStrutHeight: true,
-  );
-
-  static const StrutStyle _titleStrut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 14,
-    height: 1,
-    forceStrutHeight: true,
-  );
-
-  static const StrutStyle _bylineStrut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    height: 1.25,
-    forceStrutHeight: true,
-    leadingDistribution: TextLeadingDistribution.proportional,
-  );
 
   @override
   Widget build(BuildContext context) {
-    final bool relief = credit.assetKey == 'mswdo_relief';
-    return ConstrainedBox(
-      constraints: BoxConstraints(minHeight: pitch),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            credit.offices.join(', '),
-            style: _kicker,
-            strutStyle: _kickerStrut,
+          Text(credit.offices.join(', '), style: _officeLabel),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Expanded(child: Text(credit.title, style: _bannerTitle)),
+              if (credit.replace) ...<Widget>[
+                const SizedBox(width: 8),
+                const _ReplaceMark(),
+              ],
+            ],
           ),
-          const SizedBox(height: 10 / 3),
-          if (relief)
-            const Text(
-              'DSWD relief distribution (2026',
-              style: _bannerTitle,
-              strutStyle: _titleStrut,
-            )
-          else if (credit.assetKey == 'rescuers')
-            SizedBox(
-              height: 14,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Flexible(
-                        child: Text(
-                          credit.title,
-                          style: _bannerTitle,
-                          strutStyle: _titleStrut,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const _ReplaceMark(),
-                    ],
-                  ),
-                  Positioned(
-                    top: 8,
-                    left: 0,
-                    right: 0,
-                    child: Text(
-                      '${credit.author} ·\n${credit.licence}',
-                      style: _creditByline,
-                      strutStyle: const StrutStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 12,
-                        height: 1.6,
-                        forceStrutHeight: true,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Row(
-              children: <Widget>[
-                Flexible(
-                  child: Text(
-                    credit.title,
-                    style: _bannerTitle,
-                    strutStyle: _titleStrut,
-                  ),
-                ),
-                if (credit.replace) ...<Widget>[
-                  const SizedBox(width: 8),
-                  const _ReplaceMark(),
-                ],
-              ],
-            ),
-          if (relief) ...<Widget>[
-            const SizedBox(height: 7 / 3),
-            const Row(
-              children: <Widget>[
-                Text(
-                  'earthquake)',
-                  style: _bannerTitle,
-                  strutStyle: _titleStrut,
-                ),
-                SizedBox(width: 8),
-                _ReplaceMark(),
-              ],
-            ),
-          ],
-          if (credit.assetKey != 'rescuers') ...<Widget>[
-            const SizedBox(height: 8 / 3),
-            Text(credit.byline, style: _creditByline, strutStyle: _bylineStrut),
-          ],
+          const SizedBox(height: 1),
+          Text(credit.byline, style: _creditByline),
         ],
       ),
     );
   }
 }
 
-/// The Replace chip, kept to one title-line of layout so it does not push
-/// the byline down.
+/// Amber Replace chip, sitting on the right of the title row.
 class _ReplaceMark extends StatelessWidget {
   const _ReplaceMark();
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 78,
-      height: 14,
-      child: OverflowBox(
-        maxWidth: 78,
-        maxHeight: 22,
-        alignment: Alignment.centerLeft,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: Color(0xFFEEF1F6),
-            borderRadius: BorderRadius.all(Radius.circular(999)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Text(
-              'Replace',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                height: 1,
-                color: BrandColors.fieldLabel,
-                decoration: TextDecoration.none,
-              ),
-            ),
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        color: BrandColors.chipAmberBg,
+        borderRadius: BorderRadius.all(Radius.circular(999)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        child: Text(
+          'Replace',
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            height: 1.1,
+            color: BrandColors.warning,
+            decoration: TextDecoration.none,
           ),
         ),
       ),
@@ -1894,11 +1897,13 @@ class _ThreadBody extends StatelessWidget {
   const _ThreadBody({
     required this.bubbles,
     required this.dayLabel,
+    required this.showSampleNote,
     this.onSend,
   });
 
   final List<AccountBubble> bubbles;
   final String dayLabel;
+  final bool showSampleNote;
   final VoidCallback? onSend;
 
   @override
@@ -1907,10 +1912,10 @@ class _ThreadBody extends StatelessWidget {
       children: <Widget>[
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 57 / 3, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 23, 16, 8),
             children: <Widget>[
-              Center(child: _Chip(dayLabel)),
-              const SizedBox(height: 22 / 3),
+              if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
+              if (dayLabel.isNotEmpty) const SizedBox(height: 8),
               for (var i = 0; i < bubbles.length; i++)
                 Padding(
                   // The last bubble's border sits one dp high of the specimen.
@@ -1919,17 +1924,19 @@ class _ThreadBody extends StatelessWidget {
                   ),
                   child: _Bubble(bubble: bubbles[i]),
                 ),
-              const SizedBox(height: 2),
-              const Center(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  children: <Widget>[
-                    SampleTag(),
-                    Text('conversation for illustration', style: _meta),
-                  ],
+              if (showSampleNote) ...<Widget>[
+                const SizedBox(height: 2.5),
+                const Center(
+                  child: Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 6,
+                    children: <Widget>[
+                      SampleTag(),
+                      Text('conversation for illustration', style: _meta),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -2133,16 +2140,29 @@ class _Pill extends StatelessWidget {
         color: BrandColors.chipGreenBg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          height: 1.1,
-          color: BrandColors.success,
-          decoration: TextDecoration.none,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TaytayIcon(
+            icon: TaytayIcons.check,
+            size: compact ? 12 : 14,
+            color: BrandColors.success,
+            semanticLabel: '',
+            excludeSemantics: true,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              height: 1.1,
+              color: BrandColors.success,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2155,74 +2175,84 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 28,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF1F6),
-        borderRadius: BorderRadius.circular(999),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: Color(0xFFEEF1F6),
+        borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
-      child: Text(label, style: _label),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        child: Text(label, style: _label),
+      ),
     );
   }
 }
 
-/// Blue ring and the word Unread. The ring is 36 dp, which is the dark run
-/// under the messages header. The hit target overflows to 48 dp.
-class _UnreadMark extends StatelessWidget {
-  const _UnreadMark();
+/// The All filter. The label sits on the blue chip. Unread stays beside it.
+class _AllFilter extends StatelessWidget {
+  const _AllFilter();
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 36,
-      child: Row(
-        children: <Widget>[
-          SizedBox(
+    return const Row(
+      children: <Widget>[
+        DecoratedBox(
+          decoration: BoxDecoration(
+            color: BrandColors.taytayBlue,
+            shape: BoxShape.circle,
+          ),
+          child: SizedBox(
             width: 36,
             height: 36,
-            child: OverflowBox(
-              maxWidth: 48,
-              maxHeight: 48,
-              child: Semantics(
-                button: true,
-                label: 'Unread',
-                child: const SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: Center(child: _UnreadRing()),
+            child: Center(
+              child: Text(
+                'All',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  color: Colors.white,
+                  decoration: TextDecoration.none,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 10),
-          const Text('Unread', style: _rowTitle),
-        ],
-      ),
+        ),
+        SizedBox(width: 10),
+        Text('Unread', style: _rowTitle),
+      ],
     );
   }
 }
 
-class _UnreadRing extends StatelessWidget {
-  const _UnreadRing();
+class _CountBadge extends StatelessWidget {
+  const _CountBadge(this.label);
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 36,
-      height: 36,
-      alignment: Alignment.center,
+    return DecoratedBox(
       decoration: const BoxDecoration(
         color: BrandColors.taytayBlue,
         shape: BoxShape.circle,
       ),
-      child: Container(
-        width: 20,
-        height: 20,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
+      child: SizedBox(
+        width: 22,
+        height: 22,
+        child: Center(
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              height: 1,
+              color: Colors.white,
+              decoration: TextDecoration.none,
+            ),
+          ),
         ),
       ),
     );
@@ -2234,75 +2264,113 @@ class _DraftBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 13, 14, 4),
-      decoration: BoxDecoration(
-        color: BrandColors.chipAmberBg,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: BrandColors.sampleBorder),
-      ),
-      child: const Text(
-        'DRAFT — LGU-approved text to be inserted',
-        style: TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          color: BrandColors.warning,
-          decoration: TextDecoration.none,
+    return const Align(
+      alignment: Alignment.centerLeft,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BrandColors.chipAmberBg,
+          borderRadius: BorderRadius.all(Radius.circular(999)),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          child: Text(
+            'DRAFT · LGU-approved text to be inserted',
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: BrandColors.warning,
+              decoration: TextDecoration.none,
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _PhotoNote extends StatelessWidget {
-  const _PhotoNote();
+class _NoticePending extends StatelessWidget {
+  const _NoticePending();
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: 134 / 3),
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: const <Widget>[
+        Text('Privacy Notice', style: _noticeTitle),
+        SizedBox(height: 8),
+        Text(
+          'The privacy notice will appear here when Taytay LGU publishes it.',
+          style: _noticeBody,
+        ),
+      ],
+    );
+  }
+}
+
+class _PhotoNote extends StatelessWidget {
+  const _PhotoNote({required this.initials});
+
+  final String initials;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 15),
       child: Column(
         children: <Widget>[
           SizedBox(
-            height: 54,
+            width: 80,
+            height: 80,
             child: Stack(
+              clipBehavior: Clip.none,
               children: <Widget>[
-                Align(
-                  alignment: Alignment.topCenter,
-                  child: TaytayIcon(
-                    icon: TaytayIcons.camera,
-                    size: 24,
-                    color: BrandColors.taytayBlue,
-                    semanticLabel: '',
-                    excludeSemantics: true,
+                Container(
+                  width: 80,
+                  height: 80,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFEAF0FB),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    initials,
+                    style: const TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      color: BrandColors.taytayBlue,
+                      decoration: TextDecoration.none,
+                    ),
                   ),
                 ),
                 Positioned(
-                  top: 25,
-                  left: 0,
                   right: 0,
-                  child: Align(
-                    alignment: Alignment(0.55, 0),
-                    child: TaytayIcon(
-                      icon: TaytayIcons.circleUser,
-                      size: 24,
+                  bottom: 0,
+                  child: Container(
+                    width: 28,
+                    height: 28,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
                       color: BrandColors.taytayBlue,
-                      semanticLabel: '',
-                      excludeSemantics: true,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: const TaytayIcon(
+                      icon: TaytayIcons.camera,
+                      size: 14,
+                      color: Colors.white,
+                      semanticLabel: 'Profile photo',
                     ),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: 4),
-          Text(
+          const SizedBox(height: 8),
+          const Text(
             'Profile photo — reviewed by LGU before it appears on your ID',
             textAlign: TextAlign.center,
-            maxLines: 1,
-            softWrap: false,
             style: _caption,
           ),
         ],
@@ -2350,7 +2418,7 @@ class _OutlineButton extends StatelessWidget {
                 style: const TextStyle(
                   fontFamily: AppTypography.fontFamily,
                   fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                   height: 1,
                   color: BrandColors.taytayBlue,
                   decoration: TextDecoration.none,
@@ -2441,12 +2509,13 @@ class _FieldBox extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 40,
+        height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: const Color(0xFFF6F8FC),
+          color: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFD6DCE8)),
         ),
         child: child,
       ),
@@ -2455,14 +2524,15 @@ class _FieldBox extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.label, required this.icon, this.onTap});
+  const _PrimaryButton({required this.label, this.icon, this.onTap});
 
   final String label;
-  final IconData icon;
+  final IconData? icon;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final IconData? icon = this.icon;
     return _Hit(
       label: label,
       onTap: onTap,
@@ -2476,14 +2546,16 @@ class _PrimaryButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            TaytayIcon(
-              icon: icon,
-              size: 16,
-              color: Colors.white,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            const SizedBox(width: 8),
+            if (icon != null) ...<Widget>[
+              TaytayIcon(
+                icon: icon,
+                size: 16,
+                color: Colors.white,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+              const SizedBox(width: 8),
+            ],
             Flexible(
               child: Text(
                 label,
@@ -2508,22 +2580,25 @@ class _PrimaryButton extends StatelessWidget {
 class _LinkRow extends StatelessWidget {
   const _LinkRow({
     required this.title,
-    required this.subtitle,
+    this.subtitle = '',
+    this.tight = false,
     required this.icon,
     required this.tile,
     required this.color,
     this.subtitleHeight,
-    this.subtitleSize,
     this.onTap,
   });
 
   final String title;
   final String subtitle;
+
+  /// Uses a unit line height so the byline sits on the next line, close
+  /// enough that the design's single measured run stays one run.
+  final bool tight;
   final IconData icon;
   final Color tile;
   final Color color;
   final double? subtitleHeight;
-  final double? subtitleSize;
   final VoidCallback? onTap;
 
   @override
@@ -2542,16 +2617,19 @@ class _LinkRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(title, style: _rowTitle),
                   Text(
-                    subtitle,
-                    style: subtitleHeight == null && subtitleSize == null
-                        ? _meta
-                        : _meta.copyWith(
-                            height: subtitleHeight,
-                            fontSize: subtitleSize,
-                          ),
+                    title,
+                    style: tight ? _rowTitle.copyWith(height: 1) : _rowTitle,
                   ),
+                  if (subtitle.isNotEmpty)
+                    Text(
+                      subtitle,
+                      style: tight
+                          ? _meta.copyWith(height: 1)
+                          : subtitleHeight == null
+                          ? _meta
+                          : _meta.copyWith(height: subtitleHeight),
+                    ),
                 ],
               ),
             ),
@@ -2651,10 +2729,10 @@ class _SectionLabel extends StatelessWidget {
       text,
       style: const TextStyle(
         fontFamily: AppTypography.fontFamily,
-        fontSize: 11,
+        fontSize: 14,
         fontWeight: FontWeight.w800,
-        letterSpacing: 0.6,
-        color: BrandColors.listMeta,
+        height: 1.2,
+        color: BrandColors.textPrimary,
         decoration: TextDecoration.none,
       ),
     );
@@ -2815,18 +2893,17 @@ const TextStyle _bannerTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w700,
-  height: 1.28,
+  height: 1.15,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
 
-const TextStyle _kicker = TextStyle(
+const TextStyle _officeLabel = TextStyle(
   fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: FontWeight.w800,
-  height: 1,
-  letterSpacing: 0.4,
-  color: BrandColors.fieldLabel,
+  height: 1.2,
+  color: BrandColors.taytayBlue,
   decoration: TextDecoration.none,
 );
 

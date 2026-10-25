@@ -110,6 +110,15 @@ abstract final class TaytayIcons {
   /// Lucide `image`. Photo credits.
   static const IconData image = IconData(57590, fontFamily: 'Lucide');
 
+  /// Lucide `images`. The office-banner row on Photo credits.
+  static const IconData images = IconData(58820, fontFamily: 'Lucide');
+
+  /// Lucide `download`. A data-export row on the design specimen.
+  static const IconData download = IconData(57522, fontFamily: 'Lucide');
+
+  /// Lucide `external-link`. A photo-credit row.
+  static const IconData externalLink = IconData(57529, fontFamily: 'Lucide');
+
   /// Lucide `languages`. The language row in Settings.
   static const IconData languages = IconData(57598, fontFamily: 'Lucide');
 

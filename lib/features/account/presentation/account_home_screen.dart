@@ -36,6 +36,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   bool _failed = false;
   ResidentProfileDetail? _detail;
   String _messagesLine = 'Office replies';
+  int _unread = 0;
 
   @override
   void didChangeDependencies() {
@@ -71,7 +72,11 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           _failed = true;
       }
       if (threads case Ok(:final value) when value.isNotEmpty) {
-        final unread = value.where((thread) => thread.unreadCount > 0).length;
+        final int unread = value.fold<int>(
+          0,
+          (int sum, thread) => sum + thread.unreadCount,
+        );
+        _unread = unread;
         final office = value.first.officeName;
         _messagesLine = unread > 0
             ? '$unread new ${unread == 1 ? 'reply' : 'replies'} from $office'
@@ -149,7 +154,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         subtitle: _detail == null
             ? 'Name, contact, barangay'
             : '${profileCompletionPercent(_detail!)}% complete',
-        icon: TaytayIcons.user,
+        icon: TaytayIcons.idCard,
         tile: BrandColors.chipBlueBg,
         iconColor: BrandColors.taytayBlue,
         onTap: () => context.goNamed(AppRoute.profileEdit.routeName),
@@ -158,16 +163,17 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         title: 'Messages',
         subtitle: _messagesLine,
         icon: TaytayIcons.messageSquare,
-        tile: BrandColors.chipGreenBg,
-        iconColor: BrandColors.success,
+        tile: BrandColors.chipBlueBg,
+        iconColor: BrandColors.taytayBlue,
+        badge: _unread > 0 ? '$_unread' : null,
         onTap: () => context.goNamed(AppRoute.messagesInbox.routeName),
       ),
       AccountMenuRow(
         title: 'Verification status',
         subtitle: decided == null ? 'Verified' : 'Verified · $decided',
-        icon: TaytayIcons.badgeCheck,
-        tile: BrandColors.chipAmberBg,
-        iconColor: BrandColors.warning,
+        icon: TaytayIcons.shield,
+        tile: const Color(0xFFE7F6EE),
+        iconColor: BrandColors.success,
         onTap: () => context.goNamed(AppRoute.verification.routeName),
       ),
       AccountMenuRow(
@@ -181,17 +187,17 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
       AccountMenuRow(
         title: 'Privacy & data',
         subtitle: 'Privacy Notice, your data rights',
-        icon: TaytayIcons.shield,
-        tile: BrandColors.chipGreenBg,
-        iconColor: BrandColors.success,
+        icon: TaytayIcons.lock,
+        tile: BrandColors.chipBlueBg,
+        iconColor: BrandColors.taytayBlue,
         onTap: () => context.goNamed(AppRoute.profileNotice.routeName),
       ),
       AccountMenuRow(
         title: 'Photo credits & about',
         subtitle: 'Licences, app version',
         icon: TaytayIcons.image,
-        tile: BrandColors.chipAmberBg,
-        iconColor: BrandColors.warning,
+        tile: BrandColors.chipBlueBg,
+        iconColor: BrandColors.taytayBlue,
         onTap: () => context.goNamed(AppRoute.photoCredits.routeName),
       ),
     ];

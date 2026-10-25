@@ -634,7 +634,8 @@ void main() {
       expect(find.text('Request a copy of my data'), findsNothing);
       expect(find.text('Always on for MDRRMO alerts'), findsNothing);
       expect(find.text('Push notifications'), findsWidgets);
-      expect(find.text('Current password, then a new one'), findsOneWidget);
+      expect(find.text('Change password'), findsOneWidget);
+      expect(find.text('Current password, then a new one'), findsNothing);
     });
 
     testWidgets('the home paints the decision date when the record has one', (
