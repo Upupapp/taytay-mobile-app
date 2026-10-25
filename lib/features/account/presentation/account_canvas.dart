@@ -1005,8 +1005,12 @@ class _InboxBody extends StatelessWidget {
                   ),
                 _InboxRow(
                   row: rows[i],
-                  padTop: i == 0 ? 17 : 12,
-                  padBottom: const <double>[19.5, 16, 19][i < 3 ? i : 2],
+                  padTop: i == 0 ? 17 - 4 / 3 : 12,
+                  padBottom: const <double>[
+                    19.5 + 4 / 3,
+                    16,
+                    16,
+                  ][i < 3 ? i : 2],
                 ),
               ],
             ],
@@ -1039,41 +1043,45 @@ class _InboxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The time sits in the gap between the office and the preview, which is
+    // where the design draws it. A count badge stacks under the time. The
+    // landmark glyph has a gap between its roof and its columns; the time
+    // crosses that gap, so the row is one line of text.
     return _Hit(
       label: row.office,
       onTap: row.onTap,
       child: Padding(
         padding: EdgeInsets.fromLTRB(14, padTop, 14, padBottom),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             _Tile(icon: row.icon, tile: row.tile, color: row.iconColor),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: Text(
-                          row.office,
-                          style: _rowTitle.copyWith(height: 1),
-                        ),
-                      ),
-                      Text(row.when, style: _meta.copyWith(height: 1)),
-                      if (row.badge != null) ...<Widget>[
-                        const SizedBox(width: 8),
-                        _CountBadge(row.badge!),
-                      ],
-                    ],
-                  ),
+                  Text(row.office, style: _rowTitle),
+                  const SizedBox(height: 2),
                   Text(
                     row.preview,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: _meta.copyWith(height: 1),
+                    style: _meta,
                   ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(top: row.badge == null ? 11 : 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: <Widget>[
+                  Text(row.when, style: _meta),
+                  if (row.badge != null) ...<Widget>[
+                    const SizedBox(height: 6),
+                    _CountBadge(row.badge!),
+                  ],
                 ],
               ),
             ),
@@ -1192,12 +1200,15 @@ class _EditBody extends StatelessWidget {
         _PhotoNote(initials: initials),
         const SizedBox(height: 12),
         _Card(
-          padding: const EdgeInsets.fromLTRB(14, 16, 14, 19),
+          // The labels sit 61, 394, 622 and 851 px under the card top, and
+          // each field border sits 50 px under its label. The bottom padding
+          // gives that rhythm back so the card edge stays on the specimen.
+          padding: const EdgeInsets.fromLTRB(14, 16 + 4 / 3, 14, 19 - 11 / 3),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               for (var i = 0; i < fields.length; i++) ...<Widget>[
-                if (i == 1)
+                if (i == 1) ...<Widget>[
                   GestureDetector(
                     onTap: onLegalName,
                     child: const Text(
@@ -1206,9 +1217,19 @@ class _EditBody extends StatelessWidget {
                       style: _legal,
                     ),
                   ),
+                  // The legal note is two lines. The mobile label starts
+                  // below that block, not on its last line.
+                  const SizedBox(height: 12),
+                ],
                 _EditField(
                   field: fields[i],
-                  padBottom: i == fields.length - 1 ? 0 : 12,
+                  padBottom: i == 0
+                      ? 5 + 1 / 3
+                      : i == 1
+                      ? 9.5 + 8 / 3
+                      : i == fields.length - 1
+                      ? 4 / 3
+                      : 9.5 + 4 / 3 + 2,
                 ),
               ],
             ],
@@ -1235,7 +1256,8 @@ class _EditField extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Text(field.label, style: _label),
-          const SizedBox(height: 6),
+          // 50 px from the label ink to the field border.
+          const SizedBox(height: 14 / 3),
           _FieldBox(
             onTap: field.controller == null ? field.onTap : null,
             child: Row(
@@ -1370,7 +1392,7 @@ class _SettingsBody extends StatelessWidget {
                     title: 'Privacy Notice',
                     subtitle:
                         'Data Privacy Act of 2012 · LGU-approved text pending',
-                    subtitleHeight: 53 / 36,
+                    subtitleHeight: 1.42,
                     icon: TaytayIcons.fileText,
                     tile: const Color(0xFFE7F6EE),
                     color: BrandColors.success,
@@ -1626,7 +1648,9 @@ class _PrivacyBody extends StatelessWidget {
               ),
               SizedBox(height: 35 / 3),
               _Card(
-                padding: EdgeInsets.fromLTRB(14, 16, 14, 9),
+                // The SAMPLE chip shares the last line. This bottom padding
+                // is what remains under that line in the design.
+                padding: EdgeInsets.fromLTRB(14, 16, 14, 9 - 7 / 3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
@@ -1653,12 +1677,11 @@ class _PrivacyBody extends StatelessWidget {
                       body:
                           'Access, correction, objection and erasure. Contact '
                           'the LGU Data Protection Officer.',
+                      trailing: SampleTag(),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 10),
-              Align(alignment: Alignment.centerLeft, child: SampleTag()),
             ],
           ),
         ),
@@ -1729,13 +1752,18 @@ class _PublishedNotice extends StatelessWidget {
 }
 
 class _NoticeBlock extends StatelessWidget {
-  const _NoticeBlock({required this.title, required this.body});
+  const _NoticeBlock({required this.title, required this.body, this.trailing});
 
   final String title;
   final String body;
 
+  /// Sits on the last line of [body]. The design's SAMPLE chip shares that
+  /// line, so it does not open a dark run of its own.
+  final Widget? trailing;
+
   @override
   Widget build(BuildContext context) {
+    final Widget? trailing = this.trailing;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(
@@ -1743,7 +1771,22 @@ class _NoticeBlock extends StatelessWidget {
         children: <Widget>[
           Text(title, style: _rowTitle),
           const SizedBox(height: 20 / 3),
-          Text(body, style: _noticeBody),
+          if (trailing == null)
+            Text(body, style: _noticeBody)
+          else
+            Text.rich(
+              TextSpan(
+                style: _noticeBody,
+                children: <InlineSpan>[
+                  TextSpan(text: body),
+                  const WidgetSpan(child: SizedBox(width: 8)),
+                  WidgetSpan(
+                    alignment: PlaceholderAlignment.middle,
+                    child: trailing,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -1837,30 +1880,123 @@ class _BannerRow extends StatelessWidget {
 
   final PhotoCredit credit;
 
+  /// The canvas strips the first ascent, which lets a font's own leading
+  /// open a gap the design does not have. These struts are the line boxes.
+  static const TextHeightBehavior _forcedLine = TextHeightBehavior(
+    applyHeightToFirstAscent: true,
+    applyHeightToLastDescent: true,
+  );
+
+  static const StrutStyle _officeStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 12,
+    height: 1,
+    forceStrutHeight: true,
+  );
+
+  static const StrutStyle _titleStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 14,
+    height: 1.15,
+    forceStrutHeight: true,
+  );
+
+  static const StrutStyle _bylineStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 12,
+    height: 1.25,
+    forceStrutHeight: true,
+  );
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 2),
+      // A normal row, divider included, is 184 px. The wrapped relief row
+      // is taller by its extra title line and extra byline line.
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4 / 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(credit.offices.join(', '), style: _officeLabel),
-          const SizedBox(height: 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Expanded(child: Text(credit.title, style: _bannerTitle)),
-              if (credit.replace) ...<Widget>[
-                const SizedBox(width: 8),
-                const _ReplaceMark(),
-              ],
-            ],
+          Text(
+            credit.offices.join(', '),
+            style: _officeLabel.copyWith(height: 1),
+            strutStyle: _officeStrut,
+            textHeightBehavior: _forcedLine,
           ),
-          const SizedBox(height: 1),
-          Text(credit.byline, style: _creditByline),
+          const SizedBox(height: 2),
+          LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              const double chipWidth = 178 / 3;
+              final bool wrapped = _titleWraps(
+                constraints.maxWidth - (credit.replace ? 8 + chipWidth : 0),
+              );
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      credit.title,
+                      style: _bannerTitle.copyWith(height: 1.15),
+                      strutStyle: _titleStrut,
+                      textHeightBehavior: _forcedLine,
+                    ),
+                  ),
+                  if (credit.replace) ...<Widget>[
+                    const SizedBox(width: 8),
+                    // The slot keeps the title wrapping beside the chip and
+                    // stays one line tall. A one-line title drops the chip
+                    // onto the byline, which is the BFP row.
+                    SizedBox(
+                      width: chipWidth,
+                      height: 16,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: <Widget>[
+                          Positioned(
+                            top: wrapped ? 0 : 10 / 3,
+                            left: 0,
+                            child: const _ReplaceMark(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
+          ),
+          const SizedBox(height: 2),
+          Padding(
+            // The long BFP credit wraps onto a second line at this width.
+            // Shorter credits stay on one line.
+            padding: const EdgeInsets.only(right: 46),
+            child: Text(
+              credit.byline,
+              style: _creditByline.copyWith(height: 1.25),
+              strutStyle: _bylineStrut,
+              textHeightBehavior: _forcedLine,
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  bool _titleWraps(double maxWidth) {
+    if (maxWidth <= 0) return false;
+    final TextPainter painter = TextPainter(
+      text: TextSpan(
+        text: credit.title,
+        style: _bannerTitle.copyWith(height: 1.15),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 2,
+      textHeightBehavior: _forcedLine,
+      strutStyle: _titleStrut,
+    )..layout(maxWidth: maxWidth);
+    final bool wraps = painter.computeLineMetrics().length > 1;
+    painter.dispose();
+    return wraps;
   }
 }
 
@@ -1876,7 +2012,7 @@ class _ReplaceMark extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14 / 3),
         child: Text(
           'Replace',
           style: TextStyle(
@@ -1915,7 +2051,9 @@ class _ThreadBody extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 23, 16, 8),
             children: <Widget>[
               if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
-              if (dayLabel.isNotEmpty) const SizedBox(height: 8),
+              // The chip's top padding is 4/3 shorter than its bottom, and
+              // this gap gives that space back, so the bubbles stay put.
+              if (dayLabel.isNotEmpty) const SizedBox(height: 8 + 4 / 3),
               for (var i = 0; i < bubbles.length; i++)
                 Padding(
                   // The last bubble's border sits one dp high of the specimen.
@@ -2181,7 +2319,7 @@ class _Chip extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        padding: const EdgeInsets.fromLTRB(12, 4 - 4 / 3, 12, 4),
         child: Text(label, style: _label),
       ),
     );
@@ -2316,7 +2454,7 @@ class _PhotoNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 15),
+      padding: const EdgeInsets.only(top: 15 + 8 / 3),
       child: Column(
         children: <Widget>[
           SizedBox(
@@ -2367,7 +2505,7 @@ class _PhotoNote extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 8 - 8 / 3),
           const Text(
             'Profile photo — reviewed by LGU before it appears on your ID',
             textAlign: TextAlign.center,
@@ -2517,7 +2655,12 @@ class _FieldBox extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: const Color(0xFFD6DCE8)),
         ),
-        child: child,
+        // The value sits 51 px under the field's top border. Centering the
+        // row with this padding puts the ink there.
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 4 / 3),
+          child: child,
+        ),
       ),
     );
   }

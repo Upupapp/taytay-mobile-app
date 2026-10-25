@@ -23,6 +23,8 @@ import 'package:taytay_resident/features/account/presentation/account_pages.dart
 import 'package:taytay_resident/features/account/presentation/change_password_form.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
+import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
@@ -578,6 +580,160 @@ void main() {
     expect(profile.changes.single['barangay_id'], 'brgy-san-juan');
     expect(profile.idempotencyKeys, hasLength(1));
   });
+
+  testWidgets('the inbox sample line is only on when mock data is', (
+    tester,
+  ) async {
+    final AppDependencies live = await _accountDependencies(
+      messaging: _OneThread(),
+    );
+    addTearDown(live.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: live,
+        child: const MaterialApp(home: MessagesInboxScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('MSWDO'), findsOneWidget);
+    expect(find.textContaining('messages for illustration'), findsNothing);
+    expect(find.text('SAMPLE'), findsNothing);
+
+    final AppDependencies mock = await _accountDependencies(
+      messaging: _OneThread(),
+      config: AppConfig.from(
+        rawEnvironment: 'dev',
+        rawApiBaseUrl: 'https://example.test/api/v1',
+        isReleaseBuild: false,
+        rawDataMode: 'mock',
+      ),
+    );
+    addTearDown(mock.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: mock,
+        child: const MaterialApp(home: MessagesInboxScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(find.textContaining('messages for illustration'), findsOneWidget);
+    expect(find.text('SAMPLE'), findsOneWidget);
+  });
+
+  testWidgets('the thread sample line is only on when mock data is', (
+    tester,
+  ) async {
+    final AppDependencies live = await _accountDependencies(
+      messaging: _OneThread(),
+    );
+    addTearDown(live.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: live,
+        child: const MaterialApp(
+          home: AccountThreadScreen(threadId: 'thread-1'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('A synthetic message.'), findsOneWidget);
+    expect(find.textContaining('conversation for illustration'), findsNothing);
+    expect(find.text('SAMPLE'), findsNothing);
+
+    final AppDependencies mock = await _accountDependencies(
+      messaging: _OneThread(),
+      config: AppConfig.from(
+        rawEnvironment: 'dev',
+        rawApiBaseUrl: 'https://example.test/api/v1',
+        isReleaseBuild: false,
+        rawDataMode: 'mock',
+      ),
+    );
+    addTearDown(mock.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: mock,
+        child: const MaterialApp(
+          home: AccountThreadScreen(threadId: 'thread-1'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(
+      find.textContaining('conversation for illustration'),
+      findsOneWidget,
+    );
+    expect(find.text('SAMPLE'), findsOneWidget);
+  });
+
+  testWidgets('the privacy screen shows the draft only outside production', (
+    tester,
+  ) async {
+    Future<void> pumpNotice({
+      required String environment,
+      required PrivacyNotice notice,
+    }) async {
+      final AppDependencies dependencies = await _accountDependencies(
+        config: AppConfig.from(
+          rawEnvironment: environment,
+          rawApiBaseUrl: 'https://example.test/api/v1',
+          isReleaseBuild: false,
+        ),
+        platform: _FixedBootstrap(
+          AppBootstrap(
+            service: '',
+            apiVersion: '',
+            timezone: 'Asia/Manila',
+            channel: 'citizen-mobile',
+            defaultPageSize: 25,
+            minimumVersion: '',
+            features: FeatureFlags.none,
+            support: SupportContact.none,
+            privacyNotice: notice,
+          ),
+        ),
+      );
+      addTearDown(dependencies.dispose);
+      await tester.pumpWidget(
+        AppDependenciesScope(
+          dependencies: dependencies,
+          child: MaterialApp(
+            home: PrivacyNoticeScreen(
+              key: ValueKey<String>('$environment-${notice.version}'),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+    }
+
+    await pumpNotice(
+      environment: 'prod',
+      notice: const PrivacyNotice(version: 'placeholder'),
+    );
+    expect(find.textContaining('DRAFT'), findsNothing);
+    expect(find.textContaining('SAMPLE'), findsNothing);
+    expect(find.textContaining('when Taytay LGU publishes it'), findsOneWidget);
+
+    await pumpNotice(
+      environment: 'dev',
+      notice: const PrivacyNotice(version: 'placeholder'),
+    );
+    expect(find.textContaining('DRAFT'), findsOneWidget);
+    expect(find.text('SAMPLE'), findsOneWidget);
+
+    await pumpNotice(
+      environment: 'prod',
+      notice: const PrivacyNotice(
+        version: '2026-10',
+        bodyMarkdown: '## What we collect\n\nName and address.',
+      ),
+    );
+    expect(find.textContaining('DRAFT'), findsNothing);
+    expect(find.textContaining('SAMPLE'), findsNothing);
+    expect(find.textContaining('What we collect'), findsOneWidget);
+    expect(find.textContaining('Name and address.'), findsOneWidget);
+  });
 }
 
 class _FailingThreads implements OfficeMessagingRepository {
@@ -661,19 +817,90 @@ class _Barangays implements BarangayDirectory {
       Ok<List<Barangay>>(barangays);
 }
 
+class _OneThread implements OfficeMessagingRepository {
+  OfficeThread get _thread => OfficeThread(
+    id: 'thread-1',
+    officeId: 'office-1',
+    officeName: 'MSWDO',
+    topic: 'Relief',
+    preview: 'A synthetic reply.',
+    updatedAt: DateTime.utc(2026, 10, 1),
+  );
+
+  @override
+  Future<Result<List<OfficeThread>>> listThreads() async =>
+      Ok<List<OfficeThread>>(<OfficeThread>[_thread]);
+
+  @override
+  Future<Result<OfficeThread>> loadThread(String threadId) async =>
+      Ok<OfficeThread>(_thread);
+
+  @override
+  Future<Result<List<OfficeMessage>>> listMessages(String threadId) async =>
+      Ok<List<OfficeMessage>>(<OfficeMessage>[
+        OfficeMessage(
+          id: 'message-1',
+          threadId: threadId,
+          body: 'A synthetic message.',
+          sentAt: DateTime.utc(2026, 10, 1),
+          fromResident: false,
+        ),
+      ]);
+
+  @override
+  Future<Result<OfficeMessage>> send({
+    required String officeId,
+    required String topic,
+    required String body,
+  }) async => const Err<OfficeMessage>(NetworkFailure());
+
+  @override
+  Future<Result<OfficeMessage>> reply({
+    required String threadId,
+    required String body,
+  }) async => const Err<OfficeMessage>(NetworkFailure());
+
+  @override
+  Future<Result<void>> closeThread(String threadId) async =>
+      const Err<void>(NetworkFailure());
+
+  @override
+  Future<Result<void>> markThreadRead(String threadId) async =>
+      const Err<void>(NetworkFailure());
+}
+
+class _FixedBootstrap implements PlatformRepository {
+  const _FixedBootstrap(this.bootstrap);
+
+  final AppBootstrap bootstrap;
+
+  @override
+  Future<Result<ServiceHealth>> checkHealth() async => const Ok<ServiceHealth>(
+    ServiceHealth(service: 'taytay', status: 'ok', apiVersion: '1'),
+  );
+
+  @override
+  Future<Result<AppBootstrap>> loadBootstrap() async =>
+      Ok<AppBootstrap>(bootstrap);
+}
+
 Future<AppDependencies> _accountDependencies({
   OfficeMessagingRepository? messaging,
   ResidentProfileRepository? profile,
   List<Barangay> barangays = const <Barangay>[],
+  AppConfig? config,
+  PlatformRepository? platform,
 }) async {
   final InMemorySecretStore secrets = InMemorySecretStore();
   await secrets.write(LaunchController.welcomeCompletedKey, 'true');
   final AppDependencies base = AppDependencies.build(
-    config: AppConfig.from(
-      rawEnvironment: 'dev',
-      rawApiBaseUrl: 'https://example.test/api/v1',
-      isReleaseBuild: false,
-    ),
+    config:
+        config ??
+        AppConfig.from(
+          rawEnvironment: 'dev',
+          rawApiBaseUrl: 'https://example.test/api/v1',
+          isReleaseBuild: false,
+        ),
     secrets: secrets,
     sessionStore: InMemorySessionStore(),
     localAuthenticator: const UnavailableLocalAuthenticator(),
@@ -690,7 +917,7 @@ Future<AppDependencies> _accountDependencies({
     telemetry: base.telemetry,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
-    platformRepository: base.platformRepository,
+    platformRepository: platform ?? base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
