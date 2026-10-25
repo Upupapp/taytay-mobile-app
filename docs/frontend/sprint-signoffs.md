@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. The follow-up closes the remaining line counts and the lines that sat more than 2 px off. The side-by-sides and both clips are commit `cdafeab1e69a801f3c5d479bcb422be6d2919697`. Pull request #10 is a draft.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 1 review rebuilt the specimen to the design's structure. This pass puts the inbox timestamp, the SAMPLE chip, and the Replace chips where the designs draw them. The side-by-sides, the placement crops, and both clips are in the evidence commit named in the index. Pull request #10 is a draft.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
@@ -367,27 +367,27 @@ Card edges are the 1 dp `#E7EBF3` border rows (exact RGB 231, 235, 243, more tha
 | Screen | Lines (build / design) | Max in-order line | Max card edge | Mismatch |
 | --- | --- | --- | --- | --- |
 | 08-01 Account home | 14 / 14 | 2 | 0 | 5.67% (168104/2962440) |
-| 08-02 Messages inbox | 9 / 9 | 2 | 0 | 3.90% (115554/2962440) |
+| 08-02 Messages inbox | 9 / 9 | 1 | 1 | 2.54% (75390/2962440) |
 | 08-03 Edit profile | 18 / 18 | 2 | 0 | 3.98% (118051/2962440) |
 | 08-04 Settings and privacy | 15 / 15 | 2 | 2 | 6.23% (184685/2962440) |
 | 08-05 Photo credits | 15 / 15 | 1 | 2 | 6.47% (191709/2962440) |
 | 08-06 Messages empty | 11 / 11 | 1 | 0 | 1.94% (57539/2962440) |
 | 08-07 Thread, MSWDO | 16 / 16 | 1 | 2 | 6.47% (191678/2962440) |
 | 08-08 Thread, Treasurer | 16 / 16 | 2 | 2 | 4.66% (138011/2962440) |
-| 08-09 Privacy notice | 22 / 22 | 2 | 1 | 6.91% (204705/2962440) |
-| 08-10 Office banners | 33 / 33 | 1 | 2 | 9.11% (269804/2962440) |
+| 08-09 Privacy notice | 22 / 22 | 2 | 1 | 6.86% (203098/2962440) |
+| 08-10 Office banners | 33 / 33 | 1 | 2 | 6.25% (185106/2962440) |
 
 Every screen's line count matches the design. Every in-order line start and every card edge is within 2 image pixels. Light mode and Plus Jakarta Sans only. 08-00 is the overview board and is not a phone screen.
 
-08-02 uses the design's landmark glyph. The timestamp sits in the gap between the office name and the preview, so the glyph's roof-to-column hole does not split the row. The row is one dark run. Card edges are exact.
+08-02 right-aligns the timestamp in the trailing column. On the BPLO row it sits on the office line (ink y 614–640 against the design's 615–641, x 931–1067 on both) and the count sits under it, beside the wrapped preview. On MSWDO and Treasurer it sits in the gap between the office name and the preview (within 3 px). The Treasurer glyph is the design's landmark. It still has a gap between the roof and the columns. "Oct 12" occupies that gap, which is where the design draws it, so the row stays one dark run. Nothing was moved to close the counter. Crops: `test/goldens/compare/s8/artifacts/08-02-landmark-time.png` and `08-02-office-time.png`.
 
 08-03 keeps the specimen mobile chip, because the design paints it. The field stack matches the design: card padding, the gap from each label to its field, and the value inset put every line within 2 px. Card edges and the Save button sit on the design rows. The live edit screen still hides the mobile chip.
 
 08-04's privacy subtitle uses a line height that centres the title and the subtitle on the design rows. 08-07 and 08-08 set the day pill's padding and the spacer under it. Those lines are within 2 px, and the bubble cards stay within 2 px.
 
-08-09 puts the SAMPLE chip on the last notice line, so it is not its own dark run. The card's bottom padding keeps the export button and the card edge within 2 px.
+08-09 draws the SAMPLE chip at the end of the last line of "Your rights", which is where the design draws it. The amber box is y 1450–1509, x 700–892, against the design's y 1448–1514, x 695–887. The top is 2 px low and the left edge is 5 px to the right. The chip is 7 px shorter than the design chip. It shares that line, so it is not its own dark run, and the design's chip is not its own run either. Crop: `test/goldens/compare/s8/artifacts/08-09-sample.png`.
 
-08-10 gives each banner row a real line box. Office, title, and byline use forced struts, so the row pitch is the design's 184 px. The Replace chip sits in a slot that does not push the byline. On a one-line title the chip crosses onto the byline, so those two inks are one run, matching the design. The remaining mismatch is glyph and wrap detail.
+08-10 right-aligns each Replace chip on the title and the first credit line. A wrapped second credit line sits below the chip. The relief chip is y 693–754, x 886–1070, against the design's y 692–750, x 885–1070. The BFP chip is y 2050–2111, x 886–1070, against y 2049–2107, x 885–1070. Right edges match. The BFP chip overlaps the title and the first byline line because that is where the design draws it, and those two inks are one run on both images. The chip was not dropped onto the byline to produce the run. Crops: `test/goldens/compare/s8/artifacts/08-10-replace-relief.png` and `08-10-replace-bfp.png`.
 
 Round 1 structure:
 
@@ -437,4 +437,4 @@ Also still true:
 
 `ProfilePatch` sends `name`, `mobile`, `email`, and `barangay_id` when the directory resolves the barangay. It does not send `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (479120 bytes, 124 frames, 4.133 s) and `s8-settings.mp4` (914275 bytes, 124 frames, 4.133 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1644 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (482130 bytes, 124 frames, 4.133 s) and `s8-settings.mp4` (896954 bytes, 124 frames, 4.133 s). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and comes back. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1644 tests, with 15 skipped (the recording and live tags).

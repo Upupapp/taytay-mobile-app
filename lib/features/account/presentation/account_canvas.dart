@@ -1005,12 +1005,8 @@ class _InboxBody extends StatelessWidget {
                   ),
                 _InboxRow(
                   row: rows[i],
-                  padTop: i == 0 ? 17 - 4 / 3 : 12,
-                  padBottom: const <double>[
-                    19.5 + 4 / 3,
-                    16,
-                    16,
-                  ][i < 3 ? i : 2],
+                  padTop: i == 0 ? 17 : 12,
+                  padBottom: const <double>[37 / 3, 12, 14][i < 3 ? i : 2],
                 ),
               ],
             ],
@@ -1041,49 +1037,88 @@ class _InboxRow extends StatelessWidget {
   final double padTop;
   final double padBottom;
 
+  /// The canvas strips the first ascent. These struts are the line boxes.
+  static const TextHeightBehavior _line = TextHeightBehavior(
+    applyHeightToFirstAscent: true,
+    applyHeightToLastDescent: true,
+  );
+
+  static const StrutStyle _titleStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 14,
+    height: 1,
+    forceStrutHeight: true,
+  );
+
+  static const StrutStyle _metaStrut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 12,
+    height: 1.25,
+    forceStrutHeight: true,
+  );
+
   @override
   Widget build(BuildContext context) {
-    // The time sits in the gap between the office and the preview, which is
-    // where the design draws it. A count badge stacks under the time. The
-    // landmark glyph has a gap between its roof and its columns; the time
-    // crosses that gap, so the row is one line of text.
     return _Hit(
       label: row.office,
       onTap: row.onTap,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(14, padTop, 14, padBottom),
+        padding: EdgeInsets.fromLTRB(16, padTop, 16, padBottom),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
-            _Tile(icon: row.icon, tile: row.tile, color: row.iconColor),
+            // The design's office tile is 44 dp. The time sits in the
+            // trailing column, right-aligned, centred on this row.
+            _Tile(
+              icon: row.icon,
+              tile: row.tile,
+              color: row.iconColor,
+              size: 44,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(row.office, style: _rowTitle),
-                  const SizedBox(height: 2),
+                  Text(
+                    row.office,
+                    style: _rowTitle.copyWith(height: 1),
+                    strutStyle: _titleStrut,
+                    textHeightBehavior: _line,
+                  ),
+                  const SizedBox(height: 4),
                   Text(
                     row.preview,
-                    maxLines: 1,
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: _meta,
+                    style: _meta.copyWith(height: 1.25),
+                    strutStyle: _metaStrut,
+                    textHeightBehavior: _line,
                   ),
                 ],
               ),
             ),
-            Padding(
-              padding: EdgeInsets.only(top: row.badge == null ? 11 : 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Text(row.when, style: _meta),
-                  if (row.badge != null) ...<Widget>[
-                    const SizedBox(height: 6),
-                    _CountBadge(row.badge!),
-                  ],
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: <Widget>[
+                // A count under the time makes the line box ride high.
+                // The same 2 dp comes back off the gap, so the count stays
+                // beside the preview and the time stays on the office line.
+                Padding(
+                  padding: EdgeInsets.only(top: row.badge == null ? 0 : 2),
+                  child: Text(
+                    row.when,
+                    style: _meta.copyWith(height: 1.25),
+                    strutStyle: _metaStrut,
+                    textHeightBehavior: _line,
+                  ),
+                ),
+                if (row.badge != null) ...<Widget>[
+                  const SizedBox(height: 4),
+                  _CountBadge(row.badge!),
                 ],
-              ),
+              ],
             ),
           ],
         ),
@@ -1648,8 +1683,6 @@ class _PrivacyBody extends StatelessWidget {
               ),
               SizedBox(height: 35 / 3),
               _Card(
-                // The SAMPLE chip shares the last line. This bottom padding
-                // is what remains under that line in the design.
                 padding: EdgeInsets.fromLTRB(14, 16, 14, 9 - 7 / 3),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1757,8 +1790,7 @@ class _NoticeBlock extends StatelessWidget {
   final String title;
   final String body;
 
-  /// Sits on the last line of [body]. The design's SAMPLE chip shares that
-  /// line, so it does not open a dark run of its own.
+  /// The design draws this at the end of the last line of [body].
   final Widget? trailing;
 
   @override
@@ -1778,8 +1810,7 @@ class _NoticeBlock extends StatelessWidget {
               TextSpan(
                 style: _noticeBody,
                 children: <InlineSpan>[
-                  TextSpan(text: body),
-                  const WidgetSpan(child: SizedBox(width: 8)),
+                  TextSpan(text: '$body '),
                   WidgetSpan(
                     alignment: PlaceholderAlignment.middle,
                     child: trailing,
@@ -1913,7 +1944,7 @@ class _BannerRow extends StatelessWidget {
     return Padding(
       // A normal row, divider included, is 184 px. The wrapped relief row
       // is taller by its extra title line and extra byline line.
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 4 / 3),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4 / 3),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -1924,79 +1955,45 @@ class _BannerRow extends StatelessWidget {
             textHeightBehavior: _forcedLine,
           ),
           const SizedBox(height: 2),
-          LayoutBuilder(
-            builder: (BuildContext context, BoxConstraints constraints) {
-              const double chipWidth = 178 / 3;
-              final bool wrapped = _titleWraps(
-                constraints.maxWidth - (credit.replace ? 8 + chipWidth : 0),
-              );
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    child: Text(
+          Row(
+            // The chip is right-aligned and centred on the title and the
+            // byline. That is where the design draws it.
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
                       credit.title,
                       style: _bannerTitle.copyWith(height: 1.15),
                       strutStyle: _titleStrut,
                       textHeightBehavior: _forcedLine,
                     ),
-                  ),
-                  if (credit.replace) ...<Widget>[
-                    const SizedBox(width: 8),
-                    // The slot keeps the title wrapping beside the chip and
-                    // stays one line tall. A one-line title drops the chip
-                    // onto the byline, which is the BFP row.
-                    SizedBox(
-                      width: chipWidth,
-                      height: 16,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: <Widget>[
-                          Positioned(
-                            top: wrapped ? 0 : 10 / 3,
-                            left: 0,
-                            child: const _ReplaceMark(),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 2),
+                    Text(
+                      credit.byline,
+                      style: _creditByline.copyWith(height: 1.25),
+                      strutStyle: _bylineStrut,
+                      textHeightBehavior: _forcedLine,
                     ),
                   ],
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 2),
-          Padding(
-            // The long BFP credit wraps onto a second line at this width.
-            // Shorter credits stay on one line.
-            padding: const EdgeInsets.only(right: 46),
-            child: Text(
-              credit.byline,
-              style: _creditByline.copyWith(height: 1.25),
-              strutStyle: _bylineStrut,
-              textHeightBehavior: _forcedLine,
-            ),
+                ),
+              ),
+              if (credit.replace) ...<Widget>[
+                const SizedBox(width: 8),
+                // One byline line. The chip centres on the title and the
+                // first credit line; a wrapped second line sits below it.
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 15),
+                  child: _ReplaceMark(),
+                ),
+              ],
+            ],
           ),
         ],
       ),
     );
-  }
-
-  bool _titleWraps(double maxWidth) {
-    if (maxWidth <= 0) return false;
-    final TextPainter painter = TextPainter(
-      text: TextSpan(
-        text: credit.title,
-        style: _bannerTitle.copyWith(height: 1.15),
-      ),
-      textDirection: TextDirection.ltr,
-      maxLines: 2,
-      textHeightBehavior: _forcedLine,
-      strutStyle: _titleStrut,
-    )..layout(maxWidth: maxWidth);
-    final bool wraps = painter.computeLineMetrics().length > 1;
-    painter.dispose();
-    return wraps;
   }
 }
 
@@ -2012,7 +2009,7 @@ class _ReplaceMark extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 14 / 3),
+        padding: EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
         child: Text(
           'Replace',
           style: TextStyle(
@@ -2214,17 +2211,23 @@ class _Card extends StatelessWidget {
 }
 
 class _Tile extends StatelessWidget {
-  const _Tile({required this.icon, required this.tile, required this.color});
+  const _Tile({
+    required this.icon,
+    required this.tile,
+    required this.color,
+    this.size = 40,
+  });
 
   final IconData icon;
   final Color tile;
   final Color color;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 40,
-      height: 40,
+      width: size,
+      height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: tile,
