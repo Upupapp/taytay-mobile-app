@@ -155,9 +155,17 @@ class WovenHeader extends StatelessWidget {
     final seal = welcome ? 58.0 : 46.0;
     final afterBack = showBack ? 10.0 : 0.0;
     final brandGap = welcome ? 11.0 : 10.0;
-    // Flutter's line box insets the wordmark below the mockup's half-leading.
-    // These two corrections put the ink on the crop; they follow the text scale.
+    // Chrome's boxes for `.brand`, at 1×. The row centres the text div on
+    // the seal (`align-items: center`). Welcome: div y=55 h=40, `b` h=19,
+    // `small` y=80. Sign-in: div y=47.5 h=39, `b` h=18, `small` y=71.5.
+    // The 6 between `b`'s bottom and `small`'s top is that measured gap.
     final typeScale = MediaQuery.textScalerOf(context).scale(1);
+    final titleSize = welcome ? 15.0 : 14.0;
+    final titleBox = (welcome ? 19.0 : 18.0) * typeScale;
+    // The text div is 21 dp taller than `b`. Six of that is the gap down to
+    // `small`; the subtitle line fills the rest, and what remains sits under
+    // it so the div stays the measured 40 (welcome) or 39 (sign-in).
+    final belowTitle = 21.0 * typeScale;
     final row = Padding(
       padding: padding ?? EdgeInsets.fromLTRB(showBack ? 18 : 20, 4, 20, 16),
       child: Row(
@@ -177,7 +185,7 @@ class WovenHeader extends StatelessWidget {
           SizedBox(width: brandGap),
           Expanded(
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
@@ -186,16 +194,28 @@ class WovenHeader extends StatelessWidget {
                       (welcome
                               ? AppTypography.brandTitleWelcome
                               : AppTypography.brandTitle)
-                          .copyWith(color: Colors.white, height: 1.26),
+                          .copyWith(
+                            color: Colors.white,
+                            height: titleBox / (titleSize * typeScale),
+                          ),
                 ),
-                SizedBox(height: 4 * typeScale),
+                SizedBox(height: 6 * typeScale),
                 Text(
                   'Lalawigan ng Rizal',
                   style:
                       (welcome
                               ? AppTypography.brandSubtitleWelcome
                               : AppTypography.brandSubtitle)
-                          .copyWith(color: BrandColors.sealGold),
+                          .copyWith(
+                            color: BrandColors.sealGold,
+                            height: TypeMetrics.line(11) / 11,
+                          ),
+                ),
+                SizedBox(
+                  height:
+                      belowTitle -
+                      6 * typeScale -
+                      TypeMetrics.line(11) * typeScale,
                 ),
               ],
             ),

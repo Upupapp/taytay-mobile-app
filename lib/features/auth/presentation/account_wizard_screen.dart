@@ -1503,6 +1503,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                       color: Color(0xFF5B6680),
                     ),
                   ),
+                  // CSS margin-top is 2px. Flutter's line box leaves the
+                  // value ink 1.7dp lower than that margin's top, so the
+                  // margin is split around the text and the next row stays.
                   const SizedBox(height: 0.3),
                   Text.rich(
                     TextSpan(
@@ -1554,6 +1557,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 1.7),
                 ],
               ),
             ),
@@ -1726,28 +1730,34 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           if (error != null)
             Padding(
               padding: const EdgeInsets.only(top: 5.3),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const TaytayIcon(
-                    icon: TaytayIcons.circleAlert,
-                    semanticLabel: 'Error',
-                    size: 14,
-                    color: Color(0xFFB3261E),
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      error,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11.5,
-                        height: 1.2,
-                        fontWeight: AppTypography.strong,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const TaytayIcon(
+                        icon: TaytayIcons.circleAlert,
+                        semanticLabel: 'Error',
+                        size: 14,
                         color: Color(0xFFB3261E),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          error,
+                          style: const TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11.5,
+                            height: 1.2,
+                            fontWeight: AppTypography.strong,
+                            color: Color(0xFFB3261E),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 1.2),
                 ],
               ),
             ),

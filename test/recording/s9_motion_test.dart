@@ -213,7 +213,12 @@ void main() {
     var frame = await _until(tester, out, 0, find.text('Skip'));
     frame = await _hold(tester, out, frame, 24);
     await tester.tap(find.text('Next'));
-    frame = await _until(tester, out, frame, find.text('Ang Taytay ID mo,'));
+    frame = await _until(
+      tester,
+      out,
+      frame,
+      find.textContaining('Ang Taytay ID mo'),
+    );
     frame = await _hold(tester, out, frame, 20);
     await tester.tap(find.text('Next'));
     frame = await _until(tester, out, frame, find.text('Get started'));

@@ -536,3 +536,53 @@ Also still true:
 `ProfilePatch` from the live editor sends only changed `mobile`, `email`, and `barangay_id`. It does not send `name`, `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
 Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (476628 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (885802 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1648 tests, with 15 skipped (the recording and live tags).
+
+## S9 Polish
+
+S9 is not approved. This section records the polish pass. It does not record approval words. The app stays in light mode. Dark `ThemeData` stays built so the contrast tests have a scheme to check. Staging and production still refuse mock data. No new dependency was added.
+
+The gold thread is one layer, `GoldThreadShell`, on a `ShellRoute` that holds welcome, sign-in, create-account, and the password-reset routes. The field and the stitch are painted by that shell. The 7s clock is created once. A later route morphs the cubic over `MotionTokens.standard` and does not rebuild the clock, so the glowing tip keeps its place in the loop. Welcome page changes follow `ThreadCurve.welcomeAt` on the same clock. Reduced motion keeps the thread and hides the tip, and the clock does not repeat. A screen painted without the shell, including the welcome and sign-in goldens, still draws its own field and thread.
+
+`lib/features/onboarding`, `lib/features/auth`, and `lib/shared/widgets/taytay_headers.dart` contain no `Transform.translate`. The woven wordmark is a column: the title line box, a 6px gap, the 11px subtitle line, and the leftover that makes the block the Chrome height (welcome 40, sign-in 39), centred on the seal. Review rows keep the CSS `margin-top: 2px` as layout. Flutter's line box leaves the value ink 1.7dp below the top of that margin, so 0.3 sits above the text and 1.7 below it, and the next row keeps its stride. The too-many paragraph keeps the CSS `h1` margin-bottom of 6px the same way: 5.66 above the text and 0.34 below it, ahead of the 13px gap to the clock. Sign-in and wizard field errors keep their CSS margins as the same kind of split. Back cards keep `Transform.rotate`. The thread painter's `canvas.translate` is the SVG shadow offset.
+
+The welcome design string "track anything you apply for" stays, because that is the welcome HTML. Profile, registration, verification, household, and requests no longer invite an in-app application. Programme pages and Tulong are described as information only. The About version is one sentence: `Municipality of Taytay, Rizal · version 0.1 (design mockup)`. It soft-wraps in the card.
+
+Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s9/`. A row is dark when any pixel from x 60 to 1110 has mean RGB below 110. Runs shorter than 8 rows are dropped. Card edges are rows with more than 400 pixels of exact RGB 231,235,243 in x 120 to 1050. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). Card edges were 0/0 on every frame below.
+
+| Frame | Lines | Dev | Mismatch |
+| --- | --- | --- | --- |
+| 01-01 | 11/11 | 3px | 3.02% (89545) |
+| 01-02 | 10/10 | 3px | 2.63% (77972) |
+| 01-03 | 12/12 | 3px | 3.56% (105460) |
+| 02-01 | 13/13 | 2px | 5.17% (153014) |
+| 02-02 | 11/11 | 2px | 5.61% (166207) |
+| 02-02b | 12/12 | 1px | 5.22% (154772) |
+| 02-03 | 19/19 | 2px | 5.47% (162142) |
+| 02-04 | 9/9 | 2px | 4.34% (128604) |
+| 02-04b | 10/10 | 1px | 4.02% (119196) |
+| 02-05 | 20/20 | 2px | 7.15% (211786) |
+| 02-06 | 14/14 | 2px | 5.26% (155922) |
+| 02-07 | 13/13 | 2px | 4.64% (137405) |
+| 02-08 | 18/18 | 2px | 4.61% (136533) |
+| 02-09 | 12/12 | 2px | 4.45% (131975) |
+| 02-10 | 15/15 | 2px | 5.39% (159567) |
+| 02-11 | 18/18 | 2px | 6.93% (205246) |
+| 02-12 | 15/15 | 2px | 5.41% (160379) |
+| 02-12b | 18/18 | 2px | 6.28% (186162) |
+| 02-13 | 11/11 | 2px | 4.02% (118977) |
+| 02-14 | 14/14 | 2px | 9.55% (282926) |
+| 02-14b | 11/11 | 2px | 5.58% (165400) |
+
+The welcome 3px runs are the same starts as the previous welcome golden. They sit on the headline, which this sprint did not restack. The wordmark is white on navy, so it is outside the dark-run measure. 02-14's 9.55% matches the previous S2 render of that frame (282814 pixels); the new render differs from that render by 1470 pixels, in the wordmark band.
+
+Profile, registration, verification, household, and the requests empty states have no design still in this review set. The copy change is asserted by `test/features/s9_polish_test.dart`. The About version line is the 08-05 sentence. Its previous side-by-side stays in `test/goldens/compare/s8/08-05.png`.
+
+Still open from the roadmap, and left open on purpose:
+
+- The 84-screen contact sheet. This pass reviews the screens the sprint touched.
+- A dark-scheme contrast pass. Light mode is what the app shows.
+- A TalkBack and VoiceOver session. This environment has no screen reader, so C-07 stays open. Semantics, the 48dp walk, and the 200% text-scale tests already in the suite still run.
+- Device frame times and a cold-start measurement. `docs/integration/performance-budgets.md` is the budget. No device figure is invented here.
+- Swapping mocks for live repositories. That waits until each endpoint exists, and each swap stays its own change. Dev builds are still the only ones that honour `TAYTAY_DATA=mock`.
+
+The clip was captured from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s9/recordings/s9-thread.mp4` (2086035 bytes, 119 frames, 3.967 s, 30/1). It plays welcome page 1, page 2, page 3, sign-in, and create-account, through the real route transitions, on the shared thread. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1655 tests, with 16 skipped (the recording and live tags).

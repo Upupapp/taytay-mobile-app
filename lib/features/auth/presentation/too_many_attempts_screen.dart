@@ -162,6 +162,8 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
             eyebrow: ready ? 'Puwede na ulit' : 'Pansamantalang naka-lock',
             title: ready ? 'Subukan ulit ngayon' : 'Masyadong maraming subok',
           ),
+          // CSS `h1` margin-bottom is 6px. The paragraph's ink sits 0.34
+          // below that, so the margin is split and the clock keeps its place.
           const SizedBox(height: 5.66),
           Text.rich(
             TextSpan(
@@ -186,6 +188,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
               ],
             ),
           ),
+          const SizedBox(height: 0.34),
           const SizedBox(height: 13),
           _HoldClock(ready: ready, label: _clockLabel, remaining: _remaining),
           if (!ready) ...<Widget>[

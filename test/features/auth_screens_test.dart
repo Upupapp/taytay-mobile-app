@@ -162,9 +162,8 @@ void main() {
         );
       }
 
-      // The stitch is a sibling behind the sheet, not a paint over the field.
-      // Walk the element tree: the sheet key lives inside the sheet widget's
-      // build, so it is not a field on the stack's child configuration.
+      // The stitch is the shared shell, clipped above the sheet. It is not a
+      // child of the sign-in stack, and it must not paint the field.
       final stackElement = tester.element(
         find.byKey(const Key('sign-in-stack')),
       );
@@ -182,12 +181,8 @@ void main() {
       final threadAt = layers.indexWhere(
         (layer) => subtree(layer, (node) => node.widget is SignInThreadOverlay),
       );
-      final sheetAt = layers.indexWhere(
-        (layer) =>
-            subtree(layer, (node) => node.widget.key == signInFormSheetKey),
-      );
-      expect(threadAt, greaterThanOrEqualTo(0));
-      expect(sheetAt, greaterThan(threadAt));
+      expect(threadAt, -1);
+      expect(find.byType(SignInThreadOverlay), findsOneWidget);
 
       RenderObject? ancestor = tester.renderObject(sheet).parent;
       RenderRepaintBoundary? boundary;
