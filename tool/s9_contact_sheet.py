@@ -75,14 +75,25 @@ def main() -> None:
     rows = 12
     cell_w, cell_h = 210, 236
     margin = 16
-    header = 44
+    header = 52
     width = margin * 2 + columns * cell_w
     height = margin * 2 + header + rows * cell_h
     sheet = Image.new("RGB", (width, height), (221, 227, 238))
     draw = ImageDraw.Draw(sheet)
-    font = ImageFont.load_default()
-    draw.text((margin, 6), "Taytay resident app — 84 screens, design | render", fill=(6, 35, 88), font=font)
-    draw.text((margin, 22), sha, fill=(11, 61, 145), font=font)
+    face = ROOT / "assets/fonts/plus_jakarta_sans/PlusJakartaSans-Bold.ttf"
+    title_font = ImageFont.truetype(face, 16)
+    sha_font = ImageFont.truetype(face, 15)
+    label_font = ImageFont.truetype(
+        ROOT / "assets/fonts/plus_jakarta_sans/PlusJakartaSans-Regular.ttf",
+        12,
+    )
+    draw.text(
+        (margin, 8),
+        "Taytay resident app — 84 screens, design | render",
+        fill=(6, 35, 88),
+        font=title_font,
+    )
+    draw.text((margin, 28), sha, fill=(11, 61, 145), font=sha_font)
     for index, screen in enumerate(SCREENS):
         design_path, design_i, render_path, render_i = _source(screen)
         column = index % columns
@@ -93,7 +104,7 @@ def main() -> None:
         render = _panel(render_path, render_i)
         sheet.paste(design, (x, y + 16))
         sheet.paste(render, (x + 98, y + 16))
-        draw.text((x, y), screen, fill=(15, 26, 51), font=font)
+        draw.text((x, y), screen, fill=(15, 26, 51), font=label_font)
     OUT.parent.mkdir(parents=True, exist_ok=True)
     sheet.save(OUT, optimize=True)
     print(f"wrote {OUT} {sheet.size} {OUT.stat().st_size} bytes")
