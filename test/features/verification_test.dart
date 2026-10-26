@@ -201,6 +201,8 @@ void main() {
       'can_edit': false,
       'submitted_at': '2026-08-01T00:00:00Z',
       'message': 'We are checking your details.',
+      // A staff note may still arrive. It is ignored.
+      'notes': 'internal-office-note-7f3a',
       // None of the following may survive decoding.
       'reviewed_by': 'staff-uuid-1',
       'reviewer_name': 'Maria Santos',
@@ -249,6 +251,7 @@ void main() {
       ].join(' ').toLowerCase();
 
       for (final forbidden in <String>[
+        'internal-office-note-7f3a',
         'maria santos',
         'juan dela cruz',
         'staff-1',
@@ -293,25 +296,36 @@ void main() {
       // runs. A deny-list is one forgotten key away from rendering a note; this
       // proves the shape of the code rather than the behaviour of one payload,
       // which is what the deleted DTO's own test was for.
+      //
+      // The scan starts at the method definition. The call site appears first
+      // and ends at the next function, so a search for the bare name would
+      // miss the body that copies fields.
       const source = 'lib/features/verification/data/kyc_api_repository.dart';
       final decoder = File(source).readAsStringSync();
-      final body = decoder.substring(decoder.indexOf('_decodeDetail'));
-      final block = body.substring(0, body.indexOf('\n  }'));
+      expect(decoder, isNot(contains("['notes']")));
 
-      for (final forbidden in <String>[
-        'reviewed_by',
-        'risk_score',
-        'internal_notes',
-        'audit_trail',
-        'match_candidates',
-        'rejection_heuristic',
-        'reviewer',
-      ]) {
-        expect(
-          block,
-          isNot(contains(forbidden)),
-          reason: '_decodeDetail reads $forbidden',
+      for (final name in <String>['_decodeDetail', '_decodeStatus']) {
+        final int at = decoder.indexOf('$name(');
+        final String block = decoder.substring(
+          at,
+          at + decoder.substring(at).indexOf('\n  }'),
         );
+        for (final forbidden in <String>[
+          'reviewed_by',
+          'risk_score',
+          'internal_notes',
+          'notes',
+          'audit_trail',
+          'match_candidates',
+          'rejection_heuristic',
+          'reviewer',
+        ]) {
+          expect(
+            block,
+            isNot(contains(forbidden)),
+            reason: '$name reads $forbidden',
+          );
+        }
       }
     });
 
@@ -326,6 +340,7 @@ void main() {
       );
       final detail = (await repository.loadOwnStatusDetail()).valueOrNull!;
       expect(detail.toString(), isNot(contains('review')));
+      expect(detail.toString(), isNot(contains('internal-office-note-7f3a')));
     });
   });
   group('decoder — states, through the path production uses', () {

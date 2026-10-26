@@ -576,16 +576,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The repository is wired now, so this is a real request that could not
-      // leave the device. What must never happen is the screen advancing to the
-      // code step as though a code had been sent.
+      // A mobile number plus a password never leaves the device. It is not a
+      // wrong password, and the screen does not advance.
       expect(
-        SignInMessage.values.any(
-          (m) => find.textContaining(m.text).evaluate().isNotEmpty,
-        ),
-        isTrue,
-        reason: 'no resident-facing sign-in message was shown',
+        find.textContaining(SignInMessage.passwordNeedsEmail.text),
+        findsOneWidget,
       );
+      expect(find.textContaining('Incorrect email or password'), findsNothing);
+      expect(find.text('Incorrect password'), findsNothing);
       expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 

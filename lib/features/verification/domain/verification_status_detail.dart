@@ -274,6 +274,11 @@ class VerificationStatusDetail {
     this.canEdit,
     this.idType,
     this.reviewedAt,
+    this.id,
+    this.userId,
+    this.idFrontMediaId,
+    this.idBackMediaId,
+    this.selfieMediaId,
   });
 
   /// Nothing known yet — the initial state before a load completes.
@@ -314,11 +319,10 @@ class VerificationStatusDetail {
   /// present.
   bool get isEditableByApplicant => canEdit ?? stage.needsResidentAction;
 
-  /// Server-composed, resident-addressed guidance.
+  /// `message` on the verification request, when one was sent.
   ///
-  /// The one place server text is shown, and for the same reason a validation
-  /// message is: only the reviewing office knows what was wrong with a
-  /// particular submission, so the app cannot compose this for itself.
+  /// Not rendered. The status screen shows `rejection_reason` from `GET /me`.
+  /// A staff note on the same request is not a field on this type.
   final String? residentGuidance;
 
   /// Whether an in-person route at the municipal hall is offered.
@@ -332,6 +336,17 @@ class VerificationStatusDetail {
 
   /// When the office recorded a decision. A timestamp, not a reviewer.
   final DateTime? reviewedAt;
+
+  /// Verification request id. An opaque handle, not rendered.
+  final String? id;
+
+  /// The account the request belongs to. Not rendered.
+  final String? userId;
+
+  /// Uploaded document handles. Not the documents themselves.
+  final String? idFrontMediaId;
+  final String? idBackMediaId;
+  final String? selfieMediaId;
 
   bool get isVerified => stage == ResidentVerificationStage.verified;
 

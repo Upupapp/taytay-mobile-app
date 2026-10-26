@@ -4,46 +4,35 @@ import 'dart:typed_data';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
-import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
+import '../../../core/session/access_level.dart';
+import '../../../core/session/session_state.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
+import '../domain/sign_in_challenge.dart';
+import 'firebase_identity.dart';
 
-/// Talks to the citizen half of `Identity`.
+/// Firebase owns sign-in and registration. The API sees the ID token.
 ///
-/// ---
-///
-/// **Three of the six endpoints TAB 02 names are not wired here, and that is
-/// the finding rather than a shortfall.** Measured at
-/// `backend@api-baseline-2026-08`:
-///
-/// | Endpoint | Wired | Why |
-/// | --- | --- | --- |
-/// | `POST auth/otp` | yes | the citizen path |
-/// | `POST auth/otp/verify` | yes | the citizen path |
-/// | `DELETE auth/tokens/current` | yes | any authenticated account |
-/// | `POST auth/tokens` | **no** | filters `account_type = Staff`; email + password |
-/// | `POST auth/tokens/mfa` | **no** | second step of the same staff flow |
-/// | `POST auth/password/forgot` | **no** | filters `account_type = Staff`; residents have no password |
-///
-/// Wiring the bottom three would put admin-console surfaces in the resident
-/// repository, which Article 0 of this repository's constitution forbids
-/// outright — and the code could never do anything but fail, because a citizen
-/// account is filtered out before the password is even checked. Raised as F20.
-///
-/// **Authority is never read from the sign-in response.** `auth/otp/verify`
-/// returns a token and nothing else — no name, no tier, no permissions — so this
-/// repository asks the server who the resident is before it will say a session
-/// exists. That ordering is Article 3.6 and it is also the only thing that could
-/// work: the response has no field to infer from.
+/// Email and password, and phone codes when that provider is enabled, stay
+/// on the Firebase SDK. The first authenticated `GET /me` creates the citizen
+/// record and is what this repository reads for the session. Password reset
+/// and the signed-in email code remain HTTP routes on the contract. Password
+/// change is Firebase reauthentication followed by `updatePassword`, in the
+/// account feature, not a request from here.
 class AuthApiRepository implements AuthRepository {
-  const AuthApiRepository({required ApiClient apiClient, Telemetry? telemetry})
-    : _apiClient = apiClient,
-      _telemetry = telemetry;
+  const AuthApiRepository({
+    required ApiClient apiClient,
+    required FirebaseIdentity identity,
+    Telemetry? telemetry,
+  }) : _apiClient = apiClient,
+       _identity = identity,
+       _telemetry = telemetry;
 
   final ApiClient _apiClient;
+  final FirebaseIdentity _identity;
 
   /// Counts and outcomes, never contents.
   ///
@@ -58,28 +47,12 @@ class AuthApiRepository implements AuthRepository {
   Future<Result<void>> requestOneTimeCode({
     required String mobileNumber,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    // The attempt is recorded as blocked: the Node API has no OTP route, and a
-    // funnel that never records the stop looks like a funnel nobody started.
-    unawaited(
-      _telemetry?.record(
-            const FlowStep(
-              flow: TelemetryFlow.signIn,
-              stage: TelemetryStage.blocked,
-            ),
-          ) ??
-          Future<bool>.value(false),
-    );
     if (mobileNumber.trim().isEmpty) {
       return const Err<void>(
         ValidationFailure(debugMessage: 'A mobile number is required.'),
       );
     }
-    // The Node API has no OTP route. Identity is a Firebase ID token.
-    return backendGapFailure<void>(
-      BackendGap.absentOnNodeContract,
-      'requestOneTimeCode',
-    );
+    return _identity.sendPhoneCode(phoneNumber: mobileNumber);
   }
 
   @override
@@ -87,8 +60,6 @@ class AuthApiRepository implements AuthRepository {
     required String mobileNumber,
     required String code,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    final Object? _ = _telemetry;
     if (mobileNumber.trim().isEmpty || code.trim().isEmpty) {
       return const Err<AuthOutcome>(
         ValidationFailure(
@@ -96,11 +67,12 @@ class AuthApiRepository implements AuthRepository {
         ),
       );
     }
-    // The Node API has no OTP exchange. Dev sessions use Bearer mock:<role>:<id>.
-    return backendGapFailure<AuthOutcome>(
-      BackendGap.absentOnNodeContract,
-      'verifyOneTimeCode',
-    );
+    final Result<FirebaseCredentialSession> signed = await _identity
+        .confirmPhoneCode(code: code);
+    return switch (signed) {
+      Ok(:final value) => _openSession(value),
+      Err(:final failure) => Err<AuthOutcome>(failure),
+    };
   }
 
   @override
@@ -108,19 +80,93 @@ class AuthApiRepository implements AuthRepository {
     required String identifier,
     required String password,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    if (identifier.trim().isEmpty || password.isEmpty) {
+    final String trimmed = identifier.trim();
+    if (trimmed.isEmpty || password.isEmpty) {
       return const Err<AuthOutcome>(
         ValidationFailure(
           debugMessage: 'An identifier and a password are required.',
         ),
       );
     }
-    // Not `POST /auth/tokens`: that route filters staff accounts.
-    return backendGapFailure<AuthOutcome>(
-      BackendGap.absentOnNodeContract,
-      'signInWithPassword',
+    if (!trimmed.contains('@')) {
+      // Firebase password sign-in is an email. A mobile number uses a phone
+      // code. Nothing is sent, and the refusal is not a wrong password.
+      return const Err<AuthOutcome>(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'identifier': <String>[passwordSignInNeedsEmail],
+          },
+          debugMessage: 'Password sign-in uses an email address.',
+        ),
+      );
+    }
+    final Result<FirebaseCredentialSession> signed = await _identity
+        .signInWithEmailAndPassword(email: trimmed, password: password);
+    return switch (signed) {
+      Ok(:final value) => _openSession(value),
+      Err(:final failure) => Err<AuthOutcome>(failure),
+    };
+  }
+
+  /// `GET /me` with the ID token. The first authenticated call creates the row.
+  Future<Result<AuthOutcome>> _openSession(
+    FirebaseCredentialSession signed,
+  ) async {
+    final Result<ApiEnvelope<ResidentSession>> me = await _apiClient
+        .send<ResidentSession>(
+          method: HttpMethod.get,
+          path: 'me',
+          authenticated: true,
+          bearerOverride: signed.idToken,
+          decode: _decodeMe,
+        );
+    return switch (me) {
+      Ok(:final value) => _accepted(
+        AuthOutcome(resident: value.data, accessToken: signed.idToken),
+      ),
+      Err(:final failure) => Err<AuthOutcome>(failure),
+    };
+  }
+
+  Future<Result<AuthOutcome>> _accepted(AuthOutcome outcome) async {
+    unawaited(
+      _telemetry?.record(
+            const FlowStep(
+              flow: TelemetryFlow.signIn,
+              stage: TelemetryStage.completed,
+            ),
+          ) ??
+          Future<bool>.value(false),
     );
+    return Ok<AuthOutcome>(outcome);
+  }
+
+  static ResidentSession _decodeMe(Object? data) {
+    final Map<String, dynamic> map = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final Object? id = map['id'];
+    if (id is! String || id.isEmpty) {
+      throw const FormatException('Profile omitted id.');
+    }
+    final Object? tier = map['verification_status'];
+    final Object? name = map['name'];
+    return ResidentSession(
+      accountId: id,
+      accessLevel: AccessLevel.fromVerificationTier(
+        tier is String ? tier : null,
+      ),
+      displayName: _greeting(name),
+    );
+  }
+
+  /// First word of the published name, for the greeting only.
+  static String? _greeting(Object? name) {
+    if (name is! String) return null;
+    final String trimmed = name.trim();
+    if (trimmed.isEmpty) return null;
+    final int space = trimmed.indexOf(' ');
+    return space < 0 ? trimmed : trimmed.substring(0, space);
   }
 
   @override
@@ -253,15 +299,15 @@ class AuthApiRepository implements AuthRepository {
 
   @override
   Future<Result<AuthOutcome>> registerAccount({required String email}) async {
-    final Object _ = _apiClient.runtimeType;
     if (email.trim().isEmpty) {
       return const Err<AuthOutcome>(
         ValidationFailure(debugMessage: 'An email address is required.'),
       );
     }
-    return backendGapFailure<AuthOutcome>(
-      BackendGap.residentSelfRegistration,
-      'registerAccount',
+    return const Err<AuthOutcome>(
+      ValidationFailure(
+        debugMessage: 'Registration uses an email and a password.',
+      ),
     );
   }
 
@@ -270,7 +316,6 @@ class AuthApiRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
-    final Object _ = _apiClient.runtimeType;
     if (email.trim().isEmpty || password.isEmpty) {
       return const Err<AuthOutcome>(
         ValidationFailure(
@@ -278,10 +323,15 @@ class AuthApiRepository implements AuthRepository {
         ),
       );
     }
-    return backendGapFailure<AuthOutcome>(
-      BackendGap.residentSelfRegistration,
-      'createAccount',
-    );
+    final Result<FirebaseCredentialSession> created = await _identity
+        .createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+    return switch (created) {
+      Ok(:final value) => _openSession(value),
+      Err(:final failure) => Err<AuthOutcome>(failure),
+    };
   }
 
   @override
@@ -474,7 +524,11 @@ class AuthApiRepository implements AuthRepository {
   /// session on this device and does not wait on the network.
   @override
   Future<Result<void>> signOut() async {
-    final Object _ = _apiClient.runtimeType;
+    try {
+      await _identity.signOut();
+    } on Object {
+      // Local sign-out still proceeds. A missing Firebase app has nothing to end.
+    }
     return const Ok<void>(null);
   }
 }

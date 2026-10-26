@@ -103,6 +103,7 @@ String localisedSignInMessage(BuildContext context, SignInMessage message) {
     SignInMessage.serviceUnavailable => strings.signInServiceUnavailable,
     SignInMessage.unexpected => strings.signInUnexpected,
     SignInMessage.credentialsRejected => message.text,
+    SignInMessage.passwordNeedsEmail => message.text,
   };
 }
 

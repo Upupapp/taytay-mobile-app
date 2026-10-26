@@ -29,25 +29,92 @@ enum HouseholdRole {
   };
 }
 
+/// How one person is recorded in the household.
+///
+/// An unrecognised value is [other]. It is never promoted to [head].
+enum HouseholdRelationship {
+  head,
+  spouse,
+  child,
+  parent,
+  sibling,
+  other;
+
+  static HouseholdRelationship fromRaw(String? raw) => switch (raw?.trim()) {
+    'head' => head,
+    'spouse' => spouse,
+    'child' => child,
+    'parent' => parent,
+    'sibling' => sibling,
+    _ => other,
+  };
+}
+
+/// Sex as the household record publishes it. Null when the server omitted it.
+enum HouseholdSex {
+  male,
+  female,
+  unspecified;
+
+  static HouseholdSex? fromRaw(String? raw) => switch (raw?.trim()) {
+    'male' => male,
+    'female' => female,
+    'unspecified' => unspecified,
+    _ => null,
+  };
+}
+
+/// Whether a member has been invited to an account.
+enum HouseholdInviteStatus {
+  none,
+  pending,
+  accepted;
+
+  static HouseholdInviteStatus fromRaw(String? raw) => switch (raw?.trim()) {
+    'pending' => pending,
+    'accepted' => accepted,
+    _ => none,
+  };
+}
+
+/// One person on `GET /households/current`.
+///
+/// The screen shows the count, not this list. [toString] is redacted.
+@immutable
+class HouseholdMember {
+  const HouseholdMember({
+    required this.id,
+    required this.name,
+    required this.relationship,
+    required this.inviteStatus,
+    this.birthdate,
+    this.sex,
+    this.userId,
+  });
+
+  final String id;
+  final String name;
+  final HouseholdRelationship relationship;
+  final DateTime? birthdate;
+  final HouseholdSex? sex;
+  final String? userId;
+  final HouseholdInviteStatus inviteStatus;
+
+  @override
+  String toString() => 'HouseholdMember(${relationship.name})';
+}
+
 /// What a resident may be shown about their own household.
 ///
 /// ---
 ///
 /// ## What is deliberately absent, and why
 ///
-/// **There is no member list, and no type for one.** The committed
-/// client-visibility matrix names `Household.members` explicitly among the
-/// things a citizen never receives — *"Any other resident's data —
-/// `Household.members`, another resident's `monthly_income` … Cross-resident
-/// access is a critical defect"*. The same document grants a citizen
-/// `household` membership *"own household only"*: they may know **that** they
-/// belong to a household and see its address, not **who else** is in it.
-///
-/// So this type has no `List<HouseholdMember>` and there is no
-/// `HouseholdMember` class in this app. The shape is the control: a member's
-/// name cannot be rendered by a screen that has nowhere to read one from, and
-/// adding that type later would have to be a deliberate act against a contract
-/// change rather than an afternoon's feature work.
+/// **Names are decoded and not shown.** `GET /households/current` publishes
+/// the members of the signed-in resident's own household. This type holds
+/// them so the count matches the record. The screen shows [memberCount] and
+/// never a [HouseholdMember.name]. [toString] on this type and on
+/// [HouseholdMember] is redacted.
 ///
 /// **There is no household identifier here either.** A registry id is not
 /// useful to a resident, is never quoted at a counter, and its only effect on
@@ -67,6 +134,7 @@ class HouseholdSummary {
     this.barangay,
     this.streetAddress,
     this.memberCount,
+    this.members = const <HouseholdMember>[],
   });
 
   /// The signed-in resident's own role. Always known — it fails closed.
@@ -84,14 +152,13 @@ class HouseholdSummary {
   /// The household's street address, likewise the resident's own.
   final String? streetAddress;
 
-  /// How many people the LGU records in the household.
+  /// How many people the decoded member list contains.
   ///
-  /// An aggregate, and the only thing this app will show *about* the others.
-  /// A count says how large a household the office believes it is serving —
-  /// which is exactly what a resident needs in order to notice that it is
-  /// wrong — while naming nobody. It is shown only when the server supplies it;
-  /// the app never derives it, because there is no list to derive it from.
+  /// The screen shows this count and not the names.
   final int? memberCount;
+
+  /// People on the household record. The screen does not list [HouseholdMember.name].
+  final List<HouseholdMember> members;
 
   bool get hasAddress =>
       (barangay != null && barangay!.isNotEmpty) ||

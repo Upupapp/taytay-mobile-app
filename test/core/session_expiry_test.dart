@@ -156,29 +156,19 @@ void main() {
       expect(invalidations, 1);
     });
 
-    test('the composition root registers no refresher', () async {
-      // The source, deliberately. A behavioural test would pass just as well
-      // against a build that had quietly acquired one — and acquiring one is the
-      // change this guard exists to catch, because it would mean somebody had
-      // built a refresh against an endpoint that does not exist.
-      final String source = await File(
-        'lib/app/app_dependencies.dart',
-      ).readAsString();
+    test(
+      'live sessions refresh the Firebase ID token, not an HTTP route',
+      () async {
+        final String source = await File(
+          'lib/app/app_dependencies.dart',
+        ).readAsString();
 
-      expect(
-        source,
-        contains('AuthCoordinator('),
-        reason: 'the coordinator is still wired at all',
-      );
-      expect(
-        source,
-        isNot(contains('refresher:')),
-        reason:
-            'a TokenRefresher is registered. There is no refresh endpoint at '
-            'the pinned baseline; see F22 in docs/frontend/open-work.md before '
-            'deciding this is correct.',
-      );
-    });
+        expect(source, contains('FirebaseTokenRefresher'));
+        expect(source, contains('usesMockData'));
+        expect(source, isNot(contains("'auth/refresh'")));
+        expect(source, isNot(contains("'auth/tokens'")));
+      },
+    );
   });
 
   group('the resident is told which of the three things happened', () {

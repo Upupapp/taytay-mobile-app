@@ -136,7 +136,8 @@ class _SignInScreenState extends State<SignInScreen> {
     final rejected =
         widget.fixture == SignInFixture.error ||
         controller?.message == SignInMessage.credentialsRejected;
-    final other = !rejected ? controller?.message : null;
+    final needsEmail = controller?.message == SignInMessage.passwordNeedsEmail;
+    final other = !rejected && !needsEmail ? controller?.message : null;
 
     return AuthStage(
       sheetTop: rejected ? 276 : 332,
@@ -169,6 +170,12 @@ class _SignInScreenState extends State<SignInScreen> {
                   attemptsLeft: widget.fixture == SignInFixture.error
                       ? 2
                       : controller?.passwordAttemptsShown ?? 2,
+                ),
+              ],
+              if (needsEmail) ...<Widget>[
+                const SizedBox(height: 10),
+                _CredentialBanner.message(
+                  SignInMessage.passwordNeedsEmail.text,
                 ),
               ],
               if (other != null) ...<Widget>[
@@ -262,12 +269,16 @@ abstract final class AccountIdentifier {
 }
 
 class _CredentialBanner extends StatelessWidget {
-  const _CredentialBanner({required this.attemptsLeft});
+  const _CredentialBanner({required int this.attemptsLeft}) : message = null;
 
-  final int attemptsLeft;
+  const _CredentialBanner.message(String this.message) : attemptsLeft = null;
+
+  final int? attemptsLeft;
+  final String? message;
 
   @override
   Widget build(BuildContext context) {
+    final String? sentence = message;
     return Semantics(
       liveRegion: true,
       child: Container(
@@ -288,27 +299,41 @@ class _CredentialBanner extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Text.rich(
-                TextSpan(
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    height: 1.45,
-                    fontWeight: AppTypography.medium,
-                    color: Color(0xFF7A1C16),
-                  ),
-                  children: <InlineSpan>[
-                    const TextSpan(
-                      text: 'Incorrect email or password.\n',
-                      style: TextStyle(fontWeight: AppTypography.black),
+              child: sentence == null
+                  ? Text.rich(
+                      TextSpan(
+                        style: const TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 12,
+                          height: 1.45,
+                          fontWeight: AppTypography.medium,
+                          color: Color(0xFF7A1C16),
+                        ),
+                        children: <InlineSpan>[
+                          const TextSpan(
+                            text: 'Incorrect email or password.\n',
+                            style: TextStyle(fontWeight: AppTypography.black),
+                          ),
+                          TextSpan(
+                            text:
+                                '$attemptsLeft attempts left before a '
+                                '15-minute pause.',
+                          ),
+                        ],
+                      ),
+                    )
+                  : Text.rich(
+                      TextSpan(
+                        text: sentence,
+                        style: const TextStyle(
+                          fontFamily: AppTypography.fontFamily,
+                          fontSize: 12,
+                          height: 1.45,
+                          fontWeight: AppTypography.medium,
+                          color: Color(0xFF7A1C16),
+                        ),
+                      ),
                     ),
-                    TextSpan(
-                      text:
-                          '$attemptsLeft attempts left before a 15-minute pause.',
-                    ),
-                  ],
-                ),
-              ),
             ),
           ],
         ),

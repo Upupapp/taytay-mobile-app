@@ -184,13 +184,10 @@ HouseholdSummary fullSummary() => const HouseholdSummary(
 
 void main() {
   group('the shape refuses cross-resident data — acceptance 1', () {
-    test('there is no member type anywhere in the feature', () {
-      // The strongest form of the guarantee: not "we do not render members" but
-      // "there is nothing that could hold one". The visibility matrix names
-      // `Household.members` among the things a citizen never receives.
+    test('member names stay off the screen and out of toString', () {
       final offenders = <String>[];
       for (final file
-          in Directory('lib/features/household')
+          in Directory('lib/features/household/presentation')
               .listSync(recursive: true)
               .whereType<File>()
               .where((f) => f.path.endsWith('.dart'))) {
@@ -200,16 +197,20 @@ void main() {
             .where((line) => !line.trimLeft().startsWith('//'))
             .where((line) => !line.trimLeft().startsWith('///'))
             .join('\n');
-        for (final pattern in <RegExp>[
-          RegExp(r'class\s+HouseholdMember'),
-          RegExp(r'List<\s*HouseholdMember'),
-          RegExp(r'\bmemberNames\b'),
-          RegExp(r'\bmembers\s*='),
-        ]) {
-          if (pattern.hasMatch(source)) offenders.add(file.path);
+        if (source.contains('HouseholdMember') || source.contains('.members')) {
+          offenders.add(file.path);
         }
       }
       expect(offenders, isEmpty, reason: offenders.join('\n'));
+
+      const member = HouseholdMember(
+        id: 'm-1',
+        name: 'Maria Sample',
+        relationship: HouseholdRelationship.spouse,
+        inviteStatus: HouseholdInviteStatus.accepted,
+      );
+      expect(member.toString(), isNot(contains('Maria')));
+      expect(member.toString(), isNot(contains('m-1')));
     });
 
     test('the summary exposes no identifier and no member list', () {
@@ -223,12 +224,12 @@ void main() {
       for (final field in <String>[
         'householdId',
         'residentId',
-        'members',
         'sectors',
         'monthlyIncome',
       ]) {
         expect(source, isNot(contains('this.$field')), reason: field);
       }
+      expect(source, contains('this.members'));
     });
 
     test('a role that is not recognised fails closed to member', () {
@@ -285,7 +286,12 @@ void main() {
       // exposure a critical defect.
       'head_name': 'Juan Dela Cruz',
       'members': <Object>[
-        <String, dynamic>{'name': 'Maria Dela Cruz', 'resident_id': 'r-99'},
+        <String, dynamic>{
+          'id': 'm-1',
+          'name': 'Maria Dela Cruz',
+          'resident_id': 'r-99',
+          'relationship': 'spouse',
+        },
       ],
       'residents': <Object>[
         <String, dynamic>{'name': 'Juan Dela Cruz'},
@@ -306,8 +312,10 @@ void main() {
         ),
       );
 
-      final summary = (await repository.loadOwnHousehold()).valueOrNull;
-      final rendered = summary.toString().toLowerCase();
+      final summary = (await repository.loadOwnHousehold()).valueOrNull!;
+      expect(summary.members.single.name, 'Maria Dela Cruz');
+      final rendered = '${summary.toString()} ${summary.members.single}'
+          .toLowerCase();
 
       for (final forbidden in <String>[
         'juan',
@@ -327,8 +335,8 @@ void main() {
           'lib/features/household/data/household_api_repository.dart';
       final decoder = File(source).readAsStringSync();
 
+      expect(decoder, contains("'members'"));
       for (final forbidden in <String>[
-        'members',
         'residents',
         'relatives',
         'dependents',
@@ -483,9 +491,9 @@ void main() {
       );
     });
 
-    test('the capability still reports the backend as absent', () {
-      // It has a screen now, but no citizen endpoint exists — so the honest
-      // availability answer is unchanged.
+    test('the capability still reports the backend as planned', () {
+      // The screen reads the household. The tile stays planned so home does
+      // not change in this pass.
       expect(
         ResidentCapability.viewHouseholdSummary.availability,
         BackendAvailability.planned,

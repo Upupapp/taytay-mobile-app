@@ -1,52 +1,93 @@
 import '../../../core/api/api_client.dart';
-import '../../../core/api/backend_gap.dart';
+import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
 import '../domain/credential_repository.dart';
 
-/// Talks to `GET me/credential` and `POST me/credential/qr`.
+/// Talks to `GET /me/digital-id`.
 ///
-/// ---
-///
-/// **Built, and switched off.** `Credential` is implemented at the baseline and
-/// `credential.enabled` is false, so the whole surface answers `404` — a feature
-/// that is not live should look absent rather than forbidden (backend ADR 0011).
-/// That makes a plain `NotFoundFailure` ambiguous here: it means either "the LGU
-/// has not switched the digital ID on" or "you do not have one yet", and those
-/// are different sentences to a resident. Neither is an error.
-///
-/// So both resolve to `null` — no credential to show — and the screen decides
-/// what to say from the `digital_id` flag on `GET app/bootstrap`, which is the
-/// only thing that can tell the two apart. Both states ship in one build, which
-/// is what lets the municipality enable the ID for real residents without a new
-/// app release.
-///
-/// **The verifier side is not here and must never be.** `POST
-/// credential-verifications` exists and belongs to the `verifier-device`
-/// channel; building it would put a staff surface in the resident repository,
-/// which Article 0 forbids outright.
+/// A 404 and a null body are both "not issued". The verifier scan
+/// (`POST /digital-id/verify`) is another channel and is not called here.
 class CredentialApiRepository implements CredentialRepository {
   const CredentialApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 
+  static const String path = 'me/digital-id';
+
   @override
   Future<Result<ResidentCredential?>> loadOwnCredential() async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<ResidentCredential?>(
-      BackendGap.absentOnNodeContract,
-      'loadOwnCredential',
+    final response = await _apiClient.send<ResidentCredential?>(
+      method: HttpMethod.get,
+      path: path,
+      authenticated: true,
+      decode: decodeDigitalId,
     );
+    return switch (response) {
+      Ok(:final value) => Ok<ResidentCredential?>(value.data),
+      Err(:final failure) when failure is NotFoundFailure =>
+        const Ok<ResidentCredential?>(null),
+      Err(:final failure) => Err<ResidentCredential?>(failure),
+    };
   }
 
   @override
   Future<Result<PresentationArtifact>> requestPresentationArtifact() async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<PresentationArtifact>(
-      BackendGap.absentOnNodeContract,
-      'requestPresentationArtifact',
+    final Result<ResidentCredential?> loaded = await loadOwnCredential();
+    if (loaded case Err(:final failure)) {
+      return Err<PresentationArtifact>(failure);
+    }
+    final PresentationArtifact? qr = loaded.valueOrNull?.qr;
+    if (qr == null) {
+      return const Err<PresentationArtifact>(
+        NotFoundFailure(debugMessage: 'No digital ID QR is current.'),
+      );
+    }
+    return Ok<PresentationArtifact>(qr);
+  }
+
+  /// `DigitalIdCard` plus `qr`, which is an object or null.
+  static ResidentCredential? decodeDigitalId(Object? data) {
+    if (data == null) return null;
+    if (data is! Map) return null;
+    final Map<String, dynamic> map = data is Map<String, dynamic>
+        ? data
+        : Map<String, dynamic>.from(data);
+    final Object? id = map['id'];
+    final Object? idNumber = map['id_number'];
+    final Object? status = map['status'];
+    if (id is! String || id.isEmpty) return null;
+    final String rawState = status is String ? status : '';
+    final Object? photo = map['photo_media_id'];
+    return ResidentCredential(
+      id: id,
+      idNumber: idNumber is String && idNumber.isNotEmpty ? idNumber : null,
+      photoMediaId: photo is String && photo.isNotEmpty ? photo : null,
+      state: CredentialLifecycleState.fromWire(
+        rawState.isEmpty ? null : rawState,
+      ),
+      rawState: rawState,
+      issuedAt: _time(map['issued_at']),
+      expiresAt: _time(map['expires_at']),
+      qr: _qr(map['qr']),
     );
   }
 
+  static PresentationArtifact? _qr(Object? raw) {
+    if (raw == null || raw is! Map) return null;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : Map<String, dynamic>.from(raw);
+    final Object? token = map['token'];
+    if (token is! String || token.isEmpty) return null;
+    return PresentationArtifact(
+      payload: token,
+      expiresAt: _time(map['expires_at']),
+    );
+  }
 
+  static DateTime? _time(Object? raw) {
+    if (raw is! String || raw.isEmpty) return null;
+    return DateTime.tryParse(raw)?.toUtc();
+  }
 }

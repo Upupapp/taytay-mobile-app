@@ -150,7 +150,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
       ),
       VerificationFace.needsCorrection => NeedsCorrectionPage(
         onBack: () => _leave(context),
-        reason: _reason ?? status?.residentGuidance ?? '',
+        // rejection_reason from GET /me. The verification request is not a
+        // source of text a resident reads.
+        reason: _reason ?? '',
         notes: _notes,
         idType: idLabel,
         reviewedOn: reviewed,

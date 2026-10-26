@@ -66,11 +66,11 @@ class AuthOutcome {
 /// often reused across services, and the one an LGU is least able to help
 /// recover safely.
 abstract interface class AuthRepository {
-  /// Asks the server to send a one-time code to [mobileNumber].
+  /// Asks Firebase to send a phone code to [mobileNumber], when that
+  /// provider is enabled.
   ///
-  /// The response never says whether the number is registered: that answer
-  /// would let anyone test whether a person is a Taytay resident. Registration
-  /// and sign-in must therefore look identical from the outside.
+  /// The result never says whether the number is registered: that answer
+  /// would let anyone test whether a person is a Taytay resident.
   Future<Result<void>> requestOneTimeCode({required String mobileNumber});
 
   /// Exchanges a one-time [code] for a session.
@@ -85,11 +85,10 @@ abstract interface class AuthRepository {
   /// phone must be able to sign out with no connectivity.
   Future<Result<void>> signOut();
 
-  /// Email or mobile, plus a password, as `02-01` draws it.
+  /// Email and password on the Firebase SDK, as the sign-in screen draws it.
   ///
-  /// The live repository declines. The Node contract has no citizen password
-  /// route, and the staff token route is not this app's. The dev mock is the
-  /// only implementation that returns a session. Nothing here sends a role.
+  /// A mobile number is not a Firebase password identifier. The live client
+  /// refuses that shape locally. Nothing here sends a role.
   Future<Result<AuthOutcome>> signInWithPassword({
     required String identifier,
     required String password,
@@ -124,20 +123,14 @@ abstract interface class AuthRepository {
     required String newPassword,
   });
 
-  /// Creates a resident account and returns an unverified session.
-  ///
-  /// The live repository declines: there is no citizen registration route.
-  /// The dev mock returns an unverified session and does not upload the ID
-  /// or the selfie. Those bytes stay on the device until a route exists.
+  /// Email-only registration cannot open a Firebase account.
   ///
   /// Prefer [createAccount], which keeps the password with the draft.
   Future<Result<AuthOutcome>> registerAccount({required String email});
 
-  /// Email and password for a new resident account.
+  /// Creates the Firebase user, then reads `GET /me` with the ID token.
   ///
-  /// The live client declines with the same gap as [registerAccount]. The
-  /// password stays on [AccountApplication] and is not posted to a staff
-  /// token route. The dev mock accepts it and returns an unverified session.
+  /// The password stays on the device. It is not posted to the API.
   Future<Result<AuthOutcome>> createAccount({
     required String email,
     required String password,

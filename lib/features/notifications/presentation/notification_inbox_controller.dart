@@ -94,6 +94,7 @@ class NotificationInboxController extends ChangeNotifier {
 
   final List<ResidentNotification> _items = <ResidentNotification>[];
   int _page = 0;
+  String? _cursor;
   bool _hasMore = true;
   bool _loadingFirstPage = true;
   bool _loadingMore = false;
@@ -134,6 +135,7 @@ class NotificationInboxController extends ChangeNotifier {
   Future<void> refresh() async {
     _items.clear();
     _page = 0;
+    _cursor = null;
     _hasMore = true;
     _failure = null;
     _pageFailure = null;
@@ -154,13 +156,22 @@ class NotificationInboxController extends ChangeNotifier {
 
   Future<void> _fetch({required bool isFirstPage}) async {
     final next = _page + 1;
-    final result = await _repository.listOwn(page: next);
+    final result = await _repository.listOwn(
+      page: next,
+      cursor: isFirstPage ? null : _cursor,
+    );
 
     result.fold(
       onOk: (page) {
         _page = next;
         _items.addAll(page.items);
-        _hasMore = page.hasMore;
+        _cursor = page.nextCursor;
+        // A further page exists only when the server named the cursor for it.
+        // Asking again without one would repeat the first page.
+        _hasMore =
+            page.hasMore &&
+            page.nextCursor != null &&
+            page.nextCursor!.isNotEmpty;
         _failure = null;
         _pageFailure = null;
       },

@@ -254,6 +254,7 @@ abstract interface class NotificationRepository {
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page,
     int perPage,
+    String? cursor,
   });
 
   /// Marks one of the resident's own notifications as read.

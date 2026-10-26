@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 
 import '../core/api/api_client.dart';
@@ -15,6 +17,7 @@ import '../core/network/network_monitor.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
+import '../core/session/session_state.dart';
 import '../core/session/session_store.dart';
 import '../core/sharing/platform_share_service.dart';
 import '../core/sharing/share_service.dart';
@@ -28,6 +31,7 @@ import '../features/account/data/firebase_account_password_client.dart';
 import '../features/account/data/mock_account_password_client.dart';
 import '../features/account/domain/account_password_client.dart';
 import '../features/auth/data/auth_api_repository.dart';
+import '../features/auth/data/firebase_identity.dart';
 import '../features/auth/data/session_api_repository.dart';
 import '../features/auth/domain/auth_repository.dart';
 import '../features/auth/domain/device_session_repository.dart';
@@ -166,6 +170,9 @@ class AppDependencies {
       secrets: secretStore,
     );
 
+    // Constructing this does not talk to Firebase. Dev mock never calls it.
+    final FirebaseAuthIdentity identity = FirebaseAuthIdentity();
+
     // ── The session boundary, in one place ──────────────────────────────
     //
     // A held intent must never survive a change of account, and neither must
@@ -207,13 +214,20 @@ class AppDependencies {
       // resident handing the phone back should not see the previous session's
       // screens repopulate from memory.
       publicCache.clear();
+      // Settings sign-out clears the app session only. Firebase still holds
+      // the user until this boundary ends it. A swap is the new sign-in.
+      if (ended && !config.usesMockData) {
+        unawaited(identity.signOut());
+      }
     });
 
-    // Fail closed: with no refresher registered — and the committed backend
-    // publishes no refresh endpoint — a 401 ends the session rather than being
-    // retried or ignored.
+    // Live calls refresh the Firebase ID token. There is no HTTP refresh
+    // route. Dev mock keeps its minted bearer, and a 401 ends that session.
     final authCoordinator = AuthCoordinator(
       onSessionInvalidated: session.handleUnauthenticated,
+      refresher: config.usesMockData
+          ? null
+          : FirebaseTokenRefresher(identity: identity, session: session),
     );
 
     final httpTransport = transport ?? HttpApiTransport(config: config);
@@ -227,7 +241,13 @@ class AppDependencies {
     final apiClient = ApiClient(
       config: config,
       transport: httpTransport,
-      accessTokenProvider: session.currentAccessToken,
+      accessTokenProvider: () async {
+        if (!config.usesMockData && session.state is AuthenticatedSession) {
+          final String? token = await identity.idToken();
+          if (token != null && token.isNotEmpty) return token;
+        }
+        return session.currentAccessToken();
+      },
       onUnauthenticated: session.handleUnauthenticated,
       authCoordinator: authCoordinator,
       cache: publicCache,
@@ -283,7 +303,11 @@ class AppDependencies {
       network: network,
       telemetry: telemetry,
       authRepository: mock == null
-          ? AuthApiRepository(apiClient: apiClient, telemetry: telemetry)
+          ? AuthApiRepository(
+              apiClient: apiClient,
+              identity: identity,
+              telemetry: telemetry,
+            )
           : MockAuthRepository(mock),
       deviceSessionRepository: mock == null
           ? SessionApiRepository(apiClient: apiClient)

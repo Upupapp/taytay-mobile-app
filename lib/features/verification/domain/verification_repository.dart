@@ -94,15 +94,10 @@ class VerificationStatus {
   /// The server's own value, preserved.
   final String rawState;
 
-  /// Server-supplied, resident-safe guidance on what to do next, when the
-  /// server chooses to send it.
+  /// `message` on the verification request, when one was sent.
   ///
-  /// **The exception to "never render the server's message".** That rule
-  /// (CLAUDE.md Article 5.5) is about the operator-facing `error.message`. This
-  /// is a deliberate `data` field addressed to the resident — the same category
-  /// as a validation message shown next to its field — and rejection reasons are
-  /// the one thing the app cannot compose for itself, because only the reviewing
-  /// office knows why. It is rendered only where a status is being explained.
+  /// Not rendered. The status screen shows `rejection_reason` from `GET /me`.
+  /// A staff note sent on the same object is ignored by the decoder.
   final String? residentGuidance;
 }
 

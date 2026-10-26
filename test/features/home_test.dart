@@ -234,6 +234,7 @@ class CountingNotificationRepository implements NotificationRepository {
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int perPage = 20,
+    String? cursor,
   }) async {
     listCalls++;
     return const Err<Paginated<ResidentNotification>>(ServerFailure());

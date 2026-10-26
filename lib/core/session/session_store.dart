@@ -92,6 +92,15 @@ class StoredSession {
     deviceId: id,
   );
 
+  /// A copy with a replacement bearer, for a Firebase ID token refresh.
+  StoredSession withAccessToken(String token, {DateTime? expiresAt}) =>
+      StoredSession(
+        resident: resident,
+        accessToken: token,
+        expiresAt: expiresAt,
+        deviceId: deviceId,
+      );
+
   /// Redacted deliberately — see the class doc.
   @override
   String toString() => 'StoredSession(${resident.accessLevel.name})';

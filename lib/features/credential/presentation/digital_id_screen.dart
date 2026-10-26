@@ -1,29 +1,64 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/result/result.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
+import '../domain/credential_repository.dart';
 
 /// The resident's Taytay digital ID.
 ///
-/// Reachable only by a verified resident — the access guard sends everyone else
-/// to verification. The credential itself (card artifact, QR material, offline
-/// validity) belongs to the backend's `Credential` module and lands in a later
-/// TAB; the placeholder here exists so the verified-only route is real and
-/// testable.
+/// A credential is rendered from what the server issued, never assembled on
+/// the device from profile fields. "Valid" is a server-side cryptographic
+/// verdict — this screen may display a credential, and it never decides that
+/// one is genuine.
 ///
-/// Two rules already apply to this screen and are recorded now, before there is
-/// anything to get wrong:
-///
-/// * a credential is rendered from what the server issued, never assembled on
-///   the device from profile fields;
-/// * "valid" is a server-side cryptographic verdict — this screen may display a
-///   credential, but it never decides that one is genuine.
-class DigitalIdScreen extends StatelessWidget {
-  const DigitalIdScreen({super.key});
+/// A 404 or a null card keeps the not-issued card. The portrait media id is
+/// not fetched: this client has no media-bytes route for it.
+class DigitalIdScreen extends StatefulWidget {
+  const DigitalIdScreen({super.key, this.repository});
+
+  /// Set by tests. The app reads [CredentialRepository] from the scope.
+  final CredentialRepository? repository;
+
+  @override
+  State<DigitalIdScreen> createState() => _DigitalIdScreenState();
+}
+
+class _DigitalIdScreenState extends State<DigitalIdScreen> {
+  bool _started = false;
+  ResidentCredential? _card;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    final CredentialRepository? repository =
+        widget.repository ??
+        context
+            .dependOnInheritedWidgetOfExactType<AppDependenciesScope>()
+            ?.dependencies
+            .credentialRepository;
+    if (repository == null) return;
+    unawaited(_load(repository));
+  }
+
+  Future<void> _load(CredentialRepository repository) async {
+    final Result<ResidentCredential?> result = await repository
+        .loadOwnCredential();
+    if (!mounted) return;
+    final ResidentCredential? card = result.valueOrNull;
+    if (card == null) return;
+    setState(() => _card = card);
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final ResidentCredential? card = _card;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,7 +99,7 @@ class DigitalIdScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: Spacing.xxl),
                     Text(
-                      'Not yet issued',
+                      card == null ? 'Not yet issued' : _statusLine(card),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white70,
                       ),
@@ -74,7 +109,10 @@ class DigitalIdScreen extends StatelessWidget {
               ),
               const SizedBox(height: Spacing.xl),
               Text(
-                'Your digital ID will appear here once Taytay LGU issues it.',
+                card == null
+                    ? 'Your digital ID will appear here once Taytay LGU issues it.'
+                    : 'Taytay LGU issued this card. A scanner checks the code. '
+                          'This phone does not decide that the card is genuine.',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
@@ -85,5 +123,18 @@ class DigitalIdScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Status and municipal number. The QR token is not painted.
+  static String _statusLine(ResidentCredential card) {
+    final String status = switch (card.state) {
+      CredentialLifecycleState.active => 'Active',
+      CredentialLifecycleState.suspended => 'Suspended',
+      CredentialLifecycleState.revoked => 'Revoked',
+      _ => 'Issued',
+    };
+    final String? number = card.idNumber;
+    if (number == null || number.isEmpty) return status;
+    return '$number · $status';
   }
 }

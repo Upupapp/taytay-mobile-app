@@ -90,6 +90,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('POST', 'me/consents', 'privacy_api_repository.dart'),
   BackendRoute('DELETE', 'me/devices', 'notification_api_repository.dart'),
   BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
+  BackendRoute('GET', 'me/digital-id', 'credential_api_repository.dart'),
   BackendRoute(
     'GET',
     'me/notification-preferences',

@@ -805,6 +805,7 @@ class MockNotificationRepository
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int perPage = 15,
+    String? cursor,
   }) {
     return _gate.respond(
       _page(<ResidentNotification>[

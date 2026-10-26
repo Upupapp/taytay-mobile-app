@@ -62,9 +62,22 @@ class ResidentCredential {
     required this.rawState,
     this.issuedAt,
     this.expiresAt,
+    this.idNumber,
+    this.photoMediaId,
+    this.qr,
   });
 
   final String id;
+
+  /// Municipal card number. Not a national government identifier.
+  final String? idNumber;
+
+  /// Portrait media id. Bytes are a separate route this client does not call.
+  final String? photoMediaId;
+
+  /// Short-lived QR from the same `GET /me/digital-id` response. Null when
+  /// the card is suspended, revoked, or past expiry.
+  final PresentationArtifact? qr;
 
   /// `null` when this build does not recognise [rawState].
   final CredentialLifecycleState? state;

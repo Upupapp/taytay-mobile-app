@@ -16,6 +16,7 @@ class Paginated<T> {
     required this.total,
     required this.totalPages,
     required this.hasMore,
+    this.nextCursor,
   });
 
   /// A single unpaginated page, for endpoints that return a plain list.
@@ -24,7 +25,8 @@ class Paginated<T> {
       perPage = 0,
       total = 0,
       totalPages = 1,
-      hasMore = false;
+      hasMore = false,
+      nextCursor = null;
 
   final List<T> items;
   final int page;
@@ -32,6 +34,9 @@ class Paginated<T> {
   final int total;
   final int totalPages;
   final bool hasMore;
+
+  /// `meta.pagination.next_cursor`. Null when the list has no further page.
+  final String? nextCursor;
 
   bool get isEmpty => items.isEmpty;
 }

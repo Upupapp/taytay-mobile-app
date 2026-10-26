@@ -85,6 +85,9 @@ class Office {
     this.topics = const <String>[],
     this.draft,
     this.savedName,
+    this.bannerMediaId,
+    this.latitude,
+    this.longitude,
   });
 
   /// Route slug. Live rows use the office `slug`, which is what
@@ -130,6 +133,14 @@ class Office {
   /// Shorter label on the offline saved-numbers row, when the list name
   /// would wrap. Null keeps [listName].
   final String? savedName;
+
+  /// `banner_media_id` from `GET /offices`. Not a file the app can paint.
+  /// The hero stays the bundled photograph until media bytes exist.
+  final String? bannerMediaId;
+
+  /// Office pin from the contract. Null when the office has not published one.
+  final double? latitude;
+  final double? longitude;
 
   /// The id sent as `office_id`. A live office sends its UUID.
   String get wireId => serverId.isNotEmpty ? serverId : id;

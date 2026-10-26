@@ -152,14 +152,13 @@ class KycApiRepository implements VerificationRepository {
 
     final Object? raw = map['status'];
     final Object? message = map['message'];
-    final Object? notes = map['notes'];
     final Object? submittedAt = map['submitted_at'] ?? map['created_at'];
     final Object? canEdit = map['can_edit'];
     final Object? idType = map['id_type'];
     final Object? reviewedAt = map['reviewed_at'];
     final String? guidance = message is String && message.trim().isNotEmpty
         ? message.trim()
-        : (notes is String && notes.trim().isNotEmpty ? notes.trim() : null);
+        : null;
 
     return VerificationStatusDetail(
       stage: ResidentVerificationStage.fromAttemptState(
@@ -180,7 +179,18 @@ class KycApiRepository implements VerificationRepository {
       // say" and must stay null so the fallback applies; coercing it to false
       // would lock a resident out of a case the office considers open.
       canEdit: canEdit is bool ? canEdit : null,
+      id: _text(map['id']),
+      userId: _text(map['user_id']),
+      idFrontMediaId: _text(map['id_front_media_id']),
+      idBackMediaId: _text(map['id_back_media_id']),
+      selfieMediaId: _text(map['selfie_media_id']),
     );
+  }
+
+  static String? _text(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   @override
@@ -308,19 +318,17 @@ class KycApiRepository implements VerificationRepository {
     final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
     final Object? raw = map['status'];
     final Object? message = map['message'];
+    final String? guidance = message is String && message.trim().isNotEmpty
+        ? message.trim()
+        : null;
 
     return VerificationStatus(
       state: VerificationAttemptState.parse(raw is String ? raw : null),
       // The server's own value, preserved whatever this build made of it, so a
       // support desk and a resident are looking at the same word.
       rawState: raw is String ? raw : '',
-      // `applicant_message` is addressed to the resident by name and by design —
-      // the deliberate exception to "never render the server's message", because
-      // only the reviewing office knows why something was returned. The
-      // reviewer's identity is not published and there is nowhere for it to land.
-      residentGuidance: message is String && message.trim().isNotEmpty
-          ? message.trim()
-          : null,
+      // Only `message` is copied. Every other field on the request is ignored.
+      residentGuidance: guidance,
     );
   }
 }
