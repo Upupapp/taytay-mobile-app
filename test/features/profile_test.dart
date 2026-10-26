@@ -412,8 +412,32 @@ void main() {
         expect(detail?.emailVerified, isFalse);
         expect(detail?.rejectionReason, 'notes from a reviewer');
         expect(detail?.closed, isFalse);
+        expect(detail?.verificationDecidedAt, isNull);
       },
     );
+
+    test('a decision time is kept and a null one is not invented', () async {
+      Future<ResidentProfileDetail?> read(Object? decided) async {
+        final repository = ResidentProfileApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: _OneResponse(<String, dynamic>{
+              'name': 'Ana Reyes',
+              'verification_status': 'verified',
+              'verification_decided_at': decided,
+            }),
+            accessTokenProvider: () async => 'tok',
+          ),
+        );
+        return (await repository.loadOwnDetail()).valueOrNull;
+      }
+
+      final ResidentProfileDetail? dated = await read(
+        '2026-10-21T16:00:00.000Z',
+      );
+      expect(dated?.verificationDecidedAt, DateTime.utc(2026, 10, 21, 16));
+      expect((await read(null))?.verificationDecidedAt, isNull);
+    });
 
     test('the production decoder names no staff-only key', () {
       const source =
@@ -523,6 +547,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       expect(find.text('Your account details'), findsWidgets);
@@ -541,6 +566,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       // The distinction is legible before anything is tapped, and carried by
@@ -557,6 +583,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       expect(find.text('Ana Dela Cruz'), findsOneWidget);
@@ -581,6 +608,71 @@ void main() {
     // tester updates the existing State rather than creating a new one, and the
     // router is a `late final` built from the first session — so a second boot
     // would silently keep the first resident's access level.
+    testWidgets('a verified home paints the fill ratio from the record', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+      );
+
+      expect(find.text('50% complete'), findsOneWidget);
+    });
+
+    testWidgets('settings hides email delivery and a data export', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+        location: '/profile/settings',
+      );
+
+      expect(find.text('Push and email'), findsNothing);
+      expect(find.text('Request a copy of my data'), findsNothing);
+      expect(find.text('Always on for MDRRMO alerts'), findsNothing);
+      expect(find.text('Push notifications'), findsWidgets);
+      expect(find.text('Change password'), findsOneWidget);
+      expect(find.text('Current password, then a new one'), findsNothing);
+    });
+
+    testWidgets('the home paints the decision date when the record has one', (
+      tester,
+    ) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: ResidentProfileDetail(
+          verificationDecidedAt: DateTime.utc(2026, 10, 21, 16),
+          values: const <ResidentProfileField, String>{
+            ResidentProfileField.fullName: 'Ana Dela Cruz',
+          },
+        ),
+      );
+
+      expect(find.text('Verified · Oct 22, 2026'), findsOneWidget);
+    });
+
+    testWidgets('edit profile verifies email only', (tester) async {
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: const ResidentProfileDetail(
+          values: <ResidentProfileField, String>{
+            ResidentProfileField.mobileNumber: '09170000000',
+            ResidentProfileField.emailAddress: 'ana@example.test',
+            ResidentProfileField.fullName: 'Ana Dela Cruz',
+          },
+          emailVerified: true,
+        ),
+        location: '/profile/edit',
+      );
+
+      expect(find.text('Verified'), findsOneWidget);
+    });
+
     testWidgets('the badge says verified for a verified resident', (
       tester,
     ) async {
@@ -612,6 +704,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
       );
 
       await reveal(tester, find.text('Full name'));
@@ -849,7 +942,11 @@ void main() {
 
   group('withheld shortcuts stay withheld', () {
     testWidgets('no notification-preferences control appears', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
       final rendered = renderedText(tester);
 
       // §11 of the matrix has an inbox, mark-read and device registration, and
@@ -866,7 +963,11 @@ void main() {
     testWidgets('the household shortcut states it is unavailable', (
       tester,
     ) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
 
       await reveal(tester, find.text('See your household summary'));
       // Declared, and honestly reported — TAB 10's decision, unchanged.
@@ -874,12 +975,20 @@ void main() {
     });
 
     testWidgets('the assistance-history shortcut is present', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
       expect(find.text('Track your assistance requests'), findsOneWidget);
     });
 
     testWidgets('help and privacy are reachable from Profile', (tester) async {
-      await bootProfile(tester, level: AccessLevel.verified);
+      await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        location: '/profile/record',
+      );
 
       await reveal(tester, find.text('Help and support'));
       expect(find.text('Privacy and your data'), findsOneWidget);
@@ -893,6 +1002,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         textScaler: const TextScaler.linear(2),
         size: const Size(400, 3000),
       );
@@ -927,6 +1037,7 @@ void main() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         size: const Size(1000, 1600),
       );
 
@@ -1065,6 +1176,7 @@ void _profileLocalisation() {
         tester,
         level: AccessLevel.verified,
         detail: fullDetail(),
+        location: '/profile/record',
         locale: AppLocales.filipino,
         size: const Size(400, 3000),
       );

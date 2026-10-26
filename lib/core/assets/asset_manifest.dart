@@ -363,7 +363,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_rescuevan.jpg. FroyAgta, CC BY-SA 4.0. '
           'Credit is shown on the MDRRMO page. Not precached.',
-      semanticLabel: 'Photo: a rescue vehicle',
+      semanticLabel: 'Photo: Rescue vehicle, Bula',
       sha256:
           'b7ba969a9c60835453d7b4e63ff21fbaefc045139e95b1ec243017cbea4d700c',
     ),
@@ -376,7 +376,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_tesda.jpg. Presidential Communications Office, '
           'public domain. Credit is shown on the PESO page. Not precached.',
-      semanticLabel: 'Photo: a skills training session',
+      semanticLabel: 'Photo: TESDA skills training',
       sha256:
           '5c9951b9b0648bcca45bdab337e51d57db596c94bdbcafb1406af8373bb77125',
     ),
@@ -389,7 +389,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_sk.jpg. Halimawsabanga, CC BY-SA 4.0. '
           'Credit is shown on the youth office page. Not precached.',
-      semanticLabel: 'Photo: a youth council gathering',
+      semanticLabel: 'Photo: Sangguniang Kabataan council',
       sha256:
           '1dfda285e10128123105075ba4150dd1d428efb55d8d8003263713ffef0cc0ad',
     ),
@@ -402,7 +402,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_skhoop.jpg. Iloilo Wanderer, CC BY-SA 3.0. '
           'Credit is shown on the youth office page. Not precached.',
-      semanticLabel: 'Photo: a youth sports court',
+      semanticLabel: 'Photo: SK basketball court',
       sha256:
           '939e18a541b46f28b9f23ea6e858bcd3b49b9320b42a04d03183787e1595682c',
     ),
@@ -415,7 +415,7 @@ abstract final class AppAssets {
       provenance:
           'Design source src/ph_bhc.jpg. FroyAgta, CC BY-SA 4.0. '
           'Credit is shown on the health office page. Not precached.',
-      semanticLabel: 'Photo: a barangay health centre',
+      semanticLabel: 'Photo: Barangay health center, Bula',
       sha256:
           '10ff68d33950dc38aa139d0d2d89035abe3d37e6655eafe0b1847cb68aa539d1',
     ),
@@ -429,7 +429,7 @@ abstract final class AppAssets {
           'Design source src/ph_vaccine.jpg. Province of Camarines Sur, '
           'public domain. Credit is shown on the health office page. '
           'Not precached.',
-      semanticLabel: 'Photo: a vaccination',
+      semanticLabel: 'Photo: Vaccination, Camarines Sur',
       sha256:
           '288f8151506341175c98989a2c63335ae3da8497a81832f8ac5c2194abedf473',
     ),

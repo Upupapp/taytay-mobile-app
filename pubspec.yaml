@@ -152,6 +152,19 @@ dependencies:
   #   directly.
   url_launcher: ^6.3.2
 
+  # In-session password change. Identity stays on Firebase; the Linode API
+  # does not publish a citizen password route. Reviewed against Article 1.
+  #
+  # * Maintenance — FlutterFire, the supported Firebase plugins for Flutter.
+  # * Permissions — none beyond what a signed-in Firebase user already has.
+  # * Data egress — the current password and the new password go to Firebase
+  #   Auth (`reauthenticateWithCredential`, then `updatePassword`). They are
+  #   not sent to the Linode API and are not logged.
+  # * Scope — dev builds and tests use `MockAccountPasswordClient` and never
+  #   construct a Firebase call. Staging and production use the Firebase client.
+  firebase_core: ^5.1.0
+  firebase_auth: ^7.0.1
+
 dev_dependencies:
   # ── Why this dependency exists (Article 1 asks for a stated reason) ──────────
   #

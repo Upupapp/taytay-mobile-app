@@ -4826,6 +4826,14 @@
        "rejected"
       ]
      },
+     "verification_decided_at": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "format": "date-time",
+      "description": "When the LGU verified or rejected this resident. Null otherwise."
+     },
      "rejection_reason": {
       "type": [
        "string",
@@ -7135,6 +7143,37 @@
      "updated_at": {
       "type": "string",
       "format": "date-time"
+     },
+     "privacy_notice": {
+      "description": "Published notice. A missing object, or version placeholder, means the client keeps its bundled draft.",
+      "anyOf": [
+       {
+        "$ref": "#/components/schemas/PrivacyNotice"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    }
+   },
+   "PrivacyNotice": {
+    "type": "object",
+    "required": [
+     "version",
+     "updated_at",
+     "body_markdown"
+    ],
+    "properties": {
+     "version": {
+      "type": "string"
+     },
+     "updated_at": {
+      "type": "string",
+      "format": "date-time"
+     },
+     "body_markdown": {
+      "type": "string"
      }
     }
    },
@@ -7309,7 +7348,9 @@
       "type": "string",
       "enum": [
        "verification_decided",
-       "message_received"
+       "message_received",
+       "balita",
+       "emergency"
       ]
      },
      "in_app": {

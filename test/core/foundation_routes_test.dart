@@ -121,7 +121,7 @@ void main() {
 
   test('office messaging is verified-only', () {
     const locations = <String>[
-      '/messages',
+      '/profile/messages',
       '/messages/thread-sample-1',
       '/offices/mswdo/message',
       '/offices/mswdo/message/sent',

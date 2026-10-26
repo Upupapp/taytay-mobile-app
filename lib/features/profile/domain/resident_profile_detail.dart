@@ -29,10 +29,14 @@ class ResidentProfileDetail {
     this.verificationTier,
     this.selfServiceFields,
     this.emailVerified = false,
+    this.hasStreetLine = false,
+    this.hasFreeAddress = false,
+    this.hasAvatar = false,
     this.rejectionReason,
     this.closed = false,
     this.closedAt,
     this.createdAt,
+    this.verificationDecidedAt,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -59,6 +63,18 @@ class ResidentProfileDetail {
   /// True when the current email was confirmed with a code.
   final bool emailVerified;
 
+  /// `street` or `street_address` on `GET /me` was a non-empty string.
+  ///
+  /// Kept apart from [hasFreeAddress] so a fill ratio can count both columns.
+  /// The displayed street still falls back to `address` when the street is empty.
+  final bool hasStreetLine;
+
+  /// The free-text `address` column was a non-empty string.
+  final bool hasFreeAddress;
+
+  /// `avatar_media_id` was a non-empty string. The id itself is not stored.
+  final bool hasAvatar;
+
   /// Notes from the latest rejection. Held so a later screen can show them.
   /// Never rendered today, and never included in [toString].
   final String? rejectionReason;
@@ -70,6 +86,13 @@ class ResidentProfileDetail {
 
   /// `created_at` on `GET /me`. When the account was opened.
   final DateTime? createdAt;
+
+  /// `verification_decided_at` on `GET /me`.
+  ///
+  /// An ISO time when the LGU has verified or rejected the resident, and null
+  /// otherwise. The instant is not personal copy and is not included in
+  /// [toString].
+  final DateTime? verificationDecidedAt;
 
   /// Who may change [field], preferring the office's answer.
   ///

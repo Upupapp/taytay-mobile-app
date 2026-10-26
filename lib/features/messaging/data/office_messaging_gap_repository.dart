@@ -1,4 +1,5 @@
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
 import '../domain/office_messaging_repository.dart';
@@ -28,7 +29,13 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
                 .toList(growable: false)
           : const <OfficeThread>[],
     );
-    return response.map((envelope) => envelope.data);
+    if (response case Err<ApiEnvelope<List<OfficeThread>>>(:final failure)) {
+      return Err<List<OfficeThread>>(failure);
+    }
+    final List<OfficeThread> threads =
+        (response as Ok<ApiEnvelope<List<OfficeThread>>>).value.data;
+    final Map<String, String> labels = await _officeLabels();
+    return Ok<List<OfficeThread>>(_named(threads, labels));
   }
 
   @override
@@ -39,13 +46,18 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       authenticated: true,
       decode: _decodeThread,
     );
-    return response.flatMap(
-      (envelope) => envelope.data == null
-          ? const Err<OfficeThread>(
-              NotFoundFailure(debugMessage: 'No thread in the body.'),
-            )
-          : Ok<OfficeThread>(envelope.data!),
-    );
+    if (response case Err<ApiEnvelope<OfficeThread?>>(:final failure)) {
+      return Err<OfficeThread>(failure);
+    }
+    final OfficeThread? thread =
+        (response as Ok<ApiEnvelope<OfficeThread?>>).value.data;
+    if (thread == null) {
+      return const Err<OfficeThread>(
+        NotFoundFailure(debugMessage: 'No thread in the body.'),
+      );
+    }
+    final Map<String, String> labels = await _officeLabels();
+    return Ok<OfficeThread>(_named(<OfficeThread>[thread], labels).single);
   }
 
   @override
@@ -133,6 +145,75 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       decode: (_) {},
     );
     return response.map((_) {});
+  }
+
+  /// `short_name`, then `name`. A failed read leaves the slug in place.
+  Future<Map<String, String>> _officeLabels() async {
+    final Map<String, String> labels = <String, String>{};
+    String? cursor;
+    for (var page = 0; page < 5; page++) {
+      final Result<ApiEnvelope<Map<String, String>>> response = await _apiClient
+          .send<Map<String, String>>(
+            method: HttpMethod.get,
+            path: 'offices',
+            authenticated: false,
+            query: <String, String>{'limit': '50', 'cursor': ?cursor},
+            decode: _decodeOfficeLabels,
+          );
+      switch (response) {
+        case Err<ApiEnvelope<Map<String, String>>>():
+          return labels;
+        case Ok<ApiEnvelope<Map<String, String>>>(:final value):
+          labels.addAll(value.data);
+          final String? next = value.pagination?.nextCursor;
+          if (value.pagination?.hasMore != true ||
+              next == null ||
+              next.isEmpty) {
+            return labels;
+          }
+          cursor = next;
+      }
+    }
+    return labels;
+  }
+
+  static Map<String, String> _decodeOfficeLabels(Object? data) {
+    if (data is! List) return const <String, String>{};
+    final Map<String, String> labels = <String, String>{};
+    for (final Object? item in data) {
+      if (item is! Map) continue;
+      final Object? slug = item['slug'];
+      final Object? id = item['id'];
+      final String? label = _officeLabel(item['short_name'], item['name']);
+      if (label == null) continue;
+      if (slug is String && slug.isNotEmpty) labels[slug] = label;
+      if (id is String && id.isNotEmpty) labels[id] = label;
+    }
+    return labels;
+  }
+
+  /// `short_name` when it is a non-empty string, otherwise `name`.
+  static String? _officeLabel(Object? shortName, Object? name) {
+    if (shortName is String && shortName.trim().isNotEmpty) {
+      return shortName.trim();
+    }
+    if (name is String && name.trim().isNotEmpty) return name.trim();
+    return null;
+  }
+
+  static List<OfficeThread> _named(
+    List<OfficeThread> threads,
+    Map<String, String> labels,
+  ) {
+    return <OfficeThread>[
+      for (final OfficeThread thread in threads)
+        if (labels[thread.officeSlug] != null)
+          thread.withOfficeName(labels[thread.officeSlug]!)
+        else if (labels[thread.officeId] != null)
+          thread.withOfficeName(labels[thread.officeId]!)
+        else
+          thread,
+    ];
   }
 
   static OfficeThread? _decodeThread(Object? raw) {

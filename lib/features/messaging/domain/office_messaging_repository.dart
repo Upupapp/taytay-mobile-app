@@ -44,6 +44,23 @@ class OfficeThread {
   /// True while the fact is a fixture, not an LGU record.
   final bool sample;
 
+  /// Same thread, with the office label from `GET /offices`.
+  OfficeThread withOfficeName(String officeName) => OfficeThread(
+    id: id,
+    officeId: officeId,
+    officeName: officeName,
+    topic: topic,
+    preview: preview,
+    updatedAt: updatedAt,
+    officeSlug: officeSlug,
+    status: status,
+    unread: unread,
+    unreadCount: unreadCount,
+    lastMessageAt: lastMessageAt,
+    createdAt: createdAt,
+    sample: sample,
+  );
+
   @override
   String toString() => 'OfficeThread($id, $officeId)';
 }

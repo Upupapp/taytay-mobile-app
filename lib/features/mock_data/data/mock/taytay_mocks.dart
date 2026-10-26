@@ -26,6 +26,7 @@ import '../../../news/domain/announcement_repository.dart';
 import '../../../notifications/domain/notification_repository.dart';
 import '../../../platform/domain/app_bootstrap.dart';
 import '../../../platform/domain/platform_repository.dart';
+import '../../../platform/domain/privacy_notice.dart';
 import '../../../profile/domain/profile_fields.dart';
 import '../../../profile/domain/resident_profile_detail.dart';
 import '../../../profile/domain/resident_profile_repository.dart';
@@ -842,6 +843,8 @@ class MockNotificationRepository
             push: true,
           ),
           ChannelPreference(type: 'message_received', inApp: true, push: true),
+          ChannelPreference(type: 'balita', inApp: true, push: true),
+          ChannelPreference(type: 'emergency', inApp: true, push: true),
         ],
       ),
     );
@@ -895,6 +898,10 @@ class MockPlatformRepository implements PlatformRepository {
         features: FeatureFlags.none,
         support: SupportContact.none,
         serverTime: null,
+        privacyNotice: PrivacyNotice(
+          version: 'placeholder',
+          bodyMarkdown: 'This placeholder is not shown.',
+        ),
       ),
     );
   }
@@ -920,8 +927,12 @@ class MockProfileRepository implements ResidentProfileRepository {
         verificationTier: 'verified',
         emailVerified: false,
         createdAt: MockResidentRecordRepository.sampleAccountCreatedAt,
+        verificationDecidedAt: DateTime.utc(2026, 10, 21, 16),
         values: <ResidentProfileField, String>{
+          ResidentProfileField.fullName: resident.displayName,
           ResidentProfileField.emailAddress: resident.email,
+          ResidentProfileField.mobileNumber: resident.mobile,
+          ResidentProfileField.barangay: resident.barangay,
         },
       ),
     );

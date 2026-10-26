@@ -196,15 +196,16 @@ class NotificationApiRepository
   static ChannelPreference? _channel(Object? raw) {
     if (raw is! Map<String, dynamic>) return null;
     final Object? type = raw['type'];
-    if (type != 'verification_decided' && type != 'message_received') {
-      return null;
-    }
+    if (type is! String || !preferenceTypes.contains(type)) return null;
     return ChannelPreference(
-      type: type! as String,
-      inApp: raw['in_app'] == true,
-      push: raw['push'] == true,
+      type: type,
+      inApp: _flag(raw['in_app']),
+      push: _flag(raw['push']),
     );
   }
+
+  /// An omitted flag is on. An explicit false stays off.
+  static bool _flag(Object? value) => value is bool ? value : true;
 
   static List<Map<String, Object?>> _preferenceBody(
     NotificationPreferences preferences,
@@ -212,34 +213,37 @@ class NotificationApiRepository
     final bool verificationOn = preferences.isEnabled(
       NotificationCategory.verificationUpdate,
     );
-    final List<ChannelPreference> source = preferences.channels.isEmpty
-        ? <ChannelPreference>[
-            ChannelPreference(
-              type: 'verification_decided',
-              inApp: verificationOn,
-              push: preferences.push && verificationOn,
-            ),
-            const ChannelPreference(
-              type: 'message_received',
-              inApp: true,
-              push: true,
-            ),
-          ]
-        : preferences.channels;
+    final Map<String, ChannelPreference> byType = <String, ChannelPreference>{
+      for (final ChannelPreference channel in preferences.channels)
+        channel.type: channel,
+    };
     return <Map<String, Object?>>[
-      for (final ChannelPreference channel in source)
-        if (channel.type == 'verification_decided' ||
-            channel.type == 'message_received')
-          <String, Object?>{
-            'type': channel.type,
-            'in_app': channel.type == 'message_received'
-                ? true
-                : verificationOn && channel.inApp,
-            'push': channel.type == 'message_received'
-                ? true
-                : verificationOn && channel.push && preferences.push,
-          },
+      for (final String type in preferenceTypes)
+        <String, Object?>{
+          'type': type,
+          'in_app': _sent(type, byType[type], verificationOn).inApp,
+          'push': _sent(type, byType[type], verificationOn).push,
+        },
     ];
+  }
+
+  /// `verification_decided` still follows the older category switch.
+  /// The other three types are the row itself, defaulting to on.
+  static ChannelPreference _sent(
+    String type,
+    ChannelPreference? existing,
+    bool verificationOn,
+  ) {
+    if (type == 'verification_decided') {
+      final bool inApp = existing == null
+          ? verificationOn
+          : verificationOn && existing.inApp;
+      final bool push = existing == null
+          ? verificationOn
+          : verificationOn && existing.push;
+      return ChannelPreference(type: type, inApp: inApp, push: push);
+    }
+    return existing ?? ChannelPreference(type: type, inApp: true, push: true);
   }
 
   /// `GET notifications/unread-count`.

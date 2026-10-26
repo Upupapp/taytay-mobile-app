@@ -14,6 +14,9 @@ import 'package:taytay_resident/features/news/data/newsfeed_api_repository.dart'
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/notifications/data/notification_api_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
+import 'package:taytay_resident/features/platform/data/platform_api_repository.dart';
+import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/services/data/assistance_api_repository.dart';
 import 'package:taytay_resident/features/services/domain/assistance_case.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
@@ -411,6 +414,109 @@ void main() {
       expect(encoded, contains('in_app'));
       expect(encoded, isNot(contains('sms')));
       expect(encoded, isNot(contains('email')));
+      expect(encoded, contains('balita'));
+      expect(encoded, contains('emergency'));
     });
+
+    test(
+      'balita and emergency round-trip, and a missing flag stays on',
+      () async {
+        transport.responses.add(
+          ok(<String, Object?>{
+            'preferences': <Object?>[
+              <String, Object?>{'type': 'balita', 'in_app': false},
+              <String, Object?>{
+                'type': 'emergency',
+                'in_app': true,
+                'push': false,
+              },
+              <String, Object?>{
+                'type': 'staff_only',
+                'in_app': false,
+                'push': false,
+              },
+            ],
+          }),
+        );
+
+        final NotificationPreferences loaded =
+            ((await NotificationApiRepository(
+                      apiClient: clientFor(transport),
+                    ).loadPreferences())
+                    as Ok<NotificationPreferences>)
+                .value;
+        expect(loaded.channels.map((ChannelPreference c) => c.type), <String>[
+          'balita',
+          'emergency',
+        ]);
+        expect(loaded.channels.first.inApp, isFalse);
+        expect(loaded.channels.first.push, isTrue);
+        expect(loaded.channels.last.push, isFalse);
+
+        transport.responses.add(
+          ok(<String, Object?>{'preferences': <Object?>[]}),
+        );
+        await NotificationApiRepository(
+          apiClient: clientFor(transport),
+        ).updatePreferences(
+          loaded.copyWith(
+            channels: writePreference(
+              loaded.channels,
+              type: 'balita',
+              on: true,
+            ),
+          ),
+        );
+        final String encoded = transport.requests.last.body.toString();
+        expect(encoded, contains('balita'));
+        expect(encoded, contains('emergency'));
+        expect(encoded, isNot(contains('staff_only')));
+      },
+    );
   });
+
+  test(
+    'app config keeps a published notice and a placeholder stays draft',
+    () async {
+      Future<PrivacyNotice> read(Object? notice) async {
+        transport.responses.add(
+          ok(<String, Object?>{
+            'privacy_version': '2026-03-privacy',
+            'terms_version': '2026-03-terms',
+            'minimum_app_version': '1.0.0',
+            'feature_flags': <String, Object?>{},
+            'updated_at': '2026-10-20T00:00:00.000Z',
+            'privacy_notice': notice,
+          }),
+        );
+        final AppBootstrap config =
+            ((await PlatformApiRepository(
+                      apiClient: clientFor(transport),
+                    ).loadBootstrap())
+                    as Ok<AppBootstrap>)
+                .value;
+        return config.privacyNotice;
+      }
+
+      final PrivacyNotice published = await read(<String, Object?>{
+        'version': '2026-10',
+        'updated_at': '2026-10-20T00:00:00.000Z',
+        'body_markdown': '## What we collect\n\nName.',
+      });
+      expect(published.usesBundledDraft, isFalse);
+      expect(published.bodyMarkdown, contains('What we collect'));
+      expect(published.updatedAt, DateTime.utc(2026, 10, 20));
+
+      expect((await read(null)).usesBundledDraft, isTrue);
+      expect(
+        (await read(<String, Object?>{
+          'version': 'placeholder',
+          'updated_at': '2026-10-20T00:00:00.000Z',
+          'body_markdown': 'Do not show this.',
+        })).usesBundledDraft,
+        isTrue,
+      );
+      expect(transport.requests.last.path, 'app/config');
+    },
+  );
 }

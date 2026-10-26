@@ -204,11 +204,17 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     if (resolvedName.isNotEmpty) {
       values[ResidentProfileField.fullName] = resolvedName;
     }
+    final String? freeAddress = _plain(map, 'address');
+    if (!values.containsKey(ResidentProfileField.streetAddress) &&
+        freeAddress != null) {
+      values[ResidentProfileField.streetAddress] = freeAddress;
+    }
 
     final Object? tier = map['verification_status'] ?? map['verification_tier'];
     final Object? reason = map['rejection_reason'];
     final Object? closedAt = map['closed_at'];
     final Object? createdAt = map['created_at'];
+    final Object? decidedAt = map['verification_decided_at'];
 
     // WHO MAY CHANGE WHAT IS THE OFFICE'S ANSWER, AND IT IS ON THE WIRE (C-13).
     //
@@ -235,13 +241,22 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
           ? Set<String>.unmodifiable(selfService)
           : null,
       emailVerified: map['email_verified'] == true,
+      hasStreetLine:
+          _plain(map, 'street') != null ||
+          _plain(map, 'street_address') != null,
+      hasFreeAddress: _plain(map, 'address') != null,
+      hasAvatar: _plain(map, 'avatar_media_id') != null,
       rejectionReason: reason is String && reason.trim().isNotEmpty
           ? reason.trim()
           : null,
       closed: map['closed'] == true,
       closedAt: DateTime.tryParse(closedAt is String ? closedAt : '')?.toUtc(),
-      createdAt: DateTime.tryParse(createdAt is String ? createdAt : '')
-          ?.toUtc(),
+      createdAt: DateTime.tryParse(
+        createdAt is String ? createdAt : '',
+      )?.toUtc(),
+      verificationDecidedAt: DateTime.tryParse(
+        decidedAt is String ? decidedAt : '',
+      )?.toUtc(),
     );
   }
 
@@ -262,11 +277,18 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
     _ => wire,
   };
 
+  static String? _plain(Map<String, dynamic> map, String key) {
+    final Object? value = map[key];
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
   /// Reads the historical wire name, then Clarence's names on `/me`.
   static Object? _fieldValue(Map<String, dynamic> map, String wire) {
     final List<String> keys = switch (wire) {
       'mobile_number' => <String>['mobile_number', 'mobile'],
-      'street_address' => <String>['street', 'street_address', 'address'],
+      'street_address' => <String>['street', 'street_address'],
       'purok_or_sitio' => <String>['purok', 'purok_or_sitio'],
       'birth_date' => <String>['birth_date', 'birthdate'],
       _ => <String>[wire],

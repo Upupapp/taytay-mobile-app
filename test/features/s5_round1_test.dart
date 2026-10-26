@@ -332,6 +332,79 @@ void main() {
     expect(result, isA<Ok<OfficeMessage>>());
   });
 
+  test('a thread label uses short_name from GET /offices', () async {
+    final transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[
+        <String, Object?>{
+          'id': 'thread-live',
+          'office_id': '11111111-1111-1111-1111-111111111111',
+          'office_slug': 'treasury',
+          'subject': 'Cedula',
+          'created_at': '2026-08-16T02:00:00Z',
+          'updated_at': '2026-08-16T02:00:00Z',
+        },
+      ]),
+      _ok(<Object?>[
+        <String, Object?>{
+          'id': '11111111-1111-1111-1111-111111111111',
+          'name': "Municipal Treasurer's Office",
+          'slug': 'treasury',
+          'short_name': 'Treasury',
+          'created_at': '2026-08-16T02:00:00Z',
+          'updated_at': '2026-08-16T02:00:00Z',
+        },
+      ]),
+    ]);
+    final client = ApiClient(
+      config: _liveConfig(),
+      transport: transport,
+      accessTokenProvider: () async => 'tok',
+    );
+    final Result<List<OfficeThread>> result =
+        await OfficeMessagingApiRepository(apiClient: client).listThreads();
+    expect(result, isA<Ok<List<OfficeThread>>>());
+    expect(
+      (result as Ok<List<OfficeThread>>).value.single.officeName,
+      'Treasury',
+    );
+    expect(transport.requests[1].path, 'offices');
+  });
+
+  test('a null short_name falls through to the office name', () async {
+    final transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[
+        <String, Object?>{
+          'id': 'thread-live',
+          'office_id': '11111111-1111-1111-1111-111111111111',
+          'office_slug': 'assessor',
+          'subject': 'Tax',
+          'created_at': '2026-08-16T02:00:00Z',
+        },
+      ]),
+      _ok(<Object?>[
+        <String, Object?>{
+          'id': '11111111-1111-1111-1111-111111111111',
+          'name': 'Municipal Assessor',
+          'slug': 'assessor',
+          'short_name': null,
+          'created_at': '2026-08-16T02:00:00Z',
+          'updated_at': '2026-08-16T02:00:00Z',
+        },
+      ]),
+    ]);
+    final client = ApiClient(
+      config: _liveConfig(),
+      transport: transport,
+      accessTokenProvider: () async => 'tok',
+    );
+    final Result<List<OfficeThread>> result =
+        await OfficeMessagingApiRepository(apiClient: client).listThreads();
+    expect(
+      (result as Ok<List<OfficeThread>>).value.single.officeName,
+      'Municipal Assessor',
+    );
+  });
+
   test(
     'the dev mock still reads the fixture and does not call the API',
     () async {
@@ -358,7 +431,7 @@ void main() {
 
     expect(booted.messaging.threadLoads, <String>['thread-9']);
     expect(booted.messaging.messageLoads, <String>['thread-9']);
-    expect(find.text('Where is the cedula desk?'), findsOneWidget);
+    expect(find.textContaining('cedula'), findsOneWidget);
     expect(find.text('Treasury'), findsWidgets);
     expect(find.textContaining('Magandang araw'), findsNothing);
   });

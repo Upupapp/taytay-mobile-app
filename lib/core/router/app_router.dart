@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_dependencies.dart';
+import '../../core/session/access_policy.dart';
+import '../../features/account/presentation/account_home_screen.dart';
+import '../../features/account/presentation/account_pages.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
 import '../../features/auth/domain/code_exchange.dart';
@@ -42,7 +45,6 @@ import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
-import '../../shared/widgets/foundation_placeholder_screen.dart';
 import '../../shared/widgets/taytay_back_button.dart';
 import '../../shared/widgets/taytay_thread.dart';
 import '../design/design_tokens.dart';
@@ -298,7 +300,7 @@ GoRouter buildAppRouter({
               GoRoute(
                 path: AppRoute.profile.path,
                 name: AppRoute.profile.routeName,
-                builder: (context, state) => const ProfileScreen(),
+                builder: (context, state) => const _AccountTab(),
                 routes: <RouteBase>[
                   GoRoute(
                     path: 'contact',
@@ -310,7 +312,56 @@ GoRouter buildAppRouter({
                     name: AppRoute.profilePrivacy.routeName,
                     builder: (context, state) => const PrivacyScreen(),
                   ),
+                  GoRoute(
+                    path: 'record',
+                    name: AppRoute.profileRecord.routeName,
+                    builder: (context, state) =>
+                        const ProfileScreen(showBack: true),
+                  ),
+                  GoRoute(
+                    path: 'edit',
+                    name: AppRoute.profileEdit.routeName,
+                    builder: (context, state) => const EditProfileScreen(),
+                  ),
+                  GoRoute(
+                    path: 'settings',
+                    name: AppRoute.profileSettings.routeName,
+                    builder: (context, state) => const AccountSettingsScreen(),
+                  ),
+                  GoRoute(
+                    path: 'notice',
+                    name: AppRoute.profileNotice.routeName,
+                    builder: (context, state) => const PrivacyNoticeScreen(),
+                  ),
+                  GoRoute(
+                    path: 'messages',
+                    name: AppRoute.messagesInbox.routeName,
+                    builder: (context, state) => const MessagesInboxScreen(),
+                  ),
+                  GoRoute(
+                    path: 'photo-credits',
+                    name: AppRoute.photoCredits.routeName,
+                    builder: (context, state) => const PhotoCreditsScreen(),
+                    routes: <RouteBase>[
+                      GoRoute(
+                        path: 'offices',
+                        name: AppRoute.profileBanners.routeName,
+                        builder: (context, state) =>
+                            const OfficeBannersScreen(),
+                      ),
+                    ],
+                  ),
                 ],
+              ),
+              // The thread fills the phone. It stays on this branch so coming
+              // back does not build a second shell during the transition. The
+              // shell hides the tab bar for `/messages/`.
+              GoRoute(
+                path: AppRoute.messageThread.path,
+                name: AppRoute.messageThread.routeName,
+                builder: (context, state) => AccountThreadScreen(
+                  threadId: state.pathParameters['threadId'] ?? '',
+                ),
               ),
             ],
           ),
@@ -505,33 +556,6 @@ GoRouter buildAppRouter({
         builder: (context, state) => const PasswordUpdatedScreen(),
       ),
       GoRoute(
-        path: AppRoute.messagesInbox.path,
-        name: AppRoute.messagesInbox.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Messages',
-          body:
-              'The office inbox arrives in a later sprint. There is no live '
-              'mailbox on this build.',
-        ),
-      ),
-      GoRoute(
-        path: AppRoute.messageThread.path,
-        name: AppRoute.messageThread.routeName,
-        builder: (context, state) => OfficeThreadScreen(
-          threadId: state.pathParameters['threadId'] ?? '',
-        ),
-      ),
-      GoRoute(
-        path: AppRoute.photoCredits.path,
-        name: AppRoute.photoCredits.routeName,
-        builder: (context, state) => const FoundationPlaceholderScreen(
-          title: 'Photo credits',
-          body:
-              'Photo credits arrive with the screens that use photographs. '
-              'No municipal photograph is bundled in this build.',
-        ),
-      ),
-      GoRoute(
         path: AppRoute.componentGallery.path,
         name: AppRoute.componentGallery.routeName,
         builder: (context, state) => ComponentGalleryScreen(
@@ -580,6 +604,28 @@ class _RouteNotFoundScreen extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// My Account. Guests and unverified residents keep the account centre.
+/// A verified resident gets the designed home. Sign-out swaps back.
+class _AccountTab extends StatelessWidget {
+  const _AccountTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final session = AppDependencies.of(context).session;
+    return AnimatedBuilder(
+      animation: session,
+      builder: (context, _) {
+        final AccessDecision decision = AccessPolicy.evaluate(
+          session: session.state,
+          requirement: AccessRequirement.verified,
+        );
+        if (decision is AccessAllowed) return const AccountHomeScreen();
+        return const ProfileScreen();
+      },
     );
   }
 }

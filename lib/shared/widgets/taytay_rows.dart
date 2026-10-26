@@ -62,7 +62,12 @@ class StatusChip extends StatelessWidget {
 /// Marks a fact the LGU has not confirmed. The word SAMPLE is the signal;
 /// the gold is only a repeat of it.
 class SampleTag extends StatelessWidget {
-  const SampleTag({super.key, this.label = 'SAMPLE', this.lineHeight});
+  const SampleTag({
+    super.key,
+    this.label = 'SAMPLE',
+    this.lineHeight,
+    this.lineSlot,
+  });
 
   final String label;
 
@@ -71,6 +76,10 @@ class SampleTag extends StatelessWidget {
   /// keeps [AppTypography.labelStrong]'s 1.2, which the directory rows were
   /// spaced with.
   final double? lineHeight;
+
+  /// Label box, when it is not `11 * [lineHeight]`. Chrome's `normal` line
+  /// for 11 px is 13.67, which is not `11 * 1.26`.
+  final double? lineSlot;
 
   @override
   Widget build(BuildContext context) {
@@ -91,15 +100,51 @@ class SampleTag extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            child: Text(
-              label,
-              style: AppTypography.labelStrong.copyWith(
-                color: BrandColors.warning,
-                letterSpacing: 0.6,
-                height: lineHeight,
-              ),
+            child: _SampleLabel(
+              label: label,
+              lineHeight: lineHeight,
+              lineSlot: lineSlot,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SampleLabel extends StatelessWidget {
+  const _SampleLabel({required this.label, this.lineHeight, this.lineSlot});
+
+  final String label;
+  final double? lineHeight;
+  final double? lineSlot;
+
+  @override
+  Widget build(BuildContext context) {
+    final double? height = lineHeight;
+    final double? explicit = lineSlot;
+    final double? slot = explicit ?? (height == null ? null : 11 * height);
+    if (slot == null) {
+      return Text(
+        label,
+        style: AppTypography.labelStrong.copyWith(
+          color: BrandColors.warning,
+          letterSpacing: 0.6,
+          height: height,
+        ),
+      );
+    }
+    // 11 px is [AppTypography.labelStrong]. The slot keeps the caller's line
+    // box; a forced strut would round 16.5 to 17 and the chip would be 23.
+    return SizedBox(
+      height: slot,
+      child: Text(
+        label,
+        style: AppTypography.labelStrong.copyWith(
+          color: BrandColors.warning,
+          letterSpacing: 0.6,
+          height: slot / 11,
+          leadingDistribution: TextLeadingDistribution.even,
         ),
       ),
     );
