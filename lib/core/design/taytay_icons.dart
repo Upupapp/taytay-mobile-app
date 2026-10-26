@@ -122,7 +122,7 @@ abstract final class TaytayIcons {
   /// Lucide `languages`. The language row in Settings.
   static const IconData languages = IconData(57598, fontFamily: 'Lucide');
 
-  /// Lucide `bookmark`. Save on a Balita card.
+  /// Lucide `bookmark`. A named Balita tile icon.
   static const IconData bookmark = IconData(57440, fontFamily: 'Lucide');
 
   /// Lucide `cloud`.
