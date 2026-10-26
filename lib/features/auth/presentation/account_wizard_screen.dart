@@ -1723,13 +1723,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
-                              child: TextFormField(
+                              child: AuthBareField(
                                 controller: controller,
                                 readOnly: readOnly,
                                 obscureText: obscure,
-                                textAlignVertical: TextAlignVertical.center,
-                                style: AppTypography.fieldValue,
-                                decoration: bareField,
                               ),
                             ),
                     ),
@@ -2152,13 +2149,14 @@ class _SelfieFrame extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: <Color>[Color(0xFFDFE6F2), Color(0xFFC9D3E6)],
           ),
+          // Same order as the auth arches: the white ring paints last.
           boxShadow: <BoxShadow>[
-            BoxShadow(color: Colors.white, spreadRadius: 4),
             BoxShadow(
               color: Color(0x33062358),
               blurRadius: 28,
               offset: Offset(0, 12),
             ),
+            BoxShadow(color: Colors.white, spreadRadius: 4),
           ],
         ),
         child: Stack(

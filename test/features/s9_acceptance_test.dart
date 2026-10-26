@@ -5,11 +5,13 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/features/onboarding/presentation/welcome_scene.dart';
 import 'package:taytay_resident/shared/widgets/gold_thread_shell.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
+import 'device_adaptation_test.dart' as phone;
 import 'welcome_and_gates_test.dart';
 
 /// Headless stand-in for the S9 accessibility and frame-timing evidence.
@@ -72,6 +74,40 @@ void main() {
     expect((headlineBox as RenderBox).size.height, greaterThan(0));
   });
 
+  testWidgets(
+    'sign-in, create-account, and services meet the tap and contrast guidelines',
+    (tester) async {
+      final phone.Device handset = phone.devices.firstWhere(
+        (phone.Device device) => device.name == 'phone with a notch',
+      );
+      const screens = <String>['/sign-in', '/register', '/services'];
+      for (final String location in screens) {
+        await phone.boot(
+          tester,
+          level: AccessLevel.guest,
+          device: handset,
+          location: location,
+        );
+        expect(tester.takeException(), isNull, reason: location);
+        await expectLater(
+          tester,
+          meetsGuideline(androidTapTargetGuideline),
+          reason: location,
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(labeledTapTargetGuideline),
+          reason: location,
+        );
+        await expectLater(
+          tester,
+          meetsGuideline(textContrastGuideline),
+          reason: location,
+        );
+      }
+    },
+  );
+
   testWidgets('reduced motion keeps the thread and hides the travelling tip', (
     tester,
   ) async {
@@ -93,6 +129,28 @@ void main() {
     )!;
     expect(model.clock.isAnimating, isFalse);
   });
+
+  testWidgets(
+    'disableAnimations keeps the thread and hides the travelling tip',
+    (tester) async {
+      WelcomeMotion.enabled = true;
+      addTearDown(() => WelcomeMotion.enabled = false);
+
+      await boot(tester, disableAnimations: true);
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Skip'), findsOneWidget);
+      expect(find.byType(SignInThreadOverlay), findsOneWidget);
+      expect(find.byKey(TravellingLight.mark), findsNothing);
+      final GoldThreadModel model = GoldThreadScope.maybeOf(
+        tester.element(find.text('Skip')),
+      )!;
+      expect(model.clock.isAnimating, isFalse);
+    },
+  );
 
   testWidgets('host frame pumps while the welcome thread advances', (
     tester,
@@ -170,6 +228,8 @@ Headless widget-test run on the development host. Light mode only. This is not a
 | Page 2 back control | At least 48×48dp |
 | 200% text | Welcome still shows Skip and the headline, Skip stays at least 48dp, no exception |
 | Reduced motion | The gold thread stays. The travelling tip is absent. The 7s clock does not run |
+| `disableAnimations: true` | Same result, from the platform flag rather than the in-app preference |
+| Sign-in, create-account, services | `androidTapTargetGuideline`, `labeledTapTargetGuideline`, and `textContrastGuideline` |
 
 The same checks are `test/features/s9_acceptance_test.dart`. They run with `flutter test` on this machine. They are not a GitHub Actions job.
 ''');

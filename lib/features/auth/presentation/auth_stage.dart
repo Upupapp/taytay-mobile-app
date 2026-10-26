@@ -260,13 +260,15 @@ class _HallArch extends StatelessWidget {
           child: DecoratedBox(
             decoration: const BoxDecoration(
               borderRadius: radius,
+              // CSS paints the first shadow on top. Flutter paints the last
+              // one on top, so the white ring stays last or the blur greys it.
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x40062358),
                   blurRadius: 34,
                   offset: Offset(0, 16),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: ClipRRect(
@@ -330,12 +332,12 @@ class _KeyArch extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: TaytayIcon(
@@ -409,12 +411,12 @@ class _SmallMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(
@@ -487,12 +489,12 @@ class _ShieldMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(
@@ -564,12 +566,12 @@ class _SubmittedMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x38062358),
                   blurRadius: 34,
                   offset: Offset(0, 16),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(

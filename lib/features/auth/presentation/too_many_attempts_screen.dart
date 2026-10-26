@@ -487,6 +487,9 @@ class _HoldClock extends StatelessWidget {
                     height: TypeMetrics.line(40) / 40,
                     fontWeight: AppTypography.black,
                     letterSpacing: 1,
+                    fontFeatures: const <FontFeature>[
+                      FontFeature.tabularFigures(),
+                    ],
                     color: ready
                         ? const Color(0xFF0F7A4D)
                         : BrandColors.taytayBlueDark,

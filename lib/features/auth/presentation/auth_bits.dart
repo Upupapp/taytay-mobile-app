@@ -12,6 +12,55 @@ bool get authClockTicks =>
 
 /// A field drawn inside the 44dp box. The theme's outline would paint a
 /// second border, so every edge of this decoration is empty.
+/// A collapsed field whose semantics box is 48dp.
+///
+/// The painted slot stays the parent's height. The editable itself is 48
+/// tall and centred, so the Android tap-target check sees the control
+/// rather than the 17px line, and the glyphs stay on the same centre.
+class AuthBareField extends StatelessWidget {
+  const AuthBareField({
+    required this.controller,
+    this.readOnly = false,
+    this.obscureText = false,
+    this.style,
+    super.key,
+  });
+
+  final TextEditingController controller;
+  final bool readOnly;
+  final bool obscureText;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) {
+    // The slot stays 44. This box is 48 and centred on that slot, so the
+    // line stays where it was. The field itself stays its own height and
+    // does not paint over the border. MergeSemantics folds that line into
+    // the 48 box, which is what the tap-target check measures.
+    return OverflowBox(
+      alignment: Alignment.center,
+      minHeight: A11y.minTapTarget,
+      maxHeight: A11y.minTapTarget,
+      child: MergeSemantics(
+        child: SizedBox(
+          height: A11y.minTapTarget,
+          child: Align(
+            alignment: Alignment.center,
+            child: TextFormField(
+              controller: controller,
+              readOnly: readOnly,
+              obscureText: obscureText,
+              textAlignVertical: TextAlignVertical.center,
+              style: style ?? AppTypography.fieldValue,
+              decoration: bareField,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 const InputDecoration bareField = InputDecoration(
   hintText: '',
   filled: false,
