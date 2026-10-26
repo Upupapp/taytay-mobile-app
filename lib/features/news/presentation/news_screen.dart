@@ -17,9 +17,9 @@ import 'news_feed_controller.dart';
 /// **Public.** A guest reads the whole feed. Nothing on this screen asks them
 /// to register.
 ///
-/// **This app consumes; it never publishes.** No compose, pin, or moderation
-/// control. Bookmarks are not on the contract. The screen says so in its
-/// own words and does not call a save route.
+/// **This app consumes; it never publishes.** No compose, pin, moderation,
+/// or Save control. Bookmarks are not on the contract, so the cards do not
+/// offer one. Share sends the server's link, or none.
 class NewsScreen extends StatefulWidget {
   const NewsScreen({super.key});
 
@@ -122,19 +122,13 @@ class _NewsScreenState extends State<NewsScreen> {
     await _controller?.applyCategory(slug.isEmpty ? null : slug);
   }
 
-  /// The Save sentence lives on the root messenger. A route change would
+  /// A share outcome lives on the root messenger. A route change would
   /// otherwise keep it on the next screen.
   void _clearOutcomeOnLeave() {
     if (!mounted) return;
     if (_router?.state.uri.path != AppRoute.news.path) {
       ScaffoldMessenger.of(context).clearSnackBars();
     }
-  }
-
-  void _save(Announcement article) {
-    final Object _ = article.id;
-    // Bookmarks are not on the contract. The resident still gets an answer.
-    Outcome.problem(context, 'Saving a story is not available yet.');
   }
 
   Future<void> _share(Announcement article) async {
@@ -184,7 +178,6 @@ class _NewsScreenState extends State<NewsScreen> {
           scrollController: _scroll,
           onChip: _selectChip,
           onArticle: _open,
-          onSave: _save,
           onShare: _share,
           onBell: () => context.goNamed(
             guest

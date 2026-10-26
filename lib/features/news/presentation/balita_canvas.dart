@@ -56,7 +56,6 @@ class BalitaCanvas extends StatelessWidget {
     this.chips = BalitaChip.design,
     this.onChip,
     this.onArticle,
-    this.onSave,
     this.onShare,
     this.onBell,
     this.onBack,
@@ -73,7 +72,6 @@ class BalitaCanvas extends StatelessWidget {
   final List<BalitaChip> chips;
   final ValueChanged<BalitaChip>? onChip;
   final ValueChanged<Announcement>? onArticle;
-  final ValueChanged<Announcement>? onSave;
   final ValueChanged<Announcement>? onShare;
   final VoidCallback? onBell;
   final VoidCallback? onBack;
@@ -171,7 +169,6 @@ class BalitaCanvas extends StatelessWidget {
             articles.any((Announcement article) => article.isPinned),
         onChip: onChip,
         onArticle: onArticle,
-        onSave: onSave,
         onShare: onShare,
         scrollController: scrollController,
       ),
@@ -339,7 +336,6 @@ class _FeedBody extends StatelessWidget {
     required this.showBanner,
     this.onChip,
     this.onArticle,
-    this.onSave,
     this.onShare,
     this.scrollController,
   });
@@ -350,7 +346,6 @@ class _FeedBody extends StatelessWidget {
   final bool showBanner;
   final ValueChanged<BalitaChip>? onChip;
   final ValueChanged<Announcement>? onArticle;
-  final ValueChanged<Announcement>? onSave;
   final ValueChanged<Announcement>? onShare;
   final ScrollController? scrollController;
 
@@ -374,7 +369,6 @@ class _FeedBody extends StatelessWidget {
           _StoryCard(
             article: articles[i],
             onOpen: onArticle == null ? null : () => onArticle!(articles[i]),
-            onSave: onSave == null ? null : () => onSave!(articles[i]),
             onShare: onShare == null ? null : () => onShare!(articles[i]),
           ),
           const SizedBox(height: 12),
@@ -461,16 +455,10 @@ class _Chip extends StatelessWidget {
 }
 
 class _StoryCard extends StatelessWidget {
-  const _StoryCard({
-    required this.article,
-    this.onOpen,
-    this.onSave,
-    this.onShare,
-  });
+  const _StoryCard({required this.article, this.onOpen, this.onShare});
 
   final Announcement article;
   final VoidCallback? onOpen;
-  final VoidCallback? onSave;
   final VoidCallback? onShare;
 
   @override
@@ -544,51 +532,29 @@ class _StoryCard extends StatelessWidget {
                 ],
               ),
               if (!sample) ...<Widget>[
+                // The action row's margin-top is 10. Save was the first
+                // flex item. With it gone, Share is that first item and the
+                // gap between the two actions collapses.
                 const SizedBox(height: 10),
-                Row(
-                  children: <Widget>[
-                    _Hit(
-                      hitKey: Key('balita-save-${article.id}'),
-                      label: 'Save ${article.title}',
-                      height: 16,
-                      onTap: onSave,
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          TaytayIcon(
-                            icon: TaytayIcons.bookmark,
-                            size: 16,
-                            color: BrandColors.listMeta,
-                            semanticLabel: '',
-                            excludeSemantics: true,
-                          ),
-                          SizedBox(width: 16),
-                          Text('Save', style: _action),
-                        ],
+                _Hit(
+                  hitKey: Key('balita-share-${article.id}'),
+                  label: 'Share ${article.title}',
+                  height: 16,
+                  onTap: onShare,
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      TaytayIcon(
+                        icon: TaytayIcons.share,
+                        size: 16,
+                        color: BrandColors.listMeta,
+                        semanticLabel: '',
+                        excludeSemantics: true,
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    _Hit(
-                      hitKey: Key('balita-share-${article.id}'),
-                      label: 'Share ${article.title}',
-                      height: 16,
-                      onTap: onShare,
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          TaytayIcon(
-                            icon: TaytayIcons.share,
-                            size: 16,
-                            color: BrandColors.listMeta,
-                            semanticLabel: '',
-                            excludeSemantics: true,
-                          ),
-                          SizedBox(width: 6),
-                          Text('Share', style: _action),
-                        ],
-                      ),
-                    ),
-                  ],
+                      SizedBox(width: 6),
+                      Text('Share', style: _action),
+                    ],
+                  ),
                 ),
               ],
             ],

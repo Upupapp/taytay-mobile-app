@@ -669,25 +669,48 @@ void main() {
     expect(tester.getSize(find.byWidget(byline)).height, lessThanOrEqualTo(20));
   });
 
-  testWidgets('bell, save, share, card, back and see-all are 48 dp', (
-    tester,
-  ) async {
+  testWidgets('bell, share, card, back and see-all are 48 dp', (tester) async {
     final Announcement story = _story();
     await _pump(
       tester,
       BalitaCanvas(
         frame: BalitaFrame.feed,
         articles: <Announcement>[story],
-        onSave: (_) {},
         onShare: (_) {},
         onArticle: (_) {},
         onBell: () {},
       ),
     );
     _expectAtLeast48(tester, const Key('balita-bell'));
-    _expectAtLeast48(tester, Key('balita-save-${story.id}'));
     _expectAtLeast48(tester, Key('balita-share-${story.id}'));
     _expectAtLeast48(tester, Key('balita-article-${story.id}'));
+    expect(find.byKey(Key('balita-save-${story.id}')), findsNothing);
+    expect(find.text('Save'), findsNothing);
+    // Share is the first flex item, so it starts on the card content edge,
+    // the same left as the category tile. No gap is left where Save was.
+    final Finder card = find.byKey(Key('balita-article-${story.id}'));
+    final double tileLeft = tester
+        .getTopLeft(
+          find.descendant(
+            of: card,
+            matching: find.byWidgetPredicate(
+              (Widget widget) =>
+                  widget is SizedBox &&
+                  widget.width == 44 &&
+                  widget.height == 44,
+            ),
+          ),
+        )
+        .dx;
+    final double shareLeft = tester
+        .getTopLeft(
+          find.byWidgetPredicate(
+            (Widget widget) =>
+                widget is TaytayIcon && widget.icon == TaytayIcons.share,
+          ),
+        )
+        .dx;
+    expect(shareLeft, tileLeft);
     final Iterable<Icon> icons = tester.widgetList<Icon>(find.byType(Icon));
     expect(icons, isNotEmpty);
     expect(
@@ -698,13 +721,20 @@ void main() {
       tester
           .widgetList<TaytayIcon>(find.byType(TaytayIcon))
           .map((TaytayIcon icon) => icon.icon),
-      containsAll(<IconData>[TaytayIcons.bookmark, TaytayIcons.share]),
+      contains(TaytayIcons.share),
+    );
+    expect(
+      tester
+          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
+          .map((TaytayIcon icon) => icon.icon),
+      isNot(contains(TaytayIcons.bookmark)),
     );
 
     await _pump(
       tester,
       BalitaCanvas(frame: BalitaFrame.article, article: story),
     );
+    expect(find.text('Save'), findsNothing);
     expect(tester.getSize(find.byType(TaytayBackButton)), const Size(48, 48));
 
     await _pump(
@@ -718,9 +748,7 @@ void main() {
     _expectAtLeast48(tester, const Key('balita-see-all'));
   });
 
-  testWidgets('save tells the resident, and share does not invent a url', (
-    tester,
-  ) async {
+  testWidgets('share does not invent a url', (tester) async {
     final _RecordingShare sharing = _RecordingShare();
     await _boot(
       tester,
@@ -728,10 +756,9 @@ void main() {
       shareService: sharing,
     );
 
-    await tester.tap(find.byKey(const Key('balita-save-post-1')));
-    await tester.pumpAndSettle();
-    expect(find.text('Saving a story is not available yet.'), findsOneWidget);
-    expect(find.textContaining('F32'), findsNothing);
+    expect(find.byKey(const Key('balita-save-post-1')), findsNothing);
+    expect(find.text('Save'), findsNothing);
+    expect(find.text('Saving a story is not available yet.'), findsNothing);
 
     await tester.tap(find.byKey(const Key('balita-share-post-1')));
     await tester.pumpAndSettle();
@@ -739,23 +766,6 @@ void main() {
     expect(shared.url, isNull);
     expect(shared.text, isNot(contains('http')));
     expect(shared.text, contains('Taytay LGU'));
-
-    await tester.tap(find.byKey(const Key('balita-article-post-1')));
-    await tester.pumpAndSettle();
-    expect(find.text('Saving a story is not available yet.'), findsNothing);
-  });
-
-  testWidgets('saving a story clears when the resident leaves Balita', (
-    tester,
-  ) async {
-    await _boot(tester, repository: _Pages(<Announcement>[_story()]));
-    await tester.tap(find.byKey(const Key('balita-save-post-1')));
-    await tester.pumpAndSettle();
-    expect(find.text('Saving a story is not available yet.'), findsOneWidget);
-
-    GoRouter.of(tester.element(find.byType(Scaffold).first)).go('/home');
-    await tester.pumpAndSettle();
-    expect(find.text('Saving a story is not available yet.'), findsNothing);
   });
 
   testWidgets('an Advisory chip is sent as the lowercase slug', (tester) async {
