@@ -56,5 +56,11 @@ app.*.map.json
 /ios/Runner/GoogleService-Info.plist
 /android/app/google-services.json
 
+# Local release-signing copies. The *.example files are tracked.
+# The keystore itself must live outside this repository; see
+# android/key.properties.example.
+/ios/ExportOptions.plist
+/ios/Flutter/Release-Signing.xcconfig
+
 # Local design PNGs for golden comparison. Not shipped.
 /design-refs/

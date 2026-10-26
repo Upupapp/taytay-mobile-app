@@ -7,12 +7,14 @@ import '../core/config/app_config.dart';
 import '../core/config/app_environment.dart';
 import '../core/design/app_theme.dart';
 import '../core/design/design_tokens.dart';
+import '../core/design/taytay_icons.dart';
 import '../core/l10n/app_locales.dart';
 import '../core/router/app_router.dart';
 import '../core/telemetry/telemetry_route_observer.dart';
 import '../features/auth/presentation/app_lock_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../shared/widgets/session_expired_sheet.dart';
+import '../shared/widgets/taytay_icon.dart';
 import 'app_dependencies.dart';
 
 /// Application root.
@@ -201,8 +203,11 @@ class _EnvironmentBanner extends StatelessWidget {
   }
 }
 
-/// Shown when configuration is unusable. Deliberately dependency-free: it must
-/// render even when nothing else was built.
+/// Shown when configuration is unusable.
+///
+/// Theme, type, and one Lucide glyph. No session, router, or repository: it
+/// has to render when nothing else was built. Material Icons are not bundled,
+/// so the mark is [TaytayIcons.settings].
 class _MisconfiguredApp extends StatelessWidget {
   const _MisconfiguredApp({required this.config});
 
@@ -212,29 +217,89 @@ class _MisconfiguredApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
       home: Scaffold(
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(Spacing.xl),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Icon(Icons.settings_suggest_outlined, size: 48),
-                const SizedBox(height: Spacing.lg),
-                const Text(
-                  'This build is not configured correctly and cannot start.',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: Spacing.lg),
-                for (final issue in config.issues)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: Spacing.sm),
-                    child: Text('• ${issue.message}'),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(Spacing.xl),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - Spacing.xl * 2,
                   ),
-              ],
-            ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      _ConfigStopBanner(issues: config.issues),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Error-banner treatment: error container, on-error ink, the banner radius,
+/// and the theme's title and body roles. The glyph is Lucide, not a Material
+/// icon.
+class _ConfigStopBanner extends StatelessWidget {
+  const _ConfigStopBanner({required this.issues});
+
+  final List<ConfigIssue> issues;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final foreground = theme.colorScheme.onErrorContainer;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(Spacing.md),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.errorContainer,
+          borderRadius: BorderRadius.circular(Radii.md),
+          border: Border.all(color: foreground.withValues(alpha: 0.24)),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TaytayIcon(
+              icon: TaytayIcons.settings,
+              semanticLabel: 'Configuration',
+              size: IconSizes.md,
+              color: foreground,
+            ),
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    'This build is not configured correctly and cannot start.',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: foreground,
+                    ),
+                  ),
+                  for (final issue in issues) ...<Widget>[
+                    const SizedBox(height: Spacing.sm),
+                    Text(
+                      issue.message,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: foreground,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

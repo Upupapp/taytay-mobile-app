@@ -8,15 +8,17 @@ This file lists every resident screen or flow that, on a non-mock build, still d
 
 ## How the audit was run
 
-The app's compiled defaults are in `lib/core/config/app_config.dart`:
+Compiled API hosts live in `lib/core/config/app_config.dart`. Staging and
+production no longer have a baked-in host. A release build without
+`--dart-define=TAYTAY_API_BASE_URL` refuses to start.
 
 | Environment | Base URL |
 | --- | --- |
-| `dev` (default when `TAYTAY_ENV` is unset) | `http://10.0.2.2:8000/api/v1` |
-| `staging` | `https://staging-api.taytay.gov.ph/api/v1` |
-| `prod` | `https://api.taytay.gov.ph/api/v1` |
+| `dev` debug, define unset | `http://10.0.2.2:8000/api/v1` |
+| `staging`, `prod`, and every release build | none — pass `--dart-define=TAYTAY_API_BASE_URL` |
 
-Probes from this environment on 26 October 2026:
+Probes from this environment on 26 October 2026, against hostnames that used to
+be compiled defaults and are not anymore:
 
 | URL | Result |
 | --- | --- |

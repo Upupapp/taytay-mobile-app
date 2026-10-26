@@ -1,0 +1,16 @@
+# Copy this file to android/key.properties.
+# android/key.properties is gitignored. Do not commit the copy.
+#
+# storeFile MUST be an absolute path outside this repository.
+# A keystore under the repo is refused, even though *.jks and *.keystore
+# are gitignored. Losing this keystore means the Play listing cannot be
+# updated. The LGU holds it. This example has no real path or password.
+#
+# Windows: use a drive path with forward slashes, for example
+# C:/Users/you/keystores/taytay-upload.jks
+# Do not use ~ — it is not expanded.
+
+storeFile=/absolute/path/outside/this/repo/taytay-upload.jks
+storePassword=REPLACE_ME
+keyAlias=REPLACE_ME
+keyPassword=REPLACE_ME

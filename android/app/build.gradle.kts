@@ -6,6 +6,50 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Release signing material stays outside the repository. android/key.properties
+// and the keystore it names are gitignored. A missing file does not fail
+// configuration, so debug builds keep working. Release packaging is refused
+// by verifyReleaseSigning, and it never falls back to the debug key.
+val keystorePropertiesFile = rootProject.file("key.properties")
+val keystoreProperties = Properties()
+
+val releaseKeystoreReady: Boolean = if (!keystorePropertiesFile.exists()) {
+    logger.warn(
+        "android/key.properties is absent. Debug builds keep working. " +
+            "Release packaging will fail until you copy android/key.properties.example " +
+            "and point storeFile at a keystore outside this repository. " +
+            "See docs/release/README.md.",
+    )
+    false
+} else {
+    keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
+    val missing = listOf(
+        "storeFile",
+        "storePassword",
+        "keyAlias",
+        "keyPassword",
+    ).filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missing.isNotEmpty()) {
+        throw GradleException(
+            "android/key.properties is missing: ${missing.joinToString(", ")}. " +
+                "See android/key.properties.example and docs/release/README.md.",
+        )
+    }
+    val storePath = keystoreProperties.getProperty("storeFile")
+    val store = file(storePath)
+    val repoRoot = rootProject.projectDir.parentFile.canonicalFile
+    val canonicalStore = store.canonicalFile
+    val insideRepo = canonicalStore.path == repoRoot.path ||
+        canonicalStore.path.startsWith(repoRoot.path + java.io.File.separator)
+    if (!store.isAbsolute || insideRepo) {
+        throw GradleException(
+            "storeFile must be an absolute path outside this repository. " +
+                "Got \"$storePath\". See android/key.properties.example.",
+        )
+    }
+    true
+}
+
 android {
     namespace = "ph.gov.taytay.lguids.taytay_resident"
     // Pinned above Flutter's default because `flutter_secure_storage` 11 declares
@@ -39,6 +83,9 @@ android {
     }
 
     defaultConfig {
+        // TODO(paul): confirm this applicationId before the first Play upload.
+        // The current value is a placeholder until that decision. Do not
+        // invent a replacement here. The iOS bundle id is the same question.
         applicationId = "ph.gov.taytay.lguids.taytay_resident"
 
         /*
@@ -70,35 +117,21 @@ android {
 
     /*
      * Release signing, read from android/key.properties — which .gitignore
-     * already excludes, correctly. The keystore is held by the LGU and its loss
-     * is an incident: losing it means never being able to update this app under
-     * the same Play listing again.
+     * already excludes, correctly. The keystore is held by the LGU, outside
+     * this repository, and its loss is an incident: losing it means never
+     * being able to update this app under the same Play listing again.
+     *
+     * The config is created only when that file is present and points outside
+     * the repo. When it is absent, this block is skipped so a debug build is
+     * unaffected. Release packaging still fails, in verifyReleaseSigning.
      */
     signingConfigs {
-        create("release") {
-            val propertiesFile = rootProject.file("key.properties")
-            if (propertiesFile.exists()) {
-                val properties = Properties()
-                propertiesFile.inputStream().use { properties.load(it) }
-
-                val missing = listOf(
-                    "storeFile", "storePassword", "keyAlias", "keyPassword",
-                ).filter { properties.getProperty(it).isNullOrBlank() }
-
-                // A half-filled key.properties is worse than an absent one: it
-                // fails deep inside the packaging task with a message about a
-                // property rather than about what the developer forgot.
-                if (missing.isNotEmpty()) {
-                    throw GradleException(
-                        "android/key.properties is missing: ${missing.joinToString(", ")}. " +
-                            "See docs/integration/release-engineering.md.",
-                    )
-                }
-
-                storeFile = file(properties.getProperty("storeFile"))
-                storePassword = properties.getProperty("storePassword")
-                keyAlias = properties.getProperty("keyAlias")
-                keyPassword = properties.getProperty("keyPassword")
+        if (releaseKeystoreReady) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
             }
         }
     }
@@ -158,12 +191,14 @@ android {
              * this repository through twenty-eight TABs and a release-readiness
              * audit.
              *
-             * Absent credentials now leave the config unsigned, so the build
-             * fails at signing rather than producing something that cannot be
-             * shipped. A failure a developer meets in a minute is cheaper than a
-             * store rejection three weeks later.
+             * A missing key.properties leaves this build type unsigned and
+             * verifyReleaseSigning fails the package. Debug builds do not read
+             * the file. A half-filled file fails configuration and names the
+             * missing keys.
              */
-            signingConfig = signingConfigs.getByName("release")
+            if (releaseKeystoreReady) {
+                signingConfig = signingConfigs.getByName("release")
+            }
 
             // Kept off deliberately. Shrinking changes what ships, and this app
             // has no measured size problem to solve with it — 19.5 MB of a 20.9 MB
@@ -184,4 +219,36 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+// Runs only as a dependency of release packaging tasks. Debug task names do
+// not match, so `flutter run` and debug APKs still build when key.properties
+// is absent.
+tasks.register("verifyReleaseSigning") {
+    description =
+        "Refuses a release package when the upload keystore is not configured."
+    doFirst {
+        if (!keystorePropertiesFile.exists()) {
+            throw GradleException(
+                "Refusing to package a release without android/key.properties. " +
+                    "Copy android/key.properties.example to android/key.properties (gitignored) " +
+                    "and set storeFile to an absolute path of a keystore kept outside this repository. " +
+                    "Debug builds do not need that file. See docs/release/README.md.",
+            )
+        }
+        val store = file(keystoreProperties.getProperty("storeFile"))
+        if (!store.isFile) {
+            throw GradleException(
+                "Release keystore was not found at ${store.path}. " +
+                    "storeFile in android/key.properties must be an absolute path outside this repository.",
+            )
+        }
+    }
+}
+
+tasks.configureEach {
+    val releasePackaging = Regex("^(assemble|bundle|sign|package|strip).*Release$")
+    if (releasePackaging.matches(name)) {
+        dependsOn("verifyReleaseSigning")
+    }
 }

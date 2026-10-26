@@ -12,17 +12,15 @@ The Flutter template signs release builds with the debug key *"so
 succeeds, the artifact looks finished, and it is unpublishable in a way nothing
 announces. It passed a release-readiness audit in that state.
 
-Release builds now read `android/key.properties`, and **there is no fallback**.
-With no credentials the build fails at signing rather than producing something
-that cannot be shipped:
+Release builds read `android/key.properties`. The example is
+`android/key.properties.example`. The real file and the keystore are gitignored,
+and `storeFile` must be an absolute path outside this repository.
 
-```
-> SigningConfig "release" is missing required property "storeFile".
-```
-
-A failure a developer meets in a minute is cheaper than a store rejection three
-weeks later. A half-filled `key.properties` fails earlier still, naming the
-missing keys rather than failing deep inside the packaging task.
+A missing file does **not** fail configuration, so debug builds keep working.
+It also does **not** fall back to the debug key. `verifyReleaseSigning` fails
+`assemble*Release` and `bundle*Release` with a message that names the example
+file. A half-filled `key.properties` fails at configuration and names the
+missing keys. The local commands are `docs/release/README.md`.
 
 **The whole path was verified end to end** with a throwaway key generated,
 used once, and deleted in the same step: the build signed, `apksigner` reported

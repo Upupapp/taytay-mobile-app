@@ -234,18 +234,25 @@ scaling and high-contrast settings without per-widget work.
 * The environment is a **compile-time** constant: `--dart-define=TAYTAY_ENV=dev|staging|prod`.
   There is no in-app environment switcher — a build that can be re-pointed after shipping
   has no auditable API target, and it is how staging data reaches a public release.
-* `--dart-define=TAYTAY_API_BASE_URL` overrides the base URL for local and LAN testing.
-* **Mocks are a second compile-time flag, and only for dev.**
-  `--dart-define=TAYTAY_DATA=mock` is honoured when `TAYTAY_ENV=dev`. Staging and
-  production **refuse to start** if mock data is selected. `TAYTAY_MOCK_FAILURE` and
-  `TAYTAY_MOCK_LATENCY_MS` tune that dev mock. Fixtures are synthetic.
+* `--dart-define=TAYTAY_API_BASE_URL` supplies the API base URL. A dev debug build
+  may omit it and uses the emulator host `http://10.0.2.2:8000/api/v1`. Staging
+  and production have no baked-in host. A release build without this define
+  refuses to start. The value is still configuration, not a secret.
+* **Mocks are a second compile-time flag, and only for a dev debug build.**
+  `--dart-define=TAYTAY_DATA=mock` is honoured when `TAYTAY_ENV=dev` and the build
+  is not a release. A release build refuses mock data even when the environment
+  is dev. Staging and production **refuse to start** if mock data is selected.
+  `TAYTAY_MOCK_FAILURE` and `TAYTAY_MOCK_LATENCY_MS` tune that dev mock. Fixtures
+  are synthetic.
 * **Dev authentication against the Node API** is `Authorization: Bearer mock:<role>:<id>`.
   The success envelope is `{ data, meta }`. A failure is
   `{ error: { code, message, details, request_id } }`. The resident never sees `message`.
 * `AppConfig` **validates and refuses**: a release build with no declared environment,
-  cleartext HTTP outside dev, credentials embedded in a URL, a query string on the base
-  URL, or mock data outside dev, each produce a blocking startup screen instead of a
-  silent fallback.
+  a release build with no API base URL, a staging or production build with no API
+  base URL, cleartext HTTP outside dev, credentials embedded in a URL, a query string
+  on the base URL, mock data in a release build, or mock data outside dev, each
+  produce a blocking startup screen
+  instead of a silent fallback.
 * Non-production builds show an environment banner, so a staging build is never mistaken
   for the real thing during LGU acceptance testing.
 

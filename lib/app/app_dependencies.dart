@@ -256,7 +256,8 @@ class AppDependencies {
     );
 
     // Dev mocks stand in only when AppConfig has already accepted the flag.
-    // Staging and production never reach this branch: they refuse to start.
+    // A release build, and staging and production, never reach this branch:
+    // they refuse to start.
     final mock = config.usesMockData
         ? MockBehaviorController.fromConfig(config)
         : null;

@@ -43,6 +43,30 @@ void main() {
     );
   });
 
+  test(
+    'a release build refuses mock data even when the environment is dev',
+    () {
+      final config = AppConfig.from(
+        rawEnvironment: 'dev',
+        rawApiBaseUrl: 'http://10.0.2.2:8000/api/v1',
+        isReleaseBuild: true,
+        rawDataMode: 'mock',
+        rawMockLatencyMs: '0',
+      );
+      expect(config.isUsable, isFalse);
+      expect(config.usesMockData, isFalse);
+      expect(config.environment.name, 'dev');
+      expect(
+        config.issues.map((issue) => issue.message).join('\n'),
+        contains('Mock data is refused'),
+      );
+      expect(
+        config.issues.map((issue) => issue.message).join('\n'),
+        contains('release'),
+      );
+    },
+  );
+
   test('staging refuses to start in mock mode', () {
     final config = _config(env: 'staging', data: 'mock');
     expect(config.isUsable, isFalse);
