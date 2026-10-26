@@ -284,7 +284,8 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
                     ifYouDecline:
                         'You can keep using this app to browse municipal '
                         'services and announcements. You will not be able to '
-                        'hold a digital ID or apply for assistance.',
+                        'hold a digital ID until Taytay LGU confirms who you '
+                        'are. Programme pages are information only.',
                   ),
                   const SizedBox(height: Spacing.xl),
 

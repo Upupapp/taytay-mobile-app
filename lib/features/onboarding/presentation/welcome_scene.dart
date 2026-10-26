@@ -6,6 +6,7 @@ import '../../../core/assets/asset_manifest.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/gold_thread_shell.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_headers.dart';
 import '../../../shared/widgets/taytay_thread.dart';
@@ -163,25 +164,29 @@ class WelcomeCanvas extends StatelessWidget {
     final showBack = page > 0;
     final last = page == 2;
     final lightT = this.lightT;
+    // The shell paints the field and the thread so they survive a route
+    // change. A golden pumps this canvas on its own and still paints both.
+    final bool hosted = GoldThreadScope.maybeOf(context) != null;
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: <Widget>[
-        Positioned.fill(child: GradientBackdrop(page: page)),
+        if (!hosted) Positioned.fill(child: GradientBackdrop(page: page)),
         _BackCard(arch: arch),
         _ArchPhoto(arch: arch, copy: copy),
         _Seam(arch: arch),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(painter: ThreadPainter(curve)),
+        if (!hosted)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: ThreadPainter(curve)),
+            ),
           ),
-        ),
         if (!arch.knotsInCopy)
           Positioned.fill(
             child: IgnorePointer(
               child: KnotIndicator(active: page, label: copy.stepLabel),
             ),
           ),
-        if (lightT != null)
+        if (!hosted && lightT != null)
           Positioned.fill(
             child: TravellingLight(curve: curve, t: lightT),
           ),
@@ -357,35 +362,35 @@ class _BackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CSS is `left`/`top` plus `translate` then `rotate`. The translation is
+    // in the parent's axes, so it is the same as placing the box there and
+    // rotating about its centre.
     return Positioned(
-      left: arch.left,
-      top: arch.top,
+      left: arch.left + arch.shiftX,
+      top: arch.top + 10,
       width: arch.width,
       height: arch.height,
-      child: Transform.translate(
-        offset: Offset(arch.shiftX, 10),
-        child: Transform.rotate(
-          angle: arch.degrees * math.pi / 180,
-          child: const DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: _archRadius,
-              gradient: LinearGradient(
-                colors: <Color>[
-                  Color(0xFF1E5BC6),
-                  BrandColors.taytayBlue,
-                  BrandColors.taytayBlueDark,
-                ],
-                stops: <double>[0, 0.45, 1],
-                transform: GradientRotation(160 * math.pi / 180 - math.pi / 2),
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x40062358),
-                  blurRadius: 30,
-                  offset: Offset(0, 14),
-                ),
+      child: Transform.rotate(
+        angle: arch.degrees * math.pi / 180,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: _archRadius,
+            gradient: LinearGradient(
+              colors: <Color>[
+                Color(0xFF1E5BC6),
+                BrandColors.taytayBlue,
+                BrandColors.taytayBlueDark,
               ],
+              stops: <double>[0, 0.45, 1],
+              transform: GradientRotation(160 * math.pi / 180 - math.pi / 2),
             ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Color(0x40062358),
+                blurRadius: 30,
+                offset: Offset(0, 14),
+              ),
+            ],
           ),
         ),
       ),

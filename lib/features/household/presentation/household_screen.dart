@@ -220,13 +220,11 @@ class _FamilySection extends StatelessWidget {
                 switch (summary.role) {
                   HouseholdRole.head =>
                     'Taytay LGU records you as the person who answers for this '
-                        'household. Some services are applied for once for the '
-                        'whole household, and the office will speak to you '
-                        'about those.',
+                        'household. The office keeps that record. This app '
+                        'does not take applications.',
                   HouseholdRole.member =>
-                    'Taytay LGU records you as part of this household. You '
-                        'apply for services in your own name; some are counted '
-                        'once per household.',
+                    'Taytay LGU records you as part of this household. This '
+                        'app does not take applications.',
                 },
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,

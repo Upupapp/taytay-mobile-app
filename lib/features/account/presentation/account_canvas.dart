@@ -1459,8 +1459,7 @@ class _AboutBody extends StatelessWidget {
               const SizedBox(height: S8Space.titleGap),
               const _CssLines(
                 text:
-                    'Municipality of Taytay, Rizal · version 0.1 (design '
-                    'mockup)',
+                    'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
                 style: _version,
                 step: 13 * S8Space.versionLineHeight,
                 align: TextAlign.center,
@@ -1619,9 +1618,7 @@ class _PrivacyBody extends StatelessWidget {
                       body:
                           'Access, correction, objection and erasure. Contact '
                           'the LGU Data Protection Officer ',
-                      trailing: SampleTag(
-                        lineHeight: S8Space.bodyLineHeight,
-                      ),
+                      trailing: SampleTag(lineHeight: S8Space.bodyLineHeight),
                       suffix: '.',
                     ),
                   ],
@@ -2096,10 +2093,7 @@ class _Card extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: padding + const EdgeInsets.all(1),
-        child: child,
-      ),
+      child: Padding(padding: padding + const EdgeInsets.all(1), child: child),
     );
   }
 }
@@ -2220,11 +2214,7 @@ class _Chip extends StatelessWidget {
         ),
         child: SizedBox(
           height: S8Space.line(11),
-          child: Text(
-            label,
-            style: _day,
-            textHeightBehavior: S8Space.lineBox,
-          ),
+          child: Text(label, style: _day, textHeightBehavior: S8Space.lineBox),
         ),
       ),
     );

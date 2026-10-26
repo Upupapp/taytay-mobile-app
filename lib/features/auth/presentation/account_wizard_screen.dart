@@ -1279,11 +1279,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Transform.translate(
-                        offset: const Offset(0, -10 / 3),
-                        child: _ChangeLink(onPressed: _pickFront),
-                      ),
+                      const SizedBox(height: 8 / 3),
+                      _ChangeLink(onPressed: _pickFront),
                     ],
                   ),
                 ),
@@ -1506,67 +1503,64 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                       color: Color(0xFF5B6680),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Transform.translate(
-                    offset: const Offset(0, -1.7),
-                    child: Text.rich(
-                      TextSpan(
-                        text: value,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 13,
-                          fontWeight: AppTypography.strong,
-                          color: BrandColors.fieldInk,
-                        ),
-                        children: <InlineSpan>[
-                          if (badge != null)
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: Container(
-                                margin: const EdgeInsets.only(left: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6F4EC),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    const TaytayIcon(
-                                      icon: TaytayIcons.circleCheck,
-                                      semanticLabel: '',
-                                      excludeSemantics: true,
-                                      size: 11,
+                  const SizedBox(height: 0.3),
+                  Text.rich(
+                    TextSpan(
+                      text: value,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 13,
+                        fontWeight: AppTypography.strong,
+                        color: BrandColors.fieldInk,
+                      ),
+                      children: <InlineSpan>[
+                        if (badge != null)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6F4EC),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  const TaytayIcon(
+                                    icon: TaytayIcons.circleCheck,
+                                    semanticLabel: '',
+                                    excludeSemantics: true,
+                                    size: 11,
+                                    color: Color(0xFF0F7A4D),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    badge,
+                                    style: const TextStyle(
+                                      fontFamily: AppTypography.fontFamily,
+                                      fontSize: 11,
+                                      fontWeight: AppTypography.black,
                                       color: Color(0xFF0F7A4D),
                                     ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      badge,
-                                      style: const TextStyle(
-                                        fontFamily: AppTypography.fontFamily,
-                                        fontSize: 11,
-                                        fontWeight: AppTypography.black,
-                                        color: Color(0xFF0F7A4D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            Transform.translate(
-            offset: const Offset(0, 8 / 3),
-            child: _EditLink(onPressed: () => setState(() => _step = edit)),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8 / 3),
+              child: _EditLink(onPressed: () => setState(() => _step = edit)),
+            ),
           ],
         ),
       ),
@@ -1731,33 +1725,30 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           ),
           if (error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 6.5),
-              child: Transform.translate(
-                offset: const Offset(0, -1.2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const TaytayIcon(
-                      icon: TaytayIcons.circleAlert,
-                      semanticLabel: 'Error',
-                      size: 14,
-                      color: Color(0xFFB3261E),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        error,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11.5,
-                          height: 1.2,
-                          fontWeight: AppTypography.strong,
-                          color: Color(0xFFB3261E),
-                        ),
+              padding: const EdgeInsets.only(top: 5.3),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const TaytayIcon(
+                    icon: TaytayIcons.circleAlert,
+                    semanticLabel: 'Error',
+                    size: 14,
+                    color: Color(0xFFB3261E),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      error,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 11.5,
+                        height: 1.2,
+                        fontWeight: AppTypography.strong,
+                        color: Color(0xFFB3261E),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
         ],

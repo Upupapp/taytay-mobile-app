@@ -375,11 +375,11 @@ class _ContactStep extends StatelessWidget {
         const SizedBox(height: Spacing.md),
         const WhyWeAsk(
           purpose:
-              'Your mobile number is how you sign in, and how Taytay LGU tells '
-              'you what is happening with anything you apply for.',
+              'Your mobile number is how you sign in, and how Taytay LGU reaches '
+              'you about your account. This app does not take applications.',
           whoSeesIt:
-              'Municipal staff handling your requests. It is never used for '
-              'advertising and never shared with anyone outside the LGU.',
+              'Municipal staff who look after your account. It is never used '
+              'for advertising and never shared with anyone outside the LGU.',
         ),
       ],
     );

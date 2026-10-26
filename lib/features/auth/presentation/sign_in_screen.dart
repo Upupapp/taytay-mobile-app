@@ -410,17 +410,14 @@ class _Field extends StatelessWidget {
         ),
         if (error != null)
           Padding(
-            padding: const EdgeInsets.only(top: 5),
-            child: Transform.translate(
-              offset: const Offset(0, -3.7),
-              child: Text(
-                error!,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: AppTypography.strong,
-                  color: BrandColors.danger,
-                ),
+            padding: const EdgeInsets.only(top: 1.3),
+            child: Text(
+              error!,
+              style: const TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 12,
+                fontWeight: AppTypography.strong,
+                color: BrandColors.danger,
               ),
             ),
           ),

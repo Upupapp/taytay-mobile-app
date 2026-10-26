@@ -180,16 +180,13 @@ class WovenHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Transform.translate(
-                  offset: Offset(0, -5 / 3 * typeScale),
-                  child: Text(
-                    'Bayan ng Taytay',
-                    style:
-                        (welcome
-                                ? AppTypography.brandTitleWelcome
-                                : AppTypography.brandTitle)
-                            .copyWith(color: Colors.white),
-                  ),
+                Text(
+                  'Bayan ng Taytay',
+                  style:
+                      (welcome
+                              ? AppTypography.brandTitleWelcome
+                              : AppTypography.brandTitle)
+                          .copyWith(color: Colors.white, height: 1.26),
                 ),
                 SizedBox(height: 4 * typeScale),
                 Text(

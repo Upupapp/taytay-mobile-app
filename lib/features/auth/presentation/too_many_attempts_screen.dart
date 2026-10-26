@@ -162,31 +162,28 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
             eyebrow: ready ? 'Puwede na ulit' : 'Pansamantalang naka-lock',
             title: ready ? 'Subukan ulit ngayon' : 'Masyadong maraming subok',
           ),
-          const SizedBox(height: 6),
-          Transform.translate(
-            offset: const Offset(0, -0.34),
-            child: Text.rich(
-              TextSpan(
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  height: 1.5,
-                  fontWeight: AppTypography.body,
-                  color: Color(0xFF4A5470),
-                ),
-                children: <InlineSpan>[
-                  TextSpan(
-                    text: ready
-                        ? 'Puwede ka nang humingi ng bagong code. Ipapadala namin ito sa '
-                        : 'Para protektahan ang account mo, pansamantala naming itinigil ang pagpapadala at pag-verify ng code para sa ',
-                  ),
-                  TextSpan(
-                    text: _email,
-                    style: const TextStyle(fontWeight: AppTypography.black),
-                  ),
-                  const TextSpan(text: '.'),
-                ],
+          const SizedBox(height: 5.66),
+          Text.rich(
+            TextSpan(
+              style: const TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 13,
+                height: 1.5,
+                fontWeight: AppTypography.body,
+                color: Color(0xFF4A5470),
               ),
+              children: <InlineSpan>[
+                TextSpan(
+                  text: ready
+                      ? 'Puwede ka nang humingi ng bagong code. Ipapadala namin ito sa '
+                      : 'Para protektahan ang account mo, pansamantala naming itinigil ang pagpapadala at pag-verify ng code para sa ',
+                ),
+                TextSpan(
+                  text: _email,
+                  style: const TextStyle(fontWeight: AppTypography.black),
+                ),
+                const TextSpan(text: '.'),
+              ],
             ),
           ),
           const SizedBox(height: 13),
