@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -158,44 +159,21 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          AuthCopy(
+          _HoldHeader(
             eyebrow: ready ? 'Puwede na ulit' : 'Pansamantalang naka-lock',
             title: ready ? 'Subukan ulit ngayon' : 'Masyadong maraming subok',
+            lead: ready
+                ? 'Puwede ka nang humingi ng bagong code. Ipapadala namin ito sa '
+                : 'Para protektahan ang account mo, pansamantala naming itinigil ang pagpapadala at pag-verify ng code para sa ',
+            email: _email,
           ),
-          // CSS `h1` margin-bottom is 6px. The paragraph's ink sits 0.34
-          // below that, so the margin is split and the clock keeps its place.
-          const SizedBox(height: 5.66),
-          Text.rich(
-            TextSpan(
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 13,
-                height: 1.5,
-                fontWeight: AppTypography.body,
-                color: Color(0xFF4A5470),
-              ),
-              children: <InlineSpan>[
-                TextSpan(
-                  text: ready
-                      ? 'Puwede ka nang humingi ng bagong code. Ipapadala namin ito sa '
-                      : 'Para protektahan ang account mo, pansamantala naming itinigil ang pagpapadala at pag-verify ng code para sa ',
-                ),
-                TextSpan(
-                  text: _email,
-                  style: const TextStyle(fontWeight: AppTypography.black),
-                ),
-                const TextSpan(text: '.'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 0.34),
-          const SizedBox(height: 13),
+          const SizedBox(height: 14),
           _HoldClock(ready: ready, label: _clockLabel, remaining: _remaining),
           if (!ready) ...<Widget>[
-            const SizedBox(height: 21),
+            const SizedBox(height: 12),
             const _WhyBanner(),
           ],
-          SizedBox(height: ready ? 10 : 19),
+          const SizedBox(height: 16),
           ready
               ? PrimaryButton(
                   kind: TaytayButtonKind.signIn,
@@ -221,7 +199,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
                 ),
               ),
             ),
-          SizedBox(height: ready ? 5 : 4),
+          const SizedBox(height: 4),
           TextButton(
             style: TextButton.styleFrom(
               foregroundColor: BrandColors.taytayBlue,
@@ -255,6 +233,178 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
   }
 }
 
+/// Eyebrow, title and subtitle at the CSS line boxes.
+///
+/// The shared [AuthCopy] eyebrow paints at 13. CSS normal at 11px is 13.67,
+/// the title is 24 × 1.15, and the subtitle is 13 × 1.5. Those boxes put the
+/// clock at 427.36.
+class _HoldHeader extends StatelessWidget {
+  const _HoldHeader({
+    required this.eyebrow,
+    required this.title,
+    required this.lead,
+    required this.email,
+  });
+
+  final String eyebrow;
+  final String title;
+  final String lead;
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        SizedBox(
+          height: TypeMetrics.line(11),
+          child: Row(
+            children: <Widget>[
+              const CustomPaint(size: Size(16, 2), painter: _HoldDash()),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  eyebrow.toUpperCase(),
+                  style: AppTypography.eyebrowSignIn.copyWith(
+                    color: BrandColors.inkGold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 6),
+        _FlowLines(
+          text: title,
+          step: 24 * 1.15,
+          style: AppTypography.h1SignIn.copyWith(
+            color: BrandColors.taytayBlueDark,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _FlowLines(
+          text: '$lead$email.',
+          step: 13 * 1.5,
+          bold: email,
+          boldStyle: const TextStyle(fontWeight: AppTypography.black),
+          style: const TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 13,
+            height: 1.5,
+            fontWeight: AppTypography.body,
+            color: Color(0xFF4A5470),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HoldDash extends CustomPainter {
+  const _HoldDash();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = const Color(0xFFC9A227)
+      ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round;
+    double x = 0;
+    while (x < size.width) {
+      final double next = math.min(x + 4, size.width);
+      canvas.drawLine(Offset(x, 1), Offset(next, 1), paint);
+      x = next + 3;
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _HoldDash oldDelegate) => false;
+}
+
+/// Lines stepped at [step], which is the CSS line-height in logical pixels.
+class _FlowLines extends StatelessWidget {
+  const _FlowLines({
+    required this.text,
+    required this.style,
+    required this.step,
+    this.bold,
+    this.boldStyle,
+  });
+
+  final String text;
+  final TextStyle style;
+  final double step;
+  final String? bold;
+  final TextStyle? boldStyle;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final TextPainter painter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          textDirection: Directionality.of(context),
+          textScaler: MediaQuery.textScalerOf(context),
+        )..layout(maxWidth: constraints.maxWidth);
+        final List<TextRange> ranges = <TextRange>[];
+        int start = 0;
+        while (start < text.length) {
+          final TextRange range = painter.getLineBoundary(
+            TextPosition(offset: start),
+          );
+          if (range.end <= start) break;
+          ranges.add(range);
+          start = range.end;
+          while (start < text.length && text[start] == '\n') {
+            start++;
+          }
+        }
+        painter.dispose();
+        final int boldAt = bold == null ? -1 : text.indexOf(bold!);
+        final int boldEnd = boldAt < 0 ? -1 : boldAt + bold!.length;
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: ranges.length * step,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              for (var i = 0; i < ranges.length; i++)
+                Positioned(
+                  top: i * step,
+                  left: 0,
+                  right: 0,
+                  child: Text.rich(
+                    _lineSpan(ranges[i], boldAt, boldEnd),
+                    maxLines: 1,
+                    softWrap: false,
+                    style: style,
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  InlineSpan _lineSpan(TextRange range, int boldAt, int boldEnd) {
+    final String line = text.substring(range.start, range.end).trimRight();
+    if (boldAt < 0 || line.isEmpty) return TextSpan(text: line);
+    final int from = boldAt - range.start;
+    final int to = boldEnd - range.start;
+    if (to <= 0 || from >= line.length) return TextSpan(text: line);
+    final int start = from < 0 ? 0 : from;
+    final int end = to > line.length ? line.length : to;
+    return TextSpan(
+      children: <InlineSpan>[
+        if (start > 0) TextSpan(text: line.substring(0, start)),
+        TextSpan(text: line.substring(start, end), style: boldStyle),
+        if (end < line.length) TextSpan(text: line.substring(end)),
+      ],
+    );
+  }
+}
+
 class _HoldClock extends StatelessWidget {
   const _HoldClock({
     required this.ready,
@@ -284,7 +434,10 @@ class _HoldClock extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: EdgeInsets.fromLTRB(14, 14, 14, ready ? 19 : 12),
+          // CSS padding is 14 / 14 / 12 inside a 1px border. The border paints
+          // on the box, so the laid-out padding is one pixel larger on the
+          // top and the bottom. The card is then 109.67.
+          padding: const EdgeInsets.fromLTRB(14, 15, 14, 13),
           child: Column(
             children: <Widget>[
               Row(
@@ -309,32 +462,44 @@ class _HoldClock extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: AppTypography.fontFamily,
                         fontSize: 12,
-                        height: 1,
+                        height: TypeMetrics.line(12) / 12,
                         fontWeight: AppTypography.black,
                         color: ink,
+                      ),
+                      strutStyle: StrutStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 12,
+                        height: TypeMetrics.line(12) / 12,
+                        forceStrutHeight: true,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 0),
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
+              const SizedBox(height: 2),
+              SizedBox(
+                height: TypeMetrics.line(40),
                 child: Text(
                   label,
                   style: TextStyle(
                     fontFamily: AppTypography.fontFamily,
                     fontSize: 40,
-                    height: 1,
+                    height: TypeMetrics.line(40) / 40,
                     fontWeight: AppTypography.black,
                     letterSpacing: 1,
                     color: ready
                         ? const Color(0xFF0F7A4D)
                         : BrandColors.taytayBlueDark,
                   ),
+                  strutStyle: StrutStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 40,
+                    height: TypeMetrics.line(40) / 40,
+                    forceStrutHeight: true,
+                  ),
                 ),
               ),
-              SizedBox(height: ready ? 13 : 6),
+              const SizedBox(height: 8),
               ClipRRect(
                 borderRadius: BorderRadius.circular(3),
                 child: SizedBox(
@@ -368,7 +533,8 @@ class _WhyBanner extends StatelessWidget {
         border: Border.all(color: const Color(0xFFF0D48A)),
       ),
       child: const Padding(
-        padding: EdgeInsets.fromLTRB(12, 10, 12, 10),
+        // 10px of padding inside the 1px border. The border paints on the box.
+        padding: EdgeInsets.fromLTRB(12, 11, 12, 11),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
@@ -381,26 +547,19 @@ class _WhyBanner extends StatelessWidget {
             ),
             SizedBox(width: 10),
             Expanded(
-              child: Text.rich(
-                TextSpan(
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    height: 1.45,
-                    fontWeight: AppTypography.strong,
-                    color: Color(0xFF6B4600),
-                  ),
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text: 'Bakit ito nangyari?\n',
-                      style: TextStyle(fontWeight: AppTypography.black),
-                    ),
-                    TextSpan(
-                      text:
-                          'Masyadong maraming maling code o hiling ng bagong code sa maikling oras. Hindi mo kailangang gumawa ng bagong account.',
-                    ),
-                  ],
+              child: _FlowLines(
+                text:
+                    'Bakit ito nangyari?\nMasyadong maraming maling code o hiling ng bagong code sa maikling oras. Hindi mo kailangang gumawa ng bagong account.',
+                step: 12 * 1.45,
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 12,
+                  height: 1.45,
+                  fontWeight: AppTypography.medium,
+                  color: Color(0xFF6B4600),
                 ),
+                bold: 'Bakit ito nangyari?',
+                boldStyle: TextStyle(fontWeight: AppTypography.black),
               ),
             ),
           ],
@@ -423,6 +582,15 @@ class _LockedButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Color(0xFFAEB6C8),
           borderRadius: BorderRadius.all(Radius.circular(999)),
+          // CSS `.pri` shadow, still painted on the disabled control:
+          // `0 8px 20px rgba(11,61,145,.28)`.
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Color(0x470B3D91),
+              offset: Offset(0, 8),
+              blurRadius: 20,
+            ),
+          ],
         ),
         child: SizedBox(
           height: 50,

@@ -357,7 +357,7 @@ void main() {
       await settle(tester);
 
       final semantics = tester.getSemantics(
-        find.text('Serbisyong bayan,\nnasa isang app.'),
+        find.bySemanticsLabel('Serbisyong bayan, nasa isang app.'),
       );
       expect(semantics.flagsCollection.isHeader, isTrue);
     });

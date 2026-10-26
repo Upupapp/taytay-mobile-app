@@ -1075,7 +1075,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               child: Stack(
                 children: <Widget>[
                   Padding(
-                    padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    // 12px in the stylesheet. The shared eyebrow above this
+                    // card paints one logical pixel short of CSS normal, so
+                    // the notice starts one pixel lower and the links stay.
+                    padding: EdgeInsets.fromLTRB(14, 13, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -1087,21 +1090,30 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                             ),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.fromLTRB(10, 6, 10, 4),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             child: Text(
                               'DRAFT · LGU-approved Privacy Notice to be inserted',
                               style: TextStyle(
                                 fontFamily: AppTypography.fontFamily,
                                 fontSize: 11,
-                                height: 1.52,
+                                height: 17.05 / 11,
                                 fontWeight: AppTypography.black,
                                 color: Color(0xFF8A5A00),
+                              ),
+                              strutStyle: StrutStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                height: 17.05 / 11,
+                                forceStrutHeight: true,
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(height: 9),
-                        Expanded(child: ClipRect(child: _TermsNotice())),
+                        SizedBox(height: 8),
+                        Expanded(child: _TermsNotice()),
                       ],
                     ),
                   ),
@@ -2213,18 +2225,22 @@ class _TermsNotice extends StatelessWidget {
   static const TextStyle _style = TextStyle(
     fontFamily: AppTypography.fontFamily,
     fontSize: 12,
-    height: 56 / 36,
+    height: 1.55,
     color: Color(0xFF3A4560),
   );
+
+  /// 12px at line-height 1.55. CSS `normal` is not this step; the notice sets 1.55.
+  static const double _step = 18.6;
 
   static const StrutStyle _strut = StrutStyle(
     fontFamily: AppTypography.fontFamily,
     fontSize: 12,
-    height: 56 / 36,
+    height: 1.55,
     forceStrutHeight: true,
   );
 
-  // step counts lines on the 56px grid, including the blank paragraph line.
+  // Step counts lines on the 18.6 grid, including each blank paragraph line.
+  // The design leaves an empty line before "Your rights", so that line is step 11.
   static const List<(int, List<(String, bool)>)>
   _lines = <(int, List<(String, bool)>)>[
     (
@@ -2273,8 +2289,9 @@ class _TermsNotice extends StatelessWidget {
         ('authorised Taytay LGU personnel only.', false),
       ],
     ),
+    (10, <(String, bool)>[]),
     (
-      10,
+      11,
       <(String, bool)>[
         ('Your rights: ', true),
         (
@@ -2288,12 +2305,12 @@ class _TermsNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
-      clipBehavior: Clip.hardEdge,
+      clipBehavior: Clip.none,
       children: <Widget>[
         for (final (int step, List<(String, bool)> spans) in _lines)
           if (spans.isNotEmpty)
             Positioned(
-              top: step * 56 / 3,
+              top: step * _step,
               left: 0,
               right: 0,
               child: Text.rich(
@@ -2310,9 +2327,9 @@ class _TermsNotice extends StatelessWidget {
                   ],
                 ),
                 strutStyle: _strut,
-                maxLines: step == 10 ? 4 : 1,
-                softWrap: step == 10,
-                overflow: TextOverflow.clip,
+                maxLines: step == 11 ? 4 : 1,
+                softWrap: step == 11,
+                overflow: TextOverflow.visible,
               ),
             ),
       ],

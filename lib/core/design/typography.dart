@@ -292,11 +292,14 @@ abstract final class AppTypography {
   );
 
   /// Welcome eyebrow. CSS `.en` in gen1.py is 11 / 800, letter-spacing 1.6.
+  ///
+  /// The line is CSS `normal`: 13.67 / 11 = 1.2424. A 1.2 box left the
+  /// headline 3 image pixels high.
   static const TextStyle eyebrow = TextStyle(
     fontFamily: fontFamily,
     fontSize: 11,
     fontWeight: black,
-    height: 1.2,
+    height: 1.2424,
     letterSpacing: 1.6,
     leadingDistribution: TextLeadingDistribution.even,
   );
