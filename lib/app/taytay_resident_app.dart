@@ -34,17 +34,10 @@ class TaytayResidentApp extends StatefulWidget {
 class _TaytayResidentAppState extends State<TaytayResidentApp> {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
-  late final GoRouter _router = buildAppRouter(
-    observers: <NavigatorObserver>[
-      TelemetryRouteObserver(widget.dependencies.telemetry),
-    ],
-    session: widget.dependencies.session,
-    launch: widget.dependencies.launch,
-    platform: widget.dependencies.platform,
-    navigatorKey: _navigatorKey,
-    allowDevRoutes:
-        widget.dependencies.config.environment == AppEnvironment.dev,
-  );
+  /// Null until the first usable frame. Dispose must not force this into
+  /// existence: a misconfigured build renders [_MisconfiguredApp] with no
+  /// router, and reading a `late` field here would build one on the way out.
+  GoRouter? _router;
 
   AppLifecycleListener? _lifecycle;
 
@@ -52,19 +45,24 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
   void initState() {
     super.initState();
 
-    // Reads the app-lock preference and asks the platform what it can do. Until
-    // it completes the lock reports "off", which is the right default: a lock
-    // that has not been confirmed to exist must not hide the app.
-    unawaited(widget.dependencies.appLock.load());
+    // The stop screen is the whole app when configuration cannot start.
+    // A lock read or a bootstrap request would do the work that screen
+    // exists to prevent.
+    if (widget.dependencies.config.isUsable) {
+      // Reads the app-lock preference and asks the platform what it can do.
+      // Until it completes the lock reports "off", which is the right default:
+      // a lock that has not been confirmed to exist must not hide the app.
+      unawaited(widget.dependencies.appLock.load());
 
-    // Asks the server what it expects of this build: minimum supported version,
-    // feature flags, support contact.
-    //
-    // FIRED, NOT AWAITED. Nothing here draws a frame, and nothing waits on it.
-    // Startup must not sit on the network — a resident on a weak connection
-    // gets the app, and a request that never answers leaves the permissive
-    // defaults in place rather than a spinner or a lock-out.
-    unawaited(widget.dependencies.platform.refresh());
+      // Asks the server what it expects of this build: minimum supported
+      // version, feature flags, support contact.
+      //
+      // FIRED, NOT AWAITED. Nothing here draws a frame, and nothing waits on
+      // it. Startup must not sit on the network — a resident on a weak
+      // connection gets the app, and a request that never answers leaves the
+      // permissive defaults in place rather than a spinner or a lock-out.
+      unawaited(widget.dependencies.platform.refresh());
+    }
 
     _lifecycle = AppLifecycleListener(
       // Leaving the foreground is the moment the phone might change hands.
@@ -78,10 +76,24 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
     );
   }
 
+  GoRouter _buildRouter() {
+    return buildAppRouter(
+      observers: <NavigatorObserver>[
+        TelemetryRouteObserver(widget.dependencies.telemetry),
+      ],
+      session: widget.dependencies.session,
+      launch: widget.dependencies.launch,
+      platform: widget.dependencies.platform,
+      navigatorKey: _navigatorKey,
+      allowDevRoutes:
+          widget.dependencies.config.environment == AppEnvironment.dev,
+    );
+  }
+
   @override
   void dispose() {
     _lifecycle?.dispose();
-    _router.dispose();
+    _router?.dispose();
     super.dispose();
   }
 
@@ -117,7 +129,7 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
         // pass. The dark ThemeData stays built so contrast tests can see it.
         // The running app does not follow the OS into dark until that pass.
         themeMode: AppTheme.themeMode,
-        routerConfig: _router,
+        routerConfig: _router ??= _buildRouter(),
         builder: (context, child) {
           // Order matters. The lock is innermost so it covers the router's
           // output on every route including a cold-start deep link; the expiry
