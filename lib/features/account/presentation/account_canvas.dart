@@ -225,6 +225,7 @@ class AccountCanvas extends StatelessWidget {
 
   static const Color _pageTop = Color(0xFFEAF0FB);
 
+  /// Header titles opt into a tight box. Everything else keeps [S8Space.lineBox].
   static const TextHeightBehavior _block = TextHeightBehavior(
     applyHeightToFirstAscent: false,
     applyHeightToLastDescent: false,
@@ -238,7 +239,7 @@ class AccountCanvas extends StatelessWidget {
         color: BrandColors.textPrimary,
         decoration: TextDecoration.none,
       ),
-      textHeightBehavior: _block,
+      textHeightBehavior: S8Space.lineBox,
       child: ColoredBox(
         color: BrandColors.surface,
         child: DecoratedBox(
@@ -510,11 +511,11 @@ abstract final class AccountSpecimen {
       body:
           'Magandang araw po. Paki-send po ang Tax Declaration number para '
           'ma-compute namin.',
-      when: 'Treasury · Oct 10',
+      when: 'Treasury · Oct 11',
       fromResident: false,
     ),
     AccountBubble(
-      body: 'TD No. 000-0000-00000 po (sample).',
+      body: 'TD No. 00-0000-00000 po (sample).',
       when: 'Oct 11',
       fromResident: true,
     ),
@@ -593,14 +594,9 @@ class _BackHeader extends StatelessWidget {
         ),
       ),
       child: Padding(
-        // A wrapped office name makes the navy 8 dp taller than the one-line
-        // header. The one-line header stays 46 + 44 + 14.
-        padding: EdgeInsets.fromLTRB(
-          16,
-          top == 0 ? 46 : top,
-          16,
-          lines > 1 ? 22 : 14,
-        ),
+        // CSS padding is 46×16×14 on every header. A wrapped subtitle does
+        // not add padding; it grows the row. See [_TwoLineTitles].
+        padding: EdgeInsets.fromLTRB(16, top == 0 ? 46 : top, 16, 14),
         child: Row(
           children: <Widget>[
             SizedBox(
@@ -641,50 +637,45 @@ class _TwoLineTitles extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // `b` is its own 16 px block (normal → [S8Space.line] of 16). `small` is
+    // inline in that same block, so each wrapped line uses the 16 px strut,
+    // not the 11 px glyph's own 13.67. Two lines plus the title are 61, and
+    // with the 46 + 14 padding the header is 121.
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const SizedBox(height: 2),
-        Text(
-          title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            height: 1,
-            color: Colors.white,
-            decoration: TextDecoration.none,
+        SizedBox(
+          height: S8Space.line(16),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                height: 1,
+                color: Colors.white,
+                decoration: TextDecoration.none,
+              ),
+              textHeightBehavior: AccountCanvas._block,
+            ),
           ),
-          strutStyle: const StrutStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 16,
-            height: 1,
-            forceStrutHeight: true,
-          ),
-          textHeightBehavior: AccountCanvas._block,
         ),
-        const SizedBox(height: Spacing.xs),
-        Text(
-          subtitle,
-          maxLines: 2,
+        _CssLines(
+          text: subtitle,
           style: const TextStyle(
             fontFamily: AppTypography.fontFamily,
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            height: 1.5,
+            height: S8Space.normal,
             color: Color(0xCCFFFFFF),
             decoration: TextDecoration.none,
           ),
-          strutStyle: const StrutStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            height: 1.5,
-            leadingDistribution: TextLeadingDistribution.even,
-            forceStrutHeight: true,
-          ),
+          step: S8Space.line(16),
         ),
       ],
     );
@@ -832,25 +823,44 @@ class _HomeBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Flexible(
-                            child: Text(name, style: _name, maxLines: 1),
+                      SizedBox(
+                        height: S8Space.profileNameLine,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text.rich(
+                            TextSpan(
+                              style: _name,
+                              children: <InlineSpan>[
+                                TextSpan(text: sample ? '$name ' : name),
+                                if (sample)
+                                  const WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: SampleTag(
+                                      lineHeight: S8Space.normal,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textHeightBehavior: S8Space.lineBox,
                           ),
-                          if (sample) ...<Widget>[
-                            const SizedBox(width: 8),
-                            const SampleTag(),
-                          ],
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        location,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _meta,
+                      SizedBox(
+                        height: 13 * S8Space.bodyLineHeight,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            location,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: _location,
+                            textHeightBehavior: S8Space.lineBox,
+                          ),
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       _Pill(verifiedLabel),
                     ],
                   ),
@@ -935,21 +945,17 @@ class _MenuRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(row.title, maxLines: 1, style: _rowTitle),
+                  _Line(row.title, _rowTitle),
                   const SizedBox(height: S8Space.titleGap),
-                  Text(
-                    row.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _meta,
-                  ),
+                  _Line(row.subtitle, _meta),
                 ],
               ),
             ),
             if (row.badge != null) ...<Widget>[
               const SizedBox(width: 8),
               _CountBadge(row.badge!),
-            ],
+            ] else
+              const SizedBox(width: S8Space.iconGap),
             const TaytayIcon(
               icon: TaytayIcons.chevronRight,
               size: 18,
@@ -1016,19 +1022,6 @@ class _InboxRow extends StatelessWidget {
 
   final AccountInboxRow row;
 
-  /// Preview keeps the 1.5 line box. Titles and times use normal height.
-  static const TextHeightBehavior _line = TextHeightBehavior(
-    applyHeightToFirstAscent: true,
-    applyHeightToLastDescent: true,
-  );
-
-  static const StrutStyle _previewStrut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    height: S8Space.previewLineHeight,
-    forceStrutHeight: true,
-  );
-
   @override
   Widget build(BuildContext context) {
     return _Hit(
@@ -1057,15 +1050,24 @@ class _InboxRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(row.office, style: _rowTitle),
+                  SizedBox(
+                    height: S8Space.line(14),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        row.office,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: _rowTitle,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: S8Space.titleGap),
-                  Text(
-                    row.preview,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  _CssLines(
+                    text: row.preview,
                     style: S8Space.preview,
-                    strutStyle: _previewStrut,
-                    textHeightBehavior: _line,
+                    step: S8Space.line(12),
+                    maxLines: 2,
                   ),
                 ],
               ),
@@ -1074,9 +1076,12 @@ class _InboxRow extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: <Widget>[
-                Text(row.when, style: _meta),
+                // `.ls` carries margin-top 2, and a flex item does not
+                // collapse it, so the time starts 2 px into the column.
+                const SizedBox(height: S8Space.titleGap),
+                _Line(row.when, _meta, align: Alignment.centerRight),
                 if (row.badge != null) ...<Widget>[
-                  const SizedBox(height: S8Space.titleGap),
+                  const SizedBox(height: 4),
                   _CountBadge(row.badge!),
                 ],
               ],
@@ -1104,41 +1109,16 @@ class _EmptyInbox extends StatelessWidget {
       ),
       children: <Widget>[
         const _AllFilter(),
-        const SizedBox(height: S8Space.emptyLead),
-        const Center(child: _EmptyMark()),
-        const SizedBox(height: S8Space.emptyGap),
-        const Text(
-          'No messages yet',
-          textAlign: TextAlign.center,
-          style: _emptyTitle,
-        ),
-        const SizedBox(height: S8Space.emptyBodyGap),
-        const Text(
-          'Questions you send to municipal offices and their replies '
-          'will appear here.',
-          textAlign: TextAlign.center,
-          style: _emptyBody,
-          strutStyle: StrutStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 13,
-            height: S8Space.bodyLineHeight,
-            forceStrutHeight: true,
-          ),
-        ),
-        const SizedBox(height: S8Space.gutter),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S8Space.buttonInset),
-          child: _PrimaryButton(
-            label: 'Message an office',
-            icon: TaytayIcons.messageSquare,
-            onTap: onMessageOffice,
-          ),
-        ),
-        const SizedBox(height: S8Space.emptyNoteGap),
-        const Text(
-          'Messaging is available to verified residents.',
-          textAlign: TextAlign.center,
-          style: _meta,
+        const SizedBox(height: S8Space.filterGap),
+        _EmptyCopy(
+          title: 'No messages yet',
+          body:
+              'Questions you send to municipal offices and their replies '
+              'will appear here.',
+          button: 'Message an office',
+          buttonIcon: TaytayIcons.messageSquare,
+          note: 'Messaging is available to verified residents.',
+          onButton: onMessageOffice,
         ),
       ],
     );
@@ -1161,24 +1141,12 @@ class _InboxError extends StatelessWidget {
       ),
       children: <Widget>[
         const _AllFilter(),
-        const SizedBox(height: S8Space.emptyLead),
-        const Center(child: _EmptyMark()),
-        const SizedBox(height: S8Space.emptyGap),
-        const Text(
-          'Messages did not load',
-          textAlign: TextAlign.center,
-          style: _emptyTitle,
-        ),
-        const SizedBox(height: S8Space.emptyBodyGap),
-        const Text(
-          'Taytay LGU could not be reached. You can try again.',
-          textAlign: TextAlign.center,
-          style: _emptyBody,
-        ),
-        const SizedBox(height: S8Space.gutter),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S8Space.buttonInset),
-          child: _PrimaryButton(label: 'Retry', onTap: onRetry),
+        const SizedBox(height: S8Space.filterGap),
+        _EmptyCopy(
+          title: 'Messages did not load',
+          body: 'Taytay LGU could not be reached. You can try again.',
+          button: 'Retry',
+          onButton: onRetry,
         ),
       ],
     );
@@ -1260,7 +1228,7 @@ class _EditField extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Expanded(child: _fieldValue()),
-                if (field.verified) const _Pill('Verified', compact: true),
+                if (field.verified) const _Pill('Verified'),
                 if (field.chevron)
                   const TaytayIcon(
                     icon: TaytayIcons.chevronDown,
@@ -1481,8 +1449,8 @@ class _AboutBody extends StatelessWidget {
         S8Space.pageBottom,
       ),
       children: <Widget>[
-        const _Card(
-          padding: EdgeInsets.fromLTRB(
+        _Card(
+          padding: const EdgeInsets.fromLTRB(
             S8Space.cardPad,
             S8Space.cardPad,
             S8Space.cardPad,
@@ -1490,7 +1458,7 @@ class _AboutBody extends StatelessWidget {
           ),
           child: Column(
             children: <Widget>[
-              SizedBox(
+              const SizedBox(
                 width: S8Space.seal,
                 height: S8Space.seal,
                 child: Image(
@@ -1499,25 +1467,21 @@ class _AboutBody extends StatelessWidget {
                   semanticLabel: 'Seal of Taytay, Rizal',
                 ),
               ),
-              SizedBox(height: S8Space.sealGap),
-              Text(
-                'Taytay Resident App',
-                textAlign: TextAlign.center,
-                style: _appTitle,
+              const SizedBox(height: S8Space.sealGap),
+              _CssLines(
+                text: 'Taytay Resident App',
+                style: _aboutTitle,
+                step: S8Space.line(14),
+                align: TextAlign.center,
               ),
-              SizedBox(height: S8Space.titleGap),
-              Text(
-                'Municipality of Taytay, Rizal · version 0.1 (design\n'
-                'mockup)',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  height: S8Space.versionLineHeight,
-                  color: BrandColors.textSecondary,
-                  decoration: TextDecoration.none,
-                ),
+              const SizedBox(height: S8Space.titleGap),
+              const _CssLines(
+                text:
+                    'Municipality of Taytay, Rizal · version 0.1 (design '
+                    'mockup)',
+                style: _version,
+                step: 13 * S8Space.versionLineHeight,
+                align: TextAlign.center,
               ),
             ],
           ),
@@ -1598,7 +1562,7 @@ class _CreditRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: S8Space.iconGap),
           const TaytayIcon(
             icon: TaytayIcons.externalLink,
             size: 16,
@@ -1672,8 +1636,11 @@ class _PrivacyBody extends StatelessWidget {
                       title: 'Your rights',
                       body:
                           'Access, correction, objection and erasure. Contact '
-                          'the LGU Data Protection Officer.',
-                      trailing: SampleTag(),
+                          'the LGU Data Protection Officer ',
+                      trailing: SampleTag(
+                        lineHeight: S8Space.bodyLineHeight,
+                      ),
+                      suffix: '.',
                     ),
                   ],
                 ),
@@ -1758,7 +1725,12 @@ class _PublishedNotice extends StatelessWidget {
 }
 
 class _NoticeBlock extends StatelessWidget {
-  const _NoticeBlock({required this.title, required this.body, this.trailing});
+  const _NoticeBlock({
+    required this.title,
+    required this.body,
+    this.trailing,
+    this.suffix = '',
+  });
 
   final String title;
   final String body;
@@ -1766,10 +1738,8 @@ class _NoticeBlock extends StatelessWidget {
   /// The design draws this at the end of the last line of [body].
   final Widget? trailing;
 
-  static const TextHeightBehavior _line = TextHeightBehavior(
-    applyHeightToFirstAscent: true,
-    applyHeightToLastDescent: true,
-  );
+  /// Text after [trailing]. The SAMPLE chip is followed by a period.
+  final String suffix;
 
   @override
   Widget build(BuildContext context) {
@@ -1777,23 +1747,32 @@ class _NoticeBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(title, style: _rowTitle, textHeightBehavior: _line),
+        SizedBox(
+          height: S8Space.line(14),
+          width: double.infinity,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(title, style: _rowTitle),
+          ),
+        ),
         const SizedBox(height: S8Space.noticeGap),
         if (trailing == null)
-          Text(body, style: _noticeBody, textHeightBehavior: _line)
+          _CssLines(
+            text: body,
+            style: _noticeBody,
+            step: 13 * S8Space.bodyLineHeight,
+          )
         else
-          Text.rich(
-            TextSpan(
-              style: _noticeBody,
-              children: <InlineSpan>[
-                TextSpan(text: '$body '),
-                WidgetSpan(
-                  alignment: PlaceholderAlignment.middle,
-                  child: trailing,
-                ),
-              ],
-            ),
-            textHeightBehavior: _line,
+          _FlowLines(
+            style: _noticeBody,
+            step: 13 * S8Space.bodyLineHeight,
+            // SAMPLE inherits the 13 / 1.5 line, so that line is 22.5.
+            objectStep: 22.5,
+            pieces: <_FlowPiece>[
+              _FlowPiece.text(body),
+              _FlowPiece.box(width: 64.33, child: trailing),
+              if (suffix.isNotEmpty) _FlowPiece.text(suffix),
+            ],
           ),
       ],
     );
@@ -1818,8 +1797,11 @@ class _BannersBody extends StatelessWidget {
         S8Space.pageBottom,
       ),
       children: <Widget>[
-        const _BannerIntro(),
-        const SizedBox(height: S8Space.cardGap),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 2),
+          child: _BannerIntro(),
+        ),
+        const SizedBox(height: 10),
         _Card(
           padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
           child: Column(
@@ -1845,42 +1827,28 @@ class _BannerIntro extends StatelessWidget {
     fontSize: 13,
     fontWeight: FontWeight.w500,
     height: S8Space.bodyLineHeight,
-    color: BrandColors.sheetBody,
+    leadingDistribution: TextLeadingDistribution.even,
+    color: BrandColors.textSecondary,
     decoration: TextDecoration.none,
-  );
-
-  static const StrutStyle _strut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 13,
-    height: S8Space.bodyLineHeight,
-    forceStrutHeight: true,
-  );
-
-  static const TextHeightBehavior _behavior = TextHeightBehavior(
-    applyHeightToFirstAscent: true,
-    applyHeightToLastDescent: true,
   );
 
   @override
   Widget build(BuildContext context) {
-    return const Text.rich(
-      TextSpan(
-        style: _line,
-        children: <InlineSpan>[
-          TextSpan(text: 'All from Wikimedia Commons. Photos marked '),
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: _ReplaceMark(intro: true),
-          ),
-          TextSpan(
-            text:
-                ' show people and are placeholders until Taytay LGU '
-                'supplies its own consented photos.',
-          ),
-        ],
-      ),
-      strutStyle: _strut,
-      textHeightBehavior: _behavior,
+    // The Replace chip inherits the 13 / 1.5 line, so its line is 22.5 and
+    // the other lines stay 19.5. A forced strut rounded every line to 20
+    // and the paragraph came out 60 instead of 61.5.
+    return const _FlowLines(
+      style: _line,
+      step: 13 * S8Space.bodyLineHeight,
+      objectStep: 11 * S8Space.introLineHeight + 2 * S8Space.replacePadY,
+      pieces: <_FlowPiece>[
+        _FlowPiece.text('All from Wikimedia Commons. Photos marked '),
+        _FlowPiece.box(width: 61.85, child: _ReplaceMark(intro: true)),
+        _FlowPiece.text(
+          ' show people and are placeholders until Taytay LGU '
+          'supplies its own consented photos.',
+        ),
+      ],
     );
   }
 }
@@ -1907,10 +1875,18 @@ class _BannerRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(credit.offices.join(', '), style: _officeLabel),
-                Text(credit.title, style: _bannerTitle),
+                _Line(credit.offices.join(', '), _officeLabel),
+                _CssLines(
+                  text: credit.title,
+                  style: _bannerTitle,
+                  step: S8Space.line(13),
+                ),
                 const SizedBox(height: S8Space.titleGap),
-                Text(credit.byline, style: _creditByline),
+                _CssLines(
+                  text: credit.byline,
+                  style: _creditByline,
+                  step: S8Space.line(12),
+                ),
               ],
             ),
           ),
@@ -1939,19 +1915,16 @@ class _ReplaceMark extends StatelessWidget {
         borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(
+        padding: const EdgeInsets.symmetric(
           horizontal: S8Space.replacePadX,
-          vertical: intro ? S8Space.introPadY : S8Space.replacePadY,
+          vertical: S8Space.replacePadY,
         ),
-        child: const Text(
-          'Replace',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-            color: BrandColors.warning,
-            decoration: TextDecoration.none,
+        child: SizedBox(
+          height: intro ? 11 * S8Space.introLineHeight : S8Space.line(11),
+          child: Text(
+            'Replace',
+            style: intro ? _introChip : _day,
+            textHeightBehavior: S8Space.lineBox,
           ),
         ),
       ),
@@ -2058,14 +2031,15 @@ class _Bubble extends StatelessWidget {
     final bool mine = bubble.fromResident;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: S8Space.bubbleMaxWidth),
+      child: SizedBox(
+        width: S8Space.bubbleMaxWidth,
         child: Column(
           crossAxisAlignment: mine
               ? CrossAxisAlignment.end
               : CrossAxisAlignment.start,
           children: <Widget>[
             Container(
+              width: S8Space.bubbleMaxWidth,
               padding: const EdgeInsets.symmetric(
                 horizontal: S8Space.bubblePadX,
                 vertical: S8Space.bubblePadY,
@@ -2078,29 +2052,38 @@ class _Bubble extends StatelessWidget {
                   bottomLeft: Radius.circular(mine ? 16 : 4),
                   bottomRight: Radius.circular(mine ? 4 : 16),
                 ),
-                border: mine ? null : Border.all(color: BrandColors.cardLine),
+                border: mine
+                    ? null
+                    : Border.all(
+                        color: BrandColors.cardLine,
+                        strokeAlign: BorderSide.strokeAlignInside,
+                      ),
               ),
-              child: Text(
-                bubble.body,
+              child: _CssLines(
+                text: bubble.body,
                 style: TextStyle(
                   fontFamily: AppTypography.fontFamily,
                   fontSize: 13,
                   height: S8Space.threadLineHeight,
                   fontWeight: FontWeight.w500,
+                  letterSpacing: 0,
+                  leadingDistribution: TextLeadingDistribution.even,
                   color: mine ? Colors.white : BrandColors.textPrimary,
                   decoration: TextDecoration.none,
                 ),
-                strutStyle: const StrutStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  height: S8Space.threadLineHeight,
-                  forceStrutHeight: true,
-                ),
+                step: 13 * S8Space.threadLineHeight,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 6, 4, 10),
-              child: Text(bubble.when, style: _meta),
+              padding: const EdgeInsets.fromLTRB(4, 6, 4, 12),
+              child: SizedBox(
+                height: S8Space.line(11),
+                child: Text(
+                  bubble.when,
+                  style: _time,
+                  textHeightBehavior: S8Space.lineBox,
+                ),
+              ),
             ),
           ],
         ),
@@ -2121,7 +2104,12 @@ class _Card extends StatelessWidget {
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.all(Radius.circular(16)),
-        border: Border.fromBorderSide(BorderSide(color: BrandColors.cardLine)),
+        border: Border.fromBorderSide(
+          BorderSide(
+            color: BrandColors.cardLine,
+            strokeAlign: BorderSide.strokeAlignInside,
+          ),
+        ),
         boxShadow: <BoxShadow>[
           BoxShadow(
             color: Color(0x0D101828),
@@ -2136,7 +2124,7 @@ class _Card extends StatelessWidget {
         ],
       ),
       child: Padding(
-        padding: padding + const EdgeInsets.symmetric(horizontal: 1),
+        padding: padding + const EdgeInsets.all(1),
         child: child,
       ),
     );
@@ -2194,28 +2182,23 @@ class _Initials extends StatelessWidget {
       ),
       child: Text(
         initials,
-        style: AppTypography.cardTitle.copyWith(
-          color: BrandColors.taytayBlue,
-          decoration: TextDecoration.none,
-        ),
+        style: _initials,
+        strutStyle: S8Space.strut(18, weight: FontWeight.w800),
+        textHeightBehavior: S8Space.lineBox,
       ),
     );
   }
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill(this.label, {this.compact = false});
+  const _Pill(this.label);
 
   final String label;
-  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? 8 : 10,
-        vertical: compact ? 3 : 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: BrandColors.chipGreenBg,
         borderRadius: BorderRadius.circular(999),
@@ -2223,19 +2206,20 @@ class _Pill extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          TaytayIcon(
+          const TaytayIcon(
             icon: TaytayIcons.badgeCheck,
-            size: compact ? 12 : 14,
+            size: 12,
             color: BrandColors.success,
             semanticLabel: '',
             excludeSemantics: true,
           ),
           const SizedBox(width: Spacing.xs),
-          Text(
-            label,
-            style: AppTypography.labelStrong.copyWith(
-              color: BrandColors.success,
-              decoration: TextDecoration.none,
+          SizedBox(
+            height: 11 * 1.2,
+            child: Text(
+              label,
+              style: _badge,
+              textHeightBehavior: S8Space.lineBox,
             ),
           ),
         ],
@@ -2261,7 +2245,14 @@ class _Chip extends StatelessWidget {
           horizontal: S8Space.dayPadX,
           vertical: S8Space.dayPadY,
         ),
-        child: Text(label, style: _label),
+        child: SizedBox(
+          height: S8Space.line(11),
+          child: Text(
+            label,
+            style: _day,
+            textHeightBehavior: S8Space.lineBox,
+          ),
+        ),
       ),
     );
   }
@@ -2291,16 +2282,21 @@ class _FilterPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Border-box: the 1 px stroke sits inside the 36 px height, and the 14 px
+    // padding is inside that stroke. All is then 44.59 and Unread 72.56.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: selected ? BrandColors.taytayBlue : Colors.white,
         borderRadius: const BorderRadius.all(Radius.circular(Radii.pill)),
-        border: selected ? null : Border.all(color: BrandColors.cardLine),
+        border: Border.all(
+          color: selected ? BrandColors.taytayBlue : _chipBorder,
+          strokeAlign: BorderSide.strokeAlignInside,
+        ),
       ),
       child: SizedBox(
         height: S8Space.filterHeight,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S8Space.filterPadX),
+          padding: const EdgeInsets.symmetric(horizontal: 15),
           child: Center(
             child: Text(
               label,
@@ -2308,9 +2304,14 @@ class _FilterPill extends StatelessWidget {
                 fontFamily: AppTypography.fontFamily,
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : BrandColors.textPrimary,
+                height: S8Space.normal,
+                letterSpacing: 0,
+                leadingDistribution: TextLeadingDistribution.even,
+                color: selected ? Colors.white : _chipInk,
                 decoration: TextDecoration.none,
               ),
+              strutStyle: S8Space.strut(12, weight: FontWeight.w700),
+              textHeightBehavior: S8Space.lineBox,
             ),
           ),
         ),
@@ -2329,22 +2330,19 @@ class _CountBadge extends StatelessWidget {
     return DecoratedBox(
       decoration: const BoxDecoration(
         color: BrandColors.taytayBlue,
-        shape: BoxShape.circle,
+        borderRadius: BorderRadius.all(Radius.circular(999)),
       ),
-      child: SizedBox(
-        width: 22,
-        height: 22,
-        child: Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: S8Space.dayPadX,
+          vertical: S8Space.dayPadY,
+        ),
+        child: SizedBox(
+          height: S8Space.line(11),
           child: Text(
             label,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              height: 1,
-              color: Colors.white,
-              decoration: TextDecoration.none,
-            ),
+            style: _day.copyWith(color: Colors.white),
+            textHeightBehavior: S8Space.lineBox,
           ),
         ),
       ),
@@ -2355,36 +2353,26 @@ class _CountBadge extends StatelessWidget {
 class _DraftBanner extends StatelessWidget {
   const _DraftBanner();
 
-  static const TextStyle _ink = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    fontWeight: FontWeight.w800,
-    color: BrandColors.warning,
-    decoration: TextDecoration.none,
-  );
-
   @override
   Widget build(BuildContext context) {
-    // The chip hugs the word. The period, and the rest of the line, sit after it.
-    return const Text.rich(
-      TextSpan(
-        style: _ink,
-        children: <InlineSpan>[
-          WidgetSpan(
-            alignment: PlaceholderAlignment.middle,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: BrandColors.chipAmberBg,
-                borderRadius: BorderRadius.all(Radius.circular(999)),
-              ),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8),
-                child: Text('DRAFT', style: _ink),
-              ),
-            ),
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: BrandColors.chipAmberBg,
+        borderRadius: BorderRadius.all(Radius.circular(999)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: S8Space.dayPadX,
+          vertical: S8Space.dayPadY,
+        ),
+        child: SizedBox(
+          height: S8Space.line(11),
+          child: const Text(
+            'DRAFT · LGU-approved text to be inserted',
+            style: _draft,
+            textHeightBehavior: S8Space.lineBox,
           ),
-          TextSpan(text: '. LGU-approved text to be inserted'),
-        ],
+        ),
       ),
     );
   }
@@ -2436,13 +2424,9 @@ class _PhotoNote extends StatelessWidget {
                   ),
                   child: Text(
                     initials,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: BrandColors.taytayBlue,
-                      decoration: TextDecoration.none,
-                    ),
+                    style: _photoInitials,
+                    strutStyle: S8Space.strut(24, weight: FontWeight.w800),
+                    textHeightBehavior: S8Space.lineBox,
                   ),
                 ),
                 Positioned(
@@ -2468,11 +2452,11 @@ class _PhotoNote extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: Spacing.sm),
+          const SizedBox(height: 6),
           const Text(
-            'Profile photo — reviewed by LGU before it appears on your ID',
+            'Profile photo · reviewed by LGU before it appears on your ID',
             textAlign: TextAlign.center,
-            style: _caption,
+            style: _photoNote,
           ),
         ],
       ),
@@ -2533,17 +2517,79 @@ class _OutlineButton extends StatelessWidget {
   }
 }
 
+/// 08-06 empty state. The circle is 72, the title is 16 / normal, and the
+/// body is 13 / 1.5. Padding is 28 × 18 inside the page gutter.
+class _EmptyCopy extends StatelessWidget {
+  const _EmptyCopy({
+    required this.title,
+    required this.body,
+    required this.button,
+    this.buttonIcon,
+    this.note,
+    this.onButton,
+  });
+
+  final String title;
+  final String body;
+  final String button;
+  final IconData? buttonIcon;
+  final String? note;
+  final VoidCallback? onButton;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? note = this.note;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        S8Space.emptyPadX,
+        S8Space.emptyPadY,
+        S8Space.emptyPadX,
+        S8Space.emptyPadY,
+      ),
+      child: Column(
+        children: <Widget>[
+          const _EmptyMark(),
+          const SizedBox(height: S8Space.emptyTitleGap),
+          _Line(title, _emptyTitle, align: Alignment.center),
+          const SizedBox(height: S8Space.emptyBodyGap),
+          _CssLines(
+            text: body,
+            style: _emptyBody,
+            step: 13 * S8Space.bodyLineHeight,
+            align: TextAlign.center,
+          ),
+          const SizedBox(height: S8Space.emptyButtonGap),
+          _PrimaryButton(label: button, icon: buttonIcon, onTap: onButton),
+          if (note != null) ...<Widget>[
+            const SizedBox(height: S8Space.emptyNoteGap),
+            _Line(note, _meta, align: Alignment.center),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
 class _EmptyMark extends StatelessWidget {
   const _EmptyMark();
 
   @override
   Widget build(BuildContext context) {
-    return const TaytayIcon(
-      icon: TaytayIcons.messageSquare,
-      size: S8Space.emptyMark,
-      color: BrandColors.taytayBlue,
-      semanticLabel: '',
-      excludeSemantics: true,
+    return Container(
+      width: S8Space.emptyCircle,
+      height: S8Space.emptyCircle,
+      alignment: Alignment.center,
+      decoration: const BoxDecoration(
+        color: Color(0xFFEAF0FB),
+        shape: BoxShape.circle,
+      ),
+      child: const TaytayIcon(
+        icon: TaytayIcons.inbox,
+        size: S8Space.emptyIcon,
+        color: BrandColors.taytayBlue,
+        semanticLabel: '',
+        excludeSemantics: true,
+      ),
     );
   }
 }
@@ -2820,13 +2866,9 @@ class _SectionLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       text,
-      style: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: 15,
-        fontWeight: FontWeight.w800,
-        color: BrandColors.textPrimary,
-        decoration: TextDecoration.none,
-      ),
+      style: _section,
+      strutStyle: S8Space.strut(15, weight: FontWeight.w800),
+      textHeightBehavior: S8Space.lineBox,
     );
   }
 }
@@ -2859,6 +2901,8 @@ const TextStyle _emptyTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 16,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
@@ -2868,6 +2912,7 @@ const TextStyle _emptyBody = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w500,
   height: S8Space.bodyLineHeight,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textSecondary,
   decoration: TextDecoration.none,
 );
@@ -2876,7 +2921,39 @@ const TextStyle _name = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 16,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _initials = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 18,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.taytayBlue,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _location = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+  height: S8Space.bodyLineHeight,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.textSecondary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _badge = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 11,
+  fontWeight: FontWeight.w800,
+  height: 1.2,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.success,
   decoration: TextDecoration.none,
 );
 
@@ -2884,6 +2961,8 @@ const TextStyle _rowTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
@@ -2892,7 +2971,9 @@ const TextStyle _meta = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w500,
-  color: BrandColors.textSecondary,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
 
@@ -2900,7 +2981,111 @@ const TextStyle _label = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w700,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.fieldLabel,
+  decoration: TextDecoration.none,
+);
+
+/// Unselected filter ink. CSS `.chip` is `#33405C`.
+const Color _chipInk = Color(0xFF33405C);
+
+/// Unselected filter stroke. CSS `.chip` border is `#E1E6F0`.
+const Color _chipBorder = Color(0xFFE1E6F0);
+
+/// Thread timestamp. CSS `.tm` is 11 / 400 `#5F6880`.
+const Color _timeInk = Color(0xFF5F6880);
+
+const TextStyle _day = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 11,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  letterSpacing: 0,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.textSecondary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _draft = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 11,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  letterSpacing: 0,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.warning,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _introChip = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 11,
+  fontWeight: FontWeight.w800,
+  height: S8Space.introLineHeight,
+  letterSpacing: 0,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.warning,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _time = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 11,
+  fontWeight: FontWeight.w400,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: _timeInk,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _section = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 15,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.textPrimary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _aboutTitle = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 14,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.textPrimary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _version = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 13,
+  fontWeight: FontWeight.w500,
+  height: S8Space.versionLineHeight,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.textSecondary,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _photoInitials = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 24,
+  fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.taytayBlue,
+  decoration: TextDecoration.none,
+);
+
+const TextStyle _photoNote = TextStyle(
+  fontFamily: AppTypography.fontFamily,
+  fontSize: 12,
+  fontWeight: FontWeight.w500,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
+  color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
 
@@ -2908,15 +3093,9 @@ const TextStyle _fieldInk = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w600,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.fieldInk,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _caption = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
 
@@ -2924,15 +3103,9 @@ const TextStyle _legal = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w500,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _appTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 16,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
 
@@ -2940,6 +3113,8 @@ const TextStyle _creditTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
@@ -2949,6 +3124,7 @@ const TextStyle _noticeBody = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w500,
   height: S8Space.bodyLineHeight,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.sheetBody,
   decoration: TextDecoration.none,
 );
@@ -2957,6 +3133,8 @@ const TextStyle _creditByline = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w500,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
@@ -2965,6 +3143,9 @@ const TextStyle _noticeTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 20,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  letterSpacing: -0.4,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
@@ -2973,6 +3154,8 @@ const TextStyle _bannerTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 13,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
@@ -2981,6 +3164,8 @@ const TextStyle _officeLabel = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w800,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.taytayBlue,
   decoration: TextDecoration.none,
 );
@@ -2989,6 +3174,291 @@ const TextStyle _hint = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w500,
+  height: S8Space.normal,
+  leadingDistribution: TextLeadingDistribution.even,
   color: BrandColors.fieldHint,
   decoration: TextDecoration.none,
 );
+
+/// One CSS line, in Chrome's device-pixel line box rather than Flutter's
+/// rounded strut.
+class _Line extends StatelessWidget {
+  const _Line(this.text, this.style, {this.align = Alignment.centerLeft});
+
+  final String text;
+  final TextStyle style;
+  final Alignment align;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: S8Space.line(style.fontSize ?? 14),
+      child: Align(
+        alignment: align,
+        child: Text(
+          text,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: align == Alignment.center ? TextAlign.center : null,
+          style: style,
+          textHeightBehavior: S8Space.lineBox,
+        ),
+      ),
+    );
+  }
+}
+
+/// A text run or a fixed-width chip inside [_FlowLines].
+class _FlowPiece {
+  const _FlowPiece.text(this.text) : child = null, width = 0;
+
+  const _FlowPiece.box({required this.width, required this.child}) : text = '';
+
+  final String text;
+  final Widget? child;
+  final double width;
+}
+
+class _Run {
+  _Run.text(this.text) : child = null, width = 0;
+
+  _Run.box(this.child, this.width) : text = '';
+
+  final String text;
+  final Widget? child;
+  final double width;
+}
+
+/// Wraps [pieces] onto Chrome's line step.
+///
+/// A line that contains a chip uses [objectStep] (the chip's border box).
+/// Other lines use [step]. Flutter's strut would round both to a whole pixel.
+class _FlowLines extends StatelessWidget {
+  const _FlowLines({
+    required this.pieces,
+    required this.style,
+    required this.step,
+    this.objectStep,
+  });
+
+  final List<_FlowPiece> pieces;
+  final TextStyle style;
+  final double step;
+  final double? objectStep;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double maxWidth = constraints.maxWidth;
+        final List<List<_Run>> lines = _wrap(maxWidth);
+        var top = 0.0;
+        final List<Widget> children = <Widget>[];
+        for (final List<_Run> line in lines) {
+          final bool object = line.any((_Run run) => run.child != null);
+          final double height = object ? (objectStep ?? step) : step;
+          final StringBuffer words = StringBuffer();
+          final List<Widget> row = <Widget>[];
+          void flush() {
+            if (words.isEmpty) return;
+            row.add(
+              Text(
+                words.toString(),
+                style: style,
+                textHeightBehavior: S8Space.lineBox,
+              ),
+            );
+            words.clear();
+          }
+
+          for (final _Run run in line) {
+            final Widget? child = run.child;
+            if (child != null) {
+              flush();
+              // The reserved width is the Chrome border box. A test font is
+              // wider than Plus Jakarta, and an unconstrained chip then
+              // overflows the line.
+              row.add(SizedBox(width: run.width, child: child));
+            } else {
+              words.write(run.text);
+            }
+          }
+          flush();
+          children.add(
+            Positioned(
+              top: top,
+              left: 0,
+              right: 0,
+              height: height,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: row,
+              ),
+            ),
+          );
+          top += height;
+        }
+        return SizedBox(
+          width: maxWidth,
+          height: top,
+          child: Stack(clipBehavior: Clip.none, children: children),
+        );
+      },
+    );
+  }
+
+  List<List<_Run>> _wrap(double maxWidth) {
+    final List<_Run> tokens = <_Run>[];
+    for (final _FlowPiece piece in pieces) {
+      final Widget? child = piece.child;
+      if (child != null) {
+        tokens.add(_Run.box(child, piece.width));
+        continue;
+      }
+      for (final String part in piece.text.split(RegExp(r'(?<= )'))) {
+        if (part.isEmpty) continue;
+        tokens.add(_Run.text(part));
+      }
+    }
+    final List<List<_Run>> lines = <List<_Run>>[];
+    var line = <_Run>[];
+    var used = 0.0;
+    for (final _Run token in tokens) {
+      final bool box = token.child != null;
+      final String raw = box ? '' : token.text;
+      final double width = box ? token.width : _measure(raw);
+      if (line.isNotEmpty && used + width > maxWidth + 0.05) {
+        lines.add(line);
+        if (box) {
+          line = <_Run>[token];
+          used = width;
+        } else {
+          final String word = raw.trimLeft();
+          if (word.isEmpty) {
+            line = <_Run>[];
+            used = 0;
+            continue;
+          }
+          line = <_Run>[_Run.text(word)];
+          used = _measure(word);
+        }
+      } else {
+        if (!box && raw.trim().isEmpty && line.isEmpty) continue;
+        line.add(token);
+        used += width;
+      }
+    }
+    if (line.isNotEmpty) lines.add(line);
+    return lines;
+  }
+
+  double _measure(String text) {
+    if (text.isEmpty) return 0;
+    final TextPainter painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+      textScaler: TextScaler.noScaling,
+      textHeightBehavior: S8Space.lineBox,
+    )..layout();
+    final double width = painter.width;
+    painter.dispose();
+    return width;
+  }
+}
+
+/// Paints [text] on Chrome's line step.
+///
+/// Flutter rounds a fractional strut to a whole logical pixel. The slot keeps
+/// the CSS advance, and each line is placed at that step.
+class _CssLines extends StatelessWidget {
+  const _CssLines({
+    required this.text,
+    required this.style,
+    required this.step,
+    this.align = TextAlign.start,
+    this.maxLines,
+  });
+
+  final String text;
+  final TextStyle style;
+  final double step;
+  final TextAlign align;
+  final int? maxLines;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double width = constraints.maxWidth;
+        final TextPainter painter = TextPainter(
+          text: TextSpan(text: text, style: style),
+          textDirection: Directionality.of(context),
+          textAlign: align,
+          textScaler: TextScaler.noScaling,
+          textHeightBehavior: S8Space.lineBox,
+          strutStyle: S8Space.strut(
+            style.fontSize ?? 14,
+            height: style.height,
+            weight: style.fontWeight,
+          ),
+          maxLines: maxLines,
+          ellipsis: maxLines == null ? null : '…',
+        )..layout(maxWidth: width);
+        final List<String> lines = <String>[];
+        var start = 0;
+        final String laid = text;
+        while (start < laid.length &&
+            (maxLines == null || lines.length < maxLines!)) {
+          final TextRange range = painter.getLineBoundary(
+            TextPosition(offset: start),
+          );
+          if (range.end <= start) {
+            break;
+          }
+          lines.add(laid.substring(range.start, range.end).trimRight());
+          start = range.end;
+          // getLineBoundary stays on the line that owns a hard break, so
+          // step past the newline before asking for the next line.
+          while (start < laid.length &&
+              (laid.codeUnitAt(start) == 10 || laid.codeUnitAt(start) == 13)) {
+            start += 1;
+          }
+        }
+        painter.dispose();
+        if (lines.isEmpty) {
+          return const SizedBox.shrink();
+        }
+        return SizedBox(
+          width: width,
+          height: step * lines.length,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: <Widget>[
+              for (var i = 0; i < lines.length; i++)
+                Positioned(
+                  top: step * i,
+                  left: 0,
+                  right: 0,
+                  height: step,
+                  child: Align(
+                    alignment: align == TextAlign.center
+                        ? Alignment.center
+                        : Alignment.centerLeft,
+                    child: Text(
+                      lines[i],
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.clip,
+                      textAlign: align,
+                      style: style,
+                      textHeightBehavior: S8Space.lineBox,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}

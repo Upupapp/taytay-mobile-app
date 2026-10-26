@@ -3,11 +3,19 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 
-/// Spacing for My Account, taken from the 08 CSS.
+/// Spacing for My Account, taken from the 08 CSS and the DOM boxes.
 ///
 /// One CSS pixel is one logical pixel here, and three device pixels on the
 /// 08 PNGs. A value stays fractional when the CSS computed it that way.
-/// `line-height: normal` is an unset [TextStyle.height], not 1.2 or 1.0.
+///
+/// Plus Jakarta Sans sets USE_TYPO_METRICS. The hhea and typo metrics are
+/// ascender 1038, descender −222, line gap 0, on a 1000-unit em, so Chrome's
+/// `line-height: normal` is 1.26em (11 → 13.67, 12 → 15, 13 → 16.33,
+/// 14 → 17.67, 15 → 19 at the 3× capture). Flutter's unset [TextStyle.height]
+/// is a different box: a 12 px label measured 15 dp, and a chip with 6 dp of
+/// padding was 21 dp (63 px) against Chrome's 19.67 dp (59 px). [normal] is
+/// that Chrome line box, applied with [lineBox] so the first and last lines
+/// keep the half-leading.
 abstract final class S8Space {
   /// Page inset. 08-01 card border sits at x = 48.
   static const double gutter = 16;
@@ -85,23 +93,19 @@ abstract final class S8Space {
   /// starts at x = 203.
   static const double filterGapX = 7;
 
-  /// Filter to the empty-state mark.
-  ///
-  /// 08-06 the glyph starts at y = 696. The 24 dp slot draws the glyph 2 dp
-  /// below the slot, so the lead is 62.
-  static const double emptyLead = 62;
+  /// Padding of the empty state. CSS `.empty` is `28px 18px`.
+  static const double emptyPadY = 28;
+  static const double emptyPadX = 18;
 
-  /// Empty-state mark to its title. 08-06 the title ink starts at y = 896.
-  static const double emptyGap = 40;
+  /// Empty-state circle. CSS `.eic` is 72 px, with a 32 px icon inside.
+  static const double emptyCircle = 72;
+  static const double emptyIcon = 32;
 
-  /// Empty-state mark. 08-06 glyph is 72 px.
-  static const double emptyMark = 24;
+  /// Circle to the empty-state title. CSS margin-top 14 on a 16 / 800 label.
+  static const double emptyTitleGap = 14;
 
-  /// Primary button. 08-06 Message an office is y = 1120–1263.
+  /// Primary button. CSS height 48.
   static const double buttonHeight = 48;
-
-  /// Extra inset of that button inside the page gutter. 08-06 button x = 102.
-  static const double buttonInset = 18;
 
   /// Horizontal padding of a Replace chip. 08-10 row chips are 186 px wide.
   static const double replacePadX = 9;
@@ -109,10 +113,11 @@ abstract final class S8Space {
   /// Vertical padding of a row Replace chip. 08-10 those chips are 59 px tall.
   static const double replacePadY = 3;
 
-  /// Vertical padding of the intro Replace chip. 08-10 that chip is 68 px tall.
-  static const double introPadY = 4;
+  /// The intro Replace chip inherits the 13 / 1.5 line, so its text box is
+  /// 16.5 and the chip is 22.5 with [replacePadY]. It is not a taller pad.
+  static const double introLineHeight = 1.5;
 
-  /// Day chip. CSS `padding: 3px 9px` around a 12 / 700 label at normal height.
+  /// Day chip. CSS `padding: 3px 9px` around an 11 / 800 label at [normal].
   static const double dayPadY = 3;
 
   /// Horizontal padding of the day chip.
@@ -146,9 +151,12 @@ abstract final class S8Space {
   /// About seal. CSS 72 px.
   static const double seal = 72;
 
-  /// Seal artwork to the app title. 08-05 the seal ends at y = 622 and the
-  /// title ink starts at y = 673.
-  static const double sealGap = 15;
+  /// Seal artwork to the app title.
+  ///
+  /// The image is inline, so its line box continues 3.67 px past the 72 px
+  /// artwork, and the title's margin-top is 8. The gap under the artwork is
+  /// 11.67.
+  static const double sealGap = 11.67;
 
   /// Field box to the legal-name note. 08-03 the mobile field, which follows
   /// that note, starts 21 px low when this uses [fieldStack].
@@ -160,14 +168,17 @@ abstract final class S8Space {
   /// Header to the draft chip. CSS 18.67 px.
   static const double noticeInset = 18.67;
 
-  /// Draft chip to the notice title. 08-09 the title ink starts at y = 477.
-  static const double draftGap = 9;
+  /// Draft chip to the notice title. The title's margin-top is 10.
+  static const double draftGap = 10;
 
-  /// Empty-state title to the paragraph. 08-06 the paragraph starts at y = 970.
-  static const double emptyBodyGap = 3;
+  /// Empty-state title to the paragraph. CSS `.cs` margin-top is 4.
+  static const double emptyBodyGap = 4;
 
-  /// Empty-state button to the footnote. 08-06 the footnote starts at y = 1304.
-  static const double emptyNoteGap = 11;
+  /// Empty-state body to the button. CSS margin-top 16.
+  static const double emptyButtonGap = 16;
+
+  /// Empty-state button to the footnote. CSS margin-top 10.
+  static const double emptyNoteGap = 10;
 
   /// Padding under the version lines. CSS 16 px.
   static const double aboutPadBottom = 16;
@@ -181,19 +192,59 @@ abstract final class S8Space {
   /// Titles on those rows are 13 px.
   static const double bannerPadY = 6;
 
-  /// 12 px inbox preview. The two preview lines use a 1.5 line height.
-  static const double previewLineHeight = 1.5;
+  /// Chrome `line-height: normal` for Plus Jakarta Sans. See the class note.
+  static const double normal = 1.26;
 
-  /// 13 px notice body. 08-09 paragraph lines start 59 px apart.
+  /// The line box Chrome used at the 3× capture.
+  ///
+  /// Blink rounds the typo ascender and descender to device pixels. A flat
+  /// 1.26em is the same number before that rounding; this is the box the DOM
+  /// measured (12 → 15, 14 → 17.67, 11 → 13.67).
+  static double line(double fontSize) {
+    const double ascender = 1038 / 1000;
+    const double descender = 222 / 1000;
+    final double device = fontSize * 3;
+    return ((device * ascender).round() + (device * descender).round()) / 3;
+  }
+
+  /// Half-leading stays on the first ascent and the last descent, split
+  /// evenly, which is how Chrome builds a `normal` line box.
+  static const TextHeightBehavior lineBox = TextHeightBehavior(
+    applyHeightToFirstAscent: true,
+    applyHeightToLastDescent: true,
+    leadingDistribution: TextLeadingDistribution.even,
+  );
+
+  /// 12 px inbox preview. CSS `normal`, so each line is 15.
+  static const double previewLineHeight = normal;
+
+  /// 13 px notice and version body. CSS `line-height: 1.5` (19.5).
   static const double bodyLineHeight = 1.5;
 
-  /// 13 px thread body. 08-07 office-bubble lines start 56 px apart.
-  ///
-  /// 08-08 uses the same step. It is not the notice pitch.
-  static const double threadLineHeight = 56 / 39;
+  /// 13 px thread body. CSS `line-height: 1.45` (18.85).
+  static const double threadLineHeight = 1.45;
 
-  /// 12 px version caption. 08-05 the two lines start 59 px apart.
-  static const double versionLineHeight = 59 / 36;
+  /// Kept for the version caption, which is the same 13 / 1.5 body.
+  static const double versionLineHeight = bodyLineHeight;
+
+  /// 08-01 name line. 16 px normal is 20.33. The SAMPLE chip is
+  /// `vertical-align: middle`, and that inline box measures 22.13.
+  static const double profileNameLine = 22.13;
+
+  static StrutStyle strut(
+    double size, {
+    double? height,
+    FontWeight? weight,
+  }) {
+    return StrutStyle(
+      fontFamily: AppTypography.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      height: height ?? normal,
+      leadingDistribution: TextLeadingDistribution.even,
+      forceStrutHeight: true,
+    );
+  }
 
   /// Chat bubble. CSS padding 10 px by 12 px, max-width 270 px.
   static const double bubblePadY = 10;

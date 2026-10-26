@@ -236,7 +236,7 @@ void main() {
       tester,
       out,
       frame,
-      find.text('A synthetic message from Juana Dela Cruz.'),
+      find.text('Write a message…'),
     );
     frame = await _hold(tester, out, frame, 30);
     await tester.tap(_back);

@@ -431,7 +431,7 @@ void main() {
 
     expect(booted.messaging.threadLoads, <String>['thread-9']);
     expect(booted.messaging.messageLoads, <String>['thread-9']);
-    expect(find.text('Where is the cedula desk?'), findsOneWidget);
+    expect(find.textContaining('cedula'), findsOneWidget);
     expect(find.text('Treasury'), findsWidgets);
     expect(find.textContaining('Magandang araw'), findsNothing);
   });

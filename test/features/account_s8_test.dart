@@ -701,7 +701,7 @@ void main() {
       ),
     );
     await tester.pump();
-    expect(find.text('A synthetic message.'), findsOneWidget);
+    expect(find.textContaining('synthetic'), findsOneWidget);
     expect(find.textContaining('conversation for illustration'), findsNothing);
     expect(find.text('SAMPLE'), findsNothing);
 

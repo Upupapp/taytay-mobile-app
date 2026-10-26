@@ -91,18 +91,35 @@ class SampleTag extends StatelessWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            child: Text(
-              label,
-              style: AppTypography.labelStrong.copyWith(
-                color: BrandColors.warning,
-                letterSpacing: 0.6,
-                height: lineHeight,
-              ),
-            ),
+            child: _SampleLabel(label: label, lineHeight: lineHeight),
           ),
         ),
       ),
     );
+  }
+}
+
+class _SampleLabel extends StatelessWidget {
+  const _SampleLabel({required this.label, this.lineHeight});
+
+  final String label;
+  final double? lineHeight;
+
+  @override
+  Widget build(BuildContext context) {
+    final Text text = Text(
+      label,
+      style: AppTypography.labelStrong.copyWith(
+        color: BrandColors.warning,
+        letterSpacing: 0.6,
+        height: lineHeight,
+      ),
+    );
+    final double? height = lineHeight;
+    if (height == null) return text;
+    // 11 px is [AppTypography.labelStrong]. The slot keeps Chrome's line
+    // box; a forced strut would round 16.5 to 17 and the chip would be 23.
+    return SizedBox(height: 11 * height, child: text);
   }
 }
 
