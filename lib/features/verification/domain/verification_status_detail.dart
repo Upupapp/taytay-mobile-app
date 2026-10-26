@@ -274,6 +274,11 @@ class VerificationStatusDetail {
     this.canEdit,
     this.idType,
     this.reviewedAt,
+    this.id,
+    this.userId,
+    this.idFrontMediaId,
+    this.idBackMediaId,
+    this.selfieMediaId,
   });
 
   /// Nothing known yet — the initial state before a load completes.
@@ -332,6 +337,17 @@ class VerificationStatusDetail {
 
   /// When the office recorded a decision. A timestamp, not a reviewer.
   final DateTime? reviewedAt;
+
+  /// Verification request id. An opaque handle, not rendered.
+  final String? id;
+
+  /// The account the request belongs to. Not rendered.
+  final String? userId;
+
+  /// Uploaded document handles. Not the documents themselves.
+  final String? idFrontMediaId;
+  final String? idBackMediaId;
+  final String? selfieMediaId;
 
   bool get isVerified => stage == ResidentVerificationStage.verified;
 

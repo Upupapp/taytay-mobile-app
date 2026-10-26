@@ -189,6 +189,21 @@ class SessionController extends ChangeNotifier {
     _set(AuthenticatedSession(current.resident.copyWith(accessLevel: level)));
   }
 
+  /// Replaces the bearer on the current session.
+  ///
+  /// Used when Firebase refreshes an ID token. The resident summary is kept.
+  /// A guest has nothing to update.
+  Future<void> replaceAccessToken({
+    required String accessToken,
+    DateTime? expiresAt,
+  }) async {
+    final stored = await _store.read();
+    if (stored == null || accessToken.isEmpty) return;
+    await _store.write(
+      stored.withAccessToken(accessToken, expiresAt: expiresAt),
+    );
+  }
+
   /// The access token for the API layer, or `null` for a guest.
   ///
   /// A token past its own `expires_at` is withheld rather than sent. Presenting

@@ -1,47 +1,95 @@
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
 import '../domain/household_repository.dart';
 import '../domain/household_summary.dart';
 
-/// Talks to `GET me/household`.
+/// Talks to `GET households/current`.
 ///
-/// ---
-///
-/// **The server sends more than this app reads, and that is the point.** The
-/// payload carries a `members` array with every co-resident's name, whether each
-/// is the head, the caller's relationship to them, and — for the caller and
-/// anyone they are recorded as caring for — a birth date and a verification
-/// tier. None of it is decoded here.
-///
-/// That is not caution for its own sake. Household data is *other people's*
-/// personal data, and this screen exists so a resident can notice that the LGU's
-/// record of their home is wrong. A count answers that: it says how large a
-/// household the office believes it is serving, which is exactly what makes an
-/// error visible, while naming nobody. A list of names and birth dates on a
-/// phone in a queue serves the resident no better and everyone else a great deal
-/// worse.
-///
-/// The server has already done its own minimisation — `verification_status`,
-/// `profile_completeness`, `dwelling_type` and the utility columns are
-/// deliberately absent, because a household that learns it has been recorded as
-/// "makeshift" has been handed a judgement about itself by an API rather than by
-/// a caseworker who can explain it. This decoder does not undo that, and it does
-/// not stop there either.
+/// The citizen projection is the signed-in resident's own household: address,
+/// barangay name, the viewer's role, and the members the contract publishes.
+/// The screen still shows the count rather than a list of names. [toString]
+/// on the summary and on each member stays redacted.
 class HouseholdApiRepository implements HouseholdRepository {
   const HouseholdApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
 
   final ApiClient _apiClient;
 
-  static const String path = 'me/household';
+  static const String path = 'households/current';
 
   @override
   Future<Result<HouseholdSummary>> loadOwnHousehold() async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<HouseholdSummary>(
-      BackendGap.absentOnNodeContract,
-      'loadOwnHousehold',
+    final response = await _apiClient.send<HouseholdSummary>(
+      method: HttpMethod.get,
+      path: path,
+      authenticated: true,
+      decode: decodeHousehold,
+    );
+    return switch (response) {
+      Ok(:final value) => Ok<HouseholdSummary>(value.data),
+      Err(:final failure) => Err<HouseholdSummary>(failure),
+    };
+  }
+
+  /// Allow-list decoder for `Household` on `3e3b110`.
+  static HouseholdSummary decodeHousehold(Object? data) {
+    final Map<String, dynamic> map = data is Map<String, dynamic>
+        ? data
+        : const <String, dynamic>{};
+    final List<HouseholdMember> members = _members(map['members']);
+    final Object? address = map['address'];
+    final Object? barangay = map['barangay_name'];
+    return HouseholdSummary(
+      role: HouseholdRole.fromRaw(
+        map['viewer_role'] is String ? map['viewer_role'] as String : null,
+      ),
+      streetAddress: address is String && address.trim().isNotEmpty
+          ? address.trim()
+          : null,
+      barangay: barangay is String && barangay.trim().isNotEmpty
+          ? barangay.trim()
+          : null,
+      memberCount: members.length,
+      members: members,
+    );
+  }
+
+  static List<HouseholdMember> _members(Object? raw) {
+    if (raw is! List) return const <HouseholdMember>[];
+    return raw
+        .map(_member)
+        .whereType<HouseholdMember>()
+        .toList(growable: false);
+  }
+
+  static HouseholdMember? _member(Object? raw) {
+    if (raw is! Map) return null;
+    final Map<String, dynamic> map = raw is Map<String, dynamic>
+        ? raw
+        : Map<String, dynamic>.from(raw);
+    final Object? id = map['id'];
+    final Object? name = map['name'];
+    if (id is! String || id.isEmpty || name is! String || name.trim().isEmpty) {
+      return null;
+    }
+    final Object? birthdate = map['birthdate'];
+    final Object? userId = map['user_id'];
+    return HouseholdMember(
+      id: id,
+      name: name.trim(),
+      relationship: HouseholdRelationship.fromRaw(
+        map['relationship'] is String ? map['relationship'] as String : null,
+      ),
+      birthdate: birthdate is String ? DateTime.tryParse(birthdate) : null,
+      sex: HouseholdSex.fromRaw(
+        map['sex'] is String ? map['sex'] as String : null,
+      ),
+      userId: userId is String && userId.isNotEmpty ? userId : null,
+      inviteStatus: HouseholdInviteStatus.fromRaw(
+        map['invite_status'] is String ? map['invite_status'] as String : null,
+      ),
     );
   }
 
@@ -69,5 +117,4 @@ class HouseholdApiRepository implements HouseholdRepository {
       'submitCorrectionRequest (${request.kind.name})',
     );
   }
-
 }

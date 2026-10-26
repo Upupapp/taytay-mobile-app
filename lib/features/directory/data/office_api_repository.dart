@@ -98,6 +98,8 @@ class OfficeApiRepository {
     final String head = _text(json['head']);
     final String category = _text(json['category']);
     final String? shortName = _optional(json['short_name']);
+    // `banner_media_id` is an id, not bytes. The hall photograph stays until
+    // a public media route exists.
     return Office(
       id: slug,
       serverId: id,
@@ -141,7 +143,15 @@ class OfficeApiRepository {
           OfficeFact(label: 'Head', value: head, icon: OfficeFactIcon.pin),
       ],
       services: const <OfficeServiceLine>[],
+      bannerMediaId: _optional(json['banner_media_id']),
+      latitude: _coord(json['latitude']),
+      longitude: _coord(json['longitude']),
     );
+  }
+
+  static double? _coord(Object? value) {
+    if (value is num) return value.toDouble();
+    return null;
   }
 
   static String _text(Object? value) => value is String ? value : '';

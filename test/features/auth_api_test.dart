@@ -8,10 +8,71 @@ import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/retry_policy.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/features/auth/data/auth_api_repository.dart';
+import 'package:taytay_resident/features/auth/data/firebase_identity.dart';
 import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
+
+class _FakeIdentity implements FirebaseIdentity {
+  Result<FirebaseCredentialSession> signInResult = const Err(
+    UnauthenticatedFailure(debugMessage: 'not signed in'),
+  );
+  Result<FirebaseCredentialSession> createResult = const Err(
+    UnauthenticatedFailure(debugMessage: 'not created'),
+  );
+  Result<void> phoneResult = const Ok<void>(null);
+  Result<FirebaseCredentialSession> confirmResult = const Err(
+    UnauthenticatedFailure(debugMessage: 'no code'),
+  );
+
+  int phoneSends = 0;
+  int confirms = 0;
+  int emailSignIns = 0;
+  int creates = 0;
+  int signOuts = 0;
+
+  @override
+  Future<Result<FirebaseCredentialSession>> signInWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    emailSignIns++;
+    return signInResult;
+  }
+
+  @override
+  Future<Result<FirebaseCredentialSession>> createUserWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    creates++;
+    return createResult;
+  }
+
+  @override
+  Future<Result<void>> sendPhoneCode({required String phoneNumber}) async {
+    phoneSends++;
+    return phoneResult;
+  }
+
+  @override
+  Future<Result<FirebaseCredentialSession>> confirmPhoneCode({
+    required String code,
+  }) async {
+    confirms++;
+    return confirmResult;
+  }
+
+  @override
+  Future<String?> idToken({bool forceRefresh = false}) async => null;
+
+  @override
+  Future<void> signOut() async {
+    signOuts++;
+  }
+}
 
 class _Recording implements ApiTransport {
   _Recording(this.responses);
@@ -30,24 +91,33 @@ class _Recording implements ApiTransport {
 
 void main() {
   late _Recording transport;
+  late _FakeIdentity identity;
   late AuthApiRepository repository;
 
-  AuthApiRepository build(_Recording t) => AuthApiRepository(
-    apiClient: ApiClient(
-      config: AppConfig.from(
-        rawEnvironment: 'dev',
-        rawApiBaseUrl: 'https://example.test/api/v1',
-        isReleaseBuild: false,
-      ),
-      transport: t,
-      accessTokenProvider: () async => 'session-token',
-    ),
-  );
+  AuthApiRepository build(_Recording t, FirebaseIdentity identity) =>
+      AuthApiRepository(
+        apiClient: ApiClient(
+          config: AppConfig.from(
+            rawEnvironment: 'dev',
+            rawApiBaseUrl: 'https://example.test/api/v1',
+            isReleaseBuild: false,
+          ),
+          transport: t,
+          accessTokenProvider: () async => 'session-token',
+        ),
+        identity: identity,
+      );
 
   setUp(() {
     transport = _Recording(<Result<ApiHttpResponse>>[]);
-    repository = build(transport);
+    identity = _FakeIdentity();
+    repository = build(transport, identity);
   });
+
+  ApiHttpResponse okEnvelope(Object data) => ApiHttpResponse(
+    statusCode: 200,
+    body: jsonEncode(<String, Object?>{'data': data}),
+  );
 
   group('requesting a code', () {
     test('an empty number is refused before any network call', () async {
@@ -59,13 +129,13 @@ void main() {
       expect(transport.requests, isEmpty);
     });
 
-    test('the Node API has no OTP route, so the call declines', () async {
+    test('a mobile number asks Firebase and does not call the API', () async {
       final Result<void> result = await repository.requestOneTimeCode(
         mobileNumber: '0917-000-0000',
       );
 
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
+      expect(result.isOk, isTrue);
+      expect(identity.phoneSends, 1);
       expect(transport.requests, isEmpty);
     });
   });
@@ -126,15 +196,39 @@ void main() {
       expect(transport.requests, isEmpty);
     });
 
-    test('the Node API has no OTP exchange, so no session is minted', () async {
+    test('a phone code opens the session with GET /me', () async {
+      identity.confirmResult = const Ok<FirebaseCredentialSession>(
+        FirebaseCredentialSession(idToken: 'id-token-1'),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          okEnvelope(<String, Object?>{
+            'id': 'user-1',
+            'name': 'Juana Sample',
+            'verification_status': 'pending',
+            'role': 'admin',
+          }),
+        ),
+      );
+
       final Result<AuthOutcome> result = await repository.verifyOneTimeCode(
         mobileNumber: '0917-000-0000',
         code: '000000',
       );
 
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
-      expect(transport.requests, isEmpty);
+      final AuthOutcome outcome = (result as Ok<AuthOutcome>).value;
+      expect(outcome.resident.accountId, 'user-1');
+      expect(outcome.resident.displayName, 'Juana');
+      expect(outcome.resident.accessLevel, AccessLevel.unverified);
+      expect(outcome.accessToken, 'id-token-1');
+      expect(outcome.expiresAt, isNull);
+      expect(transport.requests.single.path, 'me');
+      expect(transport.requests.single.method, HttpMethod.get);
+      expect(
+        transport.requests.single.headers['Authorization'],
+        'Bearer id-token-1',
+      );
+      expect(transport.requests.single.body, isNull);
     });
   });
 
@@ -145,14 +239,100 @@ void main() {
       // The Node API publishes no revocation route. A resident on a borrowed
       // phone must still be able to sign out.
       expect(result.isOk, isTrue);
+      expect(identity.signOuts, 1);
       expect(transport.requests, isEmpty);
     });
   });
 
-  ApiHttpResponse okEnvelope(Object data) => ApiHttpResponse(
-    statusCode: 200,
-    body: jsonEncode(<String, Object?>{'data': data}),
-  );
+  group('Firebase sign-in and registration', () {
+    test(
+      'email and password sign in, then GET /me carries the ID token',
+      () async {
+        identity.signInResult = const Ok<FirebaseCredentialSession>(
+          FirebaseCredentialSession(idToken: 'id-token-2'),
+        );
+        transport.responses.add(
+          Ok<ApiHttpResponse>(
+            okEnvelope(<String, Object?>{
+              'id': 'user-2',
+              'name': 'Pedro Sample Resident',
+              'verification_status': 'verified',
+            }),
+          ),
+        );
+
+        final Result<AuthOutcome> result = await repository.signInWithPassword(
+          identifier: 'pedro@example.com',
+          password: 'Password1',
+        );
+
+        final AuthOutcome outcome = (result as Ok<AuthOutcome>).value;
+        expect(identity.emailSignIns, 1);
+        expect(outcome.resident.accessLevel, AccessLevel.verified);
+        expect(outcome.resident.displayName, 'Pedro');
+        expect(outcome.expiresAt, isNull);
+        expect(transport.requests.single.path, 'me');
+        expect(
+          transport.requests.single.headers['Authorization'],
+          'Bearer id-token-2',
+        );
+        expect(result.toString(), isNot(contains('id-token-2')));
+        expect(result.toString(), isNot(contains('Password1')));
+      },
+    );
+
+    test('a mobile number and password never leave the device', () async {
+      final Result<AuthOutcome> result = await repository.signInWithPassword(
+        identifier: '09170000000',
+        password: 'Password1',
+      );
+
+      expect(result.failureOrNull, isA<UnauthenticatedFailure>());
+      expect(identity.emailSignIns, 0);
+      expect(transport.requests, isEmpty);
+    });
+
+    test(
+      'registration without a password does not call Firebase or the API',
+      () async {
+        final Result<AuthOutcome> result = await repository.registerAccount(
+          email: 'juana@example.com',
+        );
+
+        expect(result.failureOrNull, isA<ValidationFailure>());
+        expect(identity.creates, 0);
+        expect(transport.requests, isEmpty);
+      },
+    );
+
+    test('createAccount uses Firebase, then GET /me', () async {
+      identity.createResult = const Ok<FirebaseCredentialSession>(
+        FirebaseCredentialSession(idToken: 'id-token-3'),
+      );
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          okEnvelope(<String, Object?>{
+            'id': 'user-3',
+            'name': 'Juana Sample',
+            'verification_status': 'unverified',
+          }),
+        ),
+      );
+
+      final Result<AuthOutcome> result = await repository.createAccount(
+        email: 'juana@example.com',
+        password: 'Password1',
+      );
+
+      expect(result.isOk, isTrue);
+      expect(identity.creates, 1);
+      expect(transport.requests.single.path, 'me');
+      expect(
+        transport.requests.single.headers['Authorization'],
+        'Bearer id-token-3',
+      );
+    });
+  });
 
   group('email and reset codes', () {
     test('a 202 without retry_after is a contract failure', () async {

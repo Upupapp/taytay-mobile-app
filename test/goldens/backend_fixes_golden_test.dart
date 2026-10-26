@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_screen.dart';
+
+import '../../tool/golden_compare.dart';
 
 /// 390×844 logical points at 3×, written as 1170×2532 PNG.
 const Size _frame = Size(390, 844);
@@ -56,7 +59,9 @@ Future<void> paintDigitalId(WidgetTester tester, String path) async {
   await tester.pump();
 
   final boundary =
-      tester.renderObject(find.byKey(const ValueKey<String>('backend-fix-frame')))
+      tester.renderObject(
+            find.byKey(const ValueKey<String>('backend-fix-frame')),
+          )
           as RenderRepaintBoundary;
   try {
     await tester.runAsync(() async {
@@ -75,16 +80,20 @@ Future<void> paintDigitalId(WidgetTester tester, String path) async {
 void main() {
   setUpAll(_loadFonts);
 
-  testWidgets('records the digital ID screen before the repository is wired', (
+  testWidgets('the wired digital ID screen matches the not-issued card', (
     tester,
   ) async {
-    await paintDigitalId(
-      tester,
-      'test/goldens/compare/backend-fixes/before/digital_id.png',
-    );
-    final bytes = File(
-      'test/goldens/compare/backend-fixes/before/digital_id.png',
-    ).readAsBytesSync();
-    expect(bytes.length, greaterThan(1000));
+    const beforePath =
+        'test/goldens/compare/backend-fixes/before/digital_id.png';
+    const afterPath = 'test/goldens/compare/backend-fixes/after/digital_id.png';
+    await paintDigitalId(tester, afterPath);
+
+    final img.Image? before = img.decodePng(File(beforePath).readAsBytesSync());
+    final img.Image? after = img.decodePng(File(afterPath).readAsBytesSync());
+    expect(before, isNotNull);
+    expect(after, isNotNull);
+    final report = compareImages(before!, after!);
+    expect(report.sameSize, isTrue);
+    expect(report.mismatchPercent, 0);
   });
 }

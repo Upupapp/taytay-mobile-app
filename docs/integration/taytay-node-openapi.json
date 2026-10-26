@@ -105,7 +105,7 @@
    "get": {
     "operationId": "getMe",
     "summary": "Get the signed-in profile",
-    "description": "Creates the user on first sight. The role is stored on the row after that. verification_status is the tier. rejection_reason is set only while that tier is rejected. closed is true after POST /api/v1/me/close. email_verified is true only after POST /api/v1/auth/email-otp/verify for the current email.",
+    "description": "Creates the user on first sight. The role is stored on the row after that. verification_status is the tier. verification_decided_at is set when that tier is verified or rejected, and null otherwise. rejection_reason is set only while that tier is rejected. closed is true after POST /api/v1/me/close. email_verified is true only after POST /api/v1/auth/email-otp/verify for the current email.",
     "security": [
      {
       "firebaseIdToken": []
@@ -1396,7 +1396,7 @@
    "get": {
     "operationId": "listServices",
     "summary": "List Tulong services",
-    "description": "Information only. There is no application endpoint.",
+    "description": "Information only. There is no application endpoint. Services with hidden_from_list are omitted unless featured=true, which returns featured services and includes those hidden from the catalogue.",
     "security": [],
     "parameters": [
      {
@@ -1418,6 +1418,13 @@
       "in": "query",
       "schema": {
        "type": "string"
+      }
+     },
+     {
+      "name": "featured",
+      "in": "query",
+      "schema": {
+       "type": "boolean"
       }
      },
      {
@@ -1445,6 +1452,59 @@
        "application/json": {
         "schema": {
          "$ref": "#/components/schemas/ServiceListEnvelope"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "/api/v1/services/{slug}/hero": {
+   "get": {
+    "operationId": "getServiceHero",
+    "summary": "Tulong hero image",
+    "description": "Bytes for a service image, read through MediaStore. No image is 404. The bucket stays private.",
+    "security": [],
+    "parameters": [
+     {
+      "name": "slug",
+      "in": "path",
+      "required": true,
+      "schema": {
+       "type": "string"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "description": "Image bytes.",
+      "content": {
+       "image/jpeg": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       },
+       "image/png": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       },
+       "image/webp": {
+        "schema": {
+         "type": "string",
+         "format": "binary"
+        }
+       }
+      }
+     },
+     "404": {
+      "description": "Not found, or no image.",
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/ErrorEnvelope"
         }
        }
       }
@@ -4716,6 +4776,7 @@
      "purok": null,
      "avatar_media_id": null,
      "verification_status": "unverified",
+     "verification_decided_at": null,
      "rejection_reason": null,
      "role": "registered",
      "office_id": null,
@@ -4729,6 +4790,7 @@
      "firebase_uid",
      "email_verified",
      "verification_status",
+     "verification_decided_at",
      "rejection_reason",
      "role",
      "closed",
@@ -4832,7 +4894,7 @@
        "null"
       ],
       "format": "date-time",
-      "description": "When the LGU verified or rejected this resident. Null otherwise."
+      "description": "When the current tier became verified or rejected. Null for unverified and pending."
      },
      "rejection_reason": {
       "type": [
@@ -5641,6 +5703,12 @@
      "slug": {
       "type": "string"
      },
+     "short_name": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
      "description": {
       "type": "string"
      },
@@ -5682,6 +5750,12 @@
      },
      "slug": {
       "type": "string"
+     },
+     "short_name": {
+      "type": [
+       "string",
+       "null"
+      ]
      },
      "category": {
       "type": "string"
@@ -6635,12 +6709,25 @@
    "ServiceContact": {
     "type": "object",
     "required": [
-     "label",
+     "type",
      "value"
     ],
     "properties": {
+     "type": {
+      "type": "string",
+      "enum": [
+       "facebook",
+       "landline",
+       "hotline",
+       "email",
+       "mobile"
+      ]
+     },
      "label": {
-      "type": "string"
+      "type": [
+       "string",
+       "null"
+      ]
      },
      "value": {
       "type": "string"
@@ -6746,6 +6833,59 @@
      "featured": {
       "type": "boolean"
      },
+     "icon_key": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tile_color": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Hex color, #RGB or #RRGGBB."
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "legal_basis": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "claim_steps": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "featured_headline": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "schedule": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "hero_url": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "description": "Public URL of GET /api/v1/services/{slug}/hero when an image is stored."
+     },
+     "hidden_from_list": {
+      "type": "boolean"
+     },
      "created_at": {
       "type": "string",
       "format": "date-time"
@@ -6845,6 +6985,51 @@
        "null"
       ],
       "format": "uuid"
+     },
+     "icon_key": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tile_color": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "legal_basis": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "claim_steps": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "featured_headline": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "schedule": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "hidden_from_list": {
+      "type": "boolean"
      }
     }
    },
@@ -6866,7 +7051,58 @@
        "type": "string"
       }
      },
+     "contacts": {
+      "type": "array",
+      "items": {
+       "$ref": "#/components/schemas/ServiceContact"
+      }
+     },
      "featured": {
+      "type": "boolean"
+     },
+     "icon_key": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "tile_color": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "badge": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "legal_basis": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "claim_steps": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "featured_headline": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "schedule": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "hidden_from_list": {
       "type": "boolean"
      }
     }
@@ -7101,6 +7337,7 @@
      "terms_version",
      "minimum_app_version",
      "feature_flags",
+     "privacy_notice",
      "updated_at"
     ],
     "properties": {
@@ -7140,20 +7377,12 @@
        "type": "string"
       }
      },
+     "privacy_notice": {
+      "$ref": "#/components/schemas/PrivacyNotice"
+     },
      "updated_at": {
       "type": "string",
       "format": "date-time"
-     },
-     "privacy_notice": {
-      "description": "Published notice. A missing object, or version placeholder, means the client keeps its bundled draft.",
-      "anyOf": [
-       {
-        "$ref": "#/components/schemas/PrivacyNotice"
-       },
-       {
-        "type": "null"
-       }
-      ]
      }
     }
    },

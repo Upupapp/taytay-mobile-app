@@ -75,6 +75,7 @@ class ScriptedNotificationRepository implements NotificationRepository {
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int perPage = 25,
+    String? cursor,
   }) async {
     final value = items;
     return value == null

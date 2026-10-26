@@ -41,8 +41,10 @@ class NotificationApiRepository
   Future<Result<Paginated<ResidentNotification>>> listOwn({
     int page = 1,
     int? perPage,
+    String? cursor,
   }) async {
     assert(page >= 1);
+    final String? next = cursor != null && cursor.isNotEmpty ? cursor : null;
     final response = await _apiClient.send<List<ResidentNotification>>(
       method: HttpMethod.get,
       path: path,
@@ -50,6 +52,7 @@ class NotificationApiRepository
       query: <String, String>{
         'limit':
             '${_apiClient.pages.clampRequest(perPage ?? _apiClient.pages.defaultPerPage)}',
+        'cursor': ?next,
       },
       decode: (Object? data) => data is List<dynamic>
           ? data
@@ -271,14 +274,26 @@ class NotificationApiRepository
     if (id is! String || id.isEmpty || title is! String) return null;
 
     final Object? rawType = entry['type'] ?? entry['category'];
+    // `verification_decided` is the resident category for a decision.
+    // `message_received` stays itself. It is not relabelled to account security.
     final String? categoryWire = switch (rawType) {
       'verification_decided' => 'verification_update',
-      'message_received' => 'account_security',
       final String value => value,
       _ => null,
     };
     final Object? subjectType = entry['subject_type'];
+    final String? explicitType = subjectType is String && subjectType.isNotEmpty
+        ? subjectType
+        : null;
+    // `subject_type` is not on the schema. When it is absent, the notification
+    // type is the only routing hint the payload carries.
+    final String? derivedType =
+        explicitType ??
+        (rawType is String && rawType.isNotEmpty ? rawType : null);
     final Object? subjectId = entry['subject_id'];
+    final String? targetId = subjectId is String && subjectId.isNotEmpty
+        ? subjectId
+        : null;
 
     return ResidentNotification(
       id: id,
@@ -298,11 +313,7 @@ class NotificationApiRepository
       // Routing only, and only two keys. Anything else the server adds is
       // dropped here rather than carried into a target map that a screen might
       // one day read.
-      target: <String, String>{
-        if (subjectType is String && subjectType.isNotEmpty)
-          'type': subjectType,
-        if (subjectId is String && subjectId.isNotEmpty) 'id': subjectId,
-      },
+      target: <String, String>{'type': ?derivedType, 'id': ?targetId},
     );
   }
 
@@ -320,6 +331,7 @@ class NotificationApiRepository
       total: pagination.total,
       totalPages: pagination.totalPages,
       hasMore: pagination.hasMore,
+      nextCursor: pagination.nextCursor,
     );
   }
 }

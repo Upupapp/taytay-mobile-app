@@ -375,24 +375,20 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // TAB 09: sign-in renders only a `SignInMessage`, never a failure view.
-      // The operator-facing debug text is no longer surfaced here even in a dev
-      // build, because on this screen it would name the endpoint that refused —
-      // and that is one step from naming *why* it refused.
-      //
-      // TAB 02 changed which message this is, and the change is the point. The
-      // repository used to decline with a temporary ServerFailure whatever
-      // happened; it now really calls `auth/otp`, and in a test there is no
-      // socket — so the honest answer is that the device is offline, which is
-      // also more useful to a resident than "temporarily unavailable" was.
-      // Asserted as a property rather than as one string. Which SignInMessage
-      // appears depends on how the request failed, and in a widget test that is
-      // an artefact of the harness; what must hold is that the resident sees
-      // copy this app wrote, and nothing else.
+      // A mobile number plus a password is refused on the device. The
+      // credential banner is the resident copy. Nothing from the server,
+      // and nothing that says whether the number is registered, is shown.
+      final bool residentCopy =
+          SignInMessage.values.any(
+            (SignInMessage message) =>
+                find.textContaining(message.text).evaluate().isNotEmpty,
+          ) ||
+          find
+              .textContaining('Incorrect email or password')
+              .evaluate()
+              .isNotEmpty;
       expect(
-        SignInMessage.values.any(
-          (m) => find.textContaining(m.text).evaluate().isNotEmpty,
-        ),
+        residentCopy,
         isTrue,
         reason: 'no resident-facing sign-in message was shown',
       );

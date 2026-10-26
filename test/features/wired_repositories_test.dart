@@ -93,19 +93,49 @@ void main() {
   late _Scripted transport;
   setUp(() => transport = _Scripted(<Result<ApiHttpResponse>>[]));
 
-  group('household — the member array is never read', () {
-    test(
-      'the household is not fetched, so the member array is never read',
-      () async {
-        final Result<HouseholdSummary> result = await HouseholdApiRepository(
-          apiClient: clientFor(transport),
-        ).loadOwnHousehold();
+  group('household — own household from households/current', () {
+    test('decodes the contract and keeps names out of toString', () async {
+      transport.responses.add(
+        ok(<String, Object?>{
+          'id': 'hh-1',
+          'address': '12 Sample Street',
+          'barangay_name': 'San Juan',
+          'viewer_role': 'head',
+          'members': <Object?>[
+            <String, Object?>{
+              'id': 'm-1',
+              'user_id': 'user-1',
+              'name': 'Juana Sample',
+              'relationship': 'head',
+              'birthdate': '1990-01-02',
+              'sex': 'female',
+              'invite_status': 'accepted',
+            },
+          ],
+        }),
+      );
 
-        expect(result.failureOrNull, isA<ServerFailure>());
-        expect(result.failureOrNull!.debugMessage, contains('F32'));
-        expect(transport.requests, isEmpty);
-      },
-    );
+      final Result<HouseholdSummary> result = await HouseholdApiRepository(
+        apiClient: clientFor(transport),
+      ).loadOwnHousehold();
+
+      expect(transport.requests.single.path, 'households/current');
+      expect(sentAuthenticated(transport.requests.single), isTrue);
+      final HouseholdSummary summary = (result as Ok<HouseholdSummary>).value;
+      expect(summary.role, HouseholdRole.head);
+      expect(summary.barangay, 'San Juan');
+      expect(summary.streetAddress, '12 Sample Street');
+      expect(summary.memberCount, 1);
+      expect(summary.members.single.relationship, HouseholdRelationship.head);
+      expect(summary.members.single.sex, HouseholdSex.female);
+      expect(
+        summary.members.single.inviteStatus,
+        HouseholdInviteStatus.accepted,
+      );
+      expect(summary.toString(), isNot(contains('Juana')));
+      expect(summary.toString(), isNot(contains('hh-1')));
+      expect(summary.members.single.toString(), isNot(contains('Juana')));
+    });
   });
 
   group('assistance — the key goes on the irreversible call only', () {
