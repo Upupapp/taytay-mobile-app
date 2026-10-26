@@ -152,14 +152,13 @@ class KycApiRepository implements VerificationRepository {
 
     final Object? raw = map['status'];
     final Object? message = map['message'];
-    final Object? notes = map['notes'];
     final Object? submittedAt = map['submitted_at'] ?? map['created_at'];
     final Object? canEdit = map['can_edit'];
     final Object? idType = map['id_type'];
     final Object? reviewedAt = map['reviewed_at'];
     final String? guidance = message is String && message.trim().isNotEmpty
         ? message.trim()
-        : (notes is String && notes.trim().isNotEmpty ? notes.trim() : null);
+        : null;
 
     return VerificationStatusDetail(
       stage: ResidentVerificationStage.fromAttemptState(
@@ -319,18 +318,16 @@ class KycApiRepository implements VerificationRepository {
     final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
     final Object? raw = map['status'];
     final Object? message = map['message'];
-    final Object? notes = map['notes'];
     final String? guidance = message is String && message.trim().isNotEmpty
         ? message.trim()
-        : (notes is String && notes.trim().isNotEmpty ? notes.trim() : null);
+        : null;
 
     return VerificationStatus(
       state: VerificationAttemptState.parse(raw is String ? raw : null),
       // The server's own value, preserved whatever this build made of it, so a
       // support desk and a resident are looking at the same word.
       rawState: raw is String ? raw : '',
-      // `notes` is the office text on VerificationRequest. The reviewer's
-      // identity is not copied.
+      // Only `message` is copied. Every other field on the request is ignored.
       residentGuidance: guidance,
     );
   }

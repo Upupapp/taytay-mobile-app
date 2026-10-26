@@ -31,7 +31,7 @@ Future<void> _loadFonts() async {
   await lucide.load();
 }
 
-Future<void> paintDigitalId(WidgetTester tester, String path) async {
+Future<img.Image> paintDigitalId(WidgetTester tester) async {
   debugDisableShadows = false;
   tester.view.devicePixelRatio = 3;
   tester.view.physicalSize = const Size(1170, 2532);
@@ -64,14 +64,20 @@ Future<void> paintDigitalId(WidgetTester tester, String path) async {
           )
           as RenderRepaintBoundary;
   try {
-    await tester.runAsync(() async {
+    final img.Image? decoded = await tester.runAsync(() async {
       final image = await boundary.toImage(pixelRatio: 3);
       final data = await image.toByteData(format: ui.ImageByteFormat.png);
-      final file = File(path);
-      file.parent.createSync(recursive: true);
-      file.writeAsBytesSync(data!.buffer.asUint8List());
       image.dispose();
+      final img.Image? parsed = img.decodePng(data!.buffer.asUint8List());
+      if (parsed == null) {
+        throw StateError('The digital ID frame did not decode.');
+      }
+      return parsed;
     });
+    if (decoded == null) {
+      throw StateError('The digital ID frame did not decode.');
+    }
+    return decoded;
   } finally {
     debugDisableShadows = true;
   }
@@ -83,16 +89,19 @@ void main() {
   testWidgets('the wired digital ID screen matches the not-issued card', (
     tester,
   ) async {
-    const beforePath =
-        'test/goldens/compare/backend-fixes/before/digital_id.png';
     const afterPath = 'test/goldens/compare/backend-fixes/after/digital_id.png';
-    await paintDigitalId(tester, afterPath);
+    final img.Image rendered = await paintDigitalId(tester);
+    if (autoUpdateGoldenFiles) {
+      final File file = File(afterPath);
+      file.parent.createSync(recursive: true);
+      file.writeAsBytesSync(img.encodePng(rendered));
+    }
 
-    final img.Image? before = img.decodePng(File(beforePath).readAsBytesSync());
-    final img.Image? after = img.decodePng(File(afterPath).readAsBytesSync());
-    expect(before, isNotNull);
-    expect(after, isNotNull);
-    final report = compareImages(before!, after!);
+    final img.Image? committed = img.decodePng(
+      File(afterPath).readAsBytesSync(),
+    );
+    expect(committed, isNotNull);
+    final report = compareImages(committed!, rendered);
     expect(report.sameSize, isTrue);
     expect(report.mismatchPercent, 0);
   });

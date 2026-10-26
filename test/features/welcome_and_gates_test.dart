@@ -576,22 +576,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // A mobile number plus a password never leaves the device, and the
-      // screen does not advance as though a code had been sent.
-      final bool residentCopy =
-          SignInMessage.values.any(
-            (SignInMessage message) =>
-                find.textContaining(message.text).evaluate().isNotEmpty,
-          ) ||
-          find
-              .textContaining('Incorrect email or password')
-              .evaluate()
-              .isNotEmpty;
+      // A mobile number plus a password never leaves the device. It is not a
+      // wrong password, and the screen does not advance.
       expect(
-        residentCopy,
-        isTrue,
-        reason: 'no resident-facing sign-in message was shown',
+        find.textContaining(SignInMessage.passwordNeedsEmail.text),
+        findsOneWidget,
       );
+      expect(find.textContaining('Incorrect email or password'), findsNothing);
+      expect(find.text('Incorrect password'), findsNothing);
       expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
     });
 

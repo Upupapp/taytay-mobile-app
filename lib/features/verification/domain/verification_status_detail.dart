@@ -319,11 +319,10 @@ class VerificationStatusDetail {
   /// present.
   bool get isEditableByApplicant => canEdit ?? stage.needsResidentAction;
 
-  /// Server-composed, resident-addressed guidance.
+  /// `message` on the verification request, when one was sent.
   ///
-  /// The one place server text is shown, and for the same reason a validation
-  /// message is: only the reviewing office knows what was wrong with a
-  /// particular submission, so the app cannot compose this for itself.
+  /// Not rendered. The status screen shows `rejection_reason` from `GET /me`.
+  /// A staff note on the same request is not a field on this type.
   final String? residentGuidance;
 
   /// Whether an in-person route at the municipal hall is offered.

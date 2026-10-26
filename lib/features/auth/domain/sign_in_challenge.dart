@@ -131,6 +131,15 @@ enum SignInMessage {
   /// The attempt count is the designed lockout notice, not a server message.
   credentialsRejected(
     'Incorrect email or password. 2 attempts left before a 15-minute pause.',
+  ),
+
+  /// A mobile number was typed into password sign-in.
+  ///
+  /// Distinct from [credentialsRejected]: the attempt is not a wrong password,
+  /// and it does not say whether that number has an account.
+  passwordNeedsEmail(
+    'Use your email to sign in with a password, or get a code sent to your '
+    'mobile.',
   );
 
   const SignInMessage(this.text);
@@ -143,6 +152,13 @@ enum SignInMessage {
   bool get suggestsRetry =>
       this == offline || this == timedOut || this == serviceUnavailable;
 }
+
+/// Field-error marker for a password attempt that used a mobile number.
+///
+/// Not resident copy. [SignInMessage.passwordNeedsEmail] is what the screen
+/// shows. A [ValidationFailure] without this marker still collapses to one
+/// OTP message, so an empty form cannot be told apart from an unknown number.
+const String passwordSignInNeedsEmail = 'password-needs-email';
 
 /// Maps a transport failure onto resident copy.
 abstract final class SignInFeedback {

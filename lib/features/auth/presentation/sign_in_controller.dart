@@ -166,7 +166,9 @@ class SignInController extends ChangeNotifier {
   /// Email or mobile plus a password. The screen does not navigate.
   ///
   /// A refusal that could mean "no such account" or "wrong password" becomes
-  /// [SignInMessage.credentialsRejected]. The server's message is never used.
+  /// [SignInMessage.credentialsRejected]. A mobile number is
+  /// [SignInMessage.passwordNeedsEmail] and does not spend an attempt. The
+  /// server's message is never used.
   Future<bool> signInWithPassword({
     required String identifier,
     required String password,
@@ -194,6 +196,12 @@ class SignInController extends ChangeNotifier {
         return true;
       case Err<AuthOutcome>(:final failure):
         _message = switch (failure) {
+          ValidationFailure(:final fieldErrors)
+              when fieldErrors['identifier']?.contains(
+                    passwordSignInNeedsEmail,
+                  ) ==
+                  true =>
+            SignInMessage.passwordNeedsEmail,
           NotFoundFailure() ||
           ForbiddenFailure() ||
           UnauthenticatedFailure() ||

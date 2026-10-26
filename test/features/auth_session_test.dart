@@ -549,6 +549,48 @@ void main() {
       },
     );
 
+    test(
+      'a mobile number on password sign-in does not spend an attempt',
+      () async {
+        final repository = FakeAuthRepository(
+          passwordOutcome: const Err<AuthOutcome>(
+            ValidationFailure(
+              fieldErrors: <String, List<String>>{
+                'identifier': <String>[passwordSignInNeedsEmail],
+              },
+            ),
+          ),
+        );
+        final controller = SignInController(
+          repository: repository,
+          session: SessionController(store: InMemorySessionStore()),
+        );
+        addTearDown(controller.dispose);
+
+        expect(
+          await controller.signInWithPassword(
+            identifier: '09171234567',
+            password: 'password-sample',
+          ),
+          isFalse,
+        );
+        expect(controller.message, SignInMessage.passwordNeedsEmail);
+
+        repository.passwordOutcome = const Err<AuthOutcome>(
+          UnauthenticatedFailure(),
+        );
+        expect(
+          await controller.signInWithPassword(
+            identifier: 'resident@example.com',
+            password: 'password-sample',
+          ),
+          isFalse,
+        );
+        expect(controller.message, SignInMessage.credentialsRejected);
+        expect(controller.passwordAttemptsShown, 2);
+      },
+    );
+
     test('toString carries neither the number nor a code', () async {
       final controller = SignInController(
         repository: FakeAuthRepository(),

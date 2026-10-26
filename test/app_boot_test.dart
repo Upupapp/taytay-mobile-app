@@ -375,23 +375,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // A mobile number plus a password is refused on the device. The
-      // credential banner is the resident copy. Nothing from the server,
-      // and nothing that says whether the number is registered, is shown.
-      final bool residentCopy =
-          SignInMessage.values.any(
-            (SignInMessage message) =>
-                find.textContaining(message.text).evaluate().isNotEmpty,
-          ) ||
-          find
-              .textContaining('Incorrect email or password')
-              .evaluate()
-              .isNotEmpty;
+      // A mobile number plus a password is refused on the device. It is not
+      // a wrong password, and it does not say whether the number is registered.
       expect(
-        residentCopy,
-        isTrue,
-        reason: 'no resident-facing sign-in message was shown',
+        find.textContaining(SignInMessage.passwordNeedsEmail.text),
+        findsOneWidget,
       );
+      expect(find.textContaining('Incorrect email or password'), findsNothing);
+      expect(find.text('Incorrect password'), findsNothing);
       expect(find.textContaining('auth/otp'), findsNothing);
       expect(find.textContaining('Identity'), findsNothing);
       // Nothing distinguishes an unknown number from any other refusal.

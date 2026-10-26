@@ -11,6 +11,7 @@ import '../../../core/telemetry/telemetry.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
+import '../domain/sign_in_challenge.dart';
 import 'firebase_identity.dart';
 
 /// Firebase owns sign-in and registration. The API sees the ID token.
@@ -88,10 +89,13 @@ class AuthApiRepository implements AuthRepository {
       );
     }
     if (!trimmed.contains('@')) {
-      // Firebase password sign-in is an email. A mobile number uses the
-      // phone code on this same identity.
+      // Firebase password sign-in is an email. A mobile number uses a phone
+      // code. Nothing is sent, and the refusal is not a wrong password.
       return const Err<AuthOutcome>(
-        UnauthenticatedFailure(
+        ValidationFailure(
+          fieldErrors: <String, List<String>>{
+            'identifier': <String>[passwordSignInNeedsEmail],
+          },
           debugMessage: 'Password sign-in uses an email address.',
         ),
       );

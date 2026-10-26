@@ -344,46 +344,50 @@ void main() {
     },
   );
 
-  test('verification reads the request fields and drops staff notes', () async {
-    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
-      _ok(<String, Object?>{
-        'id': 'vr-1',
-        'user_id': 'user-1',
-        'id_type': 'philid',
-        'id_front_media_id': 'front-1',
-        'id_back_media_id': 'back-1',
-        'selfie_media_id': 'selfie-1',
-        'status': 'pending',
-        'notes': 'Bring the card to the hall.',
-        'created_at': '2026-08-01T00:00:00Z',
-        'reviewed_at': null,
-        'internal_notes': 'staff only',
-        'reviewer_id': 'staff-1',
-      }),
-    ]);
-    final Result<VerificationStatusDetail> result = await KycApiRepository(
-      apiClient: ApiClient(
-        config: _config(),
-        transport: transport,
-        accessTokenProvider: () async => 'firebase-id-token',
-      ),
-    ).loadOwnStatusDetail();
+  test(
+    'verification reads the request fields and ignores staff notes',
+    () async {
+      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+        _ok(<String, Object?>{
+          'id': 'vr-1',
+          'user_id': 'user-1',
+          'id_type': 'philid',
+          'id_front_media_id': 'front-1',
+          'id_back_media_id': 'back-1',
+          'selfie_media_id': 'selfie-1',
+          'status': 'pending',
+          'notes': 'Bring the card to the hall.',
+          'created_at': '2026-08-01T00:00:00Z',
+          'reviewed_at': null,
+          'internal_notes': 'staff only',
+          'reviewer_id': 'staff-1',
+        }),
+      ]);
+      final Result<VerificationStatusDetail> result = await KycApiRepository(
+        apiClient: ApiClient(
+          config: _config(),
+          transport: transport,
+          accessTokenProvider: () async => 'firebase-id-token',
+        ),
+      ).loadOwnStatusDetail();
 
-    final VerificationStatusDetail detail =
-        (result as Ok<VerificationStatusDetail>).value;
-    expect(detail.id, 'vr-1');
-    expect(detail.userId, 'user-1');
-    expect(detail.idType, 'philid');
-    expect(detail.idFrontMediaId, 'front-1');
-    expect(detail.idBackMediaId, 'back-1');
-    expect(detail.selfieMediaId, 'selfie-1');
-    expect(detail.rawState, 'pending');
-    expect(detail.residentGuidance, 'Bring the card to the hall.');
-    expect(detail.submittedCategories, isEmpty);
-    expect(detail.issues, isEmpty);
-    expect(detail.toString(), isNot(contains('staff only')));
-    expect(detail.toString(), isNot(contains('staff-1')));
-  });
+      final VerificationStatusDetail detail =
+          (result as Ok<VerificationStatusDetail>).value;
+      expect(detail.id, 'vr-1');
+      expect(detail.userId, 'user-1');
+      expect(detail.idType, 'philid');
+      expect(detail.idFrontMediaId, 'front-1');
+      expect(detail.idBackMediaId, 'back-1');
+      expect(detail.selfieMediaId, 'selfie-1');
+      expect(detail.rawState, 'pending');
+      expect(detail.residentGuidance, isNull);
+      expect(detail.submittedCategories, isEmpty);
+      expect(detail.issues, isEmpty);
+      expect(detail.toString(), isNot(contains('Bring the card to the hall.')));
+      expect(detail.toString(), isNot(contains('staff only')));
+      expect(detail.toString(), isNot(contains('staff-1')));
+    },
+  );
 
   test(
     'an office keeps the hall photo and reads banner and coordinates',

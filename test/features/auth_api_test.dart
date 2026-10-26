@@ -14,6 +14,7 @@ import 'package:taytay_resident/features/auth/data/firebase_identity.dart';
 import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
+import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 
 class _FakeIdentity implements FirebaseIdentity {
   Result<FirebaseCredentialSession> signInResult = const Err(
@@ -287,7 +288,12 @@ void main() {
         password: 'Password1',
       );
 
-      expect(result.failureOrNull, isA<UnauthenticatedFailure>());
+      final ValidationFailure failure =
+          result.failureOrNull! as ValidationFailure;
+      expect(
+        failure.fieldErrors['identifier'],
+        contains(passwordSignInNeedsEmail),
+      );
       expect(identity.emailSignIns, 0);
       expect(transport.requests, isEmpty);
     });

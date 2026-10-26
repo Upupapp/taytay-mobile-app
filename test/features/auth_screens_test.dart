@@ -17,6 +17,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
+import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
@@ -334,6 +335,41 @@ void main() {
       ]) {
         expect(rendered, isNot(contains(leak)), reason: leak);
       }
+    });
+
+    testWidgets('a mobile number on password sign-in is not a wrong password', (
+      tester,
+    ) async {
+      final auth = FakeAuthRepository(
+        passwordOutcome: const Err<AuthOutcome>(
+          ValidationFailure(
+            fieldErrors: <String, List<String>>{
+              'identifier': <String>[passwordSignInNeedsEmail],
+            },
+          ),
+        ),
+      );
+      await boot(tester, auth: auth);
+      await goTo(tester, 'sign-in');
+
+      await tester.enterText(find.byType(TextFormField).at(0), '09171234567');
+      await tester.enterText(
+        find.byType(TextFormField).at(1),
+        'password-sample',
+      );
+      await tester.tap(
+        find.descendant(of: find.byType(Form), matching: find.text('Sign in')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining(SignInMessage.passwordNeedsEmail.text),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Incorrect email or password'), findsNothing);
+      expect(find.text('Incorrect password'), findsNothing);
+      expect(find.textContaining('not registered'), findsNothing);
+      expect(find.textContaining('no account'), findsNothing);
     });
 
     testWidgets('forgot password is a screen, and sign-in has a way back', (
