@@ -292,11 +292,14 @@ abstract final class AppTypography {
   );
 
   /// Welcome eyebrow. CSS `.en` in gen1.py is 11 / 800, letter-spacing 1.6.
+  ///
+  /// The line is CSS `normal`: 13.67 / 11 = 1.2424. A 1.2 box left the
+  /// headline 3 image pixels high.
   static const TextStyle eyebrow = TextStyle(
     fontFamily: fontFamily,
     fontSize: 11,
     fontWeight: black,
-    height: 1.2,
+    height: 1.2424,
     letterSpacing: 1.6,
     leadingDistribution: TextLeadingDistribution.even,
   );
@@ -360,4 +363,20 @@ abstract final class AppTypography {
       labelSmall: role(base.labelSmall, black, size: 11, height: 1.2),
     );
   }
+}
+
+/// Plus Jakarta's Chrome `line-height: normal`, after the 3× capture rounding.
+///
+/// The hhea and typo metrics are ascender 1038 and descender −222 on a
+/// 1000-unit em. Blink rounds each to a device pixel, so 11 → 13.67,
+/// 14 → 17.67 and 15 → 19. Account spacing uses this same box.
+abstract final class TypeMetrics {
+  static double ascender(double fontSize) =>
+      ((fontSize * 3 * 1038 / 1000).round()) / 3;
+
+  static double descender(double fontSize) =>
+      ((fontSize * 3 * 222 / 1000).round()) / 3;
+
+  static double line(double fontSize) =>
+      ascender(fontSize) + descender(fontSize);
 }

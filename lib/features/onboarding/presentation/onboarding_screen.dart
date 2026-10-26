@@ -8,6 +8,7 @@ import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/gold_thread_shell.dart';
 import '../../../shared/widgets/taytay_thread.dart';
 import 'welcome_scene.dart';
 
@@ -71,9 +72,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _pages.addListener(_onPageTick);
   }
 
+  bool get _hosted => GoldThreadScope.maybeOf(context) != null;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_hosted) {
+      _light.stop();
+      GoldThreadScope.maybeOf(context)!.setWelcomePage(_page);
+      return;
+    }
     if (!Motion.decorativeLoop(context)) {
       _light.stop();
     } else if (!_light.isAnimating) {
@@ -83,6 +91,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   void _onPageTick() {
     if (!mounted) return;
+    if (_hosted) {
+      GoldThreadScope.maybeOf(context)!.setWelcomePage(_page);
+      setState(() {});
+      return;
+    }
     if (!Motion.decorativeLoop(context)) {
       _heldPhase = null;
       if (mounted) setState(() {});
@@ -127,7 +140,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   /// The speck on the joined stitch. Null hides it (reduced motion, or this
   /// page is not the one currently carrying the light).
+  ///
+  /// Inside the shell the shared layer paints the speck, so this stays null.
   double? _lightT(int page) {
+    if (_hosted) return null;
     if (Motion.reduced(context)) return null;
     if (!Motion.decorativeLoop(context)) return null;
     final phase =
@@ -178,8 +194,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final scenes = WelcomePageCopy.fromStrings(AppStrings.of(context));
+    final bool hosted = _hosted;
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: hosted ? Colors.transparent : const Color(0xFFF3F5FA),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final scale = constraints.maxWidth / 390;

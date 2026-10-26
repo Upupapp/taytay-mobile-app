@@ -7,6 +7,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/sign_in_field.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/gold_thread_shell.dart';
 import '../../../shared/widgets/taytay_headers.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
@@ -77,73 +78,83 @@ class AuthStage extends StatelessWidget {
     final maxTop = math.max(0.0, height - bottom - 48);
     if (top > maxTop) top = maxTop;
 
-    return Scaffold(
-      backgroundColor: BrandColors.surface,
-      body: Stack(
-        key: const Key('sign-in-stack'),
-        children: <Widget>[
-          Positioned.fill(child: SignInBackdrop(atmosphere: atmosphere)),
-          Positioned.fill(
-            child: IgnorePointer(
-              child: SignInThreadOverlay(cycle: threadCycle, curve: curve),
-            ),
-          ),
-          if (arch != AuthArch.none) _Arch(kind: arch, greeting: greeting),
-          if (bleed)
-            const Positioned.fill(child: ColoredBox(color: Color(0x73062358))),
-          Positioned(
-            top: headerTop,
-            left: padding.left,
-            right: padding.right,
-            child: WovenHeader(
-              showBack: true,
-              onBack: onBack,
-              paintField: false,
-              includeSafeArea: false,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
-            ),
-          ),
-          if (step != null)
+    final bool hosted = GoldThreadScope.maybeOf(context) != null;
+    return GoldThreadBinding(
+      curve: curve,
+      atmosphere: atmosphere,
+      sheetTop: top,
+      child: Scaffold(
+        backgroundColor: hosted ? Colors.transparent : BrandColors.surface,
+        body: Stack(
+          key: const Key('sign-in-stack'),
+          children: <Widget>[
+            if (!hosted)
+              Positioned.fill(child: SignInBackdrop(atmosphere: atmosphere)),
+            if (!hosted)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: SignInThreadOverlay(cycle: threadCycle, curve: curve),
+                ),
+              ),
+            if (arch != AuthArch.none) _Arch(kind: arch, greeting: greeting),
+            if (bleed)
+              const Positioned.fill(
+                child: ColoredBox(color: Color(0x73062358)),
+              ),
             Positioned(
-              top: headerTop + 60,
-              left: 20 + padding.left,
-              right: 20 + padding.right,
-              child: _StepDots(step: step!, label: stepLabel ?? ''),
+              top: headerTop,
+              left: padding.left,
+              right: padding.right,
+              child: WovenHeader(
+                showBack: true,
+                onBack: onBack,
+                paintField: false,
+                includeSafeArea: false,
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+              ),
             ),
-          if (fieldCaption != null)
-            Positioned(
-              top: 346,
-              left: 24 + padding.left,
-              right: 24 + padding.right,
-              child: fieldCaption!,
-            ),
-          if (wrapSheet)
-            Positioned(
-              top: top,
-              left: bleed ? 0 : side,
-              right: bleed ? 0 : side,
-              bottom: bleed
-                  ? 0
-                  : footer == null
-                  ? bottom
-                  : bottom + 66,
-              child: _Sheet(bleed: bleed, expand: true, child: child),
-            )
-          else
-            Positioned(
-              top: top,
-              left: side,
-              right: side,
-              child: _Sheet(expand: false, child: child),
-            ),
-          if (footer != null)
-            Positioned(
-              left: 20 + padding.left,
-              right: 20 + padding.right,
-              bottom: math.max(34, padding.bottom),
-              child: footer!,
-            ),
-        ],
+            if (step != null)
+              Positioned(
+                top: headerTop + 60,
+                left: 20 + padding.left,
+                right: 20 + padding.right,
+                child: _StepDots(step: step!, label: stepLabel ?? ''),
+              ),
+            if (fieldCaption != null)
+              Positioned(
+                top: 346,
+                left: 24 + padding.left,
+                right: 24 + padding.right,
+                child: fieldCaption!,
+              ),
+            if (wrapSheet)
+              Positioned(
+                top: top,
+                left: bleed ? 0 : side,
+                right: bleed ? 0 : side,
+                bottom: bleed
+                    ? 0
+                    : footer == null
+                    ? bottom
+                    : bottom + 66,
+                child: _Sheet(bleed: bleed, expand: true, child: child),
+              )
+            else
+              Positioned(
+                top: top,
+                left: side,
+                right: side,
+                child: _Sheet(expand: false, child: child),
+              ),
+            if (footer != null)
+              Positioned(
+                left: 20 + padding.left,
+                right: 20 + padding.right,
+                bottom: math.max(34, padding.bottom),
+                child: footer!,
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -249,13 +260,15 @@ class _HallArch extends StatelessWidget {
           child: DecoratedBox(
             decoration: const BoxDecoration(
               borderRadius: radius,
+              // CSS paints the first shadow on top. Flutter paints the last
+              // one on top, so the white ring stays last or the blur greys it.
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x40062358),
                   blurRadius: 34,
                   offset: Offset(0, 16),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: ClipRRect(
@@ -319,12 +332,12 @@ class _KeyArch extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: TaytayIcon(
@@ -398,12 +411,12 @@ class _SmallMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(
@@ -476,12 +489,12 @@ class _ShieldMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x33062358),
                   blurRadius: 30,
                   offset: Offset(0, 14),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(
@@ -553,12 +566,12 @@ class _SubmittedMark extends StatelessWidget {
               color: Colors.white,
               borderRadius: radius,
               boxShadow: <BoxShadow>[
-                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
                 BoxShadow(
                   color: Color(0x38062358),
                   blurRadius: 34,
                   offset: Offset(0, 16),
                 ),
+                BoxShadow(color: Color(0xFFFFFFFF), spreadRadius: 4),
               ],
             ),
             child: Center(
@@ -868,7 +881,6 @@ class AuthCopy extends StatelessWidget {
     this.titleSize = 24,
     this.subtitleSize = 13,
     this.centered = false,
-    this.titleDy = 0,
     this.subtitleHeight = 1.5,
     this.subtitleDy = 0,
     super.key,
@@ -881,10 +893,9 @@ class AuthCopy extends StatelessWidget {
   final double subtitleSize;
   final bool centered;
 
-  /// Shifts the title ink without moving the subtitle. Large titles sit low
-  /// against the design's glyph box.
-  final double titleDy;
   final double subtitleHeight;
+
+  /// Extra gap under the title. The design's subtitle margin, in the layout.
   final double subtitleDy;
 
   @override
@@ -914,32 +925,26 @@ class AuthCopy extends StatelessWidget {
         const SizedBox(height: 6),
         Semantics(
           header: true,
-          child: Transform.translate(
-            offset: Offset(0, titleDy),
-            child: Text(
-              title,
-              textAlign: centered ? TextAlign.center : TextAlign.start,
-              style: AppTypography.h1SignIn.copyWith(
-                fontSize: titleSize,
-                color: BrandColors.taytayBlueDark,
-              ),
+          child: Text(
+            title,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: AppTypography.h1SignIn.copyWith(
+              fontSize: titleSize,
+              color: BrandColors.taytayBlueDark,
             ),
           ),
         ),
         if (subtitle != null) ...<Widget>[
-          const SizedBox(height: 6),
-          Transform.translate(
-            offset: Offset(0, subtitleDy),
-            child: Text(
-              subtitle!,
-              textAlign: centered ? TextAlign.center : TextAlign.start,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: subtitleSize,
-                fontWeight: AppTypography.body,
-                height: subtitleHeight,
-                color: const Color(0xFF4A5470),
-              ),
+          SizedBox(height: 6 + subtitleDy),
+          Text(
+            subtitle!,
+            textAlign: centered ? TextAlign.center : TextAlign.start,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: subtitleSize,
+              fontWeight: AppTypography.body,
+              height: subtitleHeight,
+              color: const Color(0xFF4A5470),
             ),
           ),
         ],

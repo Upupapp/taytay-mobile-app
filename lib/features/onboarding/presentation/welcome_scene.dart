@@ -6,6 +6,7 @@ import '../../../core/assets/asset_manifest.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/gold_thread_shell.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_headers.dart';
 import '../../../shared/widgets/taytay_thread.dart';
@@ -163,25 +164,29 @@ class WelcomeCanvas extends StatelessWidget {
     final showBack = page > 0;
     final last = page == 2;
     final lightT = this.lightT;
+    // The shell paints the field and the thread so they survive a route
+    // change. A golden pumps this canvas on its own and still paints both.
+    final bool hosted = GoldThreadScope.maybeOf(context) != null;
     return Stack(
       clipBehavior: Clip.hardEdge,
       children: <Widget>[
-        Positioned.fill(child: GradientBackdrop(page: page)),
+        if (!hosted) Positioned.fill(child: GradientBackdrop(page: page)),
         _BackCard(arch: arch),
         _ArchPhoto(arch: arch, copy: copy),
         _Seam(arch: arch),
-        Positioned.fill(
-          child: IgnorePointer(
-            child: CustomPaint(painter: ThreadPainter(curve)),
+        if (!hosted)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CustomPaint(painter: ThreadPainter(curve)),
+            ),
           ),
-        ),
         if (!arch.knotsInCopy)
           Positioned.fill(
             child: IgnorePointer(
               child: KnotIndicator(active: page, label: copy.stepLabel),
             ),
           ),
-        if (lightT != null)
+        if (!hosted && lightT != null)
           Positioned.fill(
             child: TravellingLight(curve: curve, t: lightT),
           ),
@@ -357,35 +362,35 @@ class _BackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CSS is `left`/`top` plus `translate` then `rotate`. The translation is
+    // in the parent's axes, so it is the same as placing the box there and
+    // rotating about its centre.
     return Positioned(
-      left: arch.left,
-      top: arch.top,
+      left: arch.left + arch.shiftX,
+      top: arch.top + 10,
       width: arch.width,
       height: arch.height,
-      child: Transform.translate(
-        offset: Offset(arch.shiftX, 10),
-        child: Transform.rotate(
-          angle: arch.degrees * math.pi / 180,
-          child: const DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: _archRadius,
-              gradient: LinearGradient(
-                colors: <Color>[
-                  Color(0xFF1E5BC6),
-                  BrandColors.taytayBlue,
-                  BrandColors.taytayBlueDark,
-                ],
-                stops: <double>[0, 0.45, 1],
-                transform: GradientRotation(160 * math.pi / 180 - math.pi / 2),
-              ),
-              boxShadow: <BoxShadow>[
-                BoxShadow(
-                  color: Color(0x40062358),
-                  blurRadius: 30,
-                  offset: Offset(0, 14),
-                ),
+      child: Transform.rotate(
+        angle: arch.degrees * math.pi / 180,
+        child: const DecoratedBox(
+          decoration: BoxDecoration(
+            borderRadius: _archRadius,
+            gradient: LinearGradient(
+              colors: <Color>[
+                Color(0xFF1E5BC6),
+                BrandColors.taytayBlue,
+                BrandColors.taytayBlueDark,
               ],
+              stops: <double>[0, 0.45, 1],
+              transform: GradientRotation(160 * math.pi / 180 - math.pi / 2),
             ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Color(0x40062358),
+                blurRadius: 30,
+                offset: Offset(0, 14),
+              ),
+            ],
           ),
         ),
       ),
@@ -517,11 +522,9 @@ class _Copy extends StatelessWidget {
         const SizedBox(height: 10),
         Semantics(
           header: true,
-          child: Text(
-            copy.title,
-            textHeightBehavior: _cssHalfLeading,
-            style: AppTypography.h1.copyWith(color: BrandColors.taytayBlueDark),
-          ),
+          container: true,
+          label: copy.title.replaceAll('\n', ' '),
+          child: ExcludeSemantics(child: _WelcomeTitle(copy.title)),
         ),
         const SizedBox(height: 10),
         _WelcomeBody(copy.body),
@@ -552,6 +555,46 @@ class _Copy extends StatelessWidget {
 /// a whole logical pixel (22), which is about 4 device pixels low by line 3
 /// at 3×. Each line keeps the strut, and the line tops are placed `14 × 1.55`
 /// apart so they follow the design instead of the rounded box.
+/// CSS `h1` is 28 / 1.13. One [Text] rounds the two-line box up, and the
+/// body then starts about 4 image pixels low once the eyebrow is the CSS line.
+class _WelcomeTitle extends StatelessWidget {
+  const _WelcomeTitle(this.text);
+
+  final String text;
+
+  static const double _step = 28 * 1.13;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle style = AppTypography.h1.copyWith(
+      color: BrandColors.taytayBlueDark,
+    );
+    final List<String> lines = text.split('\n');
+    return SizedBox(
+      width: double.infinity,
+      height: _step * lines.length,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          for (var i = 0; i < lines.length; i++)
+            Positioned(
+              top: i * _step,
+              left: 0,
+              right: 0,
+              child: Text(
+                lines[i],
+                maxLines: 1,
+                softWrap: false,
+                textHeightBehavior: _cssHalfLeading,
+                style: style,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WelcomeBody extends StatelessWidget {
   const _WelcomeBody(this.text);
 
@@ -783,37 +826,40 @@ class _SkipButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      key: welcomeSkipTargetKey,
-      height: A11y.minTapTarget,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onPressed,
-          customBorder: const StadiumBorder(),
-          child: Center(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                boxShadow: const <BoxShadow>[
-                  BoxShadow(
-                    color: Color(0x1A062358),
-                    blurRadius: 10,
-                    offset: Offset(0, 3),
-                  ),
-                  BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
-                ],
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: SizedBox(
-                  height: A11y.backButtonVisual,
-                  child: Center(
-                    child: Text(
-                      label,
-                      style: AppTypography.linkSkip.copyWith(
-                        color: BrandColors.taytayBlue,
+    return Semantics(
+      button: true,
+      child: SizedBox(
+        key: welcomeSkipTargetKey,
+        height: A11y.minTapTarget,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onPressed,
+            customBorder: const StadiumBorder(),
+            child: Center(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: const <BoxShadow>[
+                    BoxShadow(
+                      color: Color(0x1A062358),
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                    BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    height: A11y.backButtonVisual,
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: AppTypography.linkSkip.copyWith(
+                          color: BrandColors.taytayBlue,
+                        ),
                       ),
                     ),
                   ),
@@ -933,7 +979,12 @@ class _Finish extends StatelessWidget {
           copy.guestNote,
           textAlign: TextAlign.center,
           textHeightBehavior: _cssHalfLeading,
-          style: AppTypography.listMeta.copyWith(color: BrandColors.textMuted),
+          // Local line. CSS `normal` at 12px is 15, so the height is 1.25.
+          // [AppTypography.listMeta] stays 1.2 for every other list.
+          style: AppTypography.listMeta.copyWith(
+            color: BrandColors.textMuted,
+            height: 1.25,
+          ),
         ),
       ],
     );

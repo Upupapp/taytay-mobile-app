@@ -536,3 +536,60 @@ Also still true:
 `ProfilePatch` from the live editor sends only changed `mobile`, `email`, and `barangay_id`. It does not send `name`, `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
 Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (476628 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (885802 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1648 tests, with 15 skipped (the recording and live tags).
+
+## S9 Polish
+
+S9 is not approved. This section records the polish pass. It does not record approval words. The app stays in light mode. Dark `ThemeData` stays built so the contrast tests have a scheme to check. Staging and production still refuse mock data. No new dependency was added.
+
+The gold thread is one layer, `GoldThreadShell`, on a `ShellRoute` that holds welcome, sign-in, create-account, and the password-reset routes. The field and the stitch are painted by that shell. The 7s clock is created once. A later route morphs the cubic over `MotionTokens.standard` and does not rebuild the clock, so the glowing tip keeps its place in the loop. Welcome page changes follow `ThreadCurve.welcomeAt` on the same clock. Reduced motion keeps the thread and hides the tip, and the clock does not repeat. A screen painted without the shell, including the welcome and sign-in goldens, still draws its own field and thread.
+
+`lib/features/onboarding`, `lib/features/auth`, and `lib/shared/widgets/taytay_headers.dart` contain no `Transform.translate`. The woven wordmark is a column: the title line box, a 6px gap, the 11px subtitle line, and the leftover that makes the block the Chrome height (welcome 40, sign-in 39), centred on the seal. Review rows keep the CSS `margin-top: 2px` as layout. Flutter's line box leaves the value ink 1.7dp below the top of that margin, so 0.3 sits above the text and 1.7 below it, and the next row keeps its stride. Sign-in and wizard field errors keep their CSS margins as the same kind of split. Back cards keep `Transform.rotate`. The thread painter's `canvas.translate` is the SVG shadow offset.
+
+Welcome `.en` is CSS `normal`. `AppTypography.eyebrow` is height 1.2424 (13.67/11). The two-line welcome title is stepped at `28 * 1.13` in `_WelcomeTitle`, so the body keeps the 10px margins. The page-3 guest note uses `listMeta` with a local height of 1.25 (15/12). `listMeta` itself stays 1.2, and `eyebrowSignIn` stays 1.2, so the other auth sheets do not move. The welcome design string "track anything you apply for" stays, because that is the welcome HTML. Profile, registration, verification, household, and requests no longer invite an in-app application. Programme pages and Tulong are described as information only. The About version is one sentence: `Municipality of Taytay, Rizal · version 0.1 (design mockup)`. It soft-wraps in the card.
+
+The 02-14 clock follows the stylesheet. The border paints on the box, so the layout padding is 15 top and 13 bottom and the visual padding is 14/14/12. The label is 12/800 on a 15 line. The timer is 40/800, letter-spacing 1, `FontFeature.tabularFigures()`, locked to the 50.67 line, with margin-top 2. The bar is margin-top 8 and height 6. Those pieces plus the padding are 109.67. The gaps are 14 under the subtitle, 12 under the card, 16 under the banner, and 4 under the button. The banner text steps at `12 * 1.45` with layout padding 11, so the visual padding is 10/12. The locked-button shadow is `BoxShadow(Color(0x470B3D91), Offset(0, 8), blurRadius: 20)`. CSS paints the first `box-shadow` on top. Flutter paints the last one on top, so the white ring (`Color(0xFFFFFFFF)`, spread 4) is last on the hall, key, small mark, shield, submitted mark, and the selfie frame. A white ring listed first was covered by the blur and read as grey. The third banner ink run starts 3 image pixels below the design (1797 vs 1800). The button boxes both start at image y 1970. The sheet's first edge is 756/756.
+
+The 02-05 notice steps at 18.6 (12px at 1.55). An empty line sits before "Your rights", so that heading is step 11. The notice stack clips nothing, so "create" is not cut. The card's outer rounded clip stays. The DRAFT pill is padding 5/10 on a 17.05 line, with an 8px gap under it. The fade is 50 tall, from transparent to `#F4F1E6`. The card's inner padding is 14/13/14/12: the shared eyebrow above the card paints one logical pixel short of CSS normal, and that extra pixel keeps the links under the card inside 2 image pixels.
+
+Side-by-sides are design | render | heat at 3510×2532 in `test/goldens/compare/s9/`. `tool/rev5.py` measures them. A row is dark when any pixel from x 60 to 1110 has mean RGB below 110. Runs shorter than 8 rows are dropped. A stroke is a run of rows with more than 400 pixels of exact RGB 231,235,243 (`#E7EBF3`) in x 120 to 1050. When both sides have no such row, the report says `strokes none`. That is the absence of the colour, and it is not a match. Mismatch is CIE76 ΔE above 6 over the full 1170×2532 frame (2,962,440 pixels). Welcome and these 02 frames have no `#E7EBF3` strokes. The same function on `test/goldens/compare/s8/08-01.png` finds 8 design strokes and 8 render strokes, with a maximum start-row deviation of 1px. Sheet tops are reported on their own. The first sheet edge pairs on every frame below. A later count that differs is not called a match.
+
+| Frame | Lines | Dev | Mismatch |
+| --- | --- | --- | --- |
+| 01-01 | 11/11 | 2px | 3.24% (96082) |
+| 01-02 | 10/10 | 2px | 2.69% (79571) |
+| 01-03 | 12/12 | 2px | 2.73% (80999) |
+| 02-01 | 13/13 | 2px | 4.58% (135552) |
+| 02-02 | 11/11 | 2px | 5.24% (155349) |
+| 02-02b | 12/12 | 1px | 4.97% (147146) |
+| 02-03 | 19/19 | 2px | 5.47% (162142) |
+| 02-04 | 9/9 | 2px | 4.34% (128604) |
+| 02-04b | 10/10 | 1px | 4.02% (119196) |
+| 02-05 | 20/20 | 2px | 6.75% (199976) |
+| 02-06 | 14/14 | 2px | 5.26% (155922) |
+| 02-07 | 13/13 | 2px | 4.11% (121706) |
+| 02-08 | 18/18 | 2px | 4.61% (136533) |
+| 02-09 | 12/12 | 2px | 3.94% (116811) |
+| 02-10 | 15/15 | 2px | 4.93% (146137) |
+| 02-11 | 18/18 | 2px | 6.93% (205246) |
+| 02-12 | 15/15 | 2px | 5.16% (152752) |
+| 02-12b | 18/18 | 2px | 6.03% (178540) |
+| 02-13 | 11/11 | 2px | 3.54% (104953) |
+| 02-14 | 14/14 | 3px | 5.19% (153848) |
+| 02-14b | 11/11 | 2px | 4.15% (122873) |
+
+The wordmark is white on navy, so it is outside the dark-run measure. 02-14's 3px is the third banner line named above.
+
+Profile, registration, verification, household, and the requests empty states have no design still in this review set. The copy change is asserted by `test/features/s9_polish_test.dart`. The About version line is the 08-05 sentence. Its previous side-by-side stays in `test/goldens/compare/s8/08-05.png`.
+
+The 84-screen contact sheet is `test/goldens/compare/s9/contact-sheet.png` (1502×2916). `tool/s9_contact_sheet.py` built it on this machine. The header is stamped `db5b2ca2a86eb37de35359ef3c1a11c31cfa5fa7`, the commit that contains the code and these frame renders. The 84 are 01-01..03, 02-01..11, 03-01..09, 04-01..08, 05-01..23, 06-01..08, 07-01..12, and 08-01..10. Welcome uses the current goldens. 02-01..11 uses the renders from this tip. 03 through 08 were captured again from this tip with the S3–S8 frame tests; the 29 panels that had been stale (04-04, 04-08, 05-03, 05-05 through 05-23, 06-03, 07-02, 07-05 through 07-07, 07-11, and 07-12) now use those captures, and the other 03–08 panels were recaptured and matched the renders already on file. The b variants and 02-12, 02-13, and 02-14 stay in the table above and are not on the sheet.
+
+`docs/frontend/s9-accessibility.md` is the headless accessibility report: Skip is a button with a tap action, the welcome headline is a header, Skip and Next and the page-2 back control are at least 48dp, 200% text still shows the title and a 48dp Skip, and reduced motion keeps the thread and hides the travelling tip. The same file records `disableAnimations: true`, which stops the clock the same way. Sign-in, create-account, and Services meet `androidTapTargetGuideline`, `labeledTapTargetGuideline`, and `textContrastGuideline`. The create-account fields keep their 44px painted box. The editable line is centred in a 48dp semantics box, so the guideline measures the control and the glyphs stay put. `docs/frontend/s9-performance.md` is the headless frame-timing stand-in: 45 pumps of 33ms, and the thread cycle changed. Both files are written by `test/features/s9_acceptance_test.dart` when `TAYTAY_S9_REPORT=1`. They run with `flutter test` on this machine. They are not a GitHub Actions job, not a TalkBack or VoiceOver session, and not a device frame time. The 60fps budget stays in `docs/integration/performance-budgets.md`. No device figure is invented here.
+
+Still open from the roadmap, and left open on purpose:
+
+- A dark-scheme contrast pass. Light mode is what the app shows.
+- A TalkBack and VoiceOver session. The headless report above is the stand-in this environment can run.
+- A device frame time and a cold-start measurement. The host pump above is the stand-in.
+- Swapping mocks for live repositories. That waits until each endpoint exists, and each swap stays its own change. Dev builds are still the only ones that honour `TAYTAY_DATA=mock`.
+
+The clip was captured again after the arch ring change, at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s9/recordings/s9-thread.mp4` (2087648 bytes, 119 frames, 3.967 s, 30/1). The sign-in arch ring in that clip is white. It plays welcome page 1, page 2, page 3, sign-in, and create-account, through the real route transitions, on the shared thread. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1661 tests, with 16 skipped (the recording and live tags).

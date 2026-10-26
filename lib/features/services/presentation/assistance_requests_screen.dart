@@ -150,10 +150,11 @@ class _AssistanceRequestsScreenState extends State<AssistanceRequestsScreen> {
             kind: StatusKind.empty,
             icon: Icons.assignment_outlined,
             message: _scope.isPast
-                ? 'Requests that are completed, released or closed will appear '
-                      'here.'
-                : 'Anything you apply for with Taytay LGU will appear here '
-                      'while it is being handled.',
+                ? 'Matters the municipal hall has closed will appear here. '
+                      'This app does not take applications.'
+                : 'This app does not take applications. Programme pages under '
+                      'Tulong are information only. The municipal hall can '
+                      'tell you about a programme.',
           ),
         ],
       );

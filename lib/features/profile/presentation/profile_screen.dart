@@ -174,15 +174,16 @@ class _IdentityCard extends StatelessWidget {
     ) = switch (session.accessLevel) {
       AccessLevel.guest => (
         'You are browsing as a guest',
-        'Sign in with your mobile number to hold your digital ID and to '
-            'track anything you apply for. Browsing stays open either way.',
+        'Sign in with your mobile number to hold your digital ID. '
+            'Browsing stays open either way. Programme pages are information '
+            'only.',
         'Sign in',
         AppRoute.signIn,
       ),
       AccessLevel.unverified => (
         name ?? 'Your account',
         'Taytay LGU has not confirmed your identity yet. Verifying unlocks '
-            'your digital ID and service applications.',
+            'your digital ID. Programme pages are information only.',
         'Verify my identity',
         AppRoute.verification,
       ),

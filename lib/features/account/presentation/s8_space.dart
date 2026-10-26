@@ -198,22 +198,17 @@ abstract final class S8Space {
   /// Typo ascender after Blink's device-pixel rounding at the 3× capture.
   ///
   /// This is where the alphabetic baseline sits in a `normal` line box.
-  static double ascender(double fontSize) {
-    return ((fontSize * 3 * 1038 / 1000).round()) / 3;
-  }
+  static double ascender(double fontSize) => TypeMetrics.ascender(fontSize);
 
   /// Typo descender, as a positive distance, after the same rounding.
-  static double descender(double fontSize) {
-    return ((fontSize * 3 * 222 / 1000).round()) / 3;
-  }
+  static double descender(double fontSize) => TypeMetrics.descender(fontSize);
 
   /// The line box Chrome used at the 3× capture.
   ///
   /// Blink rounds the typo ascender and descender to device pixels. A flat
   /// 1.26em is the same number before that rounding; this is the box the DOM
   /// measured (12 → 15, 14 → 17.67, 11 → 13.67).
-  static double line(double fontSize) =>
-      ascender(fontSize) + descender(fontSize);
+  static double line(double fontSize) => TypeMetrics.line(fontSize);
 
   /// sxHeight for [weight], in CSS pixels.
   ///
@@ -273,11 +268,7 @@ abstract final class S8Space {
   /// `vertical-align: middle`, and that inline box measures 22.13.
   static const double profileNameLine = 22.13;
 
-  static StrutStyle strut(
-    double size, {
-    double? height,
-    FontWeight? weight,
-  }) {
+  static StrutStyle strut(double size, {double? height, FontWeight? weight}) {
     return StrutStyle(
       fontFamily: AppTypography.fontFamily,
       fontSize: size,

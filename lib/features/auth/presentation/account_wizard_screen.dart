@@ -1075,7 +1075,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               child: Stack(
                 children: <Widget>[
                   Padding(
-                    padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    // 12px in the stylesheet. The shared eyebrow above this
+                    // card paints one logical pixel short of CSS normal, so
+                    // the notice starts one pixel lower and the links stay.
+                    padding: EdgeInsets.fromLTRB(14, 13, 14, 12),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
@@ -1087,21 +1090,30 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                             ),
                           ),
                           child: Padding(
-                            padding: EdgeInsets.fromLTRB(10, 6, 10, 4),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             child: Text(
                               'DRAFT · LGU-approved Privacy Notice to be inserted',
                               style: TextStyle(
                                 fontFamily: AppTypography.fontFamily,
                                 fontSize: 11,
-                                height: 1.52,
+                                height: 17.05 / 11,
                                 fontWeight: AppTypography.black,
                                 color: Color(0xFF8A5A00),
+                              ),
+                              strutStyle: StrutStyle(
+                                fontFamily: AppTypography.fontFamily,
+                                fontSize: 11,
+                                height: 17.05 / 11,
+                                forceStrutHeight: true,
                               ),
                             ),
                           ),
                         ),
-                        SizedBox(height: 9),
-                        Expanded(child: ClipRect(child: _TermsNotice())),
+                        SizedBox(height: 8),
+                        Expanded(child: _TermsNotice()),
                       ],
                     ),
                   ),
@@ -1279,11 +1291,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 6),
-                      Transform.translate(
-                        offset: const Offset(0, -10 / 3),
-                        child: _ChangeLink(onPressed: _pickFront),
-                      ),
+                      const SizedBox(height: 8 / 3),
+                      _ChangeLink(onPressed: _pickFront),
                     ],
                   ),
                 ),
@@ -1506,67 +1515,68 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                       color: Color(0xFF5B6680),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Transform.translate(
-                    offset: const Offset(0, -1.7),
-                    child: Text.rich(
-                      TextSpan(
-                        text: value,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 13,
-                          fontWeight: AppTypography.strong,
-                          color: BrandColors.fieldInk,
-                        ),
-                        children: <InlineSpan>[
-                          if (badge != null)
-                            WidgetSpan(
-                              alignment: PlaceholderAlignment.middle,
-                              child: Container(
-                                margin: const EdgeInsets.only(left: 4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6F4EC),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: <Widget>[
-                                    const TaytayIcon(
-                                      icon: TaytayIcons.circleCheck,
-                                      semanticLabel: '',
-                                      excludeSemantics: true,
-                                      size: 11,
+                  // CSS margin-top is 2px. Flutter's line box leaves the
+                  // value ink 1.7dp lower than that margin's top, so the
+                  // margin is split around the text and the next row stays.
+                  const SizedBox(height: 0.3),
+                  Text.rich(
+                    TextSpan(
+                      text: value,
+                      style: const TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 13,
+                        fontWeight: AppTypography.strong,
+                        color: BrandColors.fieldInk,
+                      ),
+                      children: <InlineSpan>[
+                        if (badge != null)
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Container(
+                              margin: const EdgeInsets.only(left: 4),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6F4EC),
+                                borderRadius: BorderRadius.circular(999),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  const TaytayIcon(
+                                    icon: TaytayIcons.circleCheck,
+                                    semanticLabel: '',
+                                    excludeSemantics: true,
+                                    size: 11,
+                                    color: Color(0xFF0F7A4D),
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    badge,
+                                    style: const TextStyle(
+                                      fontFamily: AppTypography.fontFamily,
+                                      fontSize: 11,
+                                      fontWeight: AppTypography.black,
                                       color: Color(0xFF0F7A4D),
                                     ),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      badge,
-                                      style: const TextStyle(
-                                        fontFamily: AppTypography.fontFamily,
-                                        fontSize: 11,
-                                        fontWeight: AppTypography.black,
-                                        color: Color(0xFF0F7A4D),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
-                        ],
-                      ),
+                          ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 1.7),
                 ],
               ),
             ),
-            Transform.translate(
-            offset: const Offset(0, 8 / 3),
-            child: _EditLink(onPressed: () => setState(() => _step = edit)),
-          ),
+            Padding(
+              padding: const EdgeInsets.only(top: 8 / 3),
+              child: _EditLink(onPressed: () => setState(() => _step = edit)),
+            ),
           ],
         ),
       ),
@@ -1713,13 +1723,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                               ),
-                              child: TextFormField(
+                              child: AuthBareField(
                                 controller: controller,
                                 readOnly: readOnly,
                                 obscureText: obscure,
-                                textAlignVertical: TextAlignVertical.center,
-                                style: AppTypography.fieldValue,
-                                decoration: bareField,
                               ),
                             ),
                     ),
@@ -1731,33 +1738,36 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           ),
           if (error != null)
             Padding(
-              padding: const EdgeInsets.only(top: 6.5),
-              child: Transform.translate(
-                offset: const Offset(0, -1.2),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const TaytayIcon(
-                      icon: TaytayIcons.circleAlert,
-                      semanticLabel: 'Error',
-                      size: 14,
-                      color: Color(0xFFB3261E),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        error,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11.5,
-                          height: 1.2,
-                          fontWeight: AppTypography.strong,
-                          color: Color(0xFFB3261E),
+              padding: const EdgeInsets.only(top: 5.3),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const TaytayIcon(
+                        icon: TaytayIcons.circleAlert,
+                        semanticLabel: 'Error',
+                        size: 14,
+                        color: Color(0xFFB3261E),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          error,
+                          style: const TextStyle(
+                            fontFamily: AppTypography.fontFamily,
+                            fontSize: 11.5,
+                            height: 1.2,
+                            fontWeight: AppTypography.strong,
+                            color: Color(0xFFB3261E),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 1.2),
+                ],
               ),
             ),
         ],
@@ -2139,13 +2149,14 @@ class _SelfieFrame extends StatelessWidget {
             end: Alignment.bottomCenter,
             colors: <Color>[Color(0xFFDFE6F2), Color(0xFFC9D3E6)],
           ),
+          // Same order as the auth arches: the white ring paints last.
           boxShadow: <BoxShadow>[
-            BoxShadow(color: Colors.white, spreadRadius: 4),
             BoxShadow(
               color: Color(0x33062358),
               blurRadius: 28,
               offset: Offset(0, 12),
             ),
+            BoxShadow(color: Colors.white, spreadRadius: 4),
           ],
         ),
         child: Stack(
@@ -2212,18 +2223,22 @@ class _TermsNotice extends StatelessWidget {
   static const TextStyle _style = TextStyle(
     fontFamily: AppTypography.fontFamily,
     fontSize: 12,
-    height: 56 / 36,
+    height: 1.55,
     color: Color(0xFF3A4560),
   );
+
+  /// 12px at line-height 1.55. CSS `normal` is not this step; the notice sets 1.55.
+  static const double _step = 18.6;
 
   static const StrutStyle _strut = StrutStyle(
     fontFamily: AppTypography.fontFamily,
     fontSize: 12,
-    height: 56 / 36,
+    height: 1.55,
     forceStrutHeight: true,
   );
 
-  // step counts lines on the 56px grid, including the blank paragraph line.
+  // Step counts lines on the 18.6 grid, including each blank paragraph line.
+  // The design leaves an empty line before "Your rights", so that line is step 11.
   static const List<(int, List<(String, bool)>)>
   _lines = <(int, List<(String, bool)>)>[
     (
@@ -2272,8 +2287,9 @@ class _TermsNotice extends StatelessWidget {
         ('authorised Taytay LGU personnel only.', false),
       ],
     ),
+    (10, <(String, bool)>[]),
     (
-      10,
+      11,
       <(String, bool)>[
         ('Your rights: ', true),
         (
@@ -2287,12 +2303,12 @@ class _TermsNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Stack(
-      clipBehavior: Clip.hardEdge,
+      clipBehavior: Clip.none,
       children: <Widget>[
         for (final (int step, List<(String, bool)> spans) in _lines)
           if (spans.isNotEmpty)
             Positioned(
-              top: step * 56 / 3,
+              top: step * _step,
               left: 0,
               right: 0,
               child: Text.rich(
@@ -2309,9 +2325,9 @@ class _TermsNotice extends StatelessWidget {
                   ],
                 ),
                 strutStyle: _strut,
-                maxLines: step == 10 ? 4 : 1,
-                softWrap: step == 10,
-                overflow: TextOverflow.clip,
+                maxLines: step == 11 ? 4 : 1,
+                softWrap: step == 11,
+                overflow: TextOverflow.visible,
               ),
             ),
       ],

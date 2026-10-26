@@ -38,6 +38,32 @@ class ThreadCurve {
 
   /// `02-09`.
   static const ThreadCurve submitted = ThreadCurve(230, 170);
+
+  /// The welcome stitch at a fractional [PageController.page].
+  ///
+  /// Control heights blend, so a swipe reads as one curve instead of two
+  /// stitches sliding apart.
+  static ThreadCurve welcomeAt(double page) {
+    final double clamped = page.clamp(0, pages.length - 1).toDouble();
+    final int index = clamped.floor();
+    final double frac = clamped - index;
+    if (index >= pages.length - 1) return pages.last;
+    return pages[index].lerp(pages[index + 1], frac);
+  }
+
+  ThreadCurve lerp(ThreadCurve other, double t) {
+    return ThreadCurve(
+      entryY + (other.entryY - entryY) * t,
+      exitY + (other.exitY - exitY) * t,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is ThreadCurve && other.entryY == entryY && other.exitY == exitY;
+
+  @override
+  int get hashCode => Object.hash(entryY, exitY);
 }
 
 /// Passed as `go_router` extra when Get started opens Sign-in.
@@ -317,14 +343,20 @@ class SignInThreadOverlay extends StatefulWidget {
   const SignInThreadOverlay({
     this.cycle = 0,
     this.curve = ThreadCurve.signIn,
+    this.clock,
     super.key,
   });
 
   /// Raw 0–1 position on the 7s loop, before easing.
+  ///
+  /// Used only when [clock] is null and this overlay owns its loop.
   final double cycle;
 
   /// Which cubic the thread and the speck follow.
   final ThreadCurve curve;
+
+  /// A loop owned above this overlay, so a route change does not restart it.
+  final Animation<double>? clock;
 
   @override
   State<SignInThreadOverlay> createState() => _SignInThreadOverlayState();
@@ -332,31 +364,37 @@ class SignInThreadOverlay extends StatefulWidget {
 
 class _SignInThreadOverlayState extends State<SignInThreadOverlay>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  AnimationController? _owned;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: MotionTokens.welcomeLight,
-      value: widget.cycle.clamp(0.0, 1.0),
-    );
+    if (widget.clock == null) {
+      _owned = AnimationController(
+        vsync: this,
+        duration: MotionTokens.welcomeLight,
+        value: widget.cycle.clamp(0.0, 1.0),
+      );
+    }
   }
+
+  Animation<double> get _drive => widget.clock ?? _owned!;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final AnimationController? owned = _owned;
+    if (owned == null) return;
     if (Motion.decorativeLoop(context)) {
-      if (!_controller.isAnimating) _controller.repeat();
+      if (!owned.isAnimating) owned.repeat();
     } else {
-      _controller.stop();
+      owned.stop();
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _owned?.dispose();
     super.dispose();
   }
 
@@ -376,11 +414,11 @@ class _SignInThreadOverlayState extends State<SignInThreadOverlay>
                 width: 390,
                 height: 844,
                 child: AnimatedBuilder(
-                  animation: _controller,
+                  animation: _drive,
                   builder: (context, _) {
                     final showSpeck = Motion.decorativeLoop(context);
                     final t = MotionTokens.welcomeLightCurve.transform(
-                      _controller.value,
+                      _drive.value,
                     );
                     return Stack(
                       children: <Widget>[
