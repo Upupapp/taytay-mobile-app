@@ -161,6 +161,12 @@ void main() {
     );
     _expectBox(
       tester,
+      'name sample',
+      find.text('SAMPLE'),
+      const Rect.fromLTWH(224.88, 139.46, 64.33, 19.67),
+    );
+    _expectBox(
+      tester,
       'verified',
       find.text('Verified').first,
       const Rect.fromLTWH(101, 184.63, 78.26, 21.2),
@@ -170,6 +176,18 @@ void main() {
       'resident profile',
       find.text('Resident Profile'),
       const Rect.fromLTWH(89, 254.49, 238, 17.67),
+    );
+    _expectBox(
+      tester,
+      'messages title',
+      find.text('Messages'),
+      const Rect.fromLTWH(89, 323.49, 233.45, 17.67),
+    );
+    _expectBox(
+      tester,
+      'messages badge',
+      find.text('1'),
+      const Rect.fromLTWH(334.45, 330.99, 22.55, 19.67),
     );
 
     await _pump(
@@ -280,6 +298,24 @@ void main() {
       find.text('Salamat po sa impormasyon.'),
       const Rect.fromLTWH(104, 503.97, 270, 38.85),
     );
+    _expectBox(
+      tester,
+      'mswdo sample line',
+      find.text('conversation for illustration'),
+      const Rect.fromLTWH(16, 574.49, 358, 22.21),
+    );
+    _expectBox(
+      tester,
+      'mswdo sample',
+      find.text('SAMPLE'),
+      const Rect.fromLTWH(83.72, 577.04, 64.33, 19.67),
+    );
+    _expectBox(
+      tester,
+      'mswdo sample text',
+      find.text('conversation for illustration'),
+      const Rect.fromLTWH(150.77, 578.82, 155.51, 15),
+    );
 
     await _pump(
       tester,
@@ -297,6 +333,18 @@ void main() {
       'td bubble',
       find.text('TD No. 00-0000-00000 po (sample).'),
       const Rect.fromLTWH(104, 376.76, 270, 38.85),
+    );
+    _expectBox(
+      tester,
+      'treasury sample',
+      find.text('SAMPLE'),
+      const Rect.fromLTWH(83.72, 560.04, 64.33, 19.67),
+    );
+    _expectBox(
+      tester,
+      'treasury sample text',
+      find.text('conversation for illustration'),
+      const Rect.fromLTWH(150.77, 561.82, 155.51, 15),
     );
 
     await _pump(

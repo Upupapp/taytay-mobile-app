@@ -195,17 +195,59 @@ abstract final class S8Space {
   /// Chrome `line-height: normal` for Plus Jakarta Sans. See the class note.
   static const double normal = 1.26;
 
+  /// Typo ascender after Blink's device-pixel rounding at the 3× capture.
+  ///
+  /// This is where the alphabetic baseline sits in a `normal` line box.
+  static double ascender(double fontSize) {
+    return ((fontSize * 3 * 1038 / 1000).round()) / 3;
+  }
+
+  /// Typo descender, as a positive distance, after the same rounding.
+  static double descender(double fontSize) {
+    return ((fontSize * 3 * 222 / 1000).round()) / 3;
+  }
+
   /// The line box Chrome used at the 3× capture.
   ///
   /// Blink rounds the typo ascender and descender to device pixels. A flat
   /// 1.26em is the same number before that rounding; this is the box the DOM
   /// measured (12 → 15, 14 → 17.67, 11 → 13.67).
-  static double line(double fontSize) {
-    const double ascender = 1038 / 1000;
-    const double descender = 222 / 1000;
-    final double device = fontSize * 3;
-    return ((device * ascender).round() + (device * descender).round()) / 3;
+  static double line(double fontSize) =>
+      ascender(fontSize) + descender(fontSize);
+
+  /// sxHeight for [weight], in CSS pixels.
+  ///
+  /// The units come from each Plus Jakarta file (400 → 536, 500 → 539,
+  /// 600 → 541, 700 → 544, 800 → 546). `vertical-align: middle` puts a
+  /// chip's centre on the baseline plus half of this. It is not rounded to
+  /// device pixels: that half-x is what places the 08-08 chip 2.55 below
+  /// its line and the 08-01 chip 2.46 below its line.
+  static double xHeight(double fontSize, FontWeight weight) {
+    final int units = switch (weight) {
+      FontWeight.w500 => 539,
+      FontWeight.w600 => 541,
+      FontWeight.w700 => 544,
+      FontWeight.w800 || FontWeight.w900 => 546,
+      _ => 536,
+    };
+    return fontSize * units / 1000;
   }
+
+  /// Top of a `vertical-align: middle` box, measured from the parent strut.
+  ///
+  /// Chrome centres the box on the baseline plus half the x-height, not on
+  /// the line box. [boxHeight] is the chip's border box.
+  static double middleTop({
+    required double fontSize,
+    required FontWeight weight,
+    required double boxHeight,
+  }) {
+    final double centre = ascender(fontSize) - xHeight(fontSize, weight) / 2;
+    return centre - boxHeight / 2;
+  }
+
+  /// `.sample` border box. 11 px `normal`, padding 2, and a 1 px border.
+  static double get sampleChipHeight => line(11) + 6;
 
   /// Half-leading stays on the first ascent and the last descent, split
   /// evenly, which is how Chrome builds a `normal` line box.

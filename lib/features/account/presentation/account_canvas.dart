@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
@@ -823,29 +825,10 @@ class _HomeBody extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      SizedBox(
-                        height: S8Space.profileNameLine,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text.rich(
-                            TextSpan(
-                              style: _name,
-                              children: <InlineSpan>[
-                                TextSpan(text: sample ? '$name ' : name),
-                                if (sample)
-                                  const WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: SampleTag(
-                                      lineHeight: S8Space.normal,
-                                    ),
-                                  ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textHeightBehavior: S8Space.lineBox,
-                          ),
-                        ),
+                      _MiddleLine(
+                        text: sample ? '$name ' : name,
+                        style: _name,
+                        chip: sample ? const _NormalSample() : null,
                       ),
                       SizedBox(
                         height: 13 * S8Space.bodyLineHeight,
@@ -951,18 +934,17 @@ class _MenuRow extends StatelessWidget {
                 ],
               ),
             ),
-            if (row.badge != null) ...<Widget>[
-              const SizedBox(width: 8),
-              _CountBadge(row.badge!),
-            ] else
-              const SizedBox(width: S8Space.iconGap),
-            const TaytayIcon(
-              icon: TaytayIcons.chevronRight,
-              size: 18,
-              color: BrandColors.chevron,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
+            const SizedBox(width: S8Space.iconGap),
+            if (row.badge != null)
+              _CountBadge(row.badge!)
+            else
+              const TaytayIcon(
+                icon: TaytayIcons.chevronRight,
+                size: 18,
+                color: BrandColors.chevron,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
           ],
         ),
       ),
@@ -1770,7 +1752,7 @@ class _NoticeBlock extends StatelessWidget {
             objectStep: 22.5,
             pieces: <_FlowPiece>[
               _FlowPiece.text(body),
-              _FlowPiece.box(width: 64.33, child: trailing),
+              _FlowPiece.box(width: _sampleChipWidth(), child: trailing),
               if (suffix.isNotEmpty) _FlowPiece.text(suffix),
             ],
           ),
@@ -1837,14 +1819,17 @@ class _BannerIntro extends StatelessWidget {
     // The Replace chip inherits the 13 / 1.5 line, so its line is 22.5 and
     // the other lines stay 19.5. A forced strut rounded every line to 20
     // and the paragraph came out 60 instead of 61.5.
-    return const _FlowLines(
+    return _FlowLines(
       style: _line,
       step: 13 * S8Space.bodyLineHeight,
       objectStep: 11 * S8Space.introLineHeight + 2 * S8Space.replacePadY,
       pieces: <_FlowPiece>[
-        _FlowPiece.text('All from Wikimedia Commons. Photos marked '),
-        _FlowPiece.box(width: 61.85, child: _ReplaceMark(intro: true)),
-        _FlowPiece.text(
+        const _FlowPiece.text('All from Wikimedia Commons. Photos marked '),
+        _FlowPiece.box(
+          width: _replaceChipWidth(_introChip),
+          child: const _ReplaceMark(intro: true),
+        ),
+        const _FlowPiece.text(
           ' show people and are placeholders until Taytay LGU '
           'supplies its own consented photos.',
         ),
@@ -1962,19 +1947,7 @@ class _ThreadBody extends StatelessWidget {
               if (dayLabel.isNotEmpty) const SizedBox(height: S8Space.dayGap),
               for (final AccountBubble bubble in bubbles)
                 _Bubble(bubble: bubble),
-              if (showSampleNote) ...<Widget>[
-                const SizedBox(height: Spacing.xs),
-                const Center(
-                  child: Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    children: <Widget>[
-                      SampleTag(),
-                      Text('conversation for illustration', style: _meta),
-                    ],
-                  ),
-                ),
-              ],
+              if (showSampleNote) const _SampleConversation(),
             ],
           ),
         ),
@@ -3179,6 +3152,201 @@ const TextStyle _hint = TextStyle(
   color: BrandColors.fieldHint,
   decoration: TextDecoration.none,
 );
+
+double _spanWidth(String text, TextStyle style) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: style),
+    textDirection: TextDirection.ltr,
+    textScaler: TextScaler.noScaling,
+    textHeightBehavior: S8Space.lineBox,
+  )..layout();
+  final double width = painter.width;
+  painter.dispose();
+  return width;
+}
+
+/// `.sample` border box. Padding 7 and a 1 px border, each side.
+double _sampleChipWidth() {
+  return _spanWidth(
+        'SAMPLE',
+        AppTypography.labelStrong.copyWith(letterSpacing: 0.6),
+      ) +
+      16;
+}
+
+/// Replace chip border box. Padding [S8Space.replacePadX], no border.
+double _replaceChipWidth(TextStyle style) {
+  return _spanWidth('Replace', style) + S8Space.replacePadX * 2;
+}
+
+/// 11 px `normal` SAMPLE chip, for a `vertical-align: middle` line.
+class _NormalSample extends StatelessWidget {
+  const _NormalSample();
+
+  @override
+  Widget build(BuildContext context) {
+    return SampleTag(lineHeight: S8Space.normal, lineSlot: S8Space.line(11));
+  }
+}
+
+/// One inline line. A chip uses CSS `vertical-align: middle`.
+///
+/// Chrome centres the chip on the parent's baseline plus half the x-height.
+/// The parent's strut stays at the top of the line. The line grows downward
+/// when the chip hangs below that strut.
+class _MiddleLine extends StatelessWidget {
+  const _MiddleLine({
+    required this.text,
+    required this.style,
+    this.chip,
+    this.trailing = '',
+    this.trailingStyle,
+    this.centered = false,
+  });
+
+  final String text;
+  final TextStyle style;
+  final Widget? chip;
+  final String trailing;
+  final TextStyle? trailingStyle;
+  final bool centered;
+
+  @override
+  Widget build(BuildContext context) {
+    final double fontSize = style.fontSize ?? 16;
+    final FontWeight weight = style.fontWeight ?? FontWeight.w400;
+    final double strut = S8Space.line(fontSize);
+    final Widget? chip = this.chip;
+    final double chipHeight = chip == null ? 0 : S8Space.sampleChipHeight;
+    final double chipTop = chip == null
+        ? 0
+        : S8Space.middleTop(
+            fontSize: fontSize,
+            weight: weight,
+            boxHeight: chipHeight,
+          );
+    final double shift = math.max(0.0, -chipTop);
+    final double height = math.max(strut, chipTop + chipHeight) + shift;
+    final TextStyle trailStyle = trailingStyle ?? style;
+    final double trailSize = trailStyle.fontSize ?? fontSize;
+    final double trailHeight = S8Space.line(trailSize);
+    final double trailTop =
+        shift + S8Space.ascender(fontSize) - S8Space.ascender(trailSize);
+    final bool gap = chip != null && trailing.isNotEmpty;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double leadWidth = text.isEmpty ? 0 : _spanWidth(text, style);
+        final double chipWidth = chip == null ? 0 : _sampleChipWidth();
+        final double spaceWidth = gap ? _spanWidth(' ', style) : 0;
+        final double trailWidth = trailing.isEmpty
+            ? 0
+            : _spanWidth(
+                trailing,
+                trailStyle.copyWith(height: trailHeight / trailSize),
+              );
+        final double used = leadWidth + chipWidth + spaceWidth + trailWidth;
+        final double dx = centered
+            ? math.max(0.0, (constraints.maxWidth - used) / 2)
+            : 0;
+        var x = dx;
+        final List<Widget> children = <Widget>[];
+        void place(double width, double top, double box, Widget child) {
+          children.add(
+            Positioned(
+              left: x,
+              top: top,
+              width: width,
+              height: box,
+              child: child,
+            ),
+          );
+          x += width;
+        }
+
+        if (text.isNotEmpty) {
+          place(
+            leadWidth,
+            shift,
+            strut,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                text,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.clip,
+                style: style,
+                textHeightBehavior: S8Space.lineBox,
+              ),
+            ),
+          );
+        }
+        if (chip != null) {
+          place(chipWidth, shift + chipTop, chipHeight, chip);
+        }
+        if (gap) {
+          place(spaceWidth, shift, strut, const SizedBox.shrink());
+        }
+        if (trailing.isNotEmpty) {
+          place(
+            trailWidth,
+            trailTop,
+            trailHeight,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                trailing,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.clip,
+                style: trailStyle.copyWith(
+                  height: trailHeight / trailSize,
+                  leadingDistribution: TextLeadingDistribution.even,
+                ),
+                textHeightBehavior: S8Space.lineBox,
+              ),
+            ),
+          );
+        }
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: height,
+          child: Stack(clipBehavior: Clip.none, children: children),
+        );
+      },
+    );
+  }
+}
+
+/// "SAMPLE conversation for illustration" under a thread.
+///
+/// The timestamp's margin-bottom is 12 and this line's margin-top is 6.
+/// Those collapse, and the 12 already sits in the timestamp padding. The
+/// parent face is the body 16 px. The caption sits on that baseline, and
+/// the gap is one space in that face.
+class _SampleConversation extends StatelessWidget {
+  const _SampleConversation();
+
+  @override
+  Widget build(BuildContext context) {
+    return const _MiddleLine(
+      text: '',
+      style: TextStyle(
+        fontFamily: AppTypography.fontFamily,
+        fontSize: 16,
+        fontWeight: FontWeight.w400,
+        height: S8Space.normal,
+        leadingDistribution: TextLeadingDistribution.even,
+        decoration: TextDecoration.none,
+      ),
+      chip: _NormalSample(),
+      trailing: 'conversation for illustration',
+      trailingStyle: _meta,
+      centered: true,
+    );
+  }
+}
 
 /// One CSS line, in Chrome's device-pixel line box rather than Flutter's
 /// rounded strut.

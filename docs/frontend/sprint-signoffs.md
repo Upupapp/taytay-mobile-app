@@ -352,7 +352,7 @@ These designs still need data the spec does not publish. The calls decline with 
 
 ## S8 My Account
 
-S8 is not approved. This section records the My Account screens. It does not record approval words. Round 3 takes spacing from the 08 CSS and from the browser DOM boxes. One CSS pixel is one dp, and three image pixels on the PNGs. A value stays fractional when the CSS computed it that way. Plus Jakarta Sans sets USE_TYPO_METRICS. The hhea and typo metrics are ascender 1038, descender −222, and line gap 0, on a 1000-unit em, so Chrome's `line-height: normal` is 1.26em. Blink rounds the ascender and the descender to device pixels at the 3× capture. `S8Space.line` is that box: 11 → 13.67, 12 → 15, 13 → 16.33, 14 → 17.67, 15 → 19, 16 → 20.33, 20 → 25. Flutter's unset `TextStyle.height` is a different box, and a fractional strut rounds to a whole logical pixel, so the error stacks down the page. Each `normal` line is a slot of `S8Space.line`, or a `_CssLines` / `_FlowLines` step of that height. A unitless CSS line-height (1.5, 1.45) stays that multiplier in the same kind of slot, so 19.5 and 18.85 stay fractional. Every row of a role uses that token. There is no per-row offset. Round 2's structure stays: tile colours, the badge-check mark, Display name hidden on the live editor, and `PATCH` with only the changed fields. The DOM box test asserts each listed edge within 2/3 dp, which is 2 image pixels. The side-by-sides, the crops, and both clips are commit `9b95cb851c18970660562d579669af6e64425ee8`. Pull request #10 stays a draft on `feature/s8-my-account`.
+S8 is not approved. This section records the My Account screens. It does not record approval words. Round 3 takes spacing from the 08 CSS and from the browser DOM boxes. One CSS pixel is one dp, and three image pixels on the PNGs. A value stays fractional when the CSS computed it that way. Plus Jakarta Sans sets USE_TYPO_METRICS. The hhea and typo metrics are ascender 1038, descender −222, and line gap 0, on a 1000-unit em, so Chrome's `line-height: normal` is 1.26em. Blink rounds the ascender and the descender to device pixels at the 3× capture. `S8Space.line` is that box: 11 → 13.67, 12 → 15, 13 → 16.33, 14 → 17.67, 15 → 19, 16 → 20.33, 20 → 25. Flutter's unset `TextStyle.height` is a different box, and a fractional strut rounds to a whole logical pixel, so the error stacks down the page. Each `normal` line is a slot of `S8Space.line`, or a `_CssLines` / `_FlowLines` step of that height. A unitless CSS line-height (1.5, 1.45) stays that multiplier in the same kind of slot, so 19.5 and 18.85 stay fractional. Every row of a role uses that token. There is no per-row offset. Round 2's structure stays: tile colours, the badge-check mark, Display name hidden on the live editor, and `PATCH` with only the changed fields. The DOM box test asserts each listed edge within 2/3 dp, which is 2 image pixels. The 08-01, 08-07, and 08-08 side-by-sides and both clips are the commit that lands this measurement. The earlier frames stay commit `9b95cb851c18970660562d579669af6e64425ee8`. Pull request #10 stays a draft on `feature/s8-my-account`.
 
 My Account is the shell tab at `/profile`. A guest and an unverified resident keep the account centre: the guest copy is "You are browsing as a guest", and a guest issues no personal read. A verified resident sees the 08-01 home. The badge comes from the server tier through `AccessPolicy`. A failed profile read shows the unavailable state and does not paint the specimen. Sign out asks, then clears the session. There is no apply control and no submit.
 
@@ -429,7 +429,7 @@ The treasurer line "TD No. 00-0000-00000 po (sample)." measures 242.85 wide. The
 | `versionLineHeight` | 1.5 | the version caption, the same 13 / 1.5 body |
 | `profileNameLine` | 22.13 dp | 08-01 name line. 16 px `normal` is 20.33, and the middle-aligned SAMPLE chip grows the line box to 22.13 |
 
-The page wash still stops at 260/844. That ratio is the wash, and it is not a gap token. Banner rows use `bannerPadY` on both sides, and the Replace chip centres on the whole row, office label included. Menu, inbox, settings, and credit rows keep 12 dp on both sides. A menu row with no badge also keeps 12 dp before the chevron, so the title column is 238. The composer padding stays 14, 10, 14, 24. A timestamp is padded 4, 6, 4, 12, and the 11 px time sits in a `line(11)` slot, so the gap under a bubble is the 6 dp margin. The DRAFT chip is the full sentence "DRAFT · LGU-approved text to be inserted", 11 / 800 at `normal`, padding 3 and 9. The SAMPLE chip in the last notice paragraph inherits the 13 / 1.5 line, so that line is 22.5 and the period sits after the chip.
+The page wash still stops at 260/844. That ratio is the wash, and it is not a gap token. Banner rows use `bannerPadY` on both sides, and the Replace chip centres on the whole row, office label included. Menu, inbox, settings, and credit rows keep 12 dp on both sides. A menu row with no badge keeps 12 dp before the chevron, so the title column is 238. The Messages row has the count badge and no chevron. Its title column is 233.45, then 12 dp, then the badge. The 08-01 name line keeps the 16 px strut at the top of the 22.13 box. The SAMPLE chip is `vertical-align: middle`: its centre is the baseline plus half the ExtraBold x-height (546), so the chip sits at 139.46. The 08-07 and 08-08 caption uses the body face (x-height 536), so that chip sits 2.55 below a 22.21 line. The timestamp margin-bottom is 12 and the caption margin-top is 6, and those collapse to 12. The gap between that chip and the caption is one 16 px space, 2.72. The composer padding stays 14, 10, 14, 24. A timestamp is padded 4, 6, 4, 12, and the 11 px time sits in a `line(11)` slot, so the gap under a bubble is the 6 dp margin. The DRAFT chip is the full sentence "DRAFT · LGU-approved text to be inserted", 11 / 800 at `normal`, padding 3 and 9. The SAMPLE chip in the last notice paragraph inherits the 13 / 1.5 line, so that line is 22.5 and the period sits after the chip.
 
 Boxes asserted against the DOM. Each edge is within 2/3 dp.
 
@@ -439,6 +439,14 @@ Boxes asserted against the DOM. Each edge is within 2/3 dp.
 | 08-01 name line | 101, 137, 256 × 22.13 |
 | 08-01 Verified chip | 101, 184.63, 78.26 × 21.2 |
 | 08-01 Resident Profile title | 89, 254.49, 238 × 17.67 |
+| 08-01 Messages title | 89, 323.49, 233.45 × 17.67 |
+| 08-01 Messages badge | 334.45, 330.99, 22.55 × 19.67 |
+| 08-01 name SAMPLE | 224.88, 139.46, 64.33 × 19.67 |
+| 08-07 SAMPLE line | 16, 574.49, 358 × 22.21 |
+| 08-07 SAMPLE chip | 83.72, 577.04, 64.33 × 19.67 |
+| 08-07 SAMPLE caption | 150.77, 578.82, 155.51 × 15 |
+| 08-08 SAMPLE chip | 83.72, 560.04, 64.33 × 19.67 |
+| 08-08 SAMPLE caption | 150.77, 561.82, 155.51 × 15 |
 | 08-02 header | 0, 0, 390 × 104 |
 | 08-02 All | 16, 132, 44.59 × 36 |
 | 08-02 Unread | 67.59, 132, 72.56 × 36 |
@@ -468,18 +476,18 @@ CIE76 ΔE above 6, full frame:
 
 | Screen | Mismatch |
 | --- | --- |
-| 08-01 Account home | 2.53% (75041/2962440) |
+| 08-01 Account home | 2.22% (65663/2962440) |
 | 08-02 Messages inbox | 1.70% (50438/2962440) |
 | 08-03 Edit profile | 1.61% (47727/2962440) |
 | 08-04 Settings and privacy | 2.15% (63729/2962440) |
 | 08-05 Photo credits | 2.15% (63623/2962440) |
 | 08-06 Messages empty | 1.28% (37896/2962440) |
-| 08-07 Thread, MSWDO | 3.04% (90081/2962440) |
-| 08-08 Thread, Treasurer | 2.55% (75656/2962440) |
+| 08-07 Thread, MSWDO | 2.71% (80135/2962440) |
+| 08-08 Thread, Treasurer | 2.22% (65710/2962440) |
 | 08-09 Privacy notice | 2.65% (78447/2962440) |
 | 08-10 Office banners | 3.45% (102344/2962440) |
 
-Crops: `test/goldens/compare/s8/artifacts/08-02-filters.png`, `08-02-office-time.png`, `08-02-landmark-time.png`, `08-09-sample.png`, `08-10-replace-intro.png`, `08-10-replace-relief.png`, and `08-10-replace-bfp.png`. The Treasurer landmark glyph still has a hole, so one design ink run can read as two. Messages on 08-01 keeps the chevron beside its count badge. The DOM row has the badge and no chevron. That chevron is the round-1 row.
+Crops: `test/goldens/compare/s8/artifacts/08-02-filters.png`, `08-02-office-time.png`, `08-02-landmark-time.png`, `08-09-sample.png`, `08-10-replace-intro.png`, `08-10-replace-relief.png`, and `08-10-replace-bfp.png`. The Treasurer landmark glyph still has a hole, so one design ink run can read as two.
 
 Round 1 structure:
 
@@ -527,4 +535,4 @@ Also still true:
 
 `ProfilePatch` from the live editor sends only changed `mobile`, `email`, and `barangay_id`. It does not send `name`, `role`, `office_id`, `verification_status`, `rejection_reason`, or `email_verified`.
 
-Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (476831 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (888325 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1648 tests, with 15 skipped (the recording and live tags).
+Recordings were captured again from this build at 1170×2532, motion on, no environment banner. Every frame advances 33 ms and the file is 30 fps: `test/goldens/compare/s8/recordings/s8-messages.mp4` (476628 bytes, 124 frames, 4.133 s, 30/1) and `s8-settings.mp4` (885802 bytes, 124 frames, 4.133 s, 30/1). The messages clip opens the inbox, opens the MSWDO thread, and comes back. The settings clip opens Settings, opens the privacy notice, and the back control returns to My Account. The notice is opened with `goNamed`, so Settings is not left on the stack. Both play the route transition through. The live home paints the computed percent, the decision date, and the messages badge. The live settings write balita and emergency. The notice stays on the bundled draft because the mock version is `placeholder` and the recording environment is dev. `flutter analyze` was clean (`No issues found!`). `flutter test` passed 1648 tests, with 15 skipped (the recording and live tags).
