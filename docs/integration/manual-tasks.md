@@ -56,10 +56,10 @@ questions about who this platform can actually reach.
 
 The Android release keystore and the Apple signing identity must be generated
 and held by the municipality, not by a contractor and not by this repository.
-`android/app/build.gradle.kts` reads them from `key.properties` and **has no
-debug fallback**, so a release build fails loudly rather than shipping something
-signed with a throwaway key — which is the correct behaviour and also means
-there is no artifact until somebody does this.
+`android/app/build.gradle.kts` reads them from `key.properties` (see
+`android/key.properties.example`). Debug builds do not need the file. A release
+package does not fall back to the debug key — it fails until `storeFile` is an
+absolute path outside this repository. See `docs/release/README.md`.
 
 An agent must never generate, hold or rotate these. Losing the Android keystore
 means the app can never be updated under the same listing again.

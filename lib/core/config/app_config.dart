@@ -120,15 +120,40 @@ class AppConfig {
     }
     final environment = parsedEnvironment ?? AppEnvironment.dev;
 
-    final baseUrl = rawApiBaseUrl.isNotEmpty
-        ? rawApiBaseUrl
-        : _defaultApiBaseUrl(environment);
+    // Dev debug builds may omit the URL and use the emulator host. Every
+    // release build, and every staging or production build, must be given one:
+    // there is no baked-in staging or production host to fall back to.
+    final allowDevDefault =
+        rawApiBaseUrl.isEmpty &&
+        !isReleaseBuild &&
+        (rawEnvironment.isEmpty || parsedEnvironment == AppEnvironment.dev);
+
+    final String baseUrl;
+    if (rawApiBaseUrl.isNotEmpty) {
+      baseUrl = rawApiBaseUrl;
+    } else if (allowDevDefault) {
+      baseUrl = _devApiBaseUrl;
+    } else {
+      issues.add(
+        const ConfigIssue(
+          'This build was compiled without --dart-define=$apiBaseUrlDefineKey. '
+          'There is no default staging or production host. A release build '
+          'must pass the public API base URL (https, including /api/v1). '
+          'A dev debug build may omit it.',
+        ),
+      );
+      baseUrl = _unconfiguredApiBaseUrl;
+    }
+
     final baseUri = Uri.tryParse(baseUrl);
+    final Uri? acceptedUri;
     if (baseUri == null || !baseUri.hasScheme || baseUri.host.isEmpty) {
+      acceptedUri = null;
       issues.add(
         const ConfigIssue('$apiBaseUrlDefineKey is not a valid absolute URL.'),
       );
     } else {
+      acceptedUri = baseUri;
       if (baseUri.userInfo.isNotEmpty) {
         issues.add(
           const ConfigIssue(
@@ -201,7 +226,7 @@ class AppConfig {
 
     return AppConfig(
       environment: environment,
-      apiBaseUri: baseUri ?? Uri.parse(_defaultApiBaseUrl(AppEnvironment.dev)),
+      apiBaseUri: acceptedUri ?? Uri.parse(_unconfiguredApiBaseUrl),
       connectTimeout: const Duration(seconds: 15),
       requestTimeout: const Duration(seconds: 30),
       uploadTimeout: const Duration(minutes: 2),
@@ -215,8 +240,11 @@ class AppConfig {
   /// `--dart-define` key selecting the environment.
   static const String envDefineKey = 'TAYTAY_ENV';
 
-  /// `--dart-define` key overriding the API base URL (for local backends and
-  /// device testing against a LAN host).
+  /// `--dart-define` key supplying the API base URL.
+  ///
+  /// Required for every release build, and for staging and production in any
+  /// mode. A dev debug build may omit it. There is no baked-in staging or
+  /// production host — a guessed hostname must not ship inside the binary.
   static const String apiBaseUrlDefineKey = 'TAYTAY_API_BASE_URL';
 
   /// `--dart-define` key selecting live or mock repositories.
@@ -257,15 +285,15 @@ class AppConfig {
 
   bool get isUsable => issues.isEmpty;
 
-  static String _defaultApiBaseUrl(
-    AppEnvironment environment,
-  ) => switch (environment) {
-    // 10.0.2.2 is the Android emulator's route to the host machine, which is
-    // where the Laravel backend runs during development.
-    AppEnvironment.dev => 'http://10.0.2.2:8000/api/v1',
-    AppEnvironment.staging => 'https://staging-api.taytay.gov.ph/api/v1',
-    AppEnvironment.prod => 'https://api.taytay.gov.ph/api/v1',
-  };
+  /// Android emulator route to the host machine. Used only when a dev debug
+  /// build omits [apiBaseUrlDefineKey].
+  static const String _devApiBaseUrl = 'http://10.0.2.2:8000/api/v1';
+
+  /// Placeholder for a build that was not given a base URL. `.invalid` is
+  /// reserved and does not resolve. The startup screen refuses to run before
+  /// anything reads this.
+  static const String _unconfiguredApiBaseUrl =
+      'https://unconfigured.invalid/api/v1';
 
   @override
   String toString() =>

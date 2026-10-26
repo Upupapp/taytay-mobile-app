@@ -1,0 +1,10 @@
+// Copy this file to ios/Flutter/Release-Signing.xcconfig.
+// That copy is gitignored. Do not commit a team id, certificate, or profile.
+//
+// TODO(paul): the Apple Team ID is not chosen yet. Uncomment the lines below
+// only on the signing machine, and replace YOUR_APPLE_TEAM_ID there.
+// Leave them commented in this example.
+//
+// DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID
+// CODE_SIGN_STYLE = Automatic
+// CODE_SIGN_IDENTITY = Apple Distribution

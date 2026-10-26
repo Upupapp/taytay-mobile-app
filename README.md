@@ -33,19 +33,19 @@ flutter pub get
 # Local development (defaults to the Android emulator's host route)
 flutter run --dart-define=TAYTAY_ENV=dev
 
-# Against a backend on your LAN or a local Laravel server
+# Against a backend on your LAN or a local server
 flutter run --dart-define=TAYTAY_ENV=dev \
             --dart-define=TAYTAY_API_BASE_URL=http://192.168.1.10:8000/api/v1
-
-# Staging / production builds must declare their environment explicitly —
-# a release build without TAYTAY_ENV refuses to start.
-flutter build apk --release --dart-define=TAYTAY_ENV=prod
 ```
+
+Release builds have no default staging or production host. The exact
+`appbundle`, `apk`, and `ipa` commands, including the keystore and the iOS
+export options, are in [`docs/release/README.md`](docs/release/README.md).
 
 | `--dart-define` | Values | Notes |
 | --- | --- | --- |
 | `TAYTAY_ENV` | `dev`, `staging`, `prod` | Required for release builds |
-| `TAYTAY_API_BASE_URL` | absolute URL incl. `/api/v1` | Optional override; https required outside `dev` |
+| `TAYTAY_API_BASE_URL` | absolute URL incl. `/api/v1` | Required for release, staging, and production. Dev debug may omit it. https required outside `dev` |
 
 **Never put a secret in a `--dart-define`.** Those values ship in clear text inside the
 APK/IPA. See `CLAUDE.md` Article 5.

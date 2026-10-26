@@ -1,1 +1,18 @@
 #include "Generated.xcconfig"
+
+// Release build settings that must not carry a secret live on the Runner
+// target's Release configuration in Runner.xcodeproj: whole-module
+// optimization, dSYM, bitcode off, assertions off, product validation,
+// automatic signing. DEVELOPMENT_TEAM is intentionally unset in the project.
+// No certificate, provisioning profile, or team id is committed.
+//
+// TODO(paul): confirm the bundle id ph.gov.taytay.lguids.taytayResident
+// before the first App Store upload. It is a placeholder until that decision.
+// The Android applicationId is ph.gov.taytay.lguids.taytay_resident, also
+// pending the same decision. The app icon and launch image stay placeholders
+// until the designer supplies them.
+//
+// Local signing overrides: copy Release-Signing.xcconfig.example to
+// Release-Signing.xcconfig (gitignored). The example is comments only, so the
+// copy does nothing until the placeholders are uncommented on the signing machine.
+#include? "Release-Signing.xcconfig"

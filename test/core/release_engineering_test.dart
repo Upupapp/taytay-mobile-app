@@ -99,12 +99,14 @@ void main() {
         isReleaseBuild: true,
       );
       // A release build falling back to a development API would ship real
-      // residents onto test data.
+      // residents onto test data. There is also no baked-in host.
       expect(config.isUsable, isFalse);
-      expect(
-        config.issues.map((ConfigIssue i) => i.message).join(' '),
-        contains('TAYTAY_ENV'),
-      );
+      expect(config.apiBaseUri.host, 'unconfigured.invalid');
+      final String messages = config.issues
+          .map((ConfigIssue i) => i.message)
+          .join(' ');
+      expect(messages, contains('TAYTAY_ENV'));
+      expect(messages, contains('TAYTAY_API_BASE_URL'));
     });
 
     test('and the same omission in a debug build is fine', () {
@@ -119,6 +121,23 @@ void main() {
       );
     });
 
+    test(
+      'a release build with an environment but no API URL still refuses',
+      () {
+        final AppConfig config = AppConfig.from(
+          rawEnvironment: 'prod',
+          rawApiBaseUrl: '',
+          isReleaseBuild: true,
+        );
+        expect(config.isUsable, isFalse);
+        expect(
+          config.issues.map((ConfigIssue i) => i.message).join(' '),
+          contains('TAYTAY_API_BASE_URL'),
+        );
+        expect(config.apiBaseUri.toString(), isNot(contains('taytay.gov.ph')));
+      },
+    );
+
     test('cleartext stays impossible outside dev', () {
       for (final String environment in <String>['staging', 'prod']) {
         final AppConfig config = AppConfig.from(
@@ -128,6 +147,91 @@ void main() {
         );
         expect(config.isUsable, isFalse, reason: environment);
       }
+    });
+  });
+
+  group('release scaffolding stays free of secrets', () {
+    test('pubspec version is 1.0.0+1', () {
+      // versionName 1.0.0, versionCode 1. Flutter reads the + build number.
+      final String pubspec = File('pubspec.yaml').readAsStringSync();
+      expect(pubspec, contains('version: 1.0.0+1'));
+    });
+
+    test('the keystore example is tracked and points outside the repo', () {
+      final File example = File('android/key.properties.example');
+      expect(example.existsSync(), isTrue);
+      expect(File('android/key.properties').existsSync(), isFalse);
+
+      final String text = example.readAsStringSync();
+      final RegExpMatch? storeFile = RegExp(
+        r'^storeFile=(.+)$',
+        multiLine: true,
+      ).firstMatch(text);
+      expect(storeFile, isNotNull);
+      final String path = storeFile!.group(1)!;
+      expect(path.startsWith('/'), isTrue, reason: path);
+      expect(path.contains('android/'), isFalse);
+      expect(text, isNot(contains('BEGIN')));
+      expect(text.toLowerCase(), isNot(contains('taytay.gov.ph')));
+    });
+
+    test(
+      'release packaging refuses a missing keystore without using debug',
+      () {
+        final String source = gradle();
+        expect(source, contains('verifyReleaseSigning'));
+        expect(source, contains('key.properties.example'));
+        expect(
+          source,
+          contains('signingConfig = signingConfigs.getByName("release")'),
+        );
+        expect(
+          source,
+          isNot(contains('signingConfig = signingConfigs.getByName("debug")')),
+        );
+      },
+    );
+
+    test('iOS release config commits no team id', () {
+      final String project = File(
+        'ios/Runner.xcodeproj/project.pbxproj',
+      ).readAsStringSync();
+      expect(project, isNot(contains('DEVELOPMENT_TEAM')));
+      expect(project, isNot(contains('PROVISIONING_PROFILE')));
+      expect(
+        project,
+        contains(
+          'PRODUCT_BUNDLE_IDENTIFIER = ph.gov.taytay.lguids.taytayResident;',
+        ),
+      );
+      expect(project, contains('SWIFT_OPTIMIZATION_LEVEL = "-O"'));
+      expect(project, contains('DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"'));
+      expect(project, contains('ENABLE_BITCODE = NO'));
+
+      final String export = File(
+        'ios/ExportOptions.plist.example',
+      ).readAsStringSync();
+      expect(export, contains('YOUR_APPLE_TEAM_ID'));
+      expect(export, contains('app-store-connect'));
+      expect(
+        RegExp(
+          r'<key>teamID</key>\s*<string>([^<]*)</string>',
+        ).firstMatch(export)!.group(1),
+        'YOUR_APPLE_TEAM_ID',
+      );
+      expect(File('ios/ExportOptions.plist').existsSync(), isFalse);
+      expect(
+        File('ios/Flutter/Release-Signing.xcconfig').existsSync(),
+        isFalse,
+      );
+      expect(
+        File('ios/Flutter/Release-Signing.xcconfig.example').existsSync(),
+        isTrue,
+      );
+
+      final String ignores = File('.gitignore').readAsStringSync();
+      expect(ignores, contains('/ios/ExportOptions.plist'));
+      expect(ignores, contains('Release-Signing.xcconfig'));
     });
   });
 }

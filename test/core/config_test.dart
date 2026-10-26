@@ -38,24 +38,68 @@ void main() {
       expect(config.isUsable, isTrue);
     });
 
-    test('each environment has a distinct default API base URL', () {
-      final urls = <String>{
-        for (final environment in AppEnvironment.values)
-          build(environment: environment.wireValue).apiBaseUri.toString(),
-      };
-      expect(urls, hasLength(AppEnvironment.values.length));
+    test('a dev debug build keeps the emulator host when no URL is given', () {
+      final config = build();
+      expect(config.isUsable, isTrue);
+      expect(config.apiBaseUri.toString(), 'http://10.0.2.2:8000/api/v1');
     });
 
-    test('staging and production defaults are https and versioned', () {
+    test('staging and production have no baked-in host', () {
       for (final environment in <AppEnvironment>[
         AppEnvironment.staging,
         AppEnvironment.prod,
       ]) {
-        final uri = build(environment: environment.wireValue).apiBaseUri;
-        expect(uri.scheme, 'https', reason: environment.wireValue);
-        // conventions §1: the version lives in the path, never a header.
-        expect(uri.path, contains('/v1'), reason: environment.wireValue);
+        final config = build(environment: environment.wireValue);
+        expect(config.isUsable, isFalse, reason: environment.wireValue);
+        expect(config.apiBaseUri.host, 'unconfigured.invalid');
+        expect(
+          config.issues.map((issue) => issue.message).join('\n'),
+          contains(AppConfig.apiBaseUrlDefineKey),
+          reason: environment.wireValue,
+        );
       }
+    });
+
+    test(
+      'a supplied staging or production URL must be https and versioned',
+      () {
+        for (final environment in <AppEnvironment>[
+          AppEnvironment.staging,
+          AppEnvironment.prod,
+        ]) {
+          final uri = build(
+            environment: environment.wireValue,
+            baseUrl: 'https://api.example.invalid/api/v1',
+          ).apiBaseUri;
+          expect(uri.scheme, 'https', reason: environment.wireValue);
+          // conventions §1: the version lives in the path, never a header.
+          expect(uri.path, contains('/v1'), reason: environment.wireValue);
+        }
+      },
+    );
+
+    test('a release build without an API base URL refuses to start', () {
+      for (final environment in <String>['', 'dev', 'staging', 'prod']) {
+        final config = build(environment: environment, release: true);
+        expect(config.isUsable, isFalse, reason: environment);
+        expect(config.apiBaseUri.host, isNot('10.0.2.2'), reason: environment);
+        expect(config.apiBaseUri.host, isNot(contains('taytay.gov.ph')));
+        expect(
+          config.issues.map((issue) => issue.message).join('\n'),
+          contains(AppConfig.apiBaseUrlDefineKey),
+          reason: environment,
+        );
+      }
+    });
+
+    test('a release build with an explicit https URL is usable', () {
+      final config = build(
+        environment: 'prod',
+        baseUrl: 'https://api.example.invalid/api/v1',
+        release: true,
+      );
+      expect(config.isUsable, isTrue);
+      expect(config.apiBaseUri.host, 'api.example.invalid');
     });
 
     test('a release build with no environment refuses to start', () {

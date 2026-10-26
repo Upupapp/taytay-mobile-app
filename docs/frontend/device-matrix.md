@@ -98,8 +98,8 @@ device that could fail them.
 
 `android/key.properties` is absent, as it must be — the keystore is the LGU's to generate and hold
 (F03), and an agent must never generate, hold or rotate it. `android/app/build.gradle.kts` reads
-the release signing config from that file and **fails the build** when it is missing, rather than
-falling back to the debug key.
+the release signing config from that file. Debug builds still run when it is missing. A release
+package **fails** rather than falling back to the debug key. See `docs/release/README.md`.
 
 Re-verified in this TAB by running `flutter build apk --release` and confirming it refuses. A
 half-filled `key.properties` is refused too, by name, which is the more useful failure.

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Example only. Copy to ios/ExportOptions.plist (gitignored) before
+	  `flutter build ipa`, then replace YOUR_APPLE_TEAM_ID on that copy.
+	  Do not commit the copy.
+
+	  TODO(paul): the Apple Team ID is not chosen yet. YOUR_APPLE_TEAM_ID is
+	  a placeholder, not a team. No certificate, provisioning profile, or
+	  password belongs in this file. signingStyle is automatic so the
+	  profile name is not stored here either.
+
+	  method app-store-connect is the Xcode export method for an App Store
+	  IPA. The bundle id stays ph.gov.taytay.lguids.taytayResident until Paul
+	  confirms it. The app icon and launch image stay placeholders.
+	-->
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>export</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>teamID</key>
+	<string>YOUR_APPLE_TEAM_ID</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>compileBitcode</key>
+	<false/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>
