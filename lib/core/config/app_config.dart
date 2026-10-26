@@ -190,12 +190,18 @@ class AppConfig {
     }
     final resolvedDataMode = dataMode ?? AppDataMode.live;
     if (resolvedDataMode == AppDataMode.mock &&
-        environment != AppEnvironment.dev) {
+        (isReleaseBuild || environment != AppEnvironment.dev)) {
+      // A release binary that asks for mocks must not start, even when the
+      // environment says dev. kReleaseMode is [isReleaseBuild].
+      final String where = isReleaseBuild
+          ? 'A release build cannot start on synthetic fixtures, including '
+                'when $envDefineKey=dev.'
+          : 'A ${environment.wireValue} build must not start on synthetic '
+                'fixtures.';
       issues.add(
         ConfigIssue(
-          'Mock data is refused: $dataModeDefineKey=mock is only valid when '
-          '$envDefineKey=dev. A ${environment.wireValue} build must not start '
-          'on synthetic fixtures.',
+          'Mock data is refused: $dataModeDefineKey=mock is only valid for a '
+          'dev debug build. $where',
         ),
       );
     }
@@ -249,7 +255,9 @@ class AppConfig {
 
   /// `--dart-define` key selecting live or mock repositories.
   ///
-  /// Mock is refused unless [envDefineKey] is `dev`.
+  /// Mock is refused unless [envDefineKey] is `dev` and the build is not a
+  /// release. A release build refuses mock data even when the environment is
+  /// dev.
   static const String dataModeDefineKey = 'TAYTAY_DATA';
 
   /// `--dart-define` key: `none`, `offline`, or `server`. Dev mocks only.
@@ -266,7 +274,7 @@ class AppConfig {
 
   final Duration mockLatency;
 
-  /// True only for a usable dev build that asked for mocks.
+  /// True only for a usable dev debug build that asked for mocks.
   bool get usesMockData =>
       isUsable &&
       environment == AppEnvironment.dev &&

@@ -19,8 +19,9 @@ The base URL is injected at build time. The define is `TAYTAY_API_BASE_URL`
 A release build compiled without it refuses to start and names the missing
 define on the blocking configuration screen. A dev debug build may omit it and
 keeps using `http://10.0.2.2:8000/api/v1` (the Android emulator's route to the
-host machine). `--dart-define=TAYTAY_DATA=mock` is still honoured only when
-`TAYTAY_ENV=dev`. Staging and production refuse to start on mock data.
+host machine). `--dart-define=TAYTAY_DATA=mock` is honoured only for a dev
+debug build. A release build refuses it even when `TAYTAY_ENV=dev`. Staging
+and production refuse it as well.
 
 The value is a public URL, including `/api/v1`. Outside `dev` it must be
 `https`. It must not contain a user, a password, or a query string. Never put
@@ -152,4 +153,5 @@ flutter test
 ```
 
 `flutter analyze` must be clean. `flutter test` must pass. Do not pass
-`--dart-define=TAYTAY_DATA=mock` on a staging or production build.
+`--dart-define=TAYTAY_DATA=mock` on a release build, or on staging or
+production.
