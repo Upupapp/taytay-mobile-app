@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
@@ -124,7 +125,8 @@ void main() {
       expect(pixel.g.toInt(), 0x3D);
       expect(pixel.b.toInt(), 0x91);
 
-      // The generator treats the 1152 px mark as a 4× asset, so mdpi is 288 dp.
+      // The canvas stays 1152 px, so mdpi is 288 dp. The mark itself is the
+      // centred 768 px artwork, which is 192 dp.
       final mark = img.decodePng(
         File(
           'android/app/src/main/res/drawable-mdpi/splash.png',
@@ -132,8 +134,11 @@ void main() {
       )!;
       expect(mark.width, 288);
       expect(mark.height, 288);
+      final markBox = _opaqueBounds(mark);
+      expect(markBox.width, 192);
+      expect(markBox.left, (288 - markBox.width) ~/ 2);
 
-      // Android 12 icon is 240 dp. mdpi is 240 px. The system masks the circle.
+      // Android 12 icon is 240 dp. The system masks a 160 dp circle (radius 80).
       final android12 = img.decodePng(
         File(
           'android/app/src/main/res/drawable-mdpi/android12splash.png',
@@ -141,6 +146,7 @@ void main() {
       )!;
       expect(android12.width, 240);
       expect(android12.height, 240);
+      expect(_maxOpaqueRadius(android12), lessThanOrEqualTo(80));
 
       for (final path in <String>[
         'android/app/src/main/res/values/styles.xml',
@@ -180,4 +186,43 @@ void main() {
       expect(launch, contains('@drawable/background'));
     });
   });
+}
+
+({int left, int top, int width, int height}) _opaqueBounds(img.Image image) {
+  var minX = image.width;
+  var minY = image.height;
+  var maxX = 0;
+  var maxY = 0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      if (image.getPixel(x, y).a.toInt() <= 12) continue;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+    }
+  }
+  return (
+    left: minX,
+    top: minY,
+    width: maxX - minX + 1,
+    height: maxY - minY + 1,
+  );
+}
+
+/// Radius, in pixels, of the furthest opaque pixel from the image centre.
+double _maxOpaqueRadius(img.Image image) {
+  final cx = (image.width - 1) / 2;
+  final cy = (image.height - 1) / 2;
+  var maxR = 0.0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      if (image.getPixel(x, y).a.toInt() <= 12) continue;
+      final dx = x - cx;
+      final dy = y - cy;
+      final radius = math.sqrt((dx * dx) + (dy * dy));
+      if (radius > maxR) maxR = radius;
+    }
+  }
+  return maxR;
 }

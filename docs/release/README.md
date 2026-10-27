@@ -19,10 +19,10 @@ dart run flutter_native_splash:create
 
 `flutter_launcher_icons` writes the Android adaptive icon (including the
 monochrome layer) and the opaque iOS icon. `flutter_native_splash` writes the
-native splash and the Android 12 splash. The generator treats a splash image
-as a 4× asset, so the 1152 px mark is 288 dp on screen. The design sheet draws
-that mark at 192 dp. The Android 12 icon is the 960 px file at 240 dp, which
-matches the spec, and the system masks it to a 160 dp circle.
+native splash and the Android 12 splash. It treats a splash image as a 4×
+asset. The mark is 768 px, centred on the transparent 1152 px canvas, so it
+is 192 dp. The Android 12 file stays 960 px (240 dp). The dashed ring and the
+mark sit inside the 160 dp circle the system masks to.
 
 `LaunchTheme` sets the status and navigation bars to `#0B3D91` with light
 icons. Re-running the splash generator resets
