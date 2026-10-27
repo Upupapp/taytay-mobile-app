@@ -537,6 +537,9 @@ class _DateColumn extends StatelessWidget {
           color: Colors.white,
           features: const <FontFeature>[FontFeature.tabularFigures()],
           slot: TypeMetrics.line(13),
+          // 13 px normal is a 16.33 line. The rounded strut sits the
+          // glyphs above Chrome's baseline, which is 13.33 into that line.
+          pinBaseline: true,
         ),
       ],
     );
@@ -1036,8 +1039,9 @@ class _SampleChip extends StatelessWidget {
 /// CSS `vertical-align: middle` for a SAMPLE chip on a label line.
 ///
 /// The parent's line stays at the top. The line grows downward when the chip
-/// hangs below that strut. Copied from the account line measure so this
-/// feature does not import another feature's presentation.
+/// hangs below that strut. The centre is the alphabetic baseline plus half
+/// the x-height. On a 14 px line that baseline is 14.33, and the ID-number
+/// row is 20.34 rather than the 20.68 a 14.67 ascender would make.
 class _MiddleLine extends StatelessWidget {
   const _MiddleLine({required this.text, required this.style, this.chip});
 
@@ -1116,7 +1120,7 @@ double _middleTop({
     _ => 536,
   };
   final double centre =
-      TypeMetrics.ascender(fontSize) - (fontSize * units / 1000) / 2;
+      TypeMetrics.baseline(fontSize) - (fontSize * units / 1000) / 2;
   return centre - boxHeight / 2;
 }
 
@@ -1337,8 +1341,10 @@ const double _bodyLine = 13 * 1.5;
 ///
 /// SkParagraph rounds a fractional strut to a whole logical pixel. A 14 px
 /// normal line becomes 18 instead of 17.67, and 13 × 1.5 becomes 20 instead
-/// of 19.5. Each line keeps that strut and is placed `step` apart, so the
-/// paragraph is `n` times the CSS advance.
+/// of 19.5. Each line is placed `step` apart, so the paragraph is `n` times
+/// the CSS advance. A normal line then pins its glyphs to Chrome's alphabetic
+/// baseline inside that box. An explicit line-height, such as 13 × 1.5, keeps
+/// the strut: those lines are already 19.5 apart.
 class _FractionalLines extends StatelessWidget {
   const _FractionalLines({
     required this.text,
@@ -1358,11 +1364,15 @@ class _FractionalLines extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool normal = (step - TypeMetrics.line(size)).abs() < 0.001;
+    // A normal line is an em box pinned to the baseline. The explicit
+    // line-height keeps its own strut, which is what spaces 13 × 1.5.
+    final double fontHeight = normal ? 1 : step / size;
     final TextStyle style = TextStyle(
       fontFamily: AppTypography.fontFamily,
       fontSize: size,
       fontWeight: weight,
-      height: step / size,
+      height: fontHeight,
       leadingDistribution: TextLeadingDistribution.even,
       color: color,
       decoration: TextDecoration.none,
@@ -1371,10 +1381,13 @@ class _FractionalLines extends StatelessWidget {
       fontFamily: AppTypography.fontFamily,
       fontSize: size,
       fontWeight: weight,
-      height: step / size,
+      height: fontHeight,
       leadingDistribution: TextLeadingDistribution.even,
       forceStrutHeight: true,
     );
+    final double topInset = normal
+        ? TypeMetrics.baseline(size) - _emBaseline(size, weight)
+        : 0;
     return Semantics(
       label: text,
       child: ExcludeSemantics(
@@ -1408,7 +1421,7 @@ class _FractionalLines extends StatelessWidget {
                 children: <Widget>[
                   for (var i = 0; i < lines.length; i++)
                     Positioned(
-                      top: step * i,
+                      top: step * i + topInset,
                       left: 0,
                       right: 0,
                       child: Text(
@@ -1432,6 +1445,35 @@ class _FractionalLines extends StatelessWidget {
   }
 }
 
+/// Baseline of an em-box strut (`height: 1`) for [size] and [weight].
+double _emBaseline(double size, FontWeight weight) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(
+      text: 'Ag',
+      style: TextStyle(
+        fontFamily: AppTypography.fontFamily,
+        fontSize: size,
+        fontWeight: weight,
+        height: 1,
+        leadingDistribution: TextLeadingDistribution.even,
+      ),
+    ),
+    textDirection: TextDirection.ltr,
+    textHeightBehavior: _evenLeading,
+    strutStyle: StrutStyle(
+      fontFamily: AppTypography.fontFamily,
+      fontSize: size,
+      fontWeight: weight,
+      height: 1,
+      leadingDistribution: TextLeadingDistribution.even,
+      forceStrutHeight: true,
+    ),
+  )..layout();
+  final double baseline = painter.computeLineMetrics().first.baseline;
+  painter.dispose();
+  return baseline;
+}
+
 class _Ink extends StatelessWidget {
   const _Ink(
     this.text, {
@@ -1444,6 +1486,7 @@ class _Ink extends StatelessWidget {
     this.maxLines = 1,
     this.features,
     this.slot,
+    this.pinBaseline = false,
   });
 
   final String text;
@@ -1458,6 +1501,9 @@ class _Ink extends StatelessWidget {
 
   /// CSS line box when the strut would round to a whole logical pixel.
   final double? slot;
+
+  /// Place the glyphs on Chrome's alphabetic baseline inside [slot].
+  final bool pinBaseline;
 
   @override
   Widget build(BuildContext context) {
@@ -1492,7 +1538,34 @@ class _Ink extends StatelessWidget {
     );
     final double? slot = this.slot;
     if (slot == null) return textWidget;
-    return SizedBox(height: slot, child: textWidget);
+    if (!pinBaseline) return SizedBox(height: slot, child: textWidget);
+    final double top = TypeMetrics.baseline(size) - _emBaseline(size, weight);
+    return SizedBox(
+      height: slot,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: Padding(
+          padding: EdgeInsets.only(top: top),
+          child: Text(
+            text,
+            maxLines: maxLines,
+            softWrap: maxLines > 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: align,
+            style: style.copyWith(height: 1),
+            strutStyle: StrutStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: size,
+              fontWeight: weight,
+              height: 1,
+              leadingDistribution: TextLeadingDistribution.even,
+              forceStrutHeight: true,
+            ),
+            textHeightBehavior: _evenLeading,
+          ),
+        ),
+      ),
+    );
   }
 }
 

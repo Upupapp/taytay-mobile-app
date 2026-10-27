@@ -3,10 +3,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/design/typography.dart';
 import 'package:taytay_resident/core/haptics/app_haptics.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 
 void main() {
+  group('Chrome normal-line baseline', () {
+    test('ceils the descender and keeps the line box', () {
+      // Measured in Chrome at device scale 3. The line box is unchanged.
+      // The baseline is not the rounded typo ascender: 14 px is 14.33,
+      // 11 px is 11, and 13 px and 16 px already matched the ascender.
+      expect(TypeMetrics.line(14), closeTo(17.667, 0.001));
+      expect(TypeMetrics.baseline(14), closeTo(14.333, 0.001));
+      expect(TypeMetrics.baseline(11), closeTo(11, 0.001));
+      expect(TypeMetrics.baseline(13), closeTo(13.333, 0.001));
+      expect(TypeMetrics.baseline(16), closeTo(TypeMetrics.ascender(16), 0.001));
+    });
+  });
+
   group('contrast helper', () {
     test('matches known WCAG reference ratios', () {
       expect(contrastRatio(Colors.black, Colors.white), closeTo(21.0, 0.05));
