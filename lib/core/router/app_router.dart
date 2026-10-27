@@ -55,6 +55,13 @@ import '../startup/platform_controller.dart';
 import 'app_routes.dart';
 import 'route_guard.dart';
 
+/// Calls to [buildAppRouter] in this isolate.
+///
+/// Tests prove a misconfigured build never constructs a router, including
+/// when the root widget is disposed. Production does not read it.
+@visibleForTesting
+int debugBuildAppRouterCount = 0;
+
 /// Builds the app's router.
 ///
 /// **Why `go_router` and a declarative redirect.** Navigation here is derived
@@ -95,6 +102,7 @@ GoRouter buildAppRouter({
   List<NavigatorObserver> observers = const <NavigatorObserver>[],
   bool allowDevRoutes = false,
 }) {
+  debugBuildAppRouterCount++;
   final GlobalKey<NavigatorState> rootNavigatorKey =
       navigatorKey ?? GlobalKey<NavigatorState>();
   return GoRouter(
