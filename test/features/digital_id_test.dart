@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taytay_resident/core/api/api_client.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
+import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/credential/data/credential_api_repository.dart';
@@ -111,7 +115,10 @@ void main() {
         }),
         isNull,
       );
-      expect(CredentialApiRepository.decodeResidentName(<String, Object?>{}), isNull);
+      expect(
+        CredentialApiRepository.decodeResidentName(<String, Object?>{}),
+        isNull,
+      );
     });
   });
 
@@ -158,7 +165,8 @@ void main() {
       tester,
       DigitalIdView(
         card: _card(CredentialLifecycleState.active, qr: _qr),
-        name: 'Maria Concepcion Josefina Dela Paz-Villanueva Santiago Fernandez',
+        name:
+            'Maria Concepcion Josefina Dela Paz-Villanueva Santiago Fernandez',
         now: _localNow,
       ),
     );
@@ -218,54 +226,152 @@ void main() {
     expect(dump, isNot(contains(token)));
   });
 
-  testWidgets('a dead code is refetched once, and a live one arms no timer', (
+  testWidgets('a code that is not live is not painted', (tester) async {
+    await _pump(
+      tester,
+      DigitalIdView(
+        card: _card(
+          CredentialLifecycleState.active,
+          qr: PresentationArtifact(
+            payload: 'sample-qr-not-a-credential',
+            expiresAt: DateTime.utc(2020, 1, 1),
+          ),
+        ),
+        name: 'Juan Dela Cruz',
+        now: _now,
+      ),
+    );
+    expect(find.byKey(DigitalIdView.qrKey), findsNothing);
+    expect(find.text('Refreshing code…'), findsOneWidget);
+    expect(find.textContaining('sample-qr-not-a-credential'), findsNothing);
+  });
+
+  testWidgets('the fake clock refreshes a code at expires_at, hours ahead', (
     tester,
   ) async {
-    final _Recording repository = _Recording(
-      card: _card(
+    final DateTime start = tester.binding.clock.now().toUtc();
+    final DateTime expiry = start.add(const Duration(hours: 3));
+    final DateTime renewed = start.add(const Duration(hours: 5));
+    final _Recording repository = _Recording.cards(<ResidentCredential?>[
+      _card(
         CredentialLifecycleState.active,
         qr: PresentationArtifact(
           payload: 'sample-qr-not-a-credential',
-          expiresAt: DateTime.utc(2099, 1, 1),
+          expiresAt: expiry,
         ),
       ),
-    );
+      _card(
+        CredentialLifecycleState.active,
+        qr: PresentationArtifact(
+          payload: 'sample-qr-not-a-credential',
+          expiresAt: renewed,
+        ),
+      ),
+    ]);
     await _pump(
       tester,
       DigitalIdScreen(
-        key: const Key('live-qr'),
+        key: const Key('far-qr'),
         repository: repository,
+        now: () => tester.binding.clock.now(),
         sample: false,
       ),
     );
     await tester.pump();
     await tester.pump();
     expect(repository.cardLoads, 1);
-    await tester.pump(const Duration(seconds: 2));
-    expect(repository.cardLoads, 1);
+    expect(find.byKey(DigitalIdView.qrKey), findsOneWidget);
+    expect(find.text('Refreshing code…'), findsNothing);
 
-    final _Recording expired = _Recording(
-      card: _card(
-        CredentialLifecycleState.active,
-        qr: PresentationArtifact(
-          payload: 'sample-qr-not-a-credential',
-          expiresAt: DateTime.utc(2020, 1, 1),
+    await tester.pump(const Duration(hours: 2, minutes: 59));
+    expect(repository.cardLoads, 1);
+    expect(find.byKey(DigitalIdView.qrKey), findsOneWidget);
+
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pump();
+    expect(repository.cardLoads, 2);
+    expect(find.byKey(DigitalIdView.qrKey), findsOneWidget);
+    expect(find.text('Refreshing code…'), findsNothing);
+
+    await tester.pump(const Duration(hours: 1, minutes: 59));
+    expect(repository.cardLoads, 2);
+    expect(find.byKey(DigitalIdView.qrKey), findsOneWidget);
+  });
+
+  testWidgets(
+    'a refetch that returns another dead code stays on Refreshing code',
+    (tester) async {
+      final DateTime start = tester.binding.clock.now().toUtc();
+      final _Recording repository = _Recording.cards(<ResidentCredential?>[
+        _card(
+          CredentialLifecycleState.active,
+          qr: PresentationArtifact(
+            payload: 'sample-qr-not-a-credential',
+            expiresAt: start.subtract(const Duration(minutes: 5)),
+          ),
         ),
+        _card(
+          CredentialLifecycleState.active,
+          qr: PresentationArtifact(
+            payload: 'sample-qr-still-dead',
+            expiresAt: start.subtract(const Duration(seconds: 1)),
+          ),
+        ),
+      ]);
+      await _pump(
+        tester,
+        DigitalIdScreen(
+          key: const Key('dead-qr'),
+          repository: repository,
+          now: () => tester.binding.clock.now(),
+          sample: false,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(repository.cardLoads, 2);
+      expect(find.text('Refreshing code…'), findsOneWidget);
+      expect(find.byKey(DigitalIdView.qrKey), findsNothing);
+      final String dump = tester.allWidgets
+          .map((Widget widget) => widget.toString())
+          .join('\n');
+      expect(dump, isNot(contains('sample-qr-not-a-credential')));
+      expect(dump, isNot(contains('sample-qr-still-dead')));
+      await tester.pump(const Duration(minutes: 2));
+      expect(repository.cardLoads, 2);
+      expect(find.text('Refreshing code…'), findsOneWidget);
+      expect(find.byKey(DigitalIdView.qrKey), findsNothing);
+    },
+  );
+
+  testWidgets('a 404 from /me/digital-id shows the not-issued card', (
+    tester,
+  ) async {
+    final CredentialApiRepository repository = CredentialApiRepository(
+      apiClient: ApiClient(
+        config: AppConfig.from(
+          rawEnvironment: 'dev',
+          rawApiBaseUrl: 'https://example.test/api/v1',
+          isReleaseBuild: false,
+        ),
+        transport: _NotFoundDigitalId(),
+        accessTokenProvider: () async => 'firebase-id-token',
       ),
     );
     await _pump(
       tester,
-      DigitalIdScreen(
-        key: const Key('dead-qr'),
-        repository: expired,
-        sample: false,
-      ),
+      DigitalIdScreen(repository: repository, sample: false, now: () => _now),
     );
     await tester.pump();
     await tester.pump();
-    expect(expired.cardLoads, 2);
-    await tester.pump(const Duration(seconds: 1));
-    expect(expired.cardLoads, 2);
+    expect(find.text('Not yet issued'), findsOneWidget);
+    expect(
+      find.text('Your digital ID will appear here once Taytay LGU issues it.'),
+      findsOneWidget,
+    );
+    expect(find.text('operator text that must not be shown'), findsNothing);
+    expect(find.byKey(DigitalIdView.qrKey), findsNothing);
+    expect(find.text('Juan Dela Cruz'), findsNothing);
   });
 }
 
@@ -316,14 +422,21 @@ Future<void> _loadFonts() async {
 }
 
 class _Recording implements CredentialRepository {
-  _Recording({required this.card});
+  _Recording({required ResidentCredential card})
+    : this.cards(<ResidentCredential?>[card]);
 
-  final ResidentCredential card;
+  _Recording.cards(this._cards);
+
+  final List<ResidentCredential?> _cards;
   int cardLoads = 0;
 
   @override
   Future<Result<ResidentCredential?>> loadOwnCredential() async {
+    final int index = cardLoads;
     cardLoads += 1;
+    final ResidentCredential? card = index < _cards.length
+        ? _cards[index]
+        : _cards.last;
     return Ok<ResidentCredential?>(card);
   }
 
@@ -336,6 +449,34 @@ class _Recording implements CredentialRepository {
   Future<Result<PresentationArtifact>> requestPresentationArtifact() async {
     return const Err<PresentationArtifact>(
       NotFoundFailure(debugMessage: 'unused'),
+    );
+  }
+}
+
+class _NotFoundDigitalId implements ApiTransport {
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    if (request.path == CredentialApiRepository.path) {
+      return Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 404,
+          body: jsonEncode(<String, Object?>{
+            'error': <String, Object?>{
+              'code': 'NOT_FOUND',
+              'message': 'operator text that must not be shown',
+            },
+          }),
+        ),
+      );
+    }
+    return Ok<ApiHttpResponse>(
+      ApiHttpResponse(
+        statusCode: 200,
+        body: jsonEncode(<String, Object?>{
+          'data': <String, Object?>{'name': 'Juan Dela Cruz'},
+          'meta': <String, Object?>{'request_id': 'req-name'},
+        }),
+      ),
     );
   }
 }

@@ -100,6 +100,7 @@ class DigitalIdView extends StatelessWidget {
                             failure: failure,
                             environment: environment,
                             onRetry: onRetry,
+                            now: now,
                           ),
                         ),
                         const Positioned(
@@ -144,6 +145,7 @@ class _Body extends StatelessWidget {
     required this.failure,
     required this.environment,
     required this.onRetry,
+    required this.now,
   });
 
   final ResidentCredential? card;
@@ -153,6 +155,7 @@ class _Body extends StatelessWidget {
   final AppFailure? failure;
   final AppEnvironment environment;
   final VoidCallback? onRetry;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
@@ -169,7 +172,13 @@ class _Body extends StatelessWidget {
         else if (card == null || face == null)
           const _NotIssued()
         else
-          _Issued(card: card!, name: name, face: face!, sample: sample),
+          _Issued(
+            card: card!,
+            name: name,
+            face: face!,
+            sample: sample,
+            now: now,
+          ),
       ],
     );
   }
@@ -222,12 +231,14 @@ class _Issued extends StatelessWidget {
     required this.name,
     required this.face,
     required this.sample,
+    required this.now,
   });
 
   final ResidentCredential card;
   final String? name;
   final DigitalIdFace face;
   final bool sample;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
@@ -249,25 +260,11 @@ class _Issued extends StatelessWidget {
                 _MiddleLine(
                   text: 'NAME ',
                   style: _label,
-                  chip: sample ? const _SampleChip() : null,
+                  // `.kv` is `opacity: .75`, and the SAMPLE chip sits inside it.
+                  chip: sample ? const _SampleChip(opacity: 0.75) : null,
                 ),
                 const SizedBox(height: 2),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 300),
-                    child: Text(
-                      resident,
-                      key: DigitalIdView.nameKey,
-                      maxLines: 2,
-                      softWrap: true,
-                      overflow: TextOverflow.ellipsis,
-                      style: _nameStyle,
-                      strutStyle: _nameStrut,
-                      textHeightBehavior: _evenLeading,
-                    ),
-                  ),
-                ),
+                _ResidentName(name: resident),
               ],
               SizedBox(height: resident == null ? 16 : 12),
               _PhotoRow(card: card, face: face, sample: sample),
@@ -276,7 +273,7 @@ class _Issued extends StatelessWidget {
         ),
         if (qr != null) ...<Widget>[
           const SizedBox(height: 14),
-          _QrCard(qr: qr),
+          _QrCard(qr: qr, now: now),
           // `.card` margin-bottom 12 and `.cs` margin-top 12 collapse.
           const SizedBox(height: 12),
           const Padding(
@@ -288,7 +285,7 @@ class _Issued extends StatelessWidget {
               size: 13,
               weight: FontWeight.w500,
               color: BrandColors.textSecondary,
-              step: 19.5,
+              step: _bodyLine,
               align: TextAlign.center,
             ),
           ),
@@ -347,12 +344,19 @@ class _CardShell extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         child: Stack(
           children: <Widget>[
+            // The design SVG viewport is 120×214. The paths are authored
+            // out to y 220, and the viewport clips them.
             const Positioned(
               right: -6,
               top: 0,
               width: 120,
-              height: 220,
-              child: CustomPaint(painter: _StitchPainter()),
+              height: 214,
+              child: ClipRect(
+                child: CustomPaint(
+                  painter: _StitchPainter(),
+                  size: Size(120, 214),
+                ),
+              ),
             ),
             Padding(padding: const EdgeInsets.all(16), child: child),
           ],
@@ -452,12 +456,13 @@ class _PhotoRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const _Ink(
+              _Ink(
                 'ID NUMBER',
                 size: 11,
                 weight: FontWeight.w700,
                 color: _labelColor,
                 letterSpacing: 0.4,
+                slot: TypeMetrics.line(11),
               ),
               const SizedBox(height: 1),
               _MiddleLine(
@@ -466,12 +471,13 @@ class _PhotoRow extends StatelessWidget {
                 chip: sample ? const _SampleChip() : null,
               ),
               const SizedBox(height: 8),
-              const _Ink(
+              _Ink(
                 'STATUS',
                 size: 11,
                 weight: FontWeight.w700,
                 color: _labelColor,
                 letterSpacing: 0.4,
+                slot: TypeMetrics.line(11),
               ),
               const SizedBox(height: 3),
               _StatusTag(face: face),
@@ -521,6 +527,7 @@ class _DateColumn extends StatelessWidget {
           weight: FontWeight.w700,
           color: _labelColor,
           letterSpacing: 0.4,
+          slot: TypeMetrics.line(11),
         ),
         const SizedBox(height: 1),
         _Ink(
@@ -529,6 +536,7 @@ class _DateColumn extends StatelessWidget {
           weight: FontWeight.w800,
           color: Colors.white,
           features: const <FontFeature>[FontFeature.tabularFigures()],
+          slot: TypeMetrics.line(13),
         ),
       ],
     );
@@ -568,15 +576,7 @@ class _PhotoPlaceholder extends StatelessWidget {
                   color: Colors.white,
                 ),
                 SizedBox(height: 6),
-                _Ink(
-                  'Photo\nplaceholder',
-                  size: 11,
-                  weight: FontWeight.w700,
-                  color: Colors.white,
-                  height: 1.25,
-                  align: TextAlign.center,
-                  maxLines: 2,
-                ),
+                _PhotoCaption(),
               ],
             ),
           ),
@@ -620,6 +620,7 @@ class _StatusTag extends StatelessWidget {
                   size: 11,
                   weight: FontWeight.w800,
                   color: style.foreground,
+                  slot: TypeMetrics.line(11),
                 ),
               ],
             ),
@@ -667,12 +668,14 @@ class _TagStyle {
 }
 
 class _QrCard extends StatelessWidget {
-  const _QrCard({required this.qr});
+  const _QrCard({required this.qr, required this.now});
 
   final PresentationArtifact qr;
+  final DateTime now;
 
   @override
   Widget build(BuildContext context) {
+    final bool live = qr.isLive(now);
     final DateTime? expiry = qr.expiresAt;
     final String refresh = expiry == null
         ? 'Code refreshes'
@@ -699,7 +702,7 @@ class _QrCard extends StatelessWidget {
             align: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          _QrFrame(token: qr.payload),
+          if (live) _QrFrame(token: qr.payload) else const _RefreshingCode(),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -748,7 +751,36 @@ class _QrFrame extends StatelessWidget {
           color: Colors.white,
           child: CustomPaint(
             size: const Size(208, 208),
-            painter: _QrPainter(token),
+            painter: _QrPainter(token, View.of(context).devicePixelRatio),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown in the code's box once `expires_at` has passed, including when the
+/// refetch is also past its expiry. The modules are not painted.
+class _RefreshingCode extends StatelessWidget {
+  const _RefreshingCode();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 208,
+      height: 208,
+      child: Center(
+        child: Text(
+          'Refreshing code…',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            height: 1.25,
+            leadingDistribution: TextLeadingDistribution.even,
+            color: BrandColors.textSecondary,
+            decoration: TextDecoration.none,
           ),
         ),
       ),
@@ -811,7 +843,7 @@ class _Notice extends StatelessWidget {
                       size: 13,
                       weight: FontWeight.w500,
                       color: BrandColors.textSecondary,
-                      step: 19.5,
+                      step: _bodyLine,
                     ),
                   ],
                 ),
@@ -964,14 +996,20 @@ const StrutStyle _sampleCaptionStrut = StrutStyle(
 );
 
 class _SampleChip extends StatelessWidget {
-  const _SampleChip();
+  const _SampleChip({this.opacity = 1});
+
+  /// `.kv` sets `opacity: .75` on the NAME line. The ID number chip sits in
+  /// `.vv`, which does not, so only the NAME chip passes this.
+  final double opacity;
 
   @override
   Widget build(BuildContext context) {
-    return SampleTag(
+    final Widget tag = SampleTag(
       lineHeight: TypeMetrics.line(11) / 11,
       lineSlot: TypeMetrics.line(11),
     );
+    if (opacity == 1) return tag;
+    return Opacity(opacity: opacity, child: tag);
   }
 }
 
@@ -1135,12 +1173,155 @@ const StrutStyle _nameStrut = StrutStyle(
   forceStrutHeight: true,
 );
 
+/// `.nmv` in the screenshotted HTML is 18 × 1.25, so each line box is 22.5.
+///
+/// The glyphs stay 17. SkParagraph rounds the strut to a whole logical
+/// pixel (22 with Plus Jakarta loaded), which shortens the block and pulls
+/// the photo row up. The slot keeps the CSS advance.
+class _ResidentName extends StatelessWidget {
+  const _ResidentName({required this.name});
+
+  final String name;
+
+  static const double _step = 22.5;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 300),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double maxWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 300;
+            final int lines = _nameLines(name, maxWidth, context);
+            return SizedBox(
+              height: _step * lines,
+              width: maxWidth,
+              child: Text(
+                name,
+                key: DigitalIdView.nameKey,
+                maxLines: 2,
+                softWrap: true,
+                overflow: TextOverflow.ellipsis,
+                style: _nameStyle,
+                strutStyle: _nameStrut,
+                textHeightBehavior: _evenLeading,
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+int _nameLines(String text, double maxWidth, BuildContext context) {
+  final TextPainter painter = TextPainter(
+    text: TextSpan(text: text, style: _nameStyle),
+    textDirection: Directionality.of(context),
+    textScaler: MediaQuery.textScalerOf(context),
+    textHeightBehavior: _evenLeading,
+    strutStyle: _nameStrut,
+    maxLines: 2,
+    ellipsis: '…',
+  )..layout(maxWidth: maxWidth);
+  var lines = 0;
+  var start = 0;
+  while (start < text.length && lines < 2) {
+    final TextRange range = painter.getLineBoundary(
+      TextPosition(offset: start),
+    );
+    if (range.end <= start) break;
+    lines += 1;
+    start = range.end;
+  }
+  painter.dispose();
+  return lines == 0 ? 1 : lines;
+}
+
+/// `.ph1` caption: 11 / 700, line-height 1.25, two lines, centered under the
+/// icon with a 6 px gap. The step stays 13.75 so the second line is not the
+/// rounded 14 px strut.
+class _PhotoCaption extends StatelessWidget {
+  const _PhotoCaption();
+
+  static const double _step = 11 * 1.25;
+
+  static const TextStyle _style = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    leadingDistribution: TextLeadingDistribution.even,
+    color: Colors.white,
+    decoration: TextDecoration.none,
+  );
+
+  static const StrutStyle _strut = StrutStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 11,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    leadingDistribution: TextLeadingDistribution.even,
+    forceStrutHeight: true,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      height: _step * 2,
+      width: double.infinity,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: <Widget>[
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Text(
+              'Photo',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: _style,
+              strutStyle: _strut,
+              textHeightBehavior: _evenLeading,
+            ),
+          ),
+          Positioned(
+            top: _step,
+            left: 0,
+            right: 0,
+            child: Text(
+              'placeholder',
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              style: _style,
+              strutStyle: _strut,
+              textHeightBehavior: _evenLeading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// `.cs` is 13 px at `line-height: 1.5`, which is 19.5 CSS px.
+///
+/// Blink rounds that used line box to a device pixel at the 3× capture.
+/// 19.5 × 3 is 58.5, which rounds away from zero to 59, so the advance is
+/// 59/3. A raw 19.5 paints the lines 58 device px apart.
+const double _bodyLine = 59 / 3;
+
 /// Lines stacked on a CSS `line-height`, not on the rounded strut.
 ///
 /// SkParagraph rounds a fractional strut to a whole logical pixel. A 14 px
-/// normal line becomes 18 instead of 17.67, and 13 × 1.5 becomes 20 instead
-/// of 19.5. Each line keeps that strut and is placed `step` apart, so the
-/// paragraph is `n` times the CSS advance.
+/// normal line becomes 18 instead of 17.67, and [_bodyLine] would become 20
+/// if it were handed to the strut as 19.5. Each line keeps that strut and is
+/// placed `step` apart, so the paragraph is `n` times the CSS advance.
 class _FractionalLines extends StatelessWidget {
   const _FractionalLines({
     required this.text,
@@ -1245,6 +1426,7 @@ class _Ink extends StatelessWidget {
     this.align,
     this.maxLines = 1,
     this.features,
+    this.slot,
   });
 
   final String text;
@@ -1256,6 +1438,9 @@ class _Ink extends StatelessWidget {
   final TextAlign? align;
   final int maxLines;
   final List<FontFeature>? features;
+
+  /// CSS line box when the strut would round to a whole logical pixel.
+  final double? slot;
 
   @override
   Widget build(BuildContext context) {
@@ -1271,7 +1456,7 @@ class _Ink extends StatelessWidget {
       fontFeatures: features,
       decoration: TextDecoration.none,
     );
-    return Text(
+    final Widget textWidget = Text(
       text,
       maxLines: maxLines,
       softWrap: maxLines > 1,
@@ -1288,6 +1473,9 @@ class _Ink extends StatelessWidget {
       ),
       textHeightBehavior: _evenLeading,
     );
+    final double? slot = this.slot;
+    if (slot == null) return textWidget;
+    return SizedBox(height: slot, child: textWidget);
   }
 }
 
@@ -1377,36 +1565,47 @@ class _DashedRRectPainter extends CustomPainter {
 
 /// Renders a token as modules. `toString` stays redacted.
 class _QrPainter extends CustomPainter {
-  const _QrPainter(this._token);
+  const _QrPainter(this._token, this._devicePixelRatio);
 
   final String _token;
+  final double _devicePixelRatio;
 
   @override
   void paint(Canvas canvas, Size size) {
     final QrImage? matrix = _matrix(_token);
     if (matrix == null) return;
     final int count = matrix.moduleCount;
+    final double dpr = _devicePixelRatio <= 0 ? 1 : _devicePixelRatio;
     final double cell = size.shortestSide / (count + 8);
     final double origin = (size.shortestSide - cell * count) / 2;
-    final Paint paint = Paint()..color = BrandColors.textPrimary;
+    final Path path = Path();
+    final double min = 1 / dpr;
     for (var row = 0; row < count; row++) {
       for (var col = 0; col < count; col++) {
         if (!matrix.isDark(row, col)) continue;
-        canvas.drawRect(
-          Rect.fromLTWH(origin + col * cell, origin + row * cell, cell, cell),
-          paint,
-        );
+        final double left = _snap(origin + col * cell, dpr);
+        final double top = _snap(origin + row * cell, dpr);
+        var right = _snap(origin + (col + 1) * cell, dpr);
+        var bottom = _snap(origin + (row + 1) * cell, dpr);
+        if (right <= left) right = left + min;
+        if (bottom <= top) bottom = top + min;
+        path.addRect(Rect.fromLTRB(left, top, right, bottom));
       }
     }
+    canvas.drawPath(path, Paint()..color = BrandColors.textPrimary);
   }
 
   @override
   bool shouldRepaint(covariant _QrPainter oldDelegate) =>
-      oldDelegate._token != _token;
+      oldDelegate._token != _token ||
+      oldDelegate._devicePixelRatio != _devicePixelRatio;
 
   @override
   String toString() => 'QrPainter';
 }
+
+double _snap(double logical, double devicePixelRatio) =>
+    (logical * devicePixelRatio).round() / devicePixelRatio;
 
 QrImage? _matrix(String token) {
   try {

@@ -16,9 +16,11 @@ import 'digital_id_canvas.dart';
 /// one is genuine.
 ///
 /// The name is GET /me `name`. It is not stored on the session. The QR token
-/// is painted from memory and dropped when the code expires. A 404 or a null
-/// card keeps the not-issued card. The portrait media id is not fetched:
-/// this client has no media-bytes route for it.
+/// is painted from memory only while `qr.isLive`. A timer fires at
+/// `qr.expires_at`; the modules come down and the card is loaded again. A
+/// refetch that is also past its expiry stays on "Refreshing code…" and is
+/// not painted. A 404 or a null card keeps the not-issued card. The portrait
+/// media id is not fetched: this client has no media-bytes route for it.
 class DigitalIdScreen extends StatefulWidget {
   const DigitalIdScreen({super.key, this.repository, this.now, this.sample});
 
@@ -37,16 +39,15 @@ class DigitalIdScreen extends StatefulWidget {
 
 class _DigitalIdScreenState extends State<DigitalIdScreen>
     with WidgetsBindingObserver {
-  /// A code that still has longer than this to live is refreshed when the
-  /// app resumes, not by a timer. A long timer would hold `pumpAndSettle`.
-  static const Duration _refreshWindow = Duration(minutes: 10);
-
   bool _started = false;
   CredentialRepository? _repository;
   ResidentCredential? _card;
   String? _name;
   AppFailure? _failure;
   Timer? _timer;
+
+  /// A dead code is loaded once more. A second dead result stays on the
+  /// refreshing state so the load does not chain.
   bool _gaveUpOnDeadQr = false;
   int _generation = 0;
 
@@ -80,7 +81,9 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) _scheduleQrRefresh();
+    if (state != AppLifecycleState.resumed) return;
+    _gaveUpOnDeadQr = false;
+    _scheduleQrRefresh();
   }
 
   DateTime _clock() => widget.now?.call() ?? DateTime.now();
@@ -133,15 +136,19 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     _timer?.cancel();
     _timer = null;
     final PresentationArtifact? qr = _card?.qr;
-    final DateTime? expiry = qr?.expiresAt;
-    if (qr == null || expiry == null) return;
+    if (qr == null) return;
     final DateTime now = _clock();
     if (qr.isLive(now)) {
       _gaveUpOnDeadQr = false;
+      final DateTime? expiry = qr.expiresAt;
+      if (expiry == null) return;
       final Duration remaining = expiry.toUtc().difference(now.toUtc());
-      if (remaining > _refreshWindow) return;
+      if (remaining <= Duration.zero) return;
       _timer = Timer(remaining, () {
         if (!mounted) return;
+        // This load is the refresh. A dead result must not start another.
+        _gaveUpOnDeadQr = true;
+        setState(() {});
         unawaited(_load());
       });
       return;
