@@ -223,6 +223,21 @@ dev_dependencies:
   # for no permission. The resident app never imports it.
   image: ^4.5.4
 
+  # Dev-only generators for the store icon and the native splash. They are
+  # not linked into the shipped app. `dart run flutter_launcher_icons` and
+  # `dart run flutter_native_splash:create` write the Android and iOS
+  # resource folders from `release/assets/`. The resident app never imports
+  # them. Reviewed against Article 1 before adding.
+  #
+  # * Maintenance — flutter_launcher_icons is Flutter Community.
+  #   flutter_native_splash is maintained by Jon Hanson. Both are the usual
+  #   generators for these platform files.
+  # * Permissions — none. They do not run on a device.
+  # * Data egress — none. They read the PNGs in this repository and write
+  #   platform resources. No network call at generation time beyond pub get.
+  flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.8
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -296,3 +311,29 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Store icon (release spec 10-01). `android: true` keeps `@mipmap/ic_launcher`.
+# The adaptive foreground is already inside the 66 dp safe zone, so the
+# generator's default 16% inset is off. `remove_alpha_ios` keeps the App
+# Store icon opaque. `min_sdk_android` is set because this project uses
+# Gradle Kotlin DSL, which the generator does not parse for minSdk.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: release/assets/icon-master-1024.png
+  adaptive_icon_background: release/assets/android-adaptive-background-432.png
+  adaptive_icon_foreground: release/assets/android-adaptive-foreground-432.png
+  adaptive_icon_monochrome: release/assets/android-monochrome-432.png
+  adaptive_icon_foreground_inset: 0
+  remove_alpha_ios: true
+  min_sdk_android: 24
+
+# Native splash (10-02) and the Android 12 splash (10-03). This repository
+# has no web target. No dark-mode colour: one splash in both system themes.
+flutter_native_splash:
+  color: "#0B3D91"
+  image: release/assets/splash-mark-1152.png
+  web: false
+  android_12:
+    color: "#0B3D91"
+    image: release/assets/android12-splash-icon-960.png
