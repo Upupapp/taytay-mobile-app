@@ -147,6 +147,7 @@ void main() {
       expect(android12.width, 240);
       expect(android12.height, 240);
       expect(_maxOpaqueRadius(android12), lessThanOrEqualTo(80));
+      expect(_darkFringeCount(android12), 0);
 
       for (final path in <String>[
         'android/app/src/main/res/values/styles.xml',
@@ -185,6 +186,28 @@ void main() {
       expect(launch, contains('@drawable/splash'));
       expect(launch, contains('@drawable/background'));
     });
+
+    test('the Android 12 disc has no dark resize fringe', () {
+      final paths = <String>[
+        'release/assets/android12-splash-icon-960.png',
+        for (final density in [
+          'mdpi',
+          'hdpi',
+          'xhdpi',
+          'xxhdpi',
+          'xxxhdpi',
+        ]) ...[
+          'android/app/src/main/res/drawable-$density/android12splash.png',
+          'android/app/src/main/res/drawable-night-$density/android12splash.png',
+        ],
+      ];
+      for (final path in paths) {
+        final image = img.decodePng(File(path).readAsBytesSync())!;
+        expect(_darkFringeCount(image), 0, reason: path);
+        expect(_exactBrandCount(image), greaterThan(0), reason: path);
+        expect(_maxOpaqueRadius(image), lessThanOrEqualTo(80), reason: path);
+      }
+    });
   });
 }
 
@@ -210,7 +233,47 @@ void main() {
   );
 }
 
-/// Radius, in pixels, of the furthest opaque pixel from the image centre.
+/// Pixels darkened by a resize that blended the blue disc with transparent
+/// black. The reported fringe is RGBA(7, 41, 98, 117). A filled disc is
+/// exact `#0B3D91` or fully transparent, so this stays at zero.
+int _darkFringeCount(img.Image image) {
+  var count = 0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final pixel = image.getPixel(x, y);
+      final red = pixel.r.toInt();
+      final green = pixel.g.toInt();
+      final blue = pixel.b.toInt();
+      final alpha = pixel.a.toInt();
+      if (alpha <= 16 || blue <= red) continue;
+      if (red >= 0x0B || green >= 0x3D || blue >= 0x91) continue;
+      final darkening = (0x0B - red) + (0x3D - green) + (0x91 - blue);
+      if (darkening > 24) count++;
+    }
+  }
+  return count;
+}
+
+/// Opaque pixels of the Android 12 disc, exact `#0B3D91`.
+int _exactBrandCount(img.Image image) {
+  var count = 0;
+  for (var y = 0; y < image.height; y++) {
+    for (var x = 0; x < image.width; x++) {
+      final pixel = image.getPixel(x, y);
+      if (pixel.r.toInt() == 0x0B &&
+          pixel.g.toInt() == 0x3D &&
+          pixel.b.toInt() == 0x91 &&
+          pixel.a.toInt() == 255) {
+        count++;
+      }
+    }
+  }
+  return count;
+}
+
+/// Radius, in dp, of the furthest opaque pixel from the image centre.
+///
+/// The Android 12 asset is a 4× image: 960 px is 240 dp.
 double _maxOpaqueRadius(img.Image image) {
   final cx = (image.width - 1) / 2;
   final cy = (image.height - 1) / 2;
@@ -224,5 +287,6 @@ double _maxOpaqueRadius(img.Image image) {
       if (radius > maxR) maxR = radius;
     }
   }
-  return maxR;
+  // 960 px is 240 dp, and the smaller densities use the same proportion.
+  return maxR * 240 / image.width;
 }

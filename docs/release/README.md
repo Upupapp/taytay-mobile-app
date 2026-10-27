@@ -27,9 +27,16 @@ mark sit inside the 160 dp circle the system masks to.
 `LaunchTheme` sets the status and navigation bars to `#0B3D91` with light
 icons. Re-running the splash generator resets
 `android:windowDrawsSystemBarBackgrounds` to `false`; set it back to `true`
-on `LaunchTheme` or the bar colour does not apply. iOS keeps the status bar
-visible over the same blue. Its icon colour stays the system default: an
+on `LaunchTheme` or the bar colour does not apply. The same run resizes the
+Android 12 icon without premultiplied alpha and leaves a dark fringe on the
+blue disc. The disc is filled with exact `#0B3D91` after that resize; put
+the fill back if you generate again. The ~0.97 inset stays, so the dashed
+ring remains inside the 160 dp mask. iOS keeps the status bar visible over
+the same blue. Its icon colour stays the system default: an
 `UIStatusBarStyle` in `Info.plist` would still be in force after the splash.
+`flutter_launcher_icons` can write `AppIcon` into
+`ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`. That setting
+stays `YES`. `ASSETCATALOG_COMPILER_APPICON_NAME` stays `AppIcon`.
 
 ## API base URL
 
