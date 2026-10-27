@@ -77,17 +77,22 @@ void main() {
 
   group('the generated icon and splash match the release spec', () {
     test('the iOS marketing icon is opaque and matches the spec file', () {
-      final icon = File(
+      final iconBytes = File(
         'ios/Runner/Assets.xcassets/AppIcon.appiconset/'
         'Icon-App-1024x1024@1x.png',
       ).readAsBytesSync();
-      final opaque = File(
+      final opaqueBytes = File(
         'release/assets/icon-ios-1024-opaque.png',
       ).readAsBytesSync();
       // PNG colour type sits at byte 25 of a standard IHDR. 2 is RGB.
-      // 6 is RGBA, which App Store rejects on the 1024 icon.
-      expect(icon[25], 2);
-      expect(icon, opaque);
+      // 6 is RGBA, which App Store rejects on the 1024 icon. The generator
+      // re-encodes the file, so the check is the pixels, not the container.
+      expect(iconBytes[25], 2);
+      final icon = img.decodePng(iconBytes)!;
+      final opaque = img.decodePng(opaqueBytes)!;
+      expect(icon.width, 1024);
+      expect(icon.height, 1024);
+      expect(icon.getBytes(), opaque.getBytes());
     });
 
     test(
