@@ -258,9 +258,13 @@ void main() {
       );
       expect(ShellDestination.forLocation('/offices/bplo/message'), isNull);
       expect(ShellDestination.forLocation('/events/e-1'), isNull);
+      // The issued card stays on My Account so the tab bar stays selected.
+      expect(
+        ShellDestination.forLocation('/digital-id'),
+        ShellDestination.account,
+      );
       // Outside the shell entirely.
       expect(ShellDestination.forLocation('/sign-in'), isNull);
-      expect(ShellDestination.forLocation('/digital-id'), isNull);
     });
 
     test('layout breakpoints follow the Material 3 window size classes', () {

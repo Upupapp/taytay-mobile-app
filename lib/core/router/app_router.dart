@@ -90,9 +90,10 @@ int debugBuildAppRouterCount = 0;
 ///   — `redirect` is declared once on the router and applies to all of them,
 ///   including a cold-start deep link that arrives before any shell exists.
 ///
-/// Routes outside the shell — splash, onboarding, sign-in, the digital ID —
-/// are full-screen by intent: they are either pre-app or a single focused task
-/// where a navigation bar would invite a resident to wander off mid-flow.
+/// Routes outside the shell — splash, onboarding, sign-in — are full-screen
+/// by intent: they are either pre-app or a single focused task where a
+/// navigation bar would invite a resident to wander off mid-flow. The digital
+/// ID stays on the My Account branch so the issued card keeps that tab bar.
 GoRouter buildAppRouter({
   required SessionController session,
   required LaunchController launch,
@@ -416,6 +417,13 @@ GoRouter buildAppRouter({
                   threadId: state.pathParameters['threadId'] ?? '',
                 ),
               ),
+              // The issued card keeps the My Account tab. The designs show
+              // that bar; the screen itself does not paint a second one.
+              GoRoute(
+                path: AppRoute.digitalId.path,
+                name: AppRoute.digitalId.routeName,
+                builder: (context, state) => const DigitalIdScreen(),
+              ),
             ],
           ),
         ],
@@ -567,11 +575,6 @@ GoRouter buildAppRouter({
             builder: (context, state) => const HouseholdCorrectionScreen(),
           ),
         ],
-      ),
-      GoRoute(
-        path: AppRoute.digitalId.path,
-        name: AppRoute.digitalId.routeName,
-        builder: (context, state) => const DigitalIdScreen(),
       ),
       GoRoute(
         path: AppRoute.componentGallery.path,

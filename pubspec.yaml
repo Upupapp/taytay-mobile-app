@@ -64,6 +64,19 @@ dependencies:
   # reason: fewer moving parts in the layer that carries resident credentials.
   http: ^1.6.0
 
+  # Turns `qr.token` into a module matrix for the issued Digital ID. Reviewed
+  # against CLAUDE.md Article 1 before adding.
+  #
+  # * Maintenance — `kevmoo/qr.dart`, a pure-Dart encoder (no plugin, no
+  #   platform code). It builds the matrix in memory and returns.
+  # * Permissions — none.
+  # * Data egress — none. The token is not written, logged, or sent anywhere
+  #   by this package. Painting the modules is this app's own widget, and the
+  #   token stays in that widget for the lifetime of the screen.
+  # * Why it — the code has to be rendered from the server token at runtime.
+  #   Encoding a QR by hand is the sort of crypto this app must not invent.
+  qr: ^4.0.0
+
   # Platform keystore for credential material: Android Keystore via
   # EncryptedSharedPreferences, iOS Keychain. Required by CLAUDE.md Article 5.3,
   # which forbids tokens in plain `SharedPreferences` or a plain file. Configured

@@ -501,7 +501,7 @@ void main() {
         ),
       );
       await goTo(tester, 'digital-id');
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
+      expect(find.text('My Taytay ID'), findsOneWidget);
 
       // Simulates a 401 arriving from any in-flight request.
       await dependencies.session.handleUnauthenticated();

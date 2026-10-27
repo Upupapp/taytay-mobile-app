@@ -61,6 +61,10 @@ enum ShellDestination {
         path.startsWith('${AppRoute.notifications.path}/')) {
       return ShellDestination.home;
     }
+    if (path == AppRoute.digitalId.path ||
+        path.startsWith('${AppRoute.digitalId.path}/')) {
+      return ShellDestination.account;
+    }
     return null;
   }
 }

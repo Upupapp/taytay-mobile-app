@@ -136,6 +136,13 @@ abstract interface class CredentialRepository {
   /// The signed-in resident's own credential, if the LGU has issued one.
   Future<Result<ResidentCredential?>> loadOwnCredential();
 
+  /// GET /me `name`, trimmed. Null when the field is missing or blank.
+  ///
+  /// The name is not on the digital-ID payload, and it is not stored on the
+  /// session (the session keeps a greeting word). A failure here is not a
+  /// missing card.
+  Future<Result<String?>> loadResidentName();
+
   /// Requests a fresh presentation artifact — the short-lived payload a verifier
   /// scans.
   ///
