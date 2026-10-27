@@ -594,35 +594,55 @@ class _StatusTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _TagStyle style = _TagStyle.of(face);
-    return Semantics(
-      label: style.label,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: style.background,
-          borderRadius: BorderRadius.circular(Radii.pill),
-        ),
+    // The chip is inline-flex in a block that inherits the body's 16 px
+    // normal line. Its baseline is the bottom of the 12 px icon, a replaced
+    // flex item centered on the 11 px label. The chip therefore starts below
+    // the strut and the line grows to 20.5 instead of the chip's own 19.67.
+    const double icon = 12;
+    const double pad = 3;
+    final double label = TypeMetrics.line(11);
+    final double chip = label + pad * 2;
+    final double baseline = pad + (label - icon) / 2 + icon;
+    final double top = TypeMetrics.ascender(16) - baseline;
+    final double line = math.max(TypeMetrics.line(16), top + chip);
+    return SizedBox(
+      height: line,
+      child: Align(
+        alignment: Alignment.topLeft,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-          child: ExcludeSemantics(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TaytayIcon(
-                  icon: style.icon,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 12,
-                  color: style.foreground,
+          padding: EdgeInsets.only(top: top),
+          child: Semantics(
+            label: style.label,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: style.background,
+                borderRadius: BorderRadius.circular(Radii.pill),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+                child: ExcludeSemantics(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      TaytayIcon(
+                        icon: style.icon,
+                        semanticLabel: '',
+                        excludeSemantics: true,
+                        size: 12,
+                        color: style.foreground,
+                      ),
+                      const SizedBox(width: 4),
+                      _Ink(
+                        style.label,
+                        size: 11,
+                        weight: FontWeight.w800,
+                        color: style.foreground,
+                        slot: TypeMetrics.line(11),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(width: 4),
-                _Ink(
-                  style.label,
-                  size: 11,
-                  weight: FontWeight.w800,
-                  color: style.foreground,
-                  slot: TypeMetrics.line(11),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -1309,19 +1329,16 @@ class _PhotoCaption extends StatelessWidget {
   }
 }
 
-/// `.cs` is 13 px at `line-height: 1.5`, which is 19.5 CSS px.
-///
-/// Blink rounds that used line box to a device pixel at the 3× capture.
-/// 19.5 × 3 is 58.5, which rounds away from zero to 59, so the advance is
-/// 59/3. A raw 19.5 paints the lines 58 device px apart.
-const double _bodyLine = 59 / 3;
+/// `.cs` is 13 px at `line-height: 1.5`. Chrome's line boxes are exactly
+/// 19.5 apart, and a 3-line block is 58.5.
+const double _bodyLine = 13 * 1.5;
 
 /// Lines stacked on a CSS `line-height`, not on the rounded strut.
 ///
 /// SkParagraph rounds a fractional strut to a whole logical pixel. A 14 px
-/// normal line becomes 18 instead of 17.67, and [_bodyLine] would become 20
-/// if it were handed to the strut as 19.5. Each line keeps that strut and is
-/// placed `step` apart, so the paragraph is `n` times the CSS advance.
+/// normal line becomes 18 instead of 17.67, and 13 × 1.5 becomes 20 instead
+/// of 19.5. Each line keeps that strut and is placed `step` apart, so the
+/// paragraph is `n` times the CSS advance.
 class _FractionalLines extends StatelessWidget {
   const _FractionalLines({
     required this.text,
