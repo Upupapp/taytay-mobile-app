@@ -204,9 +204,9 @@ Two pre-existing tests asserted the old placeholder screen's copy. They were
 | # | Gap | Effect |
 | --- | --- | --- |
 | V-1 | No `GET /api/v1/me/verification` | The status screen shows an honest "could not check" banner; nothing is simulated. |
-| V-2 | No correction-submission endpoint | `submitCorrections` declines; the flow is complete and inert. |
+| V-2 | Correction submit | `POST me/verification-requests/current/corrections` sends the resident's message. Staff `notes` are not shown. |
 | V-3 | Wire values for `VerificationState` unpublished | The decoder recognises the spellings the boundary map implies and degrades everything else. Re-check when the module ships. |
 | V-4 | `needsMoreInformation` has no server state to map from | It is reachable only when the server sends `issues`; there is no attempt-state that produces it, because none is published. |
-| V-5 | Corrections are text-only | Re-uploading a document is impossible while the upload contract is unspecified (backend **G-18**). |
+| V-5 | Re-upload | `POST me/verification-requests/current/documents` replaces the ID photos while `can_edit` is true. |
 | V-6 | No push notification on status change | A resident must open the screen or pull to refresh. Belongs with the `Notification` module. |
 | V-7 | English only | Filipino copy arrives with app-wide localisation. |

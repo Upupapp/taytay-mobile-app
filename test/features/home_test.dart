@@ -93,7 +93,25 @@ class CountingVerificationRepository implements VerificationRepository {
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatusDetail>(ServerFailure());
 
   @override
   Future<Result<KycDocument>> attachDocument({
@@ -403,9 +421,8 @@ void main() {
 
     test('only an unverified resident and a guest get a status card', () {
       expect(
-        HomeEmphasis.forLevel(
-          AccessLevel.verified,
-        ).contains(HomeSection.statusCard),
+        HomeEmphasis.forLevel(AccessLevel.verified)
+            .contains(HomeSection.statusCard),
         isFalse,
       );
       expect(
@@ -413,15 +430,13 @@ void main() {
         HomeSection.greeting,
       );
       expect(
-        HomeEmphasis.forLevel(
-          AccessLevel.guest,
-        ).contains(HomeSection.statusCard),
+        HomeEmphasis.forLevel(AccessLevel.guest)
+            .contains(HomeSection.statusCard),
         isTrue,
       );
       expect(
-        HomeEmphasis.forLevel(
-          AccessLevel.unverified,
-        ).contains(HomeSection.statusCard),
+        HomeEmphasis.forLevel(AccessLevel.unverified)
+            .contains(HomeSection.statusCard),
         isTrue,
       );
     });
@@ -887,9 +902,8 @@ Future<void> _pumpCarousel(
   await tester.pumpWidget(
     MaterialApp(
       home: MediaQuery(
-        data: MediaQueryData.fromView(
-          tester.view,
-        ).copyWith(disableAnimations: reduced),
+        data: MediaQueryData.fromView(tester.view)
+            .copyWith(disableAnimations: reduced),
         child: HomeCanvas(
           greeting: 'Magandang gabi!',
           slides: _slides,

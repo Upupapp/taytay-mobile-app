@@ -18,6 +18,9 @@ class PendingStatusPage extends StatelessWidget {
     this.accountCreated = '',
     this.email = '',
     this.idType = '',
+    this.submittedOn = '',
+    this.residentMessage = '',
+    this.categories = const <String>[],
     super.key,
   });
 
@@ -25,6 +28,15 @@ class PendingStatusPage extends StatelessWidget {
   final String accountCreated;
   final String email;
   final String idType;
+
+  /// `submitted_at`, already formatted. Empty leaves the progress card as drawn.
+  final String submittedOn;
+
+  /// `message` the resident sent with a correction. Empty hides the line.
+  final String residentMessage;
+
+  /// Labels for `submitted_categories`. Empty hides the list.
+  final List<String> categories;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +81,17 @@ class PendingStatusPage extends StatelessWidget {
                   height: 1.5,
                   align: TextAlign.center,
                 ),
+                if (residentMessage.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  S3Lines(
+                    residentMessage,
+                    size: 13,
+                    weight: AppTypography.body,
+                    color: BrandColors.textSecondary,
+                    height: 1.5,
+                    align: TextAlign.center,
+                  ),
+                ],
               ],
             ),
           ),
@@ -119,6 +142,41 @@ class PendingStatusPage extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (submittedOn.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      'Submitted $submittedOn',
+                      style: s3Type(
+                        12,
+                        FontWeight.w400,
+                        BrandColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                if (categories.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Text(
+                    'What Taytay LGU has from you',
+                    style: s3Type(
+                      14,
+                      AppTypography.black,
+                      BrandColors.textPrimary,
+                    ),
+                  ),
+                  for (final String label in categories)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        label,
+                        style: s3Type(
+                          13,
+                          AppTypography.body,
+                          BrandColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -338,6 +396,16 @@ class NeedsCorrectionPage extends StatelessWidget {
     this.notes = const <FieldCorrectionNote>[],
     this.idType = '',
     this.reviewedOn = '',
+    this.submittedOn = '',
+    this.residentMessage = '',
+    this.categories = const <String>[],
+    this.frontValue = 'Upload new photo',
+    this.backValue = 'Add',
+    this.selfieValue = 'Previous selfie kept',
+    this.onFront,
+    this.onBackPhoto,
+    this.onRetake,
+    this.notice = '',
     super.key,
   });
 
@@ -347,6 +415,16 @@ class NeedsCorrectionPage extends StatelessWidget {
   final List<FieldCorrectionNote> notes;
   final String idType;
   final String reviewedOn;
+  final String submittedOn;
+  final String residentMessage;
+  final List<String> categories;
+  final String frontValue;
+  final String backValue;
+  final String selfieValue;
+  final VoidCallback? onFront;
+  final VoidCallback? onBackPhoto;
+  final VoidCallback? onRetake;
+  final String notice;
 
   @override
   Widget build(BuildContext context) {
@@ -359,6 +437,7 @@ class NeedsCorrectionPage extends StatelessWidget {
       onBack: onBack,
       footer: 'Resubmit for verification',
       onFooter: onResubmit,
+      notice: notice,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -409,6 +488,59 @@ class NeedsCorrectionPage extends StatelessWidget {
                   const SizedBox(height: 10),
                   _FieldNote(note: note),
                 ],
+                if (residentMessage.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 10),
+                  Text(
+                    'Your message',
+                    style: s3Type(
+                      14,
+                      AppTypography.strong,
+                      BrandColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  S3Lines(
+                    residentMessage,
+                    size: 13,
+                    weight: AppTypography.body,
+                    color: BrandColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ],
+                if (submittedOn.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Submitted $submittedOn',
+                    style: s3Type(
+                      11,
+                      FontWeight.w400,
+                      BrandColors.textSecondary,
+                    ),
+                  ),
+                ],
+                if (categories.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: 12),
+                  Text(
+                    'What Taytay LGU has from you',
+                    style: s3Type(
+                      14,
+                      AppTypography.black,
+                      BrandColors.textPrimary,
+                    ),
+                  ),
+                  for (final String label in categories)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        label,
+                        style: s3Type(
+                          13,
+                          AppTypography.body,
+                          BrandColors.textSecondary,
+                        ),
+                      ),
+                    ),
+                ],
               ],
             ),
           ),
@@ -433,12 +565,13 @@ class NeedsCorrectionPage extends StatelessWidget {
                   value: _orDash(idType),
                   chevron: true,
                 ),
-                const S3Field(
+                S3Field(
                   label: 'Front of ID',
                   asterisk: true,
-                  value: 'Upload new photo',
+                  value: frontValue,
                   dashed: true,
-                  leading: TaytayIcon(
+                  onTap: onFront,
+                  leading: const TaytayIcon(
                     icon: TaytayIcons.plus,
                     semanticLabel: '',
                     excludeSemantics: true,
@@ -446,11 +579,12 @@ class NeedsCorrectionPage extends StatelessWidget {
                     color: BrandColors.taytayBlue,
                   ),
                 ),
-                const S3Field(
+                S3Field(
                   label: 'Back of ID (optional)',
-                  value: 'Add',
+                  value: backValue,
                   dashed: true,
-                  leading: TaytayIcon(
+                  onTap: onBackPhoto,
+                  leading: const TaytayIcon(
                     icon: TaytayIcons.plus,
                     semanticLabel: '',
                     excludeSemantics: true,
@@ -458,18 +592,19 @@ class NeedsCorrectionPage extends StatelessWidget {
                     color: BrandColors.taytayBlue,
                   ),
                 ),
-                const S3Field(
+                S3Field(
                   label: 'Selfie',
-                  value: 'Previous selfie kept',
+                  value: selfieValue,
                   readOnly: true,
-                  leading: TaytayIcon(
+                  onTap: onRetake,
+                  leading: const TaytayIcon(
                     icon: TaytayIcons.check,
                     semanticLabel: '',
                     excludeSemantics: true,
                     size: 16,
                     color: BrandColors.success,
                   ),
-                  trailing: Text(
+                  trailing: const Text(
                     'Retake',
                     style: TextStyle(
                       fontFamily: AppTypography.fontFamily,
@@ -493,38 +628,62 @@ class NeedsCorrectionPage extends StatelessWidget {
 
 /// Unknown and not-yet-started tiers. Never the verified screen.
 class UnverifiedStatusPage extends StatelessWidget {
-  const UnverifiedStatusPage({this.onBack, this.onStart, super.key});
+  const UnverifiedStatusPage({
+    this.onBack,
+    this.onStart,
+    this.below,
+    this.notice = '',
+    super.key,
+  });
 
   final VoidCallback? onBack;
   final VoidCallback? onStart;
 
+  /// Extra card under the status, used once the resident starts. Null leaves
+  /// the page as drawn.
+  final Widget? below;
+  final String notice;
+
   @override
   Widget build(BuildContext context) {
+    final Widget card = S3Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'Not verified',
+            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          const S3Lines(
+            'Taytay LGU has not confirmed this account. '
+            'You can browse services while you complete your resident profile.',
+            size: 13,
+            weight: AppTypography.body,
+            color: BrandColors.textSecondary,
+            height: 1.5,
+          ),
+        ],
+      ),
+    );
+    final Widget? extra = below;
     return _StatusScaffold(
       title: 'Verification status',
       onBack: onBack,
       footer: 'Start verification',
       onFooter: onStart,
-      child: S3Card(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Text(
-              'Not verified',
-              style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
+      notice: notice,
+      child: extra == null
+          ? card
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                card,
+                const SizedBox(height: s3CardGap),
+                extra,
+              ],
             ),
-            const SizedBox(height: 6),
-            const S3Lines(
-              'Taytay LGU has not confirmed this account. '
-              'You can browse services while you complete your resident profile.',
-              size: 13,
-              weight: AppTypography.body,
-              color: BrandColors.textSecondary,
-              height: 1.5,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
@@ -638,6 +797,7 @@ class _StatusScaffold extends StatelessWidget {
     this.onBack,
     this.footer,
     this.onFooter,
+    this.notice = '',
   });
 
   final String title;
@@ -645,6 +805,7 @@ class _StatusScaffold extends StatelessWidget {
   final VoidCallback? onBack;
   final String? footer;
   final VoidCallback? onFooter;
+  final String notice;
 
   @override
   Widget build(BuildContext context) {
@@ -661,6 +822,14 @@ class _StatusScaffold extends StatelessWidget {
           Expanded(
             child: ListView(padding: s3PagePadding, children: <Widget>[child]),
           ),
+          if (notice.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: Text(
+                notice,
+                style: s3Type(13, AppTypography.body, BrandColors.danger),
+              ),
+            ),
           if (label != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 34),

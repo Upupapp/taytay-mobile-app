@@ -38,12 +38,33 @@ class FakeVerificationRepository implements VerificationRepository {
   Future<Result<VerificationStatus>> loadOwnStatus() async =>
       const Err<VerificationStatus>(ServerFailure(isTemporary: true));
 
+  final List<String> messages = <String>[];
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatusDetail>(ServerFailure());
+
   @override
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
   }) async {
     correctionKeys.add(idempotencyKey);
+    messages.add(message);
     sentCorrections.add(Map<CorrectableField, String>.from(corrections));
     return correctionOutcome ?? const Ok<void>(null);
   }
@@ -282,6 +303,8 @@ void main() {
         'message',
         'submitted_at',
         'can_edit',
+        'submitted_categories',
+        'issues',
       ]) {
         expect(
           decoder,

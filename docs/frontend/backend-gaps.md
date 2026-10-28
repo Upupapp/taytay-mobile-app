@@ -73,9 +73,13 @@ Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `bar
 
 ### 3. Verification start, documents, and corrections
 
-`GET /api/v1/me/verification-requests/current` is read. The decoder keeps `id`, `user_id`, `id_type`, `id_front_media_id`, `id_back_media_id`, `selfie_media_id`, `status`, `created_at`, and `reviewed_at`. `notes` is not copied and is not rendered. The status screen shows `rejection_reason` from `GET /api/v1/me`. The account wizard can `POST /api/v1/me/verification-requests`.
+Wired against taytay-backend `5f6fe0f` (pull request 2, not merged when this was written). The vendored spec is `docs/integration/taytay-node-openapi.json`.
 
-The remainder still declines with `BackendGap.absentOnNodeContract`: `KycClaimScreen` `openCase`, `attachDocument`, `loadDocuments`, `submitForReview`, and `submitCorrections`. `VerificationRequest` still has no `submitted_categories`, `issues`, `message`, `submitted_at`, or `can_edit`. The document bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
+`GET /api/v1/me/verification-requests/current` reads the citizen fields: `message`, `submitted_at`, `can_edit`, `submitted_categories`, and `issues`. `status` stays `pending`, `approved`, or `rejected`. Staff `notes` are not copied and are not rendered. `rejection_reason` on `GET /api/v1/me` is still the reason paragraph on the needs-correction screen. The issues list is the per-field notes under it.
+
+`POST /api/v1/me/verification-requests` starts a request (the account wizard, and Start verification once the resident has added the front of an ID and a selfie). `POST /api/v1/me/verification-requests/current/documents` replaces `id_front`, `id_back`, or `selfie`. `POST /api/v1/me/verification-requests/current/corrections` sends `{message}` and returns the request to pending. Those three no longer decline. Upload and resubmit are offered only while `can_edit` is true.
+
+Still declined: `loadDocuments` and `submitForReview` (`BackendGap.absentOnNodeContract`). A profile claim (`openCase`) is not the Node start, so it does not post. The bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
 
 ### 7. Directory photos and service lines
 

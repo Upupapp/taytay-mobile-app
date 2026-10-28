@@ -80,6 +80,32 @@ enum VerificationAttemptState {
       };
 }
 
+/// One image on `POST me/verification-requests` or the documents route.
+///
+/// Bytes stay in memory for the request and are not logged. [toString] names
+/// the type and the size, never the filename.
+@immutable
+class VerificationImagePart {
+  const VerificationImagePart({
+    required this.bytes,
+    required this.fileName,
+    required this.mimeType,
+  });
+
+  final Uint8List bytes;
+  final String fileName;
+  final String mimeType;
+
+  bool get isUsable =>
+      bytes.isNotEmpty &&
+      fileName.trim().isNotEmpty &&
+      mimeType.trim().isNotEmpty;
+
+  @override
+  String toString() =>
+      'VerificationImagePart($mimeType, ${bytes.length} bytes)';
+}
+
 /// The state of the resident's own verification, with the next step.
 @immutable
 class VerificationStatus {
@@ -94,10 +120,8 @@ class VerificationStatus {
   /// The server's own value, preserved.
   final String rawState;
 
-  /// `message` on the verification request, when one was sent.
-  ///
-  /// Not rendered. The status screen shows `rejection_reason` from `GET /me`.
-  /// A staff note sent on the same object is ignored by the decoder.
+  /// `message` on the verification request: text the resident sent with a
+  /// correction. Staff `notes` are not copied here.
   final String? residentGuidance;
 }
 
@@ -145,6 +169,31 @@ abstract interface class VerificationRepository {
     required String idempotencyKey,
   });
 
+  /// Opens a verification request.
+  ///
+  /// `POST me/verification-requests`. Registered residents, one pending request.
+  /// JPEG, PNG, or WebP. [idType] is one of the published document kinds.
+  /// [back] is optional. The front and the selfie are required.
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  });
+
+  /// Replaces one or more images on the current request.
+  ///
+  /// `POST me/verification-requests/current/documents`. At least one of [front],
+  /// [back], or [selfie] is required. The server accepts this while the latest
+  /// request is pending or rejected (`can_edit`).
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  });
+
   /// Resends only the items the office asked to have corrected.
   ///
   /// Deliberately narrower than [submitForReview]: a resident answering a
@@ -157,9 +206,15 @@ abstract interface class VerificationRepository {
   ///
   /// [idempotencyKey] is required: a resend that arrives twice is a second item
   /// in a municipal review queue.
+  /// `POST me/verification-requests/current/corrections`.
+  ///
+  /// [message] is the text the resident sends. When it is empty, the non-empty
+  /// values in [corrections] are joined into that one field. The body is
+  /// `{message}` and nothing else. Staff notes are never sent.
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
   });
 
   /// Attaches a document to the resident's open case (F28).

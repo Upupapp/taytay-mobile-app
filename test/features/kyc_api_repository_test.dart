@@ -7,8 +7,10 @@ import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/verification/data/kyc_api_repository.dart';
+import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
+import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 
 /// Opening a KYC case — the other half of F14.
 ///
@@ -62,22 +64,17 @@ void main() {
   });
 
   group('opening a case', () {
-    test(
-      'declines: the Node contract has one multipart submit, not a case',
-      () async {
-        final Result<VerificationStatus> result = await repository.openCase(
-          claim: claimOf(),
-          idempotencyKey: 'key-1',
-        );
+    test('a profile claim is not the verification start', () async {
+      final Result<VerificationStatus> result = await repository.openCase(
+        claim: claimOf(),
+        idempotencyKey: 'key-1',
+      );
 
-        // A birth date, a barangay code and a street address stay on the device.
-        // `POST me/verification-requests` is the route that exists, and it takes
-        // files, not this claim.
-        expect(result.failureOrNull, isA<ServerFailure>());
-        expect(result.failureOrNull!.debugMessage, contains('F32'));
-        expect(transport.requests, isEmpty);
-      },
-    );
+      // A birth date, a barangay code and a street address stay on the device.
+      // Start is `POST me/verification-requests` with the ID photos.
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(transport.requests, isEmpty);
+    });
 
     test('an incomplete claim never leaves the device', () async {
       final Result<VerificationStatus> result = await repository.openCase(
@@ -107,7 +104,15 @@ void main() {
   });
 
   group('attaching a document — F28', () {
-    test('declines and does not post a document slot', () async {
+    test('an identity photo replaces id_front', () async {
+      transport.responses.add(
+        _envelope(200, <String, Object?>{
+          'status': 'rejected',
+          'can_edit': true,
+          'id_front_media_id': '11111111-1111-4111-8111-111111111111',
+        }),
+      );
+
       final Result<KycDocument> result = await repository.attachDocument(
         type: KycDocumentType.identityDocument,
         fileName: 'sample-id.jpg',
@@ -116,7 +121,26 @@ void main() {
         idempotencyKey: 'key-3',
       );
 
-      expect(result.failureOrNull, isA<ServerFailure>());
+      expect(result.isOk, isTrue);
+      expect(transport.requests, hasLength(1));
+      expect(
+        transport.requests.single.path,
+        'me/verification-requests/current/documents',
+      );
+      expect(transport.requests.single.files.single.field, 'id_front');
+      expect(transport.requests.single.headers['Idempotency-Key'], 'key-3');
+    });
+
+    test('proof of address is not a documents slot', () async {
+      final Result<KycDocument> result = await repository.attachDocument(
+        type: KycDocumentType.proofOfAddress,
+        fileName: 'sample-bill.jpg',
+        bytes: Uint8List.fromList(<int>[1, 2, 3]),
+        mimeType: 'image/jpeg',
+        idempotencyKey: 'key-4',
+      );
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
       expect(transport.requests, isEmpty);
     });
 
@@ -180,4 +204,145 @@ void main() {
       );
     });
   });
+
+  group('citizen verification writes', () {
+    final VerificationImagePart photo = VerificationImagePart(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'sample.jpg',
+      mimeType: 'image/jpeg',
+    );
+
+    test('start posts the ID photos and not a claim', () async {
+      transport.responses.add(
+        _envelope(201, <String, Object?>{'status': 'pending'}),
+      );
+
+      final Result<VerificationStatus> result = await repository
+          .submitVerification(
+            idType: 'philid',
+            front: photo,
+            selfie: photo,
+            idempotencyKey: 'start-1',
+          );
+
+      expect((result as Ok<VerificationStatus>).value.rawState, 'pending');
+      final ApiRequest request = transport.requests.single;
+      expect(request.method, HttpMethod.post);
+      expect(request.path, 'me/verification-requests');
+      expect(request.body, <String, Object?>{'id_type': 'philid'});
+      expect(request.files.map((MultipartFile file) => file.field), <String>[
+        'id_front',
+        'selfie',
+      ]);
+      expect(request.headers.containsKey('X-Role'), isFalse);
+    });
+
+    test('re-upload posts only the images that changed', () async {
+      transport.responses.add(
+        _envelope(200, <String, Object?>{
+          'status': 'rejected',
+          'can_edit': true,
+          'message': null,
+          'notes': 'staff-only',
+        }),
+      );
+
+      final Result<VerificationStatusDetail> result = await repository
+          .replaceDocuments(selfie: photo);
+
+      expect(result.isOk, isTrue);
+      final ApiRequest request = transport.requests.single;
+      expect(request.path, 'me/verification-requests/current/documents');
+      expect(request.files.single.field, 'selfie');
+      expect(request.body, isNull);
+    });
+
+    test('corrections post the citizen message and return pending', () async {
+      transport.responses.add(
+        _envelope(200, <String, Object?>{
+          'status': 'pending',
+          'message': 'Please review my verification again.',
+          'can_edit': true,
+          'notes': 'do-not-echo',
+        }),
+      );
+
+      final Result<void> result = await repository.submitCorrections(
+        corrections: const <CorrectableField, String>{},
+        idempotencyKey: 'corr-1',
+        message: 'Please review my verification again.',
+      );
+
+      expect(result.isOk, isTrue);
+      final ApiRequest request = transport.requests.single;
+      expect(request.path, 'me/verification-requests/current/corrections');
+      expect(request.body, <String, Object?>{
+        'message': 'Please review my verification again.',
+      });
+      expect(request.body, isNot(contains('notes')));
+    });
+
+    test('an empty correction does not leave the device', () async {
+      final Result<void> result = await repository.submitCorrections(
+        corrections: const <CorrectableField, String>{},
+        idempotencyKey: 'corr-2',
+      );
+
+      expect(result.failureOrNull, isA<ValidationFailure>());
+      expect(transport.requests, isEmpty);
+    });
+
+    test('the citizen fields are read and notes are not', () async {
+      transport.responses.add(
+        _envelope(200, <String, Object?>{
+          'status': 'rejected',
+          'message': 'Please look again.',
+          'submitted_at': '2026-10-20T12:40:00Z',
+          'created_at': '2026-01-01T00:00:00Z',
+          'can_edit': true,
+          'submitted_categories': <String>['id_front', 'selfie', 'unknown'],
+          'issues': <Object>[
+            <String, String>{
+              'category': 'id_front',
+              'message': 'The photo is blurry.',
+            },
+            <String, String>{'category': 'secret', 'message': 'hidden'},
+          ],
+          'notes': 'staff note that must not be copied',
+        }),
+      );
+
+      final Result<VerificationStatusDetail> result = await repository
+          .loadOwnStatusDetail();
+      final VerificationStatusDetail detail =
+          (result as Ok<VerificationStatusDetail>).value;
+
+      expect(detail.rawState, 'rejected');
+      expect(detail.residentGuidance, 'Please look again.');
+      expect(detail.canEdit, isTrue);
+      expect(detail.submittedAt, DateTime.utc(2026, 10, 20, 12, 40));
+      expect(detail.submittedCategories, <VerificationItemCategory>[
+        VerificationItemCategory.identityDocument,
+        VerificationItemCategory.photo,
+      ]);
+      expect(detail.issues, hasLength(1));
+      expect(detail.issues.single.instruction, 'The photo is blurry.');
+      expect(detail.toString(), isNot(contains('staff note')));
+      expect(detail.toString(), isNot(contains('hidden')));
+      expect(detail.toString(), isNot(contains('Please look')));
+    });
+  });
+}
+
+Ok<ApiHttpResponse> _envelope(int status, Map<String, Object?> data) {
+  return Ok<ApiHttpResponse>(
+    ApiHttpResponse(
+      statusCode: status,
+      body: jsonEncode(<String, Object?>{
+        'data': data,
+        'meta': <String, Object?>{},
+      }),
+      headers: const <String, String>{'content-type': 'application/json'},
+    ),
+  );
 }

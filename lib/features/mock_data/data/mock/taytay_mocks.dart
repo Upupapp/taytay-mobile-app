@@ -1040,6 +1040,50 @@ class MockVerificationRepository implements VerificationRepository {
         idType: MockResidentRecordRepository.sampleIdType,
         submittedAt: MockResidentRecordRepository.sampleSubmittedAt,
         reviewedAt: MockResidentRecordRepository.sampleVerifiedAt,
+        canEdit: false,
+        residentGuidance: null,
+        submittedCategories: const <VerificationItemCategory>[
+          VerificationItemCategory.identityDocument,
+          VerificationItemCategory.photo,
+        ],
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) {
+    return _gate.respond(
+      const VerificationStatus(
+        state: VerificationAttemptState.underReview,
+        rawState: 'pending',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) {
+    return _gate.respond(
+      VerificationStatusDetail(
+        stage: ResidentVerificationStage.pendingReview,
+        rawState: 'pending',
+        canEdit: true,
+        idType: MockResidentRecordRepository.sampleIdType,
+        submittedAt: MockResidentRecordRepository.sampleSubmittedAt,
+        submittedCategories: const <VerificationItemCategory>[
+          VerificationItemCategory.identityDocument,
+          VerificationItemCategory.photo,
+        ],
       ),
     );
   }
@@ -1061,6 +1105,7 @@ class MockVerificationRepository implements VerificationRepository {
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
   }) => _gate.respond<void>(null);
 
   @override
