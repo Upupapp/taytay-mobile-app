@@ -6,11 +6,9 @@
 // automatic signing. DEVELOPMENT_TEAM is intentionally unset in the project.
 // No certificate, provisioning profile, or team id is committed.
 //
-// TODO(paul): confirm the bundle id ph.gov.taytay.lguids.taytayResident
-// before the first App Store upload. It is a placeholder until that decision.
-// The Android applicationId is ph.gov.taytay.lguids.taytay_resident, also
-// pending the same decision. The app icon and launch image stay placeholders
-// until the designer supplies them.
+// Bundle id ph.gov.taytay.app is set on the Runner target. The Android
+// application id is the same base. The icon and the native splash are
+// generated from release/assets/. See docs/release/README.md.
 //
 // Local signing overrides: copy Release-Signing.xcconfig.example to
 // Release-Signing.xcconfig (gitignored). The example is comments only, so the

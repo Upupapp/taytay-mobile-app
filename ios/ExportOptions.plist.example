@@ -13,8 +13,8 @@
 	  profile name is not stored here either.
 
 	  method app-store-connect is the Xcode export method for an App Store
-	  IPA. The bundle id stays ph.gov.taytay.lguids.taytayResident until Paul
-	  confirms it. The app icon and launch image stay placeholders.
+	  IPA. The bundle id is ph.gov.taytay.app. The app icon and launch image
+	  are the generated Taytay artwork.
 	-->
 	<key>method</key>
 	<string>app-store-connect</string>

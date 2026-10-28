@@ -259,4 +259,4 @@ verified in-session; re-check them before making an external conformance claim.
 | B-3 | No large-text reflow threshold | Layouts clamp at 200% but do not switch to stacked variants (Servana's `largeTextThreshold` idea, not yet adopted). |
 | B-4 | `boldText` / `accessibleNavigation` unhandled | Bold-text and screen-reader-active signals are not yet consulted. |
 | B-5 | Contrast is checked on tokens, not rendered pixels | A widget that hard-codes a colour would not be caught. Golden-image or pixel-sampling checks would close this. |
-| B-6 | No app icon or splash artwork | Belongs to the asset pipeline (TAB 04), not started. |
+| B-6 | App icon and splash artwork are platform resources | Generated from `release/assets/`. Not part of the in-app brand widgets. |
