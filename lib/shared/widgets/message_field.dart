@@ -33,7 +33,11 @@ class MessageField extends StatelessWidget {
     decoration: TextDecoration.none,
   );
 
+  /// `#D6DCE8`. Directory's field border is this color.
+  static const Color border = Color(0xFFD6DCE8);
+
   static const TextStyle _label = TextStyle(
+    inherit: false,
     fontFamily: AppTypography.fontFamily,
     fontSize: 12,
     fontWeight: FontWeight.w700,
@@ -60,7 +64,7 @@ class MessageField extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFD6DCE8), width: 1.3),
+            border: Border.all(color: border, width: 1.3),
           ),
           child: field == null
               ? Text(preview, style: body)

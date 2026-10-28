@@ -89,7 +89,7 @@ class DirectoryCanvas extends StatelessWidget {
   static const Color _chipInk = Color(0xFF33405C);
   static const Color _bodyInk = Color(0xFF33405C);
   static const Color _rowLine = Color(0xFFEEF1F6);
-  static const Color _fieldBorder = Color(0xFFD6DCE8);
+  static const Color _fieldBorder = MessageField.border;
 
   @override
   Widget build(BuildContext context) {
