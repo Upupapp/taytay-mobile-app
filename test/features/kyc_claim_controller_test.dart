@@ -216,32 +216,29 @@ void main() {
       expect(controller.opened, isTrue);
     });
 
-    test(
-      'a retry after a failure reuses the key, and a new claim does not',
-      () async {
-        await controller.loadDirectory();
-        fill(controller, barangay: published.first);
+    test('a retry after a failure reuses the key, and a new claim does not', () async {
+      await controller.loadDirectory();
+      fill(controller, barangay: published.first);
 
-        repository.outcome = const Err<VerificationStatus>(NetworkFailure());
-        await controller.submit();
-        await controller.submit();
+      repository.outcome = const Err<VerificationStatus>(NetworkFailure());
+      await controller.submit();
+      await controller.submit();
 
-        // A resend after a dropped connection must not become a second case in a
-        // municipal review queue.
-        expect(repository.keys[0], repository.keys[1]);
-        expect(controller.opened, isFalse);
-        expect(controller.failure, isNotNull);
+      // A resend after a dropped connection must not become a second case in a
+      // municipal review queue.
+      expect(repository.keys[0], repository.keys[1]);
+      expect(controller.opened, isFalse);
+      expect(controller.failure, isNotNull);
 
-        repository.outcome = const Ok<VerificationStatus>(
-          VerificationStatus(
-            state: VerificationAttemptState.draft,
-            rawState: 'draft',
-          ),
-        );
-        await controller.submit();
-        expect(controller.opened, isTrue);
-      },
-    );
+      repository.outcome = const Ok<VerificationStatus>(
+        VerificationStatus(
+          state: VerificationAttemptState.draft,
+          rawState: 'draft',
+        ),
+      );
+      await controller.submit();
+      expect(controller.opened, isTrue);
+    });
 
     test('editing a field clears the last failure', () async {
       await controller.loadDirectory();

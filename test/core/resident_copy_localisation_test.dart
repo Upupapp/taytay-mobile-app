@@ -232,8 +232,9 @@ void main() {
   });
 
   test('every enum called localised actually has a localiser', () {
-    final String locales = File('lib/core/l10n/app_locales.dart')
-        .readAsStringSync();
+    final String locales = File(
+      'lib/core/l10n/app_locales.dart',
+    ).readAsStringSync();
 
     for (final String name in localised) {
       // CORRECTED 2026-08-28. This was `locales.contains(name)`, which asserts
@@ -256,9 +257,9 @@ void main() {
       final bool viaOwnAccessor = enumsWithCopy()
           .where((e) => e.name == name)
           .any(
-            (e) =>
-                RegExp(r'In\((BuildContext|AppStrings)')
-                    .hasMatch(File(e.file).readAsStringSync()),
+            (e) => RegExp(
+              r'In\((BuildContext|AppStrings)',
+            ).hasMatch(File(e.file).readAsStringSync()),
           );
 
       expect(

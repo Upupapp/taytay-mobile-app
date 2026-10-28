@@ -11,6 +11,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -319,20 +320,19 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _pickIdType() async {
-    final String? chosen = await showModalBottomSheet<String>(
+    final String? chosen = await AppSheet.show<String>(
       context: context,
+      title: 'Type of ID',
       builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: ListView(
-            shrinkWrap: true,
-            children: <Widget>[
-              for (final String wire in verificationIdTypes)
-                ListTile(
-                  title: Text(idTypeLabel(wire)),
-                  onTap: () => Navigator.of(sheetContext).pop(wire),
-                ),
-            ],
-          ),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            for (final String wire in verificationIdTypes)
+              ListTile(
+                title: Text(idTypeLabel(wire)),
+                onTap: () => Navigator.of(sheetContext).pop(wire),
+              ),
+          ],
         );
       },
     );
@@ -505,31 +505,9 @@ class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        TextField(
-          key: const Key('verification-message-field'),
+        MessageField(
           controller: _field,
-          maxLines: null,
-          keyboardType: TextInputType.multiline,
-          style: const TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 14,
-            height: 1.5,
-            fontWeight: FontWeight.w500,
-            color: BrandColors.textPrimary,
-            decoration: TextDecoration.none,
-          ),
-          cursorColor: BrandColors.taytayBlue,
-          decoration: const InputDecoration(
-            hintText: 'Add a message (optional)',
-            isCollapsed: true,
-            isDense: true,
-            filled: false,
-            border: InputBorder.none,
-            enabledBorder: InputBorder.none,
-            focusedBorder: InputBorder.none,
-            disabledBorder: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-          ),
+          fieldKey: const Key('verification-message-field'),
         ),
         const SizedBox(height: 16),
         PrimaryButton(

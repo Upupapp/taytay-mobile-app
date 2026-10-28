@@ -4,6 +4,7 @@ import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -1172,30 +1173,10 @@ class _ComposeBody extends StatelessWidget {
             ),
           ),
         ),
-        const _FieldLabel('Message'),
-        _FieldBox(
-          height: 170,
-          alignTop: true,
-          child: messageController == null
-              ? Text(office.draft ?? '', style: _fieldBody)
-              : TextField(
-                  key: const Key('directory-message-field'),
-                  controller: messageController,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  style: _fieldBody,
-                  cursorColor: BrandColors.taytayBlue,
-                  decoration: const InputDecoration(
-                    isCollapsed: true,
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+        MessageField(
+          controller: messageController,
+          preview: office.draft ?? '',
+          fieldKey: const Key('directory-message-field'),
         ),
         // The paperclip sits above the cap height. 10dp keeps that ink on
         // the design's attach line; 8dp lifts the run by more than 2dp.
@@ -2019,23 +2000,17 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _FieldBox extends StatelessWidget {
-  const _FieldBox({
-    required this.child,
-    this.height = 44,
-    this.alignTop = false,
-  });
+  const _FieldBox({required this.child});
 
   final Widget child;
-  final double height;
-  final bool alignTop;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
+      height: 44,
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(12, alignTop ? 10.67 : 0, 12, 0),
-      alignment: alignTop ? Alignment.topLeft : Alignment.centerLeft,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -2426,15 +2401,6 @@ const TextStyle _fieldInk = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _fieldBody = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  height: 1.5,
-  fontWeight: FontWeight.w500,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
