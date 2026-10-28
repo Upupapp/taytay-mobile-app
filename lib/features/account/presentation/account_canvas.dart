@@ -3153,7 +3153,7 @@ class _ComposerSend extends StatelessWidget {
       ),
     );
     if (enabled) return button;
-    return Opacity(opacity: 0.38, child: button);
+    return Opacity(opacity: Opacities.disabled, child: button);
   }
 }
 
