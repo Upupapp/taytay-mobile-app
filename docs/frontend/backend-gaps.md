@@ -14,7 +14,9 @@ Static. No resident session was created and no personal data was sent.
 
 The latest OpenAPI this environment can read is `docs/integration/taytay-node-openapi.json` at mobile `908896d`. Mobile pull request #15 (`ab2896c`) replaced that file with the `3e3b110` export: 74 paths, the same document the first audit called newer than the old vendored copy. The drift table from 26 October is closed. `GET /api/v1/services/{slug}/hero`, the Tulong presentation fields, required `ServiceContact.type`, required `UserProfile.verification_decided_at`, and required `AppConfig.privacy_notice` are in the vendored file.
 
-Every "backend commit" below is `3e3b110`, the short id of that spec. The full SHA is not in this clone. Where a route is missing, it is missing at `3e3b110`. Where a route is present, it was already present at `3e3b110` and the mobile change is named separately.
+Every row below was scored against backend `3e3b110`, the short id of that spec. The full SHA is not in this clone. Where a route is missing, it is missing at `3e3b110`. Where a route is present, it was already present at `3e3b110` and the mobile change is named separately.
+
+Deferred items must not be built by the backend until Paul approves them.
 
 The 26 October probes (staging and production hostnames that are no longer compiled in, and the emulator alias) did not reach an API. They were not repeated.
 
@@ -25,23 +27,23 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 1 | Sign in | Closed | Firebase SDK, then `GET /api/v1/me` | `3e3b110` (no HTTP sign-in route; bearer is a Firebase ID token) |
 | 2 | Create account | Closed | Firebase SDK, then `GET /api/v1/me`, then `POST /api/v1/me/verification-requests` | `3e3b110` |
 | 3 | Verification start, documents, corrections | Partly closed | `GET /api/v1/me/verification-requests/current`, `POST /api/v1/me/verification-requests` | `3e3b110` |
-| 4 | Profile wizard name | Closed | `PATCH /api/v1/me` `name` | `3e3b110` |
+| 4 | Profile name split | Deferred (needs Paul's approval) | `PATCH /api/v1/me` sends one `name`. A given, middle, and family split is not on `ProfilePatch` | `3e3b110` |
 | 5 | In-session password change | Closed | Firebase `updatePassword` (no HTTP route) | `3e3b110` |
-| 6 | Other signed-in sessions | Open | `GET me/sessions` is not in the spec. `POST`/`DELETE /api/v1/me/devices` is a push token | `3e3b110` |
+| 6 | Other signed-in sessions | Deferred (needs Paul's approval) | `GET me/sessions` is not in the spec. `POST`/`DELETE /api/v1/me/devices` is a push token | `3e3b110` |
 | 7 | Directory photos and service lines | Partly closed | `GET /api/v1/offices`, `GET /api/v1/offices/{slug}` | `3e3b110` |
 | 8 | Balita cover bytes | Partly closed | `cover_url` on `GET /api/v1/news/{id}`. `GET /api/v1/news/{id}/cover` is not called | `3e3b110` |
-| 9 | Balita comments, reactions, bookmarks | Open | No citizen route under `/news` | `3e3b110` |
-| 10 | Tulong hero bytes and saved list | Partly closed | `GET /api/v1/services`, `GET /api/v1/services/{slug}`. `GET /api/v1/services/{slug}/hero` is not called | `3e3b110` |
+| 9 | Balita comments, reactions, bookmarks | Deferred (needs Paul's approval) | No citizen route under `/news` | `3e3b110` |
+| 10 | Tulong hero bytes and saved list | Partly closed (hero bytes). Saved list: Deferred (needs Paul's approval) | `GET /api/v1/services`, `GET /api/v1/services/{slug}`. `GET /api/v1/services/{slug}/hero` is not called. No saved-service route | `3e3b110` |
 | 11 | Old programmes screen | Open | `GET /programs` is not in the spec. The tab is Tulong | `3e3b110` |
 | 12 | My Account profile, preferences, consents | Closed | `GET`/`PATCH /api/v1/me`, `GET`/`PATCH /api/v1/me/notification-preferences`, `GET`/`POST /api/v1/me/consents`, `GET /api/v1/app/config` | `3e3b110` |
-| 13 | Consent withdrawal | Open | No withdraw route. `PrivacyConsent` is `id`, `version`, `accepted_at` | `3e3b110` |
+| 13 | Consent withdrawal | Open | No withdraw route. `PrivacyConsent` is `id`, `version`, `accepted_at`. Clarence's scope | `3e3b110` |
 | 14 | Inbox reply, read, close, paging | Partly closed | `GET`/`POST /api/v1/threads` are called. `POST /api/v1/threads/{id}/messages`, `/read`, `/close` are not | `3e3b110` |
 | 15 | Home banner media | Partly closed | `GET /api/v1/home`. `Banner.media_id` is not painted | `3e3b110` |
 | 16 | Household summary | Partly closed | `GET /api/v1/households/current` is called. Correction still declines | `3e3b110` |
 | 17 | Digital ID | Partly closed | `GET /api/v1/me/digital-id` and `GET /api/v1/me`. `photo_media_id` is not fetched | `3e3b110` |
 | 18 | Notification paging and targets | Closed | `GET /api/v1/notifications` with `cursor` | `3e3b110` |
-| 19 | Events | Open | No `/events` route | `3e3b110` |
-| 20 | Assistance requests and uploads | Open | No citizen case or requirement route | `3e3b110` |
+| 19 | Events | Deferred (needs Paul's approval) | No `/events` route | `3e3b110` |
+| 20 | Assistance requests and uploads | Deferred (needs Paul's approval) | No citizen case or requirement route. Tulong is information only | `3e3b110` |
 
 Mobile commits that closed or narrowed a gap: `ab2896c` (Firebase sign-in and registration, household decode, notification cursor, contract alignment), `8843694` (verification `notes` ignored; mobile password sign-in banner), `d1252f9` and `15b8e70` (issued Digital ID card).
 
@@ -54,10 +56,6 @@ Mobile commits that closed or narrowed a gap: `ab2896c` (Firebase sign-in and re
 ### 2. Create account
 
 `AccountWizardScreen` calls `createAccount`, which uses `createUserWithEmailAndPassword`, then `GET /api/v1/me`, then `submitProfile` (`POST /api/v1/me/verification-requests` with `id_type`, `id_front`, optional `id_back`, `selfie`, and `POST /api/v1/me/consents`). The unrouted `RegistrationScreen` still declines. It is not the register route.
-
-### 4. Profile wizard name
-
-`ProfilePatch.name` is one string. The wizard joins the name parts and sends `name`. `GET`/`PATCH /api/v1/me` and `GET`/`PATCH /api/v1/households/current` are the wizard's routes.
 
 ### 5. In-session password change
 
@@ -77,7 +75,7 @@ Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `bar
 
 `GET /api/v1/me/verification-requests/current` is read. The decoder keeps `id`, `user_id`, `id_type`, `id_front_media_id`, `id_back_media_id`, `selfie_media_id`, `status`, `created_at`, and `reviewed_at`. `notes` is not copied and is not rendered. The status screen shows `rejection_reason` from `GET /api/v1/me`. The account wizard can `POST /api/v1/me/verification-requests`.
 
-Still open, and still declining with `BackendGap.absentOnNodeContract`: `KycClaimScreen` `openCase`, `attachDocument`, `loadDocuments`, `submitForReview`, and `submitCorrections`. `VerificationRequest` still has no `submitted_categories`, `issues`, `message`, `submitted_at`, or `can_edit`. The document bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
+The remainder still declines with `BackendGap.absentOnNodeContract`: `KycClaimScreen` `openCase`, `attachDocument`, `loadDocuments`, `submitForReview`, and `submitCorrections`. `VerificationRequest` still has no `submitted_categories`, `issues`, `message`, `submitted_at`, or `can_edit`. The document bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
 
 ### 7. Directory photos and service lines
 
@@ -87,9 +85,9 @@ Still open, and still declining with `BackendGap.absentOnNodeContract`: `KycClai
 
 `GET /api/v1/news`, `GET /api/v1/news/{id}`, and `GET /api/v1/news/categories` are unchanged and match, including `cover_url`. The card paints `cover_url`. `GET /api/v1/news/{id}/cover` (image bytes) is not called. A null `cover_url` leaves the card without a photograph even when the binary route would return one.
 
-### 10. Tulong hero bytes and saved list
+### 10. Tulong hero bytes
 
-List and detail decode the `3e3b110` `Service` fields, including `hero_url`. `GET /api/v1/services/{slug}/hero` is not called. Saved pages are still the in-memory list for this process. There is no saved-service route and no citizen apply route. The screens stay information only.
+List and detail decode the `3e3b110` `Service` fields, including `hero_url`. `GET /api/v1/services/{slug}/hero` is not called. That byte route stays partly closed. The saved list is deferred, below. There is no citizen apply route. The screens stay information only.
 
 ### 14. Inbox reply, read, close, and paging
 
@@ -111,13 +109,7 @@ Not called from a screen, though the repository has the methods: `POST /api/v1/t
 
 ## Open
 
-### 6. Other signed-in sessions
-
-`SecurityScreen` still expects `GET me/sessions` and the revoke routes. Those paths are not in `3e3b110`. The repository declines. `POST`/`DELETE /api/v1/me/devices` registers a push token (`platform`, `token`) and does not list sessions.
-
-### 9. Balita comments, reactions, reports, and bookmarks
-
-The article page still does not offer them. The repository methods still decline. `3e3b110` has no comment, reaction, report, or bookmark path under `/news`.
+The only open gaps are 11 and 13. Both were scored against backend `3e3b110`.
 
 ### 11. Old programmes screen
 
@@ -125,7 +117,27 @@ The article page still does not offer them. The repository methods still decline
 
 ### 13. Consent withdrawal
 
-`PrivacyControlsScreen` still offers withdraw, and `withdrawConsent` still declines. `PrivacyConsent` has no withdrawn state. Data export has no route and the live screens still hide the row. `POST /api/v1/me/close` exists, takes no body, and is still not offered.
+This is in Clarence's scope. `PrivacyControlsScreen` still offers withdraw, and `withdrawConsent` still declines. `PrivacyConsent` has no withdrawn state. Data export has no route and the live screens still hide the row. `POST /api/v1/me/close` exists, takes no body, and is still not offered.
+
+## Deferred (needs Paul's approval)
+
+Deferred items must not be built by the backend until Paul approves them.
+
+### 4. Profile name split
+
+`ProfilePatch.name` is one string. The wizard joins the parts it collected and sends that one `name` on `PATCH /api/v1/me`. Splitting the legal name into given, middle, and family on the contract is deferred. The household and digital-ID screens read the same single `name`. They do not ask for a split.
+
+### 6. Other signed-in sessions
+
+`SecurityScreen` still expects `GET me/sessions` and the revoke routes. Those paths are not in `3e3b110`. The repository declines. `POST`/`DELETE /api/v1/me/devices` registers a push token (`platform`, `token`) and does not list sessions.
+
+### 9. Balita comments, reactions, and bookmarks
+
+The article page does not offer them. The repository methods still decline. `3e3b110` has no comment, reaction, report, or bookmark path under `/news`.
+
+### 10. Tulong saved list
+
+Saved pages are the in-memory list for this process. There is no saved-service route. Hero bytes stay partly closed above.
 
 ### 19. Events
 
@@ -133,7 +145,7 @@ The article page still does not offer them. The repository methods still decline
 
 ### 20. Assistance requests and uploads
 
-`AssistanceRequestsScreen` and the requirements screen still decline. No citizen case or upload route exists at `3e3b110`. Tulong does not submit an application.
+`AssistanceRequestsScreen` and the requirements screen still decline. No citizen case or requirement route exists at `3e3b110`. Tulong is information only.
 
 ## Not started
 
