@@ -344,7 +344,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
       setState(() => _error = 'Write a message before sending.');
       return;
     }
-    _sending = true;
+    setState(() => _sending = true);
     final OutgoingFile? file = _file;
     final result = await AppDependencies.of(context).officeMessagingRepository
         .reply(
@@ -353,11 +353,14 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
           mediaId: file == null ? _mediaId : null,
           file: file,
         );
-    _sending = false;
-    if (!mounted) return;
+    if (!mounted) {
+      _sending = false;
+      return;
+    }
     switch (result) {
       case Ok(:final value):
         setState(() {
+          _sending = false;
           final Set<String> seen = _messages
               .map((OfficeMessage message) => message.id)
               .toSet();
@@ -373,6 +376,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
         });
       case Err(:final failure):
         setState(() {
+          _sending = false;
           if (failure is ConflictFailure) _closed = true;
           _error = failure.residentMessage;
         });
@@ -477,7 +481,8 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
               dayLabel: '',
               composer: showComposer ? _composer : null,
               onAttach: showComposer ? _attach : null,
-              onSend: showComposer ? _send : null,
+              onSend: showComposer && !_sending ? _send : null,
+              sendEnabled: !_sending,
               onThreadMenu: ownsOpenThread ? _openMenu : null,
               threadClosed: _ready && _closed && !_failed,
               hideComposer: !showComposer && !(_ready && _closed && !_failed),

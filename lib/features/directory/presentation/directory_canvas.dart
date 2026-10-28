@@ -1351,7 +1351,8 @@ class _SentBody extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: ". We'll notify you, and the conversation is saved in My Account › Messages.",
+                      text:
+                          ". We'll notify you, and the conversation is saved in My Account › Messages.",
                     ),
                   ],
                 ),

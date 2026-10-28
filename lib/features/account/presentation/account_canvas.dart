@@ -178,6 +178,7 @@ class AccountCanvas extends StatelessWidget {
     this.bubbles = AccountSpecimen.mswdoBubbles,
     this.dayLabel = 'Mon',
     this.onSend,
+    this.sendEnabled = true,
     this.onInboxNearEnd,
     this.composer,
     this.onAttach,
@@ -241,6 +242,9 @@ class AccountCanvas extends StatelessWidget {
   final List<AccountBubble> bubbles;
   final String dayLabel;
   final VoidCallback? onSend;
+
+  /// False while a reply is in flight. Specimens leave this on.
+  final bool sendEnabled;
   final VoidCallback? onInboxNearEnd;
   final TextEditingController? composer;
   final VoidCallback? onAttach;
@@ -358,6 +362,7 @@ class AccountCanvas extends StatelessWidget {
         dayLabel: dayLabel,
         showSampleNote: showSampleNote,
         onSend: onSend,
+        sendEnabled: sendEnabled,
         composer: composer,
         onAttach: onAttach,
         closed: threadClosed,
@@ -2003,6 +2008,7 @@ class _ThreadBody extends StatelessWidget {
     required this.dayLabel,
     required this.showSampleNote,
     this.onSend,
+    this.sendEnabled = true,
     this.composer,
     this.onAttach,
     this.closed = false,
@@ -2019,6 +2025,7 @@ class _ThreadBody extends StatelessWidget {
   final String dayLabel;
   final bool showSampleNote;
   final VoidCallback? onSend;
+  final bool sendEnabled;
   final TextEditingController? composer;
   final VoidCallback? onAttach;
   final bool closed;
@@ -2167,7 +2174,7 @@ class _ThreadBody extends StatelessWidget {
         const SizedBox(width: 10),
         Expanded(child: _ComposerField(controller: composer)),
         const SizedBox(width: 10),
-        _ComposerSend(onTap: onSend),
+        _ComposerSend(onTap: onSend, enabled: sendEnabled),
       ],
     );
     if (label == null) return row;
@@ -3094,15 +3101,17 @@ class _MediaChip extends StatelessWidget {
 }
 
 class _ComposerSend extends StatelessWidget {
-  const _ComposerSend({this.onTap});
+  const _ComposerSend({this.onTap, this.enabled = true});
 
   final VoidCallback? onTap;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     // The painted disc is 44 dp, which is the composer dark run. The hit
-    // overflows to 48 without growing the row.
-    return SizedBox(
+    // overflows to 48 without growing the row. A send in flight keeps that
+    // disc and drops the ink so the control reads as disabled.
+    final Widget button = SizedBox(
       width: 44,
       height: 44,
       child: OverflowBox(
@@ -3110,11 +3119,12 @@ class _ComposerSend extends StatelessWidget {
         maxHeight: 48,
         child: Semantics(
           button: true,
+          enabled: enabled,
           label: 'Send',
           child: GestureDetector(
             key: const Key('account-thread-send'),
             behavior: HitTestBehavior.opaque,
-            onTap: onTap,
+            onTap: enabled ? onTap : null,
             child: const SizedBox(
               width: 48,
               height: 48,
@@ -3142,6 +3152,8 @@ class _ComposerSend extends StatelessWidget {
         ),
       ),
     );
+    if (enabled) return button;
+    return Opacity(opacity: 0.38, child: button);
   }
 }
 

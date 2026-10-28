@@ -251,6 +251,18 @@ void main() {
         expect(transport.requests, isEmpty);
         expect(large, isA<Err<OfficeMessage>>());
         expect(kind, isA<Err<OfficeMessage>>());
+
+        final Result<OfficeMessage> disguised = await repository.reply(
+          threadId: 'thread-1',
+          body: 'Saan po',
+          file: OutgoingFile(
+            bytes: Uint8List.fromList(<int>[0x00, 0x11, 0x22, 0x33]),
+            fileName: 'photo.jpg',
+            mimeType: 'image/jpeg',
+          ),
+        );
+        expect(transport.requests, isEmpty);
+        expect(disguised, isA<Err<OfficeMessage>>());
       },
     );
 
@@ -487,9 +499,122 @@ void main() {
       await tester.tap(find.byKey(const Key('account-thread-send')));
       await tester.pump();
       expect(desk.replyStarts, 1);
+      final GestureDetector send = tester.widget<GestureDetector>(
+        find.byKey(const Key('account-thread-send')),
+      );
+      expect(send.onTap, isNull);
+      expect(
+        tester
+            .getSemantics(find.byKey(const Key('account-thread-send')))
+            .flagsCollection
+            .isEnabled
+            .name,
+        'isFalse',
+      );
       gate.complete();
       await tester.pump();
       expect(desk.replies, hasLength(1));
+    });
+
+    testWidgets('a 409 on close marks the thread closed', (tester) async {
+      final _Desk desk = _Desk(
+        closeFailure: const ConflictFailure(debugMessage: 'operator-only'),
+      );
+      await _pumpThread(tester, desk);
+      await tester.tap(find.byKey(const Key('account-thread-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('account-thread-close')));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Close conversation'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(desk.closed, <String>['thread-1']);
+      expect(find.text('operator-only'), findsNothing);
+      expect(find.textContaining('already submitted'), findsOneWidget);
+      expect(find.text('This conversation is closed.'), findsOneWidget);
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsNothing);
+    });
+
+    testWidgets('Close stays hidden when the messages fail to load', (
+      tester,
+    ) async {
+      await _pumpThread(
+        tester,
+        _Desk(
+          messageFailure: const NetworkFailure(debugMessage: 'operator-only'),
+        ),
+      );
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsNothing);
+      expect(find.text('operator-only'), findsNothing);
+      expect(find.textContaining('offline'), findsOneWidget);
+    });
+
+    testWidgets('an older page drops a message already on screen', (
+      tester,
+    ) async {
+      final _Desk desk = _Desk(messagesHaveMore: true);
+      await _pumpThread(tester, desk);
+      tester.view.physicalSize = const Size(400, 240);
+      await tester.pump();
+      await tester.drag(find.byType(ListView), const Offset(0, -80));
+      await tester.pump();
+
+      expect(desk.messageCursors, contains('older'));
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pump();
+      expect(
+        find.text('A synthetic note.', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('An older', skipOffstage: false),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('an older page failure is shown and can be retried', (
+      tester,
+    ) async {
+      final _Desk desk = _Desk(
+        messagesHaveMore: true,
+        olderPageFailure: const NetworkFailure(debugMessage: 'operator-only'),
+      );
+      await _pumpThread(tester, desk);
+      tester.view.physicalSize = const Size(400, 240);
+      await tester.pump();
+      await tester.drag(find.byType(ListView), const Offset(0, -80));
+      await tester.pump();
+
+      expect(find.text('operator-only'), findsNothing);
+      expect(find.textContaining('offline'), findsOneWidget);
+      expect(find.byKey(const Key('thread-load-more-retry')), findsOneWidget);
+      desk.releaseNextPage = true;
+      tester
+          .widget<GestureDetector>(
+            find.byKey(
+              const Key('thread-load-more-retry'),
+              skipOffstage: false,
+            ),
+          )
+          .onTap!();
+      await tester.pump();
+      tester.view.physicalSize = const Size(400, 900);
+      await tester.pump();
+      expect(
+        find.textContaining('An older', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(
+        find.text('A synthetic note.', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the inbox asks for the next cursor', (tester) async {
@@ -529,6 +654,29 @@ void main() {
       );
       await tester.pump();
       await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pump();
+
+      expect(desk.threadCursors, <String?>[null]);
+    });
+
+    testWidgets('a next cursor is ignored when has_more is false', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(300, 160);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final _Desk desk = _Desk(idleCursor: 'still-there');
+      final AppDependencies dependencies = await _restored(desk);
+      addTearDown(dependencies.dispose);
+      await tester.pumpWidget(
+        AppDependenciesScope(
+          dependencies: dependencies,
+          child: const MaterialApp(home: MessagesInboxScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.drag(find.byType(ListView), const Offset(0, -500));
       await tester.pump();
 
       expect(desk.threadCursors, <String?>[null]);
@@ -692,9 +840,14 @@ class _Desk implements OfficeMessagingRepository {
     this.residentId = 'acct-1',
     this.status = 'open',
     this.loadFailure,
+    this.messageFailure,
+    this.olderPageFailure,
     this.threadPageFailure,
+    this.closeFailure,
     this.replyFailure,
     this.holdReply,
+    this.idleCursor,
+    this.messagesHaveMore = false,
   }) : messages = messages ?? _note;
 
   static final List<OfficeMessage> _note = <OfficeMessage>[
@@ -712,12 +865,18 @@ class _Desk implements OfficeMessagingRepository {
   final String residentId;
   final String status;
   final AppFailure? loadFailure;
+  final AppFailure? messageFailure;
+  final AppFailure? olderPageFailure;
   final AppFailure? threadPageFailure;
+  final AppFailure? closeFailure;
   final Completer<void>? holdReply;
+  final String? idleCursor;
+  final bool messagesHaveMore;
   bool releaseNextPage = false;
   final List<String> reads = <String>[];
   final List<String> closed = <String>[];
   final List<String?> threadCursors = <String?>[];
+  final List<String?> messageCursors = <String?>[];
   final List<_Reply> replies = <_Reply>[];
   AppFailure? replyFailure;
   int replyStarts = 0;
@@ -770,7 +929,7 @@ class _Desk implements OfficeMessagingRepository {
         total: hasMore ? 2 : 1,
         totalPages: hasMore ? 2 : 1,
         hasMore: hasMore,
-        nextCursor: hasMore ? 'page-2' : null,
+        nextCursor: hasMore ? 'page-2' : idleCursor,
       ),
     );
   }
@@ -788,8 +947,45 @@ class _Desk implements OfficeMessagingRepository {
     int page = 1,
     int? perPage,
     String? cursor,
-  }) async =>
-      Ok<Paginated<OfficeMessage>>(Paginated<OfficeMessage>.single(messages));
+  }) async {
+    messageCursors.add(cursor);
+    if (cursor == null && messageFailure != null) {
+      return Err<Paginated<OfficeMessage>>(messageFailure!);
+    }
+    if (cursor != null) {
+      if (olderPageFailure != null && !releaseNextPage) {
+        return Err<Paginated<OfficeMessage>>(olderPageFailure!);
+      }
+      return Ok<Paginated<OfficeMessage>>(
+        Paginated<OfficeMessage>.single(<OfficeMessage>[
+          messages.first,
+          OfficeMessage(
+            id: 'm0',
+            threadId: threadId,
+            body: 'An older synthetic note.',
+            sentAt: DateTime.utc(2026, 9, 30),
+            fromResident: true,
+          ),
+        ]),
+      );
+    }
+    if (!messagesHaveMore) {
+      return Ok<Paginated<OfficeMessage>>(
+        Paginated<OfficeMessage>.single(messages),
+      );
+    }
+    return Ok<Paginated<OfficeMessage>>(
+      Paginated<OfficeMessage>(
+        items: messages,
+        page: 1,
+        perPage: 25,
+        total: 2,
+        totalPages: 2,
+        hasMore: true,
+        nextCursor: 'older',
+      ),
+    );
+  }
 
   @override
   Future<Result<OfficeMessage>> send({
@@ -830,6 +1026,8 @@ class _Desk implements OfficeMessagingRepository {
   @override
   Future<Result<void>> closeThread(String threadId) async {
     closed.add(threadId);
+    final AppFailure? failure = closeFailure;
+    if (failure != null) return Err<void>(failure);
     return const Ok<void>(null);
   }
 
