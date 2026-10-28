@@ -50,6 +50,8 @@ class DirectoryCanvas extends StatelessWidget {
     this.messageController,
     this.selectedTopic,
     this.onTopic,
+    this.onAttach,
+    this.attachmentLabel,
     super.key,
   });
 
@@ -80,6 +82,10 @@ class DirectoryCanvas extends StatelessWidget {
   final TextEditingController? messageController;
   final String? selectedTopic;
   final VoidCallback? onTopic;
+  final VoidCallback? onAttach;
+
+  /// Chosen file name, or "Attachment" when an existing media id is held.
+  final String? attachmentLabel;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
   static const Color _searchBorder = Color(0xFFE1E6F0);
@@ -186,6 +192,8 @@ class DirectoryCanvas extends StatelessWidget {
         messageController: messageController,
         selectedTopic: selectedTopic,
         onTopic: onTopic,
+        onAttach: onAttach,
+        attachmentLabel: attachmentLabel,
       ),
       DirectoryFrame.sent => _SentBody(
         emergencyPhone: emergencyPhone,
@@ -1108,6 +1116,8 @@ class _ComposeBody extends StatelessWidget {
     this.messageController,
     this.selectedTopic,
     this.onTopic,
+    this.onAttach,
+    this.attachmentLabel,
   });
 
   final Office office;
@@ -1115,6 +1125,8 @@ class _ComposeBody extends StatelessWidget {
   final TextEditingController? messageController;
   final String? selectedTopic;
   final VoidCallback? onTopic;
+  final VoidCallback? onAttach;
+  final String? attachmentLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1200,32 +1212,7 @@ class _ComposeBody extends StatelessWidget {
         // The paperclip sits above the cap height. 10dp keeps that ink on
         // the design's attach line; 8dp lifts the run by more than 2dp.
         const SizedBox(height: 10),
-        const Row(
-          children: <Widget>[
-            TaytayIcon(
-              icon: TaytayIcons.paperclip,
-              size: 16,
-              color: BrandColors.taytayBlue,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Attach photo or PDF (optional)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
-          ],
-        ),
+        _attachBlock(),
         // 14dp is the design gap under the attach row. The 10 above it
         // stays, so the paperclip keeps its line and the notice does not.
         const SizedBox(height: 14),
@@ -1254,6 +1241,64 @@ class _ComposeBody extends StatelessWidget {
           icon: TaytayIcons.send,
           onTap: onSend,
         ),
+      ],
+    );
+  }
+
+  /// The specimen row when nothing is attached and the control is not live.
+  Widget _attachBlock() {
+    const Widget row = Row(
+      children: <Widget>[
+        TaytayIcon(
+          icon: TaytayIcons.paperclip,
+          size: 16,
+          color: BrandColors.taytayBlue,
+          semanticLabel: '',
+          excludeSemantics: true,
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Attach photo or PDF (optional)',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: BrandColors.taytayBlue,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      ],
+    );
+    if (onAttach == null && attachmentLabel == null) return row;
+    final String? label = attachmentLabel;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _Hit(
+          hitKey: const Key('directory-attach'),
+          label: 'Attach photo or PDF (optional)',
+          onTap: onAttach,
+          child: row,
+        ),
+        if (label != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: BrandColors.textSecondary,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1306,8 +1351,7 @@ class _SentBody extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text:
-                          ". We'll notify you, and the conversation is saved in My Account › Messages.",
+                      text: ". We'll notify you, and the conversation is saved in My Account › Messages.",
                     ),
                   ],
                 ),

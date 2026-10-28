@@ -1,15 +1,17 @@
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
+import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
 import '../domain/office_messaging_repository.dart';
 
 /// Resident threads on the Taytay LGU IDS API.
 ///
-/// F31 is closed: `GET/POST /threads` and the message routes are in the
-/// contract. A thread carries `subject`, `last_message_preview`,
-/// `last_message_at` and `unread_count`. Starting one and replying both
-/// return `{thread, message}`.
+/// `GET/POST /threads`, the message list and reply, mark-read, and close.
+/// A thread carries `subject`, `last_message_preview`, `last_message_at`
+/// and `unread_count`. Starting one and replying both return
+/// `{thread, message}`. Pages use `limit` and `cursor`. An attachment is
+/// `media_id` or multipart `file`, not both.
 class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   const OfficeMessagingApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -17,11 +19,17 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   final ApiClient _apiClient;
 
   @override
-  Future<Result<List<OfficeThread>>> listThreads() async {
+  Future<Result<Paginated<OfficeThread>>> listThreads({
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async {
+    assert(page >= 1);
     final response = await _apiClient.send<List<OfficeThread>>(
       method: HttpMethod.get,
       path: 'threads',
       authenticated: true,
+      query: _pageQuery(perPage, cursor),
       decode: (Object? data) => data is List<dynamic>
           ? data
                 .map(_decodeThread)
@@ -30,12 +38,14 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
           : const <OfficeThread>[],
     );
     if (response case Err<ApiEnvelope<List<OfficeThread>>>(:final failure)) {
-      return Err<List<OfficeThread>>(failure);
+      return Err<Paginated<OfficeThread>>(failure);
     }
-    final List<OfficeThread> threads =
-        (response as Ok<ApiEnvelope<List<OfficeThread>>>).value.data;
+    final ApiEnvelope<List<OfficeThread>> envelope =
+        (response as Ok<ApiEnvelope<List<OfficeThread>>>).value;
     final Map<String, String> labels = await _officeLabels();
-    return Ok<List<OfficeThread>>(_named(threads, labels));
+    return Ok<Paginated<OfficeThread>>(
+      _page<OfficeThread>(envelope, _named(envelope.data, labels)),
+    );
   }
 
   @override
@@ -61,11 +71,18 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   }
 
   @override
-  Future<Result<List<OfficeMessage>>> listMessages(String threadId) async {
+  Future<Result<Paginated<OfficeMessage>>> listMessages(
+    String threadId, {
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async {
+    assert(page >= 1);
     final response = await _apiClient.send<List<OfficeMessage>>(
       method: HttpMethod.get,
       path: 'threads/$threadId/messages',
       authenticated: true,
+      query: _pageQuery(perPage, cursor),
       decode: (Object? data) => data is List<dynamic>
           ? data
                 .map(_decodeMessage)
@@ -73,7 +90,10 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
                 .toList(growable: false)
           : const <OfficeMessage>[],
     );
-    return response.map((envelope) => envelope.data);
+    return response.map(
+      (ApiEnvelope<List<OfficeMessage>> envelope) =>
+          _page<OfficeMessage>(envelope, envelope.data),
+    );
   }
 
   @override
@@ -81,7 +101,14 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async {
+    final Result<MultipartFile>? upload = _upload(file);
+    if (upload is Err<MultipartFile>) {
+      return Err<OfficeMessage>(upload.failure);
+    }
+    final MultipartFile? part = upload?.valueOrNull;
     final response = await _apiClient.send<OfficeMessage?>(
       method: HttpMethod.post,
       path: 'threads',
@@ -90,7 +117,9 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
         'office_id': officeId,
         'subject': topic,
         'body': body,
+        'media_id': ?_mediaId(mediaId, file: part != null),
       },
+      file: part,
       decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),
     );
     return response.flatMap(
@@ -108,12 +137,23 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async {
+    final Result<MultipartFile>? upload = _upload(file);
+    if (upload is Err<MultipartFile>) {
+      return Err<OfficeMessage>(upload.failure);
+    }
+    final MultipartFile? part = upload?.valueOrNull;
     final response = await _apiClient.send<OfficeMessage?>(
       method: HttpMethod.post,
       path: 'threads/$threadId/messages',
       authenticated: true,
-      body: <String, Object?>{'body': body},
+      body: <String, Object?>{
+        'body': body,
+        'media_id': ?_mediaId(mediaId, file: part != null),
+      },
+      file: part,
       decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),
     );
     return response.flatMap(
@@ -145,6 +185,56 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       decode: (_) {},
     );
     return response.map((_) {});
+  }
+
+  /// `limit` from the channel page size, capped at this route's maximum of 50.
+  Map<String, String> _pageQuery(int? perPage, String? cursor) {
+    final String? next = cursor != null && cursor.isNotEmpty ? cursor : null;
+    final int asked = _apiClient.pages.clampRequest(
+      perPage ?? _apiClient.pages.defaultPerPage,
+    );
+    final int limit = asked > 50 ? 50 : asked;
+    return <String, String>{'limit': '$limit', 'cursor': ?next};
+  }
+
+  static Paginated<T> _page<T>(ApiEnvelope<List<T>> envelope, List<T> items) {
+    final PageMeta? pagination = envelope.pagination;
+    if (pagination == null) return Paginated<T>.single(items);
+    return Paginated<T>(
+      items: items,
+      page: pagination.page,
+      perPage: pagination.perPage,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+      hasMore: pagination.hasMore,
+      nextCursor: pagination.nextCursor,
+    );
+  }
+
+  /// A file takes the multipart path. `media_id` stays off that body.
+  static String? _mediaId(String? mediaId, {required bool file}) {
+    if (file) return null;
+    final String trimmed = mediaId?.trim() ?? '';
+    if (trimmed.isEmpty) return null;
+    return trimmed;
+  }
+
+  static Result<MultipartFile>? _upload(OutgoingFile? file) {
+    if (file == null) return null;
+    if (file.bytes.isEmpty || file.mimeType.trim().isEmpty) {
+      return const Err<MultipartFile>(
+        ValidationFailure(debugMessage: 'The attachment could not be sent.'),
+      );
+    }
+    final String name = file.fileName.trim();
+    return Ok<MultipartFile>(
+      MultipartFile(
+        field: 'file',
+        filename: name.isEmpty ? 'upload' : name,
+        bytes: file.bytes,
+        mimeType: file.mimeType.trim(),
+      ),
+    );
   }
 
   /// `short_name`, then `name`. A failed read leaves the slug in place.
@@ -270,6 +360,7 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       body: message?.body ?? fallbackBody,
       sentAt: message?.sentAt ?? thread.updatedAt,
       fromResident: true,
+      attachments: message?.attachments ?? const <MessageAttachment>[],
     );
   }
 
@@ -285,6 +376,7 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       threadId: threadId,
       body: body,
       senderId: sender is String ? sender : '',
+      attachments: _attachments(raw['attachments']),
       sentAt:
           DateTime.tryParse(
             raw['created_at'] is String ? raw['created_at'] as String : '',
@@ -294,5 +386,18 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       // sender id with the signed-in account when it has one.
       fromResident: false,
     );
+  }
+
+  static List<MessageAttachment> _attachments(Object? raw) {
+    if (raw is! List) return const <MessageAttachment>[];
+    final List<MessageAttachment> attachments = <MessageAttachment>[];
+    for (final Object? item in raw) {
+      if (item is! Map) continue;
+      final Object? mediaId = item['media_id'];
+      if (mediaId is String && mediaId.isNotEmpty) {
+        attachments.add(MessageAttachment(mediaId: mediaId));
+      }
+    }
+    return List<MessageAttachment>.unmodifiable(attachments);
   }
 }

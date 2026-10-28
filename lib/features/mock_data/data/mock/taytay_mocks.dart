@@ -1319,8 +1319,21 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
   );
 
   @override
-  Future<Result<List<OfficeThread>>> listThreads() {
-    return _gate.respond(<OfficeThread>[_thread('thread-sample-1')]);
+  Future<Result<Paginated<OfficeThread>>> listThreads({
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) {
+    if (cursor != null && cursor.isNotEmpty) {
+      return _gate.respond(
+        const Paginated<OfficeThread>.single(<OfficeThread>[]),
+      );
+    }
+    return _gate.respond(
+      Paginated<OfficeThread>.single(<OfficeThread>[
+        _thread('thread-sample-1'),
+      ]),
+    );
   }
 
   @override
@@ -1329,16 +1342,28 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
   }
 
   @override
-  Future<Result<List<OfficeMessage>>> listMessages(String threadId) {
-    return _gate.respond(<OfficeMessage>[
-      OfficeMessage(
-        id: 'msg-sample-1',
-        threadId: threadId,
-        body: 'A synthetic message from Juana Dela Cruz.',
-        sentAt: mockNow,
-        fromResident: true,
-      ),
-    ]);
+  Future<Result<Paginated<OfficeMessage>>> listMessages(
+    String threadId, {
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) {
+    if (cursor != null && cursor.isNotEmpty) {
+      return _gate.respond(
+        const Paginated<OfficeMessage>.single(<OfficeMessage>[]),
+      );
+    }
+    return _gate.respond(
+      Paginated<OfficeMessage>.single(<OfficeMessage>[
+        OfficeMessage(
+          id: 'msg-sample-1',
+          threadId: threadId,
+          body: 'A synthetic message from Juana Dela Cruz.',
+          sentAt: mockNow,
+          fromResident: true,
+        ),
+      ]),
+    );
   }
 
   @override
@@ -1346,6 +1371,8 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) {
     return _gate.respond(
       OfficeMessage(
@@ -1354,6 +1381,7 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
         body: body,
         sentAt: mockNow,
         fromResident: true,
+        attachments: _mockAttachments(mediaId, file),
       ),
     );
   }
@@ -1362,6 +1390,8 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) {
     return _gate.respond(
       OfficeMessage(
@@ -1370,8 +1400,26 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
         body: body,
         sentAt: mockNow,
         fromResident: true,
+        attachments: _mockAttachments(mediaId, file),
       ),
     );
+  }
+
+  /// A stand-in id. The bytes are not kept.
+  static List<MessageAttachment> _mockAttachments(
+    String? mediaId,
+    OutgoingFile? file,
+  ) {
+    final String? id = mediaId?.trim();
+    if (id != null && id.isNotEmpty) {
+      return <MessageAttachment>[MessageAttachment(mediaId: id)];
+    }
+    if (file != null && file.bytes.isNotEmpty) {
+      return const <MessageAttachment>[
+        MessageAttachment(mediaId: '00000000-0000-4000-8000-000000000001'),
+      ];
+    }
+    return const <MessageAttachment>[];
   }
 
   @override
