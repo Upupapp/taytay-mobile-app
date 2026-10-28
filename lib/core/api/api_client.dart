@@ -110,6 +110,10 @@ class ApiClient {
     bool attachTokenIfAvailable = false,
     int? requiredStatus,
     bool binary = false,
+
+    /// Public image routes stay anonymous. A `401` on one of them must not
+    /// end the resident's session.
+    bool endSessionOn401 = true,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -164,7 +168,9 @@ class ApiClient {
     // than at each call site. Recovery is serialised by the coordinator so that
     // several requests failing together cause at most one refresh.
     final failure = decoded.failureOrNull;
-    if (failure != null && failure.requiresReauthentication) {
+    if (endSessionOn401 &&
+        failure != null &&
+        failure.requiresReauthentication) {
       final coordinator = _authCoordinator;
       if (coordinator == null) {
         await _onUnauthenticated?.call();
@@ -199,7 +205,9 @@ class ApiClient {
       }
     }
 
-    if (decoded.isOk && !authenticated) {
+    // Binary reads stay out of the JSON catalogue cache. A draft cover is a
+    // 404 for an anonymous caller; that envelope is not a public document.
+    if (decoded.isOk && !authenticated && !binary) {
       _cache?.store<ApiEnvelope<T>>(
         // Path **and** query: a key of `services` alone would store page 3 and
         // serve it to a request for page 1.
@@ -269,8 +277,8 @@ class ApiClient {
   }
 
   /// A public image route. 404 is an empty picture, not a failure the
-  /// resident reads. Any other status still goes through the error envelope
-  /// so a 401 can end the session.
+  /// resident reads. Any other status still goes through the error envelope.
+  /// Whether a 401 ends the session is the caller's choice.
   static Result<ApiEnvelope<T>> _decodeImage<T>(ApiHttpResponse response) {
     if (response.statusCode == 404) {
       try {

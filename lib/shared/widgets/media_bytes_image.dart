@@ -83,6 +83,7 @@ class DecodedMemoryImage extends StatelessWidget {
     this.semanticLabel,
     this.height,
     this.maxDecodeWidth = RemoteImage.feedDecodeCeiling,
+    this.keepInImageCache = true,
     super.key,
   });
 
@@ -94,8 +95,23 @@ class DecodedMemoryImage extends StatelessWidget {
   final double? height;
   final int maxDecodeWidth;
 
+  /// Public photographs may stay in Flutter's shared image cache.
+  /// A personal portrait must not.
+  final bool keepInImageCache;
+
   @override
   Widget build(BuildContext context) {
+    if (!keepInImageCache) {
+      return _PrivateMemoryImage(
+        bytes: bytes,
+        placeholder: placeholder,
+        fit: fit,
+        alignment: alignment,
+        semanticLabel: semanticLabel,
+        height: height,
+        maxDecodeWidth: maxDecodeWidth,
+      );
+    }
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
@@ -117,11 +133,85 @@ class DecodedMemoryImage extends StatelessWidget {
           ),
           gaplessPlayback: true,
           filterQuality: FilterQuality.medium,
-          errorBuilder: (
-            BuildContext context,
-            Object error,
-            StackTrace? stack,
-          ) => placeholder,
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stack) =>
+                  placeholder,
+        );
+      },
+    );
+  }
+}
+
+/// Paints a personal picture and removes it from the shared image cache
+/// when the widget goes away. [Image.memory] would otherwise leave the
+/// decoded frame behind.
+class _PrivateMemoryImage extends StatefulWidget {
+  const _PrivateMemoryImage({
+    required this.bytes,
+    required this.placeholder,
+    required this.fit,
+    required this.alignment,
+    required this.maxDecodeWidth,
+    this.semanticLabel,
+    this.height,
+  });
+
+  final Uint8List bytes;
+  final Widget placeholder;
+  final BoxFit fit;
+  final Alignment alignment;
+  final String? semanticLabel;
+  final double? height;
+  final int maxDecodeWidth;
+
+  @override
+  State<_PrivateMemoryImage> createState() => _PrivateMemoryImageState();
+}
+
+class _PrivateMemoryImageState extends State<_PrivateMemoryImage> {
+  ImageProvider<Object>? _provider;
+
+  @override
+  void dispose() {
+    final ImageProvider<Object>? provider = _provider;
+    _provider = null;
+    if (provider != null) {
+      // The cache key is the provider's obtained key, not the provider.
+      unawaited(provider.evict());
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+        final double logicalWidth = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : (widget.height ?? 84);
+        final ImageProvider<Object> provider = ResizeImage(
+          MemoryImage(widget.bytes),
+          width: RemoteImage.decodedPixelWidth(
+            logicalWidth: logicalWidth,
+            devicePixelRatio: ratio,
+            ceiling: widget.maxDecodeWidth,
+          ),
+        );
+        _provider = provider;
+        return Image(
+          image: provider,
+          height: widget.height,
+          width: widget.height == null ? null : double.infinity,
+          fit: widget.fit,
+          alignment: widget.alignment,
+          semanticLabel: widget.semanticLabel,
+          excludeFromSemantics: widget.semanticLabel == null,
+          gaplessPlayback: false,
+          filterQuality: FilterQuality.medium,
+          errorBuilder:
+              (BuildContext context, Object error, StackTrace? stack) =>
+                  widget.placeholder,
         );
       },
     );

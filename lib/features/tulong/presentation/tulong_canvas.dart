@@ -611,14 +611,14 @@ class _MaybeHeroPhoto extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: SizedBox(
-                height: 180,
+                height: 196,
                 width: double.infinity,
                 child: DecodedMemoryImage(
                   bytes: bytes,
-                  height: 180,
+                  height: 196,
                   semanticLabel: service.name,
                   placeholder: const SizedBox(
-                    height: 180,
+                    height: 196,
                     width: double.infinity,
                   ),
                 ),

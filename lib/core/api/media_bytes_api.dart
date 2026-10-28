@@ -34,16 +34,22 @@ class MediaBytesApi {
     if (!_segment.hasMatch(id)) {
       return Future<Result<Uint8List?>>.value(const Ok<Uint8List?>(null));
     }
-    return _cached('news/$id/cover', () {
-      return _apiClient.send<Uint8List?>(
-        method: HttpMethod.get,
-        path: 'news/$id/cover',
-        authenticated: false,
-        attachTokenIfAvailable: true,
-        binary: true,
-        decode: _ignoreJson,
-      );
-    });
+    return _cached(
+      'news/$id/cover',
+      () {
+        return _apiClient.send<Uint8List?>(
+          method: HttpMethod.get,
+          path: 'news/$id/cover',
+          authenticated: false,
+          binary: true,
+          endSessionOn401: false,
+          decode: _ignoreJson,
+        );
+      },
+      // A draft is 404 to an anonymous reader. Do not remember that as a
+      // public picture, and do not keep the absence either.
+      rememberMiss: false,
+    );
   }
 
   /// `GET /services/{slug}/hero`.
@@ -56,8 +62,8 @@ class MediaBytesApi {
         method: HttpMethod.get,
         path: 'services/$slug/hero',
         authenticated: false,
-        attachTokenIfAvailable: true,
         binary: true,
+        endSessionOn401: false,
         decode: _ignoreJson,
       );
     });
@@ -74,8 +80,8 @@ class MediaBytesApi {
         method: HttpMethod.get,
         path: 'home/banners/$id/image',
         authenticated: false,
-        attachTokenIfAvailable: true,
         binary: true,
+        endSessionOn401: false,
         decode: _ignoreJson,
       );
     });
@@ -111,6 +117,7 @@ class MediaBytesApi {
     String key,
     Future<Result<ApiEnvelope<Uint8List?>>> Function() load, {
     bool remember = true,
+    bool rememberMiss = true,
   }) {
     if (remember) {
       final Result<Uint8List?>? hit = _cache.read(key);
@@ -124,6 +131,7 @@ class MediaBytesApi {
       epoch,
       load,
       remember: remember,
+      rememberMiss: rememberMiss,
     );
     _inflight[key] = future;
     return future;
@@ -134,6 +142,7 @@ class MediaBytesApi {
     int epoch,
     Future<Result<ApiEnvelope<Uint8List?>>> Function() load, {
     bool remember = true,
+    bool rememberMiss = true,
   }) async {
     try {
       final Result<ApiEnvelope<Uint8List?>> response = await load();
@@ -144,7 +153,10 @@ class MediaBytesApi {
         ),
       };
       if (epoch == _epoch && remember && result.isOk) {
-        _cache.store(key, result.valueOrNull);
+        final Uint8List? bytes = result.valueOrNull;
+        if (bytes != null || rememberMiss) {
+          _cache.store(key, bytes);
+        }
       }
       return result;
     } finally {

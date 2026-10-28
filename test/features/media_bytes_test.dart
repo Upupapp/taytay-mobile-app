@@ -3,27 +3,42 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/http_api_transport.dart';
 import 'package:taytay_resident/core/api/media_bytes_api.dart';
+import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
+import 'package:taytay_resident/core/session/session_state.dart';
+import 'package:taytay_resident/core/session/session_store.dart';
+import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/media_byte_cache.dart';
+import 'package:taytay_resident/core/storage/public_cache.dart';
+import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/citizen_api/data/node_citizen_api.dart';
 import 'package:taytay_resident/features/citizen_api/domain/citizen_contract.dart';
 import 'package:taytay_resident/features/credential/domain/credential_repository.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_canvas.dart';
+import 'package:taytay_resident/features/credential/presentation/digital_id_screen.dart';
 import 'package:taytay_resident/features/home/data/home_catalogue.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
+import 'package:taytay_resident/features/home/presentation/home_screen.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/news/presentation/balita_canvas.dart';
+import 'package:taytay_resident/features/news/presentation/news_screen.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
+import 'package:taytay_resident/features/tulong/domain/social_service_repository.dart';
+import 'package:taytay_resident/features/tulong/presentation/service_info_screen.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
+import 'package:taytay_resident/shared/widgets/media_bytes_image.dart';
 
 const String _newsId = '11111111-1111-4111-8111-111111111111';
 const String _slug = 'pwd-assistance';
@@ -135,6 +150,22 @@ ApiHttpResponse _image(Uint8List bytes, {String type = 'image/png'}) =>
       headers: <String, String>{'content-type': type},
     );
 
+ApiHttpResponse _error(int status, String code) => ApiHttpResponse(
+  statusCode: status,
+  body: jsonEncode(<String, Object?>{
+    'error': <String, Object?>{
+      'code': code,
+      'message': 'operator text',
+      'details': <String, Object?>{},
+      'request_id': 'req-err',
+    },
+  }),
+  headers: const <String, String>{
+    'content-type': 'application/json',
+    'x-request-id': 'req-err',
+  },
+);
+
 ApiHttpResponse _missing(String message) => ApiHttpResponse(
   statusCode: 404,
   body: jsonEncode(<String, Object?>{
@@ -167,10 +198,12 @@ void main() {
         );
       }),
     );
+    final PublicCache catalogue = PublicCache();
     final MediaBytesApi api = MediaBytesApi(
       apiClient: ApiClient(
         config: _config(),
         transport: transport,
+        cache: catalogue,
         accessTokenProvider: () async => 'session-token',
       ),
     );
@@ -184,12 +217,14 @@ void main() {
     expect(seen, Uri.parse('https://example.test/api/v1/news/$_newsId/cover'));
     expect(seen.toString(), isNot(contains('evil.example')));
     expect(api.toString(), isNot(contains('session-token')));
+    expect(catalogue.size, 0);
   });
 
   test(
     'a cover 404 is an empty picture and is not shown as server text',
     () async {
       final _Scripted transport = _Scripted(<ApiHttpResponse>[
+        _missing('do not show this operator text'),
         _missing('do not show this operator text'),
       ]);
       final MediaBytesApi api = MediaBytesApi(
@@ -203,14 +238,20 @@ void main() {
       expect(result, isA<Ok<Uint8List?>>());
       expect(result.valueOrNull, isNull);
       expect(again.valueOrNull, isNull);
-      expect(transport.requests, hasLength(1));
+      expect(transport.requests, hasLength(2));
       expect('$result', isNot(contains('do not show this')));
-      expect(transport.requests.single.path, 'news/$_newsId/cover');
       expect(
-        transport.requests.single.headers['Accept'],
+        transport.requests.every(
+          (ApiRequest request) =>
+              request.path == 'news/$_newsId/cover' &&
+              !request.headers.containsKey('Authorization'),
+        ),
+        isTrue,
+      );
+      expect(
+        transport.requests.first.headers['Accept'],
         contains('image/jpeg'),
       );
-      expect(transport.requests.single.headers['Authorization'], 'Bearer tok');
     },
   );
 
@@ -576,6 +617,269 @@ void main() {
     expect(_memoryImages(tester), isEmpty);
     expect(tester.takeException(), isNull);
   });
+
+  test(
+    'a 401 on a public image does not end the session or send a token',
+    () async {
+      var ended = 0;
+      final _Scripted transport = _Scripted(<ApiHttpResponse>[
+        _error(401, 'UNAUTHENTICATED'),
+        _error(401, 'UNAUTHENTICATED'),
+        _error(401, 'UNAUTHENTICATED'),
+        _error(401, 'UNAUTHENTICATED'),
+      ]);
+      final MediaBytesApi api = MediaBytesApi(
+        apiClient: ApiClient(
+          config: _config(),
+          transport: transport,
+          accessTokenProvider: () async => 'session-token',
+          onUnauthenticated: () async {
+            ended += 1;
+          },
+        ),
+      );
+
+      expect(await api.newsCover(_newsId), isA<Err<Uint8List?>>());
+      expect(await api.serviceHero(_slug), isA<Err<Uint8List?>>());
+      expect(await api.homeBanner(_bannerId), isA<Err<Uint8List?>>());
+      expect(await api.newsCover(_newsId), isA<Err<Uint8List?>>());
+
+      expect(ended, 0);
+      expect(transport.requests, hasLength(4));
+      expect(
+        transport.requests.every(
+          (ApiRequest request) => !request.headers.containsKey('Authorization'),
+        ),
+        isTrue,
+      );
+    },
+  );
+
+  test('a cover 5xx is an error and is not cached', () async {
+    final _Scripted transport = _Scripted(<ApiHttpResponse>[
+      _error(500, 'INTERNAL_ERROR'),
+      _error(500, 'INTERNAL_ERROR'),
+    ]);
+    final MediaBytesApi api = MediaBytesApi(apiClient: _client(transport));
+
+    final Result<Uint8List?> first = await api.newsCover(_newsId);
+    final Result<Uint8List?> second = await api.newsCover(_newsId);
+
+    expect(first, isA<Err<Uint8List?>>());
+    expect(second, isA<Err<Uint8List?>>());
+    expect(
+      (first as Err<Uint8List?>).failure.residentMessage,
+      isNot(contains('operator text')),
+    );
+    expect(transport.requests, hasLength(2));
+    expect(
+      transport.requests.every(
+        (ApiRequest request) => !request.headers.containsKey('Authorization'),
+      ),
+      isTrue,
+    );
+  });
+
+  test('a hero 404 is an empty picture and a 5xx is an error', () async {
+    final _Scripted missing = _Scripted(<ApiHttpResponse>[
+      _error(404, 'NOT_FOUND'),
+    ]);
+    final MediaBytesApi quiet = MediaBytesApi(apiClient: _client(missing));
+    expect((await quiet.serviceHero(_slug)).valueOrNull, isNull);
+    expect((await quiet.serviceHero(_slug)).valueOrNull, isNull);
+    expect(missing.requests, hasLength(1));
+
+    final _Scripted failed = _Scripted(<ApiHttpResponse>[
+      _error(500, 'INTERNAL_ERROR'),
+      _error(500, 'INTERNAL_ERROR'),
+    ]);
+    final MediaBytesApi api = MediaBytesApi(apiClient: _client(failed));
+    expect(await api.serviceHero(_slug), isA<Err<Uint8List?>>());
+    expect(await api.serviceHero(_slug), isA<Err<Uint8List?>>());
+    expect(failed.requests, hasLength(2));
+    expect(
+      failed.requests.every(
+        (ApiRequest request) => !request.headers.containsKey('Authorization'),
+      ),
+      isTrue,
+    );
+  });
+
+  test('a banner 404 is an empty picture and a 5xx is an error', () async {
+    final _Scripted missing = _Scripted(<ApiHttpResponse>[
+      _error(404, 'NOT_FOUND'),
+    ]);
+    final MediaBytesApi quiet = MediaBytesApi(apiClient: _client(missing));
+    expect((await quiet.homeBanner(_bannerId)).valueOrNull, isNull);
+    expect((await quiet.homeBanner(_bannerId)).valueOrNull, isNull);
+    expect(missing.requests, hasLength(1));
+
+    final _Scripted failed = _Scripted(<ApiHttpResponse>[
+      _error(503, 'SERVICE_UNAVAILABLE'),
+      _error(503, 'SERVICE_UNAVAILABLE'),
+    ]);
+    final MediaBytesApi api = MediaBytesApi(apiClient: _client(failed));
+    expect(await api.homeBanner(_bannerId), isA<Err<Uint8List?>>());
+    expect(await api.homeBanner(_bannerId), isA<Err<Uint8List?>>());
+    expect(failed.requests, hasLength(2));
+  });
+
+  test('media content 404 is empty and a 5xx is an error', () async {
+    final _Scripted missing = _Scripted(<ApiHttpResponse>[
+      _error(404, 'NOT_FOUND'),
+      _error(404, 'NOT_FOUND'),
+    ]);
+    final MediaBytesApi quiet = MediaBytesApi(apiClient: _client(missing));
+    expect((await quiet.mediaContent(_mediaId)).valueOrNull, isNull);
+    expect((await quiet.mediaContent(_mediaId)).valueOrNull, isNull);
+    expect(missing.requests, hasLength(2));
+    expect(
+      missing.requests.every(
+        (ApiRequest request) =>
+            request.headers['Authorization'] == 'Bearer tok',
+      ),
+      isTrue,
+    );
+
+    final _Scripted failed = _Scripted(<ApiHttpResponse>[
+      _error(500, 'INTERNAL_ERROR'),
+      _error(500, 'INTERNAL_ERROR'),
+    ]);
+    final MediaBytesApi api = MediaBytesApi(apiClient: _client(failed));
+    expect(await api.mediaContent(_mediaId), isA<Err<Uint8List?>>());
+    expect(await api.mediaContent(_mediaId), isA<Err<Uint8List?>>());
+    expect(failed.requests, hasLength(2));
+  });
+
+  testWidgets('the ID portrait leaves nothing in the shared image cache', (
+    WidgetTester tester,
+  ) async {
+    final ImageCache cache = PaintingBinding.instance.imageCache;
+    cache.clear();
+    cache.clearLiveImages();
+    addTearDown(cache.clear);
+    addTearDown(cache.clearLiveImages);
+
+    await _pump(
+      tester,
+      DecodedMemoryImage(
+        bytes: _png,
+        keepInImageCache: false,
+        semanticLabel: 'ID photo',
+        height: 104,
+        placeholder: const SizedBox(width: 84, height: 104),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(_labeled('ID photo'), findsWidgets);
+    expect(cache.currentSize + cache.liveImageCount, greaterThan(0));
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpAndSettle();
+
+    expect(cache.currentSize, 0);
+    expect(cache.liveImageCount, 0);
+  });
+
+  testWidgets('a mock build passes no image loaders', (
+    WidgetTester tester,
+  ) async {
+    final _Gate transport = _Gate();
+    final AppDependencies dependencies = await _mockApp(transport);
+    addTearDown(dependencies.dispose);
+
+    await _pumpRouted(tester, dependencies, const HomeScreen());
+    await _pumpRouted(tester, dependencies, const NewsScreen());
+    await _pumpRouted(
+      tester,
+      dependencies,
+      const ServiceInfoScreen(slug: _slug),
+    );
+    await _pumpRouted(tester, dependencies, const DigitalIdScreen());
+
+    expect(
+      transport.paths.where(
+        (String path) =>
+            path.endsWith('/cover') ||
+            path.endsWith('/hero') ||
+            path.endsWith('/image') ||
+            path.endsWith('/content'),
+      ),
+      isEmpty,
+    );
+    expect(tester.takeException(), isNull);
+  });
+}
+
+Future<void> _pumpRouted(
+  WidgetTester tester,
+  AppDependencies dependencies,
+  Widget child,
+) async {
+  tester.view.physicalSize = const Size(390, 1200);
+  tester.view.devicePixelRatio = 1;
+  addTearDown(tester.view.reset);
+  final GoRouter router = GoRouter(
+    routes: <RouteBase>[
+      GoRoute(
+        path: '/',
+        builder: (BuildContext context, GoRouterState state) => child,
+      ),
+      GoRoute(
+        path: '/home',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/news',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/news/:postId',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/programs',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/sign-in',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/profile',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/hotlines',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (BuildContext context, GoRouterState state) =>
+            const SizedBox.shrink(),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+  await tester.pumpWidget(
+    AppDependenciesScope(
+      dependencies: dependencies,
+      child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light(),
+        routerConfig: router,
+      ),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 Future<void> _pump(WidgetTester tester, Widget child) async {
@@ -622,4 +926,231 @@ List<NetworkImage> _networkImages(WidgetTester tester) {
       .map((Image image) => image.image)
       .whereType<NetworkImage>()
       .toList();
+}
+
+class _Gate implements ApiTransport {
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    paths.add(request.path);
+    if (request.path == 'home') {
+      return Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'banners': <Object?>[
+                <String, Object?>{
+                  'id': _bannerId,
+                  'title': 'Live title',
+                  'sort_order': 1,
+                  'active': true,
+                  'image_url': 'https://evil.example/banner.jpg',
+                },
+              ],
+            },
+            'meta': <String, Object?>{},
+          }),
+        ),
+      );
+    }
+    return Ok<ApiHttpResponse>(_error(500, 'INTERNAL_ERROR'));
+  }
+}
+
+Future<AppDependencies> _mockApp(_Gate transport) async {
+  final InMemorySecretStore secrets = InMemorySecretStore();
+  await secrets.write(LaunchController.welcomeCompletedKey, 'true');
+  final InMemorySessionStore sessionStore = InMemorySessionStore();
+  await sessionStore.write(
+    const StoredSession(
+      resident: ResidentSession(
+        accountId: 'acct-1',
+        accessLevel: AccessLevel.verified,
+      ),
+      accessToken: 'tok',
+    ),
+  );
+  final AppDependencies base = AppDependencies.build(
+    config: AppConfig.from(
+      rawEnvironment: 'dev',
+      rawApiBaseUrl: 'https://example.test/api/v1',
+      isReleaseBuild: false,
+      rawDataMode: 'mock',
+    ),
+    transport: transport,
+    secrets: secrets,
+    sessionStore: sessionStore,
+  );
+  return AppDependencies(
+    config: base.config,
+    session: base.session,
+    launch: base.launch,
+    intents: base.intents,
+    appLock: base.appLock,
+    apiClient: base.apiClient,
+    cache: base.cache,
+    network: base.network,
+    telemetry: base.telemetry,
+    authRepository: base.authRepository,
+    deviceSessionRepository: base.deviceSessionRepository,
+    platformRepository: base.platformRepository,
+    serviceCatalogRepository: base.serviceCatalogRepository,
+    programRepository: base.programRepository,
+    announcementRepository: _CoverFeed(),
+    eventRepository: base.eventRepository,
+    residentProfileRepository: base.residentProfileRepository,
+    householdRepository: base.householdRepository,
+    registrationRepository: base.registrationRepository,
+    barangayDirectory: base.barangayDirectory,
+    credentialRepository: _PortraitRepo(),
+    verificationRepository: base.verificationRepository,
+    serviceRequestRepository: base.serviceRequestRepository,
+    requirementRepository: base.requirementRepository,
+    notificationRepository: base.notificationRepository,
+    documentPicker: base.documentPicker,
+    shareService: base.shareService,
+    externalLinks: base.externalLinks,
+    accountControlsRepository: base.accountControlsRepository,
+    platform: base.platform,
+    socialServices: _HeroRepo(),
+    onDispose: base.onDispose,
+  );
+}
+
+class _CoverFeed implements AnnouncementRepository {
+  @override
+  Future<Result<Paginated<Announcement>>> listAnnouncements({
+    int page = 1,
+    int perPage = 20,
+    String? category,
+  }) async {
+    return const Ok<Paginated<Announcement>>(
+      Paginated<Announcement>(
+        items: <Announcement>[
+          Announcement(
+            id: _newsId,
+            title: 'Hall notice',
+            body: 'Bring a valid ID.',
+            coverUrl: 'https://evil.example/covers/hall.jpg',
+          ),
+        ],
+        page: 1,
+        perPage: 20,
+        total: 1,
+        totalPages: 1,
+        hasMore: false,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<List<NewsCategory>>> listCategories() async =>
+      const Ok<List<NewsCategory>>(<NewsCategory>[]);
+
+  @override
+  Future<Result<Announcement>> loadAnnouncement(String id) async =>
+      const Err<Announcement>(NotFoundFailure());
+
+  @override
+  Future<Result<Paginated<PostComment>>> listComments(
+    String postId, {
+    int page = 1,
+    int perPage = 20,
+  }) async => const Err<Paginated<PostComment>>(NotFoundFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> setReaction({
+    required String postId,
+    required ReactionKind reaction,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(NotFoundFailure());
+
+  @override
+  Future<Result<ReactionOutcome>> clearReaction({
+    required String postId,
+    required String idempotencyKey,
+  }) async => const Err<ReactionOutcome>(NotFoundFailure());
+
+  @override
+  Future<Result<PostComment>> addComment({
+    required String postId,
+    required String body,
+    required String idempotencyKey,
+    String? parentId,
+  }) async => const Err<PostComment>(NotFoundFailure());
+
+  @override
+  Future<Result<void>> deleteOwnComment({
+    required String postId,
+    required String commentId,
+    required String idempotencyKey,
+  }) async => const Err<void>(NotFoundFailure());
+
+  @override
+  Future<Result<void>> reportComment({
+    required String postId,
+    required String commentId,
+    required ReportReason reason,
+    required String idempotencyKey,
+  }) async => const Err<void>(NotFoundFailure());
+}
+
+class _HeroRepo implements SocialServiceRepository {
+  static const SocialService _service = SocialService(
+    id: _newsId,
+    name: 'PWD Assistance',
+    slug: _slug,
+    summary: 'Summary',
+    details: 'Details for the programme.',
+    heroUrl: 'https://evil.example/services/pwd-assistance/hero',
+  );
+
+  @override
+  Future<Result<Paginated<SocialService>>> listServices({
+    String? query,
+    int? limit,
+    String? cursor,
+    bool featured = false,
+  }) async => const Ok<Paginated<SocialService>>(
+    Paginated<SocialService>(
+      items: <SocialService>[_service],
+      page: 1,
+      perPage: 20,
+      total: 1,
+      totalPages: 1,
+      hasMore: false,
+    ),
+  );
+
+  @override
+  Future<Result<SocialService>> loadService(String slug) async =>
+      const Ok<SocialService>(_service);
+
+  @override
+  Future<List<SocialService>> savedOnThisPhone() async => const <SocialService>[
+    _service,
+  ];
+}
+
+class _PortraitRepo implements CredentialRepository {
+  @override
+  Future<Result<ResidentCredential?>> loadOwnCredential() async =>
+      const Ok<ResidentCredential?>(
+        ResidentCredential(
+          id: _newsId,
+          rawState: 'active',
+          state: CredentialLifecycleState.active,
+          photoMediaId: _mediaId,
+        ),
+      );
+
+  @override
+  Future<Result<String?>> loadResidentName() async =>
+      const Ok<String?>('Sample Resident');
+
+  @override
+  Future<Result<PresentationArtifact>> requestPresentationArtifact() async =>
+      const Err<PresentationArtifact>(NotFoundFailure());
 }

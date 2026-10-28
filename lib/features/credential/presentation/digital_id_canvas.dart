@@ -592,6 +592,7 @@ class _PhotoBytes extends StatelessWidget {
           bytes: bytes,
           fit: BoxFit.cover,
           semanticLabel: 'ID photo',
+          keepInImageCache: false,
           placeholder: const _PhotoPlaceholder(),
         ),
       ),

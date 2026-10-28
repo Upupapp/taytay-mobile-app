@@ -1289,11 +1289,7 @@ IconData _namedIcon(String name) {
   };
 }
 
-bool _hasRemoteCover(Announcement article) {
-  if (_reservesCover(article)) return true;
-  final String? media = article.coverMediaId;
-  return media != null && media.isNotEmpty;
-}
+bool _hasRemoteCover(Announcement article) => _reservesCover(article);
 
 bool _reservesCover(Announcement article) {
   final String? url = article.coverUrl;
