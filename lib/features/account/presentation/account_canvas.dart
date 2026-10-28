@@ -1366,7 +1366,7 @@ class _SettingsBody extends StatelessWidget {
                   if (onConsents != null)
                     _LinkRow(
                       title: 'Your consents',
-                      subtitle: 'What you agreed to, and withdrawal',
+                      subtitle: 'Review or withdraw what you agreed to',
                       icon: TaytayIcons.shieldCheck,
                       tile: BrandColors.chipBlueBg,
                       color: BrandColors.taytayBlue,
@@ -1472,7 +1472,8 @@ class _AboutBody extends StatelessWidget {
               ),
               const SizedBox(height: S8Space.titleGap),
               const _CssLines(
-                text: 'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
+                text:
+                    'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
                 style: _version,
                 step: 13 * S8Space.versionLineHeight,
                 align: TextAlign.center,

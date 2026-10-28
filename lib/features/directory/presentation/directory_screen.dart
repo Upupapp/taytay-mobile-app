@@ -132,34 +132,42 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
       api: dependencies.apiClient,
     );
     if (!mounted) return;
-    if (office == null || mock) {
-      setState(() => _office = office);
-      return;
-    }
-    final List<SocialService> catalogue = await _catalogue(
+    // The hall is the placeholder. The page does not wait on the banner or
+    // the office's Tulong list.
+    setState(() => _office = office);
+    if (office == null || mock) return;
+    final Future<List<SocialService>> catalogueFuture = _catalogue(
       dependencies,
       office.id,
     );
-    Uint8List? hero;
-    if (office.heroUrl != null) {
-      final Result<Uint8List> bytes = await OfficeApiRepository(
-        apiClient: dependencies.apiClient,
-      ).loadHero(office.id);
-      if (bytes case Ok(:final value) when value.isNotEmpty) hero = value;
-    }
+    final Future<Uint8List?> heroFuture = _hero(dependencies, office);
+    final List<SocialService> catalogue = await catalogueFuture;
+    final Uint8List? hero = await heroFuture;
     if (!mounted) return;
-    final List<OfficeServiceLine> lines = office.linesWithCatalogue(
-      <({String label, String slug})>[
-        for (final SocialService service in catalogue)
-          (label: service.name, slug: service.slug),
-      ],
-    );
+    final List<OfficeServiceLine> lines = office
+        .linesWithCatalogue(<({String label, String slug})>[
+          for (final SocialService service in catalogue)
+            (label: service.name, slug: service.slug),
+        ]);
     setState(() {
       _heroBytes = hero;
       _office = identical(lines, office.services)
           ? office
           : office.withServices(lines);
     });
+  }
+
+  /// Bytes only when the read succeeds and is non-empty. A 404, a 5xx, or a
+  /// missing URL leaves the hall in place.
+  Future<Uint8List?> _hero(AppDependencies dependencies, Office office) async {
+    if (office.heroUrl == null) return null;
+    final Result<Uint8List> bytes = await OfficeApiRepository(
+      apiClient: dependencies.apiClient,
+    ).loadHero(office.id);
+    return switch (bytes) {
+      Ok(:final value) when value.isNotEmpty => value,
+      _ => null,
+    };
   }
 
   Future<List<SocialService>> _catalogue(

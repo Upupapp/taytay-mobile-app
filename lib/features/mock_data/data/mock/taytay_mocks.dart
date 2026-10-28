@@ -1288,6 +1288,20 @@ class MockAccountControlsRepository implements AccountControlsRepository {
         label: 'Privacy notice',
         statement: 'SAMPLE',
         withdrawnAt: mockNow,
+        isWithdrawable: true,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ConsentRecord>> acceptConsent({required String version}) {
+    return _gate.respond(
+      ConsentRecord(
+        key: version,
+        label: 'Privacy notice',
+        statement: 'SAMPLE',
+        grantedAt: mockNow,
+        isWithdrawable: true,
       ),
     );
   }

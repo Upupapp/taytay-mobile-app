@@ -143,6 +143,9 @@ abstract interface class AccountControlsRepository {
     required String idempotencyKey,
   });
 
+  /// Accepts [version] again. The server clears `withdrawn_at`.
+  Future<Result<ConsentRecord>> acceptConsent({required String version});
+
   /// Asks the office to correct something it holds.
   Future<Result<void>> requestDataCorrection({
     required String detail,

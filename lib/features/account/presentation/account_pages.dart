@@ -38,8 +38,9 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   }
 
   Future<void> _load() async {
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .listThreads();
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listThreads();
     if (!mounted) return;
     setState(() {
       _loading = false;
@@ -367,8 +368,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   }
 
   Future<void> _load() async {
-    final result = await AppDependencies.of(context).notificationRepository
-        .loadPreferences();
+    final result = await AppDependencies.of(
+      context,
+    ).notificationRepository.loadPreferences();
     if (!mounted) return;
     if (result case Ok(:final value)) {
       setState(() {
@@ -472,8 +474,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 }
 
 Future<void> _changePassword(BuildContext context) async {
-  final AccountPasswordClient client = AppDependencies.of(context)
-      .accountPasswordClient;
+  final AccountPasswordClient client = AppDependencies.of(
+    context,
+  ).accountPasswordClient;
   await showDialog<void>(
     context: context,
     builder: (BuildContext dialogContext) {

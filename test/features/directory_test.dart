@@ -267,8 +267,9 @@ Future<BootedDirectory> bootDirectory(
 
   await tester.pumpWidget(
     MediaQuery(
-      data: MediaQueryData.fromView(tester.view)
-          .copyWith(textScaler: textScaler),
+      data: MediaQueryData.fromView(
+        tester.view,
+      ).copyWith(textScaler: textScaler),
       child: TaytayResidentApp(dependencies: dependencies),
     ),
   );
@@ -811,16 +812,17 @@ void main() {
     });
 
     test('both directory deep links resolve and carry a bounded code', () {
-      final service = DeepLink.resolve(<String, String>{
-        'target': 'service',
-        'id': 'CEDULA',
-      }) as DeepLinkResolved;
+      final service =
+          DeepLink.resolve(<String, String>{
+                'target': 'service',
+                'id': 'CEDULA',
+              })
+              as DeepLinkResolved;
       expect(service.target.location, '/services/CEDULA');
 
-      final program = DeepLink.resolve(<String, String>{
-        'target': 'program',
-        'id': 'AICS',
-      }) as DeepLinkResolved;
+      final program =
+          DeepLink.resolve(<String, String>{'target': 'program', 'id': 'AICS'})
+              as DeepLinkResolved;
       expect(program.target.location, '/programs/AICS');
 
       // The same bounded identifier rule as everywhere else.
@@ -867,11 +869,9 @@ void main() {
       await bootDirectory(tester, location: '/services/pwd-assistance');
 
       expect(
-        GoRouter.of(tester.element(find.byType(Scaffold).first))
-            .routerDelegate
-            .currentConfiguration
-            .uri
-            .path,
+        GoRouter.of(
+          tester.element(find.byType(Scaffold).first),
+        ).routerDelegate.currentConfiguration.uri.path,
         '/programs/pwd-assistance',
       );
       expect(find.text('PWD Assistance'), findsWidgets);

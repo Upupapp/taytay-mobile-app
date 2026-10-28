@@ -77,6 +77,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   }
 
   Future<void> _withdraw(ConsentRecord consent) async {
+    if (!consent.isWithdrawable || consent.key.isEmpty) return;
     final confirmed = await ConfirmSheet.show(
       context: context,
       title: 'Withdraw this consent?',
@@ -107,6 +108,24 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       onErr: (_) => setState(
         () => _notice =
             'That withdrawal was not recorded. Nothing has changed, and you '
+            'can try again.',
+      ),
+    );
+  }
+
+  Future<void> _accept(ConsentRecord consent) async {
+    if (!consent.isWithdrawable || consent.key.isEmpty) return;
+    final repository = AppDependencies.of(context).accountControlsRepository;
+    final result = await repository.acceptConsent(version: consent.key);
+    if (!mounted) return;
+    result.fold(
+      onOk: (_) {
+        setState(() => _notice = 'Taytay LGU has recorded this consent again.');
+        _load();
+      },
+      onErr: (_) => setState(
+        () => _notice =
+            'That consent was not recorded. Nothing has changed, and you '
             'can try again.',
       ),
     );
@@ -209,6 +228,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
                 consent: consent,
                 canWithdraw: _controls.canWithdrawConsent,
                 onWithdraw: () => _withdraw(consent),
+                onAccept: () => _accept(consent),
               ),
             ),
 
@@ -280,11 +300,13 @@ class _ConsentCard extends StatelessWidget {
     required this.consent,
     required this.canWithdraw,
     required this.onWithdraw,
+    required this.onAccept,
   });
 
   final ConsentRecord consent;
   final bool canWithdraw;
   final VoidCallback onWithdraw;
+  final VoidCallback onAccept;
 
   @override
   Widget build(BuildContext context) {
@@ -329,12 +351,24 @@ class _ConsentCard extends StatelessWidget {
 
           // A withdrawn consent keeps its row: the record is the point, and
           // removing it would erase the evidence it exists to provide.
-          if (consent.isActive && canWithdraw && consent.isWithdrawable) ...[
+          if (consent.isActive &&
+              canWithdraw &&
+              consent.isWithdrawable &&
+              consent.key.isNotEmpty) ...[
             const SizedBox(height: Spacing.md),
             AppButton(
               label: 'Withdraw this consent',
               variant: AppButtonVariant.text,
               onPressed: onWithdraw,
+            ),
+          ] else if (!consent.isActive &&
+              consent.isWithdrawable &&
+              consent.key.isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            AppButton(
+              label: 'Accept again',
+              variant: AppButtonVariant.primary,
+              onPressed: onAccept,
             ),
           ] else if (consent.isActive &&
               consent.withheldReason != null) ...<Widget>[

@@ -874,11 +874,12 @@ class _Hero extends StatelessWidget {
                       heroBytes!,
                       fit: BoxFit.cover,
                       alignment: Alignment(0, office.heroFocus * 2 - 1),
-                      errorBuilder: (
-                        BuildContext context,
-                        Object error,
-                        StackTrace? stackTrace,
-                      ) => _hall(),
+                      errorBuilder:
+                          (
+                            BuildContext context,
+                            Object error,
+                            StackTrace? stackTrace,
+                          ) => _hall(),
                     ),
               const DecoratedBox(
                 decoration: BoxDecoration(
@@ -1346,7 +1347,8 @@ class _SentBody extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text: ". We'll notify you, and the conversation is saved in My Account › Messages.",
+                      text:
+                          ". We'll notify you, and the conversation is saved in My Account › Messages.",
                     ),
                   ],
                 ),
