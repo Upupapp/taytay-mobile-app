@@ -99,16 +99,21 @@ class VerificationController extends ChangeNotifier {
   bool get loading => _loading;
   bool get submitting => _submitting;
 
-  /// Whether the server says this request can still be changed.
+  /// Whether the loaded request says the resident may still change it.
   ///
-  /// `can_edit` wins when the server sent it. A missing flag falls back to the
-  /// stage, and no loaded request (the resident has not started) stays open.
-  bool get allowsEdit {
+  /// Fails closed. Re-upload, resubmit and corrections need a loaded status
+  /// whose `can_edit` is true. A missing flag is not permission, and the stage
+  /// is not permission.
+  bool get allowsEdit => _status?.canEdit == true;
+
+  /// Whether the resident has no verification request yet.
+  ///
+  /// Start is this case. It is not [allowsEdit]: a request that cannot be
+  /// edited is not an invitation to open another one.
+  bool get canStart {
     final VerificationStatusDetail? current = _status;
-    if (current == null) return true;
-    final bool? flag = current.canEdit;
-    if (flag != null) return flag;
-    return current.isEditableByApplicant;
+    if (current == null) return false;
+    return current.rawState.isEmpty;
   }
 
   /// What the office holds, one row per type. Empty until [refresh] has run.
@@ -354,7 +359,7 @@ class VerificationController extends ChangeNotifier {
     VerificationImagePart? back,
     required VerificationImagePart selfie,
   }) async {
-    if (!allowsEdit || _submitting) return false;
+    if (!canStart || _submitting) return false;
 
     _submissionKey ??= generateRequestId();
     _submitting = true;
@@ -431,7 +436,7 @@ class VerificationController extends ChangeNotifier {
 
   /// Returns a rejected request to pending with the resident's message.
   Future<bool> resubmit(String message) async {
-    if (!allowsEdit || _submitting || message.trim().isEmpty) return false;
+    if (!allowsEdit || _submitting) return false;
 
     _correctionKey ??= generateRequestId();
     _submitting = true;
@@ -441,7 +446,8 @@ class VerificationController extends ChangeNotifier {
     final Result<void> outcome = await _repository.submitCorrections(
       corrections: const <CorrectableField, String>{},
       idempotencyKey: _correctionKey!,
-      message: message,
+      message: message.trim(),
+      allowBlank: true,
     );
     _submitting = false;
 

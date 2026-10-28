@@ -34,6 +34,18 @@ String formatManilaStamp(DateTime instant) {
   return '${formatManilaDate(instant)} · $h:$minute $suffix';
 }
 
+/// `VerificationSubmit.id_type`, in the order the contract publishes it.
+const List<String> verificationIdTypes = <String>[
+  'philid',
+  'drivers_license',
+  'passport',
+  'umid',
+  'postal',
+  'voters',
+  'sss',
+  'other',
+];
+
 /// Resident label for `VerificationRequest.id_type`.
 ///
 /// Known wire values get the name a resident would say. An unrecognised value

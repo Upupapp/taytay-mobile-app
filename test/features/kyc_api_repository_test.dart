@@ -325,10 +325,12 @@ void main() {
         VerificationItemCategory.identityDocument,
         VerificationItemCategory.photo,
       ]);
-      expect(detail.issues, hasLength(1));
-      expect(detail.issues.single.instruction, 'The photo is blurry.');
+      expect(detail.issues, hasLength(2));
+      expect(detail.issues.first.instruction, 'The photo is blurry.');
+      expect(detail.issues.last.category, VerificationItemCategory.other);
+      expect(detail.issues.last.instruction, 'hidden');
       expect(detail.toString(), isNot(contains('staff note')));
-      expect(detail.toString(), isNot(contains('hidden')));
+      expect(detail.toString(), isNot(contains('secret')));
       expect(detail.toString(), isNot(contains('Please look')));
     });
   });

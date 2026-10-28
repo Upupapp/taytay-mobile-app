@@ -10,6 +10,8 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../domain/field_correction_note.dart';
@@ -20,11 +22,6 @@ import 'manila_stamp.dart';
 import 's3_chrome.dart';
 import 'verification_controller.dart';
 import 'verification_status_pages.dart';
-
-/// Stored with `POST .../corrections`. It is the sentence the resident sends
-/// by pressing Resubmit, not a staff note.
-const String verificationResubmitMessage =
-    'Please review my verification again.';
 
 /// Identity verification: the status the server reports, drawn as `03-01`
 /// through `03-03`.
@@ -54,8 +51,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   String _email = '';
   String _accountCreated = '';
   bool _tierReady = false;
-  bool _collectingStart = false;
-  bool _needPhotos = false;
+  String _idType = 'philid';
   CapturedDocument? _front;
   CapturedDocument? _back;
   CapturedDocument? _selfie;
@@ -78,8 +74,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _loadTier() async {
-    final result = await AppDependencies.of(context).residentProfileRepository
-        .loadOwnDetail();
+    final result = await AppDependencies.of(
+      context,
+    ).residentProfileRepository.loadOwnDetail();
     if (!mounted) return;
     if (result case Ok(:final value)) {
       final String? tier = value.verificationTier;
@@ -110,11 +107,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
     super.dispose();
   }
 
-  bool get _mayEdit {
-    final VerificationStatusDetail? status = _controller.status;
-    if (status == null) return _face == VerificationFace.unverified;
-    return _controller.allowsEdit;
-  }
+  bool get _mayEdit => _controller.allowsEdit;
+
+  bool get _mayStart => _controller.canStart;
+
+  bool get _startReady => _front != null && _selfie != null;
+
+  bool get _selfieKept => (_controller.status?.selfieMediaId ?? '').isNotEmpty;
 
   String get _submittedOn {
     final DateTime? at = _controller.status?.submittedAt;
@@ -130,12 +129,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
       _noteLabel(category),
   ];
 
-  String get _notice {
-    if (_needPhotos) {
-      return 'Add a photo of the front of your ID and a selfie.';
-    }
-    return _controller.failure?.residentMessage ?? '';
-  }
+  String get _notice => _controller.failure?.residentMessage ?? '';
 
   VerificationFace get _face {
     final VerificationStatusDetail? status = _controller.status;
@@ -223,10 +217,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
           empty: 'Upload new photo',
         ),
         backValue: _slotLabel(file: _back, sent: _backSent, empty: 'Add'),
+        selfieKept: _selfieKept && _selfie == null,
         selfieValue: _slotLabel(
           file: _selfie,
           sent: _selfieSent,
-          empty: 'Previous selfie kept',
+          empty: _selfieKept ? 'Previous selfie kept' : 'Take a selfie',
         ),
         onFront: _mayEdit ? () => _pick(VerificationPhotoSlot.front) : null,
         onBackPhoto: _mayEdit ? () => _pick(VerificationPhotoSlot.back) : null,
@@ -235,9 +230,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
       ),
       VerificationFace.unverified => UnverifiedStatusPage(
         onBack: () => _leave(context),
-        onStart: _mayEdit && !_controller.submitting ? _onStart : null,
+        onStart: _mayStart && _startReady && !_controller.submitting
+            ? _onStart
+            : null,
         notice: _notice,
-        below: _collectingStart && _mayEdit ? _startPhotos(idLabel) : null,
+        below: _mayStart ? _startPhotos() : null,
       ),
     };
     if (!_tierReady && _controller.status == null && _controller.loading) {
@@ -304,7 +301,6 @@ class _VerificationScreenState extends State<VerificationScreen> {
       if (!mounted || !ok) return;
     }
     setState(() {
-      _needPhotos = false;
       switch (slot) {
         case VerificationPhotoSlot.front:
           _front = picked;
@@ -322,8 +318,37 @@ class _VerificationScreenState extends State<VerificationScreen> {
     });
   }
 
+  Future<void> _pickIdType() async {
+    final String? chosen = await showModalBottomSheet<String>(
+      context: context,
+      builder: (BuildContext sheetContext) {
+        return SafeArea(
+          child: ListView(
+            shrinkWrap: true,
+            children: <Widget>[
+              for (final String wire in verificationIdTypes)
+                ListTile(
+                  title: Text(idTypeLabel(wire)),
+                  onTap: () => Navigator.of(sheetContext).pop(wire),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+    if (chosen == null || !mounted) return;
+    if (!verificationIdTypes.contains(chosen)) return;
+    setState(() => _idType = chosen);
+  }
+
   Future<void> _resubmit() async {
-    final bool ok = await _controller.resubmit(verificationResubmitMessage);
+    final String? typed = await AppSheet.show<String>(
+      context: context,
+      title: 'Message to Taytay LGU',
+      builder: (BuildContext _) => const _ResubmitMessageSheet(),
+    );
+    if (!mounted || typed == null) return;
+    final bool ok = await _controller.resubmit(typed);
     if (!mounted || !ok) return;
     setState(() {
       _front = null;
@@ -336,19 +361,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _onStart() async {
-    if (!_collectingStart) {
-      setState(() => _collectingStart = true);
-      return;
-    }
     final CapturedDocument? front = _front;
     final CapturedDocument? selfie = _selfie;
-    if (front == null || selfie == null) {
-      setState(() => _needPhotos = true);
-      return;
-    }
+    if (front == null || selfie == null) return;
     final CapturedDocument? back = _back;
     final bool ok = await _controller.startVerification(
-      idType: _controller.status?.idType ?? 'philid',
+      idType: _idType,
       front: VerificationImagePart(
         bytes: front.bytes,
         fileName: front.fileName,
@@ -368,10 +386,14 @@ class _VerificationScreenState extends State<VerificationScreen> {
       ),
     );
     if (!mounted || !ok) return;
-    setState(() => _collectingStart = false);
+    setState(() {
+      _front = null;
+      _back = null;
+      _selfie = null;
+    });
   }
 
-  Widget _startPhotos(String idLabel) {
+  Widget _startPhotos() {
     return S3Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,12 +403,15 @@ class _VerificationScreenState extends State<VerificationScreen> {
             style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
           ),
           S3Field(
+            key: const Key('verification-id-type'),
             label: 'Type of ID',
             asterisk: true,
-            value: idLabel.isEmpty ? 'PhilSys National ID' : idLabel,
+            value: idTypeLabel(_idType),
             chevron: true,
+            onTap: _pickIdType,
           ),
           S3Field(
+            key: const Key('verification-id-front'),
             label: 'Front of ID',
             asterisk: true,
             value: _slotLabel(
@@ -418,32 +443,21 @@ class _VerificationScreenState extends State<VerificationScreen> {
             ),
           ),
           S3Field(
+            key: const Key('verification-selfie'),
             label: 'Selfie',
             value: _slotLabel(
               file: _selfie,
               sent: false,
-              empty: 'Previous selfie kept',
+              empty: 'Take a selfie',
             ),
-            readOnly: true,
+            dashed: true,
             onTap: () => _pick(VerificationPhotoSlot.selfie),
             leading: const TaytayIcon(
-              icon: TaytayIcons.check,
+              icon: TaytayIcons.plus,
               semanticLabel: '',
               excludeSemantics: true,
               size: 16,
-              color: BrandColors.success,
-            ),
-            trailing: const Text(
-              'Retake',
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                height: s3Line,
-                leadingDistribution: TextLeadingDistribution.even,
-                color: BrandColors.taytayBlue,
-                decoration: TextDecoration.none,
-              ),
+              color: BrandColors.taytayBlue,
             ),
           ),
         ],
@@ -468,10 +482,71 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
 enum VerificationPhotoSlot { front, back, selfie }
 
+/// Optional note on resubmit. The field lives in the sheet so it is disposed
+/// with the sheet, the same way a directory message field owns its text.
+class _ResubmitMessageSheet extends StatefulWidget {
+  const _ResubmitMessageSheet();
+
+  @override
+  State<_ResubmitMessageSheet> createState() => _ResubmitMessageSheetState();
+}
+
+class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
+  final TextEditingController _field = TextEditingController();
+
+  @override
+  void dispose() {
+    _field.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        TextField(
+          key: const Key('verification-message-field'),
+          controller: _field,
+          maxLines: null,
+          keyboardType: TextInputType.multiline,
+          style: const TextStyle(
+            fontFamily: AppTypography.fontFamily,
+            fontSize: 14,
+            height: 1.5,
+            fontWeight: FontWeight.w500,
+            color: BrandColors.textPrimary,
+            decoration: TextDecoration.none,
+          ),
+          cursorColor: BrandColors.taytayBlue,
+          decoration: const InputDecoration(
+            hintText: 'Add a message (optional)',
+            isCollapsed: true,
+            isDense: true,
+            filled: false,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            disabledBorder: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+        const SizedBox(height: 16),
+        PrimaryButton(
+          key: const Key('verification-resubmit-confirm'),
+          label: 'Resubmit for verification',
+          onPressed: () => Navigator.of(context).pop(_field.text),
+        ),
+      ],
+    );
+  }
+}
+
 String _noteLabel(VerificationItemCategory category) => switch (category) {
   VerificationItemCategory.personalDetails => 'Your details',
   VerificationItemCategory.address => 'Address',
   VerificationItemCategory.contact => 'Contact details',
   VerificationItemCategory.identityDocument => 'ID photo',
   VerificationItemCategory.photo => 'Photo of you',
+  VerificationItemCategory.other => 'Details',
 };

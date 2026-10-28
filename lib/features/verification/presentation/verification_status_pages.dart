@@ -402,6 +402,7 @@ class NeedsCorrectionPage extends StatelessWidget {
     this.frontValue = 'Upload new photo',
     this.backValue = 'Add',
     this.selfieValue = 'Previous selfie kept',
+    this.selfieKept = true,
     this.onFront,
     this.onBackPhoto,
     this.onRetake,
@@ -421,6 +422,10 @@ class NeedsCorrectionPage extends StatelessWidget {
   final String frontValue;
   final String backValue;
   final String selfieValue;
+
+  /// The design's kept-selfie row. False draws an upload row instead, for a
+  /// resident who has not sent one.
+  final bool selfieKept;
   final VoidCallback? onFront;
   final VoidCallback? onBackPhoto;
   final VoidCallback? onRetake;
@@ -592,31 +597,46 @@ class NeedsCorrectionPage extends StatelessWidget {
                     color: BrandColors.taytayBlue,
                   ),
                 ),
-                S3Field(
-                  label: 'Selfie',
-                  value: selfieValue,
-                  readOnly: true,
-                  onTap: onRetake,
-                  leading: const TaytayIcon(
-                    icon: TaytayIcons.check,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                    size: 16,
-                    color: BrandColors.success,
-                  ),
-                  trailing: const Text(
-                    'Retake',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      height: s3Line,
-                      leadingDistribution: TextLeadingDistribution.even,
+                if (selfieKept)
+                  S3Field(
+                    label: 'Selfie',
+                    value: selfieValue,
+                    readOnly: true,
+                    onTap: onRetake,
+                    leading: const TaytayIcon(
+                      icon: TaytayIcons.check,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: 16,
+                      color: BrandColors.success,
+                    ),
+                    trailing: const Text(
+                      'Retake',
+                      style: TextStyle(
+                        fontFamily: AppTypography.fontFamily,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        height: s3Line,
+                        leadingDistribution: TextLeadingDistribution.even,
+                        color: BrandColors.taytayBlue,
+                        decoration: TextDecoration.none,
+                      ),
+                    ),
+                  )
+                else
+                  S3Field(
+                    label: 'Selfie',
+                    value: selfieValue,
+                    dashed: true,
+                    onTap: onRetake,
+                    leading: const TaytayIcon(
+                      icon: TaytayIcons.plus,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: 16,
                       color: BrandColors.taytayBlue,
-                      decoration: TextDecoration.none,
                     ),
                   ),
-                ),
               ],
             ),
           ),

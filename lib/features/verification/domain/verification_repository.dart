@@ -215,6 +215,7 @@ abstract interface class VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
     String message = '',
+    bool allowBlank = false,
   });
 
   /// Attaches a document to the resident's open case (F28).

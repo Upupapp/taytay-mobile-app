@@ -205,19 +205,21 @@ class KycApiRepository implements VerificationRepository {
     return categories;
   }
 
-  /// Citizen issues only. An item without a known category or a message is
-  /// dropped. `notes` is not read.
+  /// Citizen issues. An item without a message is dropped. An unknown category
+  /// is kept under [VerificationItemCategory.other] so the instruction still
+  /// shows. Staff remarks are not read.
   static List<VerificationItemIssue> _issues(Object? raw) {
     if (raw is! List<dynamic>) return const <VerificationItemIssue>[];
     final List<VerificationItemIssue> issues = <VerificationItemIssue>[];
     for (final Object? item in raw) {
       if (item is! Map<String, dynamic>) continue;
-      final VerificationItemCategory? category =
+      final String? instruction = _text(item['message']);
+      if (instruction == null) continue;
+      final VerificationItemCategory category =
           VerificationItemCategory.fromWire(
             item['category'] is String ? item['category'] as String : null,
-          );
-      final String? instruction = _text(item['message']);
-      if (category == null || instruction == null) continue;
+          ) ??
+          VerificationItemCategory.other;
       issues.add(
         VerificationItemIssue(category: category, instruction: instruction),
       );
@@ -236,9 +238,10 @@ class KycApiRepository implements VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
     String message = '',
+    bool allowBlank = false,
   }) async {
     final String text = _correctionMessage(message, corrections);
-    if (text.isEmpty) {
+    if (text.isEmpty && !allowBlank) {
       return const Err<void>(
         ValidationFailure(debugMessage: 'A message is required.'),
       );

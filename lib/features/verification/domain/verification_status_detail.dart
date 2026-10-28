@@ -172,7 +172,11 @@ enum VerificationItemCategory {
     ],
   ),
   identityDocument('Proof of identity', 'Government-issued ID'),
-  photo('Photo of you', 'Used to check the ID belongs to you');
+  photo('Photo of you', 'Used to check the ID belongs to you'),
+
+  /// An issue category this build does not recognise. The resident still sees
+  /// the office's instruction, under a generic label, never the raw code.
+  other('Details', 'Something Taytay LGU asked you to correct');
 
   const VerificationItemCategory(
     this.label,
@@ -215,8 +219,8 @@ enum VerificationItemCategory {
 
   /// Maps a citizen `submitted_categories` or issue `category` string.
   ///
-  /// Unknown codes are dropped. A raw category is not shown: it can be an
-  /// internal name, and the screen only has copy for these five kinds.
+  /// Unknown codes return null. Issue lists still show those under [other]
+  /// so the instruction is not dropped. A raw code is never the label.
   static VerificationItemCategory? fromWire(String? raw) {
     if (raw == null) return null;
     final String trimmed = raw.trim();

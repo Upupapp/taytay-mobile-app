@@ -1106,6 +1106,7 @@ class MockVerificationRepository implements VerificationRepository {
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
     String message = '',
+    bool allowBlank = false,
   }) => _gate.respond<void>(null);
 
   @override
