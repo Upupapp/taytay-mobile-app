@@ -201,7 +201,7 @@ void main() {
       expect(
         project,
         contains(
-          'PRODUCT_BUNDLE_IDENTIFIER = ph.gov.taytay.lguids.taytayResident;',
+          'PRODUCT_BUNDLE_IDENTIFIER = ph.gov.taytay.app;',
         ),
       );
       expect(project, contains('SWIFT_OPTIMIZATION_LEVEL = "-O"'));

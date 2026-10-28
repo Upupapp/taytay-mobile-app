@@ -51,7 +51,7 @@ val releaseKeystoreReady: Boolean = if (!keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "ph.gov.taytay.lguids.taytay_resident"
+    namespace = "ph.gov.taytay.app"
     // Pinned above Flutter's default because `flutter_secure_storage` 11 declares
     // that dependants must compile against API 37 or later. compileSdk controls
     // only which APIs are available at compile time; `targetSdk` (runtime
@@ -83,10 +83,9 @@ android {
     }
 
     defaultConfig {
-        // TODO(paul): confirm this applicationId before the first Play upload.
-        // The current value is a placeholder until that decision. Do not
-        // invent a replacement here. The iOS bundle id is the same question.
-        applicationId = "ph.gov.taytay.lguids.taytay_resident"
+        // Resident application id. The iOS bundle id is the same base.
+        // Flavours append `.dev` and `.staging`; prod does not.
+        applicationId = "ph.gov.taytay.app"
 
         /*
          * PINNED, not inherited (F11). Both rode Flutter's defaults, which move
@@ -165,16 +164,16 @@ android {
         create("dev") {
             dimension = "environment"
             applicationIdSuffix = ".dev"
-            resValue("string", "app_name", "Taytay LGU (dev)")
+            resValue("string", "app_name", "Taytay (dev)")
         }
         create("staging") {
             dimension = "environment"
             applicationIdSuffix = ".staging"
-            resValue("string", "app_name", "Taytay LGU (staging)")
+            resValue("string", "app_name", "Taytay (staging)")
         }
         create("prod") {
             dimension = "environment"
-            resValue("string", "app_name", "Taytay LGU IDS")
+            resValue("string", "app_name", "Taytay")
         }
     }
 

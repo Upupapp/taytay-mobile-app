@@ -8,8 +8,35 @@ GitHub Actions, and these steps do not add or run a workflow.
 `CFBundleVersion` `1`. Flutter passes those through; do not hard-code them in
 Gradle or the Xcode project.
 
-The app icon and the launch image are placeholders. The designer is supplying
-them. Do not replace them as part of a release build.
+The app icon and the native splash are generated. Do not hand-edit the
+platform copies. Change `release/assets/` or the generator blocks in
+`pubspec.yaml`, then run:
+
+```bash
+dart run flutter_launcher_icons
+dart run flutter_native_splash:create
+```
+
+`flutter_launcher_icons` writes the Android adaptive icon (including the
+monochrome layer) and the opaque iOS icon. `flutter_native_splash` writes the
+native splash and the Android 12 splash. It treats a splash image as a 4×
+asset. The mark is 768 px, centred on the transparent 1152 px canvas, so it
+is 192 dp. The Android 12 file stays 960 px (240 dp). The dashed ring and the
+mark sit inside the 160 dp circle the system masks to.
+
+`LaunchTheme` sets the status and navigation bars to `#0B3D91` with light
+icons. Re-running the splash generator resets
+`android:windowDrawsSystemBarBackgrounds` to `false`; set it back to `true`
+on `LaunchTheme` or the bar colour does not apply. The same run resizes the
+Android 12 icon without premultiplied alpha and leaves a dark fringe on the
+blue disc. The disc is filled with exact `#0B3D91` after that resize; put
+the fill back if you generate again. The ~0.97 inset stays, so the dashed
+ring remains inside the 160 dp mask. iOS keeps the status bar visible over
+the same blue. Its icon colour stays the system default: an
+`UIStatusBarStyle` in `Info.plist` would still be in force after the splash.
+`flutter_launcher_icons` can write `AppIcon` into
+`ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS`. That setting
+stays `YES`. `ASSETCATALOG_COMPILER_APPICON_NAME` stays `AppIcon`.
 
 ## API base URL
 
@@ -32,16 +59,18 @@ real public base URL. `example.invalid` is not a host this app knows.
 
 ## Identifiers
 
-Both ids are placeholders until Paul confirms them. Do not invent replacements.
-
-| Platform | Current value | Where |
+| Platform | Value | Where |
 | --- | --- | --- |
-| Android `applicationId` | `ph.gov.taytay.lguids.taytay_resident` | `android/app/build.gradle.kts` (`TODO(paul)`) |
-| iOS bundle id | `ph.gov.taytay.lguids.taytayResident` | Runner target in `ios/Runner.xcodeproj` |
+| Android `applicationId` | `ph.gov.taytay.app` | `android/app/build.gradle.kts` |
+| Android namespace | `ph.gov.taytay.app` | same file; `MainActivity` uses this package |
+| iOS bundle id | `ph.gov.taytay.app` | Runner target in `ios/Runner.xcodeproj` |
+| Display name | `Taytay` | prod `app_name`, and `CFBundleDisplayName` / `CFBundleName` |
 
 Android flavors append `.dev` or `.staging` to the application id. The `prod`
-flavor does not. The flavor does **not** set `TAYTAY_ENV`. Pass the matching
-`--dart-define`, or the icon can say one environment while the app calls another.
+flavor does not. Non-production labels are `Taytay (dev)` and
+`Taytay (staging)` so a staging install is not mistaken for the store app.
+The flavor does **not** set `TAYTAY_ENV`. Pass the matching `--dart-define`,
+or the icon can say one environment while the app calls another.
 
 ## Android keystore
 

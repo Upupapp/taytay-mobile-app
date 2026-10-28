@@ -232,7 +232,7 @@ void main() {
       final gradle = File('android/app/build.gradle.kts').readAsStringSync();
       expect(
         gradle,
-        contains('applicationId = "ph.gov.taytay.lguids.taytay_resident"'),
+        contains('applicationId = "ph.gov.taytay.app"'),
       );
     });
   });

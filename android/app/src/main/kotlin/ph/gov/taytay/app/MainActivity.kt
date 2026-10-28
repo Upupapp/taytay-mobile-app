@@ -1,4 +1,4 @@
-package ph.gov.taytay.lguids.taytay_resident
+package ph.gov.taytay.app
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

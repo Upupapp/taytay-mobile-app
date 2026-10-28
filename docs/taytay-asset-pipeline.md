@@ -255,5 +255,5 @@ nothing; banner motifs all paint and the banner is tappable.
 | A-1 | No verified LGU artwork of any kind | Scenes are original; the seal is still absent (TAB 03 B-1). |
 | A-2 | No golden-image tests | Rendering is verified as "paints without error", not "looks correct". A visual regression would pass. |
 | A-3 | `assets/` ships no files | The manifest tests are structurally sound but currently vacuous over real files; the validator negative tests carry the proof instead. |
-| A-4 | No app icon or launch screen | Platform launcher assets are separate from this in-app pipeline and are not part of TAB 04's scope. |
+| A-4 | App icon and native splash are platform resources | Generated from `release/assets/` by `flutter_launcher_icons` and `flutter_native_splash`. They are not part of this in-app manifest. |
 | A-5 | No illustration localisation | Scenes carry English accessible names; Filipino labels arrive with app-wide localisation. |

@@ -110,8 +110,9 @@ would have been enough alone.
 * Comments are stripped first. The prose in this repository names the reference
   apps constantly — it is how a decision explains what it learned from where —
   and a scan that tripped on an explanation is a scan nobody keeps green.
-* The app names itself `Taytay LGU IDS`, ships under `ph.gov.taytay.lguids`, and
-  the package is `taytay_resident`.
+* The in-app title is `Taytay LGU IDS`. The home-screen name is `Taytay`.
+  The application id and the iOS bundle id are `ph.gov.taytay.app`. The Dart
+  package is `taytay_resident`.
 
 ### Product boundary
 
@@ -132,7 +133,7 @@ would have been enough alone.
   resident chose.
 * No advertising, location, contacts or phone-state permission.
 * Cleartext traffic is not enabled.
-* `applicationId = ph.gov.taytay.lguids.taytay_resident`.
+* `applicationId = ph.gov.taytay.app`. The namespace matches.
 
 XML comments are stripped first: the manifest documents the permissions this app
 does **not** declare and why, which is exactly the prose a permission scan must
