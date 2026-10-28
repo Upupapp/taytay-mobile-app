@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/app_failure.dart';
 import '../../../shared/widgets/failure_view.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -31,6 +33,7 @@ class DigitalIdView extends StatelessWidget {
     this.failure,
     this.environment = AppEnvironment.dev,
     this.onRetry,
+    this.loadPhoto,
     super.key,
   });
 
@@ -50,6 +53,9 @@ class DigitalIdView extends StatelessWidget {
   final AppFailure? failure;
   final AppEnvironment environment;
   final VoidCallback? onRetry;
+
+  /// `GET /media/{id}/content` for the card portrait. Null keeps the placeholder.
+  final MediaBytesLoader? loadPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -101,6 +107,7 @@ class DigitalIdView extends StatelessWidget {
                             environment: environment,
                             onRetry: onRetry,
                             now: now,
+                            loadPhoto: loadPhoto,
                           ),
                         ),
                         const Positioned(
@@ -146,6 +153,7 @@ class _Body extends StatelessWidget {
     required this.environment,
     required this.onRetry,
     required this.now,
+    this.loadPhoto,
   });
 
   final ResidentCredential? card;
@@ -156,6 +164,7 @@ class _Body extends StatelessWidget {
   final AppEnvironment environment;
   final VoidCallback? onRetry;
   final DateTime now;
+  final MediaBytesLoader? loadPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -178,6 +187,7 @@ class _Body extends StatelessWidget {
             face: face!,
             sample: sample,
             now: now,
+            loadPhoto: loadPhoto,
           ),
       ],
     );
@@ -232,6 +242,7 @@ class _Issued extends StatelessWidget {
     required this.face,
     required this.sample,
     required this.now,
+    this.loadPhoto,
   });
 
   final ResidentCredential card;
@@ -239,6 +250,7 @@ class _Issued extends StatelessWidget {
   final DigitalIdFace face;
   final bool sample;
   final DateTime now;
+  final MediaBytesLoader? loadPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +279,12 @@ class _Issued extends StatelessWidget {
                 _ResidentName(name: resident),
               ],
               SizedBox(height: resident == null ? 16 : 12),
-              _PhotoRow(card: card, face: face, sample: sample),
+              _PhotoRow(
+                card: card,
+                face: face,
+                sample: sample,
+                loadPhoto: loadPhoto,
+              ),
             ],
           ),
         ),
@@ -436,21 +453,34 @@ class _PhotoRow extends StatelessWidget {
     required this.card,
     required this.face,
     required this.sample,
+    this.loadPhoto,
   });
 
   final ResidentCredential card;
   final DigitalIdFace face;
   final bool sample;
+  final MediaBytesLoader? loadPhoto;
 
   @override
   Widget build(BuildContext context) {
     final String? number = card.idNumber;
     final DateTime? issued = card.issuedAt;
     final DateTime? expires = card.expiresAt;
+    final String? media = card.photoMediaId;
+    final Widget portrait = media == null || media.isEmpty || loadPhoto == null
+        ? const _PhotoPlaceholder()
+        : MediaBytesHost(
+            id: media,
+            load: loadPhoto,
+            builder: (Uint8List? bytes) {
+              if (bytes == null) return const _PhotoPlaceholder();
+              return _PhotoBytes(bytes: bytes);
+            },
+          );
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const _PhotoPlaceholder(),
+        portrait,
         const SizedBox(width: 14),
         Expanded(
           child: Column(
@@ -542,6 +572,29 @@ class _DateColumn extends StatelessWidget {
           pinBaseline: true,
         ),
       ],
+    );
+  }
+}
+
+class _PhotoBytes extends StatelessWidget {
+  const _PhotoBytes({required this.bytes});
+
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: 84,
+        height: 104,
+        child: DecodedMemoryImage(
+          bytes: bytes,
+          fit: BoxFit.cover,
+          semanticLabel: 'ID photo',
+          placeholder: const _PhotoPlaceholder(),
+        ),
+      ),
     );
   }
 }

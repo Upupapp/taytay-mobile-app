@@ -29,29 +29,33 @@ abstract final class HomeCatalogue {
   }
 
   static Future<List<HomeSlide>> _readSlides() async {
-    final Object? decoded = jsonDecode(await rootBundle.loadString(slidesAsset));
+    final Object? decoded = jsonDecode(
+      await rootBundle.loadString(slidesAsset),
+    );
     if (decoded is! Map) return const <HomeSlide>[];
     final List<HomeSlide> parsed = _slides(decoded['slides']);
     _parsedSlides = parsed;
     return parsed;
   }
 
-  /// Banner titles and links from `/home`, with the bundled photograph kept.
-  /// A banner's media id is not a file this app can paint.
+  /// Banner titles and links from `/home`, with the bundled photograph kept
+  /// until `image_url` is set. The bytes are `GET /home/banners/{id}/image`.
   static List<HomeSlide> withBanners(
     List<HomeSlide> bundled,
     List<HomeBanner> banners,
   ) {
     if (bundled.isEmpty) return bundled;
     final List<HomeBanner> active =
-        banners.where((HomeBanner banner) => banner.active).toList()
-          ..sort(
-            (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
-          );
+        banners.where((HomeBanner banner) => banner.active).toList()..sort(
+          (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
+        );
     if (active.isEmpty) return bundled;
     return <HomeSlide>[
       for (var i = 0; i < active.length; i++)
-        _fromBanner(active[i], bundled[i < bundled.length ? i : bundled.length - 1]),
+        _fromBanner(
+          active[i],
+          bundled[i < bundled.length ? i : bundled.length - 1],
+        ),
     ];
   }
 
@@ -65,7 +69,14 @@ abstract final class HomeCatalogue {
       credit: fallback.credit,
       routeName: _route(banner.href, fallback.routeName),
       focus: fallback.focus,
+      bannerId: _bannerId(banner),
     );
+  }
+
+  static String? _bannerId(HomeBanner banner) {
+    final String? url = banner.imageUrl;
+    if (url == null || url.isEmpty) return null;
+    return banner.id;
   }
 
   static String _route(String? href, String fallback) {

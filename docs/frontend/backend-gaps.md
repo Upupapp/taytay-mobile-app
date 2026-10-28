@@ -1,5 +1,7 @@
 # Backend integration gaps
 
+**Vendored contract:** `docs/integration/taytay-node-openapi.json` is the `5f6fe0f` export. The audit below was written against `3e3b110`. Where a later sentence says a bytes route is now called, that sentence is the current one.
+
 **Audit date:** 26 October 2026.
 **App commit:** `a7c8d5f` (`Merge hide Balita Save (#13)`), branch `docs/backend-gaps`.
 **How it was run:** static. A non-mock call was attempted and did not reach an API. No resident session was created, and no personal data was sent.
@@ -128,7 +130,7 @@ The unrouted `RegistrationScreen` (`lib/features/registration/presentation/regis
 - **Endpoints:** `GET /api/v1/offices` (`q`, `category`, `limit`, `cursor`) and `GET /api/v1/offices/{slug}`. Present. The client follows `meta.pagination.next_cursor` for up to five pages. A failed live list throws `OfficeDirectoryException`. It does not open the fixture.
 - **`Office` fields the decoder reads:** `id`, `name`, `slug`, `short_name` (string or null; empty falls back to `name`), `description`, `head`, `hours`, `phone`, `email`, `address`, `category`. Category chips are built from those categories, with `All` added on the client.
 - **Fields on `Office` that the decoder drops:** `banner_media_id`, `latitude`, `longitude`, `created_at`, `updated_at`. Every live office is given `heroAsset` and `insetAsset` of `assets/photos/municipal_hall.jpg`. `services` is always an empty list. The fixture's per-office hero, service lines, keywords, and SAMPLE tags are not on the contract.
-- **There is no public banner URL.** `GET /api/v1/media/{id}` returns metadata (`id`, `content_type`, `byte_size`, `created_at`) and requires a Firebase token. It does not return image bytes. Office photos in the design therefore have no citizen URL to paint.
+- **`GET /api/v1/media/{id}` is metadata.** Image bytes are `GET /api/v1/media/{id}/content`, which is authenticated and is used for the resident's own portrait, not for office photos. `5f6fe0f` also has `GET /offices/{slug}/hero`. This change does not call it. Live offices still use the bundled hall photograph.
 - **Fixture:** `test/fixtures/mock/offices.json` when `usesMockData` is true, including the sample thread under `thread`. Live directory threads do not use that sample. See item 14.
 
 `NodeCitizenApi.listOffices` decodes a thinner `MunicipalOffice` and is not called by a screen.
@@ -143,7 +145,7 @@ The list, the article, and the chips are on the contract and are what the screen
 - **Dart:** `lib/features/news/presentation/news_screen.dart`, `lib/features/news/presentation/news_feed_controller.dart`, `lib/features/news/data/newsfeed_api_repository.dart`.
 - **Endpoints:** `GET /api/v1/news` (`category`, `office`, `limit`, `cursor`), `GET /api/v1/news/{id}`, `GET /api/v1/news/categories`. Present. The feed stores `next_cursor` and sends it on the next page. `Lahat` sends no `category`. Live chips replace the design set when the category call succeeds.
 - **`NewsItem` fields read:** `id`, `title`, `body`, `category`, `office_slug`, `cover_media_id`, `cover_url`, `published_at`, `pinned`, `pinned_at`, `share_url`, `status` (`draft`, `published`). Unknown `status` values are kept raw. Drafts are filtered out of the resident list.
-- **Not read, and not on `NewsItem`:** a `media[]` array with `urls` and `alt_text`. The card uses `cover_url`. `GET /api/v1/news/{id}/cover` (public image bytes, 404 when there is no cover) is never called. If `cover_url` is null and the bytes exist only on that route, the card has no photograph. Severity for that case: **Medium**.
+- **Cover bytes:** `GET /api/v1/news/{id}/cover` is called when `cover_url` or `cover_media_id` is set and the row has no fixture asset. The request uses the configured base URL, not the host inside `cover_url`. A 404 or a failed read keeps the empty cover box when `cover_url` was set, and leaves a text card alone when only `cover_media_id` was set and no bytes arrived. Dev mocks do not call it.
 - **Office label:** the repository joins `GET /api/v1/offices` and prefers `short_name`, then `name`.
 
 ### 9. Comments, reactions, reports, and bookmarks — Low
@@ -161,7 +163,7 @@ The list, the article, and the chips are on the contract and are what the screen
 - **Dart:** `lib/features/tulong/presentation/tulong_screen.dart`, `lib/features/tulong/data/social_service_api_repository.dart`, `lib/features/tulong/data/social_service_codec.dart`.
 - **Endpoints:** `GET /api/v1/services` (`q`, `category`, `office`, `featured`, `limit`, `cursor`) and `GET /api/v1/services/{slug}`. Present. The client sends `limit`, `cursor`, `q`, and `featured=true` when the featured filter is on. It hides rows with `hidden_from_list` on the client as well.
 - **Fields read from `Service`, matching `3e3b110`:** `id`, `name`, `slug`, `summary`, `details`, `eligibility`, `requirements` (string array), `contacts` (`type`, optional `label`, `value`), `locations` (`name`, `address`), `category`, `office_id`, `office_slug`, `featured`, `icon_key`, `tile_color` (`#RGB` or `#RRGGBB`), `badge`, `legal_basis`, `claim_steps`, `featured_headline`, `schedule`, `hero_url`, `hidden_from_list`. Office name, short name, hours, and phone are joined from `GET /api/v1/offices` when `office_slug` is set. `schedule` on the service is shown on its own.
-- **`GET /api/v1/services/{slug}/hero`:** present on `3e3b110`, absent from the vendored spec, and not called. `hero_url` is stored. A null URL keeps the icon tile. Severity: **Medium**.
+- **`GET /api/v1/services/{slug}/hero`:** called on the service page when `hero_url` is set. The host inside `hero_url` is not opened. A null URL, a 404, or a failed read keeps the icon tile. The list does not paint the photograph. Dev mocks do not call it.
 - **Saved pages:** no saved-service route. `savedOnThisPhone` is the list already decoded in this process, capped at 20, and it dies with the process. The dev mock's saved date and SAMPLE requirement flags live under `presentation` in the fixture and are ignored on a live payload (`allowPresentation: false`). Severity: **Medium**.
 - **Apply:** no citizen apply or intake route. The screens are information only. `POST /api/v1/admin/services` is staff and is not called. Severity: **Low** (the product decision, not a decoder bug).
 - **Fixture:** `test/fixtures/mock/tulong_services.json`, joined to `test/fixtures/mock/offices.json`, through `MockSocialServiceRepository`. Dev mock only.
@@ -227,7 +229,7 @@ Photo credits (`PhotoCreditsScreen`) read the bundled asset manifest. There is n
 - **Dart:** `lib/features/home/presentation/home_screen.dart`, `lib/features/home/presentation/hotlines_screen.dart`, `lib/features/home/data/home_catalogue.dart`, `lib/features/citizen_api/data/node_citizen_api.dart`.
 - **`GET /api/v1/home`:** present. `data` is `banners`, `quick_links`, `news`, `services`, `hotlines`.
 - **What the screen uses:** banner `title`, `href`, `sort_order`, and `active`, overlaid on photographs from `assets/home/slides.json`. Hotline `id`, `name`, `number`, `category` from the home payload (the hotlines screen also calls `GET /api/v1/hotlines`). News titles come from `GET /api/v1/news`, not from the home `news` array. The bell count is the unread rows in the first notifications page.
-- **Dropped from `HomeFeed`:** `quick_links` (`id`, `label`, `href`, `sort_order`) and service slugs. No screen reads them. `Banner.media_id` is not painted. The code says a media id is not a file the app can paint. There is no public banner-bytes route.
+- **Dropped from `HomeFeed`:** `quick_links` (`id`, `label`, `href`, `sort_order`) and service slugs. No screen reads them. When `image_url` is set, the hero slide requests `GET /api/v1/home/banners/{id}/image` on the configured base. Until those bytes arrive, and when they fail or `image_url` is null, the photograph stays the bundled slide. Dev mocks do not call it.
 - **Fixture:** `test/fixtures/mock/home_catalogue.json` supplies news and hotlines only when `usesMockData` is true and the live lists are empty. A non-mock build with an empty feed shows an empty list. Hero photographs are bundled on every build, mock or not.
 - **`GET /api/v1/health` and `GET /api/v1/app/config`:** present and decoded. Health `data` is `service`, `status` (`ok`), `api_version`. Config fields match `AppConfig`, including `feature_flags` as an object. Older keys the decoder still accepts (`service`, `api_version`, `timezone`, `client.default_page_size`, `server_time`) are not on this schema, so page size stays at the client default of 25.
 
@@ -241,13 +243,14 @@ Photo credits (`PhotoCreditsScreen`) read the bundled asset manifest. There is n
 - **Names:** the screen's own comment refuses other residents' names. Not decoding `members[].name` is consistent with that. Not calling `GET /households/current` at all drops the address and the count, which the screen does want.
 - **Fixture:** `MockHouseholdRepository`, which reads `resident.json` for the barangay label and returns a synthetic summary.
 
-### 17. Digital ID — wired, photo bytes still absent
+### 17. Digital ID — wired, portrait bytes on the content route
 
 - **Screen:** `DigitalIdScreen` at `/digital-id`, on the My Account shell branch. It paints the five card states (active, suspended, revoked, expired, not issued).
 - **Dart:** `lib/features/credential/presentation/digital_id_screen.dart`, `lib/features/credential/presentation/digital_id_canvas.dart`, `lib/features/credential/data/credential_api_repository.dart`, `lib/features/credential/domain/digital_id_face.dart`.
 - **What the app calls:** `GET /api/v1/me/digital-id` for the card and `qr`, and `GET /api/v1/me` for `data.name` only. The name is trimmed and is not stored on the session. A 404 or a null card is not issued. Expired is this client's reading of `status=active` when `now` is after `expires_at` and `qr` is null. There is no `expired` wire value.
 - **QR:** rendered from `qr.token` in memory only while `qr.isLive(now)`. A timer is armed at `qr.expires_at` however long that is. At that instant the modules come down, the resident sees "Refreshing code…", and the card is loaded again. A refetch that is also past its expiry stays on that state and is not painted. The token is not written, logged, or put in a semantic label.
-- **Left alone on purpose:** `POST /api/v1/digital-id/verify` is the verifier scan. This app does not call it. `photo_media_id` is not fetched: this client has no media-bytes route, so the portrait stays the dashed placeholder.
+- **Portrait:** `photo_media_id` is loaded with authenticated `GET /api/v1/media/{id}/content`. `GET /media/{id}` stays metadata. A 404, a failure, or a dev mock keeps the placeholder. The bytes are not written to the public cache or to disk.
+- **Left alone on purpose:** `POST /api/v1/digital-id/verify` is the verifier scan. This app does not call it. A missing portrait stays the dashed placeholder.
 - **Fixture:** `MockCredentialRepository`, and only when `usesMockData` is true. The name, number, and dates are the fictional SAMPLE illustration. A non-mock build shows whatever the two GETs return.
 
 ### 18. Notifications inbox paging and targets — Medium

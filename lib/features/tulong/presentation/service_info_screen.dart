@@ -83,9 +83,8 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
       Outcome.problem(context, 'This office has not published a phone number.');
       return;
     }
-    final LinkOutcome outcome = await AppDependencies.of(
-      context,
-    ).externalLinks.dial(phone);
+    final LinkOutcome outcome = await AppDependencies.of(context).externalLinks
+        .dial(phone);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable || outcome == LinkOutcome.refused) {
       Outcome.problem(context, 'Calling is not available on this device.');
@@ -103,9 +102,8 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
       '/maps/search/',
       <String, String>{'api': '1', 'query': query},
     ).toString();
-    final LinkOutcome outcome = await AppDependencies.of(
-      context,
-    ).externalLinks.open(url);
+    final LinkOutcome outcome = await AppDependencies.of(context).externalLinks
+        .open(url);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable || outcome == LinkOutcome.refused) {
       Outcome.problem(context, 'Maps could not be opened on this device.');
@@ -186,6 +184,9 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
           onMessage: _message,
           onOffice: _office,
           onShare: _share,
+          loadHero: AppDependencies.of(context).config.usesMockData
+              ? null
+              : AppDependencies.of(context).mediaBytes.serviceHero,
         ),
       );
     }

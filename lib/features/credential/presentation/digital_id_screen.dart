@@ -20,7 +20,8 @@ import 'digital_id_canvas.dart';
 /// `qr.expires_at`; the modules come down and the card is loaded again. A
 /// refetch that is also past its expiry stays on "Refreshing code…" and is
 /// not painted. A 404 or a null card keeps the not-issued card. The portrait
-/// media id is not fetched: this client has no media-bytes route for it.
+/// is `GET /media/{id}/content` when `photo_media_id` is set. A dev mock
+/// keeps the placeholder. A failed or missing read keeps it too.
 class DigitalIdScreen extends StatefulWidget {
   const DigitalIdScreen({super.key, this.repository, this.now, this.sample});
 
@@ -160,6 +161,9 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
 
   @override
   Widget build(BuildContext context) {
+    final AppDependencies? dependencies = context
+        .dependOnInheritedWidgetOfExactType<AppDependenciesScope>()
+        ?.dependencies;
     return DigitalIdView(
       card: _card,
       name: _name,
@@ -168,6 +172,9 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
       failure: _failure,
       environment: _environment(context),
       onRetry: _failure == null ? null : () => unawaited(_load()),
+      loadPhoto: dependencies == null || dependencies.config.usesMockData
+          ? null
+          : dependencies.mediaBytes.mediaContent,
     );
   }
 }

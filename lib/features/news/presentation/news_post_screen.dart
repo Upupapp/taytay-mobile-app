@@ -75,9 +75,7 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
 
     final PostDetailController? controller = _controller;
     if (controller == null || controller.isLoading) {
-      return const _Shell(
-        child: Center(child: CircularProgressIndicator()),
-      );
+      return const _Shell(child: Center(child: CircularProgressIndicator()));
     }
 
     final Announcement? post = controller.post;
@@ -94,6 +92,9 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
       body: BalitaCanvas(
         frame: BalitaFrame.article,
         article: post,
+        loadCover: AppDependencies.of(context).config.usesMockData
+            ? null
+            : AppDependencies.of(context).mediaBytes.newsCover,
       ),
     );
   }

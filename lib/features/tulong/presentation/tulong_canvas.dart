@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -35,6 +38,7 @@ class TulongCanvas extends StatelessWidget {
     this.onOffice,
     this.onSearch,
     this.searchController,
+    this.loadHero,
     super.key,
   });
 
@@ -61,6 +65,10 @@ class TulongCanvas extends StatelessWidget {
   final VoidCallback? onOffice;
   final ValueChanged<String>? onSearch;
   final TextEditingController? searchController;
+
+  /// `GET /services/{slug}/hero` when the service has a hero URL.
+  /// Null on a dev mock. The list does not paint it.
+  final MediaBytesLoader? loadHero;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
   static const Color _searchBorder = Color(0xFFE1E6F0);
@@ -124,13 +132,14 @@ class TulongCanvas extends StatelessWidget {
         onOpen: onOpen,
       ),
       TulongFrame.detail when service != null && service!.showsFeaturedLayout =>
-        _FeaturedBody(service: service!, onShare: onShare),
+        _FeaturedBody(service: service!, onShare: onShare, loadHero: loadHero),
       TulongFrame.detail when service != null => _DetailBody(
         service: service!,
         onCall: onCall,
         onDirections: onDirections,
         onMessage: onMessage,
         onOffice: onOffice,
+        loadHero: loadHero,
       ),
       _ => _ListBody(
         services: services,
@@ -532,6 +541,7 @@ class _DetailBody extends StatelessWidget {
     this.onDirections,
     this.onMessage,
     this.onOffice,
+    this.loadHero,
   });
 
   final SocialService service;
@@ -539,6 +549,7 @@ class _DetailBody extends StatelessWidget {
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
   final VoidCallback? onOffice;
+  final MediaBytesLoader? loadHero;
 
   @override
   Widget build(BuildContext context) {
@@ -547,7 +558,11 @@ class _DetailBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        _Hero(service: service),
+        _MaybeHeroPhoto(
+          service: service,
+          load: loadHero,
+          child: _Hero(service: service),
+        ),
         const SizedBox(height: 12),
         _Actions(
           onCall: onCall,
@@ -566,6 +581,54 @@ class _DetailBody extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+class _MaybeHeroPhoto extends StatelessWidget {
+  const _MaybeHeroPhoto({
+    required this.service,
+    required this.child,
+    this.load,
+  });
+
+  final SocialService service;
+  final Widget child;
+  final MediaBytesLoader? load;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? url = service.heroUrl;
+    if (url == null || url.isEmpty || load == null) return child;
+    return MediaBytesHost(
+      id: service.slug,
+      load: load,
+      builder: (Uint8List? bytes) {
+        if (bytes == null) return child;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: SizedBox(
+                height: 180,
+                width: double.infinity,
+                child: DecodedMemoryImage(
+                  bytes: bytes,
+                  height: 180,
+                  semanticLabel: service.name,
+                  placeholder: const SizedBox(
+                    height: 180,
+                    width: double.infinity,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            child,
+          ],
+        );
+      },
     );
   }
 }
@@ -1072,10 +1135,11 @@ class _FactRow extends StatelessWidget {
 }
 
 class _FeaturedBody extends StatelessWidget {
-  const _FeaturedBody({required this.service, this.onShare});
+  const _FeaturedBody({required this.service, this.onShare, this.loadHero});
 
   final SocialService service;
   final VoidCallback? onShare;
+  final MediaBytesLoader? loadHero;
 
   @override
   Widget build(BuildContext context) {
@@ -1088,7 +1152,11 @@ class _FeaturedBody extends StatelessWidget {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        _FeaturedHero(service: service, headline: headline),
+        _MaybeHeroPhoto(
+          service: service,
+          load: loadHero,
+          child: _FeaturedHero(service: service, headline: headline),
+        ),
         if (steps.isNotEmpty) ...<Widget>[
           const SizedBox(height: 12),
           _Card(

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../config/app_config.dart';
 import '../network/network_monitor.dart';
 import '../result/result.dart';
@@ -5,6 +7,7 @@ import '../storage/public_cache.dart';
 import 'api_envelope.dart';
 import 'api_transport.dart';
 import 'auth_coordinator.dart';
+import 'image_payload.dart';
 import 'page_policy.dart';
 import 'request_context.dart';
 
@@ -106,6 +109,7 @@ class ApiClient {
     List<MultipartFile> files = const <MultipartFile>[],
     bool attachTokenIfAvailable = false,
     int? requiredStatus,
+    bool binary = false,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -153,6 +157,7 @@ class ApiClient {
       file: file,
       files: files,
       requiredStatus: requiredStatus,
+      binary: binary,
     );
 
     // `401` is the single signal that ends a session, handled once here rather
@@ -187,6 +192,7 @@ class ApiClient {
         file: file,
         files: files,
         requiredStatus: requiredStatus,
+        binary: binary,
       );
       if (decoded.failureOrNull?.requiresReauthentication ?? false) {
         await _onUnauthenticated?.call();
@@ -222,6 +228,7 @@ class ApiClient {
     MultipartFile? file,
     List<MultipartFile> files = const <MultipartFile>[],
     int? requiredStatus,
+    bool binary = false,
     required T Function(Object? data) decode,
   }) async {
     // A fresh correlation id per attempt: a replay is a different request and
@@ -241,8 +248,9 @@ class ApiClient {
           // A multipart request's Content-Type is generated with its boundary by
           // the transport; declaring JSON here would produce a body the server
           // cannot parse and a 400 that reads like a validation failure.
-          hasJsonBody: body != null && file == null && files.isEmpty,
+          hasJsonBody: body != null && file == null && files.isEmpty && !binary,
           idempotencyKey: idempotencyKey,
+          accept: binary ? ImagePayload.acceptHeader : null,
         ),
         timeout: timeout ?? _config.requestTimeout,
         file: file,
@@ -252,10 +260,56 @@ class ApiClient {
 
     return switch (response) {
       Err<ApiHttpResponse>(:final failure) => Err<ApiEnvelope<T>>(failure),
+      Ok<ApiHttpResponse>(value: final httpResponse) when binary =>
+        _decodeImage<T>(httpResponse),
       Ok<ApiHttpResponse>(value: final httpResponse) =>
         _requiredStatusMissed(httpResponse, requiredStatus) ??
             ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
     };
+  }
+
+  /// A public image route. 404 is an empty picture, not a failure the
+  /// resident reads. Any other status still goes through the error envelope
+  /// so a 401 can end the session.
+  static Result<ApiEnvelope<T>> _decodeImage<T>(ApiHttpResponse response) {
+    if (response.statusCode == 404) {
+      try {
+        return Ok<ApiEnvelope<T>>(
+          ApiEnvelope<T>(data: null as T, requestId: response.requestId),
+        );
+      } on Object {
+        return Err<ApiEnvelope<T>>(
+          ContractFailure(
+            requestId: response.requestId,
+            debugMessage: 'Image response could not be read.',
+          ),
+        );
+      }
+    }
+    if (!response.isSuccess) {
+      return ApiEnvelopeDecoder.decode<T>(response, (Object? _) => null as T);
+    }
+    final Uint8List bytes = response.bodyBytes ?? Uint8List(0);
+    if (!ImagePayload.isImage(response.headers['content-type'], bytes)) {
+      return Err<ApiEnvelope<T>>(
+        ContractFailure(
+          requestId: response.requestId,
+          debugMessage: 'Image bytes were not a jpeg, png, or webp.',
+        ),
+      );
+    }
+    try {
+      return Ok<ApiEnvelope<T>>(
+        ApiEnvelope<T>(data: bytes as T, requestId: response.requestId),
+      );
+    } on Object {
+      return Err<ApiEnvelope<T>>(
+        ContractFailure(
+          requestId: response.requestId,
+          debugMessage: 'Image bytes were not a jpeg, png, or webp.',
+        ),
+      );
+    }
   }
 
   /// A 2xx that is not the status this call is allowed to treat as success.
