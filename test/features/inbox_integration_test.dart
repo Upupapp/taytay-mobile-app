@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
@@ -6,12 +7,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
+import 'package:taytay_resident/core/api/page_policy.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
+import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
@@ -47,6 +51,7 @@ void main() {
           (first as Ok<Paginated<OfficeThread>>).value;
       expect(firstPage.nextCursor, 'page-2');
       expect(firstPage.hasMore, isTrue);
+      expect(firstPage.items.single.ownerAccountId, 'acct-1');
       expect(transport.requests[2].query['cursor'], 'page-2');
       final Paginated<OfficeThread> secondPage =
           (second as Ok<Paginated<OfficeThread>>).value;
@@ -106,7 +111,7 @@ void main() {
         _ok(_envelope('reply-2')),
       ]);
       final OutgoingFile file = OutgoingFile(
-        bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+        bytes: Uint8List.fromList(<int>[0x25, 0x50, 0x44, 0x46, 0x0A]),
         fileName: 'Juana Dela Cruz.pdf',
         mimeType: 'application/pdf',
       );
@@ -147,7 +152,7 @@ void main() {
         body: 'Ito po',
         mediaId: mediaId,
         file: OutgoingFile(
-          bytes: Uint8List.fromList(<int>[9]),
+          bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0x00]),
           fileName: 'photo.jpg',
           mimeType: 'image/jpeg',
         ),
@@ -172,19 +177,113 @@ void main() {
     test('an empty file is refused before a request', () async {
       final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[]);
       final Result<OfficeMessage> result =
-          await OfficeMessagingApiRepository(apiClient: _client(transport))
-              .reply(
-                threadId: 'thread-1',
-                body: 'Saan po',
-                file: OutgoingFile(
-                  bytes: Uint8List(0),
-                  fileName: 'empty.pdf',
-                  mimeType: 'application/pdf',
-                ),
-              );
+          await OfficeMessagingApiRepository(
+            apiClient: _client(transport),
+          ).reply(
+            threadId: 'thread-1',
+            body: 'Saan po',
+            file: OutgoingFile(
+              bytes: Uint8List(0),
+              fileName: 'empty.pdf',
+              mimeType: 'application/pdf',
+            ),
+          );
 
       expect(transport.requests, isEmpty);
       expect(result, isA<Err<OfficeMessage>>());
+    });
+
+    test('has_more false stops the page even when a cursor is named', () async {
+      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+        _ok(<Object?>[_threadJson('thread-1')], cursor: 'unused', more: false),
+        _ok(<Object?>[_officeJson()]),
+      ]);
+      final Result<Paginated<OfficeThread>> result =
+          await OfficeMessagingApiRepository(
+            apiClient: _client(transport),
+          ).listThreads();
+      final Paginated<OfficeThread> page =
+          (result as Ok<Paginated<OfficeThread>>).value;
+      expect(page.hasMore, isFalse);
+      expect(page.nextCursor, 'unused');
+    });
+
+    test('a channel page larger than 50 is capped at 50', () async {
+      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+        _ok(<Object?>[_threadJson('thread-1')]),
+        _ok(<Object?>[_officeJson()]),
+      ]);
+      final ApiClient client = _client(transport)..pages = PagePolicy.adopt(80);
+      await OfficeMessagingApiRepository(apiClient: client).listThreads();
+      expect(transport.requests.first.query['limit'], '50');
+    });
+
+    test(
+      'an attachment over 8 MB or of the wrong type is not uploaded',
+      () async {
+        final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[]);
+        final OfficeMessagingApiRepository repository =
+            OfficeMessagingApiRepository(apiClient: _client(transport));
+        final Uint8List tooBig = Uint8List(UploadPolicy.fallback.maxBytes + 1);
+        tooBig[0] = 0xFF;
+        tooBig[1] = 0xD8;
+        tooBig[2] = 0xFF;
+
+        final Result<OfficeMessage> large = await repository.reply(
+          threadId: 'thread-1',
+          body: 'Saan po',
+          file: OutgoingFile(
+            bytes: tooBig,
+            fileName: 'scan.jpg',
+            mimeType: 'image/jpeg',
+          ),
+        );
+        final Result<OfficeMessage> kind = await repository.reply(
+          threadId: 'thread-1',
+          body: 'Saan po',
+          file: OutgoingFile(
+            bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+            fileName: 'notes.txt',
+            mimeType: 'text/plain',
+          ),
+        );
+
+        expect(transport.requests, isEmpty);
+        expect(large, isA<Err<OfficeMessage>>());
+        expect(kind, isA<Err<OfficeMessage>>());
+      },
+    );
+
+    test('reply failures keep the status and hide the operator text', () async {
+      final List<({int status, String code, Type type})> cases =
+          <({int status, String code, Type type})>[
+            (
+              status: 401,
+              code: 'UNAUTHENTICATED',
+              type: UnauthenticatedFailure,
+            ),
+            (status: 403, code: 'FORBIDDEN', type: ForbiddenFailure),
+            (status: 404, code: 'NOT_FOUND', type: NotFoundFailure),
+            (status: 409, code: 'CONFLICT', type: ConflictFailure),
+            (
+              status: 413,
+              code: 'PAYLOAD_TOO_LARGE',
+              type: UnacceptableUploadFailure,
+            ),
+            (status: 422, code: 'VALIDATION_FAILED', type: ValidationFailure),
+          ];
+      for (final ({int status, String code, Type type}) item in cases) {
+        final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+          _failure(item.status, item.code),
+        ]);
+        final Result<OfficeMessage> result = await OfficeMessagingApiRepository(
+          apiClient: _client(transport),
+        ).reply(threadId: 'thread-1', body: 'Saan po');
+        expect(result, isA<Err<OfficeMessage>>(), reason: '${item.status}');
+        final AppFailure failure = (result as Err<OfficeMessage>).failure;
+        expect(failure.runtimeType, item.type, reason: '${item.status}');
+        expect(failure.residentMessage, isNot(contains('operator-only')));
+      }
     });
 
     test('read and close post to the thread', () async {
@@ -306,6 +405,8 @@ void main() {
       final _Desk desk = _Desk();
       await _pumpThread(tester, desk);
 
+      await tester.tap(find.byKey(const Key('account-thread-menu')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('account-thread-close')));
       await tester.pumpAndSettle();
       await tester.tap(
@@ -319,6 +420,76 @@ void main() {
       expect(desk.closed, <String>['thread-1']);
       expect(find.text('This conversation is closed.'), findsOneWidget);
       expect(find.byKey(const Key('account-thread-field')), findsNothing);
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+    });
+
+    testWidgets('Close is hidden when the thread is already closed', (
+      tester,
+    ) async {
+      await _pumpThread(tester, _Desk(status: 'closed'));
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsNothing);
+      expect(find.text('This conversation is closed.'), findsOneWidget);
+    });
+
+    testWidgets('Close is hidden when the resident does not own the thread', (
+      tester,
+    ) async {
+      await _pumpThread(tester, _Desk(residentId: 'acct-other'));
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsOneWidget);
+    });
+
+    testWidgets('a failed load hides Close and the composer', (tester) async {
+      await _pumpThread(
+        tester,
+        _Desk(loadFailure: const NetworkFailure(debugMessage: 'operator-only')),
+      );
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsNothing);
+      expect(find.text('operator-only'), findsNothing);
+      expect(find.textContaining('offline'), findsOneWidget);
+    });
+
+    testWidgets('a 409 on reply marks the thread closed and hides Close', (
+      tester,
+    ) async {
+      final _Desk desk = _Desk(
+        replyFailure: const ConflictFailure(debugMessage: 'operator-only'),
+      );
+      await _pumpThread(tester, desk);
+      expect(find.byKey(const Key('account-thread-menu')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('account-thread-field')),
+        'Ulit',
+      );
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+
+      expect(find.text('operator-only'), findsNothing);
+      expect(find.textContaining('already submitted'), findsOneWidget);
+      expect(find.text('This conversation is closed.'), findsOneWidget);
+      expect(find.byKey(const Key('account-thread-menu')), findsNothing);
+      expect(find.byKey(const Key('account-thread-field')), findsNothing);
+    });
+
+    testWidgets('a second tap does not send twice', (tester) async {
+      final Completer<void> gate = Completer<void>();
+      final _Desk desk = _Desk(holdReply: gate);
+      await _pumpThread(tester, desk);
+      await tester.enterText(
+        find.byKey(const Key('account-thread-field')),
+        'Sandali',
+      );
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+      expect(desk.replyStarts, 1);
+      gate.complete();
+      await tester.pump();
+      expect(desk.replies, hasLength(1));
     });
 
     testWidgets('the inbox asks for the next cursor', (tester) async {
@@ -327,7 +498,7 @@ void main() {
       addTearDown(tester.view.reset);
 
       final _Desk desk = _Desk(hasMore: true);
-      final AppDependencies dependencies = await _dependencies(desk);
+      final AppDependencies dependencies = await _restored(desk);
       addTearDown(dependencies.dispose);
       await tester.pumpWidget(
         AppDependenciesScope(
@@ -341,11 +512,72 @@ void main() {
 
       expect(desk.threadCursors, contains('page-2'));
     });
+
+    testWidgets('has_more false does not ask for another page', (tester) async {
+      tester.view.physicalSize = const Size(300, 160);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+
+      final _Desk desk = _Desk();
+      final AppDependencies dependencies = await _restored(desk);
+      addTearDown(dependencies.dispose);
+      await tester.pumpWidget(
+        AppDependenciesScope(
+          dependencies: dependencies,
+          child: const MaterialApp(home: MessagesInboxScreen()),
+        ),
+      );
+      await tester.pump();
+      await tester.drag(find.byType(ListView), const Offset(0, -300));
+      await tester.pump();
+
+      expect(desk.threadCursors, <String?>[null]);
+    });
+
+    testWidgets(
+      'a failed next page can be retried and duplicates are dropped',
+      (tester) async {
+        tester.view.physicalSize = const Size(300, 160);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+
+        final _Desk desk = _Desk(
+          hasMore: true,
+          threadPageFailure: const NetworkFailure(
+            debugMessage: 'operator-only',
+          ),
+        );
+        final AppDependencies dependencies = await _restored(desk);
+        addTearDown(dependencies.dispose);
+        await tester.pumpWidget(
+          AppDependenciesScope(
+            dependencies: dependencies,
+            child: const MaterialApp(home: MessagesInboxScreen()),
+          ),
+        );
+        await tester.pump();
+        await tester.drag(find.byType(ListView), const Offset(0, -500));
+        await tester.pump();
+
+        expect(desk.threadCursors, contains('page-2'));
+        expect(find.text('operator-only'), findsNothing);
+        expect(find.byKey(const Key('inbox-load-more-retry')), findsOneWidget);
+        tester.view.physicalSize = const Size(400, 900);
+        await tester.pump();
+        desk.releaseNextPage = true;
+        await tester.tap(find.byKey(const Key('inbox-load-more-retry')));
+        await tester.pump();
+
+        expect(find.text('Assessor'), findsOneWidget);
+        expect(find.text('Treasury'), findsOneWidget);
+      },
+    );
   });
 }
 
 Map<String, Object?> _threadJson(String id) => <String, Object?>{
   'id': id,
+  'resident_id': 'acct-1',
   'office_id': 'office-1',
   'office_slug': 'treasury',
   'subject': 'Cedula',
@@ -384,6 +616,22 @@ Map<String, Object?> _envelope(String messageId) => <String, Object?>{
   'thread': _threadJson('thread-1'),
   'message': _messageJson(messageId),
 };
+
+Result<ApiHttpResponse> _failure(int status, String code) =>
+    Ok<ApiHttpResponse>(
+      ApiHttpResponse(
+        statusCode: status,
+        body: jsonEncode(<String, Object?>{
+          'error': <String, Object?>{
+            'code': code,
+            'message': 'operator-only text',
+            'details': <String, Object?>{},
+            'request_id': 'req-err',
+          },
+        }),
+        headers: const <String, String>{'x-request-id': 'req-err'},
+      ),
+    );
 
 Result<ApiHttpResponse> _ok(
   Object? data, {
@@ -438,8 +686,16 @@ class _Reply {
 }
 
 class _Desk implements OfficeMessagingRepository {
-  _Desk({List<OfficeMessage>? messages, this.hasMore = false})
-    : messages = messages ?? _note;
+  _Desk({
+    List<OfficeMessage>? messages,
+    this.hasMore = false,
+    this.residentId = 'acct-1',
+    this.status = 'open',
+    this.loadFailure,
+    this.threadPageFailure,
+    this.replyFailure,
+    this.holdReply,
+  }) : messages = messages ?? _note;
 
   static final List<OfficeMessage> _note = <OfficeMessage>[
     OfficeMessage(
@@ -453,11 +709,18 @@ class _Desk implements OfficeMessagingRepository {
 
   final List<OfficeMessage> messages;
   final bool hasMore;
+  final String residentId;
+  final String status;
+  final AppFailure? loadFailure;
+  final AppFailure? threadPageFailure;
+  final Completer<void>? holdReply;
+  bool releaseNextPage = false;
   final List<String> reads = <String>[];
   final List<String> closed = <String>[];
   final List<String?> threadCursors = <String?>[];
   final List<_Reply> replies = <_Reply>[];
   AppFailure? replyFailure;
+  int replyStarts = 0;
 
   OfficeThread get _thread => OfficeThread(
     id: 'thread-1',
@@ -466,7 +729,20 @@ class _Desk implements OfficeMessagingRepository {
     topic: 'Cedula',
     preview: 'A synthetic note.',
     updatedAt: DateTime.utc(2026, 10, 1),
+    status: status,
+    ownerAccountId: residentId,
+    sample: false,
+  );
+
+  OfficeThread get _next => OfficeThread(
+    id: 'thread-2',
+    officeId: 'office-2',
+    officeName: 'Assessor',
+    topic: 'Tax',
+    preview: 'Another synthetic note.',
+    updatedAt: DateTime.utc(2026, 10, 2),
     status: 'open',
+    ownerAccountId: residentId,
     sample: false,
   );
 
@@ -478,8 +754,12 @@ class _Desk implements OfficeMessagingRepository {
   }) async {
     threadCursors.add(cursor);
     if (cursor != null) {
+      final AppFailure? failure = threadPageFailure;
+      if (failure != null && !releaseNextPage) {
+        return Err<Paginated<OfficeThread>>(failure);
+      }
       return Ok<Paginated<OfficeThread>>(
-        Paginated<OfficeThread>.single(<OfficeThread>[_thread]),
+        Paginated<OfficeThread>.single(<OfficeThread>[_thread, _next]),
       );
     }
     return Ok<Paginated<OfficeThread>>(
@@ -496,8 +776,11 @@ class _Desk implements OfficeMessagingRepository {
   }
 
   @override
-  Future<Result<OfficeThread>> loadThread(String threadId) async =>
-      Ok<OfficeThread>(_thread);
+  Future<Result<OfficeThread>> loadThread(String threadId) async {
+    final AppFailure? failure = loadFailure;
+    if (failure != null) return Err<OfficeThread>(failure);
+    return Ok<OfficeThread>(_thread);
+  }
 
   @override
   Future<Result<Paginated<OfficeMessage>>> listMessages(
@@ -524,6 +807,9 @@ class _Desk implements OfficeMessagingRepository {
     String? mediaId,
     OutgoingFile? file,
   }) async {
+    replyStarts++;
+    final Completer<void>? hold = holdReply;
+    if (hold != null) await hold.future;
     final AppFailure? failure = replyFailure;
     if (failure != null) return Err<OfficeMessage>(failure);
     replies.add(_Reply(body: body, mediaId: mediaId, file: file));
@@ -575,10 +861,7 @@ Future<void> _pumpThread(
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  final AppDependencies dependencies = await _dependencies(
-    desk,
-    picker: picker,
-  );
+  final AppDependencies dependencies = await _restored(desk, picker: picker);
   addTearDown(dependencies.dispose);
   await tester.pumpWidget(
     AppDependenciesScope(
@@ -595,6 +878,16 @@ Future<AppDependencies> _dependencies(
 }) async {
   final InMemorySecretStore secrets = InMemorySecretStore();
   await secrets.write(LaunchController.welcomeCompletedKey, 'true');
+  final InMemorySessionStore sessionStore = InMemorySessionStore();
+  await sessionStore.write(
+    const StoredSession(
+      resident: ResidentSession(
+        accountId: 'acct-1',
+        accessLevel: AccessLevel.verified,
+      ),
+      accessToken: 'token',
+    ),
+  );
   final AppDependencies base = AppDependencies.build(
     config: AppConfig.from(
       rawEnvironment: 'dev',
@@ -602,7 +895,7 @@ Future<AppDependencies> _dependencies(
       isReleaseBuild: false,
     ),
     secrets: secrets,
-    sessionStore: InMemorySessionStore(),
+    sessionStore: sessionStore,
     localAuthenticator: const UnavailableLocalAuthenticator(),
   );
   return AppDependencies(
@@ -639,4 +932,13 @@ Future<AppDependencies> _dependencies(
     officeMessaging: desk,
     onDispose: base.onDispose,
   );
+}
+
+Future<AppDependencies> _restored(_Desk desk, {DocumentPicker? picker}) async {
+  final AppDependencies dependencies = await _dependencies(
+    desk,
+    picker: picker,
+  );
+  await dependencies.session.restore();
+  return dependencies;
 }

@@ -2,6 +2,8 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
+import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../domain/office_messaging_repository.dart';
 
@@ -219,11 +221,23 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     return trimmed;
   }
 
+  /// Refuses an attachment before any request. The ceiling and the types are
+  /// [UploadPolicy.fallback]: 8 MB, JPEG, PNG, or PDF, and the bytes must match.
   static Result<MultipartFile>? _upload(OutgoingFile? file) {
     if (file == null) return null;
-    if (file.bytes.isEmpty || file.mimeType.trim().isEmpty) {
+    const UploadPolicy policy = UploadPolicy.fallback;
+    final DocumentRejection? rejection = DocumentCapturePolicy.inspect(
+      CapturedDocument(
+        bytes: file.bytes,
+        fileName: file.fileName,
+        mimeType: file.mimeType.trim(),
+        source: DocumentSource.file,
+      ),
+      policy,
+    );
+    if (rejection != null) {
       return const Err<MultipartFile>(
-        ValidationFailure(debugMessage: 'The attachment could not be sent.'),
+        ValidationFailure(debugMessage: 'The attachment was not sent.'),
       );
     }
     final String name = file.fileName.trim();
@@ -324,6 +338,9 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       topic: subject is String ? subject : '',
       preview: preview is String ? preview : '',
       status: raw['status'] is String ? raw['status'] as String : 'open',
+      ownerAccountId: raw['resident_id'] is String
+          ? raw['resident_id'] as String
+          : '',
       unread: raw['unread'] == true,
       unreadCount: unreadCount is int ? unreadCount : 0,
       lastMessageAt: DateTime.tryParse(

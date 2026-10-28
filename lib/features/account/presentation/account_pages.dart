@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -13,6 +15,8 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -36,6 +40,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   bool _loadingMore = false;
   bool _hasMore = false;
   String? _cursor;
+  String? _pageError;
   List<OfficeThread> _threads = const <OfficeThread>[];
 
   @override
@@ -47,21 +52,24 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   }
 
   Future<void> _load() async {
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .listThreads();
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listThreads();
     if (!mounted) return;
     setState(() {
       _loading = false;
       _loadingMore = false;
       switch (result) {
         case Ok(:final value):
-          _threads = value.items;
+          _threads = _uniqueThreads(value.items);
           _remember(value);
+          _pageError = null;
           _failed = false;
         case Err():
           _threads = const <OfficeThread>[];
           _cursor = null;
           _hasMore = false;
+          _pageError = null;
           _failed = true;
       }
     });
@@ -70,17 +78,37 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   Future<void> _loadMore() async {
     final String? cursor = _cursor;
     if (_loading || _loadingMore || !_hasMore || cursor == null) return;
-    setState(() => _loadingMore = true);
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .listThreads(cursor: cursor);
+    setState(() {
+      _loadingMore = true;
+      _pageError = null;
+    });
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listThreads(cursor: cursor);
     if (!mounted) return;
     setState(() {
       _loadingMore = false;
       if (result case Ok(:final value)) {
-        _threads = <OfficeThread>[..._threads, ...value.items];
+        final Set<String> seen = _threads.map((OfficeThread t) => t.id).toSet();
+        _threads = <OfficeThread>[
+          ..._threads,
+          for (final OfficeThread thread in value.items)
+            if (seen.add(thread.id)) thread,
+        ];
         _remember(value);
+        _pageError = null;
+      } else if (result case Err(:final failure)) {
+        _pageError = failure.residentMessage;
       }
     });
+  }
+
+  List<OfficeThread> _uniqueThreads(List<OfficeThread> threads) {
+    final Set<String> seen = <String>{};
+    return <OfficeThread>[
+      for (final OfficeThread thread in threads)
+        if (seen.add(thread.id)) thread,
+    ];
   }
 
   void _remember(Paginated<OfficeThread> page) {
@@ -111,6 +139,8 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
       onBell: () => context.goNamed(AppRoute.notifications.routeName),
       onInboxRetry: _load,
       onInboxNearEnd: _loadMore,
+      inboxMoreMessage: _pageError,
+      onInboxMoreRetry: _pageError == null ? null : _loadMore,
       inbox: <AccountInboxRow>[
         for (final OfficeThread thread in _threads)
           AccountInboxRow(
@@ -147,13 +177,17 @@ class AccountThreadScreen extends StatefulWidget {
 class _AccountThreadScreenState extends State<AccountThreadScreen> {
   bool _started = false;
   bool _ready = false;
+  bool _failed = false;
   bool _closed = false;
+  bool _sending = false;
   bool _loadingMore = false;
   bool _hasMore = false;
   String? _cursor;
   String _title = 'Messages';
   String _subtitle = 'Bayan ng Taytay · Rizal';
+  String _ownerAccountId = '';
   String? _error;
+  String? _pageError;
   String? _mediaId;
   OutgoingFile? _file;
   List<OfficeMessage> _messages = const <OfficeMessage>[];
@@ -189,36 +223,67 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     if (!mounted) return;
     setState(() {
       _ready = true;
+      var failed = false;
+      String? error;
       if (thread case Ok(:final value)) {
         _title = value.officeName;
         _subtitle = value.topic.isEmpty
             ? 'Bayan ng Taytay · Rizal'
             : value.topic;
+        _ownerAccountId = value.ownerAccountId;
         _closed = value.status == 'closed';
+      } else if (thread case Err(:final failure)) {
+        failed = true;
+        error = failure.residentMessage;
       }
       if (messages case Ok(:final value)) {
-        _messages = value.items.reversed.toList(growable: false);
+        _messages = _uniqueMessages(value.items.reversed.toList());
         _remember(value);
+      } else if (messages case Err(:final failure)) {
+        failed = true;
+        error ??= failure.residentMessage;
       }
+      _failed = failed;
+      _error = error;
     });
   }
 
   Future<void> _loadOlder() async {
     final String? cursor = _cursor;
-    if (_loadingMore || !_hasMore || cursor == null) return;
-    setState(() => _loadingMore = true);
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .listMessages(widget.threadId, cursor: cursor);
+    if (_loadingMore || !_hasMore || cursor == null || _failed) return;
+    setState(() {
+      _loadingMore = true;
+      _pageError = null;
+    });
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listMessages(widget.threadId, cursor: cursor);
     if (!mounted) return;
     setState(() {
       _loadingMore = false;
       if (result case Ok(:final value)) {
-        _messages = <OfficeMessage>[...value.items.reversed, ..._messages];
+        final Set<String> seen = _messages
+            .map((OfficeMessage m) => m.id)
+            .toSet();
+        final List<OfficeMessage> older = <OfficeMessage>[
+          for (final OfficeMessage message in value.items.reversed)
+            if (seen.add(message.id)) message,
+        ];
+        _messages = <OfficeMessage>[...older, ..._messages];
         _remember(value);
+        _pageError = null;
       } else if (result case Err(:final failure)) {
-        _error = failure.residentMessage;
+        _pageError = failure.residentMessage;
       }
     });
+  }
+
+  List<OfficeMessage> _uniqueMessages(List<OfficeMessage> messages) {
+    final Set<String> seen = <String>{};
+    return <OfficeMessage>[
+      for (final OfficeMessage message in messages)
+        if (seen.add(message.id)) message,
+    ];
   }
 
   void _remember(Paginated<OfficeMessage> page) {
@@ -273,12 +338,13 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
   }
 
   Future<void> _send() async {
-    if (_closed) return;
+    if (_sending || _closed || _failed || !_ready) return;
     final String body = _composer.text.trim();
     if (body.isEmpty) {
       setState(() => _error = 'Write a message before sending.');
       return;
     }
+    _sending = true;
     final OutgoingFile? file = _file;
     final result = await AppDependencies.of(context).officeMessagingRepository
         .reply(
@@ -287,11 +353,19 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
           mediaId: file == null ? _mediaId : null,
           file: file,
         );
+    _sending = false;
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
         setState(() {
-          _messages = <OfficeMessage>[..._messages, value.asFromResident()];
+          final Set<String> seen = _messages
+              .map((OfficeMessage message) => message.id)
+              .toSet();
+          final OfficeMessage sent = value.asFromResident();
+          _messages = <OfficeMessage>[
+            ..._messages,
+            if (seen.add(sent.id)) sent,
+          ];
           _composer.clear();
           _file = null;
           _mediaId = null;
@@ -305,17 +379,35 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     }
   }
 
+  Future<void> _openMenu() async {
+    final String title = _title;
+    await AppSheet.show<void>(
+      context: context,
+      title: title,
+      builder: (BuildContext sheetContext) {
+        return _CloseConversationAction(
+          onTap: () {
+            Navigator.of(sheetContext).pop();
+            unawaited(_close());
+          },
+        );
+      },
+    );
+  }
+
   Future<void> _close() async {
     final bool? confirmed = await AppDialog.confirm(
       context: context,
       title: 'Close this conversation?',
-      message: 'The office will see it as closed. You can start a new message afterwards.',
+      message:
+          'The office will see it as closed. You can start a new message afterwards.',
       confirmLabel: 'Close conversation',
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
-    final result = await AppDependencies.of(context).officeMessagingRepository
-        .closeThread(widget.threadId);
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.closeThread(widget.threadId);
     if (!mounted) return;
     switch (result) {
       case Ok():
@@ -339,8 +431,18 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     final bool mock = dependencies.config.usesMockData;
     final String? accountId =
         dependencies.session.state.residentOrNull?.accountId;
-    final String? label =
-        _file?.fileName ?? (_mediaId == null ? null : 'Attachment');
+    final bool ownsOpenThread =
+        _ready &&
+        !_failed &&
+        !_closed &&
+        accountId != null &&
+        accountId.isNotEmpty &&
+        _ownerAccountId.isNotEmpty &&
+        _ownerAccountId == accountId;
+    final bool showComposer = _ready && !_failed && !_closed;
+    final String? label = showComposer
+        ? (_file?.fileName ?? (_mediaId == null ? null : 'Attachment'))
+        : null;
     return Scaffold(
       backgroundColor: BrandColors.surface,
       body: Column(
@@ -373,20 +475,23 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
                   ),
               ],
               dayLabel: '',
-              composer: _closed ? null : _composer,
-              onAttach: _closed ? null : _attach,
-              onSend: _closed ? null : _send,
-              onClose: _ready && !_closed ? _close : null,
-              threadClosed: _closed,
-              attachmentLabel: _closed ? null : label,
+              composer: showComposer ? _composer : null,
+              onAttach: showComposer ? _attach : null,
+              onSend: showComposer ? _send : null,
+              onThreadMenu: ownsOpenThread ? _openMenu : null,
+              threadClosed: _ready && _closed && !_failed,
+              hideComposer: !showComposer && !(_ready && _closed && !_failed),
+              attachmentLabel: label,
               onClearAttachment: label == null
                   ? null
                   : () => setState(() {
                       _file = null;
                       _mediaId = null;
                     }),
-              onUseMedia: _closed ? null : _useMedia,
-              onThreadNearStart: _loadOlder,
+              onUseMedia: showComposer ? _useMedia : null,
+              onThreadNearStart: _ready && !_failed ? _loadOlder : null,
+              threadMoreMessage: _pageError,
+              onThreadMoreRetry: _pageError == null ? null : _loadOlder,
             ),
           ),
           if (_error != null)
@@ -403,6 +508,51 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// One destructive row in the thread menu.
+class _CloseConversationAction extends StatelessWidget {
+  const _CloseConversationAction({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Close conversation',
+      child: GestureDetector(
+        key: const Key('account-thread-close'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: const SizedBox(
+          height: 48,
+          child: Row(
+            children: <Widget>[
+              TaytayIcon(
+                icon: TaytayIcons.circleX,
+                size: 20,
+                color: BrandColors.danger,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Close conversation',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: BrandColors.danger,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -599,8 +749,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   }
 
   Future<void> _load() async {
-    final result = await AppDependencies.of(context).notificationRepository
-        .loadPreferences();
+    final result = await AppDependencies.of(
+      context,
+    ).notificationRepository.loadPreferences();
     if (!mounted) return;
     if (result case Ok(:final value)) {
       setState(() {
@@ -703,8 +854,9 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 }
 
 Future<void> _changePassword(BuildContext context) async {
-  final AccountPasswordClient client = AppDependencies.of(context)
-      .accountPasswordClient;
+  final AccountPasswordClient client = AppDependencies.of(
+    context,
+  ).accountPasswordClient;
   await showDialog<void>(
     context: context,
     builder: (BuildContext dialogContext) {

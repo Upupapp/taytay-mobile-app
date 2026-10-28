@@ -1316,6 +1316,7 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
     unreadCount: 1,
     lastMessageAt: mockNow,
     createdAt: mockNow,
+    ownerAccountId: 'acct-sample-juana',
   );
 
   @override

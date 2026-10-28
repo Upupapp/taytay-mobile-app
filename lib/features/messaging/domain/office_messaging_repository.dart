@@ -22,6 +22,7 @@ class OfficeThread {
     this.unreadCount = 0,
     this.lastMessageAt,
     this.createdAt,
+    this.ownerAccountId = '',
     this.sample = true,
   });
 
@@ -42,6 +43,10 @@ class OfficeThread {
   final DateTime? lastMessageAt;
   final DateTime? createdAt;
 
+  /// The thread's `resident_id`, compared with the signed-in account before
+  /// Close is offered. Absent from [toString].
+  final String ownerAccountId;
+
   /// True while the fact is a fixture, not an LGU record.
   final bool sample;
 
@@ -59,6 +64,7 @@ class OfficeThread {
     unreadCount: unreadCount,
     lastMessageAt: lastMessageAt,
     createdAt: createdAt,
+    ownerAccountId: ownerAccountId,
     sample: sample,
   );
 

@@ -181,12 +181,17 @@ class AccountCanvas extends StatelessWidget {
     this.onInboxNearEnd,
     this.composer,
     this.onAttach,
-    this.onClose,
+    this.onThreadMenu,
     this.threadClosed = false,
+    this.hideComposer = false,
     this.attachmentLabel,
     this.onClearAttachment,
     this.onUseMedia,
     this.onThreadNearStart,
+    this.inboxMoreMessage,
+    this.onInboxMoreRetry,
+    this.threadMoreMessage,
+    this.onThreadMoreRetry,
     this.credits = PhotoCredits.all,
     super.key,
   });
@@ -239,12 +244,23 @@ class AccountCanvas extends StatelessWidget {
   final VoidCallback? onInboxNearEnd;
   final TextEditingController? composer;
   final VoidCallback? onAttach;
-  final VoidCallback? onClose;
+  final VoidCallback? onThreadMenu;
   final bool threadClosed;
+
+  /// The first load failed. The live thread omits the composer.
+  final bool hideComposer;
   final String? attachmentLabel;
   final VoidCallback? onClearAttachment;
   final ValueChanged<String>? onUseMedia;
   final VoidCallback? onThreadNearStart;
+
+  /// Shown under the inbox list when the next page failed.
+  final String? inboxMoreMessage;
+  final VoidCallback? onInboxMoreRetry;
+
+  /// Shown above the messages when an older page failed.
+  final String? threadMoreMessage;
+  final VoidCallback? onThreadMoreRetry;
   final List<PhotoCredit> credits;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
@@ -295,6 +311,7 @@ class AccountCanvas extends StatelessWidget {
         showBell: showBell,
         onBack: onBack,
         onBell: onBell,
+        onMenu: onThreadMenu,
       );
     }
     return _RootHeader(title: title, subtitle: subtitle, onBell: onBell);
@@ -315,6 +332,8 @@ class AccountCanvas extends StatelessWidget {
         rows: inbox,
         showSampleNote: showSampleNote,
         onNearEnd: onInboxNearEnd,
+        moreMessage: inboxMoreMessage,
+        onMoreRetry: onInboxMoreRetry,
       ),
       AccountFrame.inboxEmpty => _EmptyInbox(onMessageOffice: onMessageOffice),
       AccountFrame.inboxError => _InboxError(onRetry: onInboxRetry),
@@ -341,12 +360,14 @@ class AccountCanvas extends StatelessWidget {
         onSend: onSend,
         composer: composer,
         onAttach: onAttach,
-        onClose: onClose,
         closed: threadClosed,
+        hideComposer: hideComposer,
         attachmentLabel: attachmentLabel,
         onClearAttachment: onClearAttachment,
         onUseMedia: onUseMedia,
         onNearStart: onThreadNearStart,
+        moreMessage: threadMoreMessage,
+        onMoreRetry: onThreadMoreRetry,
       ),
       AccountFrame.privacy =>
         noticeMarkdown != null
@@ -606,6 +627,7 @@ class _BackHeader extends StatelessWidget {
     required this.showBell,
     this.onBack,
     this.onBell,
+    this.onMenu,
   });
 
   final String title;
@@ -614,6 +636,7 @@ class _BackHeader extends StatelessWidget {
   final bool showBell;
   final VoidCallback? onBack;
   final VoidCallback? onBell;
+  final VoidCallback? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -654,6 +677,9 @@ class _BackHeader extends StatelessWidget {
             if (showBell) ...<Widget>[
               const SizedBox(width: 11),
               _Bell(onTap: onBell),
+            ] else if (onMenu != null) ...<Widget>[
+              const SizedBox(width: 11),
+              _ThreadMenu(onTap: onMenu!),
             ],
           ],
         ),
@@ -988,11 +1014,15 @@ class _InboxBody extends StatelessWidget {
     required this.rows,
     required this.showSampleNote,
     this.onNearEnd,
+    this.moreMessage,
+    this.onMoreRetry,
   });
 
   final List<AccountInboxRow> rows;
   final bool showSampleNote;
   final VoidCallback? onNearEnd;
+  final String? moreMessage;
+  final VoidCallback? onMoreRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -1017,6 +1047,12 @@ class _InboxBody extends StatelessWidget {
             ],
           ),
         ),
+        if (moreMessage != null && onMoreRetry != null)
+          _LoadMoreRetry(
+            message: moreMessage!,
+            onRetry: onMoreRetry!,
+            retryKey: const Key('inbox-load-more-retry'),
+          ),
         if (showSampleNote) ...<Widget>[
           const SizedBox(height: 14),
           const Center(
@@ -1505,7 +1541,8 @@ class _AboutBody extends StatelessWidget {
               ),
               const SizedBox(height: S8Space.titleGap),
               const _CssLines(
-                text: 'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
+                text:
+                    'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
                 style: _version,
                 step: 13 * S8Space.versionLineHeight,
                 align: TextAlign.center,
@@ -1968,12 +2005,14 @@ class _ThreadBody extends StatelessWidget {
     this.onSend,
     this.composer,
     this.onAttach,
-    this.onClose,
     this.closed = false,
+    this.hideComposer = false,
     this.attachmentLabel,
     this.onClearAttachment,
     this.onUseMedia,
     this.onNearStart,
+    this.moreMessage,
+    this.onMoreRetry,
   });
 
   final List<AccountBubble> bubbles;
@@ -1982,21 +2021,24 @@ class _ThreadBody extends StatelessWidget {
   final VoidCallback? onSend;
   final TextEditingController? composer;
   final VoidCallback? onAttach;
-  final VoidCallback? onClose;
   final bool closed;
+  final bool hideComposer;
   final String? attachmentLabel;
   final VoidCallback? onClearAttachment;
   final ValueChanged<String>? onUseMedia;
   final VoidCallback? onNearStart;
+  final String? moreMessage;
+  final VoidCallback? onMoreRetry;
 
   bool get _live =>
+      hideComposer ||
       composer != null ||
       onAttach != null ||
-      onClose != null ||
       onNearStart != null ||
       onUseMedia != null ||
       closed ||
-      attachmentLabel != null;
+      attachmentLabel != null ||
+      moreMessage != null;
 
   @override
   Widget build(BuildContext context) {
@@ -2075,6 +2117,12 @@ class _ThreadBody extends StatelessWidget {
         S8Space.labelGap,
       ),
       children: <Widget>[
+        if (moreMessage != null && onMoreRetry != null)
+          _LoadMoreRetry(
+            message: moreMessage!,
+            onRetry: onMoreRetry!,
+            retryKey: const Key('thread-load-more-retry'),
+          ),
         if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
         if (dayLabel.isNotEmpty) const SizedBox(height: S8Space.dayGap),
         for (final AccountBubble bubble in bubbles)
@@ -2083,7 +2131,6 @@ class _ThreadBody extends StatelessWidget {
       ],
     );
     final VoidCallback? onNearStart = this.onNearStart;
-    final VoidCallback? onClose = this.onClose;
     return Column(
       children: <Widget>[
         Expanded(
@@ -2099,19 +2146,15 @@ class _ThreadBody extends StatelessWidget {
                   child: transcript,
                 ),
         ),
-        if (onClose != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-            child: _CloseConversation(onTap: onClose),
+        if (!hideComposer)
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: BrandColors.cardLine)),
+            ),
+            child: closed ? const _ClosedLine() : _liveComposer(),
           ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: BrandColors.cardLine)),
-          ),
-          child: closed ? const _ClosedLine() : _liveComposer(),
-        ),
       ],
     );
   }
@@ -2747,39 +2790,110 @@ class _ClosedLine extends StatelessWidget {
   }
 }
 
-class _CloseConversation extends StatelessWidget {
-  const _CloseConversation({required this.onTap});
+class _ThreadMenu extends StatelessWidget {
+  const _ThreadMenu({required this.onTap});
 
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Semantics(
-        button: true,
-        label: 'Close conversation',
-        child: GestureDetector(
-          key: const Key('account-thread-close'),
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: const SizedBox(
-            height: 48,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Close conversation',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
+    // 44 dp disc, 48 dp hit. The specimen header does not build this.
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: OverflowBox(
+        maxWidth: 48,
+        maxHeight: 48,
+        child: Semantics(
+          button: true,
+          label: 'More',
+          child: GestureDetector(
+            key: const Key('account-thread-menu'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0x24FFFFFF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: TaytayIcon(
+                      icon: TaytayIcons.moreVertical,
+                      size: 20,
+                      color: Colors.white,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreRetry extends StatelessWidget {
+  const _LoadMoreRetry({
+    required this.message,
+    required this.onRetry,
+    required this.retryKey,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final Key retryKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: <Widget>[
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: BrandColors.textSecondary,
+              decoration: TextDecoration.none,
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'Retry',
+            child: GestureDetector(
+              key: retryKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: onRetry,
+              child: const SizedBox(
+                height: 48,
+                child: Center(
+                  child: Text(
+                    'Retry',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: BrandColors.taytayBlue,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
