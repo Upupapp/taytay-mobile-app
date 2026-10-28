@@ -15,7 +15,7 @@ import 'assistance_program.dart';
 /// | | route | auth | status |
 /// | --- | --- | --- | --- |
 /// | Service catalogue | `GET services` | public | implemented |
-/// | Programmes | `GET programs` · `GET programs/{program}` | **public** | **implemented** |
+/// | Programmes | `GET services` · `GET services/{slug}` | **public** | **implemented** |
 ///
 /// There is no `auth:sanctum` on either programme route and no `status` query
 /// parameter anywhere in the contract. The consequence was not a failed
@@ -31,10 +31,11 @@ import 'assistance_program.dart';
 /// draft, a suspended or a retired programme, and no caller can be talked into
 /// surfacing one.
 abstract interface class ProgramRepository {
-  /// Published programmes, in the citizen projection.
+  /// Published Tulong services. [office] is `GET /services?office={slug}`.
   Future<Result<Paginated<AssistanceProgram>>> listActivePrograms({
     int page,
     int perPage,
+    String? office,
   });
 
   /// One programme.

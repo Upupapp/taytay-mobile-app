@@ -707,7 +707,11 @@ class MockProgramRepository implements ProgramRepository {
   Future<Result<Paginated<AssistanceProgram>>> listActivePrograms({
     int page = 1,
     int perPage = 15,
+    String? office,
   }) {
+    if (office != null && office.isNotEmpty && office != 'mswdo') {
+      return _gate.respond(_page(const <AssistanceProgram>[]));
+    }
     return _gate.respond(_page(<AssistanceProgram>[_program('prog-sample-1')]));
   }
 
@@ -1257,7 +1261,7 @@ class MockAccountControlsRepository implements AccountControlsRepository {
 
   @override
   Future<Result<AccountControls>> loadControls() {
-    return _gate.respond(const AccountControls());
+    return _gate.respond(const AccountControls(canWithdrawConsent: true));
   }
 
   @override
@@ -1268,6 +1272,7 @@ class MockAccountControlsRepository implements AccountControlsRepository {
         label: 'Privacy notice',
         statement: 'SAMPLE consent for Juana Dela Cruz.',
         grantedAt: mockNow,
+        isWithdrawable: true,
       ),
     ]);
   }

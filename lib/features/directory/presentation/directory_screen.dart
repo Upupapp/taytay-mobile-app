@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -13,6 +14,8 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
+import '../../tulong/domain/social_service.dart';
+import '../data/office_api_repository.dart';
 import '../data/office_catalogue.dart';
 import '../domain/office.dart';
 import 'directory_canvas.dart';
@@ -109,6 +112,7 @@ class OfficeDetailScreen extends StatefulWidget {
 
 class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
   Office? _office;
+  Uint8List? _heroBytes;
   bool _started = false;
 
   @override
@@ -116,14 +120,59 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _load();
+  }
+
+  Future<void> _load() async {
     final AppDependencies dependencies = AppDependencies.of(context);
-    OfficeCatalogue.byId(
+    final bool mock = dependencies.config.usesMockData;
+    final Office? office = await OfficeCatalogue.byId(
       widget.officeId,
-      mock: dependencies.config.usesMockData,
+      mock: mock,
       api: dependencies.apiClient,
-    ).then((Office? office) {
-      if (mounted) setState(() => _office = office);
+    );
+    if (!mounted) return;
+    if (office == null || mock) {
+      setState(() => _office = office);
+      return;
+    }
+    final List<SocialService> catalogue = await _catalogue(
+      dependencies,
+      office.id,
+    );
+    Uint8List? hero;
+    if (office.heroUrl != null) {
+      final Result<Uint8List> bytes = await OfficeApiRepository(
+        apiClient: dependencies.apiClient,
+      ).loadHero(office.id);
+      if (bytes case Ok(:final value) when value.isNotEmpty) hero = value;
+    }
+    if (!mounted) return;
+    final List<OfficeServiceLine> lines = office.linesWithCatalogue(
+      <({String label, String slug})>[
+        for (final SocialService service in catalogue)
+          (label: service.name, slug: service.slug),
+      ],
+    );
+    setState(() {
+      _heroBytes = hero;
+      _office = identical(lines, office.services)
+          ? office
+          : office.withServices(lines);
     });
+  }
+
+  Future<List<SocialService>> _catalogue(
+    AppDependencies dependencies,
+    String slug,
+  ) async {
+    final result = await dependencies.socialServiceRepository.listServices(
+      office: slug,
+    );
+    return switch (result) {
+      Ok(:final value) => value.items,
+      Err() => const <SocialService>[],
+    };
   }
 
   Future<void> _message() async {
@@ -178,11 +227,18 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
         frame: DirectoryFrame.detail,
         offices: const <Office>[],
         office: _office,
+        heroBytes: _heroBytes,
         onBack: () => _back(context),
         onCall: _dial,
         onDirections: _directions,
         onMessage: _message,
         onApp: _dial,
+        onServiceLine: (String slug) {
+          context.pushNamed(
+            AppRoute.programDetail.routeName,
+            pathParameters: <String, String>{'programId': slug},
+          );
+        },
       ),
     );
   }

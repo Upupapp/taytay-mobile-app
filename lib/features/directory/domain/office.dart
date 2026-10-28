@@ -42,10 +42,18 @@ class OfficeFact {
 /// A service the office offers. Information only.
 @immutable
 class OfficeServiceLine {
-  const OfficeServiceLine({required this.label, this.sample = false});
+  const OfficeServiceLine({
+    required this.label,
+    this.sample = false,
+    this.serviceSlug,
+  });
 
   final String label;
   final bool sample;
+
+  /// Tulong slug, when this line came from `GET /services?office=`.
+  /// Directory lines from `service_lines` leave this null.
+  final String? serviceSlug;
 }
 
 /// One municipal office, as public information for residents.
@@ -86,6 +94,7 @@ class Office {
     this.draft,
     this.savedName,
     this.bannerMediaId,
+    this.heroUrl,
     this.latitude,
     this.longitude,
   });
@@ -135,8 +144,12 @@ class Office {
   final String? savedName;
 
   /// `banner_media_id` from `GET /offices`. Not a file the app can paint.
-  /// The hero stays the bundled photograph until media bytes exist.
   final String? bannerMediaId;
+
+  /// `hero_url` from `GET /offices`. Present when a banner is stored.
+  /// The bytes are `GET /offices/{slug}/hero` on the configured API host.
+  /// Null keeps [heroAsset], which for a live office is the bundled hall.
+  final String? heroUrl;
 
   /// Office pin from the contract. Null when the office has not published one.
   final double? latitude;
@@ -144,6 +157,65 @@ class Office {
 
   /// The id sent as `office_id`. A live office sends its UUID.
   String get wireId => serverId.isNotEmpty ? serverId : id;
+
+  /// Published directory lines, then Tulong names that are not already listed.
+  List<OfficeServiceLine> linesWithCatalogue(
+    List<({String label, String slug})> catalogue,
+  ) {
+    if (catalogue.isEmpty) return services;
+    final Set<String> seen = <String>{
+      for (final OfficeServiceLine line in services)
+        line.label.trim().toLowerCase(),
+    };
+    final List<OfficeServiceLine> extra = <OfficeServiceLine>[];
+    for (final ({String label, String slug}) item in catalogue) {
+      final String label = item.label.trim();
+      if (label.isEmpty) continue;
+      if (!seen.add(label.toLowerCase())) continue;
+      extra.add(OfficeServiceLine(label: label, serviceSlug: item.slug));
+    }
+    if (extra.isEmpty) return services;
+    return <OfficeServiceLine>[...services, ...extra];
+  }
+
+  Office withServices(List<OfficeServiceLine> services) {
+    return Office(
+      id: id,
+      serverId: serverId,
+      shortName: shortName,
+      name: name,
+      listName: listName,
+      category: category,
+      listLine: listLine,
+      icon: icon,
+      keywords: keywords,
+      searchLine: searchLine,
+      eyebrow: eyebrow,
+      summary: summary,
+      heroAsset: heroAsset,
+      heroFocus: heroFocus,
+      insetAsset: insetAsset,
+      representative: representative,
+      credit: credit,
+      messageable: messageable,
+      callLabel: callLabel,
+      callIsEmergency: callIsEmergency,
+      phone: phone,
+      directionsQuery: directionsQuery,
+      facts: facts,
+      services: services,
+      privacy: privacy,
+      composeTo: composeTo,
+      topic: topic,
+      topics: topics,
+      draft: draft,
+      savedName: savedName,
+      bannerMediaId: bannerMediaId,
+      heroUrl: heroUrl,
+      latitude: latitude,
+      longitude: longitude,
+    );
+  }
 
   bool matches(String query, String chip) {
     if (chip != 'All' && category != chip) return false;

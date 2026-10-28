@@ -13,11 +13,13 @@ abstract interface class SocialServiceRepository {
   /// [featured] sends `featured=true`. That list is the featured services,
   /// including ones hidden from the catalogue. The ordinary list omits
   /// `hidden_from_list`.
+  /// [office] is `GET /services?office={slug}`. Empty is omitted.
   Future<Result<Paginated<SocialService>>> listServices({
     String? query,
     int? limit,
     String? cursor,
     bool featured = false,
+    String? office,
   });
 
   Future<Result<SocialService>> loadService(String slug);

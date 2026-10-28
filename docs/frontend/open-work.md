@@ -67,7 +67,7 @@ ahead of the pin, and moving the pin needs the backend repository to be still.
 > `test/integration/backend_routes_test.dart` asserts they match the manifest — derived there, not
 > transcribed here. If the manifest changes and this line does not, the suite goes red.
 
-**C-09, current: 46 declared routes, 46 on the Node contract, 0 recorded ahead.**
+**C-09, current: 48 declared routes, 48 on the Node contract, 0 recorded ahead.**
 
 ---
 

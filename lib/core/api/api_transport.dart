@@ -74,12 +74,16 @@ class ApiHttpResponse {
     required this.statusCode,
     required this.body,
     this.headers = const <String, String>{},
+    this.bytes,
   });
 
   final int statusCode;
 
   /// Raw response body text. May be empty (`204 No Content`).
   final String body;
+
+  /// Unmodified body bytes. Image routes read this. JSON routes keep [body].
+  final Uint8List? bytes;
 
   /// Lower-cased response headers.
   final Map<String, String> headers;

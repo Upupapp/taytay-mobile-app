@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
@@ -6,11 +8,11 @@ import '../domain/office.dart';
 
 /// Public office pages on `GET /offices` and `GET /offices/{slug}`.
 ///
-/// The list is unauthenticated. A row carries the contract fields only:
-/// name, slug, short_name, description, head, hours, phone, email, address,
-/// category. `short_name` is a string or null. Photographs, service lines
-/// and the SAMPLE tag stay on the dev-mock fixture, because this response
-/// does not publish them.
+/// The list is unauthenticated. A row carries the contract fields, including
+/// `service_lines` (an empty list when the office publishes none) and
+/// `hero_url`. The hero bytes are `GET /offices/{slug}/hero`, anonymous, on
+/// the configured API host. A missing URL or a failed read keeps the bundled
+/// hall. A 401 on that read does not end the session.
 class OfficeApiRepository {
   const OfficeApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -58,6 +60,22 @@ class OfficeApiRepository {
     return response.map((ApiEnvelope<Office?> envelope) => envelope.data);
   }
 
+  /// Public banner bytes. No `Authorization` header. A 401 is returned and
+  /// does not sign the resident out.
+  Future<Result<Uint8List>> loadHero(String slug) async {
+    final Result<ApiEnvelope<Uint8List>> response = await _apiClient
+        .send<Uint8List>(
+          method: HttpMethod.get,
+          path: 'offices/$slug/hero',
+          authenticated: false,
+          binary: true,
+          endSessionOnUnauthorized: false,
+          accept: 'image/jpeg, image/png, image/webp',
+          decode: (Object? data) => data is Uint8List ? data : Uint8List(0),
+        );
+    return response.map((ApiEnvelope<Uint8List> envelope) => envelope.data);
+  }
+
   static List<String> _chips(List<Office> offices) {
     final List<String> categories = <String>[];
     for (final Office office in offices) {
@@ -98,8 +116,6 @@ class OfficeApiRepository {
     final String head = _text(json['head']);
     final String category = _text(json['category']);
     final String? shortName = _optional(json['short_name']);
-    // `banner_media_id` is an id, not bytes. The hall photograph stays until
-    // a public media route exists.
     return Office(
       id: slug,
       serverId: id,
@@ -142,11 +158,22 @@ class OfficeApiRepository {
         if (head.isNotEmpty)
           OfficeFact(label: 'Head', value: head, icon: OfficeFactIcon.pin),
       ],
-      services: const <OfficeServiceLine>[],
+      services: _serviceLines(json['service_lines']),
       bannerMediaId: _optional(json['banner_media_id']),
+      heroUrl: _optional(json['hero_url']),
       latitude: _coord(json['latitude']),
       longitude: _coord(json['longitude']),
     );
+  }
+
+  /// Missing, null, or a non-list is an empty directory. Strings only.
+  static List<OfficeServiceLine> _serviceLines(Object? raw) {
+    if (raw is! List) return const <OfficeServiceLine>[];
+    return <OfficeServiceLine>[
+      for (final Object? item in raw)
+        if (item is String && item.trim().isNotEmpty)
+          OfficeServiceLine(label: item.trim()),
+    ];
   }
 
   static double? _coord(Object? value) {

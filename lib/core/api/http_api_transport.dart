@@ -130,14 +130,14 @@ class HttpApiTransport implements ApiTransport {
       }
 
       final streamed = await _client.send(outgoing).timeout(timeout);
-      final response = await http.Response.fromStream(
-        streamed,
-      ).timeout(timeout);
+      final response = await http.Response.fromStream(streamed)
+          .timeout(timeout);
 
       return Ok<ApiHttpResponse>(
         ApiHttpResponse(
           statusCode: response.statusCode,
-          body: response.body,
+          body: _textBody(response),
+          bytes: response.bodyBytes,
           // Header names are lower-cased by `package:http`; ApiHttpResponse
           // reads them that way.
           headers: response.headers,
@@ -171,6 +171,18 @@ class HttpApiTransport implements ApiTransport {
           debugMessage: 'Unhandled transport error.',
         ),
       );
+    }
+  }
+
+  /// Image bytes are not UTF-8. Reading the decoded text body throws, and a
+  /// thrown read would hide a banner the screen can still paint from the bytes.
+  static String _textBody(http.Response response) {
+    try {
+      return response.body;
+    } on FormatException {
+      return '';
+    } on Object {
+      return '';
     }
   }
 

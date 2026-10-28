@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/brand_assets.dart';
@@ -50,6 +52,8 @@ class DirectoryCanvas extends StatelessWidget {
     this.messageController,
     this.selectedTopic,
     this.onTopic,
+    this.heroBytes,
+    this.onServiceLine,
     super.key,
   });
 
@@ -80,6 +84,12 @@ class DirectoryCanvas extends StatelessWidget {
   final TextEditingController? messageController;
   final String? selectedTopic;
   final VoidCallback? onTopic;
+
+  /// Banner bytes from `GET /offices/{slug}/hero`. Null paints [Office.heroAsset].
+  final Uint8List? heroBytes;
+
+  /// Opens a Tulong page for a catalogue line. Directory lines have no slug.
+  final ValueChanged<String>? onServiceLine;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
   static const Color _searchBorder = Color(0xFFE1E6F0);
@@ -175,10 +185,12 @@ class DirectoryCanvas extends StatelessWidget {
       ),
       DirectoryFrame.detail when current != null => _DetailBody(
         office: current,
+        heroBytes: heroBytes,
         onCall: onCall,
         onDirections: onDirections,
         onMessage: onMessage,
         onApp: onApp,
+        onServiceLine: onServiceLine,
       ),
       DirectoryFrame.compose when current != null => _ComposeBody(
         office: current,
@@ -749,24 +761,28 @@ class _OfflineBody extends StatelessWidget {
 class _DetailBody extends StatelessWidget {
   const _DetailBody({
     required this.office,
+    this.heroBytes,
     this.onCall,
     this.onDirections,
     this.onMessage,
     this.onApp,
+    this.onServiceLine,
   });
 
   final Office office;
+  final Uint8List? heroBytes;
   final VoidCallback? onCall;
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
   final VoidCallback? onApp;
+  final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        _Hero(office: office),
+        _Hero(office: office, heroBytes: heroBytes),
         const SizedBox(height: 4.33),
         Text(office.credit, style: _credit),
         const SizedBox(height: 12.67),
@@ -812,16 +828,25 @@ class _DetailBody extends StatelessWidget {
         const SizedBox(height: 10),
         _FactCard(office: office),
         const SizedBox(height: 11.67),
-        _ServiceCard(office: office),
+        _ServiceCard(office: office, onServiceLine: onServiceLine),
       ],
     );
   }
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.office});
+  const _Hero({required this.office, this.heroBytes});
 
   final Office office;
+  final Uint8List? heroBytes;
+
+  Widget _hall() {
+    return Image.asset(
+      office.heroAsset,
+      fit: BoxFit.cover,
+      alignment: Alignment(0, office.heroFocus * 2 - 1),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -843,11 +868,18 @@ class _Hero extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              Image.asset(
-                office.heroAsset,
-                fit: BoxFit.cover,
-                alignment: Alignment(0, office.heroFocus * 2 - 1),
-              ),
+              heroBytes == null
+                  ? _hall()
+                  : Image.memory(
+                      heroBytes!,
+                      fit: BoxFit.cover,
+                      alignment: Alignment(0, office.heroFocus * 2 - 1),
+                      errorBuilder: (
+                        BuildContext context,
+                        Object error,
+                        StackTrace? stackTrace,
+                      ) => _hall(),
+                    ),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -1051,9 +1083,10 @@ class _FactRow extends StatelessWidget {
 }
 
 class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({required this.office});
+  const _ServiceCard({required this.office, this.onServiceLine});
 
   final Office office;
+  final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
@@ -1067,37 +1100,44 @@ class _ServiceCard extends StatelessWidget {
           const Text('Services', style: _cardTitle),
           const SizedBox(height: 6),
           for (final OfficeServiceLine line in office.services)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 3, 0, 3),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Padding(
-                    padding: EdgeInsets.only(top: 7, right: 8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: DirectoryCanvas._bodyInk,
-                        shape: BoxShape.circle,
-                      ),
-                      child: SizedBox(width: 4, height: 4),
-                    ),
-                  ),
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      children: <Widget>[
-                        Text(line.label, style: _service),
-                        if (line.sample) const SampleTag(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _serviceRow(line),
         ],
       ),
     );
+  }
+
+  Widget _serviceRow(OfficeServiceLine line) {
+    final String? slug = line.serviceSlug;
+    final Widget row = Padding(
+      padding: const EdgeInsets.fromLTRB(18, 3, 0, 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.only(top: 7, right: 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: DirectoryCanvas._bodyInk,
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox(width: 4, height: 4),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: <Widget>[
+                Text(line.label, style: _service),
+                if (line.sample) const SampleTag(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (slug == null || slug.isEmpty || onServiceLine == null) return row;
+    return GestureDetector(onTap: () => onServiceLine!(slug), child: row);
   }
 }
 
@@ -1306,8 +1346,7 @@ class _SentBody extends StatelessWidget {
                       ),
                     ),
                     TextSpan(
-                      text:
-                          ". We'll notify you, and the conversation is saved in My Account › Messages.",
+                      text: ". We'll notify you, and the conversation is saved in My Account › Messages.",
                     ),
                   ],
                 ),
