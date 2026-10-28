@@ -254,7 +254,6 @@ void main() {
       await openDigitalIdEntry(tester);
 
       expect(find.text('My Taytay ID'), findsOneWidget);
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
     });
 
     testWidgets('signing out moves the resident off a protected screen', (
@@ -314,13 +313,13 @@ void main() {
       await _settle(tester);
 
       await openDigitalIdEntry(tester);
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
+      expect(find.text('My Taytay ID'), findsOneWidget);
 
       // Simulates a 401 arriving from any in-flight request.
       await dependencies.session.handleUnauthenticated();
       await tester.pumpAndSettle();
 
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsNothing);
+      expect(find.text('My Taytay ID'), findsNothing);
       // The resident is told why, rather than silently finding a sign-in form.
       expect(
         find.textContaining('Your session ended for your security'),

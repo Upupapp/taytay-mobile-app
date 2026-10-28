@@ -2,6 +2,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/result/result.dart';
 import '../domain/credential_repository.dart';
+import '../domain/digital_id_face.dart';
 
 /// Talks to `GET /me/digital-id`.
 ///
@@ -14,6 +15,7 @@ class CredentialApiRepository implements CredentialRepository {
   final ApiClient _apiClient;
 
   static const String path = 'me/digital-id';
+  static const String profilePath = 'me';
 
   @override
   Future<Result<ResidentCredential?>> loadOwnCredential() async {
@@ -32,6 +34,20 @@ class CredentialApiRepository implements CredentialRepository {
   }
 
   @override
+  Future<Result<String?>> loadResidentName() async {
+    final response = await _apiClient.send<String?>(
+      method: HttpMethod.get,
+      path: profilePath,
+      authenticated: true,
+      decode: decodeResidentName,
+    );
+    return switch (response) {
+      Ok(:final value) => Ok<String?>(value.data),
+      Err(:final failure) => Err<String?>(failure),
+    };
+  }
+
+  @override
   Future<Result<PresentationArtifact>> requestPresentationArtifact() async {
     final Result<ResidentCredential?> loaded = await loadOwnCredential();
     if (loaded case Err(:final failure)) {
@@ -44,6 +60,17 @@ class CredentialApiRepository implements CredentialRepository {
       );
     }
     return Ok<PresentationArtifact>(qr);
+  }
+
+  /// GET /me `data.name`. Trimmed. Null when missing or blank.
+  static String? decodeResidentName(Object? data) {
+    if (data is! Map) return null;
+    final Map<String, dynamic> map = data is Map<String, dynamic>
+        ? data
+        : Map<String, dynamic>.from(data);
+    final Object? name = map['name'];
+    if (name is! String) return null;
+    return publishedResidentName(name);
   }
 
   /// `DigitalIdCard` plus `qr`, which is an object or null.

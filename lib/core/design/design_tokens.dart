@@ -106,6 +106,14 @@ abstract final class BrandColors {
   /// SAMPLE dashed stroke. CSS `.sample` border is `#E0A400`.
   static const Color sampleBorder = Color(0xFFE0A400);
 
+  /// Dimmed issued card. CSS `.idc.dim` is 160° `#6E7C99 → #4A5674 → #333D55`.
+  static const Color cardDimStart = Color(0xFF6E7C99);
+  static const Color cardDimMid = Color(0xFF4A5674);
+  static const Color cardDimEnd = Color(0xFF333D55);
+
+  /// Dashed frame around the scannable code. CSS `.qr` border is `#9AA6BF`.
+  static const Color qrFrame = Color(0xFF9AA6BF);
+
   /// Status chip fills from `.bdg` / `.tag` in the mockup CSS.
   static const Color chipAmberBg = Color(0xFFFFF4D6);
   static const Color chipGreenBg = Color(0xFFE6F4EC);
@@ -128,6 +136,11 @@ abstract final class TaytayShadows {
 
   static const List<BoxShadow> raised = <BoxShadow>[
     BoxShadow(color: Color(0x24062358), blurRadius: 28, offset: Offset(0, 12)),
+  ];
+
+  /// Issued card. CSS `.idc` is `0 8px 24px rgba(6,35,88,.28)`.
+  static const List<BoxShadow> digitalId = <BoxShadow>[
+    BoxShadow(color: Color(0x47062358), blurRadius: 24, offset: Offset(0, 8)),
   ];
 }
 

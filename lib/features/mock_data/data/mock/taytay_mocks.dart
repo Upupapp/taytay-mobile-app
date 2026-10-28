@@ -983,13 +983,29 @@ class MockCredentialRepository implements CredentialRepository {
 
   @override
   Future<Result<ResidentCredential?>> loadOwnCredential() {
+    // Fictional SAMPLE card. The number and the dates are the illustration
+    // on 08-11, not an issued credential. The QR expiry is far ahead so a
+    // dev session does not refetch on a loop. The token is not a secret.
     return _gate.respond(
-      const ResidentCredential(
+      ResidentCredential(
         id: 'credential-sample-1',
+        idNumber: 'TYT-0000-0000',
         state: CredentialLifecycleState.active,
         rawState: 'active',
+        issuedAt: DateTime.utc(2026, 10, 22, 12),
+        expiresAt: DateTime.utc(2029, 10, 22, 12),
+        qr: PresentationArtifact(
+          payload: 'sample-qr-not-a-credential',
+          expiresAt: DateTime.utc(2099, 1, 1, 13, 42),
+        ),
       ),
     );
+  }
+
+  @override
+  Future<Result<String?>> loadResidentName() {
+    // The 08-11 illustration name. Fictional. Not the account-home fixture.
+    return _gate.respond('Juan Dela Cruz');
   }
 
   @override

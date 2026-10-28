@@ -241,14 +241,14 @@ Photo credits (`PhotoCreditsScreen`) read the bundled asset manifest. There is n
 - **Names:** the screen's own comment refuses other residents' names. Not decoding `members[].name` is consistent with that. Not calling `GET /households/current` at all drops the address and the count, which the screen does want.
 - **Fixture:** `MockHouseholdRepository`, which reads `resident.json` for the barangay label and returns a synthetic summary.
 
-### 17. Digital ID — High
+### 17. Digital ID — wired, photo bytes still absent
 
-- **Screen:** `DigitalIdScreen` at `/digital-id`. It does not call a repository. The body is the fixed sentence that the ID is not yet issued.
-- **Dart:** `lib/features/credential/presentation/digital_id_screen.dart`, `lib/features/credential/data/credential_api_repository.dart`.
-- **What the repository expects and does not call:** `GET me/credential` and `POST me/credential/qr`. Both absent. The methods decline.
-- **What the spec has:** `GET /api/v1/me/digital-id`. `data` is a `DigitalIdCard` plus `qr`. The card is `id`, `id_number`, `photo_media_id`, `status` (`active`, `suspended`, `revoked`), `issued_at`, `expires_at`. `qr` is `{token, expires_at}` or null. The screen never requests it, so a resident with an active card still sees "Not yet issued".
-- **Left alone on purpose:** `POST /api/v1/digital-id/verify` is the verifier scan. This app does not call it.
-- **Fixture:** `MockCredentialRepository` (in-memory). The screen does not call it either, including on a dev mock.
+- **Screen:** `DigitalIdScreen` at `/digital-id`, on the My Account shell branch. It paints the five card states (active, suspended, revoked, expired, not issued).
+- **Dart:** `lib/features/credential/presentation/digital_id_screen.dart`, `lib/features/credential/presentation/digital_id_canvas.dart`, `lib/features/credential/data/credential_api_repository.dart`, `lib/features/credential/domain/digital_id_face.dart`.
+- **What the app calls:** `GET /api/v1/me/digital-id` for the card and `qr`, and `GET /api/v1/me` for `data.name` only. The name is trimmed and is not stored on the session. A 404 or a null card is not issued. Expired is this client's reading of `status=active` when `now` is after `expires_at` and `qr` is null. There is no `expired` wire value.
+- **QR:** rendered from `qr.token` in memory only while `qr.isLive(now)`. A timer is armed at `qr.expires_at` however long that is. At that instant the modules come down, the resident sees "Refreshing code…", and the card is loaded again. A refetch that is also past its expiry stays on that state and is not painted. The token is not written, logged, or put in a semantic label.
+- **Left alone on purpose:** `POST /api/v1/digital-id/verify` is the verifier scan. This app does not call it. `photo_media_id` is not fetched: this client has no media-bytes route, so the portrait stays the dashed placeholder.
+- **Fixture:** `MockCredentialRepository`, and only when `usesMockData` is true. The name, number, and dates are the fictional SAMPLE illustration. A non-mock build shows whatever the two GETs return.
 
 ### 18. Notifications inbox paging and targets — Medium
 

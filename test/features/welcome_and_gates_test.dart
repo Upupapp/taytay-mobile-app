@@ -510,7 +510,7 @@ void main() {
       await openDigitalIdEntry(tester);
 
       expect(find.text('Sign in to continue'), findsNothing);
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
+      expect(find.text('My Taytay ID'), findsOneWidget);
       expect(dependencies.intents.hasPending, isFalse);
     });
 
@@ -534,7 +534,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(dependencies.intents.hasPending, isFalse);
-      expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
+      expect(find.text('My Taytay ID'), findsOneWidget);
     });
 
     testWidgets('an intent does not resume on a session that still fails it', (

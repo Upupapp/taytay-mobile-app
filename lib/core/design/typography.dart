@@ -370,6 +370,11 @@ abstract final class AppTypography {
 /// The hhea and typo metrics are ascender 1038 and descender −222 on a
 /// 1000-unit em. Blink rounds each to a device pixel, so 11 → 13.67,
 /// 14 → 17.67 and 15 → 19. Account spacing uses this same box.
+///
+/// [baseline] is not [ascender]. Chrome ceils the descender to a device
+/// pixel and gives the rest of the line box to the baseline, so a 14 px
+/// line is still 17.67 tall but its baseline sits at 14.33, not 14.67.
+/// `vertical-align: middle` and the glyphs inside that line use [baseline].
 abstract final class TypeMetrics {
   static double ascender(double fontSize) =>
       ((fontSize * 3 * 1038 / 1000).round()) / 3;
@@ -379,4 +384,12 @@ abstract final class TypeMetrics {
 
   static double line(double fontSize) =>
       ascender(fontSize) + descender(fontSize);
+
+  /// Alphabetic baseline, in CSS px, measured from the top of [line].
+  static double baseline(double fontSize) {
+    final int descender = (fontSize * 3 * 222 / 1000).ceil();
+    final int line = (fontSize * 3 * 1038 / 1000).round() +
+        (fontSize * 3 * 222 / 1000).round();
+    return (line - descender) / 3;
+  }
 }

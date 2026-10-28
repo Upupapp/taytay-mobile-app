@@ -184,6 +184,18 @@ abstract final class TaytayIcons {
 
   static const IconData circleCheck = IconData(57894, fontFamily: 'Lucide');
 
+  /// Lucide `user-round`. The vendored font still names this glyph `user-2`.
+  static const IconData userRound = IconData(58472, fontFamily: 'Lucide');
+
+  /// Lucide `pause`. The suspended status tag.
+  static const IconData pause = IconData(57646, fontFamily: 'Lucide');
+
+  /// Lucide `circle-slash`. The revoked status tag and its notice.
+  static const IconData circleSlash = IconData(58370, fontFamily: 'Lucide');
+
+  /// Lucide `shield-alert`. The suspended notice tile.
+  static const IconData shieldAlert = IconData(57854, fontFamily: 'Lucide');
+
   /// Lucide `check-circle`. The `02-14b` mark.
   static const IconData checkCircle = IconData(57468, fontFamily: 'Lucide');
 

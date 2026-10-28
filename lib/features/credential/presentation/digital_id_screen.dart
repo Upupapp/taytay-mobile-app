@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/design/design_tokens.dart';
+import '../../../core/config/app_environment.dart';
 import '../../../core/result/result.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/credential_repository.dart';
+import 'digital_id_canvas.dart';
 
 /// The resident's Taytay digital ID.
 ///
@@ -15,126 +15,159 @@ import '../domain/credential_repository.dart';
 /// verdict — this screen may display a credential, and it never decides that
 /// one is genuine.
 ///
-/// A 404 or a null card keeps the not-issued card. The portrait media id is
-/// not fetched: this client has no media-bytes route for it.
+/// The name is GET /me `name`. It is not stored on the session. The QR token
+/// is painted from memory only while `qr.isLive`. A timer fires at
+/// `qr.expires_at`; the modules come down and the card is loaded again. A
+/// refetch that is also past its expiry stays on "Refreshing code…" and is
+/// not painted. A 404 or a null card keeps the not-issued card. The portrait
+/// media id is not fetched: this client has no media-bytes route for it.
 class DigitalIdScreen extends StatefulWidget {
-  const DigitalIdScreen({super.key, this.repository});
+  const DigitalIdScreen({super.key, this.repository, this.now, this.sample});
 
   /// Set by tests. The app reads [CredentialRepository] from the scope.
   final CredentialRepository? repository;
+
+  /// Set by tests. The app uses the device clock.
+  final DateTime Function()? now;
+
+  /// Set by tests. A dev mock build marks the illustration values.
+  final bool? sample;
 
   @override
   State<DigitalIdScreen> createState() => _DigitalIdScreenState();
 }
 
-class _DigitalIdScreenState extends State<DigitalIdScreen> {
+class _DigitalIdScreenState extends State<DigitalIdScreen>
+    with WidgetsBindingObserver {
   bool _started = false;
+  CredentialRepository? _repository;
   ResidentCredential? _card;
+  String? _name;
+  AppFailure? _failure;
+  Timer? _timer;
+
+  /// A dead code is loaded once more. A second dead result stays on the
+  /// refreshing state so the load does not chain.
+  bool _gaveUpOnDeadQr = false;
+  int _generation = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    final CredentialRepository? repository =
+    _repository =
         widget.repository ??
         context
             .dependOnInheritedWidgetOfExactType<AppDependenciesScope>()
             ?.dependencies
             .credentialRepository;
-    if (repository == null) return;
-    unawaited(_load(repository));
+    if (_started) return;
+    _started = true;
+    if (_repository == null) return;
+    unawaited(_load());
   }
 
-  Future<void> _load(CredentialRepository repository) async {
-    final Result<ResidentCredential?> result = await repository
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed) return;
+    _gaveUpOnDeadQr = false;
+    _scheduleQrRefresh();
+  }
+
+  DateTime _clock() => widget.now?.call() ?? DateTime.now();
+
+  bool _sample(BuildContext context) {
+    final bool? sample = widget.sample;
+    if (sample != null) return sample;
+    return context
+            .dependOnInheritedWidgetOfExactType<AppDependenciesScope>()
+            ?.dependencies
+            .config
+            .usesMockData ??
+        false;
+  }
+
+  AppEnvironment _environment(BuildContext context) {
+    return context
+            .dependOnInheritedWidgetOfExactType<AppDependenciesScope>()
+            ?.dependencies
+            .config
+            .environment ??
+        AppEnvironment.dev;
+  }
+
+  Future<void> _load() async {
+    final CredentialRepository? repository = _repository;
+    if (repository == null) return;
+    final int generation = ++_generation;
+    final Future<Result<ResidentCredential?>> cardFuture = repository
         .loadOwnCredential();
-    if (!mounted) return;
-    final ResidentCredential? card = result.valueOrNull;
-    if (card == null) return;
-    setState(() => _card = card);
+    final Future<Result<String?>> nameFuture = repository.loadResidentName();
+    final Result<ResidentCredential?> cardResult = await cardFuture;
+    final Result<String?> nameResult = await nameFuture;
+    if (!mounted || generation != _generation) return;
+    setState(() {
+      switch (cardResult) {
+        case Ok(:final value):
+          _failure = null;
+          _card = value;
+        case Err(:final failure):
+          _failure = failure;
+          _card = null;
+      }
+      _name = nameResult.valueOrNull;
+    });
+    _scheduleQrRefresh();
+  }
+
+  void _scheduleQrRefresh() {
+    _timer?.cancel();
+    _timer = null;
+    final PresentationArtifact? qr = _card?.qr;
+    if (qr == null) return;
+    final DateTime now = _clock();
+    if (qr.isLive(now)) {
+      _gaveUpOnDeadQr = false;
+      final DateTime? expiry = qr.expiresAt;
+      if (expiry == null) return;
+      final Duration remaining = expiry.toUtc().difference(now.toUtc());
+      if (remaining <= Duration.zero) return;
+      _timer = Timer(remaining, () {
+        if (!mounted) return;
+        // This load is the refresh. A dead result must not start another.
+        _gaveUpOnDeadQr = true;
+        setState(() {});
+        unawaited(_load());
+      });
+      return;
+    }
+    if (_gaveUpOnDeadQr) return;
+    _gaveUpOnDeadQr = true;
+    unawaited(_load());
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final ResidentCredential? card = _card;
-
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('My Taytay ID'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(Spacing.xl),
-                decoration: BoxDecoration(
-                  color: BrandColors.taytayBlue,
-                  borderRadius: BorderRadius.circular(Radii.lg),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'MUNICIPALITY OF TAYTAY',
-                      style: theme.textTheme.labelMedium?.copyWith(
-                        color: Colors.white70,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xs),
-                    Text(
-                      'Resident Digital ID',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xxl),
-                    Text(
-                      card == null ? 'Not yet issued' : _statusLine(card),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: Spacing.xl),
-              Text(
-                card == null
-                    ? 'Your digital ID will appear here once Taytay LGU issues it.'
-                    : 'Taytay LGU issued this card. A scanner checks the code. '
-                          'This phone does not decide that the card is genuine.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return DigitalIdView(
+      card: _card,
+      name: _name,
+      now: _clock(),
+      sample: _sample(context),
+      failure: _failure,
+      environment: _environment(context),
+      onRetry: _failure == null ? null : () => unawaited(_load()),
     );
-  }
-
-  /// Status and municipal number. The QR token is not painted.
-  static String _statusLine(ResidentCredential card) {
-    final String status = switch (card.state) {
-      CredentialLifecycleState.active => 'Active',
-      CredentialLifecycleState.suspended => 'Suspended',
-      CredentialLifecycleState.revoked => 'Revoked',
-      _ => 'Issued',
-    };
-    final String? number = card.idNumber;
-    if (number == null || number.isEmpty) return status;
-    return '$number · $status';
   }
 }
