@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
+import 'package:taytay_resident/core/api/api_envelope.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/http_api_transport.dart';
 import 'package:taytay_resident/core/api/media_bytes_api.dart';
@@ -541,6 +542,93 @@ void main() {
     await tester.pumpAndSettle();
     expect(_memoryImages(tester), isNotEmpty);
     expect(_networkImages(tester), isEmpty);
+    final Image painted = tester.widget<Image>(
+      find.byWidgetPredicate(
+        (Widget widget) => widget is Image && _isMemory(widget.image),
+      ),
+    );
+    expect(painted.height, 196);
+    final BoxShadow heroShadow = tester
+        .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+        .map((DecoratedBox box) => box.decoration)
+        .whereType<BoxDecoration>()
+        .expand(
+          (BoxDecoration decoration) =>
+              decoration.boxShadow ?? const <BoxShadow>[],
+        )
+        .singleWhere(
+          (BoxShadow shadow) =>
+              shadow.blurRadius == 24 && shadow.offset == const Offset(0, 10),
+        );
+    expect(heroShadow.color, const Color.fromRGBO(6, 35, 88, 0.16));
+  });
+
+  test('binary responses skip the public catalogue cache', () async {
+    final PublicCache catalogue = PublicCache();
+    final _Scripted transport = _Scripted(<ApiHttpResponse>[_image(_png)]);
+    final ApiClient client = ApiClient(
+      config: _config(),
+      transport: transport,
+      cache: catalogue,
+    );
+
+    final Result<ApiEnvelope<Uint8List?>> result = await client
+        .send<Uint8List?>(
+          method: HttpMethod.get,
+          path: 'news',
+          authenticated: false,
+          binary: true,
+          decode: (Object? data) => null,
+        );
+
+    expect(result.valueOrNull?.data, _png);
+    expect(catalogue.size, 0);
+  });
+
+  testWidgets('a cover is requested only when cover_url is set', (
+    WidgetTester tester,
+  ) async {
+    var calls = 0;
+    Future<Result<Uint8List?>> load(String id) async {
+      calls += 1;
+      return Ok<Uint8List?>(_png);
+    }
+
+    await _pump(
+      tester,
+      BalitaCanvas(
+        frame: BalitaFrame.feed,
+        loadCover: load,
+        articles: const <Announcement>[
+          Announcement(
+            id: _newsId,
+            title: 'Hall notice',
+            body: 'Bring a valid ID.',
+            coverMediaId: _mediaId,
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(calls, 0);
+
+    await _pump(
+      tester,
+      BalitaCanvas(
+        frame: BalitaFrame.feed,
+        loadCover: load,
+        articles: const <Announcement>[
+          Announcement(
+            id: _newsId,
+            title: 'Hall notice',
+            body: 'Bring a valid ID.',
+            coverUrl: 'https://evil.example/covers/hall.jpg',
+          ),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(calls, 1);
   });
 
   testWidgets('a digital ID portrait falls back to the placeholder', (
@@ -751,6 +839,55 @@ void main() {
     expect(failed.requests, hasLength(2));
   });
 
+  testWidgets(
+    'the digital ID screen does not keep its portrait in the image cache',
+    (WidgetTester tester) async {
+      final ImageCache cache = PaintingBinding.instance.imageCache;
+      cache.clear();
+      cache.clearLiveImages();
+      addTearDown(cache.clear);
+      addTearDown(cache.clearLiveImages);
+
+      final _Scripted transport = _Scripted(<ApiHttpResponse>[_image(_png)]);
+      final AppDependencies dependencies = await _portraitApp(transport);
+      addTearDown(dependencies.dispose);
+
+      await _pumpRouted(tester, dependencies, const DigitalIdScreen());
+      expect(_labeled('ID photo'), findsWidgets);
+      // Decoding finishes on a real timer. The fake async zone never
+      // moves the portrait from "live" into the keep-alive cache.
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      await tester.pump();
+
+      final List<ImageProvider<Object>> portraits = tester
+          .widgetList<Image>(
+            find.byWidgetPredicate(
+              (Widget widget) =>
+                  widget is Image && widget.semanticLabel == 'ID photo',
+            ),
+          )
+          .map((Image image) => image.image)
+          .toList();
+      expect(portraits, isNotEmpty);
+      final List<Object> keys = <Object>[
+        for (final ImageProvider<Object> provider in portraits)
+          await provider.obtainKey(const ImageConfiguration()),
+      ];
+      for (final Object key in keys) {
+        expect(cache.containsKey(key), isTrue);
+      }
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpAndSettle();
+
+      for (final Object key in keys) {
+        expect(cache.containsKey(key), isFalse);
+      }
+    },
+  );
+
   testWidgets('the ID portrait leaves nothing in the shared image cache', (
     WidgetTester tester,
   ) async {
@@ -957,6 +1094,60 @@ class _Gate implements ApiTransport {
     }
     return Ok<ApiHttpResponse>(_error(500, 'INTERNAL_ERROR'));
   }
+}
+
+Future<AppDependencies> _portraitApp(_Scripted transport) async {
+  final InMemorySecretStore secrets = InMemorySecretStore();
+  await secrets.write(LaunchController.welcomeCompletedKey, 'true');
+  final InMemorySessionStore sessionStore = InMemorySessionStore();
+  await sessionStore.write(
+    const StoredSession(
+      resident: ResidentSession(
+        accountId: 'acct-1',
+        accessLevel: AccessLevel.verified,
+      ),
+      accessToken: 'tok',
+    ),
+  );
+  final AppDependencies base = AppDependencies.build(
+    config: _config(),
+    transport: transport,
+    secrets: secrets,
+    sessionStore: sessionStore,
+  );
+  return AppDependencies(
+    config: base.config,
+    session: base.session,
+    launch: base.launch,
+    intents: base.intents,
+    appLock: base.appLock,
+    apiClient: base.apiClient,
+    cache: base.cache,
+    network: base.network,
+    telemetry: base.telemetry,
+    authRepository: base.authRepository,
+    deviceSessionRepository: base.deviceSessionRepository,
+    platformRepository: base.platformRepository,
+    serviceCatalogRepository: base.serviceCatalogRepository,
+    programRepository: base.programRepository,
+    announcementRepository: base.announcementRepository,
+    eventRepository: base.eventRepository,
+    residentProfileRepository: base.residentProfileRepository,
+    householdRepository: base.householdRepository,
+    registrationRepository: base.registrationRepository,
+    barangayDirectory: base.barangayDirectory,
+    credentialRepository: _PortraitRepo(),
+    verificationRepository: base.verificationRepository,
+    serviceRequestRepository: base.serviceRequestRepository,
+    requirementRepository: base.requirementRepository,
+    notificationRepository: base.notificationRepository,
+    documentPicker: base.documentPicker,
+    shareService: base.shareService,
+    externalLinks: base.externalLinks,
+    accountControlsRepository: base.accountControlsRepository,
+    platform: base.platform,
+    onDispose: base.onDispose,
+  );
 }
 
 Future<AppDependencies> _mockApp(_Gate transport) async {

@@ -144,8 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _dial(String number) async {
-    final LinkOutcome outcome = await AppDependencies.of(context).externalLinks
-        .dial(number);
+    final LinkOutcome outcome = await AppDependencies.of(
+      context,
+    ).externalLinks.dial(number);
     if (!mounted) return;
     if (outcome == LinkOutcome.unavailable) {
       Outcome.problem(context, 'This phone has no app that can place a call.');

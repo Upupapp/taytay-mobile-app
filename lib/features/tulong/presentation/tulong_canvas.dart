@@ -608,18 +608,30 @@ class _MaybeHeroPhoto extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: SizedBox(
-                height: 196,
-                width: double.infinity,
-                child: DecodedMemoryImage(
-                  bytes: bytes,
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                borderRadius: BorderRadius.all(Radius.circular(20)),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: Color.fromRGBO(6, 35, 88, 0.16),
+                    blurRadius: 24,
+                    offset: Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: SizedBox(
                   height: 196,
-                  semanticLabel: service.name,
-                  placeholder: const SizedBox(
+                  width: double.infinity,
+                  child: DecodedMemoryImage(
+                    bytes: bytes,
                     height: 196,
-                    width: double.infinity,
+                    semanticLabel: service.name,
+                    placeholder: const SizedBox(
+                      height: 196,
+                      width: double.infinity,
+                    ),
                   ),
                 ),
               ),

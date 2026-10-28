@@ -72,14 +72,12 @@ class NodeCitizenApi {
   static HomeFeed _decodeHome(Object? data) {
     final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
     return HomeFeed(
-      banners: _list(map['banners'])
-          .map(_banner)
-          .whereType<HomeBanner>()
-          .toList(growable: false),
-      quickLinks: _list(map['quick_links'])
-          .map(_link)
-          .whereType<HomeQuickLink>()
-          .toList(growable: false),
+      banners: _list(
+        map['banners'],
+      ).map(_banner).whereType<HomeBanner>().toList(growable: false),
+      quickLinks: _list(
+        map['quick_links'],
+      ).map(_link).whereType<HomeQuickLink>().toList(growable: false),
       newsIds: _list(map['news'])
           .map((Object? row) => _string(_map(row)['id']))
           .whereType<String>()
@@ -91,10 +89,9 @@ class NodeCitizenApi {
           )
           .whereType<String>()
           .toList(growable: false),
-      hotlines: _list(map['hotlines'])
-          .map(_hotline)
-          .whereType<MunicipalHotline>()
-          .toList(growable: false),
+      hotlines: _list(
+        map['hotlines'],
+      ).map(_hotline).whereType<MunicipalHotline>().toList(growable: false),
     );
   }
 
@@ -104,11 +101,9 @@ class NodeCitizenApi {
       method: HttpMethod.get,
       path: 'hotlines',
       authenticated: false,
-      decode: (Object? data) =>
-          _list(data)
-              .map(_hotline)
-              .whereType<MunicipalHotline>()
-              .toList(growable: false),
+      decode: (Object? data) => _list(
+        data,
+      ).map(_hotline).whereType<MunicipalHotline>().toList(growable: false),
     );
     return response.map((envelope) => envelope.data);
   }
@@ -166,10 +161,9 @@ class NodeCitizenApi {
   }
 
   static List<MunicipalOffice> _decodeOffices(Object? data) {
-    return _list(data)
-        .map(_decodeOffice)
-        .whereType<MunicipalOffice>()
-        .toList(growable: false);
+    return _list(
+      data,
+    ).map(_decodeOffice).whereType<MunicipalOffice>().toList(growable: false);
   }
 
   static MunicipalOffice? _decodeOffice(Object? raw) {

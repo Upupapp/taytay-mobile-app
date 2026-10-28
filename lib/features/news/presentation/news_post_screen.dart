@@ -75,7 +75,9 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
 
     final PostDetailController? controller = _controller;
     if (controller == null || controller.isLoading) {
-      return const _Shell(child: Center(child: CircularProgressIndicator()));
+      return const _Shell(
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
 
     final Announcement? post = controller.post;

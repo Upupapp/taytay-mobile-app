@@ -57,9 +57,9 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   Future<void> _loadCategories() async {
-    final Result<List<NewsCategory>> result = await AppDependencies.of(context)
-        .announcementRepository
-        .listCategories();
+    final Result<List<NewsCategory>> result = await AppDependencies.of(
+      context,
+    ).announcementRepository.listCategories();
     if (!mounted) return;
     result.fold(
       onOk: (List<NewsCategory> categories) {

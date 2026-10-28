@@ -29,9 +29,7 @@ abstract final class HomeCatalogue {
   }
 
   static Future<List<HomeSlide>> _readSlides() async {
-    final Object? decoded = jsonDecode(
-      await rootBundle.loadString(slidesAsset),
-    );
+    final Object? decoded = jsonDecode(await rootBundle.loadString(slidesAsset));
     if (decoded is! Map) return const <HomeSlide>[];
     final List<HomeSlide> parsed = _slides(decoded['slides']);
     _parsedSlides = parsed;
@@ -46,16 +44,14 @@ abstract final class HomeCatalogue {
   ) {
     if (bundled.isEmpty) return bundled;
     final List<HomeBanner> active =
-        banners.where((HomeBanner banner) => banner.active).toList()..sort(
-          (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
-        );
+        banners.where((HomeBanner banner) => banner.active).toList()
+          ..sort(
+            (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
+          );
     if (active.isEmpty) return bundled;
     return <HomeSlide>[
       for (var i = 0; i < active.length; i++)
-        _fromBanner(
-          active[i],
-          bundled[i < bundled.length ? i : bundled.length - 1],
-        ),
+        _fromBanner(active[i], bundled[i < bundled.length ? i : bundled.length - 1]),
     ];
   }
 
