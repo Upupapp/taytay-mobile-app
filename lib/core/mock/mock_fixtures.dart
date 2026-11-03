@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Loads the synthetic JSON under `test/fixtures/mock/`.
@@ -27,6 +28,14 @@ abstract final class MockFixtures {
   }
 
   static Future<String> text(String name) async {
+    // Release binaries must not read synthetic fixtures, including when a
+    // caller forgets to check usesMockData. kReleaseMode is a compile-time
+    // constant: this branch is absent from debug and test runs.
+    if (kReleaseMode) {
+      throw StateError(
+        'Synthetic fixtures are not available in a release build.',
+      );
+    }
     final relative = '$directory/$name.json';
     final file = File(relative);
     if (file.existsSync()) {

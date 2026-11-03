@@ -15,12 +15,20 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-APK="${1:-$REPO_ROOT/build/app/outputs/flutter-apk/app-release.apk}"
+# Flavoured prod output is app-prod-release.apk. The unflavoured name remains
+# the fallback for an argument-less run that has only that older artifact.
+if [ -n "${1:-}" ]; then
+  APK="$1"
+elif [ -f "$REPO_ROOT/build/app/outputs/flutter-apk/app-prod-release.apk" ]; then
+  APK="$REPO_ROOT/build/app/outputs/flutter-apk/app-prod-release.apk"
+else
+  APK="$REPO_ROOT/build/app/outputs/flutter-apk/app-release.apk"
+fi
 
 if [ ! -f "$APK" ]; then
   echo "SKIP: no artifact at $APK." >&2
   echo "      Release hardening is NOT PROVEN. Build one first:" >&2
-  echo "      flutter build apk --release --dart-define=TAYTAY_ENV=prod" >&2
+  echo "      flutter build apk --release --flavor prod --dart-define=TAYTAY_ENV=prod --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1" >&2
   exit 3
 fi
 
@@ -49,7 +57,7 @@ if [ -f "$CONFIG" ] && [ "$CONFIG" -nt "$APK" ]; then
   echo "       It was built before the current signing configuration existed," >&2
   echo "       so anything below describes an old build, not this code." >&2
   echo "       Rebuild before believing the result:" >&2
-  echo "         flutter build apk --release --dart-define=TAYTAY_ENV=prod" >&2
+  echo "         flutter build apk --release --flavor prod --dart-define=TAYTAY_ENV=prod --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1" >&2
   stale=1
 fi
 AAPT_ERR="$(mktemp)"
@@ -110,7 +118,7 @@ fi
 #                     exported. Grants nothing to anybody else. Accepted.
 EXPECTED="android.permission.INTERNET android.permission.USE_BIOMETRIC \
 android.permission.USE_FINGERPRINT \
-ph.gov.taytay.lguids.taytay_resident.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+ph.gov.taytay.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
 ACTUAL="$(echo "$DUMP" | sed -n "s/^uses-permission: name='\([^']*\)'.*/\1/p" | sort | tr '\n' ' ')"
 for p in $ACTUAL; do
   case " $EXPECTED " in
