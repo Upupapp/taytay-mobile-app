@@ -99,6 +99,23 @@ class VerificationController extends ChangeNotifier {
   bool get loading => _loading;
   bool get submitting => _submitting;
 
+  /// Whether the loaded request says the resident may still change it.
+  ///
+  /// Fails closed. Re-upload, resubmit and corrections need a loaded status
+  /// whose `can_edit` is true. A missing flag is not permission, and the stage
+  /// is not permission.
+  bool get allowsEdit => _status?.canEdit == true;
+
+  /// Whether the resident has no verification request yet.
+  ///
+  /// Start is this case. It is not [allowsEdit]: a request that cannot be
+  /// edited is not an invitation to open another one.
+  bool get canStart {
+    final VerificationStatusDetail? current = _status;
+    if (current == null) return false;
+    return current.rawState.isEmpty;
+  }
+
   /// What the office holds, one row per type. Empty until [refresh] has run.
   List<KycDocument> get documents => _documents;
 
@@ -335,8 +352,122 @@ class VerificationController extends ChangeNotifier {
   ///
   /// One idempotency key per attempt, reused on retry, so a dropped connection
   /// cannot put two replies in a municipal review queue.
+  /// Opens `POST me/verification-requests` with the ID photos.
+  Future<bool> startVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+  }) async {
+    if (!canStart || _submitting) return false;
+
+    _submissionKey ??= generateRequestId();
+    _submitting = true;
+    _failure = null;
+    notifyListeners();
+
+    final Result<VerificationStatus> outcome = await _repository
+        .submitVerification(
+          idType: idType,
+          front: front,
+          back: back,
+          selfie: selfie,
+          idempotencyKey: _submissionKey,
+        );
+    _submitting = false;
+
+    return outcome.fold(
+      onOk: (_) {
+        _submissionKey = null;
+        notifyListeners();
+        unawaited(refresh());
+        return true;
+      },
+      onErr: (AppFailure failure) {
+        // A request already exists. Re-read it instead of starting another.
+        if (failure is ConflictFailure) {
+          _submissionKey = null;
+          notifyListeners();
+          unawaited(refresh());
+          return true;
+        }
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  /// Replaces one or more images on the current request.
+  Future<bool> replaceImage({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+  }) async {
+    if (!allowsEdit || _submitting) return false;
+
+    _submitting = true;
+    _failure = null;
+    notifyListeners();
+
+    final Result<VerificationStatusDetail> outcome = await _repository
+        .replaceDocuments(
+          front: front,
+          back: back,
+          selfie: selfie,
+          idempotencyKey: generateRequestId(),
+        );
+    _submitting = false;
+
+    return outcome.fold(
+      onOk: (VerificationStatusDetail detail) {
+        _status = detail;
+        _syncSessionTier(detail);
+        notifyListeners();
+        return true;
+      },
+      onErr: (AppFailure failure) {
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
+  /// Returns a rejected request to pending with the resident's message.
+  Future<bool> resubmit(String message) async {
+    if (!allowsEdit || _submitting) return false;
+
+    _correctionKey ??= generateRequestId();
+    _submitting = true;
+    _failure = null;
+    notifyListeners();
+
+    final Result<void> outcome = await _repository.submitCorrections(
+      corrections: const <CorrectableField, String>{},
+      idempotencyKey: _correctionKey!,
+      message: message.trim(),
+      allowBlank: true,
+    );
+    _submitting = false;
+
+    return outcome.fold(
+      onOk: (_) {
+        _correctionKey = null;
+        notifyListeners();
+        unawaited(refresh());
+        return true;
+      },
+      onErr: (AppFailure failure) {
+        _failure = failure;
+        notifyListeners();
+        return false;
+      },
+    );
+  }
+
   Future<bool> submitCorrections() async {
-    if (!correctionsComplete || _submitting) return false;
+    if (!allowsEdit || !correctionsComplete || _submitting) return false;
 
     _correctionKey ??= generateRequestId();
     _submitting = true;

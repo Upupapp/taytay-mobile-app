@@ -172,7 +172,11 @@ enum VerificationItemCategory {
     ],
   ),
   identityDocument('Proof of identity', 'Government-issued ID'),
-  photo('Photo of you', 'Used to check the ID belongs to you');
+  photo('Photo of you', 'Used to check the ID belongs to you'),
+
+  /// An issue category this build does not recognise. The resident still sees
+  /// the office's instruction, under a generic label, never the raw code.
+  other('Details', 'Something Taytay LGU asked you to correct');
 
   const VerificationItemCategory(
     this.label,
@@ -212,6 +216,42 @@ enum VerificationItemCategory {
     }
     return null;
   }
+
+  /// Maps a citizen `submitted_categories` or issue `category` string.
+  ///
+  /// Unknown codes return null. Issue lists still show those under [other]
+  /// so the instruction is not dropped. A raw code is never the label.
+  static VerificationItemCategory? fromWire(String? raw) {
+    if (raw == null) return null;
+    final String trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    final VerificationItemCategory? named = fromCode(trimmed);
+    if (named != null) return named;
+    final String key = trimmed.toLowerCase().replaceAll(RegExp(r'[\s-]+'), '_');
+    return _wire[key];
+  }
+
+  static const Map<String, VerificationItemCategory> _wire =
+      <String, VerificationItemCategory>{
+        'personal_details': VerificationItemCategory.personalDetails,
+        'personaldetails': VerificationItemCategory.personalDetails,
+        'details': VerificationItemCategory.personalDetails,
+        'your_details': VerificationItemCategory.personalDetails,
+        'address': VerificationItemCategory.address,
+        'your_address': VerificationItemCategory.address,
+        'contact': VerificationItemCategory.contact,
+        'contact_details': VerificationItemCategory.contact,
+        'identity': VerificationItemCategory.identityDocument,
+        'identity_document': VerificationItemCategory.identityDocument,
+        'identitydocument': VerificationItemCategory.identityDocument,
+        'proof_of_identity': VerificationItemCategory.identityDocument,
+        'id': VerificationItemCategory.identityDocument,
+        'id_front': VerificationItemCategory.identityDocument,
+        'id_back': VerificationItemCategory.identityDocument,
+        'photo': VerificationItemCategory.photo,
+        'photo_of_you': VerificationItemCategory.photo,
+        'selfie': VerificationItemCategory.photo,
+      };
 }
 
 /// Something the office needs corrected.
@@ -319,10 +359,10 @@ class VerificationStatusDetail {
   /// present.
   bool get isEditableByApplicant => canEdit ?? stage.needsResidentAction;
 
-  /// `message` on the verification request, when one was sent.
+  /// `message` on the verification request: text the resident sent with a
+  /// correction. Null until then.
   ///
-  /// Not rendered. The status screen shows `rejection_reason` from `GET /me`.
-  /// A staff note on the same request is not a field on this type.
+  /// Staff `notes` are not a field on this type and are never copied here.
   final String? residentGuidance;
 
   /// Whether an in-person route at the municipal hall is offered.

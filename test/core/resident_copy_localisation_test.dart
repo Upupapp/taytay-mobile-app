@@ -140,24 +140,14 @@ void main() {
     'ConsentKind':
         'registration_screen.dart:655. GATED behind the same wizard. Not '
         'reached by the events or assistance flows, which use ServerConsent.',
-    // CORRECTED 2026-08-29. The old reason said the correction flow "cannot
-    // render against the real backend". True, but not the reason, and the real
-    // one is worse: NO PRODUCTION CODE POPULATES `submittedCategories` OR
-    // `issues`. `_decodeDetail` in `kyc_api_repository.dart` decodes five
-    // fields and neither of those is among them, so both lists are always
-    // empty and two whole sections of the verification screen — the "What
-    // Taytay LGU has from you" card at `verification_screen.dart:370` and the
-    // issues list at `:466` — are dead on every device.
-    //
-    // `verification_screen_test.dart` constructs those lists directly and
-    // passes, which is why nothing noticed: the widgets work, and nothing
-    // proves they are ever reached. Localising this enum would translate copy
-    // no resident can currently see, so it stays here — but the entry is now a
-    // statement about a decoder gap, not about the correction flow.
+    // The status screen shows these kinds through `_noteLabel`, which is the
+    // fixed English on the existing verification frames. Filipino copy for
+    // the enum itself arrives with app-wide localisation. The decoder does
+    // populate the lists; this entry is the untranslated labels, not a dead
+    // section.
     'VerificationItemCategory':
-        'DEAD BY DECODER GAP, not by design. Nothing populates '
-        'VerificationStatusDetail.submittedCategories or .issues, so both '
-        'render paths are unreachable. Localise when the decoder does.',
+        'Shown as the design labels in verification_screen.dart (_noteLabel). '
+        'Localise with the rest of the English verification copy.',
   };
 
   Iterable<({String name, String file, Set<String> fields})>

@@ -108,6 +108,16 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
     'me/verification-requests/current',
     'kyc_api_repository.dart',
   ),
+  BackendRoute(
+    'POST',
+    'me/verification-requests/current/corrections',
+    'kyc_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'me/verification-requests/current/documents',
+    'kyc_api_repository.dart',
+  ),
   BackendRoute('POST', 'media', 'node_citizen_api.dart'),
   BackendRoute('GET', 'media/{}', 'node_citizen_api.dart'),
   BackendRoute('GET', 'media/{}/content', 'media_bytes_api.dart'),
