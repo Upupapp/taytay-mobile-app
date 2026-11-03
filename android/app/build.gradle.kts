@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -40,7 +41,7 @@ val releaseKeystoreReady: Boolean = if (!keystorePropertiesFile.exists()) {
     val repoRoot = rootProject.projectDir.parentFile.canonicalFile
     val canonicalStore = store.canonicalFile
     val insideRepo = canonicalStore.path == repoRoot.path ||
-        canonicalStore.path.startsWith(repoRoot.path + java.io.File.separator)
+        canonicalStore.path.startsWith(repoRoot.path + File.separator)
     if (!store.isAbsolute || insideRepo) {
         throw GradleException(
             "storeFile must be an absolute path outside this repository. " +

@@ -3,9 +3,13 @@
 // Release build settings that must not carry a secret live on the Runner
 // target's Release configuration in Runner.xcodeproj: whole-module
 // optimization, dSYM, bitcode off, assertions off, product validation,
-// automatic signing. DEVELOPMENT_TEAM is intentionally unset in the project.
-// No certificate, provisioning profile, or team id is committed.
+// automatic signing. No certificate or provisioning profile is committed.
 //
+// Apple Team ID is pending from Paul. YOUR_APPLE_TEAM_ID is not a team.
+// Release-Signing.xcconfig is included after this assignment, so a real id
+// set in that gitignored file replaces the placeholder. Do not commit one.
+DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID
+
 // Bundle id ph.gov.taytay.app is set on the Runner target. The Android
 // application id is the same base. The icon and the native splash are
 // generated from release/assets/. See docs/release/README.md.

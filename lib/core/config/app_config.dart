@@ -99,6 +99,12 @@ class AppConfig {
   }) {
     final issues = <ConfigIssue>[];
 
+    // kReleaseMode is part of the decision, not only the flag tests pass in.
+    // A release binary stays closed even if a caller forces isReleaseBuild
+    // false. flutter test is not a release build, so the flag still drives
+    // the cases below.
+    final bool releaseBuild = kReleaseMode || isReleaseBuild;
+
     final parsedEnvironment = AppEnvironment.tryParse(rawEnvironment);
     if (rawEnvironment.isNotEmpty && parsedEnvironment == null) {
       issues.add(
@@ -108,7 +114,7 @@ class AppConfig {
         ),
       );
     }
-    if (rawEnvironment.isEmpty && isReleaseBuild) {
+    if (rawEnvironment.isEmpty && releaseBuild) {
       // A release build that falls back to a development API would ship real
       // residents onto test data. Refuse instead of guessing.
       issues.add(
@@ -125,7 +131,7 @@ class AppConfig {
     // there is no baked-in staging or production host to fall back to.
     final allowDevDefault =
         rawApiBaseUrl.isEmpty &&
-        !isReleaseBuild &&
+        !releaseBuild &&
         (rawEnvironment.isEmpty || parsedEnvironment == AppEnvironment.dev);
 
     final String baseUrl;
@@ -190,10 +196,10 @@ class AppConfig {
     }
     final resolvedDataMode = dataMode ?? AppDataMode.live;
     if (resolvedDataMode == AppDataMode.mock &&
-        (isReleaseBuild || environment != AppEnvironment.dev)) {
+        (releaseBuild || environment != AppEnvironment.dev)) {
       // A release binary that asks for mocks must not start, even when the
-      // environment says dev. kReleaseMode is [isReleaseBuild].
-      final String where = isReleaseBuild
+      // environment says dev. [releaseBuild] includes kReleaseMode.
+      final String where = releaseBuild
           ? 'A release build cannot start on synthetic fixtures, including '
                 'when $envDefineKey=dev.'
           : 'A ${environment.wireValue} build must not start on synthetic '
@@ -275,7 +281,12 @@ class AppConfig {
   final Duration mockLatency;
 
   /// True only for a usable dev debug build that asked for mocks.
+  ///
+  /// [kReleaseMode] is checked here, not only via [isUsable]. Constructing a
+  /// config that skipped [AppConfig.from] still cannot turn fixtures on in a
+  /// release binary.
   bool get usesMockData =>
+      !kReleaseMode &&
       isUsable &&
       environment == AppEnvironment.dev &&
       dataMode == AppDataMode.mock;

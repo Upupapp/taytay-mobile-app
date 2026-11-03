@@ -1,5 +1,8 @@
 # Local release builds
 
+The short checklist (commands, keystore, Team ID, what is still pending) is
+`docs/release.md`. This file keeps the icon and splash notes.
+
 Commands for a signing machine. This repository does not build releases in
 GitHub Actions, and these steps do not add or run a workflow.
 
@@ -139,13 +142,15 @@ point the `prod` flavor at a staging URL.
 
 ## iOS IPA
 
-Needs macOS and Xcode. No team id is committed. `YOUR_APPLE_TEAM_ID` in the
-example is a placeholder.
+Needs macOS and Xcode. No real team id is committed. `YOUR_APPLE_TEAM_ID` is
+a placeholder.
 
 The Runner target's **Release** configuration (optimization, dSYM, bitcode off,
 assertions off, validation, automatic signing) is in
 `ios/Runner.xcodeproj/project.pbxproj` and reads `ios/Flutter/Release.xcconfig`.
-`DEVELOPMENT_TEAM` is unset on purpose.
+That file sets `DEVELOPMENT_TEAM = YOUR_APPLE_TEAM_ID`. The Apple Team ID is
+pending. The gitignored signing copy overrides the placeholder when the line
+there is uncommented. The short checklist is `docs/release.md`.
 
 ```bash
 cp ios/Flutter/Release-Signing.xcconfig.example ios/Flutter/Release-Signing.xcconfig
