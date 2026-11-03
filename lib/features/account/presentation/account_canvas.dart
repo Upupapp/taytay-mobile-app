@@ -81,11 +81,15 @@ class AccountBubble {
     required this.body,
     required this.when,
     required this.fromResident,
+    this.mediaIds = const <String>[],
   });
 
   final String body;
   final String when;
   final bool fromResident;
+
+  /// Media the resident can already read. Empty on the design specimen.
+  final List<String> mediaIds;
 }
 
 /// One labelled value on Edit profile.
@@ -174,6 +178,21 @@ class AccountCanvas extends StatelessWidget {
     this.bubbles = AccountSpecimen.mswdoBubbles,
     this.dayLabel = 'Mon',
     this.onSend,
+    this.sendEnabled = true,
+    this.onInboxNearEnd,
+    this.composer,
+    this.onAttach,
+    this.onThreadMenu,
+    this.threadClosed = false,
+    this.hideComposer = false,
+    this.attachmentLabel,
+    this.onClearAttachment,
+    this.onUseMedia,
+    this.onThreadNearStart,
+    this.inboxMoreMessage,
+    this.onInboxMoreRetry,
+    this.threadMoreMessage,
+    this.onThreadMoreRetry,
     this.credits = PhotoCredits.all,
     super.key,
   });
@@ -223,6 +242,29 @@ class AccountCanvas extends StatelessWidget {
   final List<AccountBubble> bubbles;
   final String dayLabel;
   final VoidCallback? onSend;
+
+  /// False while a reply is in flight. Specimens leave this on.
+  final bool sendEnabled;
+  final VoidCallback? onInboxNearEnd;
+  final TextEditingController? composer;
+  final VoidCallback? onAttach;
+  final VoidCallback? onThreadMenu;
+  final bool threadClosed;
+
+  /// The first load failed. The live thread omits the composer.
+  final bool hideComposer;
+  final String? attachmentLabel;
+  final VoidCallback? onClearAttachment;
+  final ValueChanged<String>? onUseMedia;
+  final VoidCallback? onThreadNearStart;
+
+  /// Shown under the inbox list when the next page failed.
+  final String? inboxMoreMessage;
+  final VoidCallback? onInboxMoreRetry;
+
+  /// Shown above the messages when an older page failed.
+  final String? threadMoreMessage;
+  final VoidCallback? onThreadMoreRetry;
   final List<PhotoCredit> credits;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
@@ -273,6 +315,7 @@ class AccountCanvas extends StatelessWidget {
         showBell: showBell,
         onBack: onBack,
         onBell: onBell,
+        onMenu: onThreadMenu,
       );
     }
     return _RootHeader(title: title, subtitle: subtitle, onBell: onBell);
@@ -292,6 +335,9 @@ class AccountCanvas extends StatelessWidget {
       AccountFrame.inbox => _InboxBody(
         rows: inbox,
         showSampleNote: showSampleNote,
+        onNearEnd: onInboxNearEnd,
+        moreMessage: inboxMoreMessage,
+        onMoreRetry: onInboxMoreRetry,
       ),
       AccountFrame.inboxEmpty => _EmptyInbox(onMessageOffice: onMessageOffice),
       AccountFrame.inboxError => _InboxError(onRetry: onInboxRetry),
@@ -316,6 +362,17 @@ class AccountCanvas extends StatelessWidget {
         dayLabel: dayLabel,
         showSampleNote: showSampleNote,
         onSend: onSend,
+        sendEnabled: sendEnabled,
+        composer: composer,
+        onAttach: onAttach,
+        closed: threadClosed,
+        hideComposer: hideComposer,
+        attachmentLabel: attachmentLabel,
+        onClearAttachment: onClearAttachment,
+        onUseMedia: onUseMedia,
+        onNearStart: onThreadNearStart,
+        moreMessage: threadMoreMessage,
+        onMoreRetry: onThreadMoreRetry,
       ),
       AccountFrame.privacy =>
         noticeMarkdown != null
@@ -575,6 +632,7 @@ class _BackHeader extends StatelessWidget {
     required this.showBell,
     this.onBack,
     this.onBell,
+    this.onMenu,
   });
 
   final String title;
@@ -583,6 +641,7 @@ class _BackHeader extends StatelessWidget {
   final bool showBell;
   final VoidCallback? onBack;
   final VoidCallback? onBell;
+  final VoidCallback? onMenu;
 
   @override
   Widget build(BuildContext context) {
@@ -623,6 +682,9 @@ class _BackHeader extends StatelessWidget {
             if (showBell) ...<Widget>[
               const SizedBox(width: 11),
               _Bell(onTap: onBell),
+            ] else if (onMenu != null) ...<Widget>[
+              const SizedBox(width: 11),
+              _ThreadMenu(onTap: onMenu!),
             ],
           ],
         ),
@@ -953,14 +1015,23 @@ class _MenuRow extends StatelessWidget {
 }
 
 class _InboxBody extends StatelessWidget {
-  const _InboxBody({required this.rows, required this.showSampleNote});
+  const _InboxBody({
+    required this.rows,
+    required this.showSampleNote,
+    this.onNearEnd,
+    this.moreMessage,
+    this.onMoreRetry,
+  });
 
   final List<AccountInboxRow> rows;
   final bool showSampleNote;
+  final VoidCallback? onNearEnd;
+  final String? moreMessage;
+  final VoidCallback? onMoreRetry;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final Widget list = ListView(
       padding: const EdgeInsets.fromLTRB(
         S8Space.gutter,
         S8Space.listInset,
@@ -981,6 +1052,12 @@ class _InboxBody extends StatelessWidget {
             ],
           ),
         ),
+        if (moreMessage != null && onMoreRetry != null)
+          _LoadMoreRetry(
+            message: moreMessage!,
+            onRetry: onMoreRetry!,
+            retryKey: const Key('inbox-load-more-retry'),
+          ),
         if (showSampleNote) ...<Widget>[
           const SizedBox(height: 14),
           const Center(
@@ -995,6 +1072,17 @@ class _InboxBody extends StatelessWidget {
           ),
         ],
       ],
+    );
+    final VoidCallback? onNearEnd = this.onNearEnd;
+    if (onNearEnd == null) return list;
+    return NotificationListener<ScrollNotification>(
+      onNotification: (ScrollNotification notice) {
+        final ScrollMetrics metrics = notice.metrics;
+        if (metrics.maxScrollExtent <= 0) return false;
+        if (metrics.maxScrollExtent - metrics.pixels < 600) onNearEnd();
+        return false;
+      },
+      child: list,
     );
   }
 }
@@ -1920,15 +2008,52 @@ class _ThreadBody extends StatelessWidget {
     required this.dayLabel,
     required this.showSampleNote,
     this.onSend,
+    this.sendEnabled = true,
+    this.composer,
+    this.onAttach,
+    this.closed = false,
+    this.hideComposer = false,
+    this.attachmentLabel,
+    this.onClearAttachment,
+    this.onUseMedia,
+    this.onNearStart,
+    this.moreMessage,
+    this.onMoreRetry,
   });
 
   final List<AccountBubble> bubbles;
   final String dayLabel;
   final bool showSampleNote;
   final VoidCallback? onSend;
+  final bool sendEnabled;
+  final TextEditingController? composer;
+  final VoidCallback? onAttach;
+  final bool closed;
+  final bool hideComposer;
+  final String? attachmentLabel;
+  final VoidCallback? onClearAttachment;
+  final ValueChanged<String>? onUseMedia;
+  final VoidCallback? onNearStart;
+  final String? moreMessage;
+  final VoidCallback? onMoreRetry;
+
+  bool get _live =>
+      hideComposer ||
+      composer != null ||
+      onAttach != null ||
+      onNearStart != null ||
+      onUseMedia != null ||
+      closed ||
+      attachmentLabel != null ||
+      moreMessage != null;
 
   @override
   Widget build(BuildContext context) {
+    if (_live) return _liveColumn();
+    return _specimenColumn();
+  }
+
+  Widget _specimenColumn() {
     return Column(
       children: <Widget>[
         Expanded(
@@ -1989,16 +2114,129 @@ class _ThreadBody extends StatelessWidget {
       ],
     );
   }
+
+  Widget _liveColumn() {
+    final Widget transcript = ListView(
+      padding: const EdgeInsets.fromLTRB(
+        S8Space.gutter,
+        S8Space.threadInset,
+        S8Space.gutter,
+        S8Space.labelGap,
+      ),
+      children: <Widget>[
+        if (moreMessage != null && onMoreRetry != null)
+          _LoadMoreRetry(
+            message: moreMessage!,
+            onRetry: onMoreRetry!,
+            retryKey: const Key('thread-load-more-retry'),
+          ),
+        if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
+        if (dayLabel.isNotEmpty) const SizedBox(height: S8Space.dayGap),
+        for (final AccountBubble bubble in bubbles)
+          _Bubble(bubble: bubble, onUseMedia: onUseMedia),
+        if (showSampleNote) const _SampleConversation(),
+      ],
+    );
+    final VoidCallback? onNearStart = this.onNearStart;
+    return Column(
+      children: <Widget>[
+        Expanded(
+          child: onNearStart == null
+              ? transcript
+              : NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification notice) {
+                    final ScrollMetrics metrics = notice.metrics;
+                    if (metrics.maxScrollExtent <= 0) return false;
+                    if (metrics.pixels < 480) onNearStart();
+                    return false;
+                  },
+                  child: transcript,
+                ),
+        ),
+        if (!hideComposer)
+          Container(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: BrandColors.cardLine)),
+            ),
+            child: closed ? const _ClosedLine() : _liveComposer(),
+          ),
+      ],
+    );
+  }
+
+  Widget _liveComposer() {
+    final String? label = attachmentLabel;
+    final Widget row = Row(
+      children: <Widget>[
+        _AttachControl(onTap: onAttach),
+        const SizedBox(width: 10),
+        Expanded(child: _ComposerField(controller: composer)),
+        const SizedBox(width: 10),
+        _ComposerSend(onTap: onSend, enabled: sendEnabled),
+      ],
+    );
+    if (label == null) return row;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: _hint,
+              ),
+            ),
+            if (onClearAttachment != null)
+              _ClearAttachment(onTap: onClearAttachment!),
+          ],
+        ),
+        const SizedBox(height: 8),
+        row,
+      ],
+    );
+  }
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.bubble});
+  const _Bubble({required this.bubble, this.onUseMedia});
 
   final AccountBubble bubble;
+  final ValueChanged<String>? onUseMedia;
 
   @override
   Widget build(BuildContext context) {
     final bool mine = bubble.fromResident;
+    final TextStyle style = TextStyle(
+      fontFamily: AppTypography.fontFamily,
+      fontSize: 13,
+      height: S8Space.threadLineHeight,
+      fontWeight: FontWeight.w500,
+      letterSpacing: 0,
+      leadingDistribution: TextLeadingDistribution.even,
+      color: mine ? Colors.white : BrandColors.textPrimary,
+      decoration: TextDecoration.none,
+    );
+    final Widget words = _CssLines(
+      text: bubble.body,
+      style: style,
+      step: 13 * S8Space.threadLineHeight,
+    );
+    final Widget content = bubble.mediaIds.isEmpty
+        ? words
+        : Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (bubble.body.isNotEmpty) words,
+              for (final String mediaId in bubble.mediaIds)
+                _MediaChip(mediaId: mediaId, mine: mine, onTap: onUseMedia),
+            ],
+          );
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: SizedBox(
@@ -2029,20 +2267,7 @@ class _Bubble extends StatelessWidget {
                         strokeAlign: BorderSide.strokeAlignInside,
                       ),
               ),
-              child: _CssLines(
-                text: bubble.body,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  height: S8Space.threadLineHeight,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0,
-                  leadingDistribution: TextLeadingDistribution.even,
-                  color: mine ? Colors.white : BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
-                step: 13 * S8Space.threadLineHeight,
-              ),
+              child: content,
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 6, 4, 12),
@@ -2557,15 +2782,29 @@ class _EmptyMark extends StatelessWidget {
   }
 }
 
-class _ComposerSend extends StatelessWidget {
-  const _ComposerSend({this.onTap});
-
-  final VoidCallback? onTap;
+class _ClosedLine extends StatelessWidget {
+  const _ClosedLine();
 
   @override
   Widget build(BuildContext context) {
-    // The painted disc is 44 dp, which is the composer dark run. The hit
-    // overflows to 48 without growing the row.
+    return const SizedBox(
+      height: 44,
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text('This conversation is closed.', style: _hint),
+      ),
+    );
+  }
+}
+
+class _ThreadMenu extends StatelessWidget {
+  const _ThreadMenu({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    // 44 dp disc, 48 dp hit. The specimen header does not build this.
     return SizedBox(
       width: 44,
       height: 44,
@@ -2574,10 +2813,318 @@ class _ComposerSend extends StatelessWidget {
         maxHeight: 48,
         child: Semantics(
           button: true,
-          label: 'Send',
+          label: 'More',
           child: GestureDetector(
+            key: const Key('account-thread-menu'),
             behavior: HitTestBehavior.opaque,
             onTap: onTap,
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Color(0x24FFFFFF),
+                    shape: BoxShape.circle,
+                  ),
+                  child: SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: TaytayIcon(
+                      icon: TaytayIcons.moreVertical,
+                      size: 20,
+                      color: Colors.white,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LoadMoreRetry extends StatelessWidget {
+  const _LoadMoreRetry({
+    required this.message,
+    required this.onRetry,
+    required this.retryKey,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final Key retryKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        children: <Widget>[
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: BrandColors.textSecondary,
+              decoration: TextDecoration.none,
+            ),
+          ),
+          Semantics(
+            button: true,
+            label: 'Retry',
+            child: GestureDetector(
+              key: retryKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: onRetry,
+              child: const SizedBox(
+                height: 48,
+                child: Center(
+                  child: Text(
+                    'Retry',
+                    style: TextStyle(
+                      fontFamily: AppTypography.fontFamily,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: BrandColors.taytayBlue,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttachControl extends StatelessWidget {
+  const _AttachControl({this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const Widget icon = TaytayIcon(
+      icon: TaytayIcons.paperclip,
+      size: 20,
+      color: BrandColors.listMeta,
+      semanticLabel: 'Attach',
+    );
+    final VoidCallback? onTap = this.onTap;
+    if (onTap == null) return icon;
+    return SizedBox(
+      width: 20,
+      height: 20,
+      child: OverflowBox(
+        maxWidth: 48,
+        maxHeight: 48,
+        child: Semantics(
+          button: true,
+          label: 'Attach photo or PDF',
+          child: GestureDetector(
+            key: const Key('account-thread-attach'),
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: const SizedBox(
+              width: 48,
+              height: 48,
+              child: Center(
+                child: TaytayIcon(
+                  icon: TaytayIcons.paperclip,
+                  size: 20,
+                  color: BrandColors.listMeta,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerField extends StatelessWidget {
+  const _ComposerField({required this.controller});
+
+  final TextEditingController? controller;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextEditingController? controller = this.controller;
+    const BoxDecoration decoration = BoxDecoration(
+      color: Color(0xFFF6F8FC),
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+    );
+    if (controller == null) {
+      return const SizedBox(
+        height: 44,
+        child: DecoratedBox(
+          decoration: decoration,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Write a message…', style: _hint),
+            ),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 44,
+      child: DecoratedBox(
+        decoration: decoration,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: TextField(
+              key: const Key('account-thread-field'),
+              controller: controller,
+              style: const TextStyle(
+                fontFamily: AppTypography.fontFamily,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                height: S8Space.normal,
+                color: BrandColors.textPrimary,
+                decoration: TextDecoration.none,
+              ),
+              cursorColor: BrandColors.taytayBlue,
+              decoration: const InputDecoration(
+                isCollapsed: true,
+                isDense: true,
+                filled: false,
+                hintText: 'Write a message…',
+                hintStyle: _hint,
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ClearAttachment extends StatelessWidget {
+  const _ClearAttachment({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Remove attachment',
+      child: GestureDetector(
+        key: const Key('account-thread-clear-attachment'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: const SizedBox(
+          width: 48,
+          height: 48,
+          child: Center(
+            child: TaytayIcon(
+              icon: TaytayIcons.close,
+              size: 16,
+              color: BrandColors.listMeta,
+              semanticLabel: '',
+              excludeSemantics: true,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MediaChip extends StatelessWidget {
+  const _MediaChip({required this.mediaId, required this.mine, this.onTap});
+
+  final String mediaId;
+  final bool mine;
+  final ValueChanged<String>? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ink = mine ? Colors.white : BrandColors.textPrimary;
+    final ValueChanged<String>? onTap = this.onTap;
+    return Semantics(
+      button: onTap != null,
+      label: 'Attachment',
+      child: GestureDetector(
+        key: Key('thread-media-$mediaId'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap == null ? null : () => onTap(mediaId),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Row(
+            children: <Widget>[
+              TaytayIcon(
+                icon: TaytayIcons.fileText,
+                size: 16,
+                color: ink,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Attachment',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: ink,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComposerSend extends StatelessWidget {
+  const _ComposerSend({this.onTap, this.enabled = true});
+
+  final VoidCallback? onTap;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    // The painted disc is 44 dp, which is the composer dark run. The hit
+    // overflows to 48 without growing the row. A send in flight keeps that
+    // disc and drops the ink so the control reads as disabled.
+    final Widget button = SizedBox(
+      width: 44,
+      height: 44,
+      child: OverflowBox(
+        maxWidth: 48,
+        maxHeight: 48,
+        child: Semantics(
+          button: true,
+          enabled: enabled,
+          label: 'Send',
+          child: GestureDetector(
+            key: const Key('account-thread-send'),
+            behavior: HitTestBehavior.opaque,
+            onTap: enabled ? onTap : null,
             child: const SizedBox(
               width: 48,
               height: 48,
@@ -2605,6 +3152,8 @@ class _ComposerSend extends StatelessWidget {
         ),
       ),
     );
+    if (enabled) return button;
+    return Opacity(opacity: Opacities.disabled, child: button);
   }
 }
 

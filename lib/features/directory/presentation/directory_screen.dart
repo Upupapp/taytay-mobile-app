@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/api/paginated.dart';
+import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -202,6 +206,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   String? _error;
   String _topic = '';
   bool _started = false;
+  OutgoingFile? _file;
   final TextEditingController _message = TextEditingController();
 
   @override
@@ -255,6 +260,42 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     setState(() => _topic = chosen);
   }
 
+  Future<void> _attach() async {
+    final DocumentPicker picker = AppDependencies.of(context).documentPicker;
+    const UploadPolicy policy = UploadPolicy.fallback;
+    if (!picker.supports(DocumentSource.file)) {
+      setState(() => _error = 'This phone cannot attach a file.');
+      return;
+    }
+    final CapturedDocument? picked = await picker.pick(
+      DocumentSource.file,
+      policy,
+    );
+    if (!mounted || picked == null) return;
+    final DocumentRejection? rejection = DocumentCapturePolicy.inspect(
+      picked,
+      policy,
+    );
+    if (rejection != null) {
+      final String message = localisedDocumentRejection(
+        context,
+        rejection,
+        actualBytes: picked.sizeBytes,
+        policy: policy,
+      );
+      setState(() => _error = message);
+      return;
+    }
+    setState(() {
+      _file = OutgoingFile(
+        bytes: picked.bytes,
+        fileName: picked.fileName,
+        mimeType: picked.mimeType,
+      );
+      _error = null;
+    });
+  }
+
   Future<void> _send() async {
     final Office? office = _office;
     if (office == null) return;
@@ -272,6 +313,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
       officeId: office.wireId,
       topic: _topic,
       body: body,
+      file: _file,
     );
     if (!mounted) return;
     switch (result) {
@@ -343,6 +385,8 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
               messageController: _message,
               selectedTopic: _topic,
               onTopic: _pickTopic,
+              onAttach: _attach,
+              attachmentLabel: _file?.fileName,
               onBack: () => _back(context),
               onSend: _send,
             ),
@@ -438,7 +482,7 @@ class _OfficeThreadScreenState extends State<OfficeThreadScreen> {
     final Result<OfficeThread> thread = await dependencies
         .officeMessagingRepository
         .loadThread(widget.threadId);
-    final Result<List<OfficeMessage>> messages = await dependencies
+    final Result<Paginated<OfficeMessage>> messages = await dependencies
         .officeMessagingRepository
         .listMessages(widget.threadId);
     if (!mounted) return;
@@ -459,8 +503,14 @@ class _OfficeThreadScreenState extends State<OfficeThreadScreen> {
     if (!mounted) return;
     final String? accountId =
         dependencies.session.state.residentOrNull?.accountId;
+    if (loaded != null) {
+      await dependencies.officeMessagingRepository.markThreadRead(
+        widget.threadId,
+      );
+    }
+    if (!mounted) return;
     final List<OfficeMessage> rows = switch (messages) {
-      Ok(:final value) => value.reversed.toList(growable: false),
+      Ok(:final value) => value.items.reversed.toList(growable: false),
       Err() => const <OfficeMessage>[],
     };
     setState(() {

@@ -37,7 +37,7 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 11 | Old programmes screen | Open | `GET /programs` is not in the spec. The tab is Tulong | `3e3b110` |
 | 12 | My Account profile, preferences, consents | Closed | `GET`/`PATCH /api/v1/me`, `GET`/`PATCH /api/v1/me/notification-preferences`, `GET`/`POST /api/v1/me/consents`, `GET /api/v1/app/config` | `3e3b110` |
 | 13 | Consent withdrawal | Open | No withdraw route. `PrivacyConsent` is `id`, `version`, `accepted_at`. Clarence's scope | `3e3b110` |
-| 14 | Inbox reply, read, close, paging | Partly closed | `GET`/`POST /api/v1/threads` are called. `POST /api/v1/threads/{id}/messages`, `/read`, `/close` are not | `3e3b110` |
+| 14 | Inbox reply, read, close, paging, attachments | Closed | `GET`/`POST /api/v1/threads`, `GET /api/v1/threads/{id}`, `GET`/`POST /api/v1/threads/{id}/messages`, `POST /api/v1/threads/{id}/read`, `POST /api/v1/threads/{id}/close`. Cursor `limit`. `media_id` or multipart `file` | `5f6fe0f` |
 | 15 | Home banner media | Closed when `image_url` is set | `GET /api/v1/home/banners/{id}/image`. No bearer token. A null URL keeps the bundled slide | `5f6fe0f` |
 | 16 | Household summary | Partly closed | `GET /api/v1/households/current` is called. Correction still declines | `3e3b110` |
 | 17 | Digital ID | Closed | `GET /api/v1/me/digital-id`, `GET /api/v1/me`, and authenticated `GET /api/v1/media/{id}/content` for `photo_media_id` | `5f6fe0f` |
@@ -64,6 +64,10 @@ Still Firebase `reauthenticateWithCredential` then `updatePassword`. Sign-in now
 ### 12. My Account profile, preferences, consents
 
 Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `barangay_id`; preferences are `verification_decided`, `message_received`, `balita`, and `emergency`, each `in_app` and `push`; consents record `{version}`; `GET /api/v1/app/config` publishes `privacy_notice`. `editable_fields` is still absent, so local field ownership applies. `POST /api/v1/me/avatar` still uses multipart `file`. `hasAvatar` is read from `avatar_media_id` on the next `GET /me`. Completion percent stays a client derivation.
+
+### 14. Inbox reply, read, close, paging, and attachments
+
+Re-scored against the vendored Node export from taytay-backend pull request 2, head `5f6fe0f` (`docs/integration/taytay-node-openapi.json`). The account thread posts a reply, marks the thread read when it opens, and can close it. The thread list and the message list send `limit` and `cursor` and stop when `has_more` is false or `next_cursor` is empty. A reply attaches either `media_id` for an attachment already in the thread, or multipart field `file` for a new photo or PDF. Starting a thread sends `file` from the compose row. The repository also accepts `media_id` on start. The two are not sent together. `Message.attachments` is kept. The SAMPLE line stays on `usesMockData`. The resident does not see the server's error `message`.
 
 ### 18. Notification paging and targets
 
@@ -92,12 +96,6 @@ Still declined: `loadDocuments` and `submitForReview` (`BackendGap.absentOnNodeC
 ### 10. Tulong hero bytes
 
 List and detail decode the `Service` fields, including `hero_url`. The service page calls `GET /api/v1/services/{slug}/hero` when `hero_url` is set. The request is anonymous, and a 401 does not end the session. The photograph is 196 dp tall with a 20 dp radius. A null URL, a 404, or a failed read keeps the icon tile. The list does not paint it. The saved list is deferred, below. There is no citizen apply route. Dev mocks do not call the hero route.
-
-### 14. Inbox reply, read, close, and paging
-
-Called: `GET /api/v1/threads` (one page, no `limit`, no `cursor`), `GET /api/v1/threads/{id}`, `GET /api/v1/threads/{id}/messages`, and `POST /api/v1/threads` from directory compose (`office_id`, `subject`, `body`).
-
-Not called from a screen, though the repository has the methods: `POST /api/v1/threads/{id}/messages`, `POST /api/v1/threads/{id}/read`, `POST /api/v1/threads/{id}/close`. The account thread still paints a composer that is not a text field. `Message.attachments` is still dropped. Multipart `file` on start and reply is still unused. The SAMPLE line is still limited to `usesMockData`.
 
 ### 15. Home banner media
 

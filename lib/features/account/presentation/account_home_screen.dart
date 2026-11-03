@@ -71,13 +71,13 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           _detail = null;
           _failed = true;
       }
-      if (threads case Ok(:final value) when value.isNotEmpty) {
-        final int unread = value.fold<int>(
+      if (threads case Ok(:final value) when value.items.isNotEmpty) {
+        final int unread = value.items.fold<int>(
           0,
           (int sum, thread) => sum + thread.unreadCount,
         );
         _unread = unread;
-        final office = value.first.officeName;
+        final office = value.items.first.officeName;
         _messagesLine = unread > 0
             ? '$unread new ${unread == 1 ? 'reply' : 'replies'} from $office'
             : 'No new replies';
