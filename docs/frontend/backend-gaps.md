@@ -30,13 +30,13 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 4 | Profile name split | Deferred (needs Paul's approval) | `PATCH /api/v1/me` sends one `name`. A given, middle, and family split is not on `ProfilePatch` | `3e3b110` |
 | 5 | In-session password change | Closed | Firebase `updatePassword` (no HTTP route) | `3e3b110` |
 | 6 | Other signed-in sessions | Deferred (needs Paul's approval) | `GET me/sessions` is not in the spec. `POST`/`DELETE /api/v1/me/devices` is a push token | `3e3b110` |
-| 7 | Directory photos and service lines | Partly closed | `GET /api/v1/offices`, `GET /api/v1/offices/{slug}` | `3e3b110` |
+| 7 | Directory photos and service lines | Closed | `GET /api/v1/offices`, `GET /api/v1/offices/{slug}`, `GET /api/v1/offices/{slug}/hero`. `service_lines` renders. A missing hero keeps the bundled hall. | `5f6fe0f` |
 | 8 | Balita cover bytes | Closed for published covers | `GET /api/v1/news/{id}/cover` when `cover_url` is set. No bearer token. A draft is not cached | `5f6fe0f` |
 | 9 | Balita comments, reactions, bookmarks | Deferred (needs Paul's approval) | No citizen route under `/news` | `3e3b110` |
 | 10 | Tulong hero bytes and saved list | Hero bytes closed. Saved list: Deferred (needs Paul's approval) | `GET /api/v1/services/{slug}/hero` when `hero_url` is set. No bearer token. No saved-service route | `5f6fe0f` |
-| 11 | Old programmes screen | Open | `GET /programs` is not in the spec. The tab is Tulong | `3e3b110` |
+| 11 | Old programmes screen | Closed | The tab and any leftover programmes entry read `GET /services` or `GET /services?office={slug}`. `GET /programs` is not called. | `5f6fe0f` |
 | 12 | My Account profile, preferences, consents | Closed | `GET`/`PATCH /api/v1/me`, `GET`/`PATCH /api/v1/me/notification-preferences`, `GET`/`POST /api/v1/me/consents`, `GET /api/v1/app/config` | `3e3b110` |
-| 13 | Consent withdrawal | Open | No withdraw route. `PrivacyConsent` is `id`, `version`, `accepted_at`. Clarence's scope | `3e3b110` |
+| 13 | Consent withdrawal | Closed | `POST /api/v1/me/consents/withdraw` sets `withdrawn_at`. `POST /api/v1/me/consents` with that version clears it. | `5f6fe0f` |
 | 14 | Inbox reply, read, close, paging, attachments | Closed | `GET`/`POST /api/v1/threads`, `GET /api/v1/threads/{id}`, `GET`/`POST /api/v1/threads/{id}/messages`, `POST /api/v1/threads/{id}/read`, `POST /api/v1/threads/{id}/close`. Cursor `limit`. `media_id` or multipart `file` | `5f6fe0f` |
 | 15 | Home banner media | Closed when `image_url` is set | `GET /api/v1/home/banners/{id}/image`. No bearer token. A null URL keeps the bundled slide | `5f6fe0f` |
 | 16 | Household summary | Partly closed | `GET /api/v1/households/current` is called. Correction still declines | `3e3b110` |
@@ -87,7 +87,7 @@ Still declined: `loadDocuments` and `submitForReview` (`BackendGap.absentOnNodeC
 
 ### 7. Directory photos and service lines
 
-`GET /api/v1/offices` and `GET /api/v1/offices/{slug}` still supply the text fields, including `short_name`. `banner_media_id` is stored and is not a file. Every live office hero is still `assets/photos/municipal_hall.jpg`. `services` is always an empty list. `Office` has no service-line array. `GET /api/v1/services` can be filtered by `office`, and the directory does not join it. A failed live list does not open `offices.json`. `GET /api/v1/offices/{slug}/hero` is on `5f6fe0f` and is not called.
+`GET /api/v1/offices` and `GET /api/v1/offices/{slug}` supply the text fields, including `short_name`, `service_lines` (default `[]`), and `hero_url`. The hero bytes are `GET /api/v1/offices/{slug}/hero` on the configured API host, with no bearer token. A 401 on that read does not end the session. A missing URL, an empty body, or a failed read keeps `assets/photos/municipal_hall.jpg`. Service lines render in the existing Services card. Tulong services for that office come from `GET /services?office={slug}` and are added there when the name is not already listed. A failed live list does not open `offices.json`. The dev fixture is still the only reader of `offices.json`, and only when `usesMockData` is true.
 
 ### 8. Balita cover bytes
 
@@ -111,15 +111,15 @@ List and detail decode the `Service` fields, including `hero_url`. The service p
 
 ## Open
 
-The only open gaps are 11 and 13. Both were scored against backend `3e3b110`.
+No open gaps remain from the 11 and 13 rows. Both were closed against the vendored spec at backend `5f6fe0f`.
 
 ### 11. Old programmes screen
 
-`ProgramsScreen` is still unrouted and still declines `GET /programs`, which is not in the spec. The tab is `TulongScreen`.
+`/programs` is `TulongScreen` and reads `GET /services`. An office page reads `GET /services?office={slug}`. `ProgramApiRepository` reads those same service routes and does not call `GET /programs`. The old programmes widgets, if something still builds them, open the Tulong routes.
 
 ### 13. Consent withdrawal
 
-This is in Clarence's scope. `PrivacyControlsScreen` still offers withdraw, and `withdrawConsent` still declines. `PrivacyConsent` has no withdrawn state. Data export has no route and the live screens still hide the row. `POST /api/v1/me/close` exists, takes no body, and is still not offered.
+`GET /me/consents` reads `withdrawn_at`. `POST /me/consents/withdraw` sends `{version}` and sets it. `POST /me/consents` with that version clears it. My Account settings links to the consents screen. Withdrawal asks for confirmation, keeps the row, and an error says nothing changed. The resident does not see the server's `message`. Data export still has no route and stays hidden. `POST /me/close` is still not offered.
 
 ## Deferred (needs Paul's approval)
 
@@ -154,6 +154,3 @@ Saved pages are the in-memory list for this process. There is no saved-service r
 The next client work, one area at a time, is not in this commit:
 
 1. Verification (the open half of item 3).
-2. Inbox send, read, close, and paging (item 14).
-3. Consent withdrawal (item 13).
-4. Directory service lines (item 7). `GET /offices/{slug}/hero` is not called.

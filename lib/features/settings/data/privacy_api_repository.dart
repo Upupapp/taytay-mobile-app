@@ -1,4 +1,5 @@
 import '../../../core/api/api_client.dart';
+import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/backend_gap.dart';
 import '../../../core/result/result.dart';
@@ -26,6 +27,7 @@ class PrivacyApiRepository implements AccountControlsRepository {
   final ApiClient _apiClient;
 
   static const String consentsPath = 'me/consents';
+  static const String withdrawPath = 'me/consents/withdraw';
 
   @override
   Future<Result<AccountControls>> loadControls() async {
@@ -53,16 +55,37 @@ class PrivacyApiRepository implements AccountControlsRepository {
     return response.map((envelope) => envelope.data);
   }
 
+  /// `POST me/consents/withdraw`. The body is `{version}`.
+  ///
+  /// Withdrawing again returns the same row. An unknown version is 404.
+  /// `POST me/consents` with that version again clears `withdrawn_at`.
   @override
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    return backendGapFailure<ConsentRecord>(
-      BackendGap.absentOnNodeContract,
-      'withdrawConsent',
-    );
+    final Result<ApiEnvelope<ConsentRecord?>> response = await _apiClient
+        .send<ConsentRecord?>(
+          method: HttpMethod.post,
+          path: withdrawPath,
+          authenticated: true,
+          idempotencyKey: idempotencyKey,
+          body: <String, Object?>{'version': key},
+          decode: _decodeConsent,
+        );
+    return switch (response) {
+      Err<ApiEnvelope<ConsentRecord?>>(:final failure) => Err<ConsentRecord>(
+        failure,
+      ),
+      Ok<ApiEnvelope<ConsentRecord?>>(:final value) =>
+        value.data == null
+            ? const Err<ConsentRecord>(
+                ContractFailure(
+                  debugMessage: 'Withdraw returned no consent record.',
+                ),
+              )
+            : Ok<ConsentRecord>(value.data!),
+    };
   }
 
   @override
@@ -97,45 +120,67 @@ class PrivacyApiRepository implements AccountControlsRepository {
   }
 
   /// `POST me/consents`. Records the notice version the resident accepted.
-  Future<Result<ConsentRecord?>> recordConsent({
-    required String version,
-  }) async {
-    final response = await _apiClient.send<ConsentRecord?>(
-      method: HttpMethod.post,
-      path: consentsPath,
-      authenticated: true,
-      body: <String, Object?>{'version': version},
-      decode: _decodeConsent,
-    );
-    return response.map((envelope) => envelope.data);
+  ///
+  /// Accepting a version that was withdrawn clears `withdrawn_at`. The
+  /// returned row is the record after that, including a null withdrawal.
+  @override
+  Future<Result<ConsentRecord>> acceptConsent({required String version}) async {
+    final Result<ApiEnvelope<ConsentRecord?>> response = await _apiClient
+        .send<ConsentRecord?>(
+          method: HttpMethod.post,
+          path: consentsPath,
+          authenticated: true,
+          body: <String, Object?>{'version': version},
+          decode: _decodeConsent,
+        );
+    return switch (response) {
+      Err<ApiEnvelope<ConsentRecord?>>(:final failure) => Err<ConsentRecord>(
+        failure,
+      ),
+      Ok<ApiEnvelope<ConsentRecord?>>(:final value) =>
+        value.data == null
+            ? const Err<ConsentRecord>(
+                ContractFailure(
+                  debugMessage: 'Accept returned no consent record.',
+                ),
+              )
+            : Ok<ConsentRecord>(value.data!),
+    };
   }
 
   static ConsentRecord? _decodeConsent(Object? entry) {
     if (entry is! Map<String, dynamic>) return null;
-    final Object? purpose = entry['purpose'] ?? entry['version'] ?? entry['id'];
-    if (purpose is! String || purpose.isEmpty) return null;
-
-    final Object? version = entry['notice_version'] ?? entry['version'];
+    // The withdraw body is the notice version. An id is not a version, and
+    // sending it would record a withdrawal the office cannot match.
+    final String? version = _version(
+      entry['version'] ?? entry['notice_version'],
+    );
+    final Object? id = entry['id'];
+    if (version == null && id is! String) return null;
 
     return ConsentRecord(
-      key: purpose,
-      // The purpose code is the label until the notice supplies a friendlier
-      // one. A code a resident can quote to the office beats an invented
-      // sentence about what they agreed to.
-      label: purpose,
-      statement: version is String && version.isNotEmpty
-          ? 'Agreed under privacy notice $version'
-          : 'Agreed under the privacy notice in force at the time',
+      key: version ?? '',
+      label: 'Privacy notice',
+      statement: version == null
+          ? 'Agreed under the privacy notice in force at the time'
+          : 'Agreed under privacy notice $version',
       grantedAt: DateTime.tryParse(
         (entry['granted_at'] ?? entry['accepted_at']) is String
             ? (entry['granted_at'] ?? entry['accepted_at']) as String
             : '',
       )?.toUtc(),
       // Kept, not dropped. A withdrawn consent stays in the list because the
-      // record is the point.
+      // record is the point. Null means this version is in force again.
       withdrawnAt: DateTime.tryParse(
         entry['withdrawn_at'] is String ? entry['withdrawn_at'] as String : '',
       )?.toUtc(),
+      isWithdrawable: version != null,
     );
+  }
+
+  static String? _version(Object? value) {
+    if (value is! String) return null;
+    final String trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
   }
 }

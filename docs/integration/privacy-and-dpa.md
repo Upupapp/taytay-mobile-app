@@ -24,17 +24,18 @@ go/no-go that treats them as code items will find them open on launch day.**
 
 ## What was wired
 
-`PrivacyApiRepository` against the `Audit` module: `GET me/privacy/consents`,
-`DELETE me/privacy/consents/{purpose}`, and the corrections route TAB 04 already
-uses. This was the last resident-reachable stub in the app.
+`PrivacyApiRepository` records and lists consents on the Node API:
+`GET /me/consents`, `POST /me/consents`, and `POST /me/consents/withdraw`.
+The body of both posts is `{version}`.
 
 **A withdrawn consent keeps its row.** The record is the point — "did she ever
 agree, and when did she change her mind" is the question a complaint asks, and
 removing the row erases the evidence it exists to provide. The server keeps
-`granted_at` and `withdrawn_at` side by side and the app renders both.
+`accepted_at` and `withdrawn_at` side by side and the app renders both.
+Accepting that version again clears `withdrawn_at`.
 
-**Consent is addressed by purpose, not by row id.** A resident withdraws a
-*purpose*; the office keeps every row either way.
+**Consent is addressed by notice version, not by row id.** A resident withdraws
+a version; the office keeps the row either way.
 
 ## Data-subject rights: what a resident can actually start today
 
@@ -42,7 +43,7 @@ removing the row erases the evidence it exists to provide. The server keeps
 | --- | --- | --- |
 | **Access** | ✅ | `me/profile`, `me/household`, `me/cases`, `me/privacy/consents` — the resident reads their own record throughout |
 | **Correction** | ✅ | `me/profile/corrections`, adjudicated by staff |
-| **Object / withdraw consent** | ✅ | `DELETE me/privacy/consents/{purpose}` |
+| **Object / withdraw consent** | ✅ | `POST me/consents/withdraw` |
 | **Erasure** | ❌ **F13** | No route exists. Also a store-submission blocker |
 | **Data portability** | ❌ | No export route exists. Not previously recorded — raised here as **F29** |
 

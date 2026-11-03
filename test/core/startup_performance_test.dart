@@ -85,7 +85,6 @@ void main() {
     test('routes the Node API does not publish do not invent paging', () {
       const List<String> absent = <String>[
         'lib/features/events/data/event_api_repository.dart',
-        'lib/features/programs/data/program_api_repository.dart',
         'lib/features/services/data/assistance_api_repository.dart',
       ];
       for (final String path in absent) {

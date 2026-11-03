@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
@@ -53,6 +56,8 @@ class DirectoryCanvas extends StatelessWidget {
     this.onTopic,
     this.onAttach,
     this.attachmentLabel,
+    this.loadHero,
+    this.onServiceLine,
     super.key,
   });
 
@@ -87,6 +92,12 @@ class DirectoryCanvas extends StatelessWidget {
 
   /// Chosen file name, or "Attachment" when an existing media id is held.
   final String? attachmentLabel;
+
+  /// `GET /offices/{slug}/hero`. Null keeps the bundled hall.
+  final MediaBytesLoader? loadHero;
+
+  /// Opens a Tulong page for a catalogue line. Directory lines have no slug.
+  final ValueChanged<String>? onServiceLine;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
   static const Color _searchBorder = Color(0xFFE1E6F0);
@@ -182,10 +193,12 @@ class DirectoryCanvas extends StatelessWidget {
       ),
       DirectoryFrame.detail when current != null => _DetailBody(
         office: current,
+        loadHero: loadHero,
         onCall: onCall,
         onDirections: onDirections,
         onMessage: onMessage,
         onApp: onApp,
+        onServiceLine: onServiceLine,
       ),
       DirectoryFrame.compose when current != null => _ComposeBody(
         office: current,
@@ -758,24 +771,28 @@ class _OfflineBody extends StatelessWidget {
 class _DetailBody extends StatelessWidget {
   const _DetailBody({
     required this.office,
+    this.loadHero,
     this.onCall,
     this.onDirections,
     this.onMessage,
     this.onApp,
+    this.onServiceLine,
   });
 
   final Office office;
+  final MediaBytesLoader? loadHero;
   final VoidCallback? onCall;
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
   final VoidCallback? onApp;
+  final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        _Hero(office: office),
+        _Hero(office: office, loadHero: loadHero),
         const SizedBox(height: 4.33),
         Text(office.credit, style: _credit),
         const SizedBox(height: 12.67),
@@ -821,16 +838,44 @@ class _DetailBody extends StatelessWidget {
         const SizedBox(height: 10),
         _FactCard(office: office),
         const SizedBox(height: 11.67),
-        _ServiceCard(office: office),
+        _ServiceCard(office: office, onServiceLine: onServiceLine),
       ],
     );
   }
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.office});
+  const _Hero({required this.office, this.loadHero});
 
   final Office office;
+  final MediaBytesLoader? loadHero;
+
+  Widget _hall() {
+    return Image.asset(
+      office.heroAsset,
+      fit: BoxFit.cover,
+      alignment: Alignment(0, office.heroFocus * 2 - 1),
+    );
+  }
+
+  Widget _picture() {
+    final Widget hall = _hall();
+    final MediaBytesLoader? load = loadHero;
+    if (office.heroUrl == null || load == null) return hall;
+    return MediaBytesHost(
+      id: office.id,
+      load: load,
+      builder: (Uint8List? bytes) {
+        if (bytes == null || bytes.isEmpty) return hall;
+        return DecodedMemoryImage(
+          bytes: bytes,
+          fit: BoxFit.cover,
+          alignment: Alignment(0, office.heroFocus * 2 - 1),
+          placeholder: hall,
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -852,11 +897,7 @@ class _Hero extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              Image.asset(
-                office.heroAsset,
-                fit: BoxFit.cover,
-                alignment: Alignment(0, office.heroFocus * 2 - 1),
-              ),
+              _picture(),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -1060,9 +1101,10 @@ class _FactRow extends StatelessWidget {
 }
 
 class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({required this.office});
+  const _ServiceCard({required this.office, this.onServiceLine});
 
   final Office office;
+  final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
@@ -1076,37 +1118,44 @@ class _ServiceCard extends StatelessWidget {
           const Text('Services', style: _cardTitle),
           const SizedBox(height: 6),
           for (final OfficeServiceLine line in office.services)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 3, 0, 3),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Padding(
-                    padding: EdgeInsets.only(top: 7, right: 8),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: DirectoryCanvas._bodyInk,
-                        shape: BoxShape.circle,
-                      ),
-                      child: SizedBox(width: 4, height: 4),
-                    ),
-                  ),
-                  Expanded(
-                    child: Wrap(
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      spacing: 6,
-                      children: <Widget>[
-                        Text(line.label, style: _service),
-                        if (line.sample) const SampleTag(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _serviceRow(line),
         ],
       ),
     );
+  }
+
+  Widget _serviceRow(OfficeServiceLine line) {
+    final String? slug = line.serviceSlug;
+    final Widget row = Padding(
+      padding: const EdgeInsets.fromLTRB(18, 3, 0, 3),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const Padding(
+            padding: EdgeInsets.only(top: 7, right: 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: DirectoryCanvas._bodyInk,
+                shape: BoxShape.circle,
+              ),
+              child: SizedBox(width: 4, height: 4),
+            ),
+          ),
+          Expanded(
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 6,
+              children: <Widget>[
+                Text(line.label, style: _service),
+                if (line.sample) const SampleTag(),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+    if (slug == null || slug.isEmpty || onServiceLine == null) return row;
+    return GestureDetector(onTap: () => onServiceLine!(slug), child: row);
   }
 }
 

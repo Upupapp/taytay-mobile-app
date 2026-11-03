@@ -854,6 +854,7 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       ),
       onChangePassword: () => _changePassword(context),
       onPrivacy: () => context.goNamed(AppRoute.profileNotice.routeName),
+      onConsents: () => context.pushNamed(AppRoute.privacyControls.routeName),
     );
   }
 }

@@ -46,10 +46,13 @@ class SocialServiceApiRepository implements SocialServiceRepository {
     int? limit,
     String? cursor,
     bool featured = false,
+    String? office,
   }) async {
     final String? q = query?.trim();
+    final String? officeSlug = office?.trim();
+    final bool scoped = officeSlug != null && officeSlug.isNotEmpty;
     final int size = (limit ?? 20).clamp(1, 50);
-    if (cursor == null) _cursor = null;
+    if (!scoped && cursor == null) _cursor = null;
     final Result<ApiEnvelope<List<SocialService>>> response = await _apiClient
         .send<List<SocialService>>(
           method: HttpMethod.get,
@@ -58,9 +61,10 @@ class SocialServiceApiRepository implements SocialServiceRepository {
           attachTokenIfAvailable: true,
           query: <String, String>{
             'limit': '$size',
-            'cursor': ?(cursor ?? _cursor),
+            'cursor': ?(scoped ? cursor : cursor ?? _cursor),
             'q': ?((q == null || q.isEmpty) ? null : q),
             'featured': ?(featured ? 'true' : null),
+            'office': ?(scoped ? officeSlug : null),
           },
           decode: _decodeList,
         );
@@ -68,7 +72,7 @@ class SocialServiceApiRepository implements SocialServiceRepository {
       case Err<ApiEnvelope<List<SocialService>>>(:final failure):
         return Err<Paginated<SocialService>>(failure);
       case Ok<ApiEnvelope<List<SocialService>>>(:final value):
-        _cursor = value.pagination?.nextCursor;
+        if (!scoped) _cursor = value.pagination?.nextCursor;
         final List<SocialService> joined = await _withOffices(value.data);
         final List<SocialService> visible = <SocialService>[
           for (final SocialService service in joined)

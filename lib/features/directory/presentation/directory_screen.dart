@@ -17,6 +17,7 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
+import '../../tulong/domain/social_service.dart';
 import '../data/office_catalogue.dart';
 import '../domain/office.dart';
 import 'directory_canvas.dart';
@@ -120,14 +121,52 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _load();
+  }
+
+  Future<void> _load() async {
     final AppDependencies dependencies = AppDependencies.of(context);
-    OfficeCatalogue.byId(
+    final bool mock = dependencies.config.usesMockData;
+    final Office? office = await OfficeCatalogue.byId(
       widget.officeId,
-      mock: dependencies.config.usesMockData,
+      mock: mock,
       api: dependencies.apiClient,
-    ).then((Office? office) {
-      if (mounted) setState(() => _office = office);
+    );
+    if (!mounted) return;
+    // The hall is the placeholder. The page does not wait on the banner or
+    // the office's Tulong list.
+    setState(() => _office = office);
+    if (office == null || mock) return;
+    // The hero loads through MediaBytesApi on the canvas, alongside this list.
+    // The hall stays in place until those bytes arrive.
+    final List<SocialService> catalogue = await _catalogue(
+      dependencies,
+      office.id,
+    );
+    if (!mounted) return;
+    final List<OfficeServiceLine> lines = office
+        .linesWithCatalogue(<({String label, String slug})>[
+          for (final SocialService service in catalogue)
+            (label: service.name, slug: service.slug),
+        ]);
+    setState(() {
+      _office = identical(lines, office.services)
+          ? office
+          : office.withServices(lines);
     });
+  }
+
+  Future<List<SocialService>> _catalogue(
+    AppDependencies dependencies,
+    String slug,
+  ) async {
+    final result = await dependencies.socialServiceRepository.listServices(
+      office: slug,
+    );
+    return switch (result) {
+      Ok(:final value) => value.items,
+      Err() => const <SocialService>[],
+    };
   }
 
   Future<void> _message() async {
@@ -182,11 +221,20 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
         frame: DirectoryFrame.detail,
         offices: const <Office>[],
         office: _office,
+        loadHero: AppDependencies.of(context).config.usesMockData
+            ? null
+            : AppDependencies.of(context).mediaBytes.officeHero,
         onBack: () => _back(context),
         onCall: _dial,
         onDirections: _directions,
         onMessage: _message,
         onApp: _dial,
+        onServiceLine: (String slug) {
+          context.pushNamed(
+            AppRoute.programDetail.routeName,
+            pathParameters: <String, String>{'programId': slug},
+          );
+        },
       ),
     );
   }

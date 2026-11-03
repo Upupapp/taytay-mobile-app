@@ -77,6 +77,7 @@ class StubProgramRepository implements ProgramRepository {
   Future<Result<Paginated<AssistanceProgram>>> listActivePrograms({
     int page = 1,
     int perPage = 20,
+    String? office,
   }) async {
     listCalls++;
     return Ok<Paginated<AssistanceProgram>>(

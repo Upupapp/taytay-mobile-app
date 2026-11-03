@@ -52,6 +52,8 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
 
   final List<String> withdrawn = <String>[];
   final List<String> withdrawKeys = <String>[];
+  final List<String> accepted = <String>[];
+  bool acceptFails = false;
   final List<bool> closures = <bool>[];
   final List<String> closureKeys = <String>[];
 
@@ -82,6 +84,15 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
       return const Err<ConsentRecord>(NetworkFailure());
     }
     final record = consent(key: key, withdrawnAt: DateTime.utc(2026, 8, 16));
+    consents = <ConsentRecord>[record];
+    return Ok<ConsentRecord>(record);
+  }
+
+  @override
+  Future<Result<ConsentRecord>> acceptConsent({required String version}) async {
+    accepted.add(version);
+    if (acceptFails) return const Err<ConsentRecord>(NetworkFailure());
+    final ConsentRecord record = consent(key: version);
     consents = <ConsentRecord>[record];
     return Ok<ConsentRecord>(record);
   }
@@ -548,6 +559,64 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Nothing has changed'), findsOneWidget);
+      expect(find.textContaining('recorded your withdrawal'), findsNothing);
+    });
+
+    testWidgets('withdrawing waits for confirmation', (tester) async {
+      final booted = await bootSettings(
+        tester,
+        controls: const AccountControls(canWithdrawConsent: true),
+        consents: <ConsentRecord>[consent()],
+        location: '/settings/privacy',
+      );
+
+      await tester.tap(find.text('Withdraw this consent'));
+      await tester.pumpAndSettle();
+
+      expect(booted.controls.withdrawn, isEmpty);
+      expect(find.text('Withdraw this consent?'), findsOneWidget);
+
+      await tester.tap(find.text('Leave it in place'));
+      await tester.pumpAndSettle();
+
+      expect(booted.controls.withdrawn, isEmpty);
+      expect(find.textContaining('recorded your withdrawal'), findsNothing);
+    });
+
+    testWidgets('a withdrawn consent offers accept again', (tester) async {
+      final booted = await bootSettings(
+        tester,
+        controls: const AccountControls(canWithdrawConsent: true),
+        consents: <ConsentRecord>[
+          consent(withdrawnAt: DateTime.utc(2026, 6, 1)),
+        ],
+        location: '/settings/privacy',
+      );
+
+      expect(find.text('Withdraw this consent'), findsNothing);
+      expect(find.text('Accept again'), findsOneWidget);
+      await tester.tap(find.text('Accept again'));
+      await tester.pumpAndSettle();
+
+      expect(booted.controls.accepted, <String>['c-notify']);
+      expect(
+        find.textContaining('recorded this consent again'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a consent with no version cannot be withdrawn', (
+      tester,
+    ) async {
+      await bootSettings(
+        tester,
+        controls: const AccountControls(canWithdrawConsent: true),
+        consents: <ConsentRecord>[consent(key: '', isWithdrawable: false)],
+        location: '/settings/privacy',
+      );
+
+      expect(find.text('Withdraw this consent'), findsNothing);
+      expect(find.text('Accept again'), findsNothing);
     });
 
     testWidgets('an unavailable consent history does not read as an error', (

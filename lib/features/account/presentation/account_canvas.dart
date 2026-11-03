@@ -170,6 +170,7 @@ class AccountCanvas extends StatelessWidget {
     this.onChangePassword,
     this.changePasswordSubtitle = '',
     this.onPrivacy,
+    this.onConsents,
     this.onBanners,
     this.onExport,
     this.showDataExport = true,
@@ -237,6 +238,7 @@ class AccountCanvas extends StatelessWidget {
   /// The bundled DRAFT copy. Non-production only.
   final bool showBundledDraft;
   final VoidCallback? onPrivacy;
+  final VoidCallback? onConsents;
   final VoidCallback? onBanners;
   final VoidCallback? onExport;
   final List<AccountBubble> bubbles;
@@ -353,6 +355,7 @@ class AccountCanvas extends StatelessWidget {
         onChangePassword: onChangePassword,
         changePasswordSubtitle: changePasswordSubtitle,
         onPrivacy: onPrivacy,
+        onConsents: onConsents,
         onExport: onExport,
         showDataExport: showDataExport,
       ),
@@ -1368,6 +1371,7 @@ class _SettingsBody extends StatelessWidget {
     this.onChangePassword,
     this.changePasswordSubtitle = '',
     this.onPrivacy,
+    this.onConsents,
     this.onExport,
     this.showDataExport = true,
   });
@@ -1377,6 +1381,7 @@ class _SettingsBody extends StatelessWidget {
   final VoidCallback? onChangePassword;
   final String changePasswordSubtitle;
   final VoidCallback? onPrivacy;
+  final VoidCallback? onConsents;
   final VoidCallback? onExport;
   final bool showDataExport;
 
@@ -1446,6 +1451,15 @@ class _SettingsBody extends StatelessWidget {
                     color: BrandColors.taytayBlue,
                     onTap: onPrivacy,
                   ),
+                  if (onConsents != null)
+                    _LinkRow(
+                      title: 'Your consents',
+                      subtitle: 'Review or withdraw what you agreed to',
+                      icon: TaytayIcons.shieldCheck,
+                      tile: BrandColors.chipBlueBg,
+                      color: BrandColors.taytayBlue,
+                      onTap: onConsents,
+                    ),
                   if (showDataExport)
                     _LinkRow(
                       title: 'Request a copy of my data',

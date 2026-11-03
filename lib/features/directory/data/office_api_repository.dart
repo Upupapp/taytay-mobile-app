@@ -6,11 +6,10 @@ import '../domain/office.dart';
 
 /// Public office pages on `GET /offices` and `GET /offices/{slug}`.
 ///
-/// The list is unauthenticated. A row carries the contract fields only:
-/// name, slug, short_name, description, head, hours, phone, email, address,
-/// category. `short_name` is a string or null. Photographs, service lines
-/// and the SAMPLE tag stay on the dev-mock fixture, because this response
-/// does not publish them.
+/// The list is unauthenticated. A row carries the contract fields, including
+/// `service_lines` (an empty list when the office publishes none) and
+/// `hero_url`. The bytes are loaded by `MediaBytesApi.officeHero`, not here.
+/// A missing URL or a failed read keeps the bundled hall.
 class OfficeApiRepository {
   const OfficeApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -98,8 +97,6 @@ class OfficeApiRepository {
     final String head = _text(json['head']);
     final String category = _text(json['category']);
     final String? shortName = _optional(json['short_name']);
-    // `banner_media_id` is an id, not bytes. The hall photograph stays until
-    // a public media route exists.
     return Office(
       id: slug,
       serverId: id,
@@ -142,11 +139,22 @@ class OfficeApiRepository {
         if (head.isNotEmpty)
           OfficeFact(label: 'Head', value: head, icon: OfficeFactIcon.pin),
       ],
-      services: const <OfficeServiceLine>[],
+      services: _serviceLines(json['service_lines']),
       bannerMediaId: _optional(json['banner_media_id']),
+      heroUrl: _optional(json['hero_url']),
       latitude: _coord(json['latitude']),
       longitude: _coord(json['longitude']),
     );
+  }
+
+  /// Missing, null, or a non-list is an empty directory. Strings only.
+  static List<OfficeServiceLine> _serviceLines(Object? raw) {
+    if (raw is! List) return const <OfficeServiceLine>[];
+    return <OfficeServiceLine>[
+      for (final Object? item in raw)
+        if (item is String && item.trim().isNotEmpty)
+          OfficeServiceLine(label: item.trim()),
+    ];
   }
 
   static double? _coord(Object? value) {
