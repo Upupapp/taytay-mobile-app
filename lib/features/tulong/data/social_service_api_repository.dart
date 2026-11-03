@@ -21,8 +21,8 @@ import 'social_service_codec.dart';
 /// * No saved-pages resource and no saved-at. [savedOnThisPhone] is the list
 ///   already loaded in this process. Nothing is written to device storage.
 /// * No apply or submit route.
-/// * `hero_url` is stored. The bytes live at `GET /services/{slug}/hero`
-///   and are not fetched here. A null URL keeps the icon tile.
+/// * `hero_url` is stored. The service page reads `GET /services/{slug}/hero`
+///   when it is set. A null URL keeps the icon tile. The list does not.
 /// * No SAMPLE flag. A live requirement is never marked sample.
 /// * Contacts are `{type, label|null, value}`. An unrecognised type is
 ///   still shown.

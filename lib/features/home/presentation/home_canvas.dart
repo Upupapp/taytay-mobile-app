@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/home_content.dart';
 
@@ -43,6 +45,7 @@ class HomeCanvas extends StatefulWidget {
     this.onAllHotlines,
     this.onQuickAction,
     this.onRefresh,
+    this.loadBanner,
     super.key,
   });
 
@@ -67,6 +70,10 @@ class HomeCanvas extends StatefulWidget {
   final VoidCallback? onCreateAccount;
   final ValueChanged<HomeSlide>? onSlide;
   final ValueChanged<HomeNewsItem>? onNews;
+
+  /// `GET /home/banners/{id}/image` for a slide whose banner has `image_url`.
+  /// Null keeps the bundled photograph, including every dev mock.
+  final MediaBytesLoader? loadBanner;
   final VoidCallback? onSeeAllNews;
   final VoidCallback? onCall;
   final VoidCallback? onAllHotlines;
@@ -216,6 +223,7 @@ class _HomeCanvasState extends State<HomeCanvas> {
                       slides: widget.slides,
                       controller: _pages,
                       index: _index,
+                      loadBanner: widget.loadBanner,
                       onChanged: (int index) {
                         if (index == _index) return;
                         setState(() => _index = index);
@@ -731,6 +739,38 @@ class _StatusCard extends StatelessWidget {
   }
 }
 
+class _SlidePhoto extends StatelessWidget {
+  const _SlidePhoto({required this.slide, this.load});
+
+  final HomeSlide slide;
+  final MediaBytesLoader? load;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget bundled = Image.asset(
+      slide.photoAsset,
+      fit: BoxFit.cover,
+      alignment: Alignment(0, slide.focus * 2 - 1),
+    );
+    final String? id = slide.bannerId;
+    if (id == null || id.isEmpty || load == null) return bundled;
+    final Alignment alignment = Alignment(0, slide.focus * 2 - 1);
+    return MediaBytesHost(
+      id: id,
+      load: load,
+      builder: (Uint8List? bytes) {
+        if (bytes == null) return bundled;
+        return DecodedMemoryImage(
+          bytes: bytes,
+          fit: BoxFit.cover,
+          alignment: alignment,
+          placeholder: bundled,
+        );
+      },
+    );
+  }
+}
+
 class _Hero extends StatelessWidget {
   const _Hero({
     required this.slides,
@@ -738,6 +778,7 @@ class _Hero extends StatelessWidget {
     required this.index,
     required this.onChanged,
     this.onOpen,
+    this.loadBanner,
   });
 
   final List<HomeSlide> slides;
@@ -745,6 +786,7 @@ class _Hero extends StatelessWidget {
   final int index;
   final ValueChanged<int> onChanged;
   final ValueChanged<HomeSlide>? onOpen;
+  final MediaBytesLoader? loadBanner;
 
   @override
   Widget build(BuildContext context) {
@@ -774,11 +816,7 @@ class _Hero extends StatelessWidget {
                     child: FractionallySizedBox(
                       widthFactor: 0.58,
                       heightFactor: 1,
-                      child: Image.asset(
-                        item.photoAsset,
-                        fit: BoxFit.cover,
-                        alignment: Alignment(0, item.focus * 2 - 1),
-                      ),
+                      child: _SlidePhoto(slide: item, load: loadBanner),
                     ),
                   ),
                 );

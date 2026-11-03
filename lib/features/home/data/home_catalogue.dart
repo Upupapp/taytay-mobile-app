@@ -36,8 +36,8 @@ abstract final class HomeCatalogue {
     return parsed;
   }
 
-  /// Banner titles and links from `/home`, with the bundled photograph kept.
-  /// A banner's media id is not a file this app can paint.
+  /// Banner titles and links from `/home`, with the bundled photograph kept
+  /// until `image_url` is set. The bytes are `GET /home/banners/{id}/image`.
   static List<HomeSlide> withBanners(
     List<HomeSlide> bundled,
     List<HomeBanner> banners,
@@ -65,7 +65,14 @@ abstract final class HomeCatalogue {
       credit: fallback.credit,
       routeName: _route(banner.href, fallback.routeName),
       focus: fallback.focus,
+      bannerId: _bannerId(banner),
     );
+  }
+
+  static String? _bannerId(HomeBanner banner) {
+    final String? url = banner.imageUrl;
+    if (url == null || url.isEmpty) return null;
+    return banner.id;
   }
 
   static String _route(String? href, String fallback) {

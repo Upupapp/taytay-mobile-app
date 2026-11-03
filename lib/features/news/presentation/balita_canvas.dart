@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
@@ -5,6 +7,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -62,6 +65,7 @@ class BalitaCanvas extends StatelessWidget {
     this.onSeeAll,
     this.onRetry,
     this.scrollController,
+    this.loadCover,
     super.key,
   });
 
@@ -78,6 +82,9 @@ class BalitaCanvas extends StatelessWidget {
   final VoidCallback? onSeeAll;
   final VoidCallback? onRetry;
   final ScrollController? scrollController;
+
+  /// `GET /news/{id}/cover`. Null on a dev mock, where covers are assets.
+  final MediaBytesLoader? loadCover;
 
   static const Color _pageTop = Color(0xFFEAF0FB);
 
@@ -159,6 +166,7 @@ class BalitaCanvas extends StatelessWidget {
       ),
       BalitaFrame.article when article != null => _ArticleBody(
         article: article!,
+        loadCover: loadCover,
       ),
       BalitaFrame.feed || BalitaFrame.filter => _FeedBody(
         chips: chips,
@@ -171,6 +179,7 @@ class BalitaCanvas extends StatelessWidget {
         onArticle: onArticle,
         onShare: onShare,
         scrollController: scrollController,
+        loadCover: loadCover,
       ),
       _ => const SizedBox.shrink(),
     };
@@ -338,6 +347,7 @@ class _FeedBody extends StatelessWidget {
     this.onArticle,
     this.onShare,
     this.scrollController,
+    this.loadCover,
   });
 
   final List<BalitaChip> chips;
@@ -348,6 +358,7 @@ class _FeedBody extends StatelessWidget {
   final ValueChanged<Announcement>? onArticle;
   final ValueChanged<Announcement>? onShare;
   final ScrollController? scrollController;
+  final MediaBytesLoader? loadCover;
 
   @override
   Widget build(BuildContext context) {
@@ -368,6 +379,7 @@ class _FeedBody extends StatelessWidget {
         for (var i = 0; i < articles.length; i++) ...<Widget>[
           _StoryCard(
             article: articles[i],
+            loadCover: loadCover,
             onOpen: onArticle == null ? null : () => onArticle!(articles[i]),
             onShare: onShare == null ? null : () => onShare!(articles[i]),
           ),
@@ -455,11 +467,17 @@ class _Chip extends StatelessWidget {
 }
 
 class _StoryCard extends StatelessWidget {
-  const _StoryCard({required this.article, this.onOpen, this.onShare});
+  const _StoryCard({
+    required this.article,
+    this.onOpen,
+    this.onShare,
+    this.loadCover,
+  });
 
   final Announcement article;
   final VoidCallback? onOpen;
   final VoidCallback? onShare;
+  final MediaBytesLoader? loadCover;
 
   @override
   Widget build(BuildContext context) {
@@ -468,7 +486,7 @@ class _StoryCard extends StatelessWidget {
     final String? asset = presentation?.listCover == true
         ? presentation?.coverAsset
         : null;
-    final String? remote = asset == null ? article.coverUrl : null;
+    final bool remote = asset == null && _hasRemoteCover(article);
     return Opacity(
       opacity: sample ? 0.9 : 1,
       child: _Hit(
@@ -486,17 +504,25 @@ class _StoryCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              if (asset != null || remote != null) ...<Widget>[
+              if (asset != null) ...<Widget>[
                 _Cover(
                   asset: asset,
-                  url: remote,
                   height: 150,
                   radius: 12,
                   label: presentation?.photoCredit ?? article.title,
                   darken: false,
                 ),
                 const SizedBox(height: 10),
-              ],
+              ] else if (remote)
+                _RemoteCover(
+                  id: article.id,
+                  height: 150,
+                  radius: 12,
+                  label: presentation?.photoCredit ?? article.title,
+                  reserve: _reservesCover(article),
+                  gap: 10,
+                  load: loadCover,
+                ),
               Row(
                 // Sample rows centre the tile on the copy. The other
                 // cards pin it to the top, matching the specimens.
@@ -652,15 +678,16 @@ class _PinnedBanner extends StatelessWidget {
 }
 
 class _ArticleBody extends StatelessWidget {
-  const _ArticleBody({required this.article});
+  const _ArticleBody({required this.article, this.loadCover});
 
   final Announcement article;
+  final MediaBytesLoader? loadCover;
 
   @override
   Widget build(BuildContext context) {
     final BalitaPresentation? presentation = article.presentation;
     final String? asset = presentation?.coverAsset;
-    final String? remote = asset == null ? article.coverUrl : null;
+    final bool remote = asset == null && _hasRemoteCover(article);
     final String lead = presentation?.lead ?? article.body;
     final String meta = <String>[
       if ((article.author ?? article.officeSlug ?? '').isNotEmpty)
@@ -673,14 +700,22 @@ class _ArticleBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        if (asset != null || remote != null)
+        if (asset != null)
           _Cover(
             asset: asset,
-            url: remote,
             height: presentation?.coverHeight ?? 180,
             radius: 16,
             label: presentation?.photoCredit ?? article.title,
-            darken: asset != null,
+            darken: true,
+          )
+        else if (remote)
+          _RemoteCover(
+            id: article.id,
+            height: presentation?.coverHeight ?? 180,
+            radius: 16,
+            label: presentation?.photoCredit ?? article.title,
+            reserve: _reservesCover(article),
+            load: loadCover,
           ),
         if ((presentation?.photoCredit ?? '').isNotEmpty) ...<Widget>[
           const SizedBox(height: 6),
@@ -1254,18 +1289,72 @@ IconData _namedIcon(String name) {
   };
 }
 
+bool _hasRemoteCover(Announcement article) => _reservesCover(article);
+
+bool _reservesCover(Announcement article) {
+  final String? url = article.coverUrl;
+  return url != null && url.isNotEmpty;
+}
+
+class _RemoteCover extends StatelessWidget {
+  const _RemoteCover({
+    required this.id,
+    required this.height,
+    required this.radius,
+    required this.label,
+    required this.reserve,
+    this.gap = 0,
+    this.load,
+  });
+
+  final String id;
+  final double height;
+  final double radius;
+  final String label;
+  final bool reserve;
+  final double gap;
+  final MediaBytesLoader? load;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget hole = SizedBox(height: height, width: double.infinity);
+    return MediaBytesHost(
+      id: id,
+      load: load,
+      builder: (Uint8List? bytes) {
+        if (!reserve && bytes == null) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(radius),
+              child: bytes == null
+                  ? hole
+                  : DecodedMemoryImage(
+                      bytes: bytes,
+                      height: height,
+                      semanticLabel: label,
+                      placeholder: hole,
+                    ),
+            ),
+            if (gap > 0) SizedBox(height: gap),
+          ],
+        );
+      },
+    );
+  }
+}
+
 class _Cover extends StatelessWidget {
   const _Cover({
+    required this.asset,
     required this.height,
     required this.radius,
     required this.label,
     required this.darken,
-    this.asset,
-    this.url,
   });
 
-  final String? asset;
-  final String? url;
+  final String asset;
   final double height;
   final double radius;
   final String label;
@@ -1273,25 +1362,14 @@ class _Cover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Widget image = asset != null
-        ? Image.asset(
-            asset!,
-            height: height,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium,
-            semanticLabel: label,
-          )
-        : Image.network(
-            url!,
-            height: height,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            filterQuality: FilterQuality.medium,
-            semanticLabel: label,
-            errorBuilder: (context, error, stackTrace) =>
-                SizedBox(height: height, width: double.infinity),
-          );
+    Widget image = Image.asset(
+      asset,
+      height: height,
+      width: double.infinity,
+      fit: BoxFit.cover,
+      filterQuality: FilterQuality.medium,
+      semanticLabel: label,
+    );
     if (darken) {
       // The fixture photo sits one level above the design on a single row
       // of the 190 dp cover, which splits that photo into two runs.

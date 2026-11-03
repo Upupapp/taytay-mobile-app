@@ -70,6 +70,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'barangays', 'barangay_api_repository.dart'),
   BackendRoute('GET', 'health', 'platform_api_repository.dart'),
   BackendRoute('GET', 'home', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'home/banners/{}/image', 'media_bytes_api.dart'),
   BackendRoute('GET', 'hotlines', 'node_citizen_api.dart'),
   BackendRoute('POST', 'households', 'resident_record_api_repository.dart'),
   BackendRoute(
@@ -119,8 +120,10 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   ),
   BackendRoute('POST', 'media', 'node_citizen_api.dart'),
   BackendRoute('GET', 'media/{}', 'node_citizen_api.dart'),
+  BackendRoute('GET', 'media/{}/content', 'media_bytes_api.dart'),
   BackendRoute('GET', 'news', 'newsfeed_api_repository.dart'),
   BackendRoute('GET', 'news/{}', 'newsfeed_api_repository.dart'),
+  BackendRoute('GET', 'news/{}/cover', 'media_bytes_api.dart'),
   BackendRoute('GET', 'news/categories', 'newsfeed_api_repository.dart'),
   BackendRoute('GET', 'notifications', 'notification_api_repository.dart'),
   BackendRoute(
@@ -142,6 +145,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'offices/{}', 'node_citizen_api.dart'),
   BackendRoute('GET', 'services', 'service_catalog_api_repository.dart'),
   BackendRoute('GET', 'services/{}', 'service_catalog_api_repository.dart'),
+  BackendRoute('GET', 'services/{}/hero', 'media_bytes_api.dart'),
   BackendRoute('GET', 'threads', 'office_messaging_gap_repository.dart'),
   BackendRoute('POST', 'threads', 'office_messaging_gap_repository.dart'),
   BackendRoute('GET', 'threads/{}', 'office_messaging_gap_repository.dart'),
