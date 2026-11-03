@@ -6,6 +6,7 @@ import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
@@ -55,7 +56,7 @@ class DirectoryCanvas extends StatelessWidget {
     this.onTopic,
     this.onAttach,
     this.attachmentLabel,
-    this.heroBytes,
+    this.loadHero,
     this.onServiceLine,
     super.key,
   });
@@ -92,8 +93,8 @@ class DirectoryCanvas extends StatelessWidget {
   /// Chosen file name, or "Attachment" when an existing media id is held.
   final String? attachmentLabel;
 
-  /// Banner bytes from `GET /offices/{slug}/hero`. Null paints [Office.heroAsset].
-  final Uint8List? heroBytes;
+  /// `GET /offices/{slug}/hero`. Null keeps the bundled hall.
+  final MediaBytesLoader? loadHero;
 
   /// Opens a Tulong page for a catalogue line. Directory lines have no slug.
   final ValueChanged<String>? onServiceLine;
@@ -192,7 +193,7 @@ class DirectoryCanvas extends StatelessWidget {
       ),
       DirectoryFrame.detail when current != null => _DetailBody(
         office: current,
-        heroBytes: heroBytes,
+        loadHero: loadHero,
         onCall: onCall,
         onDirections: onDirections,
         onMessage: onMessage,
@@ -770,7 +771,7 @@ class _OfflineBody extends StatelessWidget {
 class _DetailBody extends StatelessWidget {
   const _DetailBody({
     required this.office,
-    this.heroBytes,
+    this.loadHero,
     this.onCall,
     this.onDirections,
     this.onMessage,
@@ -779,7 +780,7 @@ class _DetailBody extends StatelessWidget {
   });
 
   final Office office;
-  final Uint8List? heroBytes;
+  final MediaBytesLoader? loadHero;
   final VoidCallback? onCall;
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
@@ -791,7 +792,7 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: <Widget>[
-        _Hero(office: office, heroBytes: heroBytes),
+        _Hero(office: office, loadHero: loadHero),
         const SizedBox(height: 4.33),
         Text(office.credit, style: _credit),
         const SizedBox(height: 12.67),
@@ -844,16 +845,35 @@ class _DetailBody extends StatelessWidget {
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.office, this.heroBytes});
+  const _Hero({required this.office, this.loadHero});
 
   final Office office;
-  final Uint8List? heroBytes;
+  final MediaBytesLoader? loadHero;
 
   Widget _hall() {
     return Image.asset(
       office.heroAsset,
       fit: BoxFit.cover,
       alignment: Alignment(0, office.heroFocus * 2 - 1),
+    );
+  }
+
+  Widget _picture() {
+    final Widget hall = _hall();
+    final MediaBytesLoader? load = loadHero;
+    if (office.heroUrl == null || load == null) return hall;
+    return MediaBytesHost(
+      id: office.id,
+      load: load,
+      builder: (Uint8List? bytes) {
+        if (bytes == null || bytes.isEmpty) return hall;
+        return DecodedMemoryImage(
+          bytes: bytes,
+          fit: BoxFit.cover,
+          alignment: Alignment(0, office.heroFocus * 2 - 1),
+          placeholder: hall,
+        );
+      },
     );
   }
 
@@ -877,19 +897,7 @@ class _Hero extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: <Widget>[
-              heroBytes == null
-                  ? _hall()
-                  : Image.memory(
-                      heroBytes!,
-                      fit: BoxFit.cover,
-                      alignment: Alignment(0, office.heroFocus * 2 - 1),
-                      errorBuilder:
-                          (
-                            BuildContext context,
-                            Object error,
-                            StackTrace? stackTrace,
-                          ) => _hall(),
-                    ),
+              _picture(),
               const DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(

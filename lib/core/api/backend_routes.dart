@@ -144,7 +144,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   ),
   BackendRoute('GET', 'offices', 'node_citizen_api.dart'),
   BackendRoute('GET', 'offices/{}', 'node_citizen_api.dart'),
-  BackendRoute('GET', 'offices/{}/hero', 'office_api_repository.dart'),
+  BackendRoute('GET', 'offices/{}/hero', 'media_bytes_api.dart'),
   BackendRoute('GET', 'services', 'service_catalog_api_repository.dart'),
   BackendRoute('GET', 'services/{}', 'service_catalog_api_repository.dart'),
   BackendRoute('GET', 'services/{}/hero', 'media_bytes_api.dart'),

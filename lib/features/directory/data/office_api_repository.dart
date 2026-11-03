@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
@@ -10,9 +8,8 @@ import '../domain/office.dart';
 ///
 /// The list is unauthenticated. A row carries the contract fields, including
 /// `service_lines` (an empty list when the office publishes none) and
-/// `hero_url`. The hero bytes are `GET /offices/{slug}/hero`, anonymous, on
-/// the configured API host. A missing URL or a failed read keeps the bundled
-/// hall. A 401 on that read does not end the session.
+/// `hero_url`. The bytes are loaded by `MediaBytesApi.officeHero`, not here.
+/// A missing URL or a failed read keeps the bundled hall.
 class OfficeApiRepository {
   const OfficeApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -58,21 +55,6 @@ class OfficeApiRepository {
           decode: _decodeOffice,
         );
     return response.map((ApiEnvelope<Office?> envelope) => envelope.data);
-  }
-
-  /// Public banner bytes. No `Authorization` header. A 401 is returned and
-  /// does not sign the resident out.
-  Future<Result<Uint8List>> loadHero(String slug) async {
-    final Result<ApiEnvelope<Uint8List>> response = await _apiClient
-        .send<Uint8List>(
-          method: HttpMethod.get,
-          path: 'offices/$slug/hero',
-          authenticated: false,
-          binary: true,
-          endSessionOn401: false,
-          decode: (Object? data) => data is Uint8List ? data : Uint8List(0),
-        );
-    return response.map((ApiEnvelope<Uint8List> envelope) => envelope.data);
   }
 
   static List<String> _chips(List<Office> offices) {

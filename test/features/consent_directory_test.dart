@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
+import 'package:taytay_resident/core/api/media_bytes_api.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
@@ -244,9 +245,14 @@ void main() {
         headers: const <String, String>{'content-type': 'image/png'},
       ),
     ]);
-    final OfficeApiRepository repository = OfficeApiRepository(
-      apiClient: _client(transport, onUnauthenticated: () => signedOut++),
+    final ApiClient client = _client(
+      transport,
+      onUnauthenticated: () => signedOut++,
     );
+    final OfficeApiRepository repository = OfficeApiRepository(
+      apiClient: client,
+    );
+    final MediaBytesApi images = MediaBytesApi(apiClient: client);
 
     final result = await repository.list();
     final List<Office> offices = result.valueOrNull!.offices;
@@ -260,7 +266,7 @@ void main() {
     expect(offices.last.heroUrl, isNull);
     expect(offices.last.heroAsset, 'assets/photos/municipal_hall.jpg');
 
-    final Result<Uint8List> denied = await repository.loadHero('sample-office');
+    final Result<Uint8List?> denied = await images.officeHero('sample-office');
     expect(denied.failureOrNull, isA<UnauthenticatedFailure>());
     expect(signedOut, 0);
     final ApiRequest hero = transport.requests[1];
@@ -268,9 +274,7 @@ void main() {
     expect(hero.headers.containsKey('Authorization'), isFalse);
     expect(hero.headers['Accept'], contains('image/'));
 
-    final Result<Uint8List> painted = await repository.loadHero(
-      'sample-office',
-    );
+    final Result<Uint8List?> painted = await images.officeHero('sample-office');
     expect(painted.valueOrNull, png);
     expect(signedOut, 0);
   });
@@ -560,9 +564,11 @@ const String _png =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 bool _paintsMemory(WidgetTester tester) {
-  return tester
-      .widgetList<Image>(find.byType(Image))
-      .any((Image image) => image.image is MemoryImage);
+  return tester.widgetList<Image>(find.byType(Image)).any((Image image) {
+    final ImageProvider<Object> provider = image.image;
+    if (provider is MemoryImage) return true;
+    return provider is ResizeImage && provider.imageProvider is MemoryImage;
+  });
 }
 
 bool _paintsHall(WidgetTester tester) {

@@ -1304,6 +1304,7 @@ class _HeroRepo implements SocialServiceRepository {
     int? limit,
     String? cursor,
     bool featured = false,
+    String? office,
   }) async => const Ok<Paginated<SocialService>>(
     Paginated<SocialService>(
       items: <SocialService>[_service],

@@ -52,6 +52,23 @@ class MediaBytesApi {
     );
   }
 
+  /// `GET /offices/{slug}/hero`. Public. `hero_url` only says a banner exists.
+  Future<Result<Uint8List?>> officeHero(String slug) {
+    if (!_segment.hasMatch(slug)) {
+      return Future<Result<Uint8List?>>.value(const Ok<Uint8List?>(null));
+    }
+    return _cached('offices/$slug/hero', () {
+      return _apiClient.send<Uint8List?>(
+        method: HttpMethod.get,
+        path: 'offices/$slug/hero',
+        authenticated: false,
+        binary: true,
+        endSessionOn401: false,
+        decode: _ignoreJson,
+      );
+    });
+  }
+
   /// `GET /services/{slug}/hero`.
   Future<Result<Uint8List?>> serviceHero(String slug) {
     if (!_segment.hasMatch(slug)) {

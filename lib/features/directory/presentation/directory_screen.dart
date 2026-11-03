@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -19,7 +18,6 @@ import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../../tulong/domain/social_service.dart';
-import '../data/office_api_repository.dart';
 import '../data/office_catalogue.dart';
 import '../domain/office.dart';
 import 'directory_canvas.dart';
@@ -116,7 +114,6 @@ class OfficeDetailScreen extends StatefulWidget {
 
 class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
   Office? _office;
-  Uint8List? _heroBytes;
   bool _started = false;
 
   @override
@@ -140,13 +137,12 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     // the office's Tulong list.
     setState(() => _office = office);
     if (office == null || mock) return;
-    final Future<List<SocialService>> catalogueFuture = _catalogue(
+    // The hero loads through MediaBytesApi on the canvas, alongside this list.
+    // The hall stays in place until those bytes arrive.
+    final List<SocialService> catalogue = await _catalogue(
       dependencies,
       office.id,
     );
-    final Future<Uint8List?> heroFuture = _hero(dependencies, office);
-    final List<SocialService> catalogue = await catalogueFuture;
-    final Uint8List? hero = await heroFuture;
     if (!mounted) return;
     final List<OfficeServiceLine> lines = office
         .linesWithCatalogue(<({String label, String slug})>[
@@ -154,24 +150,10 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
             (label: service.name, slug: service.slug),
         ]);
     setState(() {
-      _heroBytes = hero;
       _office = identical(lines, office.services)
           ? office
           : office.withServices(lines);
     });
-  }
-
-  /// Bytes only when the read succeeds and is non-empty. A 404, a 5xx, or a
-  /// missing URL leaves the hall in place.
-  Future<Uint8List?> _hero(AppDependencies dependencies, Office office) async {
-    if (office.heroUrl == null) return null;
-    final Result<Uint8List> bytes = await OfficeApiRepository(
-      apiClient: dependencies.apiClient,
-    ).loadHero(office.id);
-    return switch (bytes) {
-      Ok(:final value) when value.isNotEmpty => value,
-      _ => null,
-    };
   }
 
   Future<List<SocialService>> _catalogue(
@@ -239,7 +221,9 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
         frame: DirectoryFrame.detail,
         offices: const <Office>[],
         office: _office,
-        heroBytes: _heroBytes,
+        loadHero: AppDependencies.of(context).config.usesMockData
+            ? null
+            : AppDependencies.of(context).mediaBytes.officeHero,
         onBack: () => _back(context),
         onCall: _dial,
         onDirections: _directions,
