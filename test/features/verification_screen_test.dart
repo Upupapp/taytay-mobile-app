@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/documents/document_capture.dart';
+import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -22,12 +24,18 @@ import 'package:taytay_resident/features/verification/domain/verification_status
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
 class StubVerificationRepository implements VerificationRepository {
   StubVerificationRepository(this.detail);
 
   VerificationStatusDetail detail;
+  int startCalls = 0;
+  int replaceCalls = 0;
+  int correctionCalls = 0;
+  String? lastIdType;
+  String? lastMessage;
 
   @override
   Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async =>
@@ -41,7 +49,42 @@ class StubVerificationRepository implements VerificationRepository {
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
-  }) async => const Ok<void>(null);
+    String message = '',
+    bool allowBlank = false,
+  }) async {
+    correctionCalls++;
+    lastMessage = message;
+    return const Ok<void>(null);
+  }
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async {
+    startCalls++;
+    lastIdType = idType;
+    return const Ok<VerificationStatus>(
+      VerificationStatus(
+        state: VerificationAttemptState.underReview,
+        rawState: 'pending',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async {
+    replaceCalls++;
+    return Ok<VerificationStatusDetail>(detail);
+  }
 
   @override
   Future<Result<KycDocument>> attachDocument({
@@ -75,10 +118,29 @@ AppConfig config() => AppConfig.from(
   isReleaseBuild: false,
 );
 
+class _ReadyPicker implements DocumentPicker {
+  CapturedDocument get _file => CapturedDocument(
+    bytes: Uint8List.fromList(<int>[1, 2, 3]),
+    fileName: 'sample.jpg',
+    mimeType: 'image/jpeg',
+    source: DocumentSource.gallery,
+  );
+
+  @override
+  Future<CapturedDocument?> pick(
+    DocumentSource source,
+    UploadPolicy policy,
+  ) async => _file;
+
+  @override
+  bool supports(DocumentSource source) => true;
+}
+
 Future<AppDependencies> bootVerification(
   WidgetTester tester, {
   required VerificationStatusDetail detail,
   AccessLevel level = AccessLevel.unverified,
+  DocumentPicker? picker,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -122,7 +184,7 @@ Future<AppDependencies> bootVerification(
     verificationRepository: StubVerificationRepository(detail),
     serviceRequestRepository: base.serviceRequestRepository,
     requirementRepository: base.requirementRepository,
-    documentPicker: base.documentPicker,
+    documentPicker: picker ?? base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,
     accountControlsRepository: base.accountControlsRepository,
@@ -274,6 +336,134 @@ void main() {
       expect(find.text('Not verified'), findsOneWidget);
       expect(find.text('Your account is verified'), findsNothing);
       expect(find.text('Verification status'), findsOneWidget);
+    });
+
+    testWidgets('can_edit false disables resubmit and re-upload', (
+      tester,
+    ) async {
+      final dependencies = await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.unsuccessful,
+          rawState: 'rejected',
+          canEdit: false,
+          issues: <VerificationItemIssue>[
+            VerificationItemIssue(
+              category: VerificationItemCategory.other,
+              instruction: 'Send a clearer photo.',
+            ),
+          ],
+        ),
+        picker: _ReadyPicker(),
+      );
+      final repository =
+          dependencies.verificationRepository as StubVerificationRepository;
+
+      expect(find.text('Previous selfie kept'), findsNothing);
+      expect(find.text('Details'), findsOneWidget);
+      expect(find.textContaining('secret'), findsNothing);
+      final PrimaryButton resubmit = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'Resubmit for verification'),
+      );
+      expect(resubmit.onPressed, isNull);
+      await tester.ensureVisible(find.text('Upload new photo'));
+      await tester.tap(find.text('Upload new photo'));
+      await tester.pump();
+      expect(repository.replaceCalls, 0);
+      expect(repository.correctionCalls, 0);
+    });
+
+    testWidgets('can_edit true enables resubmit and keeps a sent selfie', (
+      tester,
+    ) async {
+      final dependencies = await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.unsuccessful,
+          rawState: 'rejected',
+          canEdit: true,
+          selfieMediaId: '11111111-1111-4111-8111-111111111111',
+        ),
+      );
+      final repository =
+          dependencies.verificationRepository as StubVerificationRepository;
+
+      expect(find.text('Previous selfie kept'), findsOneWidget);
+      final PrimaryButton resubmit = tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'Resubmit for verification'),
+      );
+      expect(resubmit.onPressed, isNotNull);
+
+      await tester.tap(find.text('Resubmit for verification'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('verification-message-field')),
+        'The front is clearer now.',
+      );
+      await tester.tap(find.byKey(const Key('verification-resubmit-confirm')));
+      await tester.pumpAndSettle();
+      expect(repository.lastMessage, 'The front is clearer now.');
+      expect(repository.correctionCalls, 1);
+    });
+
+    testWidgets('a blank resubmit message is sent as the resident left it', (
+      tester,
+    ) async {
+      final dependencies = await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.unsuccessful,
+          rawState: 'rejected',
+          canEdit: true,
+        ),
+      );
+      final repository =
+          dependencies.verificationRepository as StubVerificationRepository;
+      await tester.tap(find.text('Resubmit for verification'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('verification-resubmit-confirm')));
+      await tester.pumpAndSettle();
+      expect(repository.lastMessage, '');
+      expect(repository.correctionCalls, 1);
+    });
+
+    testWidgets('start stays disabled until the front and the selfie exist', (
+      tester,
+    ) async {
+      final dependencies = await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.notStarted,
+          rawState: '',
+        ),
+        picker: _ReadyPicker(),
+      );
+      final repository =
+          dependencies.verificationRepository as StubVerificationRepository;
+
+      expect(find.text('Previous selfie kept'), findsNothing);
+      expect(find.text('Take a selfie'), findsOneWidget);
+      PrimaryButton start() => tester.widget<PrimaryButton>(
+        find.widgetWithText(PrimaryButton, 'Start verification'),
+      );
+      expect(start().onPressed, isNull);
+
+      await tester.ensureVisible(find.byKey(const Key('verification-id-type')));
+      await tester.tap(find.byKey(const Key('verification-id-front')));
+      await tester.pump();
+      expect(start().onPressed, isNull);
+      await tester.tap(find.byKey(const Key('verification-selfie')));
+      await tester.pump();
+      expect(start().onPressed, isNotNull);
+
+      await tester.tap(find.byKey(const Key('verification-id-type')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Passport'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start verification'));
+      await tester.pumpAndSettle();
+      expect(repository.startCalls, 1);
+      expect(repository.lastIdType, 'passport');
     });
 
     testWidgets('a verified stage raises the session without a restart', (

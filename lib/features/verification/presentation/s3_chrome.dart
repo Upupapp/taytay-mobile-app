@@ -651,6 +651,7 @@ class S3Field extends StatelessWidget {
     this.leading,
     this.trailing,
     this.below,
+    this.onTap,
     super.key,
   });
 
@@ -665,25 +666,36 @@ class S3Field extends StatelessWidget {
   final Widget? trailing;
   final Widget? below;
 
+  /// Makes the whole field a button. Null leaves the field as it is drawn.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
+    final Widget column = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        S3Label(label, asterisk: asterisk),
+        S3Input(
+          value: value,
+          readOnly: readOnly,
+          dashed: dashed,
+          chevron: chevron,
+          leading: leading,
+          trailing: trailing,
+        ),
+        ?below,
+      ],
+    );
+    final VoidCallback? tap = onTap;
     return Padding(
       padding: EdgeInsets.only(top: top),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          S3Label(label, asterisk: asterisk),
-          S3Input(
-            value: value,
-            readOnly: readOnly,
-            dashed: dashed,
-            chevron: chevron,
-            leading: leading,
-            trailing: trailing,
-          ),
-          ?below,
-        ],
-      ),
+      child: tap == null
+          ? column
+          : Semantics(
+              button: true,
+              label: label,
+              child: InkWell(onTap: tap, child: column),
+            ),
     );
   }
 }

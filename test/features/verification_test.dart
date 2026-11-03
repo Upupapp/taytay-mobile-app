@@ -38,12 +38,55 @@ class FakeVerificationRepository implements VerificationRepository {
   Future<Result<VerificationStatus>> loadOwnStatus() async =>
       const Err<VerificationStatus>(ServerFailure(isTemporary: true));
 
+  final List<String> messages = <String>[];
+  int startCalls = 0;
+  int replaceCalls = 0;
+  String? lastIdType;
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async {
+    startCalls++;
+    lastIdType = idType;
+    return const Ok<VerificationStatus>(
+      VerificationStatus(
+        state: VerificationAttemptState.underReview,
+        rawState: 'pending',
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async {
+    replaceCalls++;
+    return const Ok<VerificationStatusDetail>(
+      VerificationStatusDetail(
+        stage: ResidentVerificationStage.unsuccessful,
+        rawState: 'rejected',
+        canEdit: true,
+      ),
+    );
+  }
+
   @override
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
+    bool allowBlank = false,
   }) async {
     correctionKeys.add(idempotencyKey);
+    messages.add(message);
     sentCorrections.add(Map<CorrectableField, String>.from(corrections));
     return correctionOutcome ?? const Ok<void>(null);
   }
@@ -282,6 +325,8 @@ void main() {
         'message',
         'submitted_at',
         'can_edit',
+        'submitted_categories',
+        'issues',
       ]) {
         expect(
           decoder,
@@ -634,16 +679,18 @@ void main() {
   });
 
   group('needs-more-information correction flow', () {
-    VerificationStatusDetail withIssues() => const VerificationStatusDetail(
-      stage: ResidentVerificationStage.needsMoreInformation,
-      rawState: 'under_review',
-      issues: <VerificationItemIssue>[
-        VerificationItemIssue(
-          category: VerificationItemCategory.address,
-          instruction: 'Add your house number.',
-        ),
-      ],
-    );
+    VerificationStatusDetail withIssues({bool? canEdit = true}) =>
+        VerificationStatusDetail(
+          stage: ResidentVerificationStage.needsMoreInformation,
+          rawState: 'under_review',
+          canEdit: canEdit,
+          issues: const <VerificationItemIssue>[
+            VerificationItemIssue(
+              category: VerificationItemCategory.address,
+              instruction: 'Add your house number.',
+            ),
+          ],
+        );
 
     Future<(VerificationController, FakeVerificationRepository)> build() async {
       final session = await signedInSession(AccessLevel.unverified);
@@ -766,6 +813,122 @@ void main() {
     });
   });
 
+  group('can_edit fails closed', () {
+    VerificationImagePart photo() => VerificationImagePart(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'sample.jpg',
+      mimeType: 'image/jpeg',
+    );
+
+    Future<(VerificationController, FakeVerificationRepository)> open(
+      VerificationStatusDetail detail,
+    ) async {
+      final session = await signedInSession(AccessLevel.unverified);
+      addTearDown(session.dispose);
+      final repository = FakeVerificationRepository(
+        detail: Ok<VerificationStatusDetail>(detail),
+      );
+      final controller = VerificationController(
+        repository: repository,
+        session: session,
+      );
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      return (controller, repository);
+    }
+
+    const VerificationItemIssue flagged = VerificationItemIssue(
+      category: VerificationItemCategory.address,
+      instruction: 'Add your house number.',
+    );
+
+    test(
+      'a false can_edit blocks start, re-upload, resubmit and corrections',
+      () async {
+        final (controller, repository) = await open(
+          const VerificationStatusDetail(
+            stage: ResidentVerificationStage.needsMoreInformation,
+            rawState: 'rejected',
+            canEdit: false,
+            issues: <VerificationItemIssue>[flagged],
+          ),
+        );
+        controller.chooseField(
+          VerificationItemCategory.address,
+          CorrectableField.streetAddress,
+        );
+        controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
+        expect(controller.correctionsComplete, isTrue);
+        expect(controller.allowsEdit, isFalse);
+
+        expect(
+          await controller.startVerification(
+            idType: 'philid',
+            front: photo(),
+            selfie: photo(),
+          ),
+          isFalse,
+        );
+        expect(await controller.replaceImage(front: photo()), isFalse);
+        expect(await controller.resubmit('Please look again.'), isFalse);
+        expect(await controller.submitCorrections(), isFalse);
+
+        expect(repository.startCalls, 0);
+        expect(repository.replaceCalls, 0);
+        expect(repository.correctionKeys, isEmpty);
+      },
+    );
+
+    test('a missing can_edit does not fall back to the stage', () async {
+      final (controller, repository) = await open(
+        const VerificationStatusDetail(
+          stage: ResidentVerificationStage.needsMoreInformation,
+          rawState: 'rejected',
+          issues: <VerificationItemIssue>[flagged],
+        ),
+      );
+      expect(controller.status?.isEditableByApplicant, isTrue);
+      expect(controller.allowsEdit, isFalse);
+      controller.chooseField(
+        VerificationItemCategory.address,
+        CorrectableField.streetAddress,
+      );
+      controller.updateCorrection(CorrectableField.streetAddress, '12 Rizal');
+
+      expect(await controller.replaceImage(front: photo()), isFalse);
+      expect(await controller.resubmit(''), isFalse);
+      expect(await controller.submitCorrections(), isFalse);
+      expect(repository.replaceCalls, 0);
+      expect(repository.correctionKeys, isEmpty);
+    });
+
+    test('start works when there is no request and edits do not', () async {
+      final (controller, repository) = await open(
+        const VerificationStatusDetail(
+          stage: ResidentVerificationStage.notStarted,
+          rawState: '',
+        ),
+      );
+      expect(controller.canStart, isTrue);
+      expect(controller.allowsEdit, isFalse);
+
+      expect(
+        await controller.startVerification(
+          idType: 'passport',
+          front: photo(),
+          selfie: photo(),
+        ),
+        isTrue,
+      );
+      expect(repository.startCalls, 1);
+      expect(repository.lastIdType, 'passport');
+      expect(await controller.replaceImage(front: photo()), isFalse);
+      expect(await controller.resubmit('hello'), isFalse);
+      expect(repository.replaceCalls, 0);
+      expect(repository.correctionKeys, isEmpty);
+    });
+  });
+
   group('honest seams', () {
     test('categories describe kinds, never values', () {
       for (final category in VerificationItemCategory.values) {
@@ -774,6 +937,155 @@ void main() {
       }
     });
   });
+
+  group('HTTP errors on start, re-upload and resubmit', () {
+    VerificationImagePart photo() => VerificationImagePart(
+      bytes: Uint8List.fromList(<int>[9, 8, 7]),
+      fileName: 'sample.jpg',
+      mimeType: 'image/jpeg',
+    );
+
+    Future<(VerificationController, _Queue)> drive(
+      List<ApiHttpResponse> responses,
+    ) async {
+      final session = await signedInSession(AccessLevel.unverified);
+      addTearDown(session.dispose);
+      final transport = _Queue(responses);
+      final controller = VerificationController(
+        repository: KycApiRepository(
+          apiClient: ApiClient(
+            config: config(),
+            transport: transport,
+            accessTokenProvider: () async => 'tok',
+          ),
+        ),
+        session: session,
+      );
+      addTearDown(controller.dispose);
+      await controller.refresh();
+      return (controller, transport);
+    }
+
+    test(
+      'a 409 on start is treated as success and the status is re-read',
+      () async {
+        final (controller, transport) = await drive(<ApiHttpResponse>[
+          _error(404, 'NOT_FOUND'),
+          _error(409, 'CONFLICT'),
+          _ok(<String, Object?>{'status': 'pending', 'can_edit': true}),
+        ]);
+        expect(controller.canStart, isTrue);
+
+        expect(
+          await controller.startVerification(
+            idType: 'philid',
+            front: photo(),
+            selfie: photo(),
+          ),
+          isTrue,
+        );
+        await pumpEventQueue();
+        expect(controller.failure, isNull);
+        expect(controller.status?.rawState, 'pending');
+        expect(
+          transport.requests.where(
+            (ApiRequest request) =>
+                request.method == HttpMethod.post &&
+                request.path == 'me/verification-requests',
+          ),
+          hasLength(1),
+        );
+      },
+    );
+
+    test('a 422 on start stays a validation failure', () async {
+      final (controller, transport) = await drive(<ApiHttpResponse>[
+        _error(404, 'NOT_FOUND'),
+        _error(422, 'VALIDATION_FAILED'),
+      ]);
+
+      expect(
+        await controller.startVerification(
+          idType: 'philid',
+          front: photo(),
+          selfie: photo(),
+        ),
+        isFalse,
+      );
+      expect(controller.failure, isA<ValidationFailure>());
+      expect(
+        transport.requests.where((ApiRequest r) => r.method == HttpMethod.post),
+        hasLength(1),
+      );
+    });
+
+    test('re-upload 404 and 409 are failures', () async {
+      final (missing, _) = await drive(<ApiHttpResponse>[
+        _ok(<String, Object?>{'status': 'rejected', 'can_edit': true}),
+        _error(404, 'NOT_FOUND'),
+      ]);
+      expect(await missing.replaceImage(front: photo()), isFalse);
+      expect(missing.failure, isA<NotFoundFailure>());
+
+      final (conflict, _) = await drive(<ApiHttpResponse>[
+        _ok(<String, Object?>{'status': 'rejected', 'can_edit': true}),
+        _error(409, 'CONFLICT'),
+      ]);
+      expect(await conflict.replaceImage(selfie: photo()), isFalse);
+      expect(conflict.failure, isA<ConflictFailure>());
+    });
+
+    test('resubmit 409 and 422 are failures', () async {
+      final (conflict, _) = await drive(<ApiHttpResponse>[
+        _ok(<String, Object?>{'status': 'rejected', 'can_edit': true}),
+        _error(409, 'CONFLICT'),
+      ]);
+      expect(await conflict.resubmit('Please look again.'), isFalse);
+      expect(conflict.failure, isA<ConflictFailure>());
+
+      final (invalid, _) = await drive(<ApiHttpResponse>[
+        _ok(<String, Object?>{'status': 'rejected', 'can_edit': true}),
+        _error(422, 'VALIDATION_FAILED'),
+      ]);
+      expect(await invalid.resubmit(''), isFalse);
+      expect(invalid.failure, isA<ValidationFailure>());
+    });
+  });
+}
+
+ApiHttpResponse _ok(Map<String, Object?> data) => ApiHttpResponse(
+  statusCode: 200,
+  body: jsonEncode(<String, Object?>{
+    'data': data,
+    'meta': <String, Object?>{},
+  }),
+  headers: const <String, String>{'content-type': 'application/json'},
+);
+
+ApiHttpResponse _error(int status, String code) => ApiHttpResponse(
+  statusCode: status,
+  body: jsonEncode(<String, Object?>{
+    'error': <String, Object?>{
+      'code': code,
+      'message': 'operator text',
+      'details': <String, Object?>{},
+      'request_id': 'req-http',
+    },
+  }),
+  headers: const <String, String>{'content-type': 'application/json'},
+);
+
+class _Queue implements ApiTransport {
+  _Queue(this.responses);
+
+  final List<ApiHttpResponse> responses;
+  final List<ApiRequest> requests = <ApiRequest>[];
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    requests.add(request);
+    return Ok<ApiHttpResponse>(responses.removeAt(0));
+  }
 }
 
 AppConfig config() => AppConfig.from(

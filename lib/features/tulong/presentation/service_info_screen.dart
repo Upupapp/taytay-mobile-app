@@ -186,6 +186,9 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
           onMessage: _message,
           onOffice: _office,
           onShare: _share,
+          loadHero: AppDependencies.of(context).config.usesMockData
+              ? null
+              : AppDependencies.of(context).mediaBytes.serviceHero,
         ),
       );
     }

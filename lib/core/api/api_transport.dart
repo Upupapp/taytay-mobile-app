@@ -74,12 +74,19 @@ class ApiHttpResponse {
     required this.statusCode,
     required this.body,
     this.headers = const <String, String>{},
+    this.bodyBytes,
   });
 
   final int statusCode;
 
   /// Raw response body text. May be empty (`204 No Content`).
+  ///
+  /// Image responses leave this empty. The picture is [bodyBytes].
   final String body;
+
+  /// Response bytes when the transport kept them. Image routes need this:
+  /// decoding a photograph as text corrupts it.
+  final Uint8List? bodyBytes;
 
   /// Lower-cased response headers.
   final Map<String, String> headers;

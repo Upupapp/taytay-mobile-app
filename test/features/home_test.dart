@@ -93,7 +93,26 @@ class CountingVerificationRepository implements VerificationRepository {
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
+    bool allowBlank = false,
   }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatus>(ServerFailure());
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async => const Err<VerificationStatusDetail>(ServerFailure());
 
   @override
   Future<Result<KycDocument>> attachDocument({

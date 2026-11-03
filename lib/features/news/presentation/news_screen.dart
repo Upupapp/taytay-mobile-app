@@ -163,8 +163,8 @@ class _NewsScreenState extends State<NewsScreen> {
   @override
   Widget build(BuildContext context) {
     final NewsFeedController? controller = _controller;
-    final bool guest =
-        AppDependencies.of(context).session.state is! AuthenticatedSession;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final bool guest = dependencies.session.state is! AuthenticatedSession;
 
     return Scaffold(
       backgroundColor: BrandColors.surface,
@@ -187,6 +187,9 @@ class _NewsScreenState extends State<NewsScreen> {
           onBack: () => _selectChip(BalitaChip.all),
           onSeeAll: () => _selectChip(BalitaChip.all),
           onRetry: () => controller?.refresh(),
+          loadCover: dependencies.config.usesMockData
+              ? null
+              : dependencies.mediaBytes.newsCover,
         ),
       ),
     );
