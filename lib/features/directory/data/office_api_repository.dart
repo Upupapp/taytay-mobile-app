@@ -69,8 +69,7 @@ class OfficeApiRepository {
           path: 'offices/$slug/hero',
           authenticated: false,
           binary: true,
-          endSessionOnUnauthorized: false,
-          accept: 'image/jpeg, image/png, image/webp',
+          endSessionOn401: false,
           decode: (Object? data) => data is Uint8List ? data : Uint8List(0),
         );
     return response.map((ApiEnvelope<Uint8List> envelope) => envelope.data);

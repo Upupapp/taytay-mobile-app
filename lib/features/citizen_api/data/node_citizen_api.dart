@@ -141,6 +141,7 @@ class NodeCitizenApi {
       sortOrder: map['sort_order'] is int ? map['sort_order'] as int : 0,
       active: map['active'] != false,
       mediaId: _string(map['media_id']),
+      imageUrl: _string(map['image_url']),
       href: _string(map['href']),
     );
   }

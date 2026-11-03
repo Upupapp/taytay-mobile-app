@@ -133,12 +133,25 @@ class HttpApiTransport implements ApiTransport {
       final response = await http.Response.fromStream(
         streamed,
       ).timeout(timeout);
+      final String type = (response.headers['content-type'] ?? '')
+          .toLowerCase();
+      final bool image = type.startsWith('image/');
+      // An image has no charset that round-trips through a String. Keep the
+      // bytes and leave the text body empty so a JPEG is not decoded as text.
+      String text = '';
+      if (!image) {
+        try {
+          text = response.body;
+        } on FormatException {
+          text = '';
+        }
+      }
 
       return Ok<ApiHttpResponse>(
         ApiHttpResponse(
           statusCode: response.statusCode,
-          body: _textBody(response),
-          bytes: response.bodyBytes,
+          body: text,
+          bodyBytes: image ? response.bodyBytes : null,
           // Header names are lower-cased by `package:http`; ApiHttpResponse
           // reads them that way.
           headers: response.headers,
@@ -172,18 +185,6 @@ class HttpApiTransport implements ApiTransport {
           debugMessage: 'Unhandled transport error.',
         ),
       );
-    }
-  }
-
-  /// Image bytes are not UTF-8. Reading the decoded text body throws, and a
-  /// thrown read would hide a banner the screen can still paint from the bytes.
-  static String _textBody(http.Response response) {
-    try {
-      return response.body;
-    } on FormatException {
-      return '';
-    } on Object {
-      return '';
     }
   }
 

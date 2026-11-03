@@ -184,7 +184,8 @@ void main() {
       ApiHttpResponse(
         statusCode: 200,
         body: '',
-        bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
+        bodyBytes: base64Decode(_png),
+        headers: const <String, String>{'content-type': 'image/png'},
       ),
     ]);
     final ApiClient client = ApiClient(
@@ -198,7 +199,7 @@ void main() {
       path: 'offices/sample-office/hero',
       authenticated: false,
       binary: true,
-      endSessionOnUnauthorized: false,
+      endSessionOn401: false,
       decode: (Object? data) => data is Uint8List ? data : Uint8List(0),
     );
 
@@ -208,7 +209,7 @@ void main() {
 
   test('service lines default to empty and the hero is anonymous', () async {
     var signedOut = 0;
-    final Uint8List png = Uint8List.fromList(<int>[1, 2, 3, 4]);
+    final Uint8List png = base64Decode(_png);
     final _Recording transport = _Recording(<ApiHttpResponse>[
       _json(200, <Object?>[
         <String, Object?>{
@@ -239,7 +240,7 @@ void main() {
       ApiHttpResponse(
         statusCode: 200,
         body: '',
-        bytes: png,
+        bodyBytes: png,
         headers: const <String, String>{'content-type': 'image/png'},
       ),
     ]);
@@ -477,7 +478,12 @@ void main() {
     );
     gate.release(
       'offices/sample-office/hero',
-      ApiHttpResponse(statusCode: 200, body: '', bytes: base64Decode(_png)),
+      ApiHttpResponse(
+        statusCode: 200,
+        body: '',
+        bodyBytes: base64Decode(_png),
+        headers: const <String, String>{'content-type': 'image/png'},
+      ),
     );
     await tester.pumpAndSettle();
 

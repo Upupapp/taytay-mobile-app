@@ -152,6 +152,8 @@ class KycApiRepository implements VerificationRepository {
 
     final Object? raw = map['status'];
     final Object? message = map['message'];
+    // `submitted_at` is the citizen stamp. `created_at` fills it only when
+    // that field is absent. A staff remark is neither a stamp nor a message.
     final Object? submittedAt = map['submitted_at'] ?? map['created_at'];
     final Object? canEdit = map['can_edit'];
     final Object? idType = map['id_type'];
@@ -166,6 +168,8 @@ class KycApiRepository implements VerificationRepository {
       ),
       rawState: raw is String ? raw : '',
       residentGuidance: guidance,
+      submittedCategories: _categories(map['submitted_categories']),
+      issues: _issues(map['issues']),
       submittedAt: submittedAt is String
           ? DateTime.tryParse(submittedAt)?.toUtc()
           : null,
@@ -187,6 +191,42 @@ class KycApiRepository implements VerificationRepository {
     );
   }
 
+  static List<VerificationItemCategory> _categories(Object? raw) {
+    if (raw is! List<dynamic>) return const <VerificationItemCategory>[];
+    final List<VerificationItemCategory> categories =
+        <VerificationItemCategory>[];
+    for (final Object? item in raw) {
+      if (item is! String) continue;
+      final VerificationItemCategory? category =
+          VerificationItemCategory.fromWire(item);
+      if (category == null || categories.contains(category)) continue;
+      categories.add(category);
+    }
+    return categories;
+  }
+
+  /// Citizen issues. An item without a message is dropped. An unknown category
+  /// is kept under [VerificationItemCategory.other] so the instruction still
+  /// shows. Staff remarks are not read.
+  static List<VerificationItemIssue> _issues(Object? raw) {
+    if (raw is! List<dynamic>) return const <VerificationItemIssue>[];
+    final List<VerificationItemIssue> issues = <VerificationItemIssue>[];
+    for (final Object? item in raw) {
+      if (item is! Map<String, dynamic>) continue;
+      final String? instruction = _text(item['message']);
+      if (instruction == null) continue;
+      final VerificationItemCategory category =
+          VerificationItemCategory.fromWire(
+            item['category'] is String ? item['category'] as String : null,
+          ) ??
+          VerificationItemCategory.other;
+      issues.add(
+        VerificationItemIssue(category: category, instruction: instruction),
+      );
+    }
+    return issues;
+  }
+
   static String? _text(Object? value) {
     if (value is! String) return null;
     final String trimmed = value.trim();
@@ -197,13 +237,40 @@ class KycApiRepository implements VerificationRepository {
   Future<Result<void>> submitCorrections({
     required Map<CorrectableField, String> corrections,
     required String idempotencyKey,
+    String message = '',
+    bool allowBlank = false,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    final Object? _ = _telemetry;
-    return backendGapFailure<void>(
-      BackendGap.absentOnNodeContract,
-      'submitCorrections',
-    );
+    final String text = _correctionMessage(message, corrections);
+    if (text.isEmpty && !allowBlank) {
+      return const Err<void>(
+        ValidationFailure(debugMessage: 'A message is required.'),
+      );
+    }
+    final Result<ApiEnvelope<VerificationStatusDetail>> response =
+        await _apiClient.send<VerificationStatusDetail>(
+          method: HttpMethod.post,
+          path: 'me/verification-requests/current/corrections',
+          authenticated: true,
+          requiredStatus: 200,
+          idempotencyKey: idempotencyKey,
+          body: <String, Object?>{'message': text},
+          decode: _decodeDetail,
+        );
+    return response.map((ApiEnvelope<VerificationStatusDetail> _) {});
+  }
+
+  /// One citizen string. Values the resident typed are included. Field names
+  /// and staff notes are not.
+  static String _correctionMessage(
+    String message,
+    Map<CorrectableField, String> corrections,
+  ) {
+    final String typed = message.trim();
+    if (typed.isNotEmpty) return typed;
+    return corrections.values
+        .map((String value) => value.trim())
+        .where((String value) => value.isNotEmpty)
+        .join('\n');
   }
 
   @override
@@ -211,19 +278,20 @@ class KycApiRepository implements VerificationRepository {
     required KycClaim claim,
     required String idempotencyKey,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    unawaited(
-      _telemetry?.record(
-            const FlowStep(
-              flow: TelemetryFlow.verification,
-              stage: TelemetryStage.blocked,
-            ),
-          ) ??
-          Future<bool>.value(false),
-    );
-    return backendGapFailure<VerificationStatus>(
-      BackendGap.absentOnNodeContract,
-      'openCase',
+    // The Node start is `POST me/verification-requests` with the ID photos.
+    // A name and a barangay are not that request, so they stay on the device.
+    if (!claim.isComplete || idempotencyKey.isEmpty) {
+      return const Err<VerificationStatus>(
+        ValidationFailure(
+          debugMessage: 'Verification starts with the ID photos.',
+        ),
+      );
+    }
+    return const Err<VerificationStatus>(
+      ValidationFailure(
+        debugMessage:
+            'Verification starts with the ID photos, not a profile claim.',
+      ),
     );
   }
 
@@ -248,11 +316,126 @@ class KycApiRepository implements VerificationRepository {
     required String mimeType,
     required String idempotencyKey,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    final Object? _ = _telemetry;
-    return backendGapFailure<KycDocument>(
-      BackendGap.absentOnNodeContract,
-      'attachDocument',
+    if (type != KycDocumentType.identityDocument) {
+      return const Err<KycDocument>(
+        ValidationFailure(
+          debugMessage:
+              'The documents route replaces id_front, id_back, or selfie.',
+        ),
+      );
+    }
+    final Result<VerificationStatusDetail> replaced = await replaceDocuments(
+      front: VerificationImagePart(
+        bytes: bytes,
+        fileName: fileName,
+        mimeType: mimeType,
+      ),
+      idempotencyKey: idempotencyKey,
+    );
+    return replaced.map(
+      (VerificationStatusDetail detail) => KycDocument(
+        type: type,
+        isAttached: detail.idFrontMediaId != null,
+        receivedAt: detail.submittedAt,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async {
+    if (idType.trim().isEmpty || !front.isUsable || !selfie.isUsable) {
+      return const Err<VerificationStatus>(
+        ValidationFailure(
+          debugMessage: 'The ID front and a selfie are required.',
+        ),
+      );
+    }
+    _record(TelemetryStage.started);
+    final VerificationImagePart? backPart = back != null && back.isUsable
+        ? back
+        : null;
+    final Result<ApiEnvelope<VerificationStatus>> response = await _apiClient
+        .send<VerificationStatus>(
+          method: HttpMethod.post,
+          path: 'me/verification-requests',
+          authenticated: true,
+          requiredStatus: 201,
+          idempotencyKey: idempotencyKey,
+          body: <String, Object?>{'id_type': idType.trim()},
+          files: <MultipartFile>[
+            _part('id_front', front),
+            if (backPart != null) _part('id_back', backPart),
+            _part('selfie', selfie),
+          ],
+          decode: _decodeStatus,
+        );
+    if (response.isOk) _record(TelemetryStage.submitted);
+    return response.map(
+      (ApiEnvelope<VerificationStatus> envelope) => envelope.data,
+    );
+  }
+
+  void _record(TelemetryStage stage) {
+    unawaited(
+      _telemetry?.record(
+            FlowStep(flow: TelemetryFlow.verification, stage: stage),
+          ) ??
+          Future<bool>.value(false),
+    );
+  }
+
+  @override
+  Future<Result<VerificationStatusDetail>> replaceDocuments({
+    VerificationImagePart? front,
+    VerificationImagePart? back,
+    VerificationImagePart? selfie,
+    String? idempotencyKey,
+  }) async {
+    final VerificationImagePart? frontPart = front != null && front.isUsable
+        ? front
+        : null;
+    final VerificationImagePart? backPart = back != null && back.isUsable
+        ? back
+        : null;
+    final VerificationImagePart? selfiePart = selfie != null && selfie.isUsable
+        ? selfie
+        : null;
+    if (frontPart == null && backPart == null && selfiePart == null) {
+      return const Err<VerificationStatusDetail>(
+        ValidationFailure(debugMessage: 'At least one ID photo is required.'),
+      );
+    }
+    final Result<ApiEnvelope<VerificationStatusDetail>> response =
+        await _apiClient.send<VerificationStatusDetail>(
+          method: HttpMethod.post,
+          path: 'me/verification-requests/current/documents',
+          authenticated: true,
+          requiredStatus: 200,
+          idempotencyKey: idempotencyKey,
+          files: <MultipartFile>[
+            if (frontPart != null) _part('id_front', frontPart),
+            if (backPart != null) _part('id_back', backPart),
+            if (selfiePart != null) _part('selfie', selfiePart),
+          ],
+          decode: _decodeDetail,
+        );
+    return response.map(
+      (ApiEnvelope<VerificationStatusDetail> envelope) => envelope.data,
+    );
+  }
+
+  static MultipartFile _part(String field, VerificationImagePart part) {
+    return MultipartFile(
+      field: field,
+      filename: part.fileName,
+      bytes: part.bytes,
+      mimeType: part.mimeType,
     );
   }
 
@@ -263,54 +446,6 @@ class KycApiRepository implements VerificationRepository {
     return backendGapFailure<List<KycDocument>>(
       BackendGap.absentOnNodeContract,
       'loadDocuments',
-    );
-  }
-
-  /// `POST me/verification-requests`.
-  ///
-  /// One multipart body: id type, front, optional back, and a selfie.
-  Future<Result<VerificationStatus>> submitVerification({
-    required String idType,
-    required Uint8List frontBytes,
-    required String frontName,
-    required String frontMime,
-    Uint8List? backBytes,
-    String? backName,
-    String? backMime,
-    required Uint8List selfieBytes,
-    required String selfieName,
-    required String selfieMime,
-  }) async {
-    final response = await _apiClient.send<VerificationStatus>(
-      method: HttpMethod.post,
-      path: 'me/verification-requests',
-      authenticated: true,
-      body: <String, Object?>{'id_type': idType},
-      files: <MultipartFile>[
-        MultipartFile(
-          field: 'id_front',
-          filename: frontName,
-          bytes: frontBytes,
-          mimeType: frontMime,
-        ),
-        if (backBytes != null && backName != null && backMime != null)
-          MultipartFile(
-            field: 'id_back',
-            filename: backName,
-            bytes: backBytes,
-            mimeType: backMime,
-          ),
-        MultipartFile(
-          field: 'selfie',
-          filename: selfieName,
-          bytes: selfieBytes,
-          mimeType: selfieMime,
-        ),
-      ],
-      decode: _decodeStatus,
-    );
-    return response.map(
-      (ApiEnvelope<VerificationStatus> envelope) => envelope.data,
     );
   }
 

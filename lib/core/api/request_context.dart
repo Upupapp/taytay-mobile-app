@@ -40,9 +40,10 @@ class RequestContext {
   Map<String, String> headers({
     bool hasJsonBody = false,
     String? idempotencyKey,
+    String? accept,
   }) {
     return <String, String>{
-      'Accept': 'application/json',
+      'Accept': accept ?? 'application/json',
       if (hasJsonBody) 'Content-Type': 'application/json',
       'X-Client-Channel': kClientChannel,
       'X-Request-Id': requestId,

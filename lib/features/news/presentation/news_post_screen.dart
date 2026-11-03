@@ -94,6 +94,9 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
       body: BalitaCanvas(
         frame: BalitaFrame.article,
         article: post,
+        loadCover: AppDependencies.of(context).config.usesMockData
+            ? null
+            : AppDependencies.of(context).mediaBytes.newsCover,
       ),
     );
   }

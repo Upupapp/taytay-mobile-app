@@ -12,7 +12,7 @@ Static. No resident session was created and no personal data was sent.
 
 `Upupapp/taytay-backend` is still not readable from this environment (`gh repo view` and `git ls-remote` both return repository not found) on 28 October 2026. Backend `main` could not be cloned, so a commit newer than the vendored spec cannot be confirmed.
 
-The latest OpenAPI this environment can read is `docs/integration/taytay-node-openapi.json` at mobile `908896d`. Mobile pull request #15 (`ab2896c`) replaced that file with the `3e3b110` export: 74 paths, the same document the first audit called newer than the old vendored copy. The drift table from 26 October is closed. `GET /api/v1/services/{slug}/hero`, the Tulong presentation fields, required `ServiceContact.type`, required `UserProfile.verification_decided_at`, and required `AppConfig.privacy_notice` are in the vendored file.
+The vendored file `docs/integration/taytay-node-openapi.json` is the `5f6fe0f` export. Mobile pull request #15 (`ab2896c`) had replaced it with the `3e3b110` export. The drift table from 26 October is closed. Items 8, 10, 15, and 17 below name the image routes this app calls on that newer file. `GET /api/v1/offices/{slug}/hero` is on `5f6fe0f` and is not called.
 
 Every row below was scored against backend `3e3b110`, the short id of that spec. The full SHA is not in this clone. Where a route is missing, it is missing at `3e3b110`. Where a route is present, it was already present at `3e3b110` and the mobile change is named separately.
 
@@ -31,16 +31,16 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 5 | In-session password change | Closed | Firebase `updatePassword` (no HTTP route) | `3e3b110` |
 | 6 | Other signed-in sessions | Deferred (needs Paul's approval) | `GET me/sessions` is not in the spec. `POST`/`DELETE /api/v1/me/devices` is a push token | `3e3b110` |
 | 7 | Directory photos and service lines | Closed | `GET /api/v1/offices`, `GET /api/v1/offices/{slug}`, `GET /api/v1/offices/{slug}/hero`. `service_lines` renders. A missing hero keeps the bundled hall. | `5f6fe0f` |
-| 8 | Balita cover bytes | Partly closed | `cover_url` on `GET /api/v1/news/{id}`. `GET /api/v1/news/{id}/cover` is not called | `3e3b110` |
+| 8 | Balita cover bytes | Closed for published covers | `GET /api/v1/news/{id}/cover` when `cover_url` is set. No bearer token. A draft is not cached | `5f6fe0f` |
 | 9 | Balita comments, reactions, bookmarks | Deferred (needs Paul's approval) | No citizen route under `/news` | `3e3b110` |
-| 10 | Tulong hero bytes and saved list | Partly closed (hero bytes). Saved list: Deferred (needs Paul's approval) | `GET /api/v1/services`, `GET /api/v1/services/{slug}`. `GET /api/v1/services/{slug}/hero` is not called. No saved-service route | `3e3b110` |
+| 10 | Tulong hero bytes and saved list | Hero bytes closed. Saved list: Deferred (needs Paul's approval) | `GET /api/v1/services/{slug}/hero` when `hero_url` is set. No bearer token. No saved-service route | `5f6fe0f` |
 | 11 | Old programmes screen | Closed | The tab and any leftover programmes entry read `GET /services` or `GET /services?office={slug}`. `GET /programs` is not called. | `5f6fe0f` |
 | 12 | My Account profile, preferences, consents | Closed | `GET`/`PATCH /api/v1/me`, `GET`/`PATCH /api/v1/me/notification-preferences`, `GET`/`POST /api/v1/me/consents`, `GET /api/v1/app/config` | `3e3b110` |
 | 13 | Consent withdrawal | Closed | `POST /api/v1/me/consents/withdraw` sets `withdrawn_at`. `POST /api/v1/me/consents` with that version clears it. | `5f6fe0f` |
-| 14 | Inbox reply, read, close, paging | Partly closed | `GET`/`POST /api/v1/threads` are called. `POST /api/v1/threads/{id}/messages`, `/read`, `/close` are not | `3e3b110` |
-| 15 | Home banner media | Partly closed | `GET /api/v1/home`. `Banner.media_id` is not painted | `3e3b110` |
+| 14 | Inbox reply, read, close, paging, attachments | Closed | `GET`/`POST /api/v1/threads`, `GET /api/v1/threads/{id}`, `GET`/`POST /api/v1/threads/{id}/messages`, `POST /api/v1/threads/{id}/read`, `POST /api/v1/threads/{id}/close`. Cursor `limit`. `media_id` or multipart `file` | `5f6fe0f` |
+| 15 | Home banner media | Closed when `image_url` is set | `GET /api/v1/home/banners/{id}/image`. No bearer token. A null URL keeps the bundled slide | `5f6fe0f` |
 | 16 | Household summary | Partly closed | `GET /api/v1/households/current` is called. Correction still declines | `3e3b110` |
-| 17 | Digital ID | Partly closed | `GET /api/v1/me/digital-id` and `GET /api/v1/me`. `photo_media_id` is not fetched | `3e3b110` |
+| 17 | Digital ID | Closed | `GET /api/v1/me/digital-id`, `GET /api/v1/me`, and authenticated `GET /api/v1/media/{id}/content` for `photo_media_id` | `5f6fe0f` |
 | 18 | Notification paging and targets | Closed | `GET /api/v1/notifications` with `cursor` | `3e3b110` |
 | 19 | Events | Deferred (needs Paul's approval) | No `/events` route | `3e3b110` |
 | 20 | Assistance requests and uploads | Deferred (needs Paul's approval) | No citizen case or requirement route. Tulong is information only | `3e3b110` |
@@ -65,6 +65,10 @@ Still Firebase `reauthenticateWithCredential` then `updatePassword`. Sign-in now
 
 Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `barangay_id`; preferences are `verification_decided`, `message_received`, `balita`, and `emergency`, each `in_app` and `push`; consents record `{version}`; `GET /api/v1/app/config` publishes `privacy_notice`. `editable_fields` is still absent, so local field ownership applies. `POST /api/v1/me/avatar` still uses multipart `file`. `hasAvatar` is read from `avatar_media_id` on the next `GET /me`. Completion percent stays a client derivation.
 
+### 14. Inbox reply, read, close, paging, and attachments
+
+Re-scored against the vendored Node export from taytay-backend pull request 2, head `5f6fe0f` (`docs/integration/taytay-node-openapi.json`). The account thread posts a reply, marks the thread read when it opens, and can close it. The thread list and the message list send `limit` and `cursor` and stop when `has_more` is false or `next_cursor` is empty. A reply attaches either `media_id` for an attachment already in the thread, or multipart field `file` for a new photo or PDF. Starting a thread sends `file` from the compose row. The repository also accepts `media_id` on start. The two are not sent together. `Message.attachments` is kept. The SAMPLE line stays on `usesMockData`. The resident does not see the server's error `message`.
+
 ### 18. Notification paging and targets
 
 `listOwn` sends `cursor`. Load-more asks for another page only when `has_more` is true and `next_cursor` is a non-empty string. `message_received` is no longer relabelled to account security. `subject_type` is still not on `Notification`. When it is absent, `type` is the routing hint, with `subject_id` as the id. Mark-read routes are unchanged.
@@ -73,9 +77,13 @@ Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `bar
 
 ### 3. Verification start, documents, and corrections
 
-`GET /api/v1/me/verification-requests/current` is read. The decoder keeps `id`, `user_id`, `id_type`, `id_front_media_id`, `id_back_media_id`, `selfie_media_id`, `status`, `created_at`, and `reviewed_at`. `notes` is not copied and is not rendered. The status screen shows `rejection_reason` from `GET /api/v1/me`. The account wizard can `POST /api/v1/me/verification-requests`.
+Wired against taytay-backend `5f6fe0f` (pull request 2, not merged when this was written). The vendored spec is `docs/integration/taytay-node-openapi.json`.
 
-The remainder still declines with `BackendGap.absentOnNodeContract`: `KycClaimScreen` `openCase`, `attachDocument`, `loadDocuments`, `submitForReview`, and `submitCorrections`. `VerificationRequest` still has no `submitted_categories`, `issues`, `message`, `submitted_at`, or `can_edit`. The document bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
+`GET /api/v1/me/verification-requests/current` reads the citizen fields: `message`, `submitted_at`, `can_edit`, `submitted_categories`, and `issues`. `status` stays `pending`, `approved`, or `rejected`. Staff `notes` are not copied and are not rendered. `rejection_reason` on `GET /api/v1/me` is still the reason paragraph on the needs-correction screen. The issues list is the per-field notes under it.
+
+`POST /api/v1/me/verification-requests` starts a request (the account wizard, and Start verification once the resident has added the front of an ID and a selfie). `POST /api/v1/me/verification-requests/current/documents` replaces `id_front`, `id_back`, or `selfie`. `POST /api/v1/me/verification-requests/current/corrections` sends `{message}` and returns the request to pending. Those three no longer decline. Upload and resubmit are offered only while `can_edit` is true.
+
+Still declined: `loadDocuments` and `submitForReview` (`BackendGap.absentOnNodeContract`). A profile claim (`openCase`) is not the Node start, so it does not post. The bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
 
 ### 7. Directory photos and service lines
 
@@ -83,21 +91,15 @@ The remainder still declines with `BackendGap.absentOnNodeContract`: `KycClaimSc
 
 ### 8. Balita cover bytes
 
-`GET /api/v1/news`, `GET /api/v1/news/{id}`, and `GET /api/v1/news/categories` are unchanged and match, including `cover_url`. The card paints `cover_url`. `GET /api/v1/news/{id}/cover` (image bytes) is not called. A null `cover_url` leaves the card without a photograph even when the binary route would return one.
+`GET /api/v1/news`, `GET /api/v1/news/{id}`, and `GET /api/v1/news/categories` are unchanged. `GET /api/v1/news/{id}/cover` is called only when `cover_url` is set and the row has no fixture asset. The request is anonymous: no bearer token, and a 401 does not end the session. The host inside `cover_url` is not opened. A 404, including a draft, is not stored in the public cache. A failure keeps the empty cover box. Dev mocks do not call it.
 
 ### 10. Tulong hero bytes
 
-List and detail decode the `3e3b110` `Service` fields, including `hero_url`. `GET /api/v1/services/{slug}/hero` is not called. That byte route stays partly closed. The saved list is deferred, below. There is no citizen apply route. The screens stay information only.
-
-### 14. Inbox reply, read, close, and paging
-
-Called: `GET /api/v1/threads` (one page, no `limit`, no `cursor`), `GET /api/v1/threads/{id}`, `GET /api/v1/threads/{id}/messages`, and `POST /api/v1/threads` from directory compose (`office_id`, `subject`, `body`).
-
-Not called from a screen, though the repository has the methods: `POST /api/v1/threads/{id}/messages`, `POST /api/v1/threads/{id}/read`, `POST /api/v1/threads/{id}/close`. The account thread still paints a composer that is not a text field. `Message.attachments` is still dropped. Multipart `file` on start and reply is still unused. The SAMPLE line is still limited to `usesMockData`.
+List and detail decode the `Service` fields, including `hero_url`. The service page calls `GET /api/v1/services/{slug}/hero` when `hero_url` is set. The request is anonymous, and a 401 does not end the session. The photograph is 196 dp tall with a 20 dp radius. A null URL, a 404, or a failed read keeps the icon tile. The list does not paint it. The saved list is deferred, below. There is no citizen apply route. Dev mocks do not call the hero route.
 
 ### 15. Home banner media
 
-`GET /api/v1/home` supplies banner title, href, sort order, and active. Photographs still come from `assets/home/slides.json` on every build. `Banner.media_id` is not painted. There is no public banner-bytes route. `quick_links` are decoded and unused. News titles come from `GET /api/v1/news`. Hotlines come from `GET /api/v1/home` and `GET /api/v1/hotlines`. `home_catalogue.json` is used only when `usesMockData` is true and the live lists are empty.
+`GET /api/v1/home` supplies banner title, href, sort order, active, and `image_url`. When `image_url` is set, the slide calls `GET /api/v1/home/banners/{id}/image` with no bearer token. A 401 does not end the session. Until those bytes arrive, and when they fail or `image_url` is null, the photograph stays the bundled slide. `quick_links` are decoded and unused. News titles come from `GET /api/v1/news`. Hotlines come from `GET /api/v1/home` and `GET /api/v1/hotlines`. `home_catalogue.json` is used only when `usesMockData` is true and the live lists are empty. Dev mocks do not call the image route.
 
 ### 16. Household summary
 
@@ -105,7 +107,7 @@ Not called from a screen, though the repository has the methods: `POST /api/v1/t
 
 ### 17. Digital ID
 
-`DigitalIdScreen` calls `GET /api/v1/me/digital-id` and `GET /api/v1/me` for `name`. The card covers active, suspended, revoked, expired, and not issued. Expired is this client's reading of `status=active` when `now` is after `expires_at` and `qr` is null. There is no `expired` wire value. The QR is painted from `qr.token` in memory while `qr.isLive(now)`, and a timer refreshes at `expires_at`. A 404 or a null card is not issued. `photo_media_id` is not fetched, so the portrait stays the dashed placeholder. `POST /api/v1/digital-id/verify` is not called. The SAMPLE illustration is the dev mock only.
+`DigitalIdScreen` calls `GET /api/v1/me/digital-id` and `GET /api/v1/me` for `name`. The card covers active, suspended, revoked, expired, and not issued. Expired is this client's reading of `status=active` when `now` is after `expires_at` and `qr` is null. There is no `expired` wire value. The QR is painted from `qr.token` in memory while `qr.isLive(now)`, and a timer refreshes at `expires_at`. A 404 or a null card is not issued. `photo_media_id` is loaded with authenticated `GET /api/v1/media/{id}/content`. `GET /media/{id}` stays metadata. The portrait is decoded outside the shared image cache. A 404, a failure, or a dev mock keeps the dashed placeholder. `POST /api/v1/digital-id/verify` is not called. The SAMPLE illustration is the dev mock only.
 
 ## Open
 
@@ -137,7 +139,7 @@ The article page does not offer them. The repository methods still decline. `3e3
 
 ### 10. Tulong saved list
 
-Saved pages are the in-memory list for this process. There is no saved-service route. Hero bytes stay partly closed above.
+Saved pages are the in-memory list for this process. There is no saved-service route. Hero bytes are the service-page read above.
 
 ### 19. Events
 
@@ -152,6 +154,3 @@ Saved pages are the in-memory list for this process. There is no saved-service r
 The next client work, one area at a time, is not in this commit:
 
 1. Verification (the open half of item 3).
-2. Media bytes and covers (items 8, 10, and the portrait on item 17).
-3. Inbox send, read, close, and paging (item 14).
-4. Home banner media (item 15). Directory service lines and the office hero are closed with item 7.

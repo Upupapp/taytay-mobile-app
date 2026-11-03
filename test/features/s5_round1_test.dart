@@ -7,6 +7,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
+import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -89,19 +90,47 @@ class _RecordingMessaging implements OfficeMessagingRepository {
     ),
   );
 
-  final List<({String officeId, String topic, String body})> sent =
-      <({String officeId, String topic, String body})>[];
+  final List<
+    ({
+      String officeId,
+      String topic,
+      String body,
+      String? mediaId,
+      bool hasFile,
+    })
+  >
+  sent =
+      <
+        ({
+          String officeId,
+          String topic,
+          String body,
+          String? mediaId,
+          bool hasFile,
+        })
+      >[];
 
   final List<String> threadLoads = <String>[];
   final List<String> messageLoads = <String>[];
+  final List<String> reads = <String>[];
+  final List<String> replies = <String>[];
+  final List<String?> cursors = <String?>[];
 
   @override
   Future<Result<OfficeMessage>> send({
     required String officeId,
     required String topic,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async {
-    sent.add((officeId: officeId, topic: topic, body: body));
+    sent.add((
+      officeId: officeId,
+      topic: topic,
+      body: body,
+      mediaId: mediaId,
+      hasFile: file != null,
+    ));
     return sendResult;
   }
 
@@ -123,35 +152,54 @@ class _RecordingMessaging implements OfficeMessagingRepository {
   }
 
   @override
-  Future<Result<List<OfficeMessage>>> listMessages(String threadId) async {
+  Future<Result<Paginated<OfficeMessage>>> listMessages(
+    String threadId, {
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async {
     messageLoads.add(threadId);
-    return Ok(<OfficeMessage>[
-      OfficeMessage(
-        id: 'msg-live',
-        threadId: threadId,
-        body: 'Where is the cedula desk?',
-        sentAt: DateTime.utc(2026, 8, 16, 2),
-        fromResident: true,
-        senderId: 'acct-1',
-      ),
-    ]);
+    cursors.add(cursor);
+    return Ok(
+      Paginated<OfficeMessage>.single(<OfficeMessage>[
+        OfficeMessage(
+          id: 'msg-live',
+          threadId: threadId,
+          body: 'Where is the cedula desk?',
+          sentAt: DateTime.utc(2026, 8, 16, 2),
+          fromResident: true,
+          senderId: 'acct-1',
+        ),
+      ]),
+    );
   }
 
   @override
-  Future<Result<List<OfficeThread>>> listThreads() async =>
-      const Ok(<OfficeThread>[]);
+  Future<Result<Paginated<OfficeThread>>> listThreads({
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async => const Ok(Paginated<OfficeThread>.single(<OfficeThread>[]));
 
   @override
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
-  }) async => sendResult;
+    String? mediaId,
+    OutgoingFile? file,
+  }) async {
+    replies.add(body);
+    return sendResult;
+  }
 
   @override
   Future<Result<void>> closeThread(String threadId) async => const Ok(null);
 
   @override
-  Future<Result<void>> markThreadRead(String threadId) async => const Ok(null);
+  Future<Result<void>> markThreadRead(String threadId) async {
+    reads.add(threadId);
+    return const Ok(null);
+  }
 }
 
 class _TierProfile implements ResidentProfileRepository {
@@ -360,13 +408,14 @@ void main() {
       transport: transport,
       accessTokenProvider: () async => 'tok',
     );
-    final Result<List<OfficeThread>> result =
+    final Result<Paginated<OfficeThread>> result =
         await OfficeMessagingApiRepository(apiClient: client).listThreads();
-    expect(result, isA<Ok<List<OfficeThread>>>());
+    expect(result, isA<Ok<Paginated<OfficeThread>>>());
     expect(
-      (result as Ok<List<OfficeThread>>).value.single.officeName,
+      (result as Ok<Paginated<OfficeThread>>).value.items.single.officeName,
       'Treasury',
     );
+    expect(transport.requests.first.query['limit'], isNotNull);
     expect(transport.requests[1].path, 'offices');
   });
 
@@ -397,10 +446,10 @@ void main() {
       transport: transport,
       accessTokenProvider: () async => 'tok',
     );
-    final Result<List<OfficeThread>> result =
+    final Result<Paginated<OfficeThread>> result =
         await OfficeMessagingApiRepository(apiClient: client).listThreads();
     expect(
-      (result as Ok<List<OfficeThread>>).value.single.officeName,
+      (result as Ok<Paginated<OfficeThread>>).value.items.single.officeName,
       'Municipal Assessor',
     );
   });

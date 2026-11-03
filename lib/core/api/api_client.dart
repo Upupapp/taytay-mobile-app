@@ -7,6 +7,7 @@ import '../storage/public_cache.dart';
 import 'api_envelope.dart';
 import 'api_transport.dart';
 import 'auth_coordinator.dart';
+import 'image_payload.dart';
 import 'page_policy.dart';
 import 'request_context.dart';
 
@@ -109,8 +110,10 @@ class ApiClient {
     bool attachTokenIfAvailable = false,
     int? requiredStatus,
     bool binary = false,
-    bool endSessionOnUnauthorized = true,
-    String? accept,
+
+    /// Public image routes stay anonymous. A `401` on one of them must not
+    /// end the resident's session.
+    bool endSessionOn401 = true,
   }) async {
     // A token that exists but is not yet the session's.
     //
@@ -159,20 +162,15 @@ class ApiClient {
       files: files,
       requiredStatus: requiredStatus,
       binary: binary,
-      accept: accept,
     );
 
     // `401` is the single signal that ends a session, handled once here rather
     // than at each call site. Recovery is serialised by the coordinator so that
     // several requests failing together cause at most one refresh.
-    //
-    // A public image can answer 401 without the resident's session being the
-    // thing that failed. [endSessionOnUnauthorized] stays false for that call
-    // so a banner does not sign anybody out.
     final failure = decoded.failureOrNull;
-    if (failure != null &&
-        failure.requiresReauthentication &&
-        endSessionOnUnauthorized) {
+    if (endSessionOn401 &&
+        failure != null &&
+        failure.requiresReauthentication) {
       final coordinator = _authCoordinator;
       if (coordinator == null) {
         await _onUnauthenticated?.call();
@@ -201,13 +199,14 @@ class ApiClient {
         files: files,
         requiredStatus: requiredStatus,
         binary: binary,
-        accept: accept,
       );
       if (decoded.failureOrNull?.requiresReauthentication ?? false) {
         await _onUnauthenticated?.call();
       }
     }
 
+    // Binary reads stay out of the JSON catalogue cache. A draft cover is a
+    // 404 for an anonymous caller; that envelope is not a public document.
     if (decoded.isOk && !authenticated && !binary) {
       _cache?.store<ApiEnvelope<T>>(
         // Path **and** query: a key of `services` alone would store page 3 and
@@ -238,7 +237,6 @@ class ApiClient {
     List<MultipartFile> files = const <MultipartFile>[],
     int? requiredStatus,
     bool binary = false,
-    String? accept,
     required T Function(Object? data) decode,
   }) async {
     // A fresh correlation id per attempt: a replay is a different request and
@@ -247,14 +245,6 @@ class ApiClient {
       requestId: generateRequestId(),
       bearerToken: token,
     );
-    final Map<String, String> headers = context.headers(
-      // A multipart request's Content-Type is generated with its boundary by
-      // the transport; declaring JSON here would produce a body the server
-      // cannot parse and a 400 that reads like a validation failure.
-      hasJsonBody: body != null && file == null && files.isEmpty,
-      idempotencyKey: idempotencyKey,
-    );
-    if (accept != null) headers['Accept'] = accept;
 
     final response = await _transport.send(
       ApiRequest(
@@ -262,7 +252,14 @@ class ApiClient {
         path: path,
         query: query,
         body: body,
-        headers: headers,
+        headers: context.headers(
+          // A multipart request's Content-Type is generated with its boundary by
+          // the transport; declaring JSON here would produce a body the server
+          // cannot parse and a 400 that reads like a validation failure.
+          hasJsonBody: body != null && file == null && files.isEmpty && !binary,
+          idempotencyKey: idempotencyKey,
+          accept: binary ? ImagePayload.acceptHeader : null,
+        ),
         timeout: timeout ?? _config.requestTimeout,
         file: file,
         files: files,
@@ -271,35 +268,53 @@ class ApiClient {
 
     return switch (response) {
       Err<ApiHttpResponse>(:final failure) => Err<ApiEnvelope<T>>(failure),
+      Ok<ApiHttpResponse>(value: final httpResponse) when binary =>
+        _decodeImage<T>(httpResponse),
       Ok<ApiHttpResponse>(value: final httpResponse) =>
         _requiredStatusMissed(httpResponse, requiredStatus) ??
-            (binary
-                ? _decodeBytes<T>(httpResponse, decode)
-                : ApiEnvelopeDecoder.decode<T>(httpResponse, decode)),
+            ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
     };
   }
 
-  /// A 2xx image is bytes, not an envelope. Errors stay on the JSON decoder
-  /// so a 404 still becomes a not-found failure.
-  static Result<ApiEnvelope<T>> _decodeBytes<T>(
-    ApiHttpResponse response,
-    T Function(Object? data) decode,
-  ) {
-    if (!response.isSuccess) {
-      return ApiEnvelopeDecoder.decode<T>(response, decode);
+  /// A public image route. 404 is an empty picture, not a failure the
+  /// resident reads. Any other status still goes through the error envelope.
+  /// Whether a 401 ends the session is the caller's choice.
+  static Result<ApiEnvelope<T>> _decodeImage<T>(ApiHttpResponse response) {
+    if (response.statusCode == 404) {
+      try {
+        return Ok<ApiEnvelope<T>>(
+          ApiEnvelope<T>(data: null as T, requestId: response.requestId),
+        );
+      } on Object {
+        return Err<ApiEnvelope<T>>(
+          ContractFailure(
+            requestId: response.requestId,
+            debugMessage: 'Image response could not be read.',
+          ),
+        );
+      }
     }
-    try {
-      return Ok<ApiEnvelope<T>>(
-        ApiEnvelope<T>(
-          data: decode(response.bytes ?? Uint8List(0)),
-          requestId: response.requestId,
-        ),
-      );
-    } on Object catch (error) {
+    if (!response.isSuccess) {
+      return ApiEnvelopeDecoder.decode<T>(response, (Object? _) => null as T);
+    }
+    final Uint8List bytes = response.bodyBytes ?? Uint8List(0);
+    if (!ImagePayload.isImage(response.headers['content-type'], bytes)) {
       return Err<ApiEnvelope<T>>(
         ContractFailure(
           requestId: response.requestId,
-          debugMessage: 'Could not read image bytes: $error',
+          debugMessage: 'Image bytes were not a jpeg, png, or webp.',
+        ),
+      );
+    }
+    try {
+      return Ok<ApiEnvelope<T>>(
+        ApiEnvelope<T>(data: bytes as T, requestId: response.requestId),
+      );
+    } on Object {
+      return Err<ApiEnvelope<T>>(
+        ContractFailure(
+          requestId: response.requestId,
+          debugMessage: 'Image bytes were not a jpeg, png, or webp.',
         ),
       );
     }

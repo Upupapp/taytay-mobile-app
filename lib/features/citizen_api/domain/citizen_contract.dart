@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 
-/// A published home banner. The bytes live behind [mediaId].
+/// A published home banner. [imageUrl] points at the public image route.
 @immutable
 class HomeBanner {
   const HomeBanner({
@@ -9,6 +9,7 @@ class HomeBanner {
     required this.sortOrder,
     required this.active,
     this.mediaId,
+    this.imageUrl,
     this.href,
   });
 
@@ -17,6 +18,11 @@ class HomeBanner {
   final int sortOrder;
   final bool active;
   final String? mediaId;
+
+  /// Absolute URL of `GET /home/banners/{id}/image` when a picture is stored.
+  /// The app does not open this host. It requests the path on the configured base.
+  final String? imageUrl;
+
   final String? href;
 
   @override

@@ -174,6 +174,13 @@ abstract final class TaytayIcons {
   /// Lucide `paperclip`. The thread composer attach mark.
   static const IconData paperclip = IconData(57645, fontFamily: 'Lucide');
 
+  /// Lucide `more-vertical`. The vendored font names this glyph
+  /// `ellipsis-vertical`.
+  static const IconData moreVertical = IconData(57527, fontFamily: 'Lucide');
+
+  /// Lucide `circle-x`.
+  static const IconData circleX = IconData(57476, fontFamily: 'Lucide');
+
   /// Lucide `smartphone`. The MDRRMO app action.
   static const IconData smartphone = IconData(57699, fontFamily: 'Lucide');
 

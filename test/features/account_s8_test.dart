@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
+import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/assets/asset_manifest.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
@@ -805,9 +806,13 @@ class _FailingThreads implements OfficeMessagingRepository {
   int calls = 0;
 
   @override
-  Future<Result<List<OfficeThread>>> listThreads() async {
+  Future<Result<Paginated<OfficeThread>>> listThreads({
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async {
     calls++;
-    return const Err<List<OfficeThread>>(NetworkFailure());
+    return const Err<Paginated<OfficeThread>>(NetworkFailure());
   }
 
   @override
@@ -815,20 +820,28 @@ class _FailingThreads implements OfficeMessagingRepository {
       const Err<OfficeThread>(NetworkFailure());
 
   @override
-  Future<Result<List<OfficeMessage>>> listMessages(String threadId) async =>
-      const Err<List<OfficeMessage>>(NetworkFailure());
+  Future<Result<Paginated<OfficeMessage>>> listMessages(
+    String threadId, {
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async => const Err<Paginated<OfficeMessage>>(NetworkFailure());
 
   @override
   Future<Result<OfficeMessage>> send({
     required String officeId,
     required String topic,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async => const Err<OfficeMessage>(NetworkFailure());
 
   @override
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async => const Err<OfficeMessage>(NetworkFailure());
 
   @override
@@ -893,36 +906,51 @@ class _OneThread implements OfficeMessagingRepository {
   );
 
   @override
-  Future<Result<List<OfficeThread>>> listThreads() async =>
-      Ok<List<OfficeThread>>(<OfficeThread>[_thread]);
+  Future<Result<Paginated<OfficeThread>>> listThreads({
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async => Ok<Paginated<OfficeThread>>(
+    Paginated<OfficeThread>.single(<OfficeThread>[_thread]),
+  );
 
   @override
   Future<Result<OfficeThread>> loadThread(String threadId) async =>
       Ok<OfficeThread>(_thread);
 
   @override
-  Future<Result<List<OfficeMessage>>> listMessages(String threadId) async =>
-      Ok<List<OfficeMessage>>(<OfficeMessage>[
-        OfficeMessage(
-          id: 'message-1',
-          threadId: threadId,
-          body: 'A synthetic message.',
-          sentAt: DateTime.utc(2026, 10, 1),
-          fromResident: false,
-        ),
-      ]);
+  Future<Result<Paginated<OfficeMessage>>> listMessages(
+    String threadId, {
+    int page = 1,
+    int? perPage,
+    String? cursor,
+  }) async => Ok<Paginated<OfficeMessage>>(
+    Paginated<OfficeMessage>.single(<OfficeMessage>[
+      OfficeMessage(
+        id: 'message-1',
+        threadId: threadId,
+        body: 'A synthetic message.',
+        sentAt: DateTime.utc(2026, 10, 1),
+        fromResident: false,
+      ),
+    ]),
+  );
 
   @override
   Future<Result<OfficeMessage>> send({
     required String officeId,
     required String topic,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async => const Err<OfficeMessage>(NetworkFailure());
 
   @override
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    String? mediaId,
+    OutgoingFile? file,
   }) async => const Err<OfficeMessage>(NetworkFailure());
 
   @override

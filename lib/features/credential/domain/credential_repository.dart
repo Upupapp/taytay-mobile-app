@@ -72,7 +72,7 @@ class ResidentCredential {
   /// Municipal card number. Not a national government identifier.
   final String? idNumber;
 
-  /// Portrait media id. Bytes are a separate route this client does not call.
+  /// Portrait media id. Bytes are `GET /media/{id}/content`.
   final String? photoMediaId;
 
   /// Short-lived QR from the same `GET /me/digital-id` response. Null when

@@ -1,12 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/api/paginated.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
+import '../../../core/documents/document_capture.dart';
+import '../../../core/documents/upload_policy.dart';
+import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -27,6 +37,10 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   bool _started = false;
   bool _loading = true;
   bool _failed = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  String? _cursor;
+  String? _pageError;
   List<OfficeThread> _threads = const <OfficeThread>[];
 
   @override
@@ -44,15 +58,63 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
+      _loadingMore = false;
       switch (result) {
         case Ok(:final value):
-          _threads = value;
+          _threads = _uniqueThreads(value.items);
+          _remember(value);
+          _pageError = null;
           _failed = false;
         case Err():
           _threads = const <OfficeThread>[];
+          _cursor = null;
+          _hasMore = false;
+          _pageError = null;
           _failed = true;
       }
     });
+  }
+
+  Future<void> _loadMore() async {
+    final String? cursor = _cursor;
+    if (_loading || _loadingMore || !_hasMore || cursor == null) return;
+    setState(() {
+      _loadingMore = true;
+      _pageError = null;
+    });
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listThreads(cursor: cursor);
+    if (!mounted) return;
+    setState(() {
+      _loadingMore = false;
+      if (result case Ok(:final value)) {
+        final Set<String> seen = _threads.map((OfficeThread t) => t.id).toSet();
+        _threads = <OfficeThread>[
+          ..._threads,
+          for (final OfficeThread thread in value.items)
+            if (seen.add(thread.id)) thread,
+        ];
+        _remember(value);
+        _pageError = null;
+      } else if (result case Err(:final failure)) {
+        _pageError = failure.residentMessage;
+      }
+    });
+  }
+
+  List<OfficeThread> _uniqueThreads(List<OfficeThread> threads) {
+    final Set<String> seen = <String>{};
+    return <OfficeThread>[
+      for (final OfficeThread thread in threads)
+        if (seen.add(thread.id)) thread,
+    ];
+  }
+
+  void _remember(Paginated<OfficeThread> page) {
+    final String? next = page.nextCursor;
+    _cursor = next;
+    _hasMore = page.hasMore && next != null && next.isNotEmpty;
   }
 
   @override
@@ -76,11 +138,16 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       onBell: () => context.goNamed(AppRoute.notifications.routeName),
       onInboxRetry: _load,
+      onInboxNearEnd: _loadMore,
+      inboxMoreMessage: _pageError,
+      onInboxMoreRetry: _pageError == null ? null : _loadMore,
       inbox: <AccountInboxRow>[
         for (final OfficeThread thread in _threads)
           AccountInboxRow(
             office: thread.officeName,
-            when: '',
+            when: ManilaTime.formatTime(
+              thread.lastMessageAt ?? thread.updatedAt,
+            ),
             preview: thread.preview,
             icon: TaytayIcons.messageSquare,
             tile: BrandColors.chipBlueBg,
@@ -109,9 +176,28 @@ class AccountThreadScreen extends StatefulWidget {
 
 class _AccountThreadScreenState extends State<AccountThreadScreen> {
   bool _started = false;
+  bool _ready = false;
+  bool _failed = false;
+  bool _closed = false;
+  bool _sending = false;
+  bool _loadingMore = false;
+  bool _hasMore = false;
+  String? _cursor;
   String _title = 'Messages';
   String _subtitle = 'Bayan ng Taytay · Rizal';
-  List<AccountBubble> _bubbles = const <AccountBubble>[];
+  String _ownerAccountId = '';
+  String? _error;
+  String? _pageError;
+  String? _mediaId;
+  OutgoingFile? _file;
+  List<OfficeMessage> _messages = const <OfficeMessage>[];
+  final TextEditingController _composer = TextEditingController();
+
+  @override
+  void dispose() {
+    _composer.dispose();
+    super.dispose();
+  }
 
   @override
   void didChangeDependencies() {
@@ -126,52 +212,352 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     final Result<OfficeThread> thread = await dependencies
         .officeMessagingRepository
         .loadThread(widget.threadId);
-    final Result<List<OfficeMessage>> messages = await dependencies
+    final Result<Paginated<OfficeMessage>> messages = await dependencies
         .officeMessagingRepository
         .listMessages(widget.threadId);
+    if (thread is Ok<OfficeThread>) {
+      await dependencies.officeMessagingRepository.markThreadRead(
+        widget.threadId,
+      );
+    }
     if (!mounted) return;
-    final String? accountId =
-        dependencies.session.state.residentOrNull?.accountId;
     setState(() {
+      _ready = true;
+      var failed = false;
+      String? error;
       if (thread case Ok(:final value)) {
         _title = value.officeName;
         _subtitle = value.topic.isEmpty
             ? 'Bayan ng Taytay · Rizal'
             : value.topic;
+        _ownerAccountId = value.ownerAccountId;
+        _closed = value.status == 'closed';
+      } else if (thread case Err(:final failure)) {
+        failed = true;
+        error = failure.residentMessage;
       }
       if (messages case Ok(:final value)) {
-        _bubbles = <AccountBubble>[
-          for (final OfficeMessage message in value)
-            AccountBubble(
-              body: message.body,
-              when: '',
-              fromResident:
-                  message.fromResident ||
-                  (accountId != null &&
-                      accountId.isNotEmpty &&
-                      message.senderId == accountId),
-            ),
+        _messages = _uniqueMessages(value.items.reversed.toList());
+        _remember(value);
+      } else if (messages case Err(:final failure)) {
+        failed = true;
+        error ??= failure.residentMessage;
+      }
+      _failed = failed;
+      _error = error;
+    });
+  }
+
+  Future<void> _loadOlder() async {
+    final String? cursor = _cursor;
+    if (_loadingMore || !_hasMore || cursor == null || _failed) return;
+    setState(() {
+      _loadingMore = true;
+      _pageError = null;
+    });
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.listMessages(widget.threadId, cursor: cursor);
+    if (!mounted) return;
+    setState(() {
+      _loadingMore = false;
+      if (result case Ok(:final value)) {
+        final Set<String> seen = _messages
+            .map((OfficeMessage m) => m.id)
+            .toSet();
+        final List<OfficeMessage> older = <OfficeMessage>[
+          for (final OfficeMessage message in value.items.reversed)
+            if (seen.add(message.id)) message,
         ];
+        _messages = <OfficeMessage>[...older, ..._messages];
+        _remember(value);
+        _pageError = null;
+      } else if (result case Err(:final failure)) {
+        _pageError = failure.residentMessage;
       }
     });
   }
 
+  List<OfficeMessage> _uniqueMessages(List<OfficeMessage> messages) {
+    final Set<String> seen = <String>{};
+    return <OfficeMessage>[
+      for (final OfficeMessage message in messages)
+        if (seen.add(message.id)) message,
+    ];
+  }
+
+  void _remember(Paginated<OfficeMessage> page) {
+    final String? next = page.nextCursor;
+    _cursor = next;
+    _hasMore = page.hasMore && next != null && next.isNotEmpty;
+  }
+
+  Future<void> _attach() async {
+    final DocumentPicker picker = AppDependencies.of(context).documentPicker;
+    const UploadPolicy policy = UploadPolicy.fallback;
+    if (!picker.supports(DocumentSource.file)) {
+      setState(() => _error = 'This phone cannot attach a file.');
+      return;
+    }
+    final CapturedDocument? picked = await picker.pick(
+      DocumentSource.file,
+      policy,
+    );
+    if (!mounted || picked == null) return;
+    final DocumentRejection? rejection = DocumentCapturePolicy.inspect(
+      picked,
+      policy,
+    );
+    if (rejection != null) {
+      final String message = localisedDocumentRejection(
+        context,
+        rejection,
+        actualBytes: picked.sizeBytes,
+        policy: policy,
+      );
+      setState(() => _error = message);
+      return;
+    }
+    setState(() {
+      _file = OutgoingFile(
+        bytes: picked.bytes,
+        fileName: picked.fileName,
+        mimeType: picked.mimeType,
+      );
+      _mediaId = null;
+      _error = null;
+    });
+  }
+
+  void _useMedia(String mediaId) {
+    setState(() {
+      _mediaId = mediaId;
+      _file = null;
+      _error = null;
+    });
+  }
+
+  Future<void> _send() async {
+    if (_sending || _closed || _failed || !_ready) return;
+    final String body = _composer.text.trim();
+    if (body.isEmpty) {
+      setState(() => _error = 'Write a message before sending.');
+      return;
+    }
+    setState(() => _sending = true);
+    final OutgoingFile? file = _file;
+    final result = await AppDependencies.of(context).officeMessagingRepository
+        .reply(
+          threadId: widget.threadId,
+          body: body,
+          mediaId: file == null ? _mediaId : null,
+          file: file,
+        );
+    if (!mounted) {
+      _sending = false;
+      return;
+    }
+    switch (result) {
+      case Ok(:final value):
+        setState(() {
+          _sending = false;
+          final Set<String> seen = _messages
+              .map((OfficeMessage message) => message.id)
+              .toSet();
+          final OfficeMessage sent = value.asFromResident();
+          _messages = <OfficeMessage>[
+            ..._messages,
+            if (seen.add(sent.id)) sent,
+          ];
+          _composer.clear();
+          _file = null;
+          _mediaId = null;
+          _error = null;
+        });
+      case Err(:final failure):
+        setState(() {
+          _sending = false;
+          if (failure is ConflictFailure) _closed = true;
+          _error = failure.residentMessage;
+        });
+    }
+  }
+
+  Future<void> _openMenu() async {
+    final String title = _title;
+    await AppSheet.show<void>(
+      context: context,
+      title: title,
+      builder: (BuildContext sheetContext) {
+        return _CloseConversationAction(
+          onTap: () {
+            Navigator.of(sheetContext).pop();
+            unawaited(_close());
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _close() async {
+    final bool? confirmed = await AppDialog.confirm(
+      context: context,
+      title: 'Close this conversation?',
+      message:
+          'The office will see it as closed. You can start a new message afterwards.',
+      confirmLabel: 'Close conversation',
+      destructive: true,
+    );
+    if (confirmed != true || !mounted) return;
+    final result = await AppDependencies.of(
+      context,
+    ).officeMessagingRepository.closeThread(widget.threadId);
+    if (!mounted) return;
+    switch (result) {
+      case Ok():
+        setState(() {
+          _closed = true;
+          _file = null;
+          _mediaId = null;
+          _error = null;
+        });
+      case Err(:final failure):
+        setState(() {
+          if (failure is ConflictFailure) _closed = true;
+          _error = failure.residentMessage;
+        });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool mock = AppDependencies.of(context).config.usesMockData;
+    final dependencies = AppDependencies.of(context);
+    final bool mock = dependencies.config.usesMockData;
+    final String? accountId =
+        dependencies.session.state.residentOrNull?.accountId;
+    final bool ownsOpenThread =
+        _ready &&
+        !_failed &&
+        !_closed &&
+        accountId != null &&
+        accountId.isNotEmpty &&
+        _ownerAccountId.isNotEmpty &&
+        _ownerAccountId == accountId;
+    final bool showComposer = _ready && !_failed && !_closed;
+    final String? label = showComposer
+        ? (_file?.fileName ?? (_mediaId == null ? null : 'Attachment'))
+        : null;
     return Scaffold(
       backgroundColor: BrandColors.surface,
-      body: AccountCanvas(
-        frame: AccountFrame.thread,
-        title: _title,
-        subtitle: _subtitle,
-        subtitleLines: _subtitle.length > 42 ? 2 : 1,
-        showBack: true,
-        showBell: false,
-        onBack: () => context.goNamed(AppRoute.messagesInbox.routeName),
-        showSampleNote: mock,
-        bubbles: _bubbles,
-        dayLabel: '',
+      body: Column(
+        children: <Widget>[
+          Expanded(
+            child: AccountCanvas(
+              frame: AccountFrame.thread,
+              title: _title,
+              subtitle: _subtitle,
+              subtitleLines: _subtitle.length > 42 ? 2 : 1,
+              showBack: true,
+              showBell: false,
+              onBack: () => context.goNamed(AppRoute.messagesInbox.routeName),
+              showSampleNote: mock,
+              bubbles: <AccountBubble>[
+                for (final OfficeMessage message in _messages)
+                  AccountBubble(
+                    body: message.body,
+                    when: ManilaTime.formatTime(message.sentAt),
+                    fromResident:
+                        message.fromResident ||
+                        (accountId != null &&
+                            accountId.isNotEmpty &&
+                            message.senderId == accountId),
+                    mediaIds: <String>[
+                      for (final MessageAttachment attachment
+                          in message.attachments)
+                        attachment.mediaId,
+                    ],
+                  ),
+              ],
+              dayLabel: '',
+              composer: showComposer ? _composer : null,
+              onAttach: showComposer ? _attach : null,
+              onSend: showComposer && !_sending ? _send : null,
+              sendEnabled: !_sending,
+              onThreadMenu: ownsOpenThread ? _openMenu : null,
+              threadClosed: _ready && _closed && !_failed,
+              hideComposer: !showComposer && !(_ready && _closed && !_failed),
+              attachmentLabel: label,
+              onClearAttachment: label == null
+                  ? null
+                  : () => setState(() {
+                      _file = null;
+                      _mediaId = null;
+                    }),
+              onUseMedia: showComposer ? _useMedia : null,
+              onThreadNearStart: _ready && !_failed ? _loadOlder : null,
+              threadMoreMessage: _pageError,
+              onThreadMoreRetry: _pageError == null ? null : _loadOlder,
+            ),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Text(
+                _error!,
+                style: const TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: BrandColors.danger,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// One destructive row in the thread menu.
+class _CloseConversationAction extends StatelessWidget {
+  const _CloseConversationAction({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'Close conversation',
+      child: GestureDetector(
+        key: const Key('account-thread-close'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: const SizedBox(
+          height: 48,
+          child: Row(
+            children: <Widget>[
+              TaytayIcon(
+                icon: TaytayIcons.circleX,
+                size: 20,
+                color: BrandColors.danger,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+              SizedBox(width: 12),
+              Text(
+                'Close conversation',
+                style: TextStyle(
+                  fontFamily: AppTypography.fontFamily,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: BrandColors.danger,
+                  decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

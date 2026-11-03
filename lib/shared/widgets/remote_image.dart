@@ -83,6 +83,18 @@ class RemoteImage extends StatelessWidget {
   /// For a picture opened on its own.
   static const int fullScreenDecodeCeiling = 2560;
 
+  /// Physical pixels to decode for a box of [logicalWidth].
+  static int decodedPixelWidth({
+    required double logicalWidth,
+    required double devicePixelRatio,
+    int ceiling = feedDecodeCeiling,
+  }) {
+    return math.min(
+      ceiling,
+      math.max(1, (logicalWidth * devicePixelRatio).round()),
+    );
+  }
+
   /// Raises Flutter's decoded-image budget once, at startup.
   ///
   /// Called from the composition root rather than from a widget: an image cache
@@ -111,9 +123,10 @@ class RemoteImage extends StatelessWidget {
         final logicalWidth = constraints.hasBoundedWidth
             ? constraints.maxWidth
             : MediaQuery.sizeOf(context).width;
-        final decodeWidth = math.min(
-          maxDecodeWidth,
-          math.max(1, (logicalWidth * ratio).round()),
+        final int decodeWidth = decodedPixelWidth(
+          logicalWidth: logicalWidth,
+          devicePixelRatio: ratio,
+          ceiling: maxDecodeWidth,
         );
 
         return Image.network(

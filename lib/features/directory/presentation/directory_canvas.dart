@@ -6,6 +6,7 @@ import '../../../core/design/brand_assets.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -52,6 +53,8 @@ class DirectoryCanvas extends StatelessWidget {
     this.messageController,
     this.selectedTopic,
     this.onTopic,
+    this.onAttach,
+    this.attachmentLabel,
     this.heroBytes,
     this.onServiceLine,
     super.key,
@@ -84,6 +87,10 @@ class DirectoryCanvas extends StatelessWidget {
   final TextEditingController? messageController;
   final String? selectedTopic;
   final VoidCallback? onTopic;
+  final VoidCallback? onAttach;
+
+  /// Chosen file name, or "Attachment" when an existing media id is held.
+  final String? attachmentLabel;
 
   /// Banner bytes from `GET /offices/{slug}/hero`. Null paints [Office.heroAsset].
   final Uint8List? heroBytes;
@@ -98,7 +105,7 @@ class DirectoryCanvas extends StatelessWidget {
   static const Color _chipInk = Color(0xFF33405C);
   static const Color _bodyInk = Color(0xFF33405C);
   static const Color _rowLine = Color(0xFFEEF1F6);
-  static const Color _fieldBorder = Color(0xFFD6DCE8);
+  static const Color _fieldBorder = MessageField.border;
 
   @override
   Widget build(BuildContext context) {
@@ -198,6 +205,8 @@ class DirectoryCanvas extends StatelessWidget {
         messageController: messageController,
         selectedTopic: selectedTopic,
         onTopic: onTopic,
+        onAttach: onAttach,
+        attachmentLabel: attachmentLabel,
       ),
       DirectoryFrame.sent => _SentBody(
         emergencyPhone: emergencyPhone,
@@ -1149,6 +1158,8 @@ class _ComposeBody extends StatelessWidget {
     this.messageController,
     this.selectedTopic,
     this.onTopic,
+    this.onAttach,
+    this.attachmentLabel,
   });
 
   final Office office;
@@ -1156,6 +1167,8 @@ class _ComposeBody extends StatelessWidget {
   final TextEditingController? messageController;
   final String? selectedTopic;
   final VoidCallback? onTopic;
+  final VoidCallback? onAttach;
+  final String? attachmentLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -1213,60 +1226,15 @@ class _ComposeBody extends StatelessWidget {
             ),
           ),
         ),
-        const _FieldLabel('Message'),
-        _FieldBox(
-          height: 170,
-          alignTop: true,
-          child: messageController == null
-              ? Text(office.draft ?? '', style: _fieldBody)
-              : TextField(
-                  key: const Key('directory-message-field'),
-                  controller: messageController,
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  style: _fieldBody,
-                  cursorColor: BrandColors.taytayBlue,
-                  decoration: const InputDecoration(
-                    isCollapsed: true,
-                    isDense: true,
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
+        MessageField(
+          controller: messageController,
+          preview: office.draft ?? '',
+          fieldKey: const Key('directory-message-field'),
         ),
         // The paperclip sits above the cap height. 10dp keeps that ink on
         // the design's attach line; 8dp lifts the run by more than 2dp.
         const SizedBox(height: 10),
-        const Row(
-          children: <Widget>[
-            TaytayIcon(
-              icon: TaytayIcons.paperclip,
-              size: 16,
-              color: BrandColors.taytayBlue,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Attach photo or PDF (optional)',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
-          ],
-        ),
+        _attachBlock(),
         // 14dp is the design gap under the attach row. The 10 above it
         // stays, so the paperclip keeps its line and the notice does not.
         const SizedBox(height: 14),
@@ -1295,6 +1263,64 @@ class _ComposeBody extends StatelessWidget {
           icon: TaytayIcons.send,
           onTap: onSend,
         ),
+      ],
+    );
+  }
+
+  /// The specimen row when nothing is attached and the control is not live.
+  Widget _attachBlock() {
+    const Widget row = Row(
+      children: <Widget>[
+        TaytayIcon(
+          icon: TaytayIcons.paperclip,
+          size: 16,
+          color: BrandColors.taytayBlue,
+          semanticLabel: '',
+          excludeSemantics: true,
+        ),
+        SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            'Attach photo or PDF (optional)',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: BrandColors.taytayBlue,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ),
+      ],
+    );
+    if (onAttach == null && attachmentLabel == null) return row;
+    final String? label = attachmentLabel;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _Hit(
+          hitKey: const Key('directory-attach'),
+          label: 'Attach photo or PDF (optional)',
+          onTap: onAttach,
+          child: row,
+        ),
+        if (label != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: BrandColors.textSecondary,
+              decoration: TextDecoration.none,
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -2060,23 +2086,17 @@ class _FieldLabel extends StatelessWidget {
 }
 
 class _FieldBox extends StatelessWidget {
-  const _FieldBox({
-    required this.child,
-    this.height = 44,
-    this.alignTop = false,
-  });
+  const _FieldBox({required this.child});
 
   final Widget child;
-  final double height;
-  final bool alignTop;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
+      height: 44,
       width: double.infinity,
-      padding: EdgeInsets.fromLTRB(12, alignTop ? 10.67 : 0, 12, 0),
-      alignment: alignTop ? Alignment.topLeft : Alignment.centerLeft,
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      alignment: Alignment.centerLeft,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -2467,15 +2487,6 @@ const TextStyle _fieldInk = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w600,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _fieldBody = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  height: 1.5,
-  fontWeight: FontWeight.w500,
   color: BrandColors.textPrimary,
   decoration: TextDecoration.none,
 );
