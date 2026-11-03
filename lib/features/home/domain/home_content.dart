@@ -12,6 +12,7 @@ class HomeSlide {
     required this.credit,
     required this.routeName,
     this.focus = 0.35,
+    this.bannerId,
   });
 
   final String eyebrow;
@@ -26,6 +27,10 @@ class HomeSlide {
 
   /// CSS `background-position` vertical fraction. 0 is the top of the photo.
   final double focus;
+
+  /// Set when the banner's `image_url` says a picture is stored.
+  /// The bytes are `GET /home/banners/{id}/image`. Null keeps the bundled photo.
+  final String? bannerId;
 
   @override
   String toString() => 'HomeSlide($routeName)';

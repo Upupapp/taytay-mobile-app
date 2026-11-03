@@ -6,6 +6,7 @@ import '../core/api/api_client.dart';
 import '../core/api/api_transport.dart';
 import '../core/api/auth_coordinator.dart';
 import '../core/api/http_api_transport.dart';
+import '../core/api/media_bytes_api.dart';
 import '../core/config/app_config.dart';
 import '../core/documents/document_capture.dart';
 import '../core/documents/platform_document_picker.dart';
@@ -127,7 +128,8 @@ class AppDependencies {
            socialServices ?? SocialServiceApiRepository(apiClient: apiClient),
        accountPasswordClient =
            passwordClient ?? const FirebaseAccountPasswordClient(),
-       citizenApi = NodeCitizenApi(apiClient: apiClient);
+       citizenApi = NodeCitizenApi(apiClient: apiClient),
+       mediaBytes = MediaBytesApi(apiClient: apiClient);
 
   /// Builds the production graph.
   ///
@@ -518,6 +520,9 @@ class AppDependencies {
   /// Home, offices, and media on the Node contract.
   final NodeCitizenApi citizenApi;
 
+  /// Public cover and hero bytes. The path is relative to [ApiClient].
+  final MediaBytesApi mediaBytes;
+
   /// Latency and failure for dev mocks. Null on a live build.
   final MockBehaviorController? mockBehavior;
 
@@ -532,6 +537,7 @@ class AppDependencies {
     intents.dispose();
     network.dispose();
     telemetry.dispose();
+    mediaBytes.clear();
     cache.clear();
     onDispose?.call();
   }

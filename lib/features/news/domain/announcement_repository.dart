@@ -205,10 +205,11 @@ class Announcement {
   /// `office_slug` from `NewsItem`. The display name is not on that object.
   final String? officeSlug;
 
-  /// `cover_media_id`. The bytes are at [coverUrl] when the article is published.
+  /// `cover_media_id`. The bytes are `GET /news/{id}/cover`.
   final String? coverMediaId;
 
   /// Public cover URL. Null on a draft or when there is no cover.
+  /// The app does not open this host.
   final String? coverUrl;
 
   /// Design fields the fixture carries. A live article leaves this null.

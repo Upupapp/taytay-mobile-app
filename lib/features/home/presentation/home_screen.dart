@@ -179,6 +179,9 @@ class _HomeScreenState extends State<HomeScreen> {
             bellCount: guest ? 0 : _bellCount,
             status: status,
             slides: _slides,
+            loadBanner: dependencies.config.usesMockData
+                ? null
+                : dependencies.mediaBytes.homeBanner,
             news: _news,
             hotline: _hotline,
             refreshing: _refreshing,

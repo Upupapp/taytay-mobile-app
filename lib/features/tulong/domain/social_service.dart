@@ -196,7 +196,7 @@ class SocialService {
   final String? schedule;
 
   /// Public URL of `GET /services/{slug}/hero` when an image is stored.
-  /// Null until then. This app does not fetch the bytes on the list.
+  /// Null keeps the icon tile. The list does not paint the photograph.
   final String? heroUrl;
 
   /// Omitted from `GET /services` unless `featured=true`. Still readable
