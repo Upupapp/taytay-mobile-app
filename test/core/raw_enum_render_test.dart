@@ -95,8 +95,11 @@ void main() {
   ///
   /// `app_locales.dart` is the localiser itself and `resident_capability.dart`
   /// and friends are the declarations, so none of them are screens.
-  bool isScreen(String path) =>
-      path.contains('/presentation/') || path.startsWith('lib/shared/');
+  bool isScreen(String path) {
+    // Windows lists `lib\shared\…`; the rule is written with '/'.
+    final String p = path.replaceAll(r'\', '/');
+    return p.contains('/presentation/') || p.startsWith('lib/shared/');
+  }
 
   /// Comments are not renders.
   ///

@@ -52,7 +52,8 @@ void main() {
         }
 
         yield (
-          file: entity.path,
+          // The known-exception keys are written with '/'; Windows lists '\'.
+          file: entity.path.replaceAll(r'\', '/'),
           line: '\n'.allMatches(source.substring(0, m.start)).length + 1,
           body: source.substring(open, i + 1),
         );

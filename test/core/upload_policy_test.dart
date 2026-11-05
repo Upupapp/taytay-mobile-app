@@ -154,12 +154,14 @@ void main() {
         'lib',
       ).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
-        if (entity.path.endsWith('core/documents/upload_policy.dart')) continue;
+        // Windows lists `lib\core\…`; every comparison below is written with '/'.
+        final String path = entity.path.replaceAll(r'\', '/');
+        if (path.endsWith('core/documents/upload_policy.dart')) continue;
 
         final String source = entity.readAsStringSync();
         if (!markers.any(source.contains)) continue;
 
-        yield (path: entity.path, source: source);
+        yield (path: path, source: source);
       }
     }
 

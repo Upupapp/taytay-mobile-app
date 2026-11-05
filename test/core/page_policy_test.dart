@@ -58,8 +58,10 @@ void main() {
         'lib',
       ).listSync(recursive: true)) {
         if (entity is! File || !entity.path.endsWith('.dart')) continue;
-        if (entity.path.endsWith('core/api/page_policy.dart')) continue;
-        yield (path: entity.path, source: entity.readAsStringSync());
+        // Windows lists `lib\core\…`; every comparison below is written with '/'.
+        final String path = entity.path.replaceAll(r'\', '/');
+        if (path.endsWith('core/api/page_policy.dart')) continue;
+        yield (path: path, source: entity.readAsStringSync());
       }
     }
 
