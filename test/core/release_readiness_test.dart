@@ -258,17 +258,95 @@ void main() {
   group('No secret ships in the binary', () {
     test('no dart-define name looks like a credential', () {
       // Article 5.4: `--dart-define` values are recoverable from the APK.
+      //
+      // A define name is found two ways: written inline, and read through a
+      // `const` String. This scan used to see only the first, and `AppConfig`
+      // reads every one of its defines through a constant — so it had never
+      // seen any of them (D-185). A read whose name cannot be resolved fails
+      // here instead of being skipped: a scan that quietly stops seeing is
+      // worse than no scan.
+      //
+      // ONE NAMED EXCEPTION, written into Article 5.4 itself.
+      const Map<String, String> exceptions = <String, String>{
+        'TAYTAY_FIREBASE_API_KEY':
+            'A Firebase client API key is a public project identifier. It '
+            'ships inside every Firebase client, however delivered, and '
+            'controls no access: Firebase Auth checks and the backend\'s ID '
+            'token verification do. Restricted in Google Cloud to Identity '
+            'Toolkit and Token Service. Article 5.4, decision D-185.',
+      };
+      final credentialShaped = RegExp(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL');
+      final files = filesUnder('lib', extensions: <String>['.dart']);
+
+      final constants = <String, Set<String>>{};
+      final constantPattern = RegExp(
+        r'''const\s+(?:String\s+)?(\w+)\s*=\s*['"]([^'"]*)['"]''',
+      );
+      for (final file in files) {
+        final source = stripComments(file.readAsStringSync());
+        for (final match in constantPattern.allMatches(source)) {
+          constants
+              .putIfAbsent(match.group(1)!, () => <String>{})
+              .add(match.group(2)!);
+        }
+      }
+
+      final readPattern = RegExp(
+        r'''\b(?:String|bool|int)\.(?:fromEnvironment|hasEnvironment)\(\s*'''
+        r'''(?:['"]([^'"]*)['"]|([\w.]+))''',
+      );
+      final seen = <String>{};
+      final unresolved = <String>[];
       final offenders = <String>[];
-      final pattern = RegExp(r'String\.fromEnvironment\(\s*.([A-Z0-9_]+).');
-      for (final file in filesUnder('lib', extensions: <String>['.dart'])) {
-        for (final match in pattern.allMatches(file.readAsStringSync())) {
-          final name = match.group(1)!;
-          if (RegExp(r'KEY|SECRET|TOKEN|PASSWORD|CREDENTIAL').hasMatch(name)) {
-            offenders.add('${file.path}: $name');
+      for (final file in files) {
+        final source = stripComments(file.readAsStringSync());
+        for (final match in readPattern.allMatches(source)) {
+          final literal = match.group(1);
+          final Set<String> names = literal != null
+              ? <String>{literal}
+              : constants[match.group(2)!.split('.').last] ?? <String>{};
+          if (names.isEmpty) {
+            unresolved.add('${file.path}: ${match.group(2)}');
+          }
+          for (final name in names) {
+            seen.add(name);
+            if (exceptions.containsKey(name)) continue;
+            if (credentialShaped.hasMatch(name)) {
+              offenders.add('${file.path}: $name');
+            }
           }
         }
       }
+
+      expect(
+        unresolved,
+        isEmpty,
+        reason:
+            'These define reads name a constant the scan cannot resolve:\n'
+            '${unresolved.join('\n')}',
+      );
       expect(offenders, isEmpty, reason: offenders.join('\n'));
+
+      // Proof the scan sees through constants: these are all read that way.
+      expect(
+        seen,
+        containsAll(<String>[
+          'TAYTAY_ENV',
+          'TAYTAY_API_BASE_URL',
+          'TAYTAY_DATA',
+          ...exceptions.keys,
+        ]),
+      );
+
+      // An exception the constitution does not name is not an exception.
+      final claudeMd = File('CLAUDE.md').readAsStringSync();
+      for (final name in exceptions.keys) {
+        expect(
+          claudeMd,
+          contains(name),
+          reason: '$name is excepted here but not in Article 5.4.',
+        );
+      }
     });
 
     test('no .env file is tracked', () {

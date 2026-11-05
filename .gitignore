@@ -55,6 +55,10 @@ app.*.map.json
 /android/key.properties
 /ios/Runner/GoogleService-Info.plist
 /android/app/google-services.json
+# Firebase client values for --dart-define-from-file (decision D-185). Public
+# identifiers, still never committed. Only the empty example is tracked.
+/env/firebase.*.json
+!/env/firebase.example.json
 
 # Local release-signing copies. The *.example files are tracked.
 # The keystore itself must live outside this repository; see

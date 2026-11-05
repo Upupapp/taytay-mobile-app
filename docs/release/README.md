@@ -120,7 +120,8 @@ file fails configuration and names the missing keys.
 flutter build appbundle --release \
   --flavor prod \
   --dart-define=TAYTAY_ENV=prod \
-  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1
+  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1 \
+  --dart-define-from-file=env/firebase.prod.json
 ```
 
 The bundle is `build/app/outputs/bundle/prodRelease/app-prod-release.aab`.
@@ -131,14 +132,20 @@ The bundle is `build/app/outputs/bundle/prodRelease/app-prod-release.aab`.
 flutter build apk --release \
   --flavor prod \
   --dart-define=TAYTAY_ENV=prod \
-  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1
+  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1 \
+  --dart-define-from-file=env/firebase.prod.json
 ```
 
 The APK is `build/app/outputs/flutter-apk/app-prod-release.apk`.
 
-Staging uses the same commands with `--flavor staging` and
-`--dart-define=TAYTAY_ENV=staging`, and that environment's own base URL. Do not
-point the `prod` flavor at a staging URL.
+Staging uses the same commands with `--flavor staging`,
+`--dart-define=TAYTAY_ENV=staging`, that environment's own base URL and
+`--dart-define-from-file=env/firebase.staging.json`. Do not point the `prod`
+flavor at a staging URL or a staging Firebase file.
+
+There is no production Firebase project yet, so `env/firebase.prod.json` does
+not exist and a prod build stops on the configuration screen until it does.
+The Firebase values and files are described in `docs/release.md` (Firebase).
 
 ## iOS IPA
 
@@ -164,7 +171,8 @@ On the copies only: uncomment `DEVELOPMENT_TEAM` and set it, and replace
 flutter build ipa --release \
   --export-options-plist=ios/ExportOptions.plist \
   --dart-define=TAYTAY_ENV=prod \
-  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1
+  --dart-define=TAYTAY_API_BASE_URL=https://api.example.invalid/api/v1 \
+  --dart-define-from-file=env/firebase.prod.ios.json
 ```
 
 The IPA is under `build/ios/ipa/`. iOS has no Android flavor dimension; the

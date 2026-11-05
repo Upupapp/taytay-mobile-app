@@ -183,6 +183,25 @@ This app holds Philippine personal data and is subject to the **Data Privacy Act
    or IPA and are recoverable by anyone who downloads it. Configuration only: environment
    name, public API base URL, timeouts. Never an API key, token or signing material.
    Never read, print or commit `.env` values.
+
+   **One named exception: the four Firebase client values** — `TAYTAY_FIREBASE_API_KEY`,
+   `TAYTAY_FIREBASE_APP_ID`, `TAYTAY_FIREBASE_PROJECT_ID` and
+   `TAYTAY_FIREBASE_MESSAGING_SENDER_ID`. They are public project identifiers that ship
+   inside every Firebase client however they are delivered; a `google-services.json`
+   puts the same key in the APK. Firebase's own documentation says so: "Unlike how API
+   keys are typically used, API keys for Firebase services are not used to control
+   access to backend resources", and "API keys for Firebase services are OK to include
+   in code or checked-in config files"
+   (<https://firebase.google.com/docs/projects/api-keys>, read 2026-11-05). What
+   protects a resident's account is Firebase Auth's own server-side checks and the
+   backend's verification of the Firebase ID token on every call, never the secrecy of
+   these values. The keys are restricted in Google Cloud to the Identity Toolkit and
+   Token Service APIs (the staging project's Android key, as of 2026-11-05). They are
+   allowed under those four names only and are never logged. They are still not
+   committed: they live in gitignored files under `env/`. A build that signs in through
+   Firebase refuses to start without all four. No other key, token or secret gains any
+   standing from this exception. *Amended 2026-11-05 on the authority of Ella (Michaela
+   Cailing), decision D-185.*
 5. **The server's error `message` is operator-facing and is never rendered to a resident.**
    The app derives its own copy from the failure kind. The only server text a resident sees
    is a validation message, shown next to the field it belongs to, where it is actionable.

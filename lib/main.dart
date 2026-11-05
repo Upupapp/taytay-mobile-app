@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'app/app_dependencies.dart';
+import 'app/firebase_startup.dart';
 import 'app/taytay_resident_app.dart';
 import 'core/config/app_config.dart';
 import 'shared/widgets/remote_image.dart';
@@ -13,24 +14,33 @@ import 'shared/widgets/remote_image.dart';
 /// Build with an explicit environment:
 ///
 /// ```
-/// flutter run --dart-define=TAYTAY_ENV=dev
-/// flutter build apk --release --dart-define=TAYTAY_ENV=prod
+/// flutter run --flavor dev \
+///   --dart-define=TAYTAY_ENV=dev --dart-define=TAYTAY_DATA=mock
+/// flutter run --flavor staging \
+///   --dart-define=TAYTAY_ENV=staging \
+///   --dart-define=TAYTAY_API_BASE_URL=https://… \
+///   --dart-define-from-file=env/firebase.staging.json
 /// ```
 ///
 /// Configuration is resolved before the first frame so a misconfigured build
 /// shows an explicit error instead of quietly pointing at the wrong backend.
+/// The exact commands are in `docs/release.md`.
 void main() {
   // A guarded zone so an unhandled asynchronous error is caught rather than
   // taking the isolate down silently. Everything below runs inside it.
   runZonedGuarded<void>(
-    () {
+    () async {
       WidgetsFlutterBinding.ensureInitialized();
 
       // Once, before the first frame. Resizing the image cache during a scroll
       // evicts everything it currently holds, which is the opposite of intent.
       RemoteImage.configureImageCache();
 
-      final config = AppConfig.resolve();
+      // Firebase starts here or not at all (D-185). It is a call into the
+      // platform, not the network, so the first frame does not wait on a
+      // connection. A dev mock never starts it; a failed start becomes the
+      // configuration screen rather than a crash in sign-in.
+      final config = await startFirebase(AppConfig.resolve());
       final dependencies = AppDependencies.build(config: config);
 
       // ── Crash safety ────────────────────────────────────────────────────

@@ -30,13 +30,31 @@ The environment is a compile-time constant. There is no in-app switcher.
 ```bash
 flutter pub get
 
-# Local development (defaults to the Android emulator's host route)
-flutter run --dart-define=TAYTAY_ENV=dev
+# Synthetic data and a mock identity. Firebase is never started.
+flutter run --flavor dev --dart-define=TAYTAY_ENV=dev --dart-define=TAYTAY_DATA=mock
+
+# The live API on the emulator's host route, signing in to Firebase
+flutter run --flavor dev --dart-define=TAYTAY_ENV=dev \
+            --dart-define-from-file=env/firebase.dev.json
 
 # Against a backend on your LAN or a local server
-flutter run --dart-define=TAYTAY_ENV=dev \
-            --dart-define=TAYTAY_API_BASE_URL=http://192.168.1.10:8000/api/v1
+flutter run --flavor dev --dart-define=TAYTAY_ENV=dev \
+            --dart-define=TAYTAY_API_BASE_URL=http://192.168.1.10:8000/api/v1 \
+            --dart-define-from-file=env/firebase.dev.json
+
+# Staging
+flutter run --flavor staging --dart-define=TAYTAY_ENV=staging \
+            --dart-define=TAYTAY_API_BASE_URL=https://staging-api.example.invalid/api/v1 \
+            --dart-define-from-file=env/firebase.staging.json
 ```
+
+Every build except the mock one signs residents in through Firebase and needs the
+four `TAYTAY_FIREBASE_*` values. They live in gitignored `env/firebase.<env>.json`
+files; copy `env/firebase.example.json` and fill it. A build without them stops on
+the configuration screen. The staging Firebase project is `taytay-lgu-ids-staging`.
+There is **no production project yet**, and **iOS cannot sign in** until an iOS app is
+registered in Firebase. Replace the staging URL above with the staging API's public
+`https` base URL. See [`docs/release.md`](docs/release.md#firebase).
 
 Release builds have no default staging or production host. The exact
 `appbundle`, `apk`, and `ipa` commands, including the keystore and the iOS
@@ -46,9 +64,13 @@ export options, are in [`docs/release/README.md`](docs/release/README.md).
 | --- | --- | --- |
 | `TAYTAY_ENV` | `dev`, `staging`, `prod` | Required for release builds |
 | `TAYTAY_API_BASE_URL` | absolute URL incl. `/api/v1` | Required for release, staging, and production. Dev debug may omit it. https required outside `dev` |
+| `TAYTAY_DATA` | `live` (default), `mock` | `mock` only in a dev debug build |
+| `TAYTAY_FIREBASE_API_KEY`, `TAYTAY_FIREBASE_APP_ID`, `TAYTAY_FIREBASE_PROJECT_ID`, `TAYTAY_FIREBASE_MESSAGING_SENDER_ID` | from `env/firebase.<env>.json` | Required by every build except a dev mock |
 
 **Never put a secret in a `--dart-define`.** Those values ship in clear text inside the
-APK/IPA. See `CLAUDE.md` Article 5.
+APK/IPA. See `CLAUDE.md` Article 5. The four `TAYTAY_FIREBASE_*` values are its one
+named exception: public Firebase project identifiers, never logged and still not
+committed (Article 5.4, decision D-185).
 
 ## Checks
 
@@ -89,7 +111,7 @@ decision. This app:
 * branches on the error `code`, never the message, and ignores unknown fields;
 * treats a `401` as the single signal that ends a session.
 
-Authentication endpoints do not exist yet — the backend's `Identity` module is planned —
-so `PendingBackendAuthRepository` declines sign-in honestly rather than mocking a session.
-`GET /api/v1/health` is wired end to end and is the reference implementation for future
-repositories.
+Residents sign in with Firebase Auth (email and password). The API only ever sees the
+Firebase ID token, and the first authenticated `GET /me` creates the citizen record.
+Firebase is started at launch from the `TAYTAY_FIREBASE_*` defines; a dev mock build
+uses a mock identity instead and never starts it.

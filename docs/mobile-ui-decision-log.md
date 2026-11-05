@@ -1757,6 +1757,97 @@ result they cannot explain.
 
 ---
 
+## D-185 — Firebase starts from four dart-defines, and Article 5.4 names them as its one exception
+
+**Status: settled.** Category: config / privacy. Recorded 2026-11-05 on the
+authority of Ella (Michaela Cailing), who directs this work and ruled that her
+instructions override this repository's "Paul decides" notes for this change.
+That covers this decision and the amendment to Article 5.4. It does not cover
+pushing: nothing here was pushed, and D-182 / Article 10 still govern a push.
+
+**Context.** Residents sign in through Firebase Auth (D-173), but nothing ever
+called `Firebase.initializeApp`. There was no `google-services.json`, no Google
+Services Gradle plugin and no committed options, so a real sign-in would have
+thrown inside the SDK.
+
+**Options**
+
+1. The Google Services Gradle plugin with a `google-services.json` per flavor,
+   and a `GoogleService-Info.plist` for iOS.
+2. A FlutterFire-generated `firebase_options.dart`, committed.
+3. **`Firebase.initializeApp(options: …)` from four `--dart-define` values,
+   kept in gitignored files passed with `--dart-define-from-file`.**
+
+**Chosen: 3.**
+
+**Why.** One mechanism for every flavor, and for iOS when it has an app. Option
+1 needs a file per flavor under `android/app/src/<flavor>/`, a rule for when one
+is missing (Gradle fails, or somebody commits a placeholder), and a second file
+format for iOS. Option 2 commits the options to a public repository that
+deliberately commits none, and fixes one project per generated file.
+`--dart-define` is already how this app receives its environment and API base
+URL (Article 7), and `AppConfig` already turns a bad value into the blocking
+configuration screen. The Firebase values now go through the same door.
+
+No option changes what ships. The Gradle plugin writes `google-services.json`
+into string resources inside the APK, the same API key included. Every
+mechanism puts the key in the binary, which is why this needed a ruling on
+Article 5.4 and not just a choice of file format.
+
+**The Article 5.4 exception.** Article 5.4 said a `--dart-define` is "Never an
+API key", and `test/core/release_readiness_test.dart` refused any define name
+containing `KEY`. Read literally, that forbade Firebase Auth by any mechanism
+and contradicted D-173. Firebase's documentation
+(<https://firebase.google.com/docs/projects/api-keys>, read 2026-11-05): "Unlike
+how API keys are typically used, API keys for Firebase services are not used to
+control access to backend resources", and "API keys for Firebase services are
+OK to include in code or checked-in config files". Article 5.4 now names
+`TAYTAY_FIREBASE_API_KEY`, `TAYTAY_FIREBASE_APP_ID`,
+`TAYTAY_FIREBASE_PROJECT_ID` and `TAYTAY_FIREBASE_MESSAGING_SENDER_ID` as its
+single exception: allowed under those four names only, never logged, still not
+committed. What protects an account is Firebase Auth's own server-side checks
+and the backend's verification of the ID token on every call. The keys are
+restricted in Google Cloud to the Identity Toolkit and Token Service APIs. That
+was reported for the staging project's Android key on 2026-11-05; it is not
+something this repository can check.
+
+**The scan was blind.** The define-name test matched only names written inline
+in `String.fromEnvironment('…')`. `AppConfig` reads every define through a
+constant, so the test had never seen any of them. The only name it saw was
+`TAYTAY_APP_VERSION`. It now resolves names read through constants, fails on a
+read it cannot resolve, asserts that it sees the `AppConfig` names, and holds
+one named exception that must also appear in `CLAUDE.md`. Proved by planting
+`const String plantedDefineKey = 'TAYTAY_PLANTED_SECRET'`, read through
+`String.fromEnvironment(plantedDefineKey)`. The strengthened test failed and
+named it. The old pattern, run over the same tree, did not see it. The plant was
+then removed.
+
+**Behaviour.**
+
+- Every build except a dev debug build with `TAYTAY_DATA=mock` signs in through
+  Firebase and needs all four values. Without them the configuration screen
+  names the missing defines, never a value. That includes a dev debug build
+  against the live API, which used to start and then fail at sign-in.
+- A dev mock never starts Firebase and never holds the options.
+- An Android app ID on iOS is refused at startup by name.
+- If `Firebase.initializeApp` throws, the build stops on the configuration
+  screen. The exception is dropped, not shown: its text can quote the options.
+- Firebase starts in `main()` before the first frame. It is a platform call,
+  not a network request.
+
+**Staging project, as of 2026-11-05.** `taytay-lgu-ids-staging`. Email/password
+sign-in on, email enumeration protection on, TOTP off. Android apps
+`ph.gov.taytay.app.dev` and `ph.gov.taytay.app.staging`, matching the `dev` and
+`staging` flavor suffixes. No iOS app. Their values are in gitignored
+`env/firebase.dev.json` and `env/firebase.staging.json`. Only
+`env/firebase.example.json`, with empty values, is tracked.
+
+**Open.** There is no production Firebase project, so a prod build stops until
+`env/firebase.prod.json` exists. iOS cannot sign in until an iOS app is
+registered. The staging API base URL is not recorded in this repository.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -1945,5 +2036,6 @@ result they cannot explain.
 | D-182 | Roadmap D10. No direct push to `main` and no merge without Paul's written approval. This narrows the earlier authorisation of direct pushes. Recorded in Article 10 | process | settled |
 | D-183 | Roadmap D11. A Directory office page is public resident information: contact, hours, services. It is not a staff or role selector | product / privacy | settled |
 | D-184 | The Node contract is vendored at `docs/integration/taytay-node-openapi.json` (taytay-backend PR 1). Envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }` matches `ApiEnvelopeDecoder`; residents do not see `message`. Role enum is `guest`, `registered`, `verified`, `staff`, `admin`. This app mints only `registered` and `verified`. `backend_routes.dart` calls the citizen surface. F31 is closed by `/threads` | contract | settled |
+| D-185 | Firebase starts from four `TAYTAY_FIREBASE_*` dart-defines in gitignored `env/` files, not `google-services.json`. Article 5.4 names them as its one exception: public project identifiers, never logged, never committed. The define-name scan now sees names read through constants. Ella's authority, 2026-11-05 | config / privacy | settled |
 
-**184 decisions — 180 settled, 4 provisional.**
+**185 decisions — 181 settled, 4 provisional.**

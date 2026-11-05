@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'app_environment.dart';
+import 'firebase_client_config.dart';
 
 /// Immutable, compile-time-resolved application configuration.
 ///
@@ -9,7 +10,8 @@ import 'app_environment.dart';
 /// they are configuration, not a vault. API keys, signing material and anything
 /// else confidential stay server-side. This class therefore only carries values
 /// that are safe to publish: which environment the build targets, the public API
-/// base URL, and timeout budgets.
+/// base URL, timeout budgets, and the Firebase client identifiers that Article
+/// 5.4 names as its single exception (decision D-185).
 ///
 /// See CLAUDE.md Article 7.
 /// Where repository data comes from.
@@ -63,6 +65,7 @@ class AppConfig {
     this.dataMode = AppDataMode.live,
     this.mockFailure = MockFailureMode.none,
     this.mockLatency = const Duration(milliseconds: 400),
+    this.firebase,
     this.issues = const <ConfigIssue>[],
   });
 
@@ -85,7 +88,7 @@ class AppConfig {
       rawDataMode: rawDataMode,
       rawMockFailure: rawMockFailure,
       rawMockLatencyMs: rawMockLatency,
-    );
+    ).withFirebase(FirebaseClientConfig.resolve());
   }
 
   /// Testable core of [AppConfig.resolve].
@@ -299,10 +302,64 @@ class AppConfig {
   final Duration requestTimeout;
   final Duration uploadTimeout;
 
+  /// The Firebase client identifiers, held only by a build that signs in
+  /// through Firebase and was given all four. Null for a dev mock, which never
+  /// starts Firebase, and for a build stopped by [issues].
+  final FirebaseClientConfig? firebase;
+
   /// Configuration problems found at startup. Empty means the build is sound.
   final List<ConfigIssue> issues;
 
   bool get isUsable => issues.isEmpty;
+
+  /// Whether residents sign in through Firebase in this build.
+  ///
+  /// Everything except a dev mock does: a dev debug build with
+  /// `TAYTAY_DATA=mock` uses the mock identity. A mock that is refused — in
+  /// a release, or outside dev — is already stopped by its own issue, and
+  /// once that is fixed the build signs in through Firebase like any other.
+  bool get signsInWithFirebase =>
+      !(environment == AppEnvironment.dev && dataMode == AppDataMode.mock);
+
+  /// This configuration with Firebase's client options checked and attached.
+  ///
+  /// A build that signs in through Firebase and lacks any of the four values
+  /// gains an issue here and stops on the configuration screen, rather than
+  /// throwing from inside the first sign-in. A dev mock is returned unchanged
+  /// and never holds the options at all.
+  AppConfig withFirebase(FirebaseClientConfig client) {
+    if (!signsInWithFirebase) return this;
+    final List<String> problems = client.problems;
+    return _copy(
+      firebase: client,
+      issues: <ConfigIssue>[...issues, ...problems.map(ConfigIssue.new)],
+    );
+  }
+
+  /// This configuration with further startup [issues], found after
+  /// [AppConfig.from] ran — for instance by starting Firebase.
+  AppConfig withIssues(Iterable<ConfigIssue> more) =>
+      _copy(firebase: null, issues: <ConfigIssue>[...issues, ...more]);
+
+  /// A stopped build holds no Firebase options, so nothing can start
+  /// Firebase for a configuration the startup screen has refused.
+  AppConfig _copy({
+    required FirebaseClientConfig? firebase,
+    required List<ConfigIssue> issues,
+  }) {
+    return AppConfig(
+      environment: environment,
+      apiBaseUri: apiBaseUri,
+      connectTimeout: connectTimeout,
+      requestTimeout: requestTimeout,
+      uploadTimeout: uploadTimeout,
+      dataMode: dataMode,
+      mockFailure: mockFailure,
+      mockLatency: mockLatency,
+      firebase: issues.isEmpty ? firebase : null,
+      issues: List<ConfigIssue>.unmodifiable(issues),
+    );
+  }
 
   /// Android emulator route to the host machine. Used only when a dev debug
   /// build omits [apiBaseUrlDefineKey].
@@ -318,7 +375,9 @@ class AppConfig {
   String toString() =>
       'AppConfig(environment: ${environment.wireValue}, '
       'dataMode: ${dataMode.wireValue}, '
-      'apiBaseUri: $apiBaseUri, issues: ${issues.length})';
+      'apiBaseUri: $apiBaseUri, '
+      'firebase: ${firebase == null ? 'absent' : 'present'}, '
+      'issues: ${issues.length})';
 }
 
 /// A single configuration defect, phrased for a developer or release engineer.
