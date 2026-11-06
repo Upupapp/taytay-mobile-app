@@ -240,6 +240,7 @@ void main() {
     out.createSync(recursive: true);
     final steps = <AccountFixture>[
       AccountFixture.personal,
+      AccountFixture.account,
       AccountFixture.code,
       AccountFixture.terms,
       AccountFixture.idCard,
@@ -259,7 +260,7 @@ void main() {
         index++;
       }
     }
-    expect(index, 56);
+    expect(index, 64);
   });
 
   testWidgets('reset frames for the flow recording', (tester) async {
@@ -368,13 +369,19 @@ void main() {
       final fields = find.byType(TextFormField);
       await tester.enterText(fields.at(0), 'Juana');
       await tester.enterText(fields.at(1), 'Dela Cruz');
-      await tester.enterText(fields.at(2), 'juana.delacruz@example.com');
-      await tester.enterText(fields.at(3), '09171234567');
-      await tester.enterText(fields.at(4), 'San Juan');
-      await tester.enterText(fields.at(5), 'Purok 3');
-      await tester.enterText(fields.at(6), 'Password1!');
-      await hold(14);
+      await tester.enterText(fields.at(2), '09171234567');
+      await tester.enterText(fields.at(3), 'Purok 3');
+      await tester.tap(find.byKey(const Key('barangay-picker')));
+      await hold(8);
+      await tapText('San Juan');
+      await hold(6);
       await tapText('Continue');
+
+      final account = find.byType(TextFormField);
+      await tester.enterText(account.at(0), 'juana.delacruz@example.com');
+      await tester.enterText(account.at(1), 'Password1!');
+      await hold(8);
+      await tapText('Create my account');
 
       await tester.enterText(
         find.byKey(const Key('email-code-field')),

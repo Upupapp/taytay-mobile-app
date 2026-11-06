@@ -48,7 +48,7 @@ void main() {
     () {
       final config = AppConfig.from(
         rawEnvironment: 'dev',
-        rawApiBaseUrl: 'http://10.0.2.2:8000/api/v1',
+        rawApiBaseUrl: 'http://10.0.2.2:3000/api/v1',
         isReleaseBuild: true,
         rawDataMode: 'mock',
         rawMockLatencyMs: '0',

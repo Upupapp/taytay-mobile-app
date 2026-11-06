@@ -14,6 +14,8 @@ void main() {
     '02-02': const ForgotPasswordScreen(fixture: true),
     '02-02b': const ResetCodeScreen(fixture: ResetCodeFixture.sample),
     '02-03': const AccountWizardScreen(fixture: AccountFixture.personal),
+    '02-03a': const AccountWizardScreen(fixture: AccountFixture.account),
+    '02-03b': const AccountWizardScreen(fixture: AccountFixture.codeNotSent),
     '02-04': const AccountWizardScreen(fixture: AccountFixture.code),
     '02-04b': const AccountWizardScreen(fixture: AccountFixture.codeExpired),
     '02-05': const AccountWizardScreen(fixture: AccountFixture.terms),

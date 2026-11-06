@@ -4,8 +4,9 @@
     type, so a release APK carries none of it.
 
     Why it is needed: Android has blocked cleartext by default since targetSdk 28,
-    and this app's documented dev base URL is http://10.0.2.2:8000 — the
-    emulator's route to the host machine, where a local Laravel server runs. So
+    and this app's documented dev base URL is http://10.0.2.2:3000 — the
+    emulator's route to the host machine, where the Node API's `npm run dev`
+    listens. So
     the workflow in README.md could not work on Android and would have failed as
     an ordinary-looking network error, which is the kind of thing a developer
     spends an afternoon on before suspecting the platform.

@@ -363,7 +363,7 @@ class AppConfig {
 
   /// Android emulator route to the host machine. Used only when a dev debug
   /// build omits [apiBaseUrlDefineKey].
-  static const String _devApiBaseUrl = 'http://10.0.2.2:8000/api/v1';
+  static const String _devApiBaseUrl = 'http://10.0.2.2:3000/api/v1';
 
   /// Placeholder for a build that was not given a base URL. `.invalid` is
   /// reserved and does not resolve. The startup screen refuses to run before

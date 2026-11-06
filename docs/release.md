@@ -26,7 +26,8 @@ an absolute URL, cleartext outside dev, carrying credentials, or carrying a
 query string stops on the configuration screen. It does not fall back to a
 host.
 
-The only baked-in host is `http://10.0.2.2:8000/api/v1`, and only a dev debug
+The only baked-in host is `http://10.0.2.2:3000/api/v1` (the Node API's
+`npm run dev` port, through the Android emulator's route to the host), and only a dev debug
 build that omits the define may use it. `https://unconfigured.invalid` is the
 placeholder the startup screen refuses before anything connects.
 
@@ -102,7 +103,7 @@ Dev against a local API, signing in to the staging Firebase project:
 ```bash
 flutter run --flavor dev \
   --dart-define=TAYTAY_ENV=dev \
-  --dart-define=TAYTAY_API_BASE_URL=http://10.0.2.2:8000/api/v1 \
+  --dart-define=TAYTAY_API_BASE_URL=http://10.0.2.2:3000/api/v1 \
   --dart-define-from-file=env/firebase.dev.json
 ```
 
@@ -111,20 +112,23 @@ Staging:
 ```bash
 flutter run --flavor staging \
   --dart-define=TAYTAY_ENV=staging \
-  --dart-define=TAYTAY_API_BASE_URL=https://staging-api.example.invalid/api/v1 \
+  --dart-define=TAYTAY_API_BASE_URL=https://taytay-api.139-162-51-165.sslip.io/api/v1 \
   --dart-define-from-file=env/firebase.staging.json
 ```
 
 ```bash
 flutter build apk --release --flavor staging \
   --dart-define=TAYTAY_ENV=staging \
-  --dart-define=TAYTAY_API_BASE_URL=https://staging-api.example.invalid/api/v1 \
+  --dart-define=TAYTAY_API_BASE_URL=https://taytay-api.139-162-51-165.sslip.io/api/v1 \
   --dart-define-from-file=env/firebase.staging.json
 ```
 
-Replace `https://staging-api.example.invalid/api/v1` with the staging API's
-public `https` base URL. This repository does not record one. A staging build
-refuses `http`. The release APK also needs `android/key.properties` (below).
+`https://taytay-api.139-162-51-165.sslip.io/api/v1` is the staging Node API (the shared Linode).
+`env/firebase.staging.json` is gitignored and holds the four Firebase client
+values for the staging project; it is never printed or committed. Staging sends
+no real email (`EMAIL_SENDER=mock`): the registration wizard says a code was
+sent when the API accepts the send, but nothing arrives. A staging build refuses
+`http`. The release APK also needs `android/key.properties` (below).
 
 ### Staging project
 

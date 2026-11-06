@@ -19,9 +19,40 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
+import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 import 'auth_session_test.dart' show FakeAuthRepository, FakeLocalAuthenticator;
+
+/// `GET /barangays` for widget tests: fictional ids, no network.
+class FakeBarangayDirectory implements BarangayDirectory {
+  FakeBarangayDirectory({List<Result<List<Barangay>>>? outcomes})
+    : outcomes = outcomes ?? <Result<List<Barangay>>>[];
+
+  static const List<Barangay> sample = <Barangay>[
+    Barangay(
+      id: '00000000-0000-4000-8000-0000000000d1',
+      code: 'dolores',
+      name: 'Dolores',
+    ),
+    Barangay(
+      id: '00000000-0000-4000-8000-0000000000a1',
+      code: 'san-juan',
+      name: 'San Juan',
+    ),
+  ];
+
+  /// Answers used one at a time; after them, [sample].
+  final List<Result<List<Barangay>>> outcomes;
+  int calls = 0;
+
+  @override
+  Future<Result<List<Barangay>>> listBarangays() async {
+    calls++;
+    if (outcomes.isNotEmpty) return outcomes.removeAt(0);
+    return const Ok<List<Barangay>>(sample);
+  }
+}
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -38,6 +69,7 @@ Future<AppDependencies> boot(
   StoredSession? stored,
   TextScaler textScaler = TextScaler.noScaling,
   DocumentPicker? documentPicker,
+  BarangayDirectory? barangays,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -84,7 +116,7 @@ Future<AppDependencies> boot(
     accountControlsRepository: base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
-    barangayDirectory: base.barangayDirectory,
+    barangayDirectory: barangays ?? FakeBarangayDirectory(),
     platform: base.platform,
     onDispose: base.onDispose,
   );

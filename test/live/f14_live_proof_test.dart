@@ -37,7 +37,7 @@ import 'package:taytay_resident/features/verification/domain/verification_reposi
 /// `dart_test.yaml` excludes that tag by default. Run it with:
 ///
 /// ```
-/// TAYTAY_LIVE_API=http://127.0.0.1:8000/api/v1 \
+/// TAYTAY_LIVE_API=http://127.0.0.1:3000/api/v1 \
 /// TAYTAY_LIVE_TOKEN=<citizen token> \
 ///   flutter test --tags live test/live/f14_live_proof_test.dart
 /// ```

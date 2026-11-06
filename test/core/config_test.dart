@@ -41,7 +41,7 @@ void main() {
     test('a dev debug build keeps the emulator host when no URL is given', () {
       final config = build();
       expect(config.isUsable, isTrue);
-      expect(config.apiBaseUri.toString(), 'http://10.0.2.2:8000/api/v1');
+      expect(config.apiBaseUri.toString(), 'http://10.0.2.2:3000/api/v1');
     });
 
     test('staging and production have no baked-in host', () {
@@ -135,7 +135,7 @@ void main() {
       expect(
         build(
           environment: 'dev',
-          baseUrl: 'http://10.0.2.2:8000/api/v1',
+          baseUrl: 'http://10.0.2.2:3000/api/v1',
         ).isUsable,
         isTrue,
       );

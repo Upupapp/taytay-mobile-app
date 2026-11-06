@@ -398,21 +398,6 @@ class AuthApiRepository implements AuthRepository {
       );
     }
 
-    final Result<({String privacy, String terms})> versions =
-        await _consentVersions();
-    if (versions case Err(:final failure)) return Err<void>(failure);
-    final Ok<({String privacy, String terms})> published =
-        versions as Ok<({String privacy, String terms})>;
-    final String privacy = published.value.privacy;
-    final String terms = published.value.terms;
-
-    final Result<void> privacyConsent = await _recordConsent(privacy);
-    if (privacyConsent case Err(:final failure)) return Err<void>(failure);
-    if (terms != privacy) {
-      final Result<void> termsConsent = await _recordConsent(terms);
-      if (termsConsent case Err(:final failure)) return Err<void>(failure);
-    }
-
     final Result<ApiEnvelope<void>> submitted = await _apiClient.send<void>(
       method: HttpMethod.post,
       path: 'me/verification-requests',
@@ -445,6 +430,63 @@ class AuthApiRepository implements AuthRepository {
       decode: (Object? _) {},
     );
     return submitted.map((ApiEnvelope<void> _) {});
+  }
+
+  @override
+  Future<Result<SavedProfile>> saveRegistrationProfile(
+    RegistrationProfile profile,
+  ) async {
+    final String name = profile.fullName;
+    final String email = profile.email.trim();
+    final String mobile = profile.mobile.replaceAll(' ', '');
+    final String barangayId = profile.barangayId.trim();
+    if (name.isEmpty || email.isEmpty || mobile.isEmpty || barangayId.isEmpty) {
+      return const Err<SavedProfile>(
+        ValidationFailure(
+          debugMessage: 'A name, email, mobile and barangay are required.',
+        ),
+      );
+    }
+    final String street = profile.street.trim();
+    final response = await _apiClient.send<SavedProfile>(
+      method: HttpMethod.patch,
+      path: 'me',
+      authenticated: true,
+      // ProfilePatch is strict: an undeclared key is a 422. These five are
+      // the ones it declares that the wizard collects. `null` clears a street
+      // the resident emptied on the way back through the wizard.
+      body: <String, Object?>{
+        'name': name,
+        'mobile': mobile,
+        'email': email,
+        'barangay_id': barangayId,
+        'street': street.isEmpty ? null : street,
+      },
+      decode: (Object? data) {
+        final Map<String, dynamic> map = _map(data);
+        return SavedProfile(emailVerified: map['email_verified'] == true);
+      },
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  @override
+  Future<Result<void>> recordConsents() async {
+    final Result<({String privacy, String terms})> versions =
+        await _consentVersions();
+    if (versions case Err(:final failure)) return Err<void>(failure);
+    final Ok<({String privacy, String terms})> published =
+        versions as Ok<({String privacy, String terms})>;
+    final String privacy = published.value.privacy;
+    final String terms = published.value.terms;
+
+    final Result<void> privacyConsent = await _recordConsent(privacy);
+    if (privacyConsent case Err(:final failure)) return Err<void>(failure);
+    if (terms != privacy) {
+      final Result<void> termsConsent = await _recordConsent(terms);
+      if (termsConsent case Err(:final failure)) return Err<void>(failure);
+    }
+    return const Ok<void>(null);
   }
 
   /// `privacy_version` and `terms_version` from `GET /app/config`.

@@ -9,7 +9,7 @@
 # with no server is worse than no live proof at all, because the launch dossier
 # cites it as evidence. Run them explicitly:
 #
-#   TAYTAY_LIVE_API=http://127.0.0.1:8000/api/v1 \
+#   TAYTAY_LIVE_API=http://127.0.0.1:3000/api/v1 \
 #   TAYTAY_LIVE_TOKEN=<citizen token> \
 #     flutter test --tags live
 tags:

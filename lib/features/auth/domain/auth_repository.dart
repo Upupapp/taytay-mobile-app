@@ -96,9 +96,10 @@ abstract interface class AuthRepository {
 
   /// `POST /auth/email-otp/send`. Authenticated. No body. `202`.
   ///
-  /// The code goes to the profile email. Registration asks for a code before
-  /// an account exists, so a live call can be refused; the screen still
-  /// advances and the dev mock accepts the same shape.
+  /// The code goes to the profile email, so the server refuses it (`422`)
+  /// until [saveRegistrationProfile] has stored one. The wizard creates the
+  /// account and saves the profile first, and a refusal keeps the resident on
+  /// the account step with a message. It is never skipped.
   Future<Result<CodeAcceptance>> sendEmailCode();
 
   /// `POST /auth/email-otp/verify` with `{code}`.
@@ -154,9 +155,24 @@ abstract interface class AuthRepository {
   /// This name stays for a provider that sends a link instead of a code.
   Future<Result<CodeAcceptance>> sendPasswordReset({required String email});
 
-  /// Names, mobile, barangay, and whether an ID and a selfie were captured.
+  /// `PATCH /me` with `name`, `mobile`, `email`, `barangay_id` and `street`.
   ///
-  /// The bytes stay on the device. The live client declines: there is no
-  /// citizen upload route. The dev mock accepts the draft and stores nothing.
+  /// Sent once the account exists and before an email code is asked for. Only
+  /// fields `ProfilePatch` declares are sent; never a role or an office.
+  Future<Result<SavedProfile>> saveRegistrationProfile(
+    RegistrationProfile profile,
+  );
+
+  /// `GET /app/config` for `privacy_version` and `terms_version`, then
+  /// `POST /me/consents` for each (once when they match).
+  ///
+  /// A missing version is a contract failure. Nothing is sent as `draft`.
+  Future<Result<void>> recordConsents();
+
+  /// `POST /me/verification-requests` with the ID type, the front, an
+  /// optional back, and the selfie. `201` opens the request for staff review.
+  ///
+  /// The account, the profile and consent are already on the server by now.
+  /// The dev mock accepts the draft and stores nothing.
   Future<Result<void>> submitProfile(AccountApplication application);
 }

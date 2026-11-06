@@ -1,9 +1,10 @@
 import 'dart:typed_data';
 
-/// What the registration wizard holds until a citizen registration route exists.
+/// What the registration wizard sends as the verification request.
 ///
-/// Creating the account still declines. Consent and a verification request are
-/// posted from this draft once a session exists. Bytes stay out of [toString].
+/// By the time this is built the Firebase account exists, the profile is saved
+/// ([RegistrationProfile]) and consent is recorded. Only the ID type and the
+/// photos leave from here. Bytes stay out of [toString].
 class AccountApplication {
   const AccountApplication({
     required this.email,
@@ -63,4 +64,52 @@ class AccountApplication {
 
   @override
   String toString() => 'AccountApplication(redacted)';
+}
+
+/// What the wizard writes to `PATCH /me` once the account exists.
+///
+/// The Node API creates the profile row with no name, email or barangay on the
+/// first `GET /me`, and `POST /auth/email-otp/send` refuses a profile with no
+/// email. So these are saved before a code is asked for.
+///
+/// One [fullName], because `ProfilePatch` has one `name` (gap 4). [barangayId]
+/// is the UUID `GET /barangays` published, never a typed name. Nothing here is
+/// authority-shaped, and [toString] is redacted.
+class RegistrationProfile {
+  const RegistrationProfile({
+    required this.givenName,
+    required this.familyName,
+    required this.mobile,
+    required this.email,
+    required this.barangayId,
+    this.street = '',
+  });
+
+  final String givenName;
+  final String familyName;
+
+  /// Digits only, as `09XXXXXXXXX`.
+  final String mobile;
+  final String email;
+  final String barangayId;
+
+  /// The "Street / Purok" line. Empty clears it on the server.
+  final String street;
+
+  String get fullName => '${givenName.trim()} ${familyName.trim()}'.trim();
+
+  @override
+  String toString() => 'RegistrationProfile(redacted)';
+}
+
+/// What `PATCH /me` answered that the wizard needs next.
+class SavedProfile {
+  const SavedProfile({required this.emailVerified});
+
+  /// `email_verified` on the profile the server returned. True only when the
+  /// saved email was already confirmed with a code, so no new code is needed.
+  final bool emailVerified;
+
+  @override
+  String toString() => 'SavedProfile(emailVerified: $emailVerified)';
 }

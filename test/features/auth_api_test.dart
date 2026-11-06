@@ -437,12 +437,12 @@ void main() {
 
     test('a config without versions is a contract failure', () async {
       transport.responses.add(Ok<ApiHttpResponse>(config(privacy: null)));
-      final Result<void> result = await repository.submitProfile(ready());
+      final Result<void> result = await repository.recordConsents();
       expect(result.failureOrNull, isA<ContractFailure>());
       expect(transport.requests.single.path, 'app/config');
     });
 
-    test('posts both consent versions, then opens on 201', () async {
+    test('consent posts both published versions', () async {
       transport.responses.add(Ok<ApiHttpResponse>(config()));
       transport.responses.add(
         Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
@@ -450,14 +450,12 @@ void main() {
       transport.responses.add(
         Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'y'})),
       );
-      transport.responses.add(Ok<ApiHttpResponse>(created()));
-      final Result<void> result = await repository.submitProfile(ready());
+      final Result<void> result = await repository.recordConsents();
       expect(result.isOk, isTrue);
       expect(transport.requests.map((ApiRequest r) => r.path), <String>[
         'app/config',
         'me/consents',
         'me/consents',
-        'me/verification-requests',
       ]);
       expect(transport.requests[1].body, <String, Object?>{
         'version': '2026-03-privacy',
@@ -465,15 +463,6 @@ void main() {
       expect(transport.requests[2].body, <String, Object?>{
         'version': '2026-03-terms',
       });
-      expect(transport.requests[3].body, <String, Object?>{
-        'id_type': 'philid',
-      });
-      expect(
-        transport.requests[3].files.map((MultipartFile f) => f.field),
-        <String>['id_front', 'selfie'],
-      );
-      expect(result.toString(), isNot(contains('Password1')));
-      expect(result.toString(), isNot(contains('draft')));
     });
 
     test('one consent call when the two versions match', () async {
@@ -483,8 +472,7 @@ void main() {
       transport.responses.add(
         Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
       );
-      transport.responses.add(Ok<ApiHttpResponse>(created()));
-      final Result<void> result = await repository.submitProfile(ready());
+      final Result<void> result = await repository.recordConsents();
       expect(result.isOk, isTrue);
       expect(
         transport.requests.where((ApiRequest r) => r.path == 'me/consents'),
@@ -492,13 +480,22 @@ void main() {
       );
     });
 
+    test('submit posts only the verification request, opened on 201', () async {
+      transport.responses.add(Ok<ApiHttpResponse>(created()));
+      final Result<void> result = await repository.submitProfile(ready());
+      expect(result.isOk, isTrue);
+      expect(transport.requests.single.path, 'me/verification-requests');
+      expect(transport.requests.single.body, <String, Object?>{
+        'id_type': 'philid',
+      });
+      expect(
+        transport.requests.single.files.map((MultipartFile f) => f.field),
+        <String>['id_front', 'selfie'],
+      );
+      expect(result.toString(), isNot(contains('Password1')));
+    });
+
     test('a 200 from verification does not count as opened', () async {
-      transport.responses.add(
-        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
-      );
-      transport.responses.add(
-        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
-      );
       transport.responses.add(
         Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'status': 'pending'})),
       );
@@ -507,12 +504,6 @@ void main() {
     });
 
     test('409 is already pending and 403 is already verified', () async {
-      transport.responses.add(
-        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
-      );
-      transport.responses.add(
-        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
-      );
       transport.responses.add(Ok<ApiHttpResponse>(problem(409, 'CONFLICT')));
       final Result<void> pending = await repository.submitProfile(ready());
       expect(pending.failureOrNull, isA<ConflictFailure>());
@@ -521,12 +512,6 @@ void main() {
         isNot(contains('operator')),
       );
 
-      transport.responses.add(
-        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
-      );
-      transport.responses.add(
-        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
-      );
       transport.responses.add(Ok<ApiHttpResponse>(problem(403, 'FORBIDDEN')));
       final Result<void> verified = await repository.submitProfile(ready());
       expect(verified.failureOrNull, isA<ForbiddenFailure>());
@@ -534,6 +519,103 @@ void main() {
         verified.failureOrNull!.residentMessage,
         isNot(contains('operator')),
       );
+    });
+  });
+
+  group('saving the registration profile', () {
+    const RegistrationProfile profile = RegistrationProfile(
+      givenName: 'Juana',
+      familyName: 'Dela Cruz',
+      mobile: '0917 123 4567',
+      email: 'juana.delacruz@example.com',
+      barangayId: '00000000-0000-4000-8000-0000000000a1',
+      street: 'Purok 3',
+    );
+
+    test(
+      'PATCH /me sends only ProfilePatch fields, with barangay_id',
+      () async {
+        transport.responses.add(
+          Ok<ApiHttpResponse>(
+            okEnvelope(<String, Object?>{
+              'id': 'acct-1',
+              'email_verified': false,
+              'role': 'registered',
+            }),
+          ),
+        );
+        final Result<SavedProfile> result = await repository
+            .saveRegistrationProfile(profile);
+
+        final ApiRequest request = transport.requests.single;
+        expect(request.method, HttpMethod.patch);
+        expect(request.path, 'me');
+        expect(request.body, <String, Object?>{
+          'name': 'Juana Dela Cruz',
+          'mobile': '09171234567',
+          'email': 'juana.delacruz@example.com',
+          'barangay_id': '00000000-0000-4000-8000-0000000000a1',
+          'street': 'Purok 3',
+        });
+        // ProfilePatch is strict. Nothing outside it is sent, least of all a
+        // role or an office.
+        const Set<String> declared = <String>{
+          'name',
+          'birthdate',
+          'sex',
+          'mobile',
+          'email',
+          'barangay_id',
+          'address',
+          'street',
+          'purok',
+        };
+        final Object? body = request.body;
+        expect(body, isA<Map<String, Object?>>());
+        expect(
+          (body! as Map<String, Object?>).keys.toSet().difference(declared),
+          isEmpty,
+        );
+        expect(result.valueOrNull?.emailVerified, isFalse);
+        expect(profile.toString(), isNot(contains('Juana')));
+      },
+    );
+
+    test('an emptied street is cleared; no barangay is refused', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          okEnvelope(<String, Object?>{'id': 'acct-1', 'email_verified': true}),
+        ),
+      );
+      final Result<SavedProfile> cleared = await repository
+          .saveRegistrationProfile(
+            const RegistrationProfile(
+              givenName: 'Juana',
+              familyName: 'Dela Cruz',
+              mobile: '09171234567',
+              email: 'juana.delacruz@example.com',
+              barangayId: '00000000-0000-4000-8000-0000000000a1',
+            ),
+          );
+      final Object? body = transport.requests.single.body;
+      expect(body, isA<Map<String, Object?>>());
+      final Map<String, Object?> map = body! as Map<String, Object?>;
+      expect(map.containsKey('street'), isTrue);
+      expect(map['street'], isNull);
+      expect(cleared.valueOrNull?.emailVerified, isTrue);
+
+      final Result<SavedProfile> missing = await repository
+          .saveRegistrationProfile(
+            const RegistrationProfile(
+              givenName: 'Juana',
+              familyName: 'Dela Cruz',
+              mobile: '09171234567',
+              email: 'juana.delacruz@example.com',
+              barangayId: '',
+            ),
+          );
+      expect(missing.failureOrNull, isA<ValidationFailure>());
+      expect(transport.requests, hasLength(1));
     });
   });
 

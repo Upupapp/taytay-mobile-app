@@ -29,6 +29,16 @@ class FakeAuthRepository implements AuthRepository {
   int verifyCalls = 0;
   final List<String> codesSeen = <String>[];
 
+  /// The registration calls, in the order the wizard made them.
+  final List<String> calls = <String>[];
+
+  /// Answers for `sendEmailCode`, used one at a time before the default.
+  final List<Result<CodeAcceptance>> emailCodeOutcomes =
+      <Result<CodeAcceptance>>[];
+  Result<SavedProfile>? profileOutcome;
+  Result<void>? consentOutcome;
+  RegistrationProfile? savedRegistration;
+
   @override
   Future<Result<void>> requestOneTimeCode({
     required String mobileNumber,
@@ -80,6 +90,8 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<Result<CodeAcceptance>> sendEmailCode() async {
     requestCalls++;
+    calls.add('sendEmailCode');
+    if (emailCodeOutcomes.isNotEmpty) return emailCodeOutcomes.removeAt(0);
     if (requestOutcome case Err<void>(:final failure)) {
       return Err<CodeAcceptance>(failure);
     }
@@ -91,6 +103,7 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<Result<EmailVerified>> verifyEmailCode({required String code}) async {
     verifyCalls++;
+    calls.add('verifyEmailCode');
     codesSeen.add(code);
     if (code.trim() == CodeExchangeRules.expiredSentinel) {
       return const Err<EmailVerified>(
@@ -163,6 +176,7 @@ class FakeAuthRepository implements AuthRepository {
     required String password,
   }) async {
     createdPassword = password;
+    calls.add('createAccount');
     if (passwordOutcome case Err<AuthOutcome>()) {
       return passwordOutcome!;
     }
@@ -212,8 +226,25 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<Result<void>> submitProfile(AccountApplication application) async {
+    calls.add('submitProfile');
     submittedProfile = application;
     return const Ok<void>(null);
+  }
+
+  @override
+  Future<Result<SavedProfile>> saveRegistrationProfile(
+    RegistrationProfile profile,
+  ) async {
+    calls.add('saveRegistrationProfile');
+    savedRegistration = profile;
+    return profileOutcome ??
+        const Ok<SavedProfile>(SavedProfile(emailVerified: false));
+  }
+
+  @override
+  Future<Result<void>> recordConsents() async {
+    calls.add('recordConsents');
+    return consentOutcome ?? const Ok<void>(null);
   }
 
   @override

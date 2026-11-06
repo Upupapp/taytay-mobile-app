@@ -295,13 +295,19 @@ class KycApiRepository implements VerificationRepository {
     );
   }
 
+  /// Declined, because the Node API has no separate submit.
+  ///
+  /// `POST me/verification-requests` (the wizard and [submitVerification])
+  /// opens the request as `pending`, which is already the office's review
+  /// queue. Replacing photos keeps that status, and a rejected request goes
+  /// back to pending only through [submitCorrections] with a message. A
+  /// second "submit" would have nothing to post to. Nothing in the app calls
+  /// this; it stays declined rather than pretending to send.
   @override
   Future<Result<void>> submitForReview({
     required List<String> documentUploadIds,
     required String idempotencyKey,
   }) async {
-    final Object _ = _apiClient.runtimeType;
-    final Object? _ = _telemetry;
     return backendGapFailure<void>(
       BackendGap.absentOnNodeContract,
       'submitForReview',
@@ -439,14 +445,44 @@ class KycApiRepository implements VerificationRepository {
     );
   }
 
+  /// `GET me/verification-requests/current`, read for what the office holds.
+  ///
+  /// The Node request has three image slots and no document list, so the
+  /// identity row is attached when `id_front_media_id` is set. Proof of
+  /// address has no slot on the request and is reported as not sent, which
+  /// is true. A `404` is a resident who never submitted: every row is
+  /// unattached, not an error. Image bytes are never read here.
   @override
   Future<Result<List<KycDocument>>> loadDocuments() async {
-    final Object _ = _apiClient.runtimeType;
-    final Object? _ = _telemetry;
-    return backendGapFailure<List<KycDocument>>(
-      BackendGap.absentOnNodeContract,
-      'loadDocuments',
-    );
+    final Result<ApiEnvelope<VerificationStatusDetail>> response =
+        await _apiClient.send<VerificationStatusDetail>(
+          method: HttpMethod.get,
+          path: 'me/verification-requests/current',
+          authenticated: true,
+          decode: _decodeDetail,
+        );
+    return switch (response) {
+      Ok(:final value) => Ok<List<KycDocument>>(_documentRows(value.data)),
+      Err(:final failure) when failure is NotFoundFailure =>
+        Ok<List<KycDocument>>(_documentRows(null)),
+      Err(:final failure) => Err<List<KycDocument>>(failure),
+    };
+  }
+
+  static List<KycDocument> _documentRows(VerificationStatusDetail? detail) {
+    final bool front = detail?.idFrontMediaId != null;
+    return <KycDocument>[
+      KycDocument(
+        type: KycDocumentType.identityDocument,
+        isAttached: front,
+        receivedAt: front ? detail?.submittedAt : null,
+        isAvailable: front,
+      ),
+      const KycDocument(
+        type: KycDocumentType.proofOfAddress,
+        isAttached: false,
+      ),
+    ];
   }
 
   static VerificationStatus _decodeStatus(Object? data) {

@@ -144,11 +144,78 @@ void main() {
       expect(transport.requests, isEmpty);
     });
 
-    test('loading documents declines rather than guessing a type', () async {
+    test('documents are read from the current request', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          ApiHttpResponse(
+            statusCode: 200,
+            body: jsonEncode(<String, Object?>{
+              'data': <String, Object?>{
+                'id': '00000000-0000-4000-8000-000000000001',
+                'status': 'pending',
+                'id_type': 'philid',
+                'id_front_media_id': '00000000-0000-4000-8000-000000000002',
+                'id_back_media_id': null,
+                'selfie_media_id': '00000000-0000-4000-8000-000000000003',
+                'submitted_at': '2026-11-05T01:00:00Z',
+                'can_edit': true,
+                'submitted_categories': <String>[
+                  'philid',
+                  'id_front',
+                  'selfie',
+                ],
+                'issues': <Object?>[],
+              },
+            }),
+          ),
+        ),
+      );
+
       final Result<List<KycDocument>> result = await repository.loadDocuments();
 
+      expect(transport.requests.single.method, HttpMethod.get);
+      expect(
+        transport.requests.single.path,
+        'me/verification-requests/current',
+      );
+      final List<KycDocument> rows = result.valueOrNull!;
+      expect(rows.map((KycDocument d) => d.type), KycDocumentType.values);
+      expect(rows.first.isAttached, isTrue);
+      expect(rows.first.receivedAt, DateTime.utc(2026, 11, 5, 1));
+      expect(rows.last.isAttached, isFalse);
+    });
+
+    test('no request yet is every row unattached, not an error', () async {
+      transport.responses.add(
+        Ok<ApiHttpResponse>(
+          ApiHttpResponse(
+            statusCode: 404,
+            body: jsonEncode(<String, Object?>{
+              'error': <String, Object?>{
+                'code': 'NOT_FOUND',
+                'message': 'operator text',
+              },
+            }),
+          ),
+        ),
+      );
+
+      final Result<List<KycDocument>> result = await repository.loadDocuments();
+
+      expect(result.valueOrNull, hasLength(KycDocumentType.values.length));
+      expect(
+        result.valueOrNull!.every((KycDocument d) => !d.isAttached),
+        isTrue,
+      );
+    });
+
+    test('there is no separate submit on the Node API', () async {
+      final Result<void> result = await repository.submitForReview(
+        documentUploadIds: const <String>[],
+        idempotencyKey: 'key-5',
+      );
+
       expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
       expect(transport.requests, isEmpty);
     });
 

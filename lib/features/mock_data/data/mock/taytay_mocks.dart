@@ -288,6 +288,31 @@ class MockAuthRepository implements AuthRepository {
     return requestPasswordReset(email: email);
   }
 
+  /// Accepts the profile and stores nothing. The sample email is unconfirmed,
+  /// so the wizard still asks for a code.
+  @override
+  Future<Result<SavedProfile>> saveRegistrationProfile(
+    RegistrationProfile profile,
+  ) {
+    if (profile.fullName.isEmpty ||
+        profile.email.trim().isEmpty ||
+        profile.barangayId.trim().isEmpty) {
+      return Future<Result<SavedProfile>>.value(
+        const Err<SavedProfile>(
+          ValidationFailure(
+            debugMessage: 'A name, email and barangay are required.',
+          ),
+        ),
+      );
+    }
+    return _gate.respond<SavedProfile>(
+      const SavedProfile(emailVerified: false),
+    );
+  }
+
+  @override
+  Future<Result<void>> recordConsents() => _gate.respond<void>(null);
+
   @override
   Future<Result<void>> submitProfile(AccountApplication application) {
     if (application.email.trim().isEmpty || application.password.isEmpty) {

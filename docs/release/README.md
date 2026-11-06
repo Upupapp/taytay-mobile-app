@@ -48,8 +48,8 @@ The base URL is injected at build time. The define is `TAYTAY_API_BASE_URL`
 
 A release build compiled without it refuses to start and names the missing
 define on the blocking configuration screen. A dev debug build may omit it and
-keeps using `http://10.0.2.2:8000/api/v1` (the Android emulator's route to the
-host machine). `--dart-define=TAYTAY_DATA=mock` is honoured only for a dev
+keeps using `http://10.0.2.2:3000/api/v1` (the Android emulator's route to the
+host machine, where the Node API's `npm run dev` listens). `--dart-define=TAYTAY_DATA=mock` is honoured only for a dev
 debug build. A release build refuses it even when `TAYTAY_ENV=dev`. Staging
 and production refuse it as well.
 

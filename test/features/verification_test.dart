@@ -950,7 +950,13 @@ void main() {
     ) async {
       final session = await signedInSession(AccessLevel.unverified);
       addTearDown(session.dispose);
-      final transport = _Queue(responses);
+      // `refresh` reads the status, then the same route again for the
+      // documents list (`loadDocuments`). Both get the first answer.
+      final transport = _Queue(<ApiHttpResponse>[
+        responses.first,
+        responses.first,
+        ...responses.skip(1),
+      ]);
       final controller = VerificationController(
         repository: KycApiRepository(
           apiClient: ApiClient(
@@ -963,6 +969,8 @@ void main() {
       );
       addTearDown(controller.dispose);
       await controller.refresh();
+      // The documents read is not awaited by `refresh`; let it land first.
+      await pumpEventQueue();
       return (controller, transport);
     }
 
@@ -1084,6 +1092,11 @@ class _Queue implements ApiTransport {
   @override
   Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
     requests.add(request);
+    // A read nobody scripted (the documents list after a re-read) fails
+    // quietly instead of throwing out of the transport.
+    if (responses.isEmpty) {
+      return const Err<ApiHttpResponse>(NetworkFailure());
+    }
     return Ok<ApiHttpResponse>(responses.removeAt(0));
   }
 }

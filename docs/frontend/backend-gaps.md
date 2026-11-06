@@ -25,8 +25,8 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | # | Gap | Status | Endpoint | Backend |
 | --- | --- | --- | --- | --- |
 | 1 | Sign in | Closed | Firebase SDK, then `GET /api/v1/me` | `3e3b110` (no HTTP sign-in route; bearer is a Firebase ID token) |
-| 2 | Create account | Closed | Firebase SDK, then `GET /api/v1/me`, then `POST /api/v1/me/verification-requests` | `3e3b110` |
-| 3 | Verification start, documents, corrections | Partly closed | `GET /api/v1/me/verification-requests/current`, `POST /api/v1/me/verification-requests` | `3e3b110` |
+| 2 | Create account | Closed (re-checked 6 November 2026 against backend `6436b70`) | Firebase SDK, then `GET /api/v1/me`, then `PATCH /api/v1/me` (`name`, `mobile`, `email`, `barangay_id` from `GET /api/v1/barangays`, `street`), then `POST /api/v1/auth/email-otp/send` and `/verify`, then `POST /api/v1/me/consents`, then `POST /api/v1/me/verification-requests` | `6436b70` |
+| 3 | Verification start, documents, corrections | Closed (no separate submit exists on Node) | `GET /api/v1/me/verification-requests/current`, `POST /api/v1/me/verification-requests`, `.../current/documents`, `.../current/corrections` | `6436b70` |
 | 4 | Profile name split | Deferred (needs Paul's approval) | `PATCH /api/v1/me` sends one `name`. A given, middle, and family split is not on `ProfilePatch` | `3e3b110` |
 | 5 | In-session password change | Closed | Firebase `updatePassword` (no HTTP route) | `3e3b110` |
 | 6 | Other signed-in sessions | Deferred (needs Paul's approval) | `GET me/sessions` is not in the spec. `POST`/`DELETE /api/v1/me/devices` is a push token | `3e3b110` |
@@ -55,7 +55,19 @@ Mobile commits that closed or narrowed a gap: `ab2896c` (Firebase sign-in and re
 
 ### 2. Create account
 
-`AccountWizardScreen` calls `createAccount`, which uses `createUserWithEmailAndPassword`, then `GET /api/v1/me`, then `submitProfile` (`POST /api/v1/me/verification-requests` with `id_type`, `id_front`, optional `id_back`, `selfie`, and `POST /api/v1/me/consents`). The unrouted `RegistrationScreen` still declines. It is not the register route.
+Re-checked 6 November 2026 against backend `6436b70` (`docs/api/endpoints.md`, "Sign-up wizard", and `openapi/openapi.json`). The audit found the wizard asking for the email code before the account existed: `POST /api/v1/auth/email-otp/send` needs a signed-in registered member whose profile has an email, the Node API creates that profile empty on the first `GET /api/v1/me`, and nothing ever sent `PATCH /api/v1/me`. The refusal was swallowed and the code step opened anyway. Barangay was free text.
+
+The wizard now runs in the server's order:
+
+1. Personal details. The barangay is picked from `GET /api/v1/barangays` in a modal list (48 dp rows, announced as a button with its value; a failed read says so and offers Try again). There is no typed barangay.
+2. The account: `createAccount` (`createUserWithEmailAndPassword`, then `GET /api/v1/me` with the ID token), and the session is opened.
+3. `saveRegistrationProfile`: `PATCH /api/v1/me` with `name` (given and family joined, gap 4), `mobile`, `email`, `barangay_id` and `street`. `ProfilePatch` is strict; nothing else is sent. A field the server refuses is shown beside that field.
+4. `sendEmailCode`, then `verifyEmailCode`. A send that is refused keeps the resident on the account step with a sentence saying the code was not sent; Continue asks again. A cooldown opens the hold screen. Once the account exists the email is fixed, so the code step no longer offers to change it.
+5. `recordConsents` at the terms step: `GET /api/v1/app/config`, then `POST /api/v1/me/consents` for `privacy_version` and `terms_version`. A failure stays on the terms step.
+6. ID front (required) and back (optional), then a selfie (required).
+7. Review, then `submitProfile`: `POST /api/v1/me/verification-requests` with `id_type`, `id_front`, optional `id_back`, `selfie`. `201` is the pending state, which says staff check the request in the office's own system and the result arrives as an in-app notification.
+
+Staging sends no real email (`EMAIL_SENDER=mock`). The send is accepted and nothing arrives; the app does not work around that. The unrouted `RegistrationScreen` still declines. It is not the register route.
 
 ### 5. In-session password change
 
@@ -83,7 +95,7 @@ Wired against taytay-backend `5f6fe0f` (pull request 2, not merged when this was
 
 `POST /api/v1/me/verification-requests` starts a request (the account wizard, and Start verification once the resident has added the front of an ID and a selfie). `POST /api/v1/me/verification-requests/current/documents` replaces `id_front`, `id_back`, or `selfie`. `POST /api/v1/me/verification-requests/current/corrections` sends `{message}` and returns the request to pending. Those three no longer decline. Upload and resubmit are offered only while `can_edit` is true.
 
-Still declined: `loadDocuments` and `submitForReview` (`BackendGap.absentOnNodeContract`). A profile claim (`openCase`) is not the Node start, so it does not post. The bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
+`loadDocuments` reads `GET /api/v1/me/verification-requests/current`: the identity row is attached when `id_front_media_id` is set, proof of address has no slot on the Node request and is reported as not sent, and a `404` is every row unattached rather than an error (6 November 2026, backend `6436b70`). `submitForReview` still declines, because there is nothing to call: the Node request is `pending`, which is the office's review queue, from the moment `POST /api/v1/me/verification-requests` answers `201`; replacing photos keeps that status; and a rejected request returns to pending only through the corrections route with a message. Nothing in the app calls it. A profile claim (`openCase`) is not the Node start, so it does not post. The bytes behind the media ids are not fetched. `POST /api/v1/digital-id/verify` stays on the verifier channel and is not called.
 
 ### 7. Directory photos and service lines
 
@@ -153,4 +165,4 @@ Saved pages are the in-memory list for this process. There is no saved-service r
 
 The next client work, one area at a time, is not in this commit:
 
-1. Verification (the open half of item 3).
+1. Verification has no open half left (item 3, 6 November 2026).

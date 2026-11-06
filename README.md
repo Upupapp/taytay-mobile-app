@@ -39,12 +39,12 @@ flutter run --flavor dev --dart-define=TAYTAY_ENV=dev \
 
 # Against a backend on your LAN or a local server
 flutter run --flavor dev --dart-define=TAYTAY_ENV=dev \
-            --dart-define=TAYTAY_API_BASE_URL=http://192.168.1.10:8000/api/v1 \
+            --dart-define=TAYTAY_API_BASE_URL=http://192.168.1.10:3000/api/v1 \
             --dart-define-from-file=env/firebase.dev.json
 
-# Staging
+# Staging (the Node API on the shared Linode, staging Firebase project)
 flutter run --flavor staging --dart-define=TAYTAY_ENV=staging \
-            --dart-define=TAYTAY_API_BASE_URL=https://staging-api.example.invalid/api/v1 \
+            --dart-define=TAYTAY_API_BASE_URL=https://taytay-api.139-162-51-165.sslip.io/api/v1 \
             --dart-define-from-file=env/firebase.staging.json
 ```
 
@@ -53,8 +53,12 @@ four `TAYTAY_FIREBASE_*` values. They live in gitignored `env/firebase.<env>.jso
 files; copy `env/firebase.example.json` and fill it. A build without them stops on
 the configuration screen. The staging Firebase project is `taytay-lgu-ids-staging`.
 There is **no production project yet**, and **iOS cannot sign in** until an iOS app is
-registered in Firebase. Replace the staging URL above with the staging API's public
-`https` base URL. See [`docs/release.md`](docs/release.md#firebase).
+registered in Firebase. The staging API is `https://taytay-api.139-162-51-165.sslip.io/api/v1`; staging
+sends no real email (`EMAIL_SENDER=mock`): the API accepts the code send and
+nothing arrives, so a registration there cannot get past the email code. The dev default with no
+`TAYTAY_API_BASE_URL` is `http://10.0.2.2:3000/api/v1`, the emulator's route to a
+Node API started with `npm run dev` on the host. See
+[`docs/release.md`](docs/release.md#firebase).
 
 Release builds have no default staging or production host. The exact
 `appbundle`, `apk`, and `ipa` commands, including the keystore and the iOS
