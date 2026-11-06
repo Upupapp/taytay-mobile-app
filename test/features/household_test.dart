@@ -22,6 +22,38 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/household/data/household_api_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_repository.dart';
 import 'package:taytay_resident/features/household/domain/household_summary.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
+import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+
+/// `GET /me` for a verified resident, so My Account draws its menu.
+class _VerifiedProfile implements ResidentProfileRepository {
+  const _VerifiedProfile();
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async =>
+      const Ok<ResidentProfileDetail>(
+        ResidentProfileDetail(verificationTier: 'verified'),
+      );
+
+  @override
+  Future<Result<ResidentProfileSummary>> loadOwnSummary() async =>
+      const Ok<ResidentProfileSummary>(
+        ResidentProfileSummary(verificationTier: 'verified'),
+      );
+
+  @override
+  Future<Result<void>> updateContactDetails({
+    required ContactDetailsUpdate update,
+    required String idempotencyKey,
+  }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<void>> submitOwnUpdate({
+    required Map<String, Object?> changes,
+    required String idempotencyKey,
+  }) async => const Ok<void>(null);
+}
 
 /// Records every read and every correction so a test can assert what a guest
 /// did not do, and exactly what a report carried.
@@ -29,6 +61,9 @@ class RecordingHouseholdRepository implements HouseholdRepository {
   RecordingHouseholdRepository({this.summary});
 
   HouseholdSummary? summary;
+
+  /// What a read answers when there is no [summary].
+  AppFailure failure = const ServerFailure(isTemporary: true);
 
   int loadCalls = 0;
   final List<HouseholdCorrectionRequest> requests =
@@ -41,7 +76,7 @@ class RecordingHouseholdRepository implements HouseholdRepository {
     loadCalls++;
     final value = summary;
     return value == null
-        ? const Err<HouseholdSummary>(ServerFailure(isTemporary: true))
+        ? Err<HouseholdSummary>(failure)
         : Ok<HouseholdSummary>(value);
   }
 
@@ -74,6 +109,8 @@ Future<BootedHousehold> bootHousehold(
   String location = '/household',
   Size size = const Size(400, 1800),
   TextScaler textScaler = TextScaler.noScaling,
+  AppFailure? failure,
+  ResidentProfileRepository? profile,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -97,6 +134,7 @@ Future<BootedHousehold> bootHousehold(
   }
 
   final household = RecordingHouseholdRepository(summary: summary);
+  if (failure != null) household.failure = failure;
   final base = AppDependencies.build(
     config: config(),
     secrets: secrets,
@@ -120,7 +158,7 @@ Future<BootedHousehold> bootHousehold(
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
-    residentProfileRepository: base.residentProfileRepository,
+    residentProfileRepository: profile ?? base.residentProfileRepository,
     householdRepository: household,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
@@ -564,6 +602,41 @@ void main() {
       expect(find.textContaining('municipal hall'), findsWidgets);
       // No fabricated household appears in its place.
       expect(find.text('Your family record'), findsNothing);
+    });
+
+    testWidgets('a 404 says the account has no household, not a fault', (
+      tester,
+    ) async {
+      await bootHousehold(tester, failure: const NotFoundFailure());
+
+      expect(find.text('No household on your account yet'), findsOneWidget);
+      expect(find.text('Not available in this app yet'), findsNothing);
+      expect(find.textContaining('switched on'), findsNothing);
+      expect(find.text('Your family record'), findsNothing);
+    });
+
+    testWidgets('a verified resident reaches it from My Account and back', (
+      tester,
+    ) async {
+      final booted = await bootHousehold(
+        tester,
+        summary: fullSummary(),
+        location: '/profile',
+        profile: const _VerifiedProfile(),
+      );
+      expect(booted.household.loadCalls, 0);
+
+      await tester.tap(find.text('Household'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Household and family'), findsOneWidget);
+      expect(find.text('Your household'), findsOneWidget);
+      expect(booted.household.loadCalls, 1);
+
+      await tester.tap(find.byType(TaytayBackButton));
+      await tester.pumpAndSettle();
+      expect(find.text('Household and family'), findsNothing);
+      expect(find.text('Verification status'), findsOneWidget);
     });
 
     testWidgets('no staff or vulnerability wording appears anywhere', (

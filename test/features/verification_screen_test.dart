@@ -19,6 +19,7 @@ import 'package:taytay_resident/features/verification/domain/correctable_field.d
 import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_face.dart';
+import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';

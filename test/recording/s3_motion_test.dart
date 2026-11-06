@@ -11,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
+import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';

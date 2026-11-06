@@ -162,9 +162,10 @@ enum ResidentCapability {
     AccessRequirement.verified,
     'See your household summary',
     BackendAvailability.planned,
-    // TAB 13 gave it a screen. The capability stays `planned` because no
-    // citizen endpoint exists — the screen explains that honestly rather than
-    // showing an invented family — but access alone decides whether it opens.
+    // TAB 13 gave it a screen. The Node API now serves the resident's own
+    // `GET /households/current`, which the screen reads, and My Account links
+    // to it. The flag is still `planned`, so the account-centre tile still
+    // says "not yet available"; access alone decides whether it opens.
     route: AppRoute.household,
   );
 

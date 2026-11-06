@@ -408,6 +408,44 @@ void main() {
     expect(plain.single.bannerId, isNull);
   });
 
+  test('a banner does not borrow the bundled slide copy', () {
+    final List<HomeSlide> bundled = <HomeSlide>[
+      const HomeSlide(
+        eyebrow: 'BALITA · MSWDO',
+        title: 'Unclaimed 2026 PWD Cash Gift',
+        body: 'Validate at MSWDO, claim at the Treasury Office.',
+        action: 'Read Balita',
+        photoAsset: 'assets/photos/municipal_hall.jpg',
+        credit: 'Fixture',
+        routeName: 'news',
+      ),
+    ];
+    HomeSlide slideFor(String? href) =>
+        HomeCatalogue.withBanners(bundled, <HomeBanner>[
+          HomeBanner(
+            id: _bannerId,
+            title: 'Libreng bakuna',
+            sortOrder: 1,
+            active: true,
+            href: href,
+          ),
+        ]).single;
+
+    final HomeSlide tulong = slideFor('/programs/aics');
+    expect(tulong.title, 'Libreng bakuna');
+    expect(tulong.body, isEmpty);
+    expect(tulong.routeName, 'programs');
+    expect(tulong.eyebrow, 'TULONG');
+    expect(tulong.action, 'Explore Tulong');
+
+    // No link keeps the slide's destination, and names that destination.
+    final HomeSlide unlinked = slideFor(null);
+    expect(unlinked.routeName, 'news');
+    expect(unlinked.eyebrow, 'BALITA');
+    expect(unlinked.action, 'Read Balita');
+    expect(unlinked.body, isEmpty);
+  });
+
   testWidgets('a Balita cover paints bytes and survives a failed read', (
     WidgetTester tester,
   ) async {

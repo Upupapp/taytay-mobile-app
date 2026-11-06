@@ -176,6 +176,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         iconColor: BrandColors.success,
         onTap: () => context.goNamed(AppRoute.verification.routeName),
       ),
+      // `/household` is a top-level route, so it is pushed: back returns here
+      // rather than to Home.
+      AccountMenuRow(
+        title: 'Household',
+        subtitle: 'Address and your place in it',
+        icon: TaytayIcons.house,
+        tile: BrandColors.chipBlueBg,
+        iconColor: BrandColors.taytayBlue,
+        onTap: () => context.pushNamed(AppRoute.household.routeName),
+      ),
       AccountMenuRow(
         title: 'Settings',
         subtitle: 'Notifications, language',

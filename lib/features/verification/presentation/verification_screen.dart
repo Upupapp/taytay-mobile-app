@@ -17,6 +17,7 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../domain/field_correction_note.dart';
 import '../domain/verification_face.dart';
+import '../domain/verification_id_type.dart';
 import '../domain/verification_repository.dart';
 import '../domain/verification_status_detail.dart';
 import 'manila_stamp.dart';

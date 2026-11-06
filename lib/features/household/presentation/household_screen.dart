@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../shared/widgets/app_banner.dart';
@@ -57,6 +58,9 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
   bool _loading = false;
   HouseholdSummary? _summary;
 
+  /// `GET /households/current` answered 404: the account is in no household.
+  bool _none = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -84,10 +88,12 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
     if (!mounted) return;
     setState(() {
       _loading = false;
-      // A failure and an absent record land in the same place: the record is
-      // not readable here, and the municipal hall is the answer either way. The
-      // server's own message is operator-facing and is never rendered.
+      // A 404 is an answer, not a fault: this account has not set up or
+      // joined a household. Anything else is unreadable here, and the
+      // municipal hall is the answer. The server's own message is
+      // operator-facing and is never rendered.
       _summary = result.valueOrNull;
+      _none = result.failureOrNull is NotFoundFailure;
     });
   }
 
@@ -115,7 +121,7 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (summary == null) ...<Widget>[
-                  const _Unavailable(),
+                  if (_none) const _NoHousehold() else const _Unavailable(),
                 ] else ...<Widget>[
                   _HouseholdSection(summary: summary),
                   const SizedBox(height: Spacing.xl),
@@ -269,6 +275,24 @@ class _WhatIsNotShown extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The server answered that this account belongs to no household. The app
+/// cannot create one or answer an invitation, and says so.
+class _NoHousehold extends StatelessWidget {
+  const _NoHousehold();
+
+  @override
+  Widget build(BuildContext context) {
+    return const AppBanner(
+      tone: BannerTone.info,
+      title: 'No household on your account yet',
+      message:
+          'Your account is not part of a household in this app, and this '
+          'version of the app cannot set one up. The municipal hall keeps its '
+          'own household record, and staff can go through it with you.',
     );
   }
 }

@@ -55,19 +55,40 @@ abstract final class HomeCatalogue {
     ];
   }
 
+  /// A banner carries a title, a link and an image, and nothing else. The
+  /// bundled slide's eyebrow, sentence and button were written for another
+  /// message, so they are not shown under the office's title: the eyebrow and
+  /// the button name where the banner goes, and there is no sentence.
   static HomeSlide _fromBanner(HomeBanner banner, HomeSlide fallback) {
+    final String route = _route(banner.href, fallback.routeName);
     return HomeSlide(
-      eyebrow: fallback.eyebrow,
+      eyebrow: _eyebrowFor(route),
       title: banner.title,
-      body: fallback.body,
-      action: fallback.action,
+      body: '',
+      action: _actionFor(route),
       photoAsset: fallback.photoAsset,
       credit: fallback.credit,
-      routeName: _route(banner.href, fallback.routeName),
+      routeName: route,
       focus: fallback.focus,
       bannerId: _bannerId(banner),
     );
   }
+
+  static String _eyebrowFor(String route) => switch (route) {
+    'news' => 'BALITA',
+    'programs' => 'TULONG',
+    'services' => 'DIRECTORY',
+    'hotlines' => 'HOTLINES',
+    _ => 'TAYTAY LGU',
+  };
+
+  static String _actionFor(String route) => switch (route) {
+    'news' => 'Read Balita',
+    'programs' => 'Explore Tulong',
+    'services' => 'Open Directory',
+    'hotlines' => 'See hotlines',
+    _ => 'Open',
+  };
 
   static String? _bannerId(HomeBanner banner) {
     final String? url = banner.imageUrl;

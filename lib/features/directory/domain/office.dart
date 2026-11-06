@@ -158,6 +158,23 @@ class Office {
   /// The id sent as `office_id`. A live office sends its UUID.
   String get wireId => serverId.isNotEmpty ? serverId : id;
 
+  /// The thread `subject` when the office publishes no topics.
+  ///
+  /// `POST /threads` requires a subject, and the office inbox lists it, so it
+  /// is fixed wording. It is never taken from what the resident wrote.
+  static const String generalTopic = 'General enquiry';
+
+  /// True when the compose screen has topics to offer in a picker.
+  /// `GET /offices` publishes none.
+  bool get offersTopics => topics.isNotEmpty;
+
+  /// The subject the compose screen starts on.
+  String get composeTopic {
+    if (topics.isNotEmpty) return topics.first;
+    final String named = topic?.trim() ?? '';
+    return named.isNotEmpty ? named : generalTopic;
+  }
+
   /// Published directory lines, then Tulong names that are not already listed.
   List<OfficeServiceLine> linesWithCatalogue(
     List<({String label, String slug})> catalogue,

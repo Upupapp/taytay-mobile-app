@@ -15,6 +15,7 @@ import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 
 class _FakeIdentity implements FirebaseIdentity {
   Result<FirebaseCredentialSession> signInResult = const Err(
@@ -372,21 +373,22 @@ void main() {
       barangay: 'San Juan',
     );
 
-    AccountApplication ready() => AccountApplication(
-      email: bare.email,
-      password: bare.password,
-      mobile: bare.mobile,
-      givenName: bare.givenName,
-      familyName: bare.familyName,
-      barangay: bare.barangay,
-      idTypeLabel: 'PhilSys National ID',
-      idFrontBytes: Uint8List.fromList(<int>[1, 2]),
-      idFrontName: 'id_front.jpg',
-      idFrontMime: 'image/jpeg',
-      selfieBytes: Uint8List.fromList(<int>[3]),
-      selfieName: 'selfie.jpg',
-      selfieMime: 'image/jpeg',
-    );
+    AccountApplication ready({String idType = 'PhilSys National ID'}) =>
+        AccountApplication(
+          email: bare.email,
+          password: bare.password,
+          mobile: bare.mobile,
+          givenName: bare.givenName,
+          familyName: bare.familyName,
+          barangay: bare.barangay,
+          idTypeLabel: idType,
+          idFrontBytes: Uint8List.fromList(<int>[1, 2]),
+          idFrontName: 'id_front.jpg',
+          idFrontMime: 'image/jpeg',
+          selfieBytes: Uint8List.fromList(<int>[3]),
+          selfieName: 'selfie.jpg',
+          selfieMime: 'image/jpeg',
+        );
 
     ApiHttpResponse config({
       String? privacy = '2026-03-privacy',
@@ -493,6 +495,19 @@ void main() {
         <String>['id_front', 'selfie'],
       );
       expect(result.toString(), isNot(contains('Password1')));
+    });
+
+    test('each ID type the wizard offers posts its own id_type', () async {
+      for (final String wire in verificationIdTypes) {
+        transport.responses.add(Ok<ApiHttpResponse>(created()));
+        final Result<void> result = await repository.submitProfile(
+          ready(idType: idTypeLabel(wire)),
+        );
+        expect(result.isOk, isTrue, reason: wire);
+        expect(transport.requests.last.body, <String, Object?>{
+          'id_type': wire,
+        }, reason: wire);
+      }
     });
 
     test('a 200 from verification does not count as opened', () async {

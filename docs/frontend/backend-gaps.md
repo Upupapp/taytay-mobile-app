@@ -44,6 +44,7 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 18 | Notification paging and targets | Closed | `GET /api/v1/notifications` with `cursor` | `3e3b110` |
 | 19 | Events | Deferred (needs Paul's approval) | No `/events` route | `3e3b110` |
 | 20 | Assistance requests and uploads | Deferred (needs Paul's approval) | No citizen case or requirement route. Tulong is information only | `3e3b110` |
+| 21 | Full Terms of Use text | Open (checked 6 November 2026) | `GET /api/v1/app/config` publishes `terms_version` and no Terms text or URL. The wizard's "Read full Terms" says the text is not published yet. "Read full Privacy Notice" shows `privacy_notice.body_markdown` once its version is not `placeholder`, and otherwise says the same | `fb43122` |
 
 Mobile commits that closed or narrowed a gap: `ab2896c` (Firebase sign-in and registration, household decode, notification cursor, contract alignment), `8843694` (verification `notes` ignored; mobile password sign-in banner), `d1252f9` and `15b8e70` (issued Digital ID card).
 

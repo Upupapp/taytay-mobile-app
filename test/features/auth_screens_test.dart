@@ -19,6 +19,7 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
+import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
@@ -70,6 +71,7 @@ Future<AppDependencies> boot(
   TextScaler textScaler = TextScaler.noScaling,
   DocumentPicker? documentPicker,
   BarangayDirectory? barangays,
+  PlatformRepository? platform,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -99,7 +101,7 @@ Future<AppDependencies> boot(
     telemetry: base.telemetry,
     authRepository: auth ?? base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
-    platformRepository: base.platformRepository,
+    platformRepository: platform ?? base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,

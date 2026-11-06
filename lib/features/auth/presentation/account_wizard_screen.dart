@@ -17,7 +17,10 @@ import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
+import '../../account/domain/notice_markdown.dart';
+import '../../platform/domain/app_bootstrap.dart';
 import '../../registration/domain/registration_domain.dart';
+import '../../verification/domain/verification_id_type.dart';
 import '../../verification/domain/verification_submit_outcome.dart';
 import '../domain/account_application.dart';
 import '../domain/auth_repository.dart';
@@ -115,6 +118,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   Map<String, String> _errors = <String, String>{};
   bool _codeExpired = false;
 
+  /// Redraws the resend countdown once a second on the code step.
+  Timer? _clock;
+
   /// The UUID from `GET /barangays`. [_barangay] holds only its name.
   String? _barangayId;
   List<Barangay>? _barangays;
@@ -141,6 +147,19 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   void initState() {
     super.initState();
     _applyFixture();
+    if (authClockTicks && widget.fixture == AccountFixture.live) {
+      _clock = Timer.periodic(const Duration(seconds: 1), _tick);
+    }
+  }
+
+  /// Only the code step shows a countdown. One more frame after the wait ends
+  /// turns "Resend in 0:01" back into a button that works.
+  void _tick(Timer _) {
+    if (!mounted || _step != _Step.code || _codeExpired) return;
+    final DateTime? at = _attempt.resendAt;
+    if (at == null) return;
+    if (DateTime.now().isAfter(at.add(const Duration(seconds: 1)))) return;
+    setState(() {});
   }
 
   @override
@@ -201,6 +220,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   @override
   void dispose() {
+    _clock?.cancel();
     _first.dispose();
     _last.dispose();
     _email.dispose();
@@ -794,6 +814,74 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     });
   }
 
+  Future<void> _chooseIdType() async {
+    final String? picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (BuildContext sheet) =>
+          _IdTypeSheet(selectedLabel: _idType.text.trim()),
+    );
+    if (picked == null || !mounted) return;
+    if (!verificationIdTypes.contains(picked)) return;
+    setState(() => _idType.text = idTypeLabel(picked));
+  }
+
+  /// `GET /app/config` publishes a `terms_version` and no Terms text or
+  /// link, so the sheet says the text is not out yet instead of a dead link.
+  Future<void> _openTerms() {
+    return _showLegalSheet(
+      title: 'Terms of Use',
+      markdown: Future<String?>.value(),
+      pending:
+          'The full Terms of Use will be available soon. Taytay LGU has not '
+          'published them in the app yet.',
+    );
+  }
+
+  /// `privacy_notice.body_markdown` from `GET /app/config`, once a version
+  /// other than the server's placeholder is published.
+  Future<void> _openPrivacyNotice() {
+    final Future<String?> markdown = widget.fixture == AccountFixture.live
+        ? _publishedPrivacyNotice(
+            AppDependencies.of(context).platformRepository.loadBootstrap(),
+          )
+        : Future<String?>.value();
+    return _showLegalSheet(
+      title: 'Privacy Notice',
+      markdown: markdown,
+      pending:
+          'The full Privacy Notice will be available soon. Taytay LGU has not '
+          'published it in the app yet. The summary on this step is a draft.',
+    );
+  }
+
+  static Future<String?> _publishedPrivacyNotice(
+    Future<Result<AppBootstrap>> loading,
+  ) async {
+    final Result<AppBootstrap> result = await loading;
+    return switch (result) {
+      Ok<AppBootstrap>(:final value)
+          when !value.privacyNotice.usesBundledDraft =>
+        value.privacyNotice.bodyMarkdown,
+      _ => null,
+    };
+  }
+
+  Future<void> _showLegalSheet({
+    required String title,
+    required Future<String?> markdown,
+    required String pending,
+  }) {
+    return showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (BuildContext sheet) =>
+          _LegalSheet(title: title, markdown: markdown, pending: pending),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final submitted = _step == _Step.submitted;
@@ -1165,12 +1253,15 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   Future<void> _resendEmailCode() async {
     if (widget.fixture == AccountFixture.live) {
+      if (_busy) return;
+      setState(() => _busy = true);
       final Result<CodeAcceptance> sent = await AppDependencies.of(
         context,
       ).authRepository.sendEmailCode();
       if (!mounted) return;
       final DateTime now = DateTime.now();
       setState(() {
+        _busy = false;
         switch (sent) {
           case Ok<CodeAcceptance>(:final value):
             _attempt = _attempt.applyAcceptance(value, now);
@@ -1257,32 +1348,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           ],
         ),
         const SizedBox(height: 6.33),
-        Text.rich(
-          textAlign: TextAlign.center,
-          TextSpan(
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              fontWeight: AppTypography.body,
-              color: Color(0xFF5B6680),
-            ),
-            children: <InlineSpan>[
-              const TextSpan(text: "Didn't get it? "),
-              TextSpan(
-                text: widget.fixture == AccountFixture.live
-                    ? (_attempt.canResendAt(DateTime.now())
-                          ? 'Resend'
-                          : 'Resend in ${CodeExchangeRules.countdown(_attempt.resendAt == null ? Duration.zero : _attempt.resendAt!.difference(DateTime.now()))}')
-                    : 'Resend in 0:45',
-                style: const TextStyle(
-                  color: BrandColors.taytayBlue,
-                  fontWeight: AppTypography.black,
-                ),
-              ),
-              const TextSpan(text: ' · Check spam folder'),
-            ],
-          ),
-        ),
+        _resendRow(),
         if (_status != null)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -1312,6 +1378,52 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             onPressed: () => setState(() => _step = _Step.account),
           ),
         ],
+      ],
+    );
+  }
+
+  /// "Didn't get it?" and a real button, 48 dp. During the wait from the
+  /// last `retry_after` the button is off and says how long is left. The
+  /// server enforces that wait whatever this shows.
+  Widget _resendRow() {
+    final bool live = widget.fixture == AccountFixture.live;
+    final DateTime now = DateTime.now();
+    final bool ready = live && _attempt.canResendAt(now);
+    final Duration left = _attempt.resendAt?.difference(now) ?? Duration.zero;
+    final String label = ready
+        ? 'Resend code'
+        : live
+        ? 'Resend in ${CodeExchangeRules.countdown(left)}'
+        : 'Resend in 0:45';
+    const TextStyle note = TextStyle(
+      fontFamily: AppTypography.fontFamily,
+      fontSize: 11,
+      fontWeight: AppTypography.body,
+      color: Color(0xFF5B6680),
+    );
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: <Widget>[
+        const Text("Didn't get it?", style: note),
+        TextButton(
+          key: const Key('email-code-resend'),
+          style: TextButton.styleFrom(
+            foregroundColor: BrandColors.taytayBlue,
+            disabledForegroundColor: const Color(0xFF5B6680),
+            minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            textStyle: const TextStyle(
+              fontFamily: AppTypography.fontFamily,
+              fontSize: 12,
+              fontWeight: AppTypography.black,
+            ),
+          ),
+          onPressed: ready && !_busy ? _resendEmailCode : null,
+          child: Text(label),
+        ),
+        const Text('Check your spam folder too.', style: note),
       ],
     );
   }
@@ -1494,37 +1606,19 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        const Row(
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 6,
           children: <Widget>[
-            Flexible(
-              child: Text(
-                'Read full Terms ›',
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: AppTypography.black,
-                  color: BrandColors.taytayBlue,
-                ),
-              ),
+            _LegalLink(
+              key: const Key('terms-read-full'),
+              label: 'Read full Terms ›',
+              onPressed: _openTerms,
             ),
-            SizedBox(width: 14),
-            Flexible(
-              child: Text(
-                'Read full Privacy Notice ›',
-                maxLines: 1,
-                overflow: TextOverflow.fade,
-                softWrap: false,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: AppTypography.black,
-                  color: BrandColors.taytayBlue,
-                ),
-              ),
+            _LegalLink(
+              key: const Key('privacy-read-full'),
+              label: 'Read full Privacy Notice ›',
+              onPressed: _openPrivacyNotice,
             ),
           ],
         ),
@@ -1564,12 +1658,15 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           'Type of ID',
           _idType,
           requiredField: true,
-          readOnly: true,
           ok: true,
           padTop: 13.67,
+          placeholder: 'Choose',
+          tapKey: const Key('id-type-picker'),
+          onTap: _busy ? null : _chooseIdType,
           trailing: const TaytayIcon(
             icon: TaytayIcons.chevronDown,
-            semanticLabel: 'ID types',
+            semanticLabel: '',
+            excludeSemantics: true,
             size: 16,
             color: Color(0xFF5A6480),
           ),
@@ -2961,16 +3058,97 @@ class _BarangayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _ChoiceRow(
+      rowKey: Key('barangay-${barangay.id}'),
+      label: barangay.name,
+      selected: selected,
+      onTap: () => Navigator.of(context).pop(barangay),
+    );
+  }
+}
+
+/// The kinds of ID `POST /me/verification-requests` accepts for `id_type`.
+/// Pops the wire value.
+class _IdTypeSheet extends StatelessWidget {
+  const _IdTypeSheet({required this.selectedLabel});
+
+  final String selectedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Semantics(
+                header: true,
+                child: const Text(
+                  'Type of ID',
+                  style: TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 18,
+                    fontWeight: AppTypography.black,
+                    color: BrandColors.taytayBlueDark,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  children: <Widget>[
+                    for (final String wire in verificationIdTypes)
+                      _ChoiceRow(
+                        rowKey: Key('id-type-$wire'),
+                        label: idTypeLabel(wire),
+                        selected: idTypeLabel(wire) == selectedLabel,
+                        onTap: () => Navigator.of(context).pop(wire),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One choice in a picker sheet: a 48 dp row, announced as a button in a
+/// group where one is selected.
+class _ChoiceRow extends StatelessWidget {
+  const _ChoiceRow({
+    required this.rowKey,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final Key rowKey;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
     return Semantics(
       button: true,
       selected: selected,
       inMutuallyExclusiveGroup: true,
-      label: barangay.name,
-      onTap: () => Navigator.of(context).pop(barangay),
+      label: label,
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
-        key: Key('barangay-${barangay.id}'),
-        onTap: () => Navigator.of(context).pop(barangay),
+        key: rowKey,
+        onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
@@ -2980,7 +3158,7 @@ class _BarangayRow extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: Text(
-                    barangay.name,
+                    label,
                     style: TextStyle(
                       fontFamily: AppTypography.fontFamily,
                       fontSize: 15,
@@ -3003,6 +3181,152 @@ class _BarangayRow extends StatelessWidget {
                   ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A text link on the terms step, drawn as a 48 dp button.
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({required this.label, required this.onPressed, super.key});
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      style: TextButton.styleFrom(
+        foregroundColor: BrandColors.taytayBlue,
+        minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        alignment: Alignment.centerLeft,
+        textStyle: const TextStyle(
+          fontFamily: AppTypography.fontFamily,
+          fontSize: 12,
+          fontWeight: AppTypography.black,
+        ),
+      ),
+      onPressed: onPressed,
+      child: Text(label),
+    );
+  }
+}
+
+/// The full text behind a terms-step link. When nothing is published, one
+/// plain sentence says so: the resident is not shown a placeholder as if it
+/// were the notice.
+class _LegalSheet extends StatelessWidget {
+  const _LegalSheet({
+    required this.title,
+    required this.markdown,
+    required this.pending,
+  });
+
+  final String title;
+  final Future<String?> markdown;
+  final String pending;
+
+  static const TextStyle _body = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 14,
+    height: 1.5,
+    color: Color(0xFF3A4560),
+  );
+
+  static const TextStyle _heading = TextStyle(
+    fontFamily: AppTypography.fontFamily,
+    fontSize: 15,
+    height: 1.4,
+    fontWeight: AppTypography.black,
+    color: BrandColors.taytayBlueDark,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: AppTypography.fontFamily,
+                    fontSize: 18,
+                    fontWeight: AppTypography.black,
+                    color: BrandColors.taytayBlueDark,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: FutureBuilder<String?>(
+                  future: markdown,
+                  builder: (BuildContext context, AsyncSnapshot<String?> snap) {
+                    if (snap.connectionState != ConnectionState.done) {
+                      return Semantics(
+                        liveRegion: true,
+                        label: 'Loading $title',
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: Center(child: CircularProgressIndicator()),
+                        ),
+                      );
+                    }
+                    final String text = snap.data?.trim() ?? '';
+                    if (text.isEmpty) {
+                      return Semantics(
+                        liveRegion: true,
+                        child: Text(pending, style: _body),
+                      );
+                    }
+                    return ListView(
+                      shrinkWrap: true,
+                      children: <Widget>[
+                        for (final NoticeLine line in parseNoticeMarkdown(text))
+                          Padding(
+                            padding: EdgeInsets.only(
+                              top: line.heading ? 12 : 6,
+                            ),
+                            child: Semantics(
+                              header: line.heading,
+                              child: Text.rich(
+                                TextSpan(
+                                  style: line.heading ? _heading : _body,
+                                  children: <InlineSpan>[
+                                    if (line.bullet) const TextSpan(text: '• '),
+                                    for (final NoticeRun run in line.runs)
+                                      TextSpan(
+                                        text: run.text,
+                                        style: run.strong
+                                            ? const TextStyle(
+                                                fontWeight: AppTypography.black,
+                                              )
+                                            : null,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),

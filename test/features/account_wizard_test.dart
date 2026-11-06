@@ -13,7 +13,11 @@ import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
+import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 import 'auth_screens_test.dart' show FakeBarangayDirectory, boot, goTo, reveal;
@@ -49,6 +53,33 @@ class _Picker implements DocumentPicker {
 
   @override
   bool supports(DocumentSource source) => true;
+}
+
+/// `GET /app/config` answering with one privacy notice.
+class _Bootstrap implements PlatformRepository {
+  const _Bootstrap(this.notice);
+
+  final PrivacyNotice notice;
+
+  @override
+  Future<Result<ServiceHealth>> checkHealth() async => const Ok<ServiceHealth>(
+    ServiceHealth(service: 'taytay', status: 'ok', apiVersion: '1'),
+  );
+
+  @override
+  Future<Result<AppBootstrap>> loadBootstrap() async => Ok<AppBootstrap>(
+    AppBootstrap(
+      service: '',
+      apiVersion: '',
+      timezone: 'Asia/Manila',
+      channel: 'citizen-mobile',
+      defaultPageSize: 25,
+      minimumVersion: '',
+      features: FeatureFlags.none,
+      support: SupportContact.none,
+      privacyNotice: notice,
+    ),
+  );
 }
 
 Future<void> _chooseBarangay(WidgetTester tester, String id) async {
@@ -91,6 +122,14 @@ Future<void> _createAccount(WidgetTester tester) async {
   await _tapText(tester, 'Continue');
   await _fillAccount(tester);
   await _tapText(tester, 'Create my account');
+}
+
+/// Account, then the email code, which leaves the wizard on terms.
+Future<void> _toTerms(WidgetTester tester) async {
+  await _createAccount(tester);
+  await tester.enterText(find.byKey(const Key('email-code-field')), '482190');
+  await tester.tap(find.text('Confirm email'));
+  await tester.pumpAndSettle();
 }
 
 const String _agree =
@@ -513,5 +552,160 @@ void main() {
     expect(find.textContaining('operator'), findsNothing);
     // No profile and no code without an account.
     expect(auth.calls, <String>['createAccount']);
+  });
+
+  group('resending the email code', () {
+    testWidgets('waits out retry_after as a disabled 48 dp button', (
+      tester,
+    ) async {
+      final auth = FakeAuthRepository();
+      await boot(tester, auth: auth);
+      await goTo(tester, 'register');
+      await _createAccount(tester);
+
+      final Finder resend = find.byKey(const Key('email-code-resend'));
+      expect(tester.widget<TextButton>(resend).onPressed, isNull);
+      expect(
+        find.textContaining(RegExp(r'^Resend in [01]:\d\d$')),
+        findsOneWidget,
+      );
+      final Size size = tester.getSize(resend);
+      expect(size.height, greaterThanOrEqualTo(48));
+      expect(size.width, greaterThanOrEqualTo(48));
+
+      await tester.tap(resend, warnIfMissed: false);
+      await tester.pumpAndSettle();
+      final int sends = auth.calls
+          .where((String call) => call == 'sendEmailCode')
+          .length;
+      expect(sends, 1);
+    });
+
+    testWidgets('sends a new code once the wait is over', (tester) async {
+      final auth = FakeAuthRepository()
+        ..emailCodeOutcomes.add(
+          const Ok<CodeAcceptance>(
+            CodeAcceptance(accepted: true, retryAfterSeconds: 0),
+          ),
+        );
+      await boot(tester, auth: auth);
+      await goTo(tester, 'register');
+      await _createAccount(tester);
+
+      final Finder resend = find.byKey(const Key('email-code-resend'));
+      expect(find.text('Resend code'), findsOneWidget);
+      expect(tester.widget<TextButton>(resend).onPressed, isNotNull);
+
+      await tester.tap(resend);
+      await tester.pumpAndSettle();
+
+      expect(auth.calls, <String>[
+        'createAccount',
+        'saveRegistrationProfile',
+        'sendEmailCode',
+        'sendEmailCode',
+      ]);
+      // The new code starts the server's wait again.
+      expect(find.text('Resend code'), findsNothing);
+      expect(tester.widget<TextButton>(resend).onPressed, isNull);
+      expect(find.text('Enter the 6-digit code'), findsOneWidget);
+    });
+  });
+
+  group('the full Terms and Privacy Notice', () {
+    testWidgets('Terms says it is not published, and Privacy shows the text', (
+      tester,
+    ) async {
+      await boot(
+        tester,
+        auth: FakeAuthRepository(),
+        platform: const _Bootstrap(
+          PrivacyNotice(
+            version: '2026-11',
+            bodyMarkdown: '## Ano ang kinokolekta\n\n- Ang iyong **pangalan**.',
+          ),
+        ),
+      );
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+      expect(find.text('Your data, protected'), findsOneWidget);
+
+      final Finder terms = find.byKey(const Key('terms-read-full'));
+      await reveal(tester, terms);
+      expect(tester.getSize(terms).height, greaterThanOrEqualTo(48));
+      await tester.tap(terms);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('The full Terms of Use will be available soon'),
+        findsOneWidget,
+      );
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('privacy-read-full')));
+      await tester.pumpAndSettle();
+      expect(find.text('Ano ang kinokolekta'), findsOneWidget);
+      expect(find.textContaining('Ang iyong pangalan.'), findsOneWidget);
+      expect(find.textContaining('will be available soon'), findsNothing);
+    });
+
+    testWidgets('the server placeholder is not shown as the notice', (
+      tester,
+    ) async {
+      await boot(
+        tester,
+        auth: FakeAuthRepository(),
+        platform: const _Bootstrap(
+          PrivacyNotice(version: 'placeholder', bodyMarkdown: 'TODO notice'),
+        ),
+      );
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+
+      final Finder privacy = find.byKey(const Key('privacy-read-full'));
+      await reveal(tester, privacy);
+      await tester.tap(privacy);
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('The full Privacy Notice will be available soon'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('TODO notice'), findsNothing);
+    });
+  });
+
+  testWidgets('the ID type offers every kind the API accepts', (tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    await boot(tester, auth: FakeAuthRepository(), documentPicker: _Picker());
+    await goTo(tester, 'register');
+    await _toTerms(tester);
+    await _tapText(tester, _agree);
+    await _tapText(tester, _consent);
+    await _tapText(tester, 'Continue');
+    expect(find.text('Upload a valid government ID'), findsOneWidget);
+    expect(find.text('PhilSys National ID'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('id-type-picker')));
+    await tester.pumpAndSettle();
+    for (final String wire in verificationIdTypes) {
+      final Finder row = find.byKey(Key('id-type-$wire'));
+      expect(row, findsOneWidget, reason: wire);
+      expect(tester.getSize(row).height, greaterThanOrEqualTo(48));
+      expect(
+        tester.getSemantics(row),
+        isSemantics(
+          label: idTypeLabel(wire),
+          isButton: true,
+          hasTapAction: true,
+        ),
+        reason: wire,
+      );
+    }
+    await tester.tap(find.byKey(const Key('id-type-drivers_license')));
+    await tester.pumpAndSettle();
+
+    expect(find.text("Driver's license"), findsOneWidget);
+    expect(find.text('PhilSys National ID'), findsNothing);
+    semantics.dispose();
   });
 }

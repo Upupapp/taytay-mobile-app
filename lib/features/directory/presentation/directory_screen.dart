@@ -271,9 +271,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
       if (!mounted || office == null) return;
       setState(() {
         _office = office;
-        _topic = office.topics.isNotEmpty
-            ? office.topics.first
-            : (office.topic ?? '');
+        _topic = office.composeTopic;
       });
     });
   }
@@ -352,14 +350,14 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
       setState(() => _error = 'Write a message before sending.');
       return;
     }
-    if (_topic.trim().isEmpty) {
-      setState(() => _error = 'Choose a topic before sending.');
-      return;
-    }
+    // An office from `GET /offices` publishes no topics, and `POST /threads`
+    // still needs a subject. Asking the resident to choose from an empty list
+    // blocked every first message, so the subject falls back to fixed words.
+    final String chosen = _topic.trim();
     final AppDependencies dependencies = AppDependencies.of(context);
     final result = await dependencies.officeMessagingRepository.send(
       officeId: office.wireId,
-      topic: _topic,
+      topic: chosen.isEmpty ? Office.generalTopic : chosen,
       body: body,
       file: _file,
     );
@@ -432,7 +430,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
               office: _office,
               messageController: _message,
               selectedTopic: _topic,
-              onTopic: _pickTopic,
+              onTopic: (_office?.offersTopics ?? false) ? _pickTopic : null,
               onAttach: _attach,
               attachmentLabel: _file?.fileName,
               onBack: () => _back(context),

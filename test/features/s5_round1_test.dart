@@ -79,6 +79,19 @@ Map<String, Object?> _officeJson() => <String, Object?>{
   'updated_at': '2026-08-16T02:00:00Z',
 };
 
+/// Answers `GET offices/treasury` with a live office, which publishes no
+/// topics, and fails everything else as offline.
+class _OfficeOnly implements ApiTransport {
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    paths.add(request.path);
+    if (request.path == 'offices/treasury') return _ok(_officeJson());
+    return const Err<ApiHttpResponse>(NetworkFailure());
+  }
+}
+
 class _RecordingMessaging implements OfficeMessagingRepository {
   Result<OfficeMessage> sendResult = Ok<OfficeMessage>(
     OfficeMessage(
@@ -236,6 +249,8 @@ Future<({AppDependencies dependencies, _RecordingMessaging messaging})> _boot(
   String location = '/services',
   _RecordingMessaging? messaging,
   ResidentProfileRepository? profile,
+  AppConfig? config,
+  ApiTransport? transport,
 }) async {
   tester.view.physicalSize = const Size(400, 1400);
   tester.view.devicePixelRatio = 1;
@@ -255,7 +270,8 @@ Future<({AppDependencies dependencies, _RecordingMessaging messaging})> _boot(
     );
   }
   final base = AppDependencies.build(
-    config: _mockConfig(),
+    config: config ?? _mockConfig(),
+    transport: transport,
     secrets: secrets,
     sessionStore: sessionStore,
     localAuthenticator: const UnavailableLocalAuthenticator(),
@@ -527,6 +543,82 @@ void main() {
     expect(booted.messaging.sent.single.body, 'Saan po ang pila?');
     expect(booted.messaging.sent.single.body, isNot(contains('Magandang')));
     expect(find.text('Message sent'), findsWidgets);
+  });
+
+  testWidgets('a live office with no topics sends under a fixed subject', (
+    tester,
+  ) async {
+    final _OfficeOnly transport = _OfficeOnly();
+    final booted = await _boot(
+      tester,
+      location: '/offices/treasury/message',
+      config: _liveConfig(),
+      transport: transport,
+    );
+
+    expect(transport.paths, contains('offices/treasury'));
+    expect(find.text(Office.generalTopic), findsOneWidget);
+    // Nothing to choose, so the field opens no picker.
+    await tester.tap(find.byKey(const Key('directory-topic')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+
+    await tester.enterText(
+      find.byKey(const Key('directory-message-field')),
+      'Saan po ang pila?',
+    );
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose a topic before sending.'), findsNothing);
+    expect(booted.messaging.sent, hasLength(1));
+    expect(
+      booted.messaging.sent.single.officeId,
+      '11111111-1111-1111-1111-111111111111',
+    );
+    // The staff inbox lists the subject, so it never carries the message.
+    expect(booted.messaging.sent.single.topic, Office.generalTopic);
+    expect(booted.messaging.sent.single.body, 'Saan po ang pila?');
+  });
+
+  test('the compose subject prefers a published topic', () {
+    Office office({String? topic, List<String> topics = const <String>[]}) =>
+        Office(
+          id: 'x',
+          shortName: 'X',
+          name: 'X',
+          listName: 'X',
+          category: '',
+          listLine: '',
+          icon: OfficeIcon.building2,
+          keywords: const <String>[],
+          eyebrow: '',
+          summary: '',
+          heroAsset: '',
+          heroFocus: 0.5,
+          insetAsset: '',
+          representative: false,
+          credit: '',
+          messageable: true,
+          callLabel: 'Call',
+          callIsEmergency: false,
+          phone: '',
+          directionsQuery: '',
+          facts: const <OfficeFact>[],
+          services: const <OfficeServiceLine>[],
+          topic: topic,
+          topics: topics,
+        );
+
+    expect(office().composeTopic, Office.generalTopic);
+    expect(office().offersTopics, isFalse);
+    expect(office(topic: '  ').composeTopic, Office.generalTopic);
+    expect(office(topic: 'Cedula').composeTopic, 'Cedula');
+    expect(
+      office(topics: <String>['Permit', 'Renewal']).composeTopic,
+      'Permit',
+    );
+    expect(office(topics: <String>['Permit']).offersTopics, isTrue);
   });
 
   testWidgets('the office list filters by name and by service', (tester) async {

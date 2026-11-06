@@ -859,8 +859,11 @@ class _Hero extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(slide.title, style: _heroTitle),
-                  const SizedBox(height: 4),
-                  Text(slide.body, style: _heroBody),
+                  // A slide from a `GET /home` banner has no sentence.
+                  if (slide.body.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: 4),
+                    Text(slide.body, style: _heroBody),
+                  ],
                 ],
               ),
             ),

@@ -1223,13 +1223,16 @@ class _ComposeBody extends StatelessWidget {
                     style: _fieldInk,
                   ),
                 ),
-                const TaytayIcon(
-                  icon: TaytayIcons.chevronDown,
-                  size: 18,
-                  color: BrandColors.chevron,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                ),
+                // No chevron when there is nothing to choose: the field then
+                // only says what the subject will be.
+                if (office.offersTopics)
+                  const TaytayIcon(
+                    icon: TaytayIcons.chevronDown,
+                    size: 18,
+                    color: BrandColors.chevron,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                  ),
               ],
             ),
           ),
