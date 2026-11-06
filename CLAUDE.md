@@ -254,7 +254,8 @@ scaling and high-contrast settings without per-widget work.
   There is no in-app environment switcher — a build that can be re-pointed after shipping
   has no auditable API target, and it is how staging data reaches a public release.
 * `--dart-define=TAYTAY_API_BASE_URL` supplies the API base URL. A dev debug build
-  may omit it and uses the emulator host `http://10.0.2.2:8000/api/v1`. Staging
+  may omit it and uses the emulator host `http://10.0.2.2:3000/api/v1` (the Node API's
+  port; 8000 was the retired Laravel API's). Staging
   and production have no baked-in host. A release build without this define
   refuses to start. The value is still configuration, not a secret.
 * **Mocks are a second compile-time flag, and only for a dev debug build.**
