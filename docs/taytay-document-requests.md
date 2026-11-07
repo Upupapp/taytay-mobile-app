@@ -4,9 +4,11 @@ A verified resident asks a municipal office for a document it issues (a
 certificate, a certified copy) and follows the request to the counter. Code and
 wire names say **issuance**; every screen says **document request**.
 
-Implemented in `lib/features/issuance/`, against backend `2fd0566`
-(`docs/api/endpoints.md`, "Document requests (issuance)"). The Node export in
-`docs/integration/taytay-node-openapi.json` was refreshed from that commit.
+Implemented in `lib/features/issuance/`, against backend `2fd0566`, with the
+follow-ups of `0d1cb14` (idempotency key, `VERIFICATION_REQUIRED`, `accepts` on
+the request) (`docs/api/endpoints.md`, "Document requests (issuance)"). The
+Node export in `docs/integration/taytay-node-openapi.json` was refreshed from
+`84c7159`.
 
 ---
 
@@ -25,8 +27,12 @@ reads the catalogue and the type page with a notice above them ("Sign in to
 request a document" or "Verify your account first"), and the "Request this
 document" button is not offered. A typed or linked address to the form is sent
 to `/verification` by the route guard. The server refuses an unverified submit
-with `403` whatever the app shows, and the form then says, in this app's words,
-that only verified residents can send a request and that nothing was sent.
+with `403 VERIFICATION_REQUIRED` whatever the app shows, and the form then says,
+in this app's words, that only verified residents can send a request, that
+nothing was sent, and offers "Go to verification". A plain `403 FORBIDDEN` is a
+different refusal (a staff account, for one): the form says "Not available for
+this account" and that nothing was sent, and offers no verification, which
+would not help. Neither shows the server's text.
 
 ## 2. Entry points
 
@@ -35,15 +41,23 @@ that only verified residents can send a request and that nothing was sent.
 - The account centre (guest and unverified, and the resident record): a
   "Request documents" row opens the catalogue, with the subtitle "Sending a
   request needs a verified account" for anybody not verified.
+- The verified My Account home (`08-01`): a "Request documents" row
+  ("Certificates and copies from offices"), first in the second card, pushes
+  `/documents`, so back returns to My Account.
 - The catalogue links to My document requests for a signed-in resident.
 - The `issuance_request_updated` notification opens the request it names.
 
-**Not added, and why.** The verified My Account home (`08-01`) is a fixed
-frame: two menu cards and a sign-out card that fills what is left. An eighth
-row overflows it (the route walk in `foundation_routes_test.dart` caught 9 px
-at 400×900, and a 390×844 phone has less). Home's four quick-action tiles are
-the approved design too. A direct row for verified residents needs a design
-decision: a scrolling account home, or a row traded for this one.
+**The account home scrolls.** It was a fixed frame: two menu cards and a
+sign-out card that fills what is left, and the eighth row overflowed it (9 px
+at 400×900 in the route walk). It is now a `CustomScrollView`: the cards are a
+sliver list and the sign-out card a `SliverFillRemaining`, so at the design’s
+size it still fills the rest of the page, and when nothing is left it keeps its
+own height and the page scrolls. Past 1× text the home’s fixed 1× line boxes
+would cut text short, so the name, the location and each row’s title and
+subtitle reflow into ordinary wrapping text, and so does the Verified pill. If
+the record cannot be loaded, its "Verified by Taytay LGU" line wraps too
+instead of running off a small phone. At 1× nothing moves: the 08 DOM boxes
+still match. Home’s four quick-action tiles are unchanged.
 
 ## 3. What the screens say
 
@@ -93,9 +107,11 @@ A part is sent under its requirement `code` with the file name
 routinely carries a person's name or a document number.
 
 A resubmission takes a note, files, or both, and says that a new file is kept
-beside the old one. Its upload policy is read from the type
-(`GET issuance-types/{id}`); a retired type falls back to the labelled
-`UploadPolicy.fallback`.
+beside the old one. Its upload policy is the request’s own `accepts` block
+(`mime_types`, `max_bytes`; 10 MB), which the server keeps after the type is
+retired. Only a request from a server older than `0d1cb14`, with no block, has
+its type read for one (`GET issuance-types/{id}`), and the labelled
+`UploadPolicy.fallback` (8 MB) is the last resort.
 
 The resident may view a photo they sent (`.../attachments/{id}/content`). The
 bytes live in the dialog and go when it closes. **A PDF is listed but not
@@ -107,7 +123,20 @@ opened**: the app has no PDF viewer and the binary path only reads images.
 - Offline, a load says "You are offline"; a send says "Nothing was sent. Your
   answers are still here."
 - A timeout on a send does **not** say nothing was sent: it cannot know. It
-  asks the resident to open My document requests before trying again.
+  says a second try will not send twice, or that they can check My document
+  requests first.
+- **A retried send files once.** Submit, resubmit and cancel carry an
+  `idempotency_key` in the body (a multipart field for the two that send
+  files): a version 4 UUID minted when the resident presses send
+  (`IssuanceSendKey`) and the same on every retry of that act, including the
+  transport’s own automatic retry after a dropped connection. The server
+  answers a repeat with the request as it stands. Changing the purpose, a file
+  or the note makes it a new act with a new key; success lets the key go.
+- A `409` on a submit can only mean a key was reused for other content, which
+  is a fault in this app. The resident reads "It did not go through" and is
+  asked to check My document requests; the key is dropped so the next press is
+  a fresh one. Nothing about it is logged. A `409` on a cancel or a resubmit
+  still says the request has moved on.
 - Every send failure is this app's own copy, chosen by the failure kind
   (`issuance_failure_copy.dart`). The server's `message` never reaches a
   screen. A `422` keyed by requirement code marks those files; it does not
@@ -133,11 +162,24 @@ opened**: the app has no PDF viewer and the binary path only reads images.
 - `test/features/issuance_domain_test.dart`: labels, fee and time formatting,
   purpose and file checks, catalogue grouping and search, redaction.
 - `test/features/issuance_api_repository_test.dart`: every route against a
-  scripted transport, the multipart parts and file names, `201` only, `403`
-  and `422`, cursor paging, missing flags, attachment bytes, and the
-  notification's deep link.
+  scripted transport, the multipart parts and file names, `idempotency_key` in
+  each body, `201` only, `VERIFICATION_REQUIRED` and `FORBIDDEN`, `422`, the
+  request’s `accepts` and its absence, cursor paging, missing flags, attachment
+  bytes, and the notification's deep link.
+- `test/features/issuance_retry_test.dart`: the key is a v4 UUID, is reused
+  across a timeout and a lost connection until the request is filed, is new
+  after an edit, and a `409` reads generically and drops the key.
 - `test/features/issuance_screens_test.dart`: the gate as guest, unverified and
-  verified; form validation; a refused file; send success, `403` and offline;
-  the list, the needs-info timeline and resubmit, claim details, and cancel.
+  verified; form validation; a refused file; send success, `VERIFICATION_REQUIRED`
+  (with the way to verification), plain `FORBIDDEN` (without), and offline; the
+  list, the needs-info timeline and resubmit against the request’s `accepts`
+  (a 9 MB file, no type read), claim details, cancel, and a cancel retried
+  after a timeout under the same key.
+- `test/core/foundation_routes_test.dart` walks My Account at 400×900 and opens
+  the catalogue from its row. `test/features/account_home_test.dart` places the
+  row, opens the catalogue and comes back; checks the sign-out card still fills
+  the page at 1×; and at 1.3×, 1.6× and 2× text on a 320×568 phone checks that
+  the home scrolls, the row reads whole, sign-out stays a full target, the
+  catalogue opens, and nothing overflows.
 - `test/recording/issuance_frames_test.dart` (skipped by default) draws the
   owner's frames from sample data.
