@@ -2039,6 +2039,107 @@ composer is; it adds no Filipino string.
 
 ---
 
+## D-191 — Events run on the Node API: a key in the body, an answer the app cannot read is never a blank, and a lost answer is "not confirmed"
+
+**Status: settled.** Category: contract / errors / idempotency. Recorded
+2026-11-08, on taytay-backend `580acbb` (backend DL-192), under Ella's standing
+"decide best practice" instruction.
+
+**Context.** `EventApiRepository` declined every method with
+`BackendGap.absentOnNodeContract`. The backend now serves `GET /events`
+(`scope` `upcoming`, `past` or `registered`, `limit` 1–50, a cursor),
+`GET /events/{id}` with its `registration_form`,
+`POST /events/{id}/registrations` and
+`POST /events/{id}/registrations/{registration_id}/cancel`. The registration
+controller minted its key with `generateRequestId()`, a `tay-…` string the API
+refuses, and its failure copy said "nothing was registered" for every failure,
+timeouts included. `UnsentNotice` said "Taytay LGU does not have {what} …
+Nothing was filed, so sending again does not create a duplicate." That is untrue
+after a send whose answer was lost, and the second clause holds only for a send
+that keeps its idempotency key.
+
+**Chosen.**
+
+1. Every method calls its route and decodes explicitly. A success the app cannot
+   read is a `ContractFailure`, never an empty list or a blank outcome: `data` of
+   the wrong shape, an event with no id or title, a registration with no event
+   or state, a page with no pagination block or one promising more with no
+   cursor, and an outcome this build does not know (it may be a place the
+   resident holds). Unknown fields are ignored.
+2. No seats-left number: `capacity` is the published total and
+   `EventCapacity.remaining` stays null on every path. No share link and no
+   waitlist position are sent, so none is held. `category_label` is shown as
+   sent; an empty description falls back to the summary; the contact is one
+   line from the office's published name, office and phone; a cover is drawn
+   only from an `https` link. `not_required` reads as an unknown state, so no
+   register control is offered. The office's `words` are not shown: every
+   sentence is this app's own, chosen by the outcome.
+3. The list and the event are public reads that carry the resident's bearer
+   when there is one, so each row says whether they hold a place. "My events"
+   needs the account. The cursor is kept per scope, page 1 starts again, and
+   nothing is asked past the last page.
+4. `registered`, `waitlisted`, `full` and `closed` are outcomes, and the capacity
+   race is one of them. `403 VERIFICATION_REQUIRED`, `403 FORBIDDEN`, `404`,
+   `409` and `422` are `refused`, in the app's own words. A `401`, a timeout, a
+   lost connection, a `5xx`, a `429` and an unreadable answer stay failures.
+5. Registering and cancelling send `idempotency_key` in the body only, never as
+   a header: the API's CORS policy allows four request headers. Unlike D-190,
+   the transport therefore does not repeat these sends by itself; the resident
+   does, with the same key. The key is a version 4 UUID from `SendKey`: the
+   controller takes one per attempt and the detail screen one per place given
+   up; an answer lets it go, a failure keeps it.
+6. A send that may have arrived reads "We could not confirm that your
+   registration was received. Trying again is safe: you will not be registered
+   twice.", headed "Registration not confirmed". A later retry that fails before
+   sending keeps that sentence, because the earlier send may have registered the
+   resident. D-188 holds an unknown across the transport's own retries, not
+   across the resident's. "Nothing was registered" is said only for a connection
+   that failed before sending with no earlier doubt, and for `full` and
+   `closed`, which the server answers only when the resident holds no place.
+   Giving up a place that may have gone through reads "We could not confirm
+   that your place was given up. Trying again is safe: it will not be done
+   twice." and never "You still have your place". A `409` says the place can no
+   longer be given up in the app.
+7. `UnsentNotice` is headed "Not confirmed yet" and says "We could not confirm
+   that Taytay LGU has {what}. Everything you typed is still on this phone." It
+   adds "Sending it again is safe: it will not be filed twice." only when the
+   caller passes `resendIsSafe`. In Filipino: "Hindi pa kumpirmado", "Hindi
+   namin makumpirma na nasa Taytay LGU na ang {what}. Nandito pa sa telepono mo
+   ang lahat ng na-type mo." and "Ligtas itong ipadala muli: hindi ito
+   maisusumite nang dalawang beses." The Filipino needs review by a native
+   speaker. No screen shows the notice today; event registration has its own
+   outcome screen.
+8. The one model addition is `LguEvent.isCalledOff`, true for status
+   `cancelled`. The server keeps a called-off event in Upcoming until its date
+   passes. Without it, the row would read "Registration closed" and look like
+   an event still going ahead, so the row reads "Called off by Taytay LGU" and
+   the page opens with a warning that says the same.
+9. A resident who gave up their place may register again while registration is
+   `open`. The register control checks for an active registration rather than
+   any registration, because the server returns the cancelled one as
+   `my_registration`.
+10. Events stays routed and off the bar (D-178). `event_registration_updated`
+    notifications now open the event. `browseEvents` is `available`. The four
+    routes are declared in `backend_routes.dart`, and the Node export is
+    re-vendored whole from `580acbb`; the staff routes under `/office/events`
+    came with it and are not called.
+
+**Rejected.** Sending the key as an `Idempotency-Key` header too, as D-190 does
+for messages: the API's CORS policy allows four request headers, and the
+transport's own retry is not needed for a send the resident can retry safely.
+Adding a field for the office's `words`: it is a sentence the screens would
+have to show beside the app's own, and Article 5.5 keeps resident copy the
+app's. Adding `notRequired` to `EventRegistrationState` so a walk-in event reads
+"No registration needed" instead of "Ask the office about registering": a
+model change for wording, left to the owner.
+
+**Why.** "Could not confirm" is true whenever an answer was lost, and "trying
+again is safe" is true only while the retry carries the first key, which is
+what `SendKey` keeps. A blank where an unreadable answer was tells a resident
+there are no events, or that they have no place, and both are guesses.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2233,5 +2334,6 @@ composer is; it adds no Filipino string.
 | D-188 | "Nothing was sent" only when the connection failed before the request left the phone. The transport sets `NetworkFailure.mayHaveArrived`, `AppFailure.outcomeUnknown` names the uncertain cases, and a retried write keeps the earlier unknown. Where a retry is safe, an unknown outcome says it could not be confirmed and that sending again is safe | errors / honesty | settled |
 | D-189 | The offline banner says the app cannot get through and that typed text is kept. It makes no claim about what was sent: a timeout or a connection dropped after sending may have reached the office, and each send says for itself what happened to it | errors / honesty | settled |
 | D-190 | Starting a thread and replying send `idempotency_key` (backend `a7a1884`). `SendKey`, promoted from issuance, binds the key to the office or thread, subject, words and attachment: the same message keeps it across retries, a changed one gets a new one, and a `409` is never retried. An unknown outcome says sending again is safe and will not post twice | errors / idempotency | settled |
+| D-191 | Events run on the Node API (backend `580acbb`). Every method decodes explicitly, and an answer the app cannot read is a `ContractFailure`, never a blank. No seats-left number. `full` and `closed` are outcomes, the four refusals are `refused`, and a lost answer is "not confirmed" with trying again safe, even after a retry that fails before sending. `idempotency_key` in the body only, a `SendKey` UUID. `UnsentNotice` says "not confirmed" and promises no duplicate only for a keyed send. One model addition, `LguEvent.isCalledOff` | contract / idempotency | settled |
 
-**190 decisions — 186 settled, 4 provisional.**
+**191 decisions — 187 settled, 4 provisional.**

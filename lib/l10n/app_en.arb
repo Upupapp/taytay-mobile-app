@@ -48,19 +48,23 @@
   "@networkUnreachableMessage": {
     "description": "Offline banner body. Says only what the app knows about the connection and never what happened to a send: the failures that raise the banner include timeouts and connections that dropped after the request left the phone, which the office may already hold. Each send says for itself whether it went (D-188, D-189). The Filipino text needs review by a native speaker."
   },
-  "unsentTitle": "Not sent yet",
+  "unsentTitle": "Not confirmed yet",
   "@unsentTitle": {
-    "description": "Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it."
+    "description": "Heading for work the resident finished that the office has not confirmed it has. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it. Not 'not sent' either: a send that timed out may have reached the office (D-188, D-191). The Filipino text needs review by a native speaker."
   },
-  "unsentMessage": "Taytay LGU does not have {what}. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.",
+  "unsentMessage": "We could not confirm that Taytay LGU has {what}. Everything you typed is still on this phone.",
   "@unsentMessage": {
-    "description": "Body for unsent work.",
+    "description": "Body for work whose send failed. True whether the send never left the phone or its answer was lost, so it never says nothing was filed (D-188, D-191). The Filipino text needs review by a native speaker.",
     "placeholders": {
       "what": {
         "type": "String",
         "example": "your application"
       }
     }
+  },
+  "unsentResendSafe": "Sending it again is safe: it will not be filed twice.",
+  "@unsentResendSafe": {
+    "description": "Added after unsentMessage only when the send keeps its idempotency key for the retry, the one case where a second send cannot file twice (D-191). The Filipino text needs review by a native speaker."
   },
   "staleContentMessage": "Showing what was saved on {timestamp}. It may have changed.",
   "@staleContentMessage": {

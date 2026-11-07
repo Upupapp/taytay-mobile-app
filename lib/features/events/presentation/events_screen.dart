@@ -368,7 +368,13 @@ class _RegistrationSummary extends StatelessWidget {
     final remaining = event.capacity.remaining;
 
     final parts = <String>[
-      if (state != null) registrationStateLabel(state),
+      // A called-off event stays listed until its date passes. Its row says
+      // so in words, ahead of "Registration closed", which alone would read
+      // as an event that is still going ahead.
+      if (event.isCalledOff)
+        calledOffLabel
+      else if (state != null)
+        registrationStateLabel(state),
       // Only when the server said so. The app never subtracts a registered
       // count from a capacity to produce this — a number computed from a stale
       // page tells a resident there is room when there is not.
@@ -494,6 +500,9 @@ class _EventsSkeleton extends StatelessWidget {
 /// One switch for the card and the detail screen, for the same reason the
 /// request-status copy has one: two switches over an enum drift, and a resident
 /// then reads two different words for one state.
+/// What a called-off event is labelled, in its list row and on its page.
+const String calledOffLabel = 'Called off by Taytay LGU';
+
 String registrationStateLabel(EventRegistrationState? state) => switch (state) {
   EventRegistrationState.notOpen => 'Registration not open yet',
   EventRegistrationState.open => 'Registration open',

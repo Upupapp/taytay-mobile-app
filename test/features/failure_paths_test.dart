@@ -280,7 +280,20 @@ void main() {
           apiClient: ApiClient(
             config: config(),
             transport: _Scripted(<Result<ApiHttpResponse>>[
-              ok(<String, Object?>{'id': 'reg-1', 'state': 'registered'}),
+              ok(<String, Object?>{
+                'outcome': 'registered',
+                'words': 'You are registered.',
+                'registration': <String, Object?>{
+                  'id': 'reg-1',
+                  'event_id': 'e-1',
+                  'reference': 'ER-2026-000001',
+                  'state': 'registered',
+                  'registered_at': '2026-09-01T00:00:00Z',
+                  'attendance': null,
+                  'can_cancel': true,
+                  'instructions': null,
+                },
+              }, status: 201),
             ]),
             accessTokenProvider: () async => 'tok',
           ),
@@ -289,7 +302,13 @@ void main() {
           apiClient: ApiClient(
             config: config(),
             transport: _Scripted(<Result<ApiHttpResponse>>[
-              apiError(409, 'CONFLICT'),
+              // The last place went inside the server's lock on the event's
+              // row. Losing the race is a 200 with an outcome, not an error.
+              ok(<String, Object?>{
+                'outcome': 'full',
+                'words': 'Every place was taken.',
+                'registration': null,
+              }),
             ]),
             accessTokenProvider: () async => 'tok',
           ),
@@ -313,17 +332,22 @@ void main() {
               ],
             );
 
-        // Event registration is not on the Node contract. Neither tap
-        // confirms a place.
+        // Backend `580acbb` serves registration (D-191). One tap holds the
+        // place; the other reads a calm outcome rather than a fault.
         expect(
-          results.every((Result<RegistrationAttempt> r) => r.isErr),
+          results.every((Result<RegistrationAttempt> r) => r.isOk),
           isTrue,
         );
         expect(
-          results.every(
-            (Result<RegistrationAttempt> r) => r.failureOrNull is ServerFailure,
-          ),
-          isTrue,
+          results.first.valueOrNull?.outcome,
+          RegistrationOutcome.registered,
+        );
+        expect(results.first.valueOrNull?.isHeld, isTrue);
+        expect(results.last.valueOrNull?.outcome, RegistrationOutcome.full);
+        expect(results.last.valueOrNull?.isHeld, isFalse);
+        expect(
+          results.last.valueOrNull?.residentMessage.toLowerCase(),
+          isNot(contains('went wrong')),
         );
       },
     );

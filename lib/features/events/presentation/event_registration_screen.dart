@@ -639,7 +639,12 @@ class _Outcome extends StatelessWidget {
         RegistrationOutcome.full => 'This event is full',
         RegistrationOutcome.closed => 'Registration has closed',
         RegistrationOutcome.refused => 'Taytay LGU could not register you',
-        RegistrationOutcome.couldNotSend => 'Not registered',
+        // A send whose answer was lost may have registered the resident, so
+        // its heading never says they are not registered (D-188, D-191).
+        RegistrationOutcome.couldNotSend =>
+          controller.isUnconfirmed
+              ? 'Registration not confirmed'
+              : 'Not registered',
       },
       kind: switch (attempt.outcome) {
         RegistrationOutcome.registered ||

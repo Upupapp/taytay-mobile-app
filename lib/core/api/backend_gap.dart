@@ -133,9 +133,10 @@ enum BackendGap {
   ///
   /// The forward contract is the Node API vendored at
   /// `docs/integration/taytay-node-openapi.json`. Routes that the historical
-  /// PHP pin served and this spec does not — OTP, sessions, events, programmes,
+  /// PHP pin served and this spec does not — OTP, sessions, programmes,
   /// credentials, assistance intake, household, notification devices — decline
-  /// here. The screen says the office cannot do that from the app yet.
+  /// here. The screen says the office cannot do that from the app yet. Events
+  /// left this list when backend `580acbb` served them (D-191).
   absentOnNodeContract(
     finding: 'F32',
     missing: 'a citizen route in the Taytay LGU IDS OpenAPI',

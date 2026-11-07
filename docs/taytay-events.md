@@ -6,6 +6,14 @@ where — without this app inventing a link, a place or a number.
 Implemented in `lib/features/events/`, `lib/core/time/manila_time.dart` and
 `lib/core/links/`.
 
+**Served by the Node API since 8 November 2026** (backend `580acbb`, D-191).
+`EventApiRepository` reads `GET /events` by scope (`upcoming`, `past`,
+`registered`) with a cursor, and `GET /events/{id}`. The event's `capacity` is
+the published total and `remaining` stays null: no seats-left number is sent or
+computed. A called-off event stays in Upcoming until its date passes, and its
+row and page say "Called off by Taytay LGU". An answer the app cannot read is a
+contract failure, never "no events".
+
 ---
 
 ## 1. Asia/Manila, stated
@@ -130,7 +138,8 @@ repository method that could express one.
   directions only for a safe link; the unavailable service distinguishes refused
   from absent
 * visibility: published shown, withdrawn hidden, unrecognised shown; past decided
-  by the end; capacity stated never computed; the shipped repository declines
+  by the end; capacity stated never computed; a called-off event is shown and
+  says so on its row and its page
 * controller: non-visible events filtered; scope change refetches; re-selecting
   the same scope does not; a page failure keeps the list; first-page failure is
   distinct from empty

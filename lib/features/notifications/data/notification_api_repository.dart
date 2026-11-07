@@ -326,11 +326,15 @@ class NotificationApiRepository
   ///
   /// `issuance_request_updated` carries the request's id in `subject_id`, and
   /// tapping it opens that request; the screen fetches the detail itself under
-  /// the live session. Types not listed here keep their row and open nothing.
+  /// the live session. `event_registration_updated` carries the event's id —
+  /// the office called it off or moved the resident's place — and opens the
+  /// event, which shows where they stand now (D-191). Types not listed here
+  /// keep their row and open nothing.
   static String? _deepLinkTarget(String? type, String? subjectId) {
     if (subjectId == null) return null;
     return switch (type) {
       'issuance_request_updated' => 'issuance_request',
+      'event_registration_updated' => 'event',
       _ => null,
     };
   }

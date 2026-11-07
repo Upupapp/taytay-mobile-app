@@ -16,6 +16,7 @@ import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
+import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/event_registration_controller.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -102,6 +103,10 @@ class ScriptedRegistrationRepository implements EventRepository {
   LguEvent? detail;
 
   Result<RegistrationAttempt>? registerOutcome;
+
+  /// Answers taken in order before [registerOutcome], for a run of attempts.
+  final List<Result<RegistrationAttempt>> registerQueue =
+      <Result<RegistrationAttempt>>[];
   Result<EventRegistration> cancelOutcome = Ok<EventRegistration>(
     registration(state: EventRegistrationState.cancelled),
   );
@@ -132,6 +137,7 @@ class ScriptedRegistrationRepository implements EventRepository {
     idempotencyKeys.add(idempotencyKey);
     submittedAnswers.add(answers);
     submittedConsents.add(consentKeys);
+    if (registerQueue.isNotEmpty) return registerQueue.removeAt(0);
     return registerOutcome ??
         Ok<RegistrationAttempt>(
           RegistrationAttempt(
@@ -401,6 +407,107 @@ void main() {
         controller.attempt?.residentMessage,
         contains('nothing was registered'),
       );
+      expect(controller.isUnconfirmed, isFalse);
+    });
+
+    test('the key is a version 4 UUID, as the Node API requires', () async {
+      final repository = ScriptedRegistrationRepository(
+        registrationForm: form(),
+      );
+      final controller = controllerFor(repository);
+      addTearDown(controller.dispose);
+      await controller.initialise();
+
+      await controller.submit();
+
+      expect(
+        repository.idempotencyKeys.single,
+        matches(
+          RegExp(
+            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-'
+            r'[0-9a-f]{12}$',
+          ),
+        ),
+      );
+    });
+
+    test('a lost answer is "not confirmed", never "not registered", and a '
+        'retry that fails before sending keeps saying so', () async {
+      final repository =
+          ScriptedRegistrationRepository(registrationForm: form())
+            ..registerQueue.addAll(<Result<RegistrationAttempt>>[
+              const Err<RegistrationAttempt>(TimeoutFailure()),
+              // Fails before leaving the phone. The first send may still have
+              // registered the resident, so this cannot say nothing was.
+              const Err<RegistrationAttempt>(NetworkFailure()),
+            ]);
+      final controller = controllerFor(repository);
+      addTearDown(controller.dispose);
+      await controller.initialise();
+
+      await controller.submit();
+      expect(controller.attempt?.outcome, RegistrationOutcome.couldNotSend);
+      expect(controller.isUnconfirmed, isTrue);
+      expect(controller.attempt?.residentMessage, registrationUnconfirmed);
+
+      await controller.retry();
+      expect(controller.isUnconfirmed, isTrue);
+      expect(controller.attempt?.residentMessage, registrationUnconfirmed);
+      for (final String phrase in <String>[
+        'nothing was',
+        'not registered',
+        'not sent',
+      ]) {
+        expect(
+          controller.attempt!.residentMessage.toLowerCase(),
+          isNot(contains(phrase)),
+        );
+      }
+      expect(
+        repository.idempotencyKeys.toSet(),
+        hasLength(1),
+        reason: 'Trying again is safe only with the same key.',
+      );
+    });
+
+    test('an answer clears the doubt and lets the key go', () async {
+      final repository =
+          ScriptedRegistrationRepository(registrationForm: form())
+            ..registerQueue.add(
+              const Err<RegistrationAttempt>(
+                NetworkFailure(mayHaveArrived: true),
+              ),
+            );
+      final controller = controllerFor(repository);
+      addTearDown(controller.dispose);
+      await controller.initialise();
+
+      await controller.submit();
+      await controller.retry();
+
+      expect(controller.attempt?.outcome, RegistrationOutcome.registered);
+      expect(controller.isUnconfirmed, isFalse);
+      expect(repository.idempotencyKeys.first, repository.idempotencyKeys.last);
+    });
+
+    test('a refused send is not retried and its key is let go', () async {
+      final repository =
+          ScriptedRegistrationRepository(registrationForm: form())
+            ..registerOutcome = const Ok<RegistrationAttempt>(
+              RegistrationAttempt(
+                outcome: RegistrationOutcome.refused,
+                residentMessage: 'Refused in the app\'s words.',
+              ),
+            );
+      final controller = controllerFor(repository);
+      addTearDown(controller.dispose);
+      await controller.initialise();
+
+      await controller.submit();
+      await controller.retry();
+
+      expect(repository.registerCalls, 1);
+      expect(controller.isUnconfirmed, isFalse);
     });
   });
 
@@ -713,6 +820,29 @@ void main() {
 
       expect(find.text('Not registered'), findsOneWidget);
       expect(find.textContaining('nothing was registered'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+    });
+
+    testWidgets('a lost answer says it could not be confirmed and that '
+        'trying again is safe', (tester) async {
+      final booted = await bootRegistration(tester, registrationForm: form());
+      booted.events.registerOutcome = const Err<RegistrationAttempt>(
+        TimeoutFailure(),
+      );
+
+      await tester.tap(registerButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Registration not confirmed'), findsOneWidget);
+      expect(find.text('Not registered'), findsNothing);
+      expect(
+        find.textContaining(
+          'Trying again is safe: you will not be '
+          'registered twice.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('nothing was registered'), findsNothing);
       expect(find.text('Try again'), findsOneWidget);
     });
 

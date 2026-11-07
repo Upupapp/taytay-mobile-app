@@ -169,12 +169,16 @@ The services screen's own stale banner now carries `Last updated <Manila
 timestamp>` alongside its "check with the municipal hall" line — the timestamp
 was missing, and the Master Command asks for it explicitly.
 
-**`UnsentNotice`** says **"Not sent yet"** and never "saved" (D-152). "Saved" is
-the word that breaks the rule this whole TAB serves: a resident who reads "saved"
-on an assistance request believes the office has it. So the copy states what is
-true from their side — Taytay LGU does not have it, everything typed is still on
-the phone, and **sending again does not create a duplicate**, which is true
-because every mutation in this app carries an idempotency key.
+**`UnsentNotice`** says **"Not confirmed yet"** and never "saved" (D-152). "Saved"
+is the word that breaks the rule this whole TAB serves: a resident who reads
+"saved" on an assistance request believes the office has it. So the copy states
+what is true from their side: Taytay LGU has not confirmed it has it, and
+everything typed is still on the phone. It used to say "Not sent yet", that
+Taytay LGU did not have it and that nothing was filed. That was untrue after a
+timeout or a connection dropped once the request had left the phone (D-188), so
+D-191 changed it. **That sending again does not file twice** is added only when
+the caller passes `resendIsSafe`, for a send whose idempotency key is kept for
+its retry (`SendKey`). Not every write in this app carries one.
 
 **`OfflineBanner`** as above.
 

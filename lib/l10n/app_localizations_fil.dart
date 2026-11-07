@@ -55,12 +55,16 @@ class AppStringsFil extends AppStrings {
       'Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo.';
 
   @override
-  String get unsentTitle => 'Hindi pa naipapadala';
+  String get unsentTitle => 'Hindi pa kumpirmado';
 
   @override
   String unsentMessage(String what) {
-    return 'Wala pa sa Taytay LGU ang $what. Nandito pa sa telepono mo ang lahat ng na-type mo. Walang naisumite, kaya hindi magiging dalawa kapag ipinadala mong muli.';
+    return 'Hindi namin makumpirma na nasa Taytay LGU na ang $what. Nandito pa sa telepono mo ang lahat ng na-type mo.';
   }
+
+  @override
+  String get unsentResendSafe =>
+      'Ligtas itong ipadala muli: hindi ito maisusumite nang dalawang beses.';
 
   @override
   String staleContentMessage(String timestamp) {

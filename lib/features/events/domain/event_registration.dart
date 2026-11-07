@@ -184,17 +184,24 @@ enum RegistrationOutcome {
   /// A waitlist place is held.
   waitlisted,
 
-  /// The server refused because the event filled while they were filling the
-  /// form in.
+  /// The event filled while they were filling the form in, and keeps no
+  /// waitlist. A `200`, not a refusal.
   full,
 
-  /// Registration closed before they submitted.
+  /// Registration closed before they submitted, or the event was called off,
+  /// completed or ended. A `200`, not a refusal.
   closed,
 
-  /// The server refused for a reason it stated.
+  /// The server refused this send: `403`, `404`, `409` or `422`.
   refused,
 
-  /// It could not be sent. **Nothing was registered**, so retrying is safe.
+  /// No answer the app could use: a timeout, a lost connection, a server
+  /// fault, or an answer it could not read.
+  ///
+  /// **Not "nothing was registered".** A send whose answer was lost may have
+  /// reached the office, and only a connection that failed before the request
+  /// left the phone means it did not (D-188). Retrying is safe either way,
+  /// because the retry carries the same idempotency key (D-191).
   couldNotSend,
 }
 

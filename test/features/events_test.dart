@@ -16,6 +16,7 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/core/time/manila_time.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
+import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/events_controller.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -148,6 +149,10 @@ class ScriptedEventRepository implements EventRepository {
 
   /// Cancellation is scripted, because the detail screen offers it.
   bool cancelFails = false;
+
+  /// What a failing cancellation reports. A connection that failed before
+  /// anything left the phone unless a test says otherwise.
+  AppFailure cancelFailure = const NetworkFailure();
   final List<String> cancelledRegistrationIds = <String>[];
   final List<String> cancelKeys = <String>[];
 
@@ -160,7 +165,7 @@ class ScriptedEventRepository implements EventRepository {
     cancelledRegistrationIds.add(registrationId);
     cancelKeys.add(idempotencyKey);
     return cancelFails
-        ? const Err<EventRegistration>(NetworkFailure())
+        ? Err<EventRegistration>(cancelFailure)
         : Ok<EventRegistration>(
             myPlace(
               eventId: eventId,
@@ -984,6 +989,137 @@ void main() {
       // stops turning up for while still holding it.
       expect(find.text('Give up my place'), findsOneWidget);
       expect(find.textContaining('You still have your place'), findsOneWidget);
+    });
+
+    testWidgets('a lost answer never says the place is still theirs, and '
+        'trying again sends the same key', (tester) async {
+      final booted = await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace()),
+        location: '/events/e-1',
+      );
+      booted.events
+        ..cancelFails = true
+        ..cancelFailure = const TimeoutFailure();
+
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Give up my place').last);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(cancellationUnconfirmed), findsOneWidget);
+      expect(find.textContaining('You still have your place'), findsNothing);
+
+      // The retry fails before leaving the phone. The first send may still
+      // have given the place up, so it is still not "you still have it".
+      booted.events.cancelFailure = const NetworkFailure();
+      // Let the first message time out, so the second is the one on screen.
+      await tester.pump(const Duration(seconds: 7));
+      await tester.pumpAndSettle();
+      expect(find.textContaining(cancellationUnconfirmed), findsNothing);
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Give up my place').last);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(cancellationUnconfirmed), findsOneWidget);
+      expect(find.textContaining('You still have your place'), findsNothing);
+      expect(booted.events.cancelKeys, hasLength(2));
+      expect(booted.events.cancelKeys.toSet(), hasLength(1));
+      expect(
+        booted.events.cancelKeys.first,
+        matches(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-')),
+      );
+    });
+
+    testWidgets('too late to give up in the app says to contact the office', (
+      tester,
+    ) async {
+      final booted = await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(myRegistration: myPlace()),
+        location: '/events/e-1',
+      );
+      booted.events
+        ..cancelFails = true
+        ..cancelFailure = const ConflictFailure();
+
+      await tester.tap(find.text('Give up my place').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Give up my place').last);
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining(cancellationTooLate), findsOneWidget);
+    });
+
+    testWidgets('a resident who gave up their place may register again while '
+        'registration is open', (tester) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(
+          registrationState: registration(EventRegistrationState.open),
+          myRegistration: myPlace(
+            state: EventRegistrationState.cancelled,
+            canCancel: false,
+          ),
+        ),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('You cancelled your place'), findsOneWidget);
+      expect(find.text('Register for this event'), findsOneWidget);
+    });
+  });
+
+  group('a called-off event', () {
+    const ServerValue<PublicationState> calledOff =
+        ServerValue<PublicationState>(raw: 'cancelled', known: null);
+
+    test('is shown, and known to be called off', () {
+      final LguEvent cancelled = event(publicationState: calledOff);
+      expect(cancelled.isResidentVisible, isTrue);
+      expect(cancelled.isCalledOff, isTrue);
+      expect(event().isCalledOff, isFalse);
+    });
+
+    testWidgets('says so on its row, ahead of "Registration closed"', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: pageOf(<LguEvent>[
+            event(
+              publicationState: calledOff,
+              registrationState: registration(EventRegistrationState.closed),
+            ),
+          ]),
+        },
+      );
+
+      expect(find.text('Called off by Taytay LGU'), findsOneWidget);
+      expect(find.text('Registration closed'), findsNothing);
+    });
+
+    testWidgets('says so on its page, and offers no registration', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(
+          publicationState: calledOff,
+          registrationState: registration(EventRegistrationState.closed),
+        ),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('Called off by Taytay LGU'), findsOneWidget);
+      expect(find.textContaining('has called this event off'), findsOneWidget);
+      expect(find.text('Register for this event'), findsNothing);
     });
   });
 

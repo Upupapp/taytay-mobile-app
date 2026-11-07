@@ -159,19 +159,38 @@ class StaleContentNotice extends StatelessWidget {
 /// finds out weeks later that nothing was ever filed.
 ///
 /// So this says what is true from the resident's side: their answers are still
-/// on the phone, Taytay LGU does not have them, and the way to change that is to
-/// send again.
+/// on the phone, and Taytay LGU has not confirmed it has them.
+///
+/// ## Why it says "not confirmed" and never "nothing was filed"
+///
+/// The notice follows a send that failed, and a send can fail after it left
+/// the phone: a timeout, or a connection dropped before the answer. Then the
+/// office may already have it, and "nothing was filed" is untrue (D-188). Only
+/// the screen that made the send knows which, so this widget says the one thing
+/// true of both: it was not confirmed (D-191).
+///
+/// That sending again cannot file it twice is said only when the caller passes
+/// [resendIsSafe]. The widget cannot know whether the send carried an
+/// idempotency key kept for its retry, and without one the promise is false.
 class UnsentNotice extends StatelessWidget {
   const UnsentNotice({
     required this.what,
+    this.resendIsSafe = false,
     this.onRetry,
     this.retryLabel,
     super.key,
   });
 
-  /// What is unsent, in the resident's terms — "your application", "your
-  /// comment", "your registration".
+  /// What is not confirmed, in the resident's terms — "your application",
+  /// "your comment", "your registration".
   final String what;
+
+  /// Whether sending [what] again cannot file it twice.
+  ///
+  /// True only for a send whose idempotency key is kept for every retry of
+  /// the same content (`SendKey`), or one idempotent by nature. Defaults to
+  /// false: without it, the notice makes no promise about a second send.
+  final bool resendIsSafe;
 
   final VoidCallback? onRetry;
 
@@ -185,7 +204,9 @@ class UnsentNotice extends StatelessWidget {
     return AppBanner(
       tone: BannerTone.warning,
       title: strings.unsentTitle,
-      message: strings.unsentMessage(what),
+      message: resendIsSafe
+          ? '${strings.unsentMessage(what)} ${strings.unsentResendSafe}'
+          : strings.unsentMessage(what),
       action: onRetry == null
           ? null
           : TextButton(

@@ -55,7 +55,8 @@ enum ResidentCapability {
   browseEvents(
     AccessRequirement.public,
     'See LGU events',
-    BackendAvailability.planned,
+    // Served by the Node API's resident events routes (D-191).
+    BackendAvailability.available,
     route: AppRoute.events,
   ),
 

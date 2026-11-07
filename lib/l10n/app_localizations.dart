@@ -188,17 +188,23 @@ abstract class AppStrings {
   /// **'The app cannot get through right now. Anything you have typed is still here.'**
   String get networkUnreachableMessage;
 
-  /// Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it.
+  /// Heading for work the resident finished that the office has not confirmed it has. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it. Not 'not sent' either: a send that timed out may have reached the office (D-188, D-191). The Filipino text needs review by a native speaker.
   ///
   /// In en, this message translates to:
-  /// **'Not sent yet'**
+  /// **'Not confirmed yet'**
   String get unsentTitle;
 
-  /// Body for unsent work.
+  /// Body for work whose send failed. True whether the send never left the phone or its answer was lost, so it never says nothing was filed (D-188, D-191). The Filipino text needs review by a native speaker.
   ///
   /// In en, this message translates to:
-  /// **'Taytay LGU does not have {what}. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.'**
+  /// **'We could not confirm that Taytay LGU has {what}. Everything you typed is still on this phone.'**
   String unsentMessage(String what);
+
+  /// Added after unsentMessage only when the send keeps its idempotency key for the retry, the one case where a second send cannot file twice (D-191). The Filipino text needs review by a native speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending it again is safe: it will not be filed twice.'**
+  String get unsentResendSafe;
 
   /// Last-updated line over cached content. The timestamp is pre-formatted in Manila time by ManilaTime, so it is passed in as a string rather than a DateTime.
   ///

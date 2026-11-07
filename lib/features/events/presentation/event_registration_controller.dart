@@ -1,11 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/api/request_context.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/forms/field_error.dart';
 import '../../../core/forms/validation_message.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/access_level.dart';
 import '../domain/event_repository.dart';
+import '../domain/event_send_failure.dart';
 
 /// Where the resident is in the registration flow.
 enum RegistrationStep {
@@ -63,10 +64,15 @@ enum RegistrationBlock {
 /// * **The server owns capacity.** Nothing here decides a place is available.
 ///   A full event is discovered by asking, and a `full` answer to a submission
 ///   is an outcome the resident reads, not an error they report.
-/// * **Nothing is registered twice.** One idempotency key per attempt, reused
-///   across retries of that attempt, discarded once the server answers. A
-///   resident who retried into a double registration would be holding a place
-///   somebody else could have had.
+/// * **Nothing is registered twice.** One idempotency key per attempt, a
+///   version 4 UUID from [SendKey], reused across retries of that attempt and
+///   let go once the server answers. A resident who retried into a double
+///   registration would be holding a place somebody else could have had. The
+///   answers cannot change between a failed send and its retry: the outcome
+///   step has no way back to the form, so the key never carries other content.
+/// * **A lost answer is never called "not registered".** A send that may have
+///   arrived says it could not be confirmed and that trying again is safe, and
+///   a later retry that fails before sending keeps saying so (D-188, D-191).
 /// * **Verification is the server's call, per event.** `allowsUnverifiedResidents`
 ///   comes from the form; the app does not assume that every event needs a
 ///   verified resident, nor that none does.
@@ -77,9 +83,21 @@ class EventRegistrationController extends ChangeNotifier {
     required EventRepository repository,
     required this.eventId,
     required this.accessLevel,
-  }) : _repository = repository;
+    SendKey? sendKey,
+  }) : _repository = repository,
+       _sendKey = sendKey ?? SendKey();
 
   final EventRepository _repository;
+
+  /// The key for this attempt, kept across its retries (D-191).
+  final SendKey _sendKey;
+
+  /// Whether a send in this flow may have reached Taytay LGU without an answer.
+  ///
+  /// Cleared only by an answer from the server. Until then a retry that fails
+  /// before sending still cannot say nothing was registered: the earlier send
+  /// may have registered the resident.
+  bool _unconfirmed = false;
   final String eventId;
 
   /// The signed-in resident's level, captured when the flow opened. The route
@@ -98,7 +116,6 @@ class EventRegistrationController extends ChangeNotifier {
   RegistrationAttempt? _attempt;
   AppFailure? _failure;
   bool _busy = false;
-  String? _idempotencyKey;
 
   EventRegistrationForm? get form => _form;
   AppFailure? get formFailure => _formFailure;
@@ -113,6 +130,12 @@ class EventRegistrationController extends ChangeNotifier {
   RegistrationAttempt? get attempt => _attempt;
   AppFailure? get failure => _failure;
   bool get busy => _busy;
+
+  /// Whether the last attempt ended without an answer, and a send in this flow
+  /// may have reached Taytay LGU. The outcome screen then says "not confirmed",
+  /// never "not registered".
+  bool get isUnconfirmed =>
+      _attempt?.outcome == RegistrationOutcome.couldNotSend && _unconfirmed;
 
   /// Why registration is unavailable, or `null` when it may proceed.
   ///
@@ -265,7 +288,6 @@ class EventRegistrationController extends ChangeNotifier {
     }
 
     _errors = const <FieldError>[];
-    _idempotencyKey ??= generateRequestId();
     _step = RegistrationStep.submitting;
     _busy = true;
     notifyListeners();
@@ -274,29 +296,32 @@ class EventRegistrationController extends ChangeNotifier {
       eventId: eventId,
       answers: _answers,
       consentKeys: _consents.toList(growable: false),
-      idempotencyKey: _idempotencyKey!,
+      idempotencyKey: _sendKey.take(),
     );
     _busy = false;
+    // An answer lets the key go: a later attempt is a new one. A failure keeps
+    // it, so a retry replays this attempt and is answered, never repeated.
+    _sendKey.settle(outcome);
 
     outcome.fold(
       onOk: (attempt) {
         _attempt = attempt;
         _failure = null;
-        // The server has answered. A later attempt is a new one.
-        _idempotencyKey = null;
+        _unconfirmed = false;
         if (attempt.isHeld) _alreadyRegistered = true;
       },
       onErr: (failure) {
         _failure = failure;
+        final bool earlierUnconfirmed = _unconfirmed;
+        if (failure.outcomeUnknown) _unconfirmed = true;
         _attempt = RegistrationAttempt(
           outcome: RegistrationOutcome.couldNotSend,
           requestId: failure.requestId,
-          residentMessage:
-              'We could not send your registration, so nothing was registered. '
-              'Your answers are still here — you can try again without '
-              'registering twice.',
+          residentMessage: registrationSendFailure(
+            failure,
+            earlierUnconfirmed: earlierUnconfirmed,
+          ),
         );
-        // The key survives, so a retry replays this attempt.
       },
     );
 

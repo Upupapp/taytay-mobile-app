@@ -55,12 +55,16 @@ class AppStringsEn extends AppStrings {
       'The app cannot get through right now. Anything you have typed is still here.';
 
   @override
-  String get unsentTitle => 'Not sent yet';
+  String get unsentTitle => 'Not confirmed yet';
 
   @override
   String unsentMessage(String what) {
-    return 'Taytay LGU does not have $what. Everything you typed is still on this phone. Nothing was filed, so sending again does not create a duplicate.';
+    return 'We could not confirm that Taytay LGU has $what. Everything you typed is still on this phone.';
   }
+
+  @override
+  String get unsentResendSafe =>
+      'Sending it again is safe: it will not be filed twice.';
 
   @override
   String staleContentMessage(String timestamp) {

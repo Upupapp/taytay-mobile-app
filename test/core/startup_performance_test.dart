@@ -68,6 +68,7 @@ void main() {
       const List<String> paged = <String>[
         'lib/features/news/data/newsfeed_api_repository.dart',
         'lib/features/notifications/data/notification_api_repository.dart',
+        'lib/features/events/data/event_api_repository.dart',
       ];
 
       for (final String path in paged) {
@@ -84,7 +85,6 @@ void main() {
 
     test('routes the Node API does not publish do not invent paging', () {
       const List<String> absent = <String>[
-        'lib/features/events/data/event_api_repository.dart',
         'lib/features/services/data/assistance_api_repository.dart',
       ];
       for (final String path in absent) {

@@ -220,6 +220,17 @@ class LguEvent {
   bool get isRegistered =>
       registrationState?.known?.isResidentRegistered ?? false;
 
+  /// Whether the office called this event off.
+  ///
+  /// The server keeps a cancelled event in the upcoming list until its date
+  /// passes, so that residents see it was called off (backend DL-192). Its
+  /// status, `cancelled`, is not a [PublicationState], so the event is shown
+  /// under [isResidentVisible]'s unknown-is-shown rule, and this says why its
+  /// registration reads closed. Without it, a cancelled medical mission would
+  /// look like any other upcoming event, and people would go to the venue
+  /// for nothing. The one addition to this model in D-191.
+  bool get isCalledOff => publicationState?.raw == 'cancelled';
+
   /// This event with the resident's registration replaced by the server's
   /// latest version of it.
   ///
@@ -271,10 +282,10 @@ class LguEvent {
 
 /// LGU events, as the committed contract describes them.
 ///
-/// **Read-only, deliberately.** There is no create, edit, publish, cancel or
-/// capacity method here and there cannot be one: creating and managing events is
-/// an admin-console act. Registering attendance arrives in TAB 22, against the
-/// registration endpoints when the contract publishes them.
+/// **Read-only for the event, deliberately.** There is no create, edit,
+/// publish, cancel or capacity method here and there cannot be one: creating
+/// and managing events is an admin-console act. A resident registers and gives
+/// up their own place, on the Node API's resident routes (D-191).
 abstract interface class EventRepository {
   /// Events in the given [scope].
   ///

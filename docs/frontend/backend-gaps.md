@@ -42,7 +42,7 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 16 | Household summary | Partly closed | `GET /api/v1/households/current` is called. Correction still declines | `3e3b110` |
 | 17 | Digital ID | Closed | `GET /api/v1/me/digital-id`, `GET /api/v1/me`, and authenticated `GET /api/v1/media/{id}/content` for `photo_media_id` | `5f6fe0f` |
 | 18 | Notification paging and targets | Closed | `GET /api/v1/notifications` with `cursor` | `3e3b110` |
-| 19 | Events | Deferred (needs Paul's approval) | No `/events` route | `3e3b110` |
+| 19 | Events | Closed (8 November 2026) | `GET /api/v1/events` (`scope` `upcoming`, `past`, `registered`; `limit`, `cursor`), `GET /api/v1/events/{id}` (with `registration_form`), `POST /api/v1/events/{id}/registrations`, `POST /api/v1/events/{id}/registrations/{registration_id}/cancel`. Body `idempotency_key` on both sends, never a header. No seats-left number, share link or waitlist position is sent. Notification `event_registration_updated` opens the event | `580acbb` |
 | 20 | Assistance requests and uploads | Deferred (needs Paul's approval) | No citizen case or requirement route. Tulong is information only | `3e3b110` |
 | 21 | Full Terms of Use text | Closed in the app (7 November 2026). The LGU's approved text is still to be published | `GET /api/v1/app/config` `terms` (`version`, `updated_at`, `body_markdown`), beside `terms_version`. "Read full Terms" shows `terms.body_markdown` once its version is not `placeholder`, as the Privacy Notice does, and otherwise says the text is not published yet | `77da0b2` |
 | 22 | Document requests (issuance) | Closed (7 November 2026), with the three follow-ups wired | `GET /api/v1/issuance-types`, `GET /api/v1/issuance-types/{id}`, `GET`/`POST /api/v1/me/issuance-requests`, `GET /api/v1/me/issuance-requests/{id}`, `POST .../{id}/cancel`, `POST .../{id}/resubmit`, `GET .../{id}/attachments/{attachmentId}/content`. Body `idempotency_key` on the three sends, `403 VERIFICATION_REQUIRED`, and `accepts` on the request. Notification `issuance_request_updated` opens the request | `2fd0566`, `0d1cb14` |
@@ -103,6 +103,9 @@ Wired 7 November 2026 against backend `77da0b2`. `GET /api/v1/app/config` publis
 
 `listOwn` sends `cursor`. Load-more asks for another page only when `has_more` is true and `next_cursor` is a non-empty string. `message_received` is no longer relabelled to account security. `subject_type` is still not on `Notification`. When it is absent, `type` is the routing hint, with `subject_id` as the id. Mark-read routes are unchanged.
 
+### 19. Events
+
+Wired 8 November 2026 against backend `580acbb` (DL-192); the vendored Node export was refreshed from that commit. See D-191. `EventApiRepository` reads the list and the event with the resident's bearer when there is one, so each row carries `my_registration`; "My events" (`scope=registered`) needs the account. The form is the event read's `registration_form`: nothing is asked, `allows_unverified_residents` is false, so an unverified resident is sent to verification. `registered`, `waitlisted`, `full` and `closed` are outcomes, the capacity race among them; `403`, `404`, `409` and `422` are a refusal in the app's own words. The key is a version 4 UUID held by `SendKey` for every retry of one attempt, sent as `idempotency_key` in the body only (the API allows four request headers). A timeout or a dropped connection says the app could not confirm and that trying again is safe, never "not registered"; giving up a place follows the same rule. A called-off event stays in Upcoming and says so. `EventsScreen` stays routed and not a tab (D-178).
 ## Partly closed
 
 ### 3. Verification start, documents, and corrections
@@ -171,9 +174,6 @@ The article page does not offer them. The repository methods still decline. `3e3
 
 Saved pages are the in-memory list for this process. There is no saved-service route. Hero bytes are the service-page read above.
 
-### 19. Events
-
-`EventsScreen`, event detail, and event registration are still routed and not a tab. No `/events` route exists. Every method declines.
 
 ### 20. Assistance requests and uploads
 

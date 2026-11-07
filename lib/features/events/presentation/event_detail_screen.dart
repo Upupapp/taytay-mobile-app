@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/api/request_context.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
@@ -21,7 +21,9 @@ import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/event_repository.dart';
-import 'events_screen.dart' show EventCover, registrationStateLabel;
+import '../domain/event_send_failure.dart';
+import 'events_screen.dart'
+    show EventCover, calledOffLabel, registrationStateLabel;
 
 /// One LGU event, opened from the list or from a notification.
 ///
@@ -56,6 +58,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   AppFailure? _failure;
   LguEvent? _event;
   bool _cancelling = false;
+
+  /// The key for giving up a place, kept across retries of that act (D-191).
+  final SendKey _cancelKey = SendKey();
+
+  /// Whether a cancellation may have reached Taytay LGU without an answer.
+  /// Cleared only by an answer from the server.
+  bool _cancelUnconfirmed = false;
 
   bool get _idIsValid => DeepLink.isValidIdentifier(widget.eventId);
 
@@ -94,13 +103,17 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   /// it, and a medical mission that filled will not have room again — so the
   /// sheet says that before the button does anything.
   ///
-  /// **One idempotency key per attempt.** Generated when the resident confirms,
-  /// not when the screen builds, so an abandoned confirmation leaves nothing
-  /// behind. It is not reused after the server answers.
+  /// **One idempotency key per act.** Taken when the resident confirms, not
+  /// when the screen builds, so an abandoned confirmation leaves nothing
+  /// behind. It is kept for every retry of giving up the same place, so a
+  /// cancellation whose answer was lost is answered when sent again, and let go
+  /// once the server answers (`SendKey`, D-191).
   ///
   /// **A failure changes nothing on screen.** The registration stays exactly as
   /// it was, because a place the app quietly removed from view is a place the
-  /// resident stops turning up for while still holding it.
+  /// resident stops turning up for while still holding it. The message says
+  /// "you still have your place" only where that is known: never after a send
+  /// that may have arrived (D-188).
   Future<void> _cancelRegistration(EventRegistration registration) async {
     final registrationId = registration.id;
     if (registrationId == null || _cancelling) return;
@@ -123,17 +136,24 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final result = await repository.cancelRegistration(
       eventId: registration.eventId,
       registrationId: registrationId,
-      idempotencyKey: generateRequestId(),
+      idempotencyKey: _cancelKey.takeFor(registrationId),
     );
+    _cancelKey.settle(result);
     if (!mounted) return;
 
+    final bool earlierUnconfirmed = _cancelUnconfirmed;
     setState(() {
       _cancelling = false;
       result.fold(
         // The server's own version of the registration replaces the local one —
         // it knows whether this became `cancelled` or something else.
-        onOk: (updated) => _event = _event?.withRegistration(updated),
-        onErr: (_) {},
+        onOk: (updated) {
+          _event = _event?.withRegistration(updated);
+          _cancelUnconfirmed = false;
+        },
+        onErr: (failure) {
+          if (failure.outcomeUnknown) _cancelUnconfirmed = true;
+        },
       );
     });
 
@@ -144,13 +164,16 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
           'Your place has been given up. Taytay LGU has been told.',
         );
       case Err<EventRegistration>(failure: final failure):
-        // Copy from the failure kind, never the server's operator-facing text,
-        // and it says plainly that the place is still theirs.
-        Outcome.problem(
-          context,
-          '${localisedResidentMessage(context, failure)} '
-          'You still have your place.',
-        );
+        // Copy from the failure kind, never the server's operator-facing text.
+        // "You still have your place" only when no send may have arrived.
+        Outcome.problem(context, switch (failure) {
+          _ when failure.outcomeUnknown || earlierUnconfirmed =>
+            cancellationUnconfirmed,
+          ConflictFailure() => cancellationTooLate,
+          _ =>
+            '${localisedResidentMessage(context, failure)} '
+                'You still have your place.',
+        });
     }
   }
 
@@ -277,6 +300,19 @@ class _Detail extends StatelessWidget {
                 header: true,
                 child: Text(event.title, style: theme.textTheme.headlineSmall),
               ),
+
+              // Before anything else on the page: a called-off event still
+              // shows its date and venue, and somebody skimming those would go.
+              if (event.isCalledOff) ...<Widget>[
+                const SizedBox(height: Spacing.md),
+                const AppBanner(
+                  tone: BannerTone.warning,
+                  title: calledOffLabel,
+                  message:
+                      'Taytay LGU has called this event off. It will not take '
+                      'place as listed. Ask the office if you have questions.',
+                ),
+              ],
 
               if (event.myRegistration != null) ...<Widget>[
                 const SizedBox(height: Spacing.md),
@@ -429,8 +465,12 @@ class _Detail extends StatelessWidget {
 /// **Only on the server's own `open` state.** Not on an unrecognised one, and
 /// never inferred from a capacity number: offering registration for a full or
 /// closed event sends a resident through a form to be refused at the end of it.
+///
+/// A registration the resident gave up does not stand in the way: the server
+/// sends it back as `my_registration` and reports the event's own state, and a
+/// resident who cancelled may register again while it is `open` (D-191).
 bool _canOfferRegistration(LguEvent event) =>
-    event.myRegistration == null &&
+    !(event.myRegistration?.isActive ?? false) &&
     !event.isRegistered &&
     event.registrationState?.known == EventRegistrationState.open;
 

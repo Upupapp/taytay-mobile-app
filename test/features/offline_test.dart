@@ -396,9 +396,11 @@ void main() {
         localised(const UnsentNotice(what: 'your application')),
       );
 
-      expect(find.text('Not sent yet'), findsOneWidget);
+      expect(find.text('Not confirmed yet'), findsOneWidget);
       expect(
-        find.textContaining('Taytay LGU does not have your application'),
+        find.textContaining(
+          'We could not confirm that Taytay LGU has your application',
+        ),
         findsOneWidget,
       );
 
@@ -411,21 +413,49 @@ void main() {
       // it, and finds out weeks later that nothing was filed.
       expect(rendered, isNot(contains('saved')));
       expect(rendered, isNot(contains('submitted')));
-      expect(rendered, contains('does not have'));
+      expect(rendered, contains('could not confirm'));
     });
 
-    testWidgets('the unsent notice says a retry cannot duplicate', (
+    testWidgets('the unsent notice never claims nothing was sent, and makes '
+        'no promise about a second send unless the caller can keep it', (
       tester,
     ) async {
+      // A send can fail after it left the phone: a timeout, or a connection
+      // dropped before the answer. The office may then have it (D-188), so
+      // the notice says only what is true of both cases (D-191).
+      await tester.pumpWidget(
+        localised(const UnsentNotice(what: 'your application')),
+      );
+
+      final rendered = tester
+          .widgetList<Text>(find.byType(Text))
+          .map((text) => text.data ?? '')
+          .join(' ')
+          .toLowerCase();
+      expect(rendered, isNot(contains('nothing was')));
+      expect(rendered, isNot(contains('not sent')));
+      expect(rendered, isNot(contains('does not have')));
+      expect(rendered, isNot(contains('duplicate')));
+      expect(rendered, isNot(contains('twice')));
+    });
+
+    testWidgets('a keyed send says a retry cannot file twice', (tester) async {
       var retried = 0;
       await tester.pumpWidget(
         localised(
-          UnsentNotice(what: 'your registration', onRetry: () => retried++),
+          UnsentNotice(
+            what: 'your registration',
+            resendIsSafe: true,
+            onRetry: () => retried++,
+          ),
         ),
       );
 
       expect(
-        find.textContaining('does not create a duplicate'),
+        find.textContaining(
+          'Sending it again is safe: it will not be filed '
+          'twice.',
+        ),
         findsOneWidget,
       );
       await tester.tap(find.text('Try sending again'));

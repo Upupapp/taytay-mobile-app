@@ -22,7 +22,11 @@ carries `cover_url`, `pinned`, `pinned_at`, and `share_url`, and
 `GET /news/categories` publishes `{slug, label}`. Staff pin and unpin stay out of
 `backend_routes.dart`. Bookmarks are not on that contract. Backend `f32a631`
 adds `short_name` (`string` or null) on `Office` for `GET /offices` and
-`GET /offices/{slug}`.
+`GET /offices/{slug}`. The whole export was re-vendored from backend `580acbb`
+on 8 November 2026 for the resident events routes (D-191): `GET /events`,
+`GET /events/{id}`, `POST /events/{id}/registrations` and
+`POST /events/{id}/registrations/{registration_id}/cancel`. The staff routes
+under `/office/events` came with it and are not called. Events left F32 then.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -242,7 +246,7 @@ likely to be planned around by both sides and closed by neither.
 | **F18** | P2 | **`app/bootstrap` publishes no maintenance state.** The payload carries `service`, `api_version`, `server_time`, `timezone`, `client`, `features`, `support` and `conventions` — TAB 01 asks for a maintenance screen driven by it and there is no field. **Recorded with a decision rather than a request: the app infers maintenance from a live `503 SERVICE_UNAVAILABLE` instead.** Maintenance changes minute to minute; a flag read once at startup would announce it after it ended and miss one that began, and a client caching it to survive a cold start caches the most perishable fact the server has. A 503 is the server saying so, at the moment it is true. Do not "fix" this by adding the field. | decided · TAB 01 (closed) |
 | **F17** | P1 | **Four repositories name the wrong module, and shrinking `PlannedModule` cannot catch them.** Removing the four shipped members made the compiler point at six files. It could not point at these, because the names they reference still exist and still mean something real — just not this. See the table below. | this repo · TAB 00 (closed) |
 | **F31** | **CLOSED** | **Resident-to-office messaging is on the Node API.** `GET/POST /threads`, the message list and reply, mark-read, and close are citizen routes. Lists page with `limit` and `cursor`. An attachment is `media_id` or multipart `file`. The account thread calls reply, read, and close. Office pages stay public. The vendored contract is taytay-backend pull request 2, head `5f6fe0f`. | closed |
-| **F32** | P1 | **Several resident screens still need routes the Node OpenAPI does not publish.** OTP sign-in, token revocation, events, programmes, the digital ID, household, assistance intake, notification devices and preferences, news comments, and account closure are absent. Those calls decline. The designs that need them are listed in the sprint sign-off. | backend |
+| **F32** | P1 | **Several resident screens still need routes the Node OpenAPI does not publish.** OTP sign-in, token revocation, programmes, the digital ID, household, assistance intake, notification devices and preferences, news comments, and account closure are absent. Those calls decline. The designs that need them are listed in the sprint sign-off. | backend |
 
 ### F17 in detail — the mis-attributions
 

@@ -7,6 +7,17 @@ Implemented in `lib/features/events/domain/event_registration.dart`,
 `presentation/event_registration_controller.dart` and
 `presentation/event_registration_screen.dart`.
 
+**Served by the Node API since 8 November 2026** (backend `580acbb`, D-191).
+Registering is `POST /events/{id}/registrations` and giving up a place is
+`POST /events/{id}/registrations/{registration_id}/cancel`. Each carries
+`idempotency_key`, a version 4 UUID from `SendKey`, in the body and never as a
+header, and keeps it for every retry of the same act. `registered`,
+`waitlisted`, `full` and `closed` are outcomes; a `403`, `404`, `409` or `422`
+is a refusal in the app's own words. A timeout or a dropped connection reads
+"We could not confirm that your registration was received. Trying again is
+safe: you will not be registered twice." It never says "not registered", and a
+later retry that fails before sending keeps saying so.
+
 ---
 
 ## 1. The server owns capacity
@@ -134,7 +145,11 @@ outcome showing its position.
 
 `test/features/event_registration_test.dart` — 34 tests.
 
-* the shipped repository declines form, register and cancel
+* `test/features/event_api_repository_test.dart` covers the repository: every
+  route, every error code, the race, a lost answer and its key, and an answer
+  the app cannot read
+* a lost answer is "not confirmed", never "not registered", and a retry that
+  fails before sending keeps saying so; the key is a version 4 UUID
 * `full` is an outcome not a failure; `full`/`closed` are not retried
 * a retry replays one key; a success retires it; a failure keeps every answer
 * unverified blocked when the event says so, permitted when it says otherwise;

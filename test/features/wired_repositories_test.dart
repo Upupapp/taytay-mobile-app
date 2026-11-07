@@ -311,38 +311,79 @@ void main() {
 
   group('events — there is no seats-left number to be found', () {
     test('capacity is carried and remaining is never derived', () async {
+      // Backend `580acbb` serves events (D-191). Even a row that carries
+      // `registered_count` beside `capacity` yields no seats-left number.
       transport.responses.add(
-        ok(<Object?>[
-          <String, Object?>{
-            'id': 'e-1',
-            'title': 'Medical mission',
-            'summary': 'Free check-ups.',
-            'starts_at': '2026-09-01T01:00:00Z',
-            'registration': <String, Object?>{
-              'required': true,
+        ok(
+          <Object?>[
+            <String, Object?>{
+              'id': 'e-1',
+              'title': 'Medical mission',
+              'summary': 'Free check-ups.',
+              'description': '',
+              'status': 'published',
+              'starts_at': '2026-09-01T01:00:00Z',
               'capacity': 100,
-              'waitlist_enabled': true,
-              'availability': 'open',
-              'message': 'Registration is open.',
+              'registered_count': 99,
+              'registration': <String, Object?>{
+                'required': true,
+                'availability': 'open',
+                'joins_waitlist': false,
+                'state': 'open',
+                'words': 'Registration is open.',
+                'rules': null,
+              },
+              'my_registration': null,
+            },
+          ],
+          meta: <String, Object?>{
+            'request_id': 'req-1',
+            'pagination': <String, Object?>{
+              'has_more': false,
+              'next_cursor': null,
             },
           },
-        ]),
+        ),
+      );
+      transport.responses.add(
+        ok(<String, Object?>{
+          'outcome': 'registered',
+          'words': 'You are registered.',
+          'registration': <String, Object?>{
+            'id': 'reg-1',
+            'event_id': 'e-1',
+            'reference': 'ER-2026-000001',
+            'state': 'registered',
+            'registered_at': '2026-09-01T00:00:00Z',
+            'attendance': null,
+            'can_cancel': true,
+            'instructions': null,
+          },
+        }, status: 201),
       );
 
-      final Result<Paginated<LguEvent>> listed = await EventApiRepository(
+      final EventApiRepository events = EventApiRepository(
         apiClient: clientFor(transport),
-      ).listEvents();
-      final Result<RegistrationAttempt> registered =
-          await EventApiRepository(apiClient: clientFor(transport)).register(
-            eventId: 'e-1',
-            answers: const <String, Object?>{},
-            consentKeys: const <String>[],
-            idempotencyKey: 'reg-once',
-          );
+      );
+      final Result<Paginated<LguEvent>> listed = await events.listEvents();
+      final Result<RegistrationAttempt> registered = await events.register(
+        eventId: 'e-1',
+        answers: const <String, Object?>{},
+        consentKeys: const <String>[],
+        idempotencyKey: 'reg-once',
+      );
 
-      expect(listed.failureOrNull, isA<ServerFailure>());
-      expect(registered.failureOrNull, isA<ServerFailure>());
-      expect(transport.requests, isEmpty);
+      final LguEvent event = listed.valueOrNull!.items.single;
+      expect(event.capacity.capacity, 100);
+      expect(event.capacity.remaining, isNull);
+      expect(event.capacity.isFull, isFalse);
+      expect(registered.valueOrNull?.outcome, RegistrationOutcome.registered);
+      // The key that makes a retry safe is a body field, as the API reads it.
+      expect(
+        (transport.requests.last.body!
+            as Map<String, Object?>)['idempotency_key'],
+        'reg-once',
+      );
     });
   });
 

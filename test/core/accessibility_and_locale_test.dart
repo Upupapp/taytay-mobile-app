@@ -188,8 +188,8 @@ void main() {
       tester,
     ) async {
       for (final (Locale locale, String expected) in <(Locale, String)>[
-        (AppLocales.english, 'Not sent yet'),
-        (AppLocales.filipino, 'Hindi pa naipapadala'),
+        (AppLocales.english, 'Not confirmed yet'),
+        (AppLocales.filipino, 'Hindi pa kumpirmado'),
       ]) {
         await tester.pumpWidget(
           localised(
