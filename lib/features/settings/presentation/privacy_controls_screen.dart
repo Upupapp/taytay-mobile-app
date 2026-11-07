@@ -105,10 +105,15 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
         setState(() => _notice = 'Taytay LGU has recorded your withdrawal.');
         _load();
       },
-      onErr: (_) => setState(
-        () => _notice =
-            'That withdrawal was not recorded. Nothing has changed, and you '
-            'can try again.',
+      // A withdrawal of the same version returns the same row, so trying
+      // again is safe. After a timeout the office may already have it, and
+      // "nothing has changed" would be a guess.
+      onErr: (AppFailure failure) => setState(
+        () => _notice = failure.outcomeUnknown
+            ? 'We could not confirm that your withdrawal was recorded. Trying '
+                  'again is safe: it is recorded only once.'
+            : 'That withdrawal was not recorded. Nothing has changed, and you '
+                  'can try again.',
       ),
     );
   }
@@ -123,10 +128,13 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
         setState(() => _notice = 'Taytay LGU has recorded this consent again.');
         _load();
       },
-      onErr: (_) => setState(
-        () => _notice =
-            'That consent was not recorded. Nothing has changed, and you '
-            'can try again.',
+      // Recording a version is idempotent on the server, as above.
+      onErr: (AppFailure failure) => setState(
+        () => _notice = failure.outcomeUnknown
+            ? 'We could not confirm that your consent was recorded. Trying '
+                  'again is safe: it is recorded only once.'
+            : 'That consent was not recorded. Nothing has changed, and you '
+                  'can try again.',
       ),
     );
   }

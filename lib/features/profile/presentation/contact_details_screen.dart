@@ -50,6 +50,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
   bool _loading = false;
   bool _saving = false;
   AppFailure? _failure;
+
+  /// Why the last save did not go through. Separate from a failed load.
+  AppFailure? _saveFailure;
   bool _saved = false;
 
   /// One key per attempt, reused on retry: a dropped connection after the
@@ -116,7 +119,7 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
 
     setState(() {
       _saving = true;
-      _failure = null;
+      _saveFailure = null;
       _saved = false;
     });
     _idempotencyKey ??= DateTime.now().microsecondsSinceEpoch.toString();
@@ -133,7 +136,8 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
           // Spent. The next edit is a new change, not a replay of this one.
           _idempotencyKey = null;
         },
-        onErr: (failure) => _failure = failure,
+        // The key is kept, so saving again replays this change.
+        onErr: (failure) => _saveFailure = failure,
       );
     });
 
@@ -209,14 +213,32 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
                           tone: BannerTone.success,
                           message: 'Your contact details were updated.',
                         ),
-                      if (_failure != null)
-                        const AppBanner(
+                      // `PATCH /me` is wired, so a failure is the request's,
+                      // not a feature that is switched off. Each value is set
+                      // outright and the key is kept, so saving again is safe.
+                      if (_saveFailure case final AppFailure failure)
+                        failure.outcomeUnknown
+                            ? const AppBanner(
+                                tone: BannerTone.warning,
+                                title: 'Your changes may not have been saved',
+                                message:
+                                    'We could not confirm them. Saving again '
+                                    'is safe: the same details are sent '
+                                    'again.',
+                              )
+                            : AppBanner(
+                                tone: BannerTone.warning,
+                                title: 'Could not save your changes',
+                                message:
+                                    '${failure.residentMessage} Nothing was '
+                                    'changed, and the municipal hall can '
+                                    'update them for you.',
+                              )
+                      else if (_failure case final AppFailure failure)
+                        AppBanner(
                           tone: BannerTone.warning,
-                          title: 'Could not save your changes',
-                          message:
-                              'Taytay LGU has not switched on account details '
-                              'in this app yet. Nothing was changed, and the '
-                              'municipal hall can update them for you.',
+                          title: 'Could not load your details',
+                          message: failure.residentMessage,
                         ),
                       const SizedBox(height: Spacing.lg),
                       AppButton(

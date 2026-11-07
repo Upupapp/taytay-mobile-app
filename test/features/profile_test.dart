@@ -816,6 +816,34 @@ void main() {
       expect(find.textContaining('module not built'), findsNothing);
     });
 
+    testWidgets('a save whose answer was lost is not called unchanged', (
+      tester,
+    ) async {
+      final booted = await bootProfile(
+        tester,
+        level: AccessLevel.verified,
+        detail: fullDetail(),
+        location: '/profile/contact',
+      );
+      booted.profile.updateOutcome = const Err<void>(TimeoutFailure());
+
+      await reveal(tester, find.text('Save changes'));
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your changes may not have been saved'), findsOneWidget);
+      expect(find.textContaining('Nothing was changed'), findsNothing);
+      expect(find.textContaining('has not switched on'), findsNothing);
+
+      // Saving again replays the same change under the same key.
+      booted.profile.updateOutcome = const Ok<void>(null);
+      await reveal(tester, find.text('Save changes'));
+      await tester.tap(find.text('Save changes'));
+      await tester.pumpAndSettle();
+      expect(booted.profile.idempotencyKeys, hasLength(2));
+      expect(booted.profile.idempotencyKeys.toSet(), hasLength(1));
+    });
+
     testWidgets('an invalid mobile number is refused before anything is sent', (
       tester,
     ) async {

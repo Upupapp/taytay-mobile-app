@@ -5,6 +5,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
@@ -311,7 +312,9 @@ class _NotificationPreferencesScreenState
     extends State<NotificationPreferencesScreen> {
   bool _loading = true;
   NotificationPreferences? _preferences;
-  bool _saveFailed = false;
+
+  /// Why the last change did not save, or null.
+  AppFailure? _saveFailure;
 
   @override
   void didChangeDependencies() {
@@ -339,7 +342,7 @@ class _NotificationPreferencesScreenState
     final next = current.withCategory(category, enabled: on);
     setState(() {
       _preferences = next;
-      _saveFailed = false;
+      _saveFailure = null;
     });
 
     final repository = AppDependencies.of(context).notificationRepository;
@@ -350,9 +353,9 @@ class _NotificationPreferencesScreenState
       onOk: (_) {},
       // Put the switch back. A preference that appeared to save and did not is
       // how a resident ends up believing they turned something off.
-      onErr: (_) => setState(() {
+      onErr: (AppFailure failure) => setState(() {
         _preferences = current;
-        _saveFailed = true;
+        _saveFailure = failure;
       }),
     );
   }
@@ -385,14 +388,26 @@ class _NotificationPreferencesScreenState
             (_, final NotificationPreferences loaded) => ListView(
               padding: const EdgeInsets.all(Spacing.lg),
               children: <Widget>[
-                if (_saveFailed) ...<Widget>[
-                  const AppBanner(
-                    tone: BannerTone.error,
-                    title: 'That change was not saved',
-                    message:
-                        'Your setting is unchanged. Check your connection and '
-                        'try again.',
-                  ),
+                if (_saveFailure case final AppFailure failure) ...<Widget>[
+                  // The whole set is sent each time, so setting it again is
+                  // safe. After a timeout the office may already have the
+                  // change, and "unchanged" would be a guess.
+                  failure.outcomeUnknown
+                      ? const AppBanner(
+                          tone: BannerTone.error,
+                          title: 'Your change may not have been saved',
+                          message:
+                              'We could not confirm it. The switch shows your '
+                              'setting before the change. Setting it again is '
+                              'safe.',
+                        )
+                      : const AppBanner(
+                          tone: BannerTone.error,
+                          title: 'That change was not saved',
+                          message:
+                              'Your setting is unchanged. Check your '
+                              'connection and try again.',
+                        ),
                   const SizedBox(height: Spacing.lg),
                 ],
 

@@ -66,6 +66,9 @@ class ScriptedNotificationRepository implements NotificationRepository {
   bool markAllFails = false;
   bool updateFails = false;
 
+  /// What a failed update answers with.
+  AppFailure updateFailure = const NetworkFailure();
+
   final List<String> markedRead = <String>[];
   final List<String> registeredTokens = <String>[];
   final List<NotificationPreferences> saved = <NotificationPreferences>[];
@@ -116,9 +119,7 @@ class ScriptedNotificationRepository implements NotificationRepository {
     NotificationPreferences preferences,
   ) async {
     saved.add(preferences);
-    return updateFails
-        ? const Err<void>(NetworkFailure())
-        : const Ok<void>(null);
+    return updateFails ? Err<void>(updateFailure) : const Ok<void>(null);
   }
 
   @override
@@ -729,6 +730,27 @@ void main() {
             'A preference that appeared to save and did not is how a '
             'resident ends up believing they turned something off.',
       );
+    });
+
+    testWidgets('a save that timed out is not called unchanged', (
+      tester,
+    ) async {
+      final booted = await bootInbox(
+        tester,
+        prefs: preferences(),
+        location: '/notifications/settings',
+      );
+      booted.notifications
+        ..updateFails = true
+        ..updateFailure = const TimeoutFailure();
+
+      await tester.tap(find.widgetWithText(SwitchListTile, 'Event reminders'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your change may not have been saved'), findsOneWidget);
+      expect(find.textContaining('Setting it again is safe'), findsOneWidget);
+      expect(find.text('That change was not saved'), findsNothing);
+      expect(find.textContaining('unchanged'), findsNothing);
     });
   });
 }

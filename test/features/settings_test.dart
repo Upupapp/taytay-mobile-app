@@ -48,6 +48,9 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
   List<ConsentRecord>? consents;
 
   bool withdrawFails = false;
+
+  /// What a failed withdrawal answers with.
+  AppFailure withdrawFailure = const NetworkFailure();
   bool closureFails = false;
 
   final List<String> withdrawn = <String>[];
@@ -81,7 +84,7 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
     withdrawn.add(key);
     withdrawKeys.add(idempotencyKey);
     if (withdrawFails) {
-      return const Err<ConsentRecord>(NetworkFailure());
+      return Err<ConsentRecord>(withdrawFailure);
     }
     final record = consent(key: key, withdrawnAt: DateTime.utc(2026, 8, 16));
     consents = <ConsentRecord>[record];
@@ -559,6 +562,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Nothing has changed'), findsOneWidget);
+      expect(find.textContaining('recorded your withdrawal'), findsNothing);
+    });
+
+    testWidgets('a withdrawal whose answer was lost is not called unchanged', (
+      tester,
+    ) async {
+      final booted = await bootSettings(
+        tester,
+        controls: const AccountControls(canWithdrawConsent: true),
+        consents: <ConsentRecord>[consent()],
+        location: '/settings/privacy',
+      );
+      booted.controls
+        ..withdrawFails = true
+        ..withdrawFailure = const TimeoutFailure();
+
+      await tester.tap(find.text('Withdraw this consent'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Withdraw it'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('could not confirm that your withdrawal'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Nothing has changed'), findsNothing);
       expect(find.textContaining('recorded your withdrawal'), findsNothing);
     });
 

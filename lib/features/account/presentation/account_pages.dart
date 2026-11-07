@@ -682,7 +682,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       idempotencyKey: _idempotencyKey!,
     );
     if (!mounted) return;
-    if (result is Err<void>) {
+    if (result case Err<void>(:final AppFailure failure)) {
+      // `PATCH /me` sets each value outright, so saving again is safe. After
+      // a timeout the office may already hold the change: keep the key, and
+      // do not say nothing changed.
+      if (failure.outcomeUnknown) {
+        await AppDialog.acknowledge(
+          context: context,
+          title: 'Not confirmed yet',
+          message:
+              'We could not confirm that your profile was updated. Saving '
+              'again is safe: the same change is sent again.',
+        );
+        return;
+      }
       _idempotencyKey = null;
       await AppDialog.acknowledge(
         context: context,
