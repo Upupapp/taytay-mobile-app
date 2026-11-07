@@ -14,6 +14,14 @@ import '../domain/office_messaging_repository.dart';
 /// and `unread_count`. Starting one and replying both return
 /// `{thread, message}`. Pages use `limit` and `cursor`. An attachment is
 /// `media_id` or multipart `file`, not both.
+///
+/// **A retried send posts once** (backend `a7a1884`). Starting a thread and
+/// replying carry the caller's key as `idempotency_key` in the body — a
+/// multipart field when a file goes with it — because that is where the Node
+/// API reads it. A repeat with the same key and content answers `201` or `200`
+/// with the first message and notifies nobody again. The key also goes to
+/// [ApiClient] as the `Idempotency-Key` header, which the server ignores and
+/// the transport reads to know an automatic retry is safe (`RetryPolicy`).
 class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   const OfficeMessagingApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -103,6 +111,7 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async {
@@ -115,11 +124,13 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       method: HttpMethod.post,
       path: 'threads',
       authenticated: true,
+      idempotencyKey: idempotencyKey,
       body: <String, Object?>{
         'office_id': officeId,
         'subject': topic,
         'body': body,
         'media_id': ?_mediaId(mediaId, file: part != null),
+        'idempotency_key': idempotencyKey,
       },
       file: part,
       decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),
@@ -139,6 +150,7 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async {
@@ -151,9 +163,11 @@ class OfficeMessagingApiRepository implements OfficeMessagingRepository {
       method: HttpMethod.post,
       path: 'threads/$threadId/messages',
       authenticated: true,
+      idempotencyKey: idempotencyKey,
       body: <String, Object?>{
         'body': body,
         'media_id': ?_mediaId(mediaId, file: part != null),
+        'idempotency_key': idempotencyKey,
       },
       file: part,
       decode: (Object? data) => _decodeEnvelope(data, fallbackBody: body),

@@ -1462,6 +1462,7 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) {
@@ -1481,6 +1482,7 @@ class MockOfficeMessagingRepository implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) {

@@ -21,12 +21,18 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/account/presentation/account_pages.dart';
 import 'package:taytay_resident/features/messaging/data/office_messaging_gap_repository.dart';
+import 'package:taytay_resident/features/messaging/domain/message_send_failure.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
+
+final RegExp _uuidV4 = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+);
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   const String mediaId = '11111111-1111-4111-8111-111111111111';
+  const String key = '22222222-2222-4222-8222-222222222222';
 
   group('the thread routes', () {
     test('a page sends limit and the next page sends the cursor', () async {
@@ -92,9 +98,15 @@ void main() {
       final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
         _ok(_envelope('reply-1')),
       ]);
-      final Result<OfficeMessage> result = await OfficeMessagingApiRepository(
-        apiClient: _client(transport),
-      ).reply(threadId: 'thread-1', body: 'Saan po', mediaId: mediaId);
+      final Result<OfficeMessage> result =
+          await OfficeMessagingApiRepository(
+            apiClient: _client(transport),
+          ).reply(
+            threadId: 'thread-1',
+            body: 'Saan po',
+            idempotencyKey: key,
+            mediaId: mediaId,
+          );
 
       expect(transport.requests.single.method, HttpMethod.post);
       expect(transport.requests.single.path, 'threads/thread-1/messages');
@@ -102,7 +114,10 @@ void main() {
       expect(transport.requests.single.body, <String, Object?>{
         'body': 'Saan po',
         'media_id': mediaId,
+        'idempotency_key': key,
       });
+      // The header the server ignores, for the transport's own retry.
+      expect(transport.requests.single.headers['Idempotency-Key'], key);
       expect(result, isA<Ok<OfficeMessage>>());
     });
 
@@ -118,6 +133,7 @@ void main() {
       await OfficeMessagingApiRepository(apiClient: _client(transport)).reply(
         threadId: 'thread-1',
         body: 'Ito po',
+        idempotencyKey: key,
         mediaId: mediaId,
         file: file,
       );
@@ -126,8 +142,10 @@ void main() {
       expect(part?.field, 'file');
       expect(part?.filename, 'Juana Dela Cruz.pdf');
       expect(part?.mimeType, 'application/pdf');
+      // With a file the body becomes multipart fields, the key among them.
       expect(transport.requests.single.body, <String, Object?>{
         'body': 'Ito po',
+        'idempotency_key': key,
       });
       expect(file.toString(), isNot(contains('Juana')));
     });
@@ -144,12 +162,14 @@ void main() {
         officeId: 'office-1',
         topic: 'Cedula',
         body: 'Saan po',
+        idempotencyKey: key,
         mediaId: mediaId,
       );
       await repository.send(
         officeId: 'office-1',
         topic: 'Cedula',
         body: 'Ito po',
+        idempotencyKey: '33333333-3333-4333-8333-333333333333',
         mediaId: mediaId,
         file: OutgoingFile(
           bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0x00]),
@@ -165,14 +185,49 @@ void main() {
         'subject': 'Cedula',
         'body': 'Saan po',
         'media_id': mediaId,
+        'idempotency_key': key,
       });
+      expect(transport.requests[0].headers['Idempotency-Key'], key);
       expect(transport.requests[1].file?.field, 'file');
       expect(transport.requests[1].body, <String, Object?>{
         'office_id': 'office-1',
         'subject': 'Cedula',
         'body': 'Ito po',
+        'idempotency_key': '33333333-3333-4333-8333-333333333333',
       });
     });
+
+    test(
+      'a replayed send answers 200 or 201, and both are the message',
+      () async {
+        // The server answers a repeat with the first message: 201 when that
+        // message opened the thread, 200 when it joined one already open.
+        final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+          _ok(_envelope('made-1'), status: 201),
+          _ok(_envelope('made-1')),
+        ]);
+        final OfficeMessagingApiRepository repository =
+            OfficeMessagingApiRepository(apiClient: _client(transport));
+
+        final List<Result<OfficeMessage>> answers = <Result<OfficeMessage>>[
+          for (int i = 0; i < 2; i++)
+            await repository.send(
+              officeId: 'office-1',
+              topic: 'Cedula',
+              body: 'Saan po',
+              idempotencyKey: key,
+            ),
+        ];
+
+        for (final Result<OfficeMessage> answer in answers) {
+          expect(answer.valueOrNull?.id, 'made-1');
+        }
+        expect(
+          transport.requests.map((ApiRequest r) => r.body),
+          everyElement(containsPair('idempotency_key', key)),
+        );
+      },
+    );
 
     test('an empty file is refused before a request', () async {
       final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[]);
@@ -182,6 +237,7 @@ void main() {
           ).reply(
             threadId: 'thread-1',
             body: 'Saan po',
+            idempotencyKey: key,
             file: OutgoingFile(
               bytes: Uint8List(0),
               fileName: 'empty.pdf',
@@ -232,6 +288,7 @@ void main() {
         final Result<OfficeMessage> large = await repository.reply(
           threadId: 'thread-1',
           body: 'Saan po',
+          idempotencyKey: key,
           file: OutgoingFile(
             bytes: tooBig,
             fileName: 'scan.jpg',
@@ -241,6 +298,7 @@ void main() {
         final Result<OfficeMessage> kind = await repository.reply(
           threadId: 'thread-1',
           body: 'Saan po',
+          idempotencyKey: key,
           file: OutgoingFile(
             bytes: Uint8List.fromList(<int>[1, 2, 3, 4]),
             fileName: 'notes.txt',
@@ -255,6 +313,7 @@ void main() {
         final Result<OfficeMessage> disguised = await repository.reply(
           threadId: 'thread-1',
           body: 'Saan po',
+          idempotencyKey: key,
           file: OutgoingFile(
             bytes: Uint8List.fromList(<int>[0x00, 0x11, 0x22, 0x33]),
             fileName: 'photo.jpg',
@@ -290,7 +349,7 @@ void main() {
         ]);
         final Result<OfficeMessage> result = await OfficeMessagingApiRepository(
           apiClient: _client(transport),
-        ).reply(threadId: 'thread-1', body: 'Saan po');
+        ).reply(threadId: 'thread-1', body: 'Saan po', idempotencyKey: key);
         expect(result, isA<Err<OfficeMessage>>(), reason: '${item.status}');
         final AppFailure failure = (result as Err<OfficeMessage>).failure;
         expect(failure.runtimeType, item.type, reason: '${item.status}');
@@ -514,6 +573,116 @@ void main() {
       gate.complete();
       await tester.pump();
       expect(desk.replies, hasLength(1));
+    });
+
+    testWidgets(
+      'a reply whose answer was lost says so, and its retry keeps the key',
+      (tester) async {
+        final _Desk desk = _Desk(
+          replyFailure: const TimeoutFailure(debugMessage: 'operator-only'),
+        );
+        await _pumpThread(tester, desk);
+        await tester.enterText(
+          find.byKey(const Key('account-thread-field')),
+          'Saan po ang pila?',
+        );
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+
+        expect(find.text(MessageAct.reply.unconfirmed), findsOneWidget);
+        expect(find.textContaining('will not be posted twice'), findsOneWidget);
+        expect(find.textContaining('Nothing was sent'), findsNothing);
+        expect(find.text('operator-only'), findsNothing);
+        // The words stay in the composer, ready to send again unchanged.
+        expect(find.text('Saan po ang pila?'), findsOneWidget);
+
+        // A connection dropped after sending is just as unknown.
+        desk.replyFailure = const NetworkFailure(mayHaveArrived: true);
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(find.text(MessageAct.reply.unconfirmed), findsOneWidget);
+
+        desk.replyFailure = null;
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+
+        expect(desk.replies.single.body, 'Saan po ang pila?');
+        expect(desk.replyKeys, hasLength(3));
+        expect(desk.replyKeys.toSet(), hasLength(1));
+        expect(desk.replyKeys.first, matches(_uuidV4));
+
+        // Once it went, the same words again are a new message.
+        await tester.enterText(
+          find.byKey(const Key('account-thread-field')),
+          'Saan po ang pila?',
+        );
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(desk.replyKeys, hasLength(4));
+        expect(desk.replyKeys.last, isNot(desk.replyKeys.first));
+      },
+    );
+
+    testWidgets('other words or another file are a new reply with a new key', (
+      tester,
+    ) async {
+      final _Picker picker = _Picker();
+      final _Desk desk = _Desk(replyFailure: const TimeoutFailure());
+      await _pumpThread(tester, desk, picker: picker);
+
+      await tester.enterText(
+        find.byKey(const Key('account-thread-field')),
+        'Saan po',
+      );
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('account-thread-field')),
+        'Saan po ang pila?',
+      );
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+
+      picker.next = CapturedDocument(
+        bytes: Uint8List.fromList(<int>[0xFF, 0xD8, 0xFF, 0x00]),
+        fileName: 'note.jpg',
+        mimeType: 'image/jpeg',
+        source: DocumentSource.file,
+      );
+      await tester.tap(find.byKey(const Key('account-thread-attach')));
+      await tester.pump();
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+
+      expect(desk.replyKeys, hasLength(3));
+      expect(desk.replyKeys.toSet(), hasLength(3));
+      for (final String sent in desk.replyKeys) {
+        expect(sent, matches(_uuidV4));
+      }
+    });
+
+    testWidgets('only a failure before sending says nothing was sent', (
+      tester,
+    ) async {
+      final _Desk desk = _Desk(
+        replyFailure: const NetworkFailure(debugMessage: 'operator-only'),
+      );
+      await _pumpThread(tester, desk);
+      await tester.enterText(
+        find.byKey(const Key('account-thread-field')),
+        'Sandali',
+      );
+      await tester.tap(find.byKey(const Key('account-thread-send')));
+      await tester.pump();
+
+      expect(
+        find.text(
+          'Nothing was sent. ${const NetworkFailure().residentMessage}',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('could not confirm'), findsNothing);
+      expect(find.text('operator-only'), findsNothing);
     });
 
     testWidgets('a 409 on close marks the thread closed', (tester) async {
@@ -785,9 +954,10 @@ Result<ApiHttpResponse> _ok(
   Object? data, {
   String? cursor,
   bool more = false,
+  int status = 200,
 }) => Ok<ApiHttpResponse>(
   ApiHttpResponse(
-    statusCode: 200,
+    statusCode: status,
     body: jsonEncode(<String, Object?>{
       'data': data,
       'meta': <String, Object?>{
@@ -880,6 +1050,9 @@ class _Desk implements OfficeMessagingRepository {
   final List<_Reply> replies = <_Reply>[];
   AppFailure? replyFailure;
   int replyStarts = 0;
+
+  /// The key every reply attempt carried, refused ones included.
+  final List<String> replyKeys = <String>[];
 
   OfficeThread get _thread => OfficeThread(
     id: 'thread-1',
@@ -992,6 +1165,7 @@ class _Desk implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async => const Err<OfficeMessage>(NetworkFailure());
@@ -1000,10 +1174,12 @@ class _Desk implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async {
     replyStarts++;
+    replyKeys.add(idempotencyKey);
     final Completer<void>? hold = holdReply;
     if (hold != null) await hold.future;
     final AppFailure? failure = replyFailure;

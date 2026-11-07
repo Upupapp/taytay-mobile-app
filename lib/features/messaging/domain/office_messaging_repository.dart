@@ -154,6 +154,14 @@ class OfficeMessage {
 /// An attachment is either `media_id` for media the resident can already read,
 /// or multipart field `file`. The two are not sent together.
 /// Lists page with `limit` and `cursor`.
+///
+/// **A retried send posts once.** [send] and [reply] take an idempotency key:
+/// a UUID minted when the resident presses Send and kept for every retry of
+/// the same message (`SendKey`). The server answers a repeat with the message
+/// the first send made and notifies nobody again (backend `a7a1884`). New
+/// words, a new subject or a new image are a new message with a new key: the
+/// same key with other content is refused with `409`, which is a fault in
+/// this app and is never retried.
 abstract interface class OfficeMessagingRepository {
   Future<Result<Paginated<OfficeThread>>> listThreads({
     int page = 1,
@@ -174,6 +182,7 @@ abstract interface class OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   });
@@ -181,6 +190,7 @@ abstract interface class OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   });

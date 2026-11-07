@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
@@ -17,6 +18,7 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -193,6 +195,9 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
   List<OfficeMessage> _messages = const <OfficeMessage>[];
   final TextEditingController _composer = TextEditingController();
 
+  /// Kept across every retry of the same words and attachment.
+  final SendKey _sendKey = SendKey();
+
   @override
   void dispose() {
     _composer.dispose();
@@ -346,13 +351,20 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     }
     setState(() => _sending = true);
     final OutgoingFile? file = _file;
+    final String? mediaId = file == null ? _mediaId : null;
+    // The same reply keeps its key, so one whose answer was lost posts once
+    // however often it is repeated. Other words or another attachment are a
+    // new reply: the server refuses an old key on them.
+    final String key = _sendKey.takeFor((widget.threadId, body, file, mediaId));
     final result = await AppDependencies.of(context).officeMessagingRepository
         .reply(
           threadId: widget.threadId,
           body: body,
-          mediaId: file == null ? _mediaId : null,
+          idempotencyKey: key,
+          mediaId: mediaId,
           file: file,
         );
+    _sendKey.settle(result);
     if (!mounted) {
       _sending = false;
       return;
@@ -378,7 +390,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
         setState(() {
           _sending = false;
           if (failure is ConflictFailure) _closed = true;
-          _error = failure.residentMessage;
+          _error = messageSendFailure(failure, act: MessageAct.reply);
         });
     }
   }

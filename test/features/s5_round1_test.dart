@@ -20,6 +20,7 @@ import 'package:taytay_resident/features/directory/data/office_catalogue.dart';
 import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
 import 'package:taytay_resident/features/messaging/data/office_messaging_gap_repository.dart';
+import 'package:taytay_resident/features/messaging/domain/message_send_failure.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
@@ -134,6 +135,7 @@ class _RecordingMessaging implements OfficeMessagingRepository {
     required String officeId,
     required String topic,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async {
@@ -144,8 +146,16 @@ class _RecordingMessaging implements OfficeMessagingRepository {
       mediaId: mediaId,
       hasFile: file != null,
     ));
+    sendKeys.add(idempotencyKey);
+    if (sendAnswers.isNotEmpty) return sendAnswers.removeAt(0);
     return sendResult;
   }
+
+  /// Answers taken in order before [sendResult].
+  final List<Result<OfficeMessage>> sendAnswers = <Result<OfficeMessage>>[];
+
+  /// The key each send carried.
+  final List<String> sendKeys = <String>[];
 
   @override
   Future<Result<OfficeThread>> loadThread(String threadId) async {
@@ -198,6 +208,7 @@ class _RecordingMessaging implements OfficeMessagingRepository {
   Future<Result<OfficeMessage>> reply({
     required String threadId,
     required String body,
+    required String idempotencyKey,
     String? mediaId,
     OutgoingFile? file,
   }) async {
@@ -384,6 +395,7 @@ void main() {
       officeId: '11111111-1111-1111-1111-111111111111',
       topic: 'Cedula',
       body: 'Saan po ang pila?',
+      idempotencyKey: '22222222-2222-4222-8222-222222222222',
     );
 
     expect(transport.requests.single.method, HttpMethod.post);
@@ -392,6 +404,7 @@ void main() {
       'office_id': '11111111-1111-1111-1111-111111111111',
       'subject': 'Cedula',
       'body': 'Saan po ang pila?',
+      'idempotency_key': '22222222-2222-4222-8222-222222222222',
     });
     expect(result, isA<Ok<OfficeMessage>>());
   });
@@ -543,6 +556,127 @@ void main() {
     expect(booted.messaging.sent.single.body, 'Saan po ang pila?');
     expect(booted.messaging.sent.single.body, isNot(contains('Magandang')));
     expect(find.text('Message sent'), findsWidgets);
+  });
+
+  testWidgets(
+    'a first message whose answer was lost keeps its key when sent again',
+    (tester) async {
+      final _RecordingMessaging messaging = _RecordingMessaging()
+        ..sendAnswers.addAll(<Result<OfficeMessage>>[
+          const Err<OfficeMessage>(TimeoutFailure(debugMessage: 'operator')),
+          const Err<OfficeMessage>(NetworkFailure(mayHaveArrived: true)),
+        ]);
+      final booted = await _boot(
+        tester,
+        location: '/offices/bplo/message',
+        messaging: messaging,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('directory-message-field')),
+        'Saan po ang pila?',
+      );
+      await tester.tap(find.byKey(const Key('directory-send')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(MessageAct.start.unconfirmed), findsOneWidget);
+      expect(find.textContaining('will not be posted twice'), findsOneWidget);
+      expect(find.textContaining('check Messages'), findsOneWidget);
+      expect(find.textContaining('Nothing was sent'), findsNothing);
+      expect(find.text('operator'), findsNothing);
+      expect(find.text('Message sent'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('directory-send')));
+      await tester.pumpAndSettle();
+      expect(find.text(MessageAct.start.unconfirmed), findsOneWidget);
+      await tester.tap(find.byKey(const Key('directory-send')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Message sent'), findsWidgets);
+      expect(booted.messaging.sendKeys, hasLength(3));
+      expect(booted.messaging.sendKeys.toSet(), hasLength(1));
+      expect(
+        booted.messaging.sendKeys.first.length,
+        36,
+        reason: 'a UUID, as the Node API requires',
+      );
+    },
+  );
+
+  testWidgets('other words or another topic are a new message with a new key', (
+    tester,
+  ) async {
+    final _RecordingMessaging messaging = _RecordingMessaging()
+      ..sendAnswers.addAll(<Result<OfficeMessage>>[
+        const Err<OfficeMessage>(TimeoutFailure()),
+        const Err<OfficeMessage>(TimeoutFailure()),
+        const Err<OfficeMessage>(TimeoutFailure()),
+      ]);
+    final booted = await _boot(
+      tester,
+      location: '/offices/bplo/message',
+      messaging: messaging,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('directory-message-field')),
+      'Saan po',
+    );
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('directory-message-field')),
+      'Saan po ang pila?',
+    );
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('directory-topic')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('New business registration'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+
+    expect(booted.messaging.sendKeys, hasLength(3));
+    expect(booted.messaging.sendKeys.toSet(), hasLength(3));
+  });
+
+  testWidgets('a 409 on a first message is said generically, never retried', (
+    tester,
+  ) async {
+    const String serverText =
+        'That idempotency key was already used for a different message.';
+    final _RecordingMessaging messaging = _RecordingMessaging()
+      ..sendAnswers.add(
+        const Err<OfficeMessage>(ConflictFailure(debugMessage: serverText)),
+      );
+    final booted = await _boot(
+      tester,
+      location: '/offices/bplo/message',
+      messaging: messaging,
+    );
+
+    await tester.enterText(
+      find.byKey(const Key('directory-message-field')),
+      'Saan po ang pila?',
+    );
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Open Messages to check'), findsOneWidget);
+    expect(find.textContaining(serverText), findsNothing);
+    expect(find.textContaining('already submitted'), findsNothing);
+    // Nothing repeated it behind the resident's back.
+    expect(booted.messaging.sendKeys, hasLength(1));
+
+    // The refused key is let go: pressing Send again is a new message.
+    await tester.tap(find.byKey(const Key('directory-send')));
+    await tester.pumpAndSettle();
+    expect(booted.messaging.sendKeys, hasLength(2));
+    expect(
+      booted.messaging.sendKeys.last,
+      isNot(booted.messaging.sendKeys.first),
+    );
   });
 
   testWidgets('a live office with no topics sends under a fixed subject', (

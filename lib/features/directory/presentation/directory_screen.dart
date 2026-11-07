@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
@@ -15,6 +16,7 @@ import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
+import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../../tulong/domain/social_service.dart';
@@ -257,6 +259,9 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   OutgoingFile? _file;
   final TextEditingController _message = TextEditingController();
 
+  /// Kept across every retry of the same office, subject, words and file.
+  final SendKey _sendKey = SendKey();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -354,13 +359,21 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     // still needs a subject. Asking the resident to choose from an empty list
     // blocked every first message, so the subject falls back to fixed words.
     final String chosen = _topic.trim();
+    final String subject = chosen.isEmpty ? Office.generalTopic : chosen;
+    final OutgoingFile? file = _file;
+    // The same message keeps its key, so a send whose answer was lost posts
+    // once however often it is repeated. Other words, another subject or
+    // another file are a new message: the server refuses an old key on them.
+    final String key = _sendKey.takeFor((office.wireId, subject, body, file));
     final AppDependencies dependencies = AppDependencies.of(context);
     final result = await dependencies.officeMessagingRepository.send(
       officeId: office.wireId,
-      topic: chosen.isEmpty ? Office.generalTopic : chosen,
+      topic: subject,
       body: body,
-      file: _file,
+      idempotencyKey: key,
+      file: file,
     );
+    _sendKey.settle(result);
     if (!mounted) return;
     switch (result) {
       case Ok():
@@ -375,7 +388,9 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
           await _applyTierAfterForbidden(dependencies, office, failure);
           return;
         }
-        setState(() => _error = failure.residentMessage);
+        setState(
+          () => _error = messageSendFailure(failure, act: MessageAct.start),
+        );
     }
   }
 

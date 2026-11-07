@@ -1991,6 +1991,54 @@ a retry is safe (D-188).
 
 ---
 
+## D-190 — A message to an office carries an idempotency key that follows its words, and a lost answer says sending again is safe
+
+**Status: settled.** Category: errors / idempotency. Recorded 2026-11-07,
+following D-188, on taytay-backend `a7a1884` (migration `0040_message_intents`).
+
+**Context.** Starting a thread (`POST /threads`) and replying
+(`POST /threads/{id}/messages`) carried no key, so a message whose answer was
+lost to a timeout posted twice when the resident pressed Send again, and the
+office was notified twice. The backend now accepts an optional
+`idempotency_key` on both: a repeat with the same key, words and image answers
+`201` or `200` with the first message and notifies nobody; the same key with
+other content is `409`. The composer said "taking longer than expected" or
+"offline" without saying whether the message went.
+
+**Chosen.**
+
+1. `send` and `reply` take a required key and put it in the body as
+   `idempotency_key`, a multipart field when a file goes with it, as document
+   requests do (D-188). It also goes as the `Idempotency-Key` header, which the
+   server ignores and the transport reads to retry a dropped send.
+2. `IssuanceSendKey` moved to `core/api/send_key.dart` as `SendKey`;
+   issuance keeps the old name as an alias. The composers ask for the key with
+   `takeFor(content)`, where the content is the office or thread, the subject,
+   the trimmed words, the file and the media id. The same content keeps the
+   key across every retry; any change mints a new one. A sent message or a
+   `409` lets it go.
+3. A `409` is never retried. On a first message it reads "Nothing was sent.
+   Something went wrong on our side. Open Messages to check what the office has
+   before trying again." On a reply it cannot be told from a closed thread by
+   its code, and the screen keeps treating it as closed.
+4. An unknown outcome (D-188) reads "We could not confirm that your message was
+   received. Sending it again is safe: it will not be posted twice.", with "You
+   can also check Messages." on a first message. Only a connection that failed
+   before the request left the phone reads "Nothing was sent." before the
+   offline sentence.
+
+**Rejected.** Resetting the key from each edit path (the text field, the topic
+picker, attach, clear, choosing an existing attachment), as the document
+request form does. Five paths can each forget, and a forgotten one sends an old
+key with new words: the `409` the backend calls a bug.
+
+**Why.** "Sending again is safe" is true only while the retry carries the key
+the first send did, and only for the same words. Binding the key to the content
+makes both hold by construction. The copy is English, as the rest of the
+composer is; it adds no Filipino string.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2184,5 +2232,6 @@ a retry is safe (D-188).
 | D-187 | A new Terms of Use or Privacy Notice version is asked for when a session begins and on return to the app. Only a successful answer closes the gate; an empty version or a failed read leaves the app open. Registration and the update and maintenance gates are exempt, a guest is never asked, and Sign out returns to guest browsing. A failed agreement is never called recorded, and only then is Continue for now offered | privacy / access | settled |
 | D-188 | "Nothing was sent" only when the connection failed before the request left the phone. The transport sets `NetworkFailure.mayHaveArrived`, `AppFailure.outcomeUnknown` names the uncertain cases, and a retried write keeps the earlier unknown. Where a retry is safe, an unknown outcome says it could not be confirmed and that sending again is safe | errors / honesty | settled |
 | D-189 | The offline banner says the app cannot get through and that typed text is kept. It makes no claim about what was sent: a timeout or a connection dropped after sending may have reached the office, and each send says for itself what happened to it | errors / honesty | settled |
+| D-190 | Starting a thread and replying send `idempotency_key` (backend `a7a1884`). `SendKey`, promoted from issuance, binds the key to the office or thread, subject, words and attachment: the same message keeps it across retries, a changed one gets a new one, and a `409` is never retried. An unknown outcome says sending again is safe and will not post twice | errors / idempotency | settled |
 
-**189 decisions — 185 settled, 4 provisional.**
+**190 decisions — 186 settled, 4 provisional.**
