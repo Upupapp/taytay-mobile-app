@@ -57,9 +57,10 @@ class _Picker implements DocumentPicker {
 
 /// `GET /app/config` answering with one privacy notice.
 class _Bootstrap implements PlatformRepository {
-  const _Bootstrap(this.notice);
+  const _Bootstrap(this.notice, {this.terms = TermsOfUse.missing});
 
   final PrivacyNotice notice;
+  final TermsOfUse terms;
 
   @override
   Future<Result<ServiceHealth>> checkHealth() async => const Ok<ServiceHealth>(
@@ -78,6 +79,7 @@ class _Bootstrap implements PlatformRepository {
       features: FeatureFlags.none,
       support: SupportContact.none,
       privacyNotice: notice,
+      terms: terms,
     ),
   );
 }
@@ -671,6 +673,60 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('TODO notice'), findsNothing);
+    });
+
+    Future<void> openTerms(WidgetTester tester, TermsOfUse terms) async {
+      await boot(
+        tester,
+        auth: FakeAuthRepository(),
+        platform: _Bootstrap(PrivacyNotice.missing, terms: terms),
+      );
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+      final Finder link = find.byKey(const Key('terms-read-full'));
+      await reveal(tester, link);
+      await tester.tap(link);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('published Terms are shown from terms.body_markdown', (
+      tester,
+    ) async {
+      await openTerms(
+        tester,
+        const TermsOfUse(
+          version: '2026-12',
+          bodyMarkdown: '## Paggamit ng app\n\n- Ang iyong **account** ay iyo.',
+        ),
+      );
+      expect(find.text('Terms of Use'), findsOneWidget);
+      expect(find.text('Paggamit ng app'), findsOneWidget);
+      expect(find.textContaining('Ang iyong account ay iyo.'), findsOneWidget);
+      expect(find.textContaining('will be available soon'), findsNothing);
+    });
+
+    testWidgets('the server placeholder is not shown as the Terms', (
+      tester,
+    ) async {
+      await openTerms(
+        tester,
+        const TermsOfUse(version: 'placeholder', bodyMarkdown: 'TODO terms'),
+      );
+      expect(
+        find.textContaining('The full Terms of Use will be available soon'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('TODO terms'), findsNothing);
+    });
+
+    testWidgets('a server that sends no terms object says the same', (
+      tester,
+    ) async {
+      await openTerms(tester, TermsOfUse.missing);
+      expect(
+        find.textContaining('The full Terms of Use will be available soon'),
+        findsOneWidget,
+      );
     });
   });
 

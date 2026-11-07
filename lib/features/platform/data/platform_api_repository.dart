@@ -88,6 +88,7 @@ class PlatformApiRepository implements PlatformRepository {
         map['updated_at'] is String ? map['updated_at'] as String : '',
       )?.toUtc(),
       privacyNotice: _notice(map['privacy_notice']),
+      terms: _notice(map['terms']),
       serverTime: DateTime.tryParse(
         map['server_time'] is String ? map['server_time'] as String : '',
       )?.toUtc(),
@@ -112,13 +113,14 @@ class PlatformApiRepository implements PlatformRepository {
     );
   }
 
-  static PrivacyNotice _notice(Object? raw) {
-    if (raw is! Map) return PrivacyNotice.missing;
+  /// `privacy_notice` and `terms` share one shape.
+  static PublishedText _notice(Object? raw) {
+    if (raw is! Map) return PublishedText.missing;
     final Map<String, dynamic> map = raw is Map<String, dynamic>
         ? raw
         : Map<String, dynamic>.from(raw);
     final Object? body = map['body_markdown'];
-    return PrivacyNotice(
+    return PublishedText(
       version: _string(map['version']) ?? '',
       updatedAt: DateTime.tryParse(
         map['updated_at'] is String ? map['updated_at'] as String : '',

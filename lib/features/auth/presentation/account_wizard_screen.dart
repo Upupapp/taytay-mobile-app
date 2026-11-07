@@ -827,16 +827,34 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     setState(() => _idType.text = idTypeLabel(picked));
   }
 
-  /// `GET /app/config` publishes a `terms_version` and no Terms text or
-  /// link, so the sheet says the text is not out yet instead of a dead link.
+  /// `terms.body_markdown` from `GET /app/config` (backend `77da0b2`), once a
+  /// version other than the server's placeholder is published. Until then the
+  /// sheet says the text is not out yet, never a dead link. Consent still
+  /// records `terms_version`, which a published text shares.
   Future<void> _openTerms() {
+    final Future<String?> markdown = widget.fixture == AccountFixture.live
+        ? _publishedTerms(
+            AppDependencies.of(context).platformRepository.loadBootstrap(),
+          )
+        : Future<String?>.value();
     return _showLegalSheet(
       title: 'Terms of Use',
-      markdown: Future<String?>.value(),
+      markdown: markdown,
       pending:
           'The full Terms of Use will be available soon. Taytay LGU has not '
           'published them in the app yet.',
     );
+  }
+
+  static Future<String?> _publishedTerms(
+    Future<Result<AppBootstrap>> loading,
+  ) async {
+    final Result<AppBootstrap> result = await loading;
+    return switch (result) {
+      Ok<AppBootstrap>(:final value) when value.terms.isPublished =>
+        value.terms.bodyMarkdown,
+      _ => null,
+    };
   }
 
   /// `privacy_notice.body_markdown` from `GET /app/config`, once a version

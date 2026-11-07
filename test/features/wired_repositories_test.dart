@@ -549,4 +549,47 @@ void main() {
       expect(transport.requests.last.path, 'app/config');
     },
   );
+
+  test(
+    'app config reads the Terms text beside terms_version, placeholder unpublished',
+    () async {
+      Future<AppBootstrap> read(Object? terms) async {
+        transport.responses.add(
+          ok(<String, Object?>{
+            'privacy_version': '2026-03-privacy',
+            'terms_version': '2026-12',
+            'feature_flags': <String, Object?>{},
+            'terms': terms,
+          }),
+        );
+        return ((await PlatformApiRepository(
+                  apiClient: clientFor(transport),
+                ).loadBootstrap())
+                as Ok<AppBootstrap>)
+            .value;
+      }
+
+      final AppBootstrap published = await read(<String, Object?>{
+        'version': '2026-12',
+        'updated_at': '2026-11-07T00:00:00.000Z',
+        'body_markdown': '## Using the app\n\nBe kind.',
+      });
+      expect(published.terms.isPublished, isTrue);
+      expect(published.terms.bodyMarkdown, contains('Using the app'));
+      expect(published.terms.updatedAt, DateTime.utc(2026, 11, 7));
+      // Consent still records terms_version.
+      expect(published.termsVersion, '2026-12');
+
+      final AppBootstrap placeholder = await read(<String, Object?>{
+        'version': 'placeholder',
+        'updated_at': '2026-11-07T00:00:00.000Z',
+        'body_markdown': 'Do not show this.',
+      });
+      expect(placeholder.terms.isPublished, isFalse);
+      expect(placeholder.termsVersion, '2026-12');
+
+      // An older server sends terms_version alone.
+      expect((await read(null)).terms.isPublished, isFalse);
+    },
+  );
 }

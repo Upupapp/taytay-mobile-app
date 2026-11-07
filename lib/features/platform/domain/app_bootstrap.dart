@@ -32,6 +32,7 @@ class AppBootstrap {
     this.termsVersion = '',
     this.updatedAt,
     this.privacyNotice = PrivacyNotice.missing,
+    this.terms = TermsOfUse.missing,
   });
 
   /// What the app assumes before the server has answered, and after a failure.
@@ -88,6 +89,11 @@ class AppBootstrap {
 
   /// `privacy_notice` from `GET /app/config`. Missing means the bundled draft.
   final PrivacyNotice privacyNotice;
+
+  /// `terms` from `GET /app/config` (backend `77da0b2`): the Terms of Use
+  /// text. Once published its version is the one [termsVersion] names, and
+  /// consent still records [termsVersion], which older servers send alone.
+  final TermsOfUse terms;
 
   /// How far the device clock is from the server's, when both are known.
   ///

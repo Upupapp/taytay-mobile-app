@@ -1,29 +1,49 @@
 import 'package:flutter/foundation.dart';
 
-/// `privacy_notice` on `GET /app/config`.
+/// A text `GET /app/config` publishes under a version: `privacy_notice`, and
+/// since backend `77da0b2` the Terms of Use in `terms`. Both have the same
+/// shape: `version`, `updated_at`, `body_markdown`.
 ///
-/// [version] `placeholder`, a missing object, or an empty body keeps the
-/// bundled draft. A published version renders [bodyMarkdown].
+/// [version] `placeholder`, a missing object, or an empty body is not
+/// published, and [bodyMarkdown] is then never shown as the text. A published
+/// version renders [bodyMarkdown].
 @immutable
-class PrivacyNotice {
-  const PrivacyNotice({
+class PublishedText {
+  const PublishedText({
     this.version = '',
     this.updatedAt,
     this.bodyMarkdown = '',
   });
 
   /// No object on the wire.
-  static const PrivacyNotice missing = PrivacyNotice();
+  static const PublishedText missing = PublishedText();
+
+  /// The version the server ships until the LGU's approved text is written.
+  static const String placeholderVersion = 'placeholder';
 
   final String version;
   final DateTime? updatedAt;
   final String bodyMarkdown;
 
-  bool get usesBundledDraft {
-    if (version.trim().isEmpty || version.trim() == 'placeholder') return true;
-    return bodyMarkdown.trim().isEmpty;
+  /// Whether the LGU has published this text.
+  bool get isPublished {
+    final String trimmed = version.trim();
+    if (trimmed.isEmpty || trimmed == placeholderVersion) return false;
+    return bodyMarkdown.trim().isNotEmpty;
   }
 
+  /// The Privacy Notice's name for an unpublished text: the screens show the
+  /// bundled draft instead.
+  bool get usesBundledDraft => !isPublished;
+
   @override
-  String toString() => 'PrivacyNotice($version)';
+  String toString() => 'PublishedText($version)';
 }
+
+/// `privacy_notice` on `GET /app/config`. Unpublished keeps the bundled draft.
+typedef PrivacyNotice = PublishedText;
+
+/// `terms` on `GET /app/config`: the Terms of Use a resident accepts.
+/// Unpublished says the text is not out yet; there is no bundled draft, so
+/// nothing stands in for it.
+typedef TermsOfUse = PublishedText;
