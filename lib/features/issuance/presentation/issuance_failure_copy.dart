@@ -2,14 +2,36 @@ import '../../../core/result/result.dart';
 
 /// The three things a resident sends about a document request.
 enum IssuanceAct {
-  submit('Nothing was sent.'),
-  resubmit('Nothing was sent.'),
-  cancel('Nothing was cancelled.');
+  submit(
+    'Nothing was sent.',
+    'We could not confirm that your request was received. Sending the same '
+        'request again is safe: it will not be filed twice. You can also '
+        'check My document requests.',
+  ),
+  resubmit(
+    'Nothing was sent.',
+    'We could not confirm that your changes were received. Sending them again '
+        'is safe: they will not be filed twice. You can also go back and open '
+        'the request to check.',
+  ),
+  cancel(
+    'Nothing was cancelled.',
+    'We could not confirm that your cancellation was received. Trying again '
+        'is safe: the request is cancelled only once. You can also go back and '
+        'open the request to check.',
+  );
 
-  const IssuanceAct(this.nothing);
+  const IssuanceAct(this.nothing, this.unconfirmed);
 
-  /// The sentence for the act that failed.
+  /// The sentence for an act that certainly did not reach the office.
   final String nothing;
+
+  /// The sentence for an act that may have reached the office.
+  ///
+  /// True because every act carries an idempotency key that is kept for the
+  /// retry (`IssuanceSendKey`): the server answers a repeat with what the
+  /// first one did, and never acts twice.
+  final String unconfirmed;
 }
 
 /// What a resident reads when sending to the office did not go through.
@@ -24,6 +46,14 @@ enum IssuanceAct {
 }) {
   final String nothing = act.nothing;
   return switch (failure) {
+    // The request may have arrived: no answer came, the connection dropped
+    // after it was written, the answer could not be read, or the server
+    // failed part-way. "Nothing was sent" here would be a guess.
+    _ when failure.outcomeUnknown => (
+      title: 'Not confirmed yet',
+      body: act.unconfirmed,
+      offerVerification: false,
+    ),
     // `VERIFICATION_REQUIRED`: the server said why, so the way on is offered.
     ForbiddenFailure(requiresVerification: true) => (
       title: 'Only verified residents can do this',
@@ -41,18 +71,14 @@ enum IssuanceAct {
           'municipal hall can tell you more.',
       offerVerification: false,
     ),
-    NetworkFailure() => (
+    // Past the guard above, the connection failed before the request left
+    // the phone. A timeout is always unknown and never reaches this line; it
+    // is named only because the switch must cover every kind.
+    NetworkFailure() || TimeoutFailure() => (
       title: 'You are offline',
       body:
           '$nothing Your answers are still here on the phone. Connect to the '
           'internet and try again.',
-      offerVerification: false,
-    ),
-    TimeoutFailure() => (
-      title: 'No answer from Taytay LGU',
-      body:
-          'We cannot tell whether it arrived. Try again: it will not be sent '
-          'twice. Or open My document requests to check first.',
       offerVerification: false,
     ),
     ValidationFailure() => (
@@ -103,6 +129,7 @@ enum IssuanceAct {
       body: '$nothing Your session ended. Sign in, then try again.',
       offerVerification: false,
     ),
+    // Past the guard above: a `503` that turned it away before acting.
     ServerFailure() ||
     ContractFailure() ||
     UnexpectedFailure() ||

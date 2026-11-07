@@ -250,4 +250,74 @@ void main() {
       controller.dispose();
     });
   });
+
+  group('a send whose outcome is unknown is not called unsent', () {
+    const List<AppFailure> unknown = <AppFailure>[
+      TimeoutFailure(),
+      NetworkFailure(mayHaveArrived: true),
+      ContractFailure(),
+      UnexpectedFailure(),
+      ServerFailure(),
+    ];
+
+    test('says it could not confirm, and that sending again is safe', () {
+      for (final IssuanceAct act in IssuanceAct.values) {
+        for (final AppFailure failure in unknown) {
+          final ({String title, String body, bool offerVerification}) copy =
+              issuanceSendFailure(failure, act: act);
+          final String reason = '${act.name} ${failure.kind}';
+          expect(copy.title, 'Not confirmed yet', reason: reason);
+          expect(copy.body, act.unconfirmed, reason: reason);
+          expect(copy.body, contains('could not confirm'), reason: reason);
+          expect(copy.body, contains('safe'), reason: reason);
+          expect(copy.body, isNot(contains('Nothing was')), reason: reason);
+          expect(copy.title, isNot(contains('offline')), reason: reason);
+        }
+      }
+      expect(
+        IssuanceAct.submit.unconfirmed,
+        contains('will not be filed twice'),
+      );
+      expect(IssuanceAct.submit.unconfirmed, contains('My document requests'));
+    });
+
+    test('says nothing was sent only when it failed before leaving', () {
+      for (final IssuanceAct act in IssuanceAct.values) {
+        final ({String title, String body, bool offerVerification}) offline =
+            issuanceSendFailure(const NetworkFailure(), act: act);
+        expect(offline.title, 'You are offline');
+        expect(offline.body, startsWith(act.nothing));
+
+        // A 503 turned it away before acting on it.
+        final ({String title, String body, bool offerVerification}) busy =
+            issuanceSendFailure(
+              const ServerFailure(isTemporary: true),
+              act: act,
+            );
+        expect(busy.body, startsWith(act.nothing));
+      }
+    });
+
+    test('the retry after a dropped connection carries the same key', () async {
+      final _Scripted repository = _Scripted(await _type());
+      repository.answers.addAll(<Result<IssuanceRequestDetail>>[
+        const Err<IssuanceRequestDetail>(NetworkFailure(mayHaveArrived: true)),
+        Ok<IssuanceRequestDetail>(_filed()),
+      ]);
+      final IssuanceRequestController controller = await _readyToSend(
+        repository,
+      );
+
+      await controller.submit();
+      expect(controller.failure?.outcomeUnknown, isTrue);
+      // Still on review: the same request, ready to send again unchanged.
+      expect(controller.stage, IssuanceFormStage.reviewing);
+      await controller.submit();
+
+      expect(controller.stage, IssuanceFormStage.done);
+      expect(repository.keys, hasLength(2));
+      expect(repository.keys.toSet(), hasLength(1));
+      controller.dispose();
+    });
+  });
 }

@@ -49,6 +49,25 @@ sealed class AppFailure {
   FailureAffordance get affordance =>
       isRetryable ? FailureAffordance.retryNow : FailureAffordance.terminal;
 
+  /// Whether the request may have reached the server although no answer came
+  /// back, so a write that failed this way may still have been acted on.
+  ///
+  /// ---
+  ///
+  /// **The question a resident asks after a failed send is "did it go?"**, and
+  /// the honest answer to a timeout or a connection that dropped mid-exchange
+  /// is "we do not know". A screen that says "nothing was sent" for one of
+  /// those is guessing, and a resident who believes it may send twice or stop
+  /// chasing a request the office already holds.
+  ///
+  /// True for a [TimeoutFailure], a [NetworkFailure] whose
+  /// [NetworkFailure.mayHaveArrived] is set, an answer the app could not read
+  /// ([ContractFailure]), an error inside the app ([UnexpectedFailure]), and a
+  /// `5xx` other than `503` — the server failed part-way, or a gateway in front
+  /// of it gave up on a server that may have finished. False for a refusal: a
+  /// `4xx` or a `503` says the server did not act.
+  bool get outcomeUnknown => false;
+
   /// Whether the app must drop to a signed-out session and ask the resident to
   /// authenticate again.
   bool get requiresReauthentication => false;
@@ -61,10 +80,26 @@ sealed class AppFailure {
       '$kind(requestId: $requestId, debugMessage: ${debugMessage ?? '-'})';
 }
 
-/// The device could not reach the API at all: no connectivity, DNS failure,
-/// TLS failure or a socket error.
+/// The connection failed: no connectivity, DNS failure, TLS failure or a
+/// socket error.
 final class NetworkFailure extends AppFailure {
-  const NetworkFailure({super.requestId, super.debugMessage});
+  const NetworkFailure({
+    this.mayHaveArrived = false,
+    super.requestId,
+    super.debugMessage,
+  });
+
+  /// Whether the connection failed after the request may already have been
+  /// written to the server: a reset, or a connection closed before the answer.
+  ///
+  /// False only when the failure happened before anything left the phone — no
+  /// route, a failed name lookup, a refused connection, a TLS handshake — and
+  /// only then may a screen say that nothing was sent. `HttpApiTransport`
+  /// decides which, because it is the one place that saw the socket.
+  final bool mayHaveArrived;
+
+  @override
+  bool get outcomeUnknown => mayHaveArrived;
 
   @override
   String get kind => 'network';
@@ -80,6 +115,11 @@ final class NetworkFailure extends AppFailure {
 /// The request was sent but no response arrived within the configured budget.
 final class TimeoutFailure extends AppFailure {
   const TimeoutFailure({super.requestId, super.debugMessage});
+
+  /// The request may have been written before the budget ran out. Even a
+  /// timeout while connecting is not told apart, so this is never "not sent".
+  @override
+  bool get outcomeUnknown => true;
 
   @override
   String get kind => 'timeout';
@@ -266,6 +306,11 @@ final class ServerFailure extends AppFailure {
   /// started. A live 503 is the server saying so, now.
   final bool isMaintenance;
 
+  /// A `503` turned the request away. Any other `5xx` may have come after the
+  /// work was done.
+  @override
+  bool get outcomeUnknown => !isTemporary;
+
   @override
   String get kind => isTemporary ? 'service_unavailable' : 'server_error';
 
@@ -285,6 +330,10 @@ final class ServerFailure extends AppFailure {
 /// from [ServerFailure] so it can be alerted on separately.
 final class ContractFailure extends AppFailure {
   const ContractFailure({super.requestId, super.debugMessage});
+
+  /// The server answered; what it did is unreadable, so it is not known.
+  @override
+  bool get outcomeUnknown => true;
 
   @override
   String get kind => 'contract';
@@ -308,6 +357,10 @@ final class UnexpectedFailure extends AppFailure {
   final String? debugContext;
   final Object? error;
   final StackTrace? stackTrace;
+
+  /// It may have failed after the server answered.
+  @override
+  bool get outcomeUnknown => true;
 
   @override
   String get kind => 'unexpected';

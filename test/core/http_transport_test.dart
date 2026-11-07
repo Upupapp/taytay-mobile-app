@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -394,6 +395,176 @@ void main() {
         reason: 'a delivered 503 is still a response',
       );
       expect(result.valueOrNull?.statusCode, 503);
+    });
+  });
+
+  group('whether a failed send may have arrived', () {
+    const ApiRequest keyedPost = ApiRequest(
+      method: HttpMethod.post,
+      path: 'me/issuance-requests',
+      headers: <String, String>{'Idempotency-Key': 'idem-1'},
+      body: <String, Object?>{'purpose': 'Sample purpose'},
+    );
+
+    /// The refused-connection errno on the machine running the test.
+    int refusedErrno() => Platform.isWindows
+        ? 10061
+        : Platform.isMacOS || Platform.isIOS
+        ? 61
+        : 111;
+
+    test('a connect failure is before sending; a reset is not', () {
+      expect(
+        failedBeforeSending(
+          const SocketException("Failed host lookup: 'example.test'"),
+        ),
+        isTrue,
+      );
+      expect(
+        failedBeforeSending(
+          const SocketException(
+            'Connection failed',
+            osError: OSError('Network is unreachable', 101),
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        failedBeforeSending(
+          SocketException(
+            'Connection refused',
+            osError: OSError('Connection refused', refusedErrno()),
+          ),
+        ),
+        isTrue,
+      );
+      expect(
+        failedBeforeSending(
+          const SocketException(
+            'Connection reset by peer',
+            osError: OSError('Connection reset by peer', 104),
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        failedBeforeSending(const SocketException('Write failed')),
+        isFalse,
+      );
+    });
+
+    Future<AppFailure> failureOf(Exception thrown) async {
+      final transport = HttpApiTransport(
+        config: config(),
+        client: MockClient((_) async => throw thrown),
+        retryPolicy: const RetryPolicy(maxAttempts: 1),
+      );
+      final result = await transport.send(keyedPost);
+      return result.failureOrNull!;
+    }
+
+    test(
+      'only a failure before sending lets a screen say nothing was sent',
+      () async {
+        final AppFailure lookup = await failureOf(
+          const SocketException("Failed host lookup: 'example.test'"),
+        );
+        expect(lookup, isA<NetworkFailure>());
+        expect(lookup.outcomeUnknown, isFalse);
+
+        final AppFailure tls = await failureOf(
+          const HandshakeException('bad certificate'),
+        );
+        expect(tls.outcomeUnknown, isFalse);
+
+        final AppFailure reset = await failureOf(
+          const SocketException(
+            'Connection reset by peer',
+            osError: OSError('Connection reset by peer', 104),
+          ),
+        );
+        expect(reset, isA<NetworkFailure>());
+        expect(reset.outcomeUnknown, isTrue);
+
+        final AppFailure closed = await failureOf(
+          http.ClientException(
+            'Connection closed before full header was received',
+          ),
+        );
+        expect(closed, isA<NetworkFailure>());
+        expect(closed.outcomeUnknown, isTrue);
+
+        final AppFailure timeout = await failureOf(TimeoutException('slow'));
+        expect(timeout, isA<TimeoutFailure>());
+        expect(timeout.outcomeUnknown, isTrue);
+      },
+    );
+
+    test(
+      'a write that timed out and then could not connect stays unknown',
+      () async {
+        var calls = 0;
+        final clock = _Clock();
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            if (calls == 1) throw TimeoutException('slow');
+            throw const SocketException("Failed host lookup: 'example.test'");
+          }),
+          sleep: clock.sleep,
+        );
+
+        final result = await transport.send(keyedPost);
+        expect(calls, 3);
+        // The last attempt never left the phone, but the first may have
+        // reached the office. That is what the resident must be told.
+        expect(result.failureOrNull, isA<TimeoutFailure>());
+        expect(result.failureOrNull?.outcomeUnknown, isTrue);
+      },
+    );
+
+    test(
+      'a write that may have arrived is not hidden by a later 503',
+      () async {
+        var calls = 0;
+        final clock = _Clock();
+        final transport = HttpApiTransport(
+          config: config(),
+          client: MockClient((_) async {
+            calls++;
+            if (calls == 1) {
+              throw http.ClientException('Connection closed while receiving');
+            }
+            return http.Response('{}', 503);
+          }),
+          sleep: clock.sleep,
+        );
+
+        final result = await transport.send(keyedPost);
+        expect(calls, 3);
+        expect(result.failureOrNull?.outcomeUnknown, isTrue);
+      },
+    );
+
+    test('a read reports its last attempt as it was', () async {
+      var calls = 0;
+      final clock = _Clock();
+      final transport = HttpApiTransport(
+        config: config(),
+        client: MockClient((_) async {
+          calls++;
+          if (calls == 1) throw TimeoutException('slow');
+          throw const SocketException("Failed host lookup: 'example.test'");
+        }),
+        sleep: clock.sleep,
+      );
+
+      final result = await transport.send(
+        const ApiRequest(method: HttpMethod.get, path: 'services'),
+      );
+      expect(result.failureOrNull, isA<NetworkFailure>());
+      expect(result.failureOrNull?.outcomeUnknown, isFalse);
     });
   });
 }

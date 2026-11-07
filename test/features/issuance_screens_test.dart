@@ -548,7 +548,12 @@ void main() {
 
       await _tap(tester, find.byKey(const Key('issuance-cancel')));
       await _tap(tester, find.text('Cancel request'));
-      expect(find.textContaining('it will not be sent twice'), findsOneWidget);
+      // A timeout may have reached the office: not "nothing was cancelled".
+      expect(
+        find.textContaining('could not confirm that your cancellation'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Nothing was cancelled'), findsNothing);
       // Nothing moved: the request is still open, and can be cancelled again.
       expect(find.byKey(const Key('issuance-cancel')), findsOneWidget);
 

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
@@ -44,6 +45,11 @@ class HttpApiTransport implements ApiTransport {
 
     Result<ApiHttpResponse>? last;
 
+    // The first attempt of a write that may have reached the server. A later
+    // attempt that fails before sending, or is turned away as unavailable,
+    // does not undo it: the resident still cannot be told nothing happened.
+    AppFailure? unconfirmed;
+
     for (var attempt = 1; attempt <= _retryPolicy.maxAttempts; attempt++) {
       final result = await _attempt(uri, request, timeout);
       last = result;
@@ -60,21 +66,43 @@ class HttpApiTransport implements ApiTransport {
         )) {
           return result;
         }
-        if (attempt == _retryPolicy.maxAttempts) return result;
+        if (attempt == _retryPolicy.maxAttempts) {
+          return _withEarlier(request, result, unconfirmed);
+        }
         await _sleep(
           _retryPolicy.delayFor(attempt, retryAfter: response.retryAfter),
         );
         continue;
       }
 
+      if (failure.outcomeUnknown) unconfirmed ??= failure;
       if (!_retryPolicy.isRetryable(request: request, failure: failure)) {
-        return result;
+        return _withEarlier(request, result, unconfirmed);
       }
-      if (attempt == _retryPolicy.maxAttempts) return result;
+      if (attempt == _retryPolicy.maxAttempts) {
+        return _withEarlier(request, result, unconfirmed);
+      }
       await _sleep(_retryPolicy.delayFor(attempt));
     }
 
-    return last!;
+    return _withEarlier(request, last!, unconfirmed);
+  }
+
+  /// The last attempt's result, unless it would hide an earlier attempt of a
+  /// write that may have arrived.
+  ///
+  /// A timed-out write retried into a dead connection ends on "could not
+  /// connect"; reporting only that would let a screen say nothing was sent
+  /// about a request the office may already hold. Reads are exempt: whether a
+  /// `GET` arrived changes nothing.
+  static Result<ApiHttpResponse> _withEarlier(
+    ApiRequest request,
+    Result<ApiHttpResponse> last,
+    AppFailure? unconfirmed,
+  ) {
+    if (unconfirmed == null || request.method.isSafe) return last;
+    if (last.failureOrNull?.outcomeUnknown ?? false) return last;
+    return Err<ApiHttpResponse>(unconfirmed);
   }
 
   Future<Result<ApiHttpResponse>> _attempt(
@@ -162,20 +190,31 @@ class HttpApiTransport implements ApiTransport {
         TimeoutFailure(debugMessage: 'Request exceeded its timeout budget.'),
       );
     } on SocketException catch (error) {
-      // No route, DNS failure, connection refused.
+      // No route, DNS failure and a refused connection happen before the
+      // request is written. A reset or a broken pipe may happen after.
       return Err<ApiHttpResponse>(
-        NetworkFailure(debugMessage: 'Socket error: ${error.osError?.message}'),
+        NetworkFailure(
+          mayHaveArrived: !failedBeforeSending(error),
+          debugMessage: 'Socket error: ${error.osError?.message}',
+        ),
       );
     } on HandshakeException catch (error) {
       // TLS failure. Reported as a network failure to the resident, but kept
       // distinct in the debug message: a handshake failure on a government
       // endpoint deserves a different investigation from a dropped connection.
+      // The handshake comes before the request, so nothing was sent.
       return Err<ApiHttpResponse>(
         NetworkFailure(debugMessage: 'TLS handshake failed: ${error.message}'),
       );
     } on http.ClientException catch (error) {
+      // `package:http` raises this for a connection closed mid-exchange
+      // ("Connection closed before full header was received"), after the
+      // request was written.
       return Err<ApiHttpResponse>(
-        NetworkFailure(debugMessage: 'HTTP client error: ${error.message}'),
+        NetworkFailure(
+          mayHaveArrived: true,
+          debugMessage: 'HTTP client error: ${error.message}',
+        ),
       );
     } on Object catch (error) {
       return Err<ApiHttpResponse>(
@@ -204,3 +243,36 @@ class HttpApiTransport implements ApiTransport {
 
   void close() => _client.close();
 }
+
+/// Whether [error] happened while connecting, before any of the request was
+/// written.
+///
+/// ---
+///
+/// **Only a failure this function is sure of counts as "not sent".** The Dart
+/// runtime names its connect failures — `Failed host lookup` and
+/// `Connection failed` — and a refused or unreachable destination carries an
+/// errno that a connected socket does not produce. Everything else, a reset or
+/// a broken pipe above all, may come after the request left the phone, and is
+/// reported as possibly arrived. A guess in that direction costs a sentence
+/// saying "we could not confirm"; a guess the other way tells a resident
+/// nothing was sent about a request the office holds.
+@visibleForTesting
+bool failedBeforeSending(SocketException error) {
+  final String message = error.message;
+  if (message.startsWith('Failed host lookup') ||
+      message.startsWith('Connection failed') ||
+      message.startsWith('Connection attempt cancelled')) {
+    return true;
+  }
+  final int? code = error.osError?.errorCode;
+  return code != null && _connectErrnos.contains(code);
+}
+
+/// Refused, network unreachable, host unreachable and network down: answers
+/// to a connection attempt, never to a request on an open socket.
+final Set<int> _connectErrnos = Platform.isIOS || Platform.isMacOS
+    ? const <int>{61, 51, 65, 50}
+    : Platform.isWindows
+    ? const <int>{10061, 10051, 10065, 10050}
+    : const <int>{111, 101, 113, 100};
