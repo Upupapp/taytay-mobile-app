@@ -65,7 +65,7 @@ The wizard now runs in the server's order:
 2. The account: `createAccount` (`createUserWithEmailAndPassword`, then `GET /api/v1/me` with the ID token), and the session is opened.
 3. `saveRegistrationProfile`: `PATCH /api/v1/me` with `name` (given and family joined, gap 4), `mobile`, `email`, `barangay_id` and `street`. `ProfilePatch` is strict; nothing else is sent. A field the server refuses is shown beside that field.
 4. `sendEmailCode`, then `verifyEmailCode`. A send that is refused keeps the resident on the account step with a sentence saying the code was not sent; Continue asks again. A cooldown opens the hold screen. Once the account exists the email is fixed, so the code step no longer offers to change it.
-5. `recordConsents` at the terms step: `GET /api/v1/app/config`, then `POST /api/v1/me/consents` for `privacy_version` and `terms_version`. A failure stays on the terms step.
+5. `recordConsents` at the terms step: `GET /api/v1/app/config`, then `POST /api/v1/me/consents` for `privacy_version` and `terms_version`. A failure stays on the terms step, and one whose answer was lost says it could not be confirmed rather than that it was not recorded (D-188). After registration, a newer version of either text is asked for again on the consent screen (D-187).
 6. ID front (required) and back (optional), then a selfie (required).
 7. Review, then `submitProfile`: `POST /api/v1/me/verification-requests` with `id_type`, `id_front`, optional `id_back`, `selfie`. `201` is the pending state, which says staff check the request in the office's own system and the result arrives as an in-app notification.
 

@@ -3,7 +3,8 @@
 How the app decides where a resident lands on launch, what the welcome scenes
 do, and how an interrupted action is preserved across an access gate.
 
-Implemented in `lib/core/startup/`, `lib/core/intent/`, `lib/core/router/` and
+Implemented in `lib/core/startup/`, `lib/core/intent/`, `lib/core/router/`,
+`lib/core/session/consent_gate_controller.dart` and
 `lib/shared/widgets/access_gate_sheet.dart`.
 
 ---
@@ -37,6 +38,44 @@ screen. No screen handles this itself.
 
 `LaunchState` is presentation only. It never weakens an access requirement — a
 guest on first launch still cannot reach the digital ID, and a test asserts it.
+
+### A new Terms of Use or Privacy Notice version (D-187)
+
+When an administrator publishes a new version of either text, the staff console
+says it "makes every resident accept the text again in the app". This is how the
+app keeps that true.
+
+* **When it asks.** `ConsentGateController` (`lib/core/session/`) asks when a
+  session begins — a cold start that restores one, or a sign-in — and when the
+  resident returns to the app, at most once every five minutes after a
+  successful answer. It reads `terms_version` and `privacy_version` from
+  `GET /app/config` and the resident's consents from `GET /me/consents`.
+* **What counts.** A version is accepted when the resident's consents hold it,
+  trimmed and exact, and it has not been withdrawn (`ConsentReview`,
+  `lib/features/platform/domain/`). An empty version asks for nothing. One
+  version shared by both texts is recorded once.
+* **Never a lock-out.** Only a successful answer from both reads that names an
+  unaccepted version closes the gate. A failed read, a timeout or an empty
+  version leaves the app open, and the next return asks again. Startup never
+  waits for it: a resident may see Home for a moment before the screen appears.
+* **Where it stands.** `resolveRedirect(consentRequired:)` sends a signed-in
+  resident to `/consent-update?from=…` from every route except registration
+  (whose terms step records both texts), the update gate and the maintenance
+  gate. A guest is never asked. Once nothing is owed, the guard resumes `from`
+  if it is a route the resident may open, and Home otherwise.
+* **The screen.** It says which text changed and when it was published (only
+  for a published text of the version asked for), opens each text in the sheet
+  registration uses (`LegalTextSheet`, which says "available soon" rather than
+  showing the server's placeholder), and offers **I agree** and **Sign out**.
+  Signing out returns to guest browsing.
+* **Nothing claimed that the server did not confirm.** **I agree** posts each
+  missing version and succeeds only when every answer is an accepted,
+  unwithdrawn record of that version. A failure says the agreement was not
+  recorded, or that it could not be confirmed, and only then offers
+  **Continue for now**, which lets the resident in without recording anything.
+* **Registration.** The wizard opens the session before its terms step, so the
+  gate may close during registration; the register route is exempt, and the
+  wizard asks the gate again once its own consent is recorded.
 
 ---
 

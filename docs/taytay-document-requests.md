@@ -120,11 +120,18 @@ opened**: the app has no PDF viewer and the binary path only reads images.
 ## 5. Honest states
 
 - Loading shows skeletons; an empty list says so and offers a request.
-- Offline, a load says "You are offline"; a send says "Nothing was sent. Your
-  answers are still here."
-- A timeout on a send does **not** say nothing was sent: it cannot know. It
-  says a second try will not send twice, or that they can check My document
-  requests first.
+- Offline, a load says "You are offline". A send says "Nothing was sent. Your
+  answers are still here." only when the connection failed before the request
+  left the phone: no connection, a failed name lookup, a refused connection or
+  a TLS failure (D-188).
+- A send whose outcome is unknown does **not** say nothing was sent: a timeout,
+  a connection that dropped after the request was written, an answer the app
+  could not read, or a `5xx` other than `503`. It is titled "Not confirmed yet"
+  and says, for a submit: "We could not confirm that your request was received.
+  Sending the same request again is safe: it will not be filed twice. You can
+  also check My document requests." Resubmit and cancel say the same of the
+  changes or the cancellation. A `503` and every `4xx` refusal still say nothing
+  was sent.
 - **A retried send files once.** Submit, resubmit and cancel carry an
   `idempotency_key` in the body (a multipart field for the two that send
   files): a version 4 UUID minted when the resident presses send

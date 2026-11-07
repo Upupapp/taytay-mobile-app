@@ -247,7 +247,9 @@ will guess at.
 * Erasure and deactivation confirmed, dismissal sends nothing, confirmation sends
   exactly one keyed request, failure says nothing was asked for.
 * Consent withdrawal confirmed and keyed; a withdrawn consent keeps its row; a
-  non-withdrawable consent shows its reason; failure says nothing changed.
+  non-withdrawable consent shows its reason; a refused withdrawal says nothing
+  changed, and one whose answer was lost says it could not be confirmed and that
+  trying again is safe (D-188).
 * No server message, status code or exception text in resident copy.
 * 200% text scale.
 * Sign-out confirmation; dismissal keeps the session.

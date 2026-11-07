@@ -1883,6 +1883,84 @@ ends with them, the same way every other credential is handed over.
 
 ---
 
+## D-187 — A new Terms of Use or Privacy Notice version is asked for in the app, and a failure never locks anybody out
+
+**Status: settled.** Category: privacy / access. Recorded 2026-11-07 under the
+owner's standing instruction to settle open design questions by best practice
+(Ella, Michaela Cailing; see D-185 for the scope of her authority).
+
+**Context.** The staff console lets an administrator publish a new Terms of Use
+or Privacy Notice and warns that this "makes every resident accept the text
+again in the app". The API supports it (`terms_version` and `privacy_version` on
+`GET /app/config`, `GET` and `POST /me/consents`), but the app recorded consent
+only at registration, so the warning was untrue.
+
+**Chosen.**
+
+1. `ConsentGateController` asks when a session begins (a cold start that
+   restores one, or a sign-in) and when the resident returns to the app, at most
+   once every five minutes after a successful answer. A version is accepted when
+   the resident's consents hold it, trimmed and exact, and it is not withdrawn.
+   One version shared by both texts is recorded once.
+2. The gate closes only on a **successful** answer from both reads that names a
+   version the resident has not accepted. An empty version, a failed read or a
+   timeout leaves the app open, and the next return asks again.
+3. While it is closed, the guard sends a signed-in resident to
+   `/consent-update?from=…` from every route except registration (its terms step
+   records both texts), the update gate and the maintenance gate. A guest is
+   never asked. The screen says which text changed and when, opens each text in
+   the same sheet registration uses (which says "available soon" for a
+   placeholder), and offers **I agree** and **Sign out**. Signing out returns to
+   guest browsing.
+4. **I agree** posts each missing version and reports success only when every
+   answer is an accepted, unwithdrawn record of that version. A failure says it
+   was not recorded, or that it could not be confirmed, never that it was. Only
+   then does the screen offer **Continue for now**, which lets the resident in
+   without recording anything; the next return asks again.
+
+**Why.** A gate that a weak connection could close is one a resident cannot rely
+on at a counter, where the digital ID is shown. The direction of every uncertain
+case is the one `SupportedVersion` already takes: never lock anybody out on a
+missing answer. The gate is presentation, not authorization (Article 3.1); the
+server does not refuse requests from a resident who has not accepted.
+
+---
+
+## D-188 — A failed send says "nothing was sent" only when nothing left the phone
+
+**Status: settled.** Category: errors / honesty. Recorded 2026-11-07 under the
+same instruction as D-187.
+
+**Context.** The document request form said "You are offline … Nothing was
+sent." for every dropped connection, including one that dropped after the
+request was written. Then the office may already hold it, and the sentence is
+untrue: a resident who believes it may stop chasing a request the office has.
+
+**Chosen.**
+
+1. `NetworkFailure.mayHaveArrived` is set by `HttpApiTransport`, the one place
+   that saw the socket. It is false only for a failure while connecting: a
+   failed name lookup, `Connection failed`, a refused or unreachable destination,
+   or a TLS handshake. A reset, a broken pipe or a connection closed before the
+   answer is "may have arrived".
+2. `AppFailure.outcomeUnknown` is true for a timeout, a network failure that may
+   have arrived, an answer the app could not read, an error inside the app, and
+   a `5xx` other than `503`. A refusal (`4xx`, `503`) is not unknown.
+3. When the transport retries a write and a later attempt fails before sending,
+   it reports the earlier attempt that may have arrived, so a retry cannot turn
+   "unknown" into "not sent".
+4. Where a retry is safe (an idempotency key kept between attempts, or a write
+   that is idempotent by nature), an unknown outcome says so: "We could not
+   confirm that your request was received. Sending the same request again is
+   safe: it will not be filed twice." Document requests, consent and withdrawal,
+   notification settings, contact details, the profile edit, and the
+   registration wizard's profile and consent steps follow this.
+
+**Why.** "Could not confirm" is true in every case; "nothing was sent" is true
+only in some. When the app cannot tell which, it says the one that is true.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2073,5 +2151,7 @@ ends with them, the same way every other credential is handed over.
 | D-184 | The Node contract is vendored at `docs/integration/taytay-node-openapi.json` (taytay-backend PR 1). Envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }` matches `ApiEnvelopeDecoder`; residents do not see `message`. Role enum is `guest`, `registered`, `verified`, `staff`, `admin`. This app mints only `registered` and `verified`. `backend_routes.dart` calls the citizen surface. F31 is closed by `/threads` | contract | settled |
 | D-185 | Firebase starts from four `TAYTAY_FIREBASE_*` dart-defines in gitignored `env/` files, not `google-services.json`. Article 5.4 names them as its one exception: public project identifiers, never logged, never committed. The define-name scan now sees names read through constants. Ella's authority, 2026-11-05 | config / privacy | settled |
 | D-186 | Google Play App Signing holds the app signing key. The upload key is created by Paul with the Play Console listing, kept in a password vault, and handed to the municipality at turnover through the credentials register; its password is never committed. Settled under Ella's standing "decide best practice" instruction, 2026-11-07 | release / security | settled |
+| D-187 | A new Terms of Use or Privacy Notice version is asked for when a session begins and on return to the app. Only a successful answer closes the gate; an empty version or a failed read leaves the app open. Registration and the update and maintenance gates are exempt, a guest is never asked, and Sign out returns to guest browsing. A failed agreement is never called recorded, and only then is Continue for now offered | privacy / access | settled |
+| D-188 | "Nothing was sent" only when the connection failed before the request left the phone. The transport sets `NetworkFailure.mayHaveArrived`, `AppFailure.outcomeUnknown` names the uncertain cases, and a retried write keeps the earlier unknown. Where a retry is safe, an unknown outcome says it could not be confirmed and that sending again is safe | errors / honesty | settled |
 
-**186 decisions — 182 settled, 4 provisional.**
+**188 decisions — 184 settled, 4 provisional.**
