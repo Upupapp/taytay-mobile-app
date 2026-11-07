@@ -263,6 +263,27 @@ void main() {
       }
     }
 
+    // My Account, verified: its "Request documents" row opens the catalogue,
+    // pushed, so back returns to My Account. Eight rows at 400×900 once
+    // overflowed this frame; it scrolls now, and the walk above would have
+    // failed on an overflow.
+    _go(tester, AppRoute.profile.path);
+    await tester.pumpAndSettle();
+    final Finder documents = find.text('Request documents');
+    await tester.ensureVisible(documents);
+    await tester.pumpAndSettle();
+    await tester.tap(documents);
+    await tester.pumpAndSettle();
+    // Pushed: the router's location stays /profile and the catalogue is on top.
+    final Finder catalogue = find.byKey(const Key('issuance-my-requests'));
+    expect(catalogue, findsOneWidget);
+    _expectBackButtons(AppRoute.issuanceCatalogue);
+    await tester.tap(find.byType(TaytayBackButton));
+    await tester.pumpAndSettle();
+    expect(catalogue, findsNothing);
+    expect(_currentPath(tester), AppRoute.profile.path);
+    expect(find.text('Request documents'), findsOneWidget);
+
     // A signed-in resident is sent away from sign-in. Open it as a guest.
     await dependencies.session.signOut();
     await tester.pumpAndSettle();

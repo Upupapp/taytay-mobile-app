@@ -866,62 +866,83 @@ class _HomeBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<AccountMenuRow> first = menu.take(3).toList(growable: false);
     final List<AccountMenuRow> second = menu.skip(3).toList(growable: false);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.pagePad,
-        S8Space.gutter,
-        0,
-      ),
-      child: Column(
-        children: <Widget>[
-          _Card(
-            padding: const EdgeInsets.fromLTRB(
-              S8Space.cardPad,
-              S8Space.profilePadY,
-              S8Space.cardPad,
-              S8Space.profilePadY,
-            ),
-            child: Row(
-              children: <Widget>[
-                _Initials(initials),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      _MiddleLine(
-                        text: sample ? '$name ' : name,
-                        style: _name,
-                        chip: sample ? const _NormalSample() : null,
-                      ),
-                      SizedBox(
-                        height: 13 * S8Space.bodyLineHeight,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            location,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: _location,
-                            textHeightBehavior: S8Space.lineBox,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      _Pill(verifiedLabel),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+    final bool reflow = _largerText(context);
+    // The 08-01 frame is a fixed page whose sign-out card fills what is left.
+    // A longer menu, a shorter phone or larger text leaves nothing to fill, and
+    // a Column then overflowed (9 px at 400×900 with an eighth row). So the
+    // page scrolls, and the card fills the rest only when there is a rest:
+    // otherwise it keeps its own height (Article 6, layouts scroll rather than
+    // shrink text).
+    return CustomScrollView(
+      key: const Key('account-home-scroll'),
+      slivers: <Widget>[
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(
+            S8Space.gutter,
+            S8Space.pagePad,
+            S8Space.gutter,
+            0,
           ),
-          const SizedBox(height: S8Space.cardGap),
-          _MenuCard(rows: first),
-          const SizedBox(height: S8Space.cardGap),
-          _MenuCard(rows: second),
-          const SizedBox(height: S8Space.cardGap),
-          Expanded(
+          sliver: SliverList.list(
+            children: <Widget>[
+              _Card(
+                padding: const EdgeInsets.fromLTRB(
+                  S8Space.cardPad,
+                  S8Space.profilePadY,
+                  S8Space.cardPad,
+                  S8Space.profilePadY,
+                ),
+                child: Row(
+                  children: <Widget>[
+                    _Initials(initials),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          if (reflow) ...<Widget>[
+                            Text(name, style: _name),
+                            Text(location, style: _location),
+                          ] else ...<Widget>[
+                            _MiddleLine(
+                              text: sample ? '$name ' : name,
+                              style: _name,
+                              chip: sample ? const _NormalSample() : null,
+                            ),
+                            SizedBox(
+                              height: 13 * S8Space.bodyLineHeight,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  location,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: _location,
+                                  textHeightBehavior: S8Space.lineBox,
+                                ),
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 6),
+                          _Pill(verifiedLabel, reflow: reflow),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: S8Space.cardGap),
+              _MenuCard(rows: first),
+              const SizedBox(height: S8Space.cardGap),
+              _MenuCard(rows: second),
+              const SizedBox(height: S8Space.cardGap),
+            ],
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: S8Space.gutter),
+          sliver: SliverFillRemaining(
+            hasScrollBody: false,
             child: _Card(
               padding: const EdgeInsets.symmetric(horizontal: S8Space.cardPad),
               child: _Hit(
@@ -941,11 +962,20 @@ class _HomeBody extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
+
+/// Whether the resident reads text larger than the design's own size.
+///
+/// The 08-01 lines are drawn in fixed line boxes measured from the design at
+/// 1×. Larger text in them would be clipped or cut short, so past 1× the home
+/// reflows into ordinary wrapping text instead: a name, a row title or a
+/// subtitle is read whole, and the page scrolls (Article 6).
+bool _largerText(BuildContext context) =>
+    MediaQuery.textScalerOf(context).scale(14) > 14;
 
 /// Menu rows sized by their content. The hairline is #EEF1F6.
 class _MenuCard extends StatelessWidget {
@@ -976,6 +1006,7 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool reflow = _largerText(context);
     return _Hit(
       label: row.title,
       onTap: row.onTap,
@@ -993,9 +1024,15 @@ class _MenuRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  _Line(row.title, _rowTitle),
+                  if (reflow)
+                    Text(row.title, style: _rowTitle)
+                  else
+                    _Line(row.title, _rowTitle),
                   const SizedBox(height: S8Space.titleGap),
-                  _Line(row.subtitle, _meta),
+                  if (reflow)
+                    Text(row.subtitle, style: _meta)
+                  else
+                    _Line(row.subtitle, _meta),
                 ],
               ),
             ),
@@ -2397,9 +2434,12 @@ class _Initials extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill(this.label);
+  const _Pill(this.label, {this.reflow = false});
 
   final String label;
+
+  /// Only inside a bounded column: a flexible label needs a width to wrap in.
+  final bool reflow;
 
   @override
   Widget build(BuildContext context) {
@@ -2420,14 +2460,21 @@ class _Pill extends StatelessWidget {
             excludeSemantics: true,
           ),
           const SizedBox(width: Spacing.xs),
-          SizedBox(
-            height: 11 * 1.2,
-            child: Text(
-              label,
-              style: _badge,
-              textHeightBehavior: S8Space.lineBox,
+          // Where the pill sits in a column of reflowed text, the label wraps
+          // in its own height rather than running past a small phone's edge.
+          if (reflow)
+            Flexible(child: Text(label, style: _badge))
+          else
+            // The line box grows with the resident's text size; at 1× it is
+            // the design's 11 × 1.2.
+            SizedBox(
+              height: MediaQuery.textScalerOf(context).scale(11) * 1.2,
+              child: Text(
+                label,
+                style: _badge,
+                textHeightBehavior: S8Space.lineBox,
+              ),
             ),
-          ),
         ],
       ),
     );

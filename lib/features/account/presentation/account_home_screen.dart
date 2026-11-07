@@ -176,8 +176,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         iconColor: BrandColors.success,
         onTap: () => context.goNamed(AppRoute.verification.routeName),
       ),
-      // `/household` is a top-level route, so it is pushed: back returns here
-      // rather than to Home.
+      // `/documents` and `/household` are top-level routes, so they are
+      // pushed: back returns here rather than to Home.
+      AccountMenuRow(
+        title: 'Request documents',
+        subtitle: 'Certificates and copies from offices',
+        icon: TaytayIcons.fileText,
+        tile: BrandColors.chipBlueBg,
+        iconColor: BrandColors.taytayBlue,
+        onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
+      ),
       AccountMenuRow(
         title: 'Household',
         subtitle: 'Address and your place in it',
@@ -255,7 +263,8 @@ class _VerifiedBadge extends StatelessWidget {
           color: theme.colorScheme.onSecondaryContainer,
         ),
         const SizedBox(width: 8),
-        const Text('Verified by Taytay LGU'),
+        // Wraps at large text on a small phone instead of running off it.
+        const Flexible(child: Text('Verified by Taytay LGU')),
       ],
     );
   }
