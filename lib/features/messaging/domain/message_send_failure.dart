@@ -35,9 +35,19 @@ const String messageNotSent = 'Nothing was sent.';
 /// failed before the request left the phone, "could not confirm" for a
 /// timeout, a connection dropped after sending, an unreadable answer or a
 /// server that failed part-way. Other refusals keep the failure's own words.
-String messageSendFailure(AppFailure failure, {required MessageAct act}) {
+///
+/// Once a send's answer was lost, every later failure in the same composer
+/// says "could not confirm" until a send goes through, the rule events follow
+/// (D-191, D-192): a retry that fails before it leaves the phone sent nothing,
+/// but the earlier send may have reached the office. [unconfirmed] is
+/// `SendKey.unconfirmed`, read after settling this failure.
+String messageSendFailure(
+  AppFailure failure, {
+  required MessageAct act,
+  bool unconfirmed = false,
+}) {
   return switch (failure) {
-    _ when failure.outcomeUnknown => act.unconfirmed,
+    _ when failure.outcomeUnknown || unconfirmed => act.unconfirmed,
     // Past the guard above, the connection failed before anything was sent.
     NetworkFailure() => '$messageNotSent ${failure.residentMessage}',
     // A first message has no thread state to conflict with: a 409 means its

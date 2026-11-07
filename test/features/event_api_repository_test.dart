@@ -292,7 +292,7 @@ void main() {
     });
 
     test('a called-off event is shown and says so; completed is shown; '
-        '"not_required" offers nothing', () async {
+        '"not_required" is a walk-in event', () async {
       transport.responses.add(
         _page(<Object?>[
           _event(status: 'cancelled', state: 'closed'),
@@ -313,7 +313,10 @@ void main() {
       expect(items[1].isResidentVisible, isTrue);
       expect(items[1].isCalledOff, isFalse);
       expect(items[2].registrationState?.raw, 'not_required');
-      expect(items[2].registrationState?.known, isNull);
+      expect(
+        items[2].registrationState?.known,
+        EventRegistrationState.notRequired,
+      );
     });
 
     test('only an https cover is drawn', () async {

@@ -179,5 +179,42 @@ void main() {
       expect(config.requestTimeout, lessThan(config.uploadTimeout));
       expect(config.requestTimeout.inSeconds, greaterThan(0));
     });
+
+    test('the API origin is its scheme, host and port, and nothing else', () {
+      final config = build(
+        environment: 'staging',
+        baseUrl: 'https://api.example.test/api/v1',
+      );
+
+      // Any path on the API's own host is its origin.
+      expect(
+        config.isOnApiOrigin('https://api.example.test/media/cover.jpg'),
+        isTrue,
+      );
+      expect(config.isOnApiOrigin('https://API.Example.test/x.jpg'), isTrue);
+      expect(config.isOnApiOrigin('https://api.example.test:443/x'), isTrue);
+
+      // Another host, a sibling, another scheme or port, or credentials.
+      for (final String url in <String>[
+        'https://cdn.example.org/cover.jpg',
+        'https://example.test/cover.jpg',
+        'https://api.example.test.evil.example/cover.jpg',
+        'http://api.example.test/cover.jpg',
+        'https://api.example.test:8443/cover.jpg',
+        'https://someone@api.example.test/cover.jpg',
+        '//api.example.test/cover.jpg',
+        '/media/cover.jpg',
+        'data:image/png;base64,AAAA',
+        '',
+        'not a url',
+      ]) {
+        expect(config.isOnApiOrigin(url), isFalse, reason: url);
+      }
+
+      // A dev API on another port is its own origin.
+      final dev = build(baseUrl: 'http://10.0.2.2:3000/api/v1');
+      expect(dev.isOnApiOrigin('http://10.0.2.2:3000/media/x.jpg'), isTrue);
+      expect(dev.isOnApiOrigin('http://10.0.2.2/media/x.jpg'), isFalse);
+    });
   });
 }

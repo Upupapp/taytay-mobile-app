@@ -60,11 +60,9 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   bool _cancelling = false;
 
   /// The key for giving up a place, kept across retries of that act (D-191).
+  /// It also holds whether a cancellation may have reached Taytay LGU without
+  /// an answer ([SendKey.unconfirmed], D-192).
   final SendKey _cancelKey = SendKey();
-
-  /// Whether a cancellation may have reached Taytay LGU without an answer.
-  /// Cleared only by an answer from the server.
-  bool _cancelUnconfirmed = false;
 
   bool get _idIsValid => DeepLink.isValidIdentifier(widget.eventId);
 
@@ -141,20 +139,13 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     _cancelKey.settle(result);
     if (!mounted) return;
 
-    final bool earlierUnconfirmed = _cancelUnconfirmed;
     setState(() {
       _cancelling = false;
-      result.fold(
-        // The server's own version of the registration replaces the local one —
-        // it knows whether this became `cancelled` or something else.
-        onOk: (updated) {
-          _event = _event?.withRegistration(updated);
-          _cancelUnconfirmed = false;
-        },
-        onErr: (failure) {
-          if (failure.outcomeUnknown) _cancelUnconfirmed = true;
-        },
-      );
+      // The server's own version of the registration replaces the local one —
+      // it knows whether this became `cancelled` or something else.
+      if (result case Ok<EventRegistration>(value: final updated)) {
+        _event = _event?.withRegistration(updated);
+      }
     });
 
     switch (result) {
@@ -167,8 +158,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
         // Copy from the failure kind, never the server's operator-facing text.
         // "You still have your place" only when no send may have arrived.
         Outcome.problem(context, switch (failure) {
-          _ when failure.outcomeUnknown || earlierUnconfirmed =>
-            cancellationUnconfirmed,
+          _ when _cancelKey.unconfirmed => cancellationUnconfirmed,
           ConflictFailure() => cancellationTooLate,
           _ =>
             '${localisedResidentMessage(context, failure)} '
@@ -278,8 +268,7 @@ class _Detail extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: <Widget>[
-        if (event.coverImageUrl != null)
-          EventCover(url: event.coverImageUrl!, height: 200),
+        EventCover(url: event.coverImageUrl, height: 200),
 
         Padding(
           padding: const EdgeInsets.all(Spacing.lg),

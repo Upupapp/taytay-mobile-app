@@ -29,7 +29,9 @@ abstract final class HomeCatalogue {
   }
 
   static Future<List<HomeSlide>> _readSlides() async {
-    final Object? decoded = jsonDecode(await rootBundle.loadString(slidesAsset));
+    final Object? decoded = jsonDecode(
+      await rootBundle.loadString(slidesAsset),
+    );
     if (decoded is! Map) return const <HomeSlide>[];
     final List<HomeSlide> parsed = _slides(decoded['slides']);
     _parsedSlides = parsed;
@@ -44,14 +46,16 @@ abstract final class HomeCatalogue {
   ) {
     if (bundled.isEmpty) return bundled;
     final List<HomeBanner> active =
-        banners.where((HomeBanner banner) => banner.active).toList()
-          ..sort(
-            (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
-          );
+        banners.where((HomeBanner banner) => banner.active).toList()..sort(
+          (HomeBanner a, HomeBanner b) => a.sortOrder.compareTo(b.sortOrder),
+        );
     if (active.isEmpty) return bundled;
     return <HomeSlide>[
       for (var i = 0; i < active.length; i++)
-        _fromBanner(active[i], bundled[i < bundled.length ? i : bundled.length - 1]),
+        _fromBanner(
+          active[i],
+          bundled[i < bundled.length ? i : bundled.length - 1],
+        ),
     ];
   }
 
@@ -79,6 +83,7 @@ abstract final class HomeCatalogue {
     'programs' => 'TULONG',
     'services' => 'DIRECTORY',
     'hotlines' => 'HOTLINES',
+    'events' => 'EVENTS',
     _ => 'TAYTAY LGU',
   };
 
@@ -87,6 +92,7 @@ abstract final class HomeCatalogue {
     'programs' => 'Explore Tulong',
     'services' => 'Open Directory',
     'hotlines' => 'See hotlines',
+    'events' => 'See events',
     _ => 'Open',
   };
 
@@ -96,6 +102,12 @@ abstract final class HomeCatalogue {
     return banner.id;
   }
 
+  /// The route a banner's link names. Every value is an `AppRoute` name, so
+  /// the slide's button resolves when Home calls `goNamed`.
+  ///
+  /// Events is not on the tab bar (D-178). A banner whose link names events is
+  /// the way into it, and the office sets banners from the staff console's
+  /// home screen page, so promoting an event stays in its hands (D-192).
   static String _route(String? href, String fallback) {
     if (href == null || href.isEmpty) return fallback;
     final String path = Uri.tryParse(href)?.path ?? href;
@@ -103,6 +115,7 @@ abstract final class HomeCatalogue {
     if (path.contains('service')) return 'services';
     if (path.contains('hotline')) return 'hotlines';
     if (path.contains('news')) return 'news';
+    if (path.contains('event')) return 'events';
     return fallback;
   }
 

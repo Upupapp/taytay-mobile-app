@@ -1,13 +1,17 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/links/external_link_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
@@ -18,6 +22,8 @@ import 'package:taytay_resident/core/time/manila_time.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/events_controller.dart';
+import 'package:taytay_resident/features/events/presentation/events_screen.dart';
+import 'package:taytay_resident/shared/widgets/remote_image.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -224,6 +230,7 @@ Future<BootedEvents> bootEvents(
   String location = '/events',
   Size size = const Size(400, 4000),
   TextScaler textScaler = TextScaler.noScaling,
+  ApiTransport? transport,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -251,6 +258,7 @@ Future<BootedEvents> bootEvents(
 
   final base = AppDependencies.build(
     config: config(),
+    transport: transport,
     secrets: secrets,
     sessionStore: sessionStore,
     localAuthenticator: const UnavailableLocalAuthenticator(),
@@ -1153,4 +1161,189 @@ void main() {
       expect(myPlace().toString(), isNot(contains('TR-2026-0001')));
     });
   });
+
+  group('a walk-in event — D-192', () {
+    testWidgets('its row says no registration is needed', (tester) async {
+      await bootEvents(
+        tester,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: pageOf(<LguEvent>[
+            event(
+              registrationState: registration(
+                EventRegistrationState.notRequired,
+              ),
+            ),
+          ]),
+        },
+      );
+
+      expect(find.text('No registration needed'), findsOneWidget);
+      expect(find.textContaining('Ask the office'), findsNothing);
+    });
+
+    testWidgets('its page says so, and offers no register control', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        level: AccessLevel.verified,
+        detail: event(
+          registrationState: registration(EventRegistrationState.notRequired),
+        ),
+        location: '/events/e-1',
+      );
+
+      expect(find.text('No registration needed'), findsOneWidget);
+      expect(find.text('Register for this event'), findsNothing);
+      expect(find.textContaining('Ask the office'), findsNothing);
+    });
+
+    test("is the server's not_required, and nothing else", () {
+      expect(EventRegistrationState.notRequired.wireValue, 'not_required');
+      expect(
+        registrationStateLabel(EventRegistrationState.notRequired),
+        'No registration needed',
+      );
+      expect(EventRegistrationState.notRequired.isResidentRegistered, isFalse);
+      // A state this build does not know still points at the office.
+      expect(registrationStateLabel(null), 'Ask the office about registering');
+    });
+  });
+
+  group('an event cover — D-192', () {
+    // `config()` serves the API from https://example.test/api/v1.
+    const String onApi = 'https://example.test/media/covers/sample.jpg';
+    const String elsewhere = 'https://covers.example.org/sample.jpg';
+
+    Finder drawn() => find.descendant(
+      of: find.byType(EventCover),
+      matching: find.byType(RemoteImage),
+    );
+
+    testWidgets("is drawn from the API's own origin on its row", (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: pageOf(<LguEvent>[event(coverImageUrl: onApi)]),
+        },
+      );
+
+      expect(drawn(), findsOneWidget);
+      expect(tester.widget<RemoteImage>(drawn()).url, onApi);
+    });
+
+    testWidgets("is drawn from the API's own origin on its page", (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        detail: event(coverImageUrl: onApi),
+        location: '/events/e-1',
+      );
+
+      expect(drawn(), findsOneWidget);
+    });
+
+    testWidgets('from another host is not loaded, and takes no space', (
+      tester,
+    ) async {
+      await bootEvents(
+        tester,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: pageOf(<LguEvent>[
+            event(coverImageUrl: elsewhere),
+            event(id: 'e-2', title: 'Clean-up drive'),
+          ]),
+        },
+      );
+
+      expect(find.byType(EventCover), findsNWidgets(2));
+      expect(find.byType(RemoteImage), findsNothing);
+      expect(find.byType(Image), findsNothing);
+      // The same as an event with no cover at all: no box, no gap.
+      expect(tester.getSize(find.byType(EventCover).first).height, 0);
+      expect(tester.getSize(find.byType(EventCover).last).height, 0);
+    });
+
+    testWidgets('from another host is not loaded on its page', (tester) async {
+      await bootEvents(
+        tester,
+        detail: event(coverImageUrl: elsewhere),
+        location: '/events/e-1',
+      );
+
+      expect(find.byType(RemoteImage), findsNothing);
+      expect(find.byType(Image), findsNothing);
+      expect(find.text('Medical mission'), findsWidgets);
+    });
+  });
+
+  group('a way in from Home — D-192', () {
+    testWidgets('a banner whose link names events opens Events', (
+      tester,
+    ) async {
+      final _HomeBanner home = _HomeBanner('/events/summer-fun-run');
+      await bootEvents(tester, location: '/home', transport: home);
+
+      expect(home.paths, contains('home'));
+      expect(find.text('EVENTS'), findsOneWidget);
+      expect(find.text('Fun run this Saturday'), findsOneWidget);
+
+      await tester.tap(find.text('See events'));
+      await tester.pumpAndSettle();
+
+      expect(currentLocation(tester), AppRoute.events.path);
+      expect(find.byType(EventsScreen), findsOneWidget);
+    });
+  });
+}
+
+/// Answers `GET home` with one active banner linking to [href], and refuses
+/// every other request, as a server with nothing else to say would.
+class _HomeBanner implements ApiTransport {
+  _HomeBanner(this.href);
+
+  final String href;
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    paths.add(request.path);
+    if (request.path == 'home') {
+      return Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: jsonEncode(<String, Object?>{
+            'data': <String, Object?>{
+              'banners': <Object?>[
+                <String, Object?>{
+                  'id': '22222222-2222-4222-8222-222222222222',
+                  'title': 'Fun run this Saturday',
+                  'href': href,
+                  'sort_order': 1,
+                  'active': true,
+                },
+              ],
+            },
+            'meta': <String, Object?>{},
+          }),
+        ),
+      );
+    }
+    return Ok<ApiHttpResponse>(
+      ApiHttpResponse(
+        statusCode: 404,
+        body: jsonEncode(<String, Object?>{
+          'error': <String, Object?>{
+            'code': 'NOT_FOUND',
+            'message': 'Not found.',
+            'details': <String, Object?>{},
+            'request_id': 'req-1',
+          },
+        }),
+      ),
+    );
+  }
 }

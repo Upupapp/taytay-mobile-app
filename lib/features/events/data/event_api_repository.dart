@@ -381,7 +381,8 @@ class EventApiRepository implements EventRepository {
       // The server's own label, shown as sent. The code beside it decides
       // nothing in this app.
       category: _text(raw['category_label']),
-      // A link the office typed. Only `https` is drawn, as with directions.
+      // A link the office typed. Only `https` is kept, as with directions, and
+      // `EventCover` draws it only from the API's own origin (D-192).
       coverImageUrl: ExternalLink.isSafe(coverUrl) ? coverUrl : null,
       organiser: _text(raw['organiser']),
       contact: _contact(raw['contact']),
@@ -479,8 +480,8 @@ class EventApiRepository implements EventRepository {
   }
 
   static ServerValue<EventRegistrationState>? _registrationState(Object? raw) {
-    // `not_required` is not a state this enum names, so it reads as unknown
-    // and no register control is offered, which is right for it.
+    // `not_required` is a walk-in event and reads "No registration needed".
+    // Only `open` offers the register control, so it offers none (D-192).
     final String? value = _text(raw);
     return value == null
         ? null

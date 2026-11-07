@@ -965,6 +965,7 @@ class _Eyebrow extends StatelessWidget {
   IconData get _icon => switch (routeName) {
     'programs' => TaytayIcons.handHeart,
     'services' => TaytayIcons.briefcase,
+    'events' => TaytayIcons.calendar,
     _ => TaytayIcons.newspaper,
   };
 

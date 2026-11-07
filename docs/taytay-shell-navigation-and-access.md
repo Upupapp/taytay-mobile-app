@@ -234,7 +234,7 @@ reporting a fault.
 | --- | --- | --- |
 | Services | `GET /api/v1/services` | **implemented** — real repository |
 | News | `GET /api/v1/announcements` (public) | `planned` — declines |
-| Events | `GET /api/v1/events` (public) | **served** on the Node API since backend `580acbb` (D-191) |
+| Events | `GET /api/v1/events` (public) | **served** on the Node API since backend `580acbb` (D-191). Not a tab (D-178): reached from a notification or a home banner whose link names events (D-192) |
 | My requests | `GET /api/v1/me/assistance-requests` | `planned` — declines |
 | Request detail | `GET /api/v1/me/assistance-requests/{id}` | `planned` — declines |
 

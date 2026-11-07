@@ -35,14 +35,11 @@ const String cancellationTooLate =
 /// connection dropped after sending, an unreadable answer or a server that
 /// failed part-way says "could not confirm" — and keeps saying it on a later
 /// retry that fails before sending, because the earlier one may still have
-/// registered the resident ([earlierUnconfirmed]).
-String registrationSendFailure(
-  AppFailure failure, {
-  bool earlierUnconfirmed = false,
-}) {
+/// registered the resident ([unconfirmed]: `SendKey.unconfirmed`, read after
+/// settling this failure).
+String registrationSendFailure(AppFailure failure, {bool unconfirmed = false}) {
   return switch (failure) {
-    _ when failure.outcomeUnknown || earlierUnconfirmed =>
-      registrationUnconfirmed,
+    _ when failure.outcomeUnknown || unconfirmed => registrationUnconfirmed,
     // Past the guard above, the connection failed before anything was sent.
     NetworkFailure() =>
       'We could not send your registration, so nothing was registered. '

@@ -39,6 +39,10 @@ enum EventScope {
 /// worse than an absent one, and registration has its own flow with capacity and
 /// waitlist rules that belong together.
 enum EventRegistrationState {
+  /// The event takes no registration: residents come on the day. There is
+  /// nothing to register for, so no register control is offered (D-192).
+  notRequired('not_required'),
+
   /// Registration has not opened.
   notOpen('not_open'),
 
@@ -170,6 +174,9 @@ class LguEvent {
   /// app takes no decision from it.
   final String? category;
 
+  /// The cover link the office typed. `EventCover` draws it only from the
+  /// API's own origin, so a cover never makes the phone contact another host
+  /// (D-192).
   final String? coverImageUrl;
 
   /// The Taytay office running it.

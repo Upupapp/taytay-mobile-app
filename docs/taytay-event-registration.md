@@ -16,7 +16,9 @@ header, and keeps it for every retry of the same act. `registered`,
 is a refusal in the app's own words. A timeout or a dropped connection reads
 "We could not confirm that your registration was received. Trying again is
 safe: you will not be registered twice." It never says "not registered", and a
-later retry that fails before sending keeps saying so.
+later retry that fails before sending keeps saying so. `SendKey.unconfirmed`
+holds that doubt until the server answers, and messages to an office now use
+the same rule (D-192).
 
 ---
 

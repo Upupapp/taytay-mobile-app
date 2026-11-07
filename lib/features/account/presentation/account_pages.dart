@@ -390,7 +390,13 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
         setState(() {
           _sending = false;
           if (failure is ConflictFailure) _closed = true;
-          _error = messageSendFailure(failure, act: MessageAct.reply);
+          // Once an answer was lost, a later failure is never "not sent"
+          // until a reply goes through (D-192).
+          _error = messageSendFailure(
+            failure,
+            act: MessageAct.reply,
+            unconfirmed: _sendKey.unconfirmed,
+          );
         });
     }
   }

@@ -312,6 +312,22 @@ class AppConfig {
 
   bool get isUsable => issues.isEmpty;
 
+  /// Whether [url] is on the API's own origin: the scheme, host and port of
+  /// [apiBaseUri], with no credentials in it.
+  ///
+  /// A picture a payload names by URL is loaded only from there, so showing it
+  /// never makes a resident's phone contact a host the API does not run, which
+  /// would learn the phone's address and when the screen was opened (D-192).
+  /// A missing port is the scheme's default on both sides.
+  bool isOnApiOrigin(String url) {
+    final Uri? uri = Uri.tryParse(url.trim());
+    if (uri == null || !uri.hasScheme || !uri.hasAuthority) return false;
+    if (uri.host.isEmpty || uri.userInfo.isNotEmpty) return false;
+    return uri.scheme.toLowerCase() == apiBaseUri.scheme.toLowerCase() &&
+        uri.host.toLowerCase() == apiBaseUri.host.toLowerCase() &&
+        uri.port == apiBaseUri.port;
+  }
+
   /// Whether residents sign in through Firebase in this build.
   ///
   /// Everything except a dev mock does: a dev debug build with

@@ -297,10 +297,7 @@ class EventCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (event.coverImageUrl != null) ...<Widget>[
-            EventCover(url: event.coverImageUrl!),
-            const SizedBox(height: Spacing.md),
-          ],
+          EventCover(url: event.coverImageUrl, gapBelow: Spacing.md),
 
           if (event.isRegistered) ...<Widget>[
             Row(
@@ -425,14 +422,28 @@ class _IconLine extends StatelessWidget {
 
 /// An event cover, with its space reserved and a failure that does not take the
 /// event down with it.
+///
+/// **The one place an event's cover link becomes a picture.** It is loaded only
+/// when the link is on the API's own origin (`AppConfig.isOnApiOrigin`). A link
+/// the office typed can name any host, and fetching it would tell that host the
+/// resident's address and that they opened the event. Anything else draws
+/// nothing, and no space: the cover is decorative (D-192).
 class EventCover extends StatelessWidget {
-  const EventCover({required this.url, this.height, super.key});
+  const EventCover({required this.url, this.height, this.gapBelow, super.key});
 
-  final String url;
+  /// The event's cover link, or null when it has none.
+  final String? url;
   final double? height;
+
+  /// Space under a drawn cover. None when there is no cover to draw.
+  final double? gapBelow;
 
   @override
   Widget build(BuildContext context) {
+    final String? url = this.url;
+    if (url == null || !AppDependencies.of(context).config.isOnApiOrigin(url)) {
+      return const SizedBox.shrink();
+    }
     // Decorative: the title, date and venue below carry every fact. Giving it
     // a description this app invented for a picture it cannot see would be
     // worse than silence — so no `semanticLabel`.
@@ -442,12 +453,19 @@ class EventCover extends StatelessWidget {
       errorIcon: Icons.event_outlined,
     );
 
-    return ClipRRect(
+    final Widget cover = ClipRRect(
       borderRadius: BorderRadius.circular(Radii.md),
       child: height == null
           ? AspectRatio(aspectRatio: 16 / 9, child: image)
           : SizedBox(height: height, width: double.infinity, child: image),
     );
+    final double? gap = gapBelow;
+    return gap == null
+        ? cover
+        : Padding(
+            padding: EdgeInsets.only(bottom: gap),
+            child: cover,
+          );
   }
 }
 
@@ -495,15 +513,17 @@ class _EventsSkeleton extends StatelessWidget {
   }
 }
 
+/// What a called-off event is labelled, in its list row and on its page.
+const String calledOffLabel = 'Called off by Taytay LGU';
+
 /// Resident-facing wording for a registration state.
 ///
 /// One switch for the card and the detail screen, for the same reason the
 /// request-status copy has one: two switches over an enum drift, and a resident
 /// then reads two different words for one state.
-/// What a called-off event is labelled, in its list row and on its page.
-const String calledOffLabel = 'Called off by Taytay LGU';
-
 String registrationStateLabel(EventRegistrationState? state) => switch (state) {
+  // A walk-in event. Not "ask the office": there is nothing to ask (D-192).
+  EventRegistrationState.notRequired => 'No registration needed',
   EventRegistrationState.notOpen => 'Registration not open yet',
   EventRegistrationState.open => 'Registration open',
   EventRegistrationState.registered => 'You are registered',

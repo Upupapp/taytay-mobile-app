@@ -623,6 +623,50 @@ void main() {
       },
     );
 
+    testWidgets(
+      'after a lost answer, a retry that fails before sending is still not '
+      'confirmed (D-192)',
+      (tester) async {
+        final _Desk desk = _Desk(replyFailure: const TimeoutFailure());
+        await _pumpThread(tester, desk);
+        await tester.enterText(
+          find.byKey(const Key('account-thread-field')),
+          'Saan po ang pila?',
+        );
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(find.text(MessageAct.reply.unconfirmed), findsOneWidget);
+
+        // Offline now. This try never left the phone, but the first one may
+        // have reached the office, so it is not "Nothing was sent".
+        desk.replyFailure = const NetworkFailure();
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(find.text(MessageAct.reply.unconfirmed), findsOneWidget);
+        expect(find.textContaining('Nothing was sent'), findsNothing);
+        expect(desk.replyKeys.toSet(), hasLength(1));
+
+        // Once a reply goes through, a failure before sending is said plainly.
+        desk.replyFailure = null;
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(desk.replies, hasLength(1));
+        desk.replyFailure = const NetworkFailure();
+        await tester.enterText(
+          find.byKey(const Key('account-thread-field')),
+          'Salamat po',
+        );
+        await tester.tap(find.byKey(const Key('account-thread-send')));
+        await tester.pump();
+        expect(
+          find.text(
+            'Nothing was sent. ${const NetworkFailure().residentMessage}',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+
     testWidgets('other words or another file are a new reply with a new key', (
       tester,
     ) async {

@@ -12,12 +12,28 @@ import 'request_context.dart';
 /// refuses a mismatch, so the key must change whenever the content does:
 /// either the owner calls [reset] on every edit, or it asks through [takeFor]
 /// and the key follows the content by itself.
+///
+/// It also remembers whether a send may have arrived without an answer
+/// ([unconfirmed]), so a screen never calls a later failure "not sent" while an
+/// earlier send may have reached the office (D-191, D-192).
 class SendKey {
   SendKey({String Function() mint = generateIdempotencyKey}) : _mint = mint;
 
   final String Function() _mint;
   String? _key;
   Object? _content;
+  bool _unconfirmed = false;
+
+  /// Whether a send made with this holder may have reached the server without
+  /// its answer reaching the phone, and no answer has come since.
+  ///
+  /// [settle] sets it for a failure whose outcome is unknown (D-188), and only
+  /// an `Ok` clears it. A refusal or a `409` on a later try, a new key for
+  /// changed content, and [reset] all leave it: the send whose answer was lost
+  /// may still have arrived. Read after [settle], it covers the send just
+  /// settled too, so a retry that fails before it leaves the phone still says
+  /// "could not confirm", never "not sent".
+  bool get unconfirmed => _unconfirmed;
 
   /// The key for this send. The same one until [settle] or [reset] lets it go.
   String take() => _key ??= _mint();
@@ -48,13 +64,17 @@ class SendKey {
   /// * Anything else is kept. A timeout or a lost connection may have reached
   ///   the office, and only the same key makes trying again safe. A refusal
   ///   (`403`, `422`, `413`) claimed nothing, so keeping the key costs nothing.
+  ///
+  /// An `Ok` clears [unconfirmed]; a failure whose outcome is unknown sets it.
   void settle(Result<Object?> result) {
     switch (result) {
       case Ok():
+        _key = null;
+        _unconfirmed = false;
       case Err(failure: ConflictFailure()):
         _key = null;
-      case Err():
-        break;
+      case Err(:final failure):
+        if (failure.outcomeUnknown) _unconfirmed = true;
     }
   }
 

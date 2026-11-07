@@ -14,6 +14,13 @@ computed. A called-off event stays in Upcoming until its date passes, and its
 row and page say "Called off by Taytay LGU". An answer the app cannot read is a
 contract failure, never "no events".
 
+**Since D-192:** Events is still not a tab (D-178); a home banner whose link
+names events opens it, and the office sets banners. A walk-in event
+(`not_required`) reads "No registration needed" and offers no register control.
+`EventCover` loads a cover only when its link is on the API's own origin (the
+scheme, host and port of the configured base URL); a link to any other host
+draws nothing, so viewing an event never makes the phone contact a third party.
+
 ---
 
 ## 1. Asia/Manila, stated

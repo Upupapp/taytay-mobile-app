@@ -2140,6 +2140,84 @@ there are no events, or that they have no place, and both are guesses.
 
 ---
 
+## D-192 — Events open from a home banner, a walk-in event says so, a cover loads only from the API, and a message stays "not confirmed" after a lost answer
+
+**Status: settled.** Category: navigation / privacy / errors. Recorded
+2026-11-08, following D-191. The owner delegated all four questions with
+"decide the best practice" (Ella, Michaela Cailing; see D-185 for the scope of
+her authority).
+
+**Context.** D-191 left four things open. Events is routed but not on the
+approved tab bar (D-178), so a resident had no way in except a notification. A
+walk-in event (`not_required`) read "Ask the office about registering", which
+sends a resident to ask a question that has no answer. A cover was loaded from
+whatever `https` link the office typed, so opening the list made the phone
+contact a host the LGU may not run and told it the phone's address and when the
+event was viewed. Balita covers never do this: they come from
+`GET /news/{id}/cover`. And a message kept D-188 only for one try: after a
+timeout, a retry that failed before leaving the phone said "Nothing was sent",
+though the first send may have posted the message. D-191 had closed that gap
+for events only.
+
+**Chosen.**
+
+1. **A home banner opens Events.** The tab bar stays Home, Directory, Balita,
+   Tulong, My Account (D-178). `HomeCatalogue._route` maps a banner link whose
+   path contains `event` to the `events` route. It is checked after `program`,
+   `service`, `hotline` and `news`. The slide reads "EVENTS" above the title
+   and "See events" on its button, with the calendar icon. The office sets
+   banners on the staff console's home screen page, so promoting an event is
+   its decision. The eyebrow and the button are literal English, as the other
+   four are; Home's banner copy is not localised.
+2. **A walk-in event says "No registration needed".** The one model addition
+   is `EventRegistrationState.notRequired` (`not_required`). Its row and its
+   page say "No registration needed". Only `open` offers the register control,
+   so it offers none. A state this build does not know still reads "Ask the
+   office about registering". The events screens are not localised, so the
+   label is English like the other registration labels and no Filipino string
+   ships. When they are localised, the proposed Filipino is "Hindi kailangang
+   magparehistro", which needs review by a native speaker.
+3. **A cover loads only from the API's own origin.** `EventCover` is the one
+   place a cover link becomes a picture, on the list and on the page. It draws
+   one only when `AppConfig.isOnApiOrigin` holds: the scheme, host and port of
+   the configured API base URL, and no credentials in the link. Otherwise it
+   draws nothing and takes no space. The cover was already decorative, with no
+   label, and the title, date and venue carry every fact. The decoder still
+   keeps only `https` links (D-191).
+4. **A message stays "not confirmed" after a lost answer.** `SendKey` now holds
+   `unconfirmed`: `settle` sets it for a failure whose outcome is unknown
+   (D-188), and only an `Ok` clears it. Registering, giving up a place,
+   starting a thread and replying all read it after settling, so the four share
+   one rule instead of keeping a flag each. After a lost answer, every later
+   failure in the same composer reads `MessageAct.unconfirmed`, including a
+   retry that fails before sending, until a message goes through. A changed
+   message gets a new key but keeps the doubt, because the earlier message may
+   already be at the office. Messages send `idempotency_key` in the body; the
+   `Idempotency-Key` header copy that `ApiClient` adds is ignored by the server
+   and stays.
+
+**Rejected.** Putting Events back on the tab bar: D-178 approved five tabs, and
+a banner needs no change to them. Matching `event` before `news`: a Balita link
+that mentions an event would open Events instead of the article. Checking the
+origin in the decoder alone: a mock or a later repository could still hand
+`EventCover` a link to any host, and the check at the point of loading holds
+for all of them. Clearing a message's doubt on a refusal: the API answers a
+repeated key before it reads the thread (`a7a1884`), but a changed message
+carries another key, and the earlier one may still have posted.
+
+**Owner question.** Should event covers be uploaded through the API, as Balita
+covers are (served by `GET /news/{id}/cover`), so that an office can have them
+shown? Until then a cover is shown only when its link is on the API's own host,
+and a link the office typed to any other host is not shown.
+
+**Why.** A banner is the office's own voice on Home, so it is a way into Events
+that needs no new navigation. "No registration needed" is what a walk-in event
+is; "ask the office" invents a question. A picture from a host the LGU does not
+run tells that host who opened the event. "Could not confirm" stays true until
+the server answers; "nothing was sent" was true only of the last try.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2335,5 +2413,6 @@ there are no events, or that they have no place, and both are guesses.
 | D-189 | The offline banner says the app cannot get through and that typed text is kept. It makes no claim about what was sent: a timeout or a connection dropped after sending may have reached the office, and each send says for itself what happened to it | errors / honesty | settled |
 | D-190 | Starting a thread and replying send `idempotency_key` (backend `a7a1884`). `SendKey`, promoted from issuance, binds the key to the office or thread, subject, words and attachment: the same message keeps it across retries, a changed one gets a new one, and a `409` is never retried. An unknown outcome says sending again is safe and will not post twice | errors / idempotency | settled |
 | D-191 | Events run on the Node API (backend `580acbb`). Every method decodes explicitly, and an answer the app cannot read is a `ContractFailure`, never a blank. No seats-left number. `full` and `closed` are outcomes, the four refusals are `refused`, and a lost answer is "not confirmed" with trying again safe, even after a retry that fails before sending. `idempotency_key` in the body only, a `SendKey` UUID. `UnsentNotice` says "not confirmed" and promises no duplicate only for a keyed send. One model addition, `LguEvent.isCalledOff` | contract / idempotency | settled |
+| D-192 | A home banner whose link names events opens Events; the tab bar is unchanged (D-178). A walk-in event (`not_required`) reads "No registration needed" and offers no register control. `EventCover` loads a cover only from the API's own origin (`AppConfig.isOnApiOrigin`). `SendKey.unconfirmed` holds a lost answer for events and messages alike, so a message retry that fails before sending still says it could not be confirmed. Owner question: upload event covers through the API | navigation / privacy / errors | settled |
 
 **191 decisions — 187 settled, 4 provisional.**

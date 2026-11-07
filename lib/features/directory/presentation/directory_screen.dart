@@ -388,8 +388,14 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
           await _applyTierAfterForbidden(dependencies, office, failure);
           return;
         }
+        // Once an answer was lost, a later failure is never "not sent" until
+        // a message goes through (D-192).
         setState(
-          () => _error = messageSendFailure(failure, act: MessageAct.start),
+          () => _error = messageSendFailure(
+            failure,
+            act: MessageAct.start,
+            unconfirmed: _sendKey.unconfirmed,
+          ),
         );
     }
   }

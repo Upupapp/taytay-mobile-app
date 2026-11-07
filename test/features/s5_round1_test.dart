@@ -603,6 +603,41 @@ void main() {
     },
   );
 
+  testWidgets(
+    'after a lost answer, a first message that fails before sending is still '
+    'not confirmed (D-192)',
+    (tester) async {
+      final _RecordingMessaging messaging = _RecordingMessaging()
+        ..sendAnswers.addAll(<Result<OfficeMessage>>[
+          const Err<OfficeMessage>(TimeoutFailure()),
+          const Err<OfficeMessage>(NetworkFailure()),
+        ]);
+      final booted = await _boot(
+        tester,
+        location: '/offices/bplo/message',
+        messaging: messaging,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('directory-message-field')),
+        'Saan po ang pila?',
+      );
+      await tester.tap(find.byKey(const Key('directory-send')));
+      await tester.pumpAndSettle();
+      expect(find.text(MessageAct.start.unconfirmed), findsOneWidget);
+
+      // Offline now. This try never left the phone, but the first one may
+      // have opened a thread at the office, so it is not "Nothing was sent".
+      await tester.tap(find.byKey(const Key('directory-send')));
+      await tester.pumpAndSettle();
+      expect(find.text(MessageAct.start.unconfirmed), findsOneWidget);
+      expect(find.textContaining('Nothing was sent'), findsNothing);
+      expect(find.text('Message sent'), findsNothing);
+      expect(booted.messaging.sendKeys, hasLength(2));
+      expect(booted.messaging.sendKeys.toSet(), hasLength(1));
+    },
+  );
+
   testWidgets('other words or another topic are a new message with a new key', (
     tester,
   ) async {

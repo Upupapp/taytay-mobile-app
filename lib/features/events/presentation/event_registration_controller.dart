@@ -89,15 +89,12 @@ class EventRegistrationController extends ChangeNotifier {
 
   final EventRepository _repository;
 
-  /// The key for this attempt, kept across its retries (D-191).
+  /// The key for this attempt, kept across its retries (D-191). It also holds
+  /// whether a send in this flow may have reached Taytay LGU without an
+  /// answer ([SendKey.unconfirmed]): until the server answers, a retry that
+  /// fails before sending still cannot say nothing was registered, because the
+  /// earlier send may have registered the resident (D-192).
   final SendKey _sendKey;
-
-  /// Whether a send in this flow may have reached Taytay LGU without an answer.
-  ///
-  /// Cleared only by an answer from the server. Until then a retry that fails
-  /// before sending still cannot say nothing was registered: the earlier send
-  /// may have registered the resident.
-  bool _unconfirmed = false;
   final String eventId;
 
   /// The signed-in resident's level, captured when the flow opened. The route
@@ -135,7 +132,8 @@ class EventRegistrationController extends ChangeNotifier {
   /// may have reached Taytay LGU. The outcome screen then says "not confirmed",
   /// never "not registered".
   bool get isUnconfirmed =>
-      _attempt?.outcome == RegistrationOutcome.couldNotSend && _unconfirmed;
+      _attempt?.outcome == RegistrationOutcome.couldNotSend &&
+      _sendKey.unconfirmed;
 
   /// Why registration is unavailable, or `null` when it may proceed.
   ///
@@ -307,19 +305,16 @@ class EventRegistrationController extends ChangeNotifier {
       onOk: (attempt) {
         _attempt = attempt;
         _failure = null;
-        _unconfirmed = false;
         if (attempt.isHeld) _alreadyRegistered = true;
       },
       onErr: (failure) {
         _failure = failure;
-        final bool earlierUnconfirmed = _unconfirmed;
-        if (failure.outcomeUnknown) _unconfirmed = true;
         _attempt = RegistrationAttempt(
           outcome: RegistrationOutcome.couldNotSend,
           requestId: failure.requestId,
           residentMessage: registrationSendFailure(
             failure,
-            earlierUnconfirmed: earlierUnconfirmed,
+            unconfirmed: _sendKey.unconfirmed,
           ),
         );
       },

@@ -74,6 +74,42 @@ void main() {
       expect(key.takeFor(reply), isNot(second));
     });
 
+    test('a lost answer stays unconfirmed until a send goes through', () {
+      int minted = 0;
+      final SendKey key = SendKey(mint: () => 'k-${++minted}');
+      const (String, String) reply = ('thread-1', 'Salamat po');
+      expect(key.unconfirmed, isFalse);
+
+      // A send that failed before it left the phone claims nothing.
+      key.takeFor(reply);
+      key.settle(const Err<Object?>(NetworkFailure()));
+      expect(key.unconfirmed, isFalse);
+
+      // Its answer was lost: from here on nothing is "not sent".
+      key.settle(const Err<Object?>(TimeoutFailure()));
+      expect(key.unconfirmed, isTrue);
+      for (final AppFailure later in <AppFailure>[
+        const NetworkFailure(),
+        const ValidationFailure(),
+        const ForbiddenFailure(),
+        const ConflictFailure(),
+      ]) {
+        key.settle(Err<Object?>(later));
+        expect(key.unconfirmed, isTrue, reason: later.kind);
+      }
+      // Other words are a new key, but the earlier message may still be there.
+      key.takeFor(('thread-1', 'Salamat po ulit'));
+      expect(key.unconfirmed, isTrue);
+      key.reset();
+      expect(key.unconfirmed, isTrue);
+
+      // Only an answer settles it.
+      key.settle(const Ok<Object?>(null));
+      expect(key.unconfirmed, isFalse);
+      key.settle(const Err<Object?>(NetworkFailure()));
+      expect(key.unconfirmed, isFalse);
+    });
+
     test('a minted key is a version 4 UUID', () {
       expect(
         SendKey().takeFor(('thread-1', 'Salamat po')),
@@ -122,6 +158,26 @@ void main() {
           messageSendFailure(const ValidationFailure(), act: act),
           const ValidationFailure().residentMessage,
         );
+      }
+    });
+
+    test('a retry that fails before sending, after a lost answer, is still '
+        'not confirmed', () {
+      for (final MessageAct act in MessageAct.values) {
+        for (final AppFailure failure in <AppFailure>[
+          const NetworkFailure(),
+          const ValidationFailure(),
+          const ConflictFailure(),
+        ]) {
+          final String said = messageSendFailure(
+            failure,
+            act: act,
+            unconfirmed: true,
+          );
+          final String reason = '${act.name} ${failure.kind}';
+          expect(said, act.unconfirmed, reason: reason);
+          expect(said, isNot(contains(messageNotSent)), reason: reason);
+        }
       }
     });
 

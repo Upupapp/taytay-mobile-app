@@ -16,6 +16,7 @@ import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
@@ -444,6 +445,19 @@ void main() {
     expect(unlinked.eyebrow, 'BALITA');
     expect(unlinked.action, 'Read Balita');
     expect(unlinked.body, isEmpty);
+
+    // Events is off the tab bar (D-178): a link that names events is the way
+    // in, and the office chooses it (D-192). `events_test.dart` taps it.
+    for (final String href in <String>[
+      '/events',
+      '/events/2026-fun-run',
+      'https://taytay.example/events?when=saturday',
+    ]) {
+      final HomeSlide events = slideFor(href);
+      expect(events.routeName, AppRoute.events.routeName, reason: href);
+      expect(events.eyebrow, 'EVENTS', reason: href);
+      expect(events.action, 'See events', reason: href);
+    }
   });
 
   testWidgets('a Balita cover paints bytes and survives a failed read', (
