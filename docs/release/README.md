@@ -83,8 +83,10 @@ A missing `key.properties` does not break debug builds. Release packaging fails
 with `verifyReleaseSigning` instead of signing with the debug key. A half-filled
 file fails configuration and names the missing keys.
 
-1. Generate the upload keystore outside the repo. The LGU holds it. Do not
-   commit it, and do not paste the passwords into a ticket.
+1. Generate the upload keystore outside the repo. Paul creates it with the
+   Play Console listing and keeps it in a password vault; it is handed to the
+   LGU at turnover (D-186). Google Play App Signing holds the app signing key.
+   Do not commit it, and do not paste the passwords into a ticket.
 
    ```bash
    keytool -genkeypair -v \

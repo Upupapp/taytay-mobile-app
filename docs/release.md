@@ -155,9 +155,23 @@ as `env/firebase.staging.ios.json`.
 (`storeFile`, `storePassword`, `keyAlias`, `keyPassword`). The file, `*.jks`,
 and `*.keystore` are gitignored. Commit only `android/key.properties.example`.
 
-`storeFile` must be an absolute path **outside** this repository. Paul creates
-the keystore and keeps it. Do not generate one in this tree and do not commit
-passwords.
+`storeFile` must be an absolute path **outside** this repository. Do not
+generate one in this tree and do not commit passwords.
+
+**Who holds which key (D-186).** The app uses **Google Play App Signing**:
+Google generates and holds the **app signing key** that users' devices see, and
+nobody on the project ever has it. This keystore is only the **upload key**.
+
+* Paul, who sets up the Play Console listing, creates the upload keystore and
+  keeps the file and both passwords in a password vault, with a backup.
+* At turnover it is handed to the municipality and recorded in the turnover
+  credentials register (`taytay-admin-web/docs/turnover/accounts-and-credentials-register.md`,
+  "Android upload keystore and its passwords"). From then on the municipality
+  holds it.
+* Its passwords are never committed, and never sent by e-mail or chat.
+* A lost or leaked upload key does not lose the listing: the Play Console
+  account owner asks Google for an upload key reset. Updates wait until it is
+  done, so keep it safe anyway.
 
 A missing `key.properties` does not break debug builds. **Release packaging
 fails** in `verifyReleaseSigning` with a message that names the example file.
@@ -251,5 +265,7 @@ an iOS app does (see Firebase above).
   sign in yet.
 * **Apple Team ID.** Replace `YOUR_APPLE_TEAM_ID` on the signing machine.
 * **Android upload keystore.** Create it outside the repo, point
-  `android/key.properties` at it, and keep the file and the passwords. Losing
-  the keystore means the Play listing cannot be updated.
+  `android/key.properties` at it, and keep the file and the passwords in a
+  password vault until turnover hands it to the municipality (D-186). With
+  Play App Signing, a lost upload key can be reset through the Play Console,
+  but updates wait until it is.

@@ -1848,6 +1848,41 @@ registered. The staging API base URL is not recorded in this repository.
 
 ---
 
+## D-186 — Google holds the app signing key; the upload key is Paul's until turnover, then the municipality's
+
+**Status: settled.** Category: release / security. Recorded 2026-11-07 under the
+owner's standing instruction to settle open design questions by best practice
+(Ella, Michaela Cailing; see D-185 for the scope of her authority). It does not
+cover pushing: D-182 and Article 10 still govern a push.
+
+**Context.** Two documents disagreed. `docs/release.md` said Paul creates the
+Android keystore and keeps it; `docs/integration/manual-tasks.md` ("Custody of
+the release signing keys") said the municipality must generate and hold it, not
+a contractor. Whoever holds it decides who can ship an update, so the
+contradiction had to be settled before the key exists.
+
+**Chosen.**
+
+1. **Google Play App Signing holds the app signing key.** It is generated and
+   kept by Google; nobody on the project, and no repository, ever has it.
+2. **The upload key** (the keystore `android/key.properties` points at) is
+   created by whoever sets up the Play Console listing, Paul, and kept with both
+   passwords in a password vault, with a backup.
+3. **At turnover it is handed to the municipality** and recorded in the turnover
+   credentials register (`taytay-admin-web/docs/turnover/accounts-and-credentials-register.md`).
+   Its password is never committed or sent by e-mail or chat.
+4. The Apple signing identity is not changed by this decision.
+
+**Why.** Play App Signing is how Google Play signs new apps, and it removes the
+worst outcome both documents feared: with Google holding the app signing key, a
+lost or leaked upload key is reset by the Play Console account owner instead of
+ending the listing. That leaves the upload key as an ordinary credential with
+one holder at a time. The person who builds the first release needs it, so it
+starts with Paul; the municipality must own its releases after turnover, so it
+ends with them, the same way every other credential is handed over.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2037,5 +2072,6 @@ registered. The staging API base URL is not recorded in this repository.
 | D-183 | Roadmap D11. A Directory office page is public resident information: contact, hours, services. It is not a staff or role selector | product / privacy | settled |
 | D-184 | The Node contract is vendored at `docs/integration/taytay-node-openapi.json` (taytay-backend PR 1). Envelope `{ data, meta }` / `{ error: { code, message, details, request_id } }` matches `ApiEnvelopeDecoder`; residents do not see `message`. Role enum is `guest`, `registered`, `verified`, `staff`, `admin`. This app mints only `registered` and `verified`. `backend_routes.dart` calls the citizen surface. F31 is closed by `/threads` | contract | settled |
 | D-185 | Firebase starts from four `TAYTAY_FIREBASE_*` dart-defines in gitignored `env/` files, not `google-services.json`. Article 5.4 names them as its one exception: public project identifiers, never logged, never committed. The define-name scan now sees names read through constants. Ella's authority, 2026-11-05 | config / privacy | settled |
+| D-186 | Google Play App Signing holds the app signing key. The upload key is created by Paul with the Play Console listing, kept in a password vault, and handed to the municipality at turnover through the credentials register; its password is never committed. Settled under Ella's standing "decide best practice" instruction, 2026-11-07 | release / security | settled |
 
-**185 decisions — 181 settled, 4 provisional.**
+**186 decisions — 182 settled, 4 provisional.**

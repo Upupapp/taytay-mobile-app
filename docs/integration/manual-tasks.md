@@ -52,17 +52,33 @@ questions about who this platform can actually reach.
 
 ## 3. Custody of the release signing keys — F03
 
-**Owner: LGU. Blocks: any releasable artifact at all.**
+**Owner: Paul creates the Android upload key; the LGU holds it from turnover.
+Blocks: any releasable artifact at all.**
 
-The Android release keystore and the Apple signing identity must be generated
-and held by the municipality, not by a contractor and not by this repository.
-`android/app/build.gradle.kts` reads them from `key.properties` (see
+**Decided 2026-11-07 (D-186)**, under the owner's standing instruction to settle
+open questions by best practice. It replaces this item's earlier line that the
+municipality must generate the Android keystore itself:
+
+* **Google Play App Signing holds the app signing key.** Google generates and
+  keeps it; no contractor, office or repository ever has it.
+* **The upload key** is created by whoever sets up the Play Console listing
+  (Paul), and kept, with both passwords, in a password vault.
+* **At turnover it is handed to the municipality** and recorded in the turnover
+  credentials register (`taytay-admin-web/docs/turnover/accounts-and-credentials-register.md`).
+  Its password is never committed.
+* The Apple signing identity is unchanged by this decision: it belongs to the
+  municipality's own Apple Developer membership ("Store accounts and listings").
+
+None of these is in this repository.
+`android/app/build.gradle.kts` reads the upload key from `key.properties` (see
 `android/key.properties.example`). Debug builds do not need the file. A release
 package does not fall back to the debug key — it fails until `storeFile` is an
 absolute path outside this repository. See `docs/release/README.md`.
 
-An agent must never generate, hold or rotate these. Losing the Android keystore
-means the app can never be updated under the same listing again.
+An agent must never generate, hold or rotate these. Because Google holds the
+app signing key, a lost or leaked upload key does not end the listing: the Play
+Console account owner requests an upload key reset, and updates wait until
+Google completes it.
 
 ## 4. Store accounts and listings
 
