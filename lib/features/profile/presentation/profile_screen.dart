@@ -293,6 +293,7 @@ class _ShortcutSection extends StatelessWidget {
             icon: entry.$3,
           ),
         _MessageOfficeTile(session: session),
+        _DocumentRequestTile(session: session),
         const Divider(height: Spacing.xxl),
         Semantics(
           header: true,
@@ -384,6 +385,37 @@ class _CapabilityTile extends StatelessWidget {
       subtitle: requirement == null ? null : Text(requirement),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => _open(context, verdict),
+    );
+  }
+}
+
+/// Document requests. The catalogue is public, so the tile always opens it;
+/// the catalogue itself says what it takes to send a request. The subtitle
+/// says it first, so nobody taps expecting a form they cannot reach.
+class _DocumentRequestTile extends StatelessWidget {
+  const _DocumentRequestTile({required this.session});
+
+  final SessionState session;
+
+  @override
+  Widget build(BuildContext context) {
+    final AccessDecision decision = AccessPolicy.evaluate(
+      session: session,
+      requirement: AccessRequirement.verified,
+    );
+    return ListTile(
+      key: const Key('profile-document-requests'),
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(
+        Icons.description_outlined,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      title: const Text('Request documents'),
+      subtitle: decision is AccessAllowed
+          ? null
+          : const Text('Sending a request needs a verified account'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
     );
   }
 }

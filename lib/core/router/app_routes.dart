@@ -416,6 +416,44 @@ enum AppRoute {
     parameters: <String>['threadId'],
   ),
 
+  /// Documents the municipal offices issue: certificates, clearances, copies.
+  /// Public, like the API's own catalogue: a resident reads what a document
+  /// needs before signing in or being verified.
+  issuanceCatalogue('documents', '/documents', AccessRequirement.public),
+
+  /// One document type: what it is, what it needs, the fee and how to claim.
+  issuanceType(
+    'document-type',
+    '/documents/types/:typeId',
+    AccessRequirement.public,
+    parameters: <String>['typeId'],
+  ),
+
+  /// Filing a document request. Verified only: the server accepts a request
+  /// from a verified resident and from nobody else.
+  issuanceForm(
+    'document-request-form',
+    '/documents/types/:typeId/request',
+    AccessRequirement.verified,
+    parameters: <String>['typeId'],
+  ),
+
+  /// The resident's own document requests. The API serves this list to any
+  /// signed-in resident, so the route asks no more than that.
+  issuanceRequests(
+    'my-document-requests',
+    '/documents/mine',
+    AccessRequirement.authenticated,
+  ),
+
+  /// One of the resident's own document requests, by opaque id.
+  issuanceRequestDetail(
+    'my-document-request',
+    '/documents/mine/:requestId',
+    AccessRequirement.authenticated,
+    parameters: <String>['requestId'],
+  ),
+
   /// Photo credits. Public: it is a list of licences, not a person's record.
   photoCredits(
     'photo-credits',

@@ -43,6 +43,9 @@ import '../features/events/data/event_api_repository.dart';
 import '../features/events/domain/event_repository.dart';
 import '../features/household/data/household_api_repository.dart';
 import '../features/household/domain/household_repository.dart';
+import '../features/issuance/data/issuance_api_repository.dart';
+import '../features/issuance/data/mock_issuance_repository.dart';
+import '../features/issuance/domain/issuance_repository.dart';
 import '../features/messaging/data/office_messaging_gap_repository.dart';
 import '../features/messaging/domain/office_messaging_repository.dart';
 import '../features/mock_data/data/mock/resident_record_mock.dart';
@@ -118,6 +121,7 @@ class AppDependencies {
     this.mockBehavior,
     SocialServiceRepository? socialServices,
     OfficeMessagingRepository? officeMessaging,
+    IssuanceRepository? issuance,
     AccountPasswordClient? passwordClient,
     this.clock = DateTime.now,
     this.onDispose,
@@ -126,6 +130,8 @@ class AppDependencies {
            OfficeMessagingApiRepository(apiClient: apiClient),
        socialServiceRepository =
            socialServices ?? SocialServiceApiRepository(apiClient: apiClient),
+       issuanceRepository =
+           issuance ?? IssuanceApiRepository(apiClient: apiClient),
        accountPasswordClient =
            passwordClient ?? const FirebaseAccountPasswordClient(),
        citizenApi = NodeCitizenApi(apiClient: apiClient),
@@ -377,6 +383,9 @@ class AppDependencies {
       officeMessaging: mock == null
           ? OfficeMessagingApiRepository(apiClient: apiClient)
           : MockOfficeMessagingRepository(mock),
+      issuance: mock == null
+          ? IssuanceApiRepository(apiClient: apiClient)
+          : MockIssuanceRepository(mock),
       passwordClient: mock == null
           ? const FirebaseAccountPasswordClient()
           : MockAccountPasswordClient(),
@@ -513,6 +522,11 @@ class AppDependencies {
   /// Resident-to-office messages. Live calls are the thread routes (F31 closed).
   /// A dev mock build supplies synthetic threads.
   final OfficeMessagingRepository officeMessagingRepository;
+
+  /// Document requests: the public catalogue and the resident's own requests
+  /// (`issuance-types`, `me/issuance-requests`). A dev mock build supplies
+  /// synthetic offices and requests.
+  final IssuanceRepository issuanceRepository;
 
   /// In-session password change. Firebase on a live build, a mock in dev.
   final AccountPasswordClient accountPasswordClient;

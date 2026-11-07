@@ -24,6 +24,11 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/home/presentation/hotlines_screen.dart';
 import '../../features/household/presentation/household_correction_screen.dart';
 import '../../features/household/presentation/household_screen.dart';
+import '../../features/issuance/presentation/issuance_catalogue_screen.dart';
+import '../../features/issuance/presentation/issuance_request_detail_screen.dart';
+import '../../features/issuance/presentation/issuance_request_form_screen.dart';
+import '../../features/issuance/presentation/issuance_type_screen.dart';
+import '../../features/issuance/presentation/my_issuance_requests_screen.dart';
 import '../../features/news/presentation/news_post_screen.dart';
 import '../../features/news/presentation/news_screen.dart';
 import '../../features/notifications/presentation/notification_inbox_screen.dart';
@@ -545,6 +550,45 @@ GoRouter buildAppRouter({
                 path: 'requirements',
                 name: AppRoute.requestRequirements.routeName,
                 builder: (context, state) => RequirementsScreen(
+                  requestId: state.pathParameters['requestId'] ?? '',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+      // Document requests. Full-screen, like assistance requests: the form and
+      // the request each fill the phone.
+      GoRoute(
+        path: AppRoute.issuanceCatalogue.path,
+        name: AppRoute.issuanceCatalogue.routeName,
+        builder: (context, state) => const IssuanceCatalogueScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'types/:typeId',
+            name: AppRoute.issuanceType.routeName,
+            builder: (context, state) => IssuanceTypeScreen(
+              typeId: state.pathParameters['typeId'] ?? '',
+            ),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'request',
+                name: AppRoute.issuanceForm.routeName,
+                builder: (context, state) => IssuanceRequestFormScreen(
+                  typeId: state.pathParameters['typeId'] ?? '',
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'mine',
+            name: AppRoute.issuanceRequests.routeName,
+            builder: (context, state) => const MyIssuanceRequestsScreen(),
+            routes: <RouteBase>[
+              GoRoute(
+                path: ':requestId',
+                name: AppRoute.issuanceRequestDetail.routeName,
+                builder: (context, state) => IssuanceRequestDetailScreen(
                   requestId: state.pathParameters['requestId'] ?? '',
                 ),
               ),

@@ -175,6 +175,9 @@ abstract final class DeepLink {
     'assistance_requirements': AppRoute.requestRequirements,
     // Verification steps.
     'verification': AppRoute.verification,
+    // Document requests: the resident's list, and one request.
+    'issuance_requests': AppRoute.issuanceRequests,
+    'issuance_request': AppRoute.issuanceRequestDetail,
     // Programs and services directory.
     'service': AppRoute.serviceDetail,
     'programs': AppRoute.programs,

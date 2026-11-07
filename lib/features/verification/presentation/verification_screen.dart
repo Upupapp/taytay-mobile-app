@@ -190,6 +190,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
         onProfile: () => context.goNamed(AppRoute.residentProfile.routeName),
         onDigitalId: () => context.goNamed(AppRoute.digitalId.routeName),
         onMessage: () => context.goNamed(AppRoute.messagesInbox.routeName),
+        onRequestDocuments: () =>
+            context.pushNamed(AppRoute.issuanceCatalogue.routeName),
         verifiedOn: reviewed,
       ),
       VerificationFace.pending => PendingStatusPage(

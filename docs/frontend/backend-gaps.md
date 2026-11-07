@@ -45,6 +45,7 @@ The 26 October probes (staging and production hostnames that are no longer compi
 | 19 | Events | Deferred (needs Paul's approval) | No `/events` route | `3e3b110` |
 | 20 | Assistance requests and uploads | Deferred (needs Paul's approval) | No citizen case or requirement route. Tulong is information only | `3e3b110` |
 | 21 | Full Terms of Use text | Open (checked 6 November 2026) | `GET /api/v1/app/config` publishes `terms_version` and no Terms text or URL. The wizard's "Read full Terms" says the text is not published yet. "Read full Privacy Notice" shows `privacy_notice.body_markdown` once its version is not `placeholder`, and otherwise says the same | `fb43122` |
+| 22 | Document requests (issuance) | Closed (7 November 2026) | `GET /api/v1/issuance-types`, `GET /api/v1/issuance-types/{id}`, `GET`/`POST /api/v1/me/issuance-requests`, `GET /api/v1/me/issuance-requests/{id}`, `POST .../{id}/cancel`, `POST .../{id}/resubmit`, `GET .../{id}/attachments/{attachmentId}/content`. Notification `issuance_request_updated` opens the request | `2fd0566` |
 
 Mobile commits that closed or narrowed a gap: `ab2896c` (Firebase sign-in and registration, household decode, notification cursor, contract alignment), `8843694` (verification `notes` ignored; mobile password sign-in banner), `d1252f9` and `15b8e70` (issued Digital ID card).
 
@@ -81,6 +82,16 @@ Unchanged and matching `3e3b110`: edit sends changed `mobile`, `email`, and `bar
 ### 14. Inbox reply, read, close, paging, and attachments
 
 Re-scored against the vendored Node export from taytay-backend pull request 2, head `5f6fe0f` (`docs/integration/taytay-node-openapi.json`). The account thread posts a reply, marks the thread read when it opens, and can close it. The thread list and the message list send `limit` and `cursor` and stop when `has_more` is false or `next_cursor` is empty. A reply attaches either `media_id` for an attachment already in the thread, or multipart field `file` for a new photo or PDF. Starting a thread sends `file` from the compose row. The repository also accepts `media_id` on start. The two are not sent together. `Message.attachments` is kept. The SAMPLE line stays on `usesMockData`. The resident does not see the server's error `message`.
+
+### 22. Document requests (issuance)
+
+Wired 7 November 2026 against backend `2fd0566`; the vendored Node export was refreshed from that commit. See `docs/taytay-document-requests.md`. The catalogue is read anonymously; the five `me/` routes carry the Firebase bearer. A submit is multipart (`type_id`, `purpose`, one part per requirement code, file name `<code>.<ext>`) and only a `201` counts as filed. A `403` is shown in the app's own words with the way to verification. `can_cancel` and `can_resubmit` are read, never derived. `issuance_request_updated` carries the request id in `subject_id`; the decoder adds the `issuance_request` deep-link target, and tapping opens `/documents/mine/{id}`.
+
+What the backend could still change:
+
+- **`Idempotency-Key` is not honoured** on `POST /me/issuance-requests` (or on cancel and resubmit). The app sends one, but a send retried after a timeout can file twice. The app's timeout copy asks the resident to check My document requests first.
+- **Not-verified and staff-account `403`s share `FORBIDDEN`.** The app reads every `403` on submit as "not verified". A distinct code (for example `VERIFICATION_REQUIRED`) would let it say the right thing to each.
+- **The resident view of a request carries no `accepts` block.** A resubmission reads the type for it; once a type is retired that is a `404`, and the app falls back to the lower labelled ceiling (8 MB rather than 10 MB). Echoing `accepts` on the request would remove the fallback.
 
 ### 18. Notification paging and targets
 

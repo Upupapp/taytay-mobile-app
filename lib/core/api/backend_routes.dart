@@ -83,6 +83,8 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
     'households/current',
     'resident_record_api_repository.dart',
   ),
+  BackendRoute('GET', 'issuance-types', 'issuance_api_repository.dart'),
+  BackendRoute('GET', 'issuance-types/{}', 'issuance_api_repository.dart'),
   BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),
@@ -93,6 +95,28 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('DELETE', 'me/devices', 'notification_api_repository.dart'),
   BackendRoute('POST', 'me/devices', 'notification_api_repository.dart'),
   BackendRoute('GET', 'me/digital-id', 'credential_api_repository.dart'),
+  BackendRoute('GET', 'me/issuance-requests', 'issuance_api_repository.dart'),
+  BackendRoute('POST', 'me/issuance-requests', 'issuance_api_repository.dart'),
+  BackendRoute(
+    'GET',
+    'me/issuance-requests/{}',
+    'issuance_api_repository.dart',
+  ),
+  BackendRoute(
+    'GET',
+    'me/issuance-requests/{}/attachments/{}/content',
+    'issuance_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'me/issuance-requests/{}/cancel',
+    'issuance_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'me/issuance-requests/{}/resubmit',
+    'issuance_api_repository.dart',
+  ),
   BackendRoute(
     'GET',
     'me/notification-preferences',

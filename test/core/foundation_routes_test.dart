@@ -70,6 +70,11 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.officeCompose: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeMessageSent: <String, String>{'officeId': 'mswdo'},
   AppRoute.messageThread: <String, String>{'threadId': 'thread-sample-1'},
+  AppRoute.issuanceType: <String, String>{'typeId': 'dt-sample-birth'},
+  AppRoute.issuanceForm: <String, String>{'typeId': 'dt-sample-birth'},
+  AppRoute.issuanceRequestDetail: <String, String>{
+    'requestId': 'dr-sample-ready',
+  },
 };
 
 String _openLocation(AppRoute route) =>

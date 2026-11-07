@@ -220,6 +220,7 @@ class VerifiedStatusPage extends StatelessWidget {
     this.onProfile,
     this.onDigitalId,
     this.onMessage,
+    this.onRequestDocuments,
     this.verifiedOn = '',
     this.completeness,
     super.key,
@@ -230,6 +231,9 @@ class VerifiedStatusPage extends StatelessWidget {
   final VoidCallback? onProfile;
   final VoidCallback? onDigitalId;
   final VoidCallback? onMessage;
+
+  /// Opens the document-request catalogue.
+  final VoidCallback? onRequestDocuments;
 
   /// Date the server says the account was verified. Empty hides the date.
   final String verifiedOn;
@@ -300,11 +304,12 @@ class VerifiedStatusPage extends StatelessWidget {
                 ),
                 Timeline(
                   steps: <TimelineStep>[
-                    const TimelineStep(
+                    TimelineStep(
                       icon: TaytayIcons.check,
                       title: 'Request documents',
                       detail: 'Certificates, clearances and permits',
                       tone: TimelineTone.navy,
+                      onTap: onRequestDocuments,
                     ),
                     TimelineStep(
                       icon: TaytayIcons.check,

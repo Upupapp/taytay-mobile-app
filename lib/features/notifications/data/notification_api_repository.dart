@@ -5,6 +5,7 @@ import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/result/result.dart';
+import '../../../core/router/deep_link.dart';
 import '../../../core/session/push_registration.dart';
 import '../domain/notification_repository.dart';
 
@@ -310,11 +311,28 @@ class NotificationApiRepository
         NotificationCategory.values,
         (NotificationCategory c) => c.wireValue,
       ),
-      // Routing only, and only two keys. Anything else the server adds is
-      // dropped here rather than carried into a target map that a screen might
-      // one day read.
-      target: <String, String>{'type': ?derivedType, 'id': ?targetId},
+      // Routing only. Anything else the server adds is dropped here rather
+      // than carried into a target map that a screen might one day read.
+      target: <String, String>{
+        'type': ?derivedType,
+        'id': ?targetId,
+        DeepLink.targetKey: ?_deepLinkTarget(derivedType, targetId),
+      },
     );
+  }
+
+  /// The `DeepLink` target a notification type opens, when this build knows
+  /// one and the payload names the record.
+  ///
+  /// `issuance_request_updated` carries the request's id in `subject_id`, and
+  /// tapping it opens that request; the screen fetches the detail itself under
+  /// the live session. Types not listed here keep their row and open nothing.
+  static String? _deepLinkTarget(String? type, String? subjectId) {
+    if (subjectId == null) return null;
+    return switch (type) {
+      'issuance_request_updated' => 'issuance_request',
+      _ => null,
+    };
   }
 
   static Paginated<ResidentNotification> _toPage(
