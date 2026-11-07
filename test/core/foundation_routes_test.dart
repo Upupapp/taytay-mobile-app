@@ -32,7 +32,7 @@ const SessionState _verified = AuthenticatedSession(
 /// `!navigationRoots.contains`, so a test that only compares the two checks
 /// the definition against itself.
 ///
-/// Shell tabs, plus the splash, onboarding and the two blocking gates.
+/// Shell tabs, plus the splash, onboarding and the three gates.
 /// Events left the bar in S4 and shows a back button. Programs is the Tulong
 /// root and does not.
 const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
@@ -40,6 +40,7 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
   AppRoute.onboarding,
   AppRoute.updateRequired,
   AppRoute.maintenance,
+  AppRoute.consentUpdate,
   AppRoute.home,
   AppRoute.services,
   AppRoute.news,
@@ -251,6 +252,10 @@ void main() {
           ? AppRoute.programDetail.location(<String, String>{
               'programId': _sampleArguments[route]!['serviceCode']!,
             })
+          // The dev mock names no consent version, so nothing is owed and
+          // the consent gate sends the resident home.
+          : route == AppRoute.consentUpdate
+          ? AppRoute.home.path
           : _openLocation(route);
       expect(_currentPath(tester), landed, reason: route.name);
       _expectBackButtons(route);

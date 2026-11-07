@@ -534,6 +534,30 @@ void main() {
     expect(find.textContaining('exploded'), findsNothing);
   });
 
+  testWidgets('consent whose answer was lost is not called unrecorded', (
+    tester,
+  ) async {
+    final auth = FakeAuthRepository()
+      ..consentOutcome = const Err<void>(TimeoutFailure());
+    await boot(tester, auth: auth, documentPicker: _Picker());
+    await goTo(tester, 'register');
+    await _createAccount(tester);
+    await tester.enterText(find.byKey(const Key('email-code-field')), '482190');
+    await tester.tap(find.text('Confirm email'));
+    await tester.pumpAndSettle();
+    await _tapText(tester, _agree);
+    await _tapText(tester, _consent);
+    await _tapText(tester, 'Continue');
+
+    // Still on the terms step, and honest about not knowing.
+    expect(find.text('Your data, protected'), findsOneWidget);
+    expect(
+      find.textContaining('could not confirm that your consent was recorded'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('was not recorded'), findsNothing);
+  });
+
   testWidgets('a declined registration does not show the server message', (
     tester,
   ) async {

@@ -35,6 +35,15 @@ enum AppRoute {
   /// while cached public content still is.
   maintenance('maintenance', '/maintenance', AccessRequirement.public),
 
+  /// A Terms of Use or Privacy Notice version the signed-in resident has not
+  /// accepted. Authenticated: a guest has nothing to accept, and the guard
+  /// sends anybody with nothing owed back to where they were going.
+  consentUpdate(
+    'consent-update',
+    '/consent-update',
+    AccessRequirement.authenticated,
+  ),
+
   /// Sign-in. Public by definition.
   signIn('sign-in', '/sign-in', AccessRequirement.public),
 
@@ -497,14 +506,16 @@ enum AppRoute {
 
   /// Routes that are the top of a stack and therefore do not show a back button.
   ///
-  /// Shell tabs, the splash, onboarding, and the two blocking gates. Everything
-  /// else shows [showsBackButton]. Events left the bar in S4 and shows a back
+  /// Shell tabs, the splash, onboarding, and the three gates: update,
+  /// maintenance, and a new Terms or Privacy Notice version. Everything else
+  /// shows [showsBackButton]. Events left the bar in S4 and shows a back
   /// button. Programs is the Tulong root and does not.
   static const Set<AppRoute> navigationRoots = <AppRoute>{
     splash,
     onboarding,
     updateRequired,
     maintenance,
+    consentUpdate,
     home,
     services,
     news,

@@ -139,6 +139,10 @@ void main() {
             // in foundation_routes_test.
             onboarding: OnboardingMode.selfEnrolled,
             allowDevRoutes: true,
+            // The consent screen is reachable while a version is owed; with
+            // nothing owed it sends the resident on, asserted in
+            // consent_gate_test.
+            consentRequired: route == AppRoute.consentUpdate,
           ),
           isNull,
           reason: route.name,

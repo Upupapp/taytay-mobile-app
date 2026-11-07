@@ -14,10 +14,10 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/legal_text_sheet.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_thread.dart';
-import '../../account/domain/notice_markdown.dart';
 import '../../platform/domain/app_bootstrap.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../../verification/domain/verification_id_type.dart';
@@ -413,19 +413,28 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             _busy = true;
             _status = null;
           });
-          final Result<void> recorded = await AppDependencies.of(
-            context,
-          ).authRepository.recordConsents();
+          final AppDependencies dependencies = AppDependencies.of(context);
+          final Result<void> recorded = await dependencies.authRepository
+              .recordConsents();
           if (!mounted) return;
           if (recorded case Err<void>(:final failure)) {
             setState(() {
               _busy = false;
-              _status =
-                  'Your consent was not recorded. ${failure.residentMessage}';
+              // Recording is idempotent by version, so agreeing again is
+              // safe. After a timeout the server may already have it, and
+              // "not recorded" would be a guess.
+              _status = failure.outcomeUnknown
+                  ? 'We could not confirm that your consent was recorded. '
+                        'Agreeing again is safe: it is recorded only once.'
+                  : 'Your consent was not recorded. ${failure.residentMessage}';
             });
             return;
           }
           _consented = true;
+          // The account was opened a few steps ago with nothing agreed yet.
+          // Asking again now clears the re-consent gate with the server's
+          // word rather than this screen's.
+          unawaited(dependencies.consentGate.check());
         }
         setState(() {
           _busy = false;
@@ -619,6 +628,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   String _profileNotSavedCopy(AppFailure failure) {
+    // `PATCH /me` sets each value outright, so sending it again is safe. After
+    // a timeout the server may already hold them, and "not saved" would be a
+    // guess.
+    if (failure.outcomeUnknown) {
+      return 'We could not confirm that your details were saved. Press '
+          'Continue to send them again: it is safe to repeat.';
+    }
     const String lead = 'Your details were not saved.';
     return switch (failure) {
       ValidationFailure() => '$lead Please check the highlighted details.',
@@ -837,12 +853,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             AppDependencies.of(context).platformRepository.loadBootstrap(),
           )
         : Future<String?>.value();
-    return _showLegalSheet(
+    return showLegalTextSheet(
+      context,
       title: 'Terms of Use',
       markdown: markdown,
-      pending:
-          'The full Terms of Use will be available soon. Taytay LGU has not '
-          'published them in the app yet.',
+      pending: termsNotPublishedYet,
     );
   }
 
@@ -865,12 +880,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             AppDependencies.of(context).platformRepository.loadBootstrap(),
           )
         : Future<String?>.value();
-    return _showLegalSheet(
+    return showLegalTextSheet(
+      context,
       title: 'Privacy Notice',
       markdown: markdown,
       pending:
-          'The full Privacy Notice will be available soon. Taytay LGU has not '
-          'published it in the app yet. The summary on this step is a draft.',
+          '$privacyNoticeNotPublishedYet The summary on this step is a draft.',
     );
   }
 
@@ -884,20 +899,6 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         value.privacyNotice.bodyMarkdown,
       _ => null,
     };
-  }
-
-  Future<void> _showLegalSheet({
-    required String title,
-    required Future<String?> markdown,
-    required String pending,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (BuildContext sheet) =>
-          _LegalSheet(title: title, markdown: markdown, pending: pending),
-    );
   }
 
   @override
@@ -3230,124 +3231,6 @@ class _LegalLink extends StatelessWidget {
       ),
       onPressed: onPressed,
       child: Text(label),
-    );
-  }
-}
-
-/// The full text behind a terms-step link. When nothing is published, one
-/// plain sentence says so: the resident is not shown a placeholder as if it
-/// were the notice.
-class _LegalSheet extends StatelessWidget {
-  const _LegalSheet({
-    required this.title,
-    required this.markdown,
-    required this.pending,
-  });
-
-  final String title;
-  final Future<String?> markdown;
-  final String pending;
-
-  static const TextStyle _body = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 14,
-    height: 1.5,
-    color: Color(0xFF3A4560),
-  );
-
-  static const TextStyle _heading = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 15,
-    height: 1.4,
-    fontWeight: AppTypography.black,
-    color: BrandColors.taytayBlueDark,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 18,
-                    fontWeight: AppTypography.black,
-                    color: BrandColors.taytayBlueDark,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: FutureBuilder<String?>(
-                  future: markdown,
-                  builder: (BuildContext context, AsyncSnapshot<String?> snap) {
-                    if (snap.connectionState != ConnectionState.done) {
-                      return Semantics(
-                        liveRegion: true,
-                        label: 'Loading $title',
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: Center(child: CircularProgressIndicator()),
-                        ),
-                      );
-                    }
-                    final String text = snap.data?.trim() ?? '';
-                    if (text.isEmpty) {
-                      return Semantics(
-                        liveRegion: true,
-                        child: Text(pending, style: _body),
-                      );
-                    }
-                    return ListView(
-                      shrinkWrap: true,
-                      children: <Widget>[
-                        for (final NoticeLine line in parseNoticeMarkdown(text))
-                          Padding(
-                            padding: EdgeInsets.only(
-                              top: line.heading ? 12 : 6,
-                            ),
-                            child: Semantics(
-                              header: line.heading,
-                              child: Text.rich(
-                                TextSpan(
-                                  style: line.heading ? _heading : _body,
-                                  children: <InlineSpan>[
-                                    if (line.bullet) const TextSpan(text: '• '),
-                                    for (final NoticeRun run in line.runs)
-                                      TextSpan(
-                                        text: run.text,
-                                        style: run.strong
-                                            ? const TextStyle(
-                                                fontWeight: AppTypography.black,
-                                              )
-                                            : null,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

@@ -16,6 +16,7 @@ import '../core/links/platform_external_link_service.dart';
 import '../core/mock/mock_behavior.dart';
 import '../core/network/network_monitor.dart';
 import '../core/session/app_lock_controller.dart';
+import '../core/session/consent_gate_controller.dart';
 import '../core/session/local_authenticator.dart';
 import '../core/session/session_controller.dart';
 import '../core/session/session_state.dart';
@@ -123,9 +124,18 @@ class AppDependencies {
     OfficeMessagingRepository? officeMessaging,
     IssuanceRepository? issuance,
     AccountPasswordClient? passwordClient,
+    ConsentGateController? consentGate,
     this.clock = DateTime.now,
     this.onDispose,
-  }) : officeMessagingRepository =
+  }) : consentGate =
+           consentGate ??
+           ConsentGateController(
+             session: session,
+             platform: platformRepository,
+             consents: accountControlsRepository,
+             clock: clock,
+           ),
+       officeMessagingRepository =
            officeMessaging ??
            OfficeMessagingApiRepository(apiClient: apiClient),
        socialServiceRepository =
@@ -432,6 +442,12 @@ class AppDependencies {
   /// Optional local unlock over an already-signed-in app. Device convenience
   /// only — it grants nothing and proves nothing to the server.
   final AppLockController appLock;
+
+  /// Asks a signed-in resident to accept a Terms of Use or Privacy Notice
+  /// version published after they last agreed. Built from [session],
+  /// [platformRepository] and [accountControlsRepository] unless a test
+  /// supplies one.
+  final ConsentGateController consentGate;
   final ApiClient apiClient;
   final PublicCache cache;
 
@@ -546,6 +562,7 @@ class AppDependencies {
   void dispose() {
     mockBehavior?.dispose();
     appLock.dispose();
+    consentGate.dispose();
     session.dispose();
     launch.dispose();
     intents.dispose();

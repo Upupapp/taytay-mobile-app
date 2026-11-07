@@ -22,6 +22,7 @@ String? resolveRedirect({
   LaunchState launch = LaunchState.returning,
   bool mustUpgrade = false,
   bool isInMaintenance = false,
+  bool consentRequired = false,
   OnboardingMode onboarding = OnboardingMode.staffMediated,
   bool allowDevRoutes = false,
 }) {
@@ -119,6 +120,25 @@ String? resolveRedirect({
     return AppRoute.maintenance.path;
   }
 
+  // A NEW TERMS OF USE OR PRIVACY NOTICE VERSION, not yet accepted.
+  //
+  // Raised only by a successful answer from the server (`ConsentGateController`)
+  // and never by a failure, so a weak connection cannot hold anybody here. It
+  // stands between a signed-in resident and their account; a guest is never
+  // asked, and signing out from the screen is the way back to browsing.
+  //
+  // Registration is exempt because its own terms step records both texts. The
+  // update and maintenance gates are exempt because they already come first.
+  final bool owes = consentRequired && session.accessLevel.isAuthenticated;
+  if (target == AppRoute.consentUpdate) {
+    if (owes) return null;
+    return _resumable(location, session, allowDevRoutes) ?? AppRoute.home.path;
+  }
+  if (owes && !_consentExempt.contains(target)) {
+    return '${AppRoute.consentUpdate.path}?${AppRoute.redirectQueryParam}='
+        '${Uri.encodeQueryComponent(location)}';
+  }
+
   // The component gallery is a dev-build tool. It is in the route table so
   // the requirement is explicit, and it is refused everywhere else — including
   // a deep link — rather than hidden inside the screen.
@@ -140,6 +160,41 @@ String? resolveRedirect({
     // it is the moment to show them how to get verified.
     AccessNeedsVerification() => AppRoute.verification.path,
   };
+}
+
+/// Routes a resident who owes a consent may still open.
+const Set<AppRoute> _consentExempt = <AppRoute>{
+  AppRoute.consentUpdate,
+  AppRoute.register,
+  AppRoute.updateRequired,
+  AppRoute.maintenance,
+};
+
+/// Where the consent screen hands a resident back once nothing is owed: the
+/// `?from=` destination, if it is a known route they may now open.
+///
+/// The concrete path is returned, parameters and all, because the resident
+/// was on it a moment ago. Only the route table's own paths are honoured, so
+/// a link from outside cannot use this as an open redirect.
+String? _resumable(String location, SessionState session, bool allowDevRoutes) {
+  final String? requested = Uri.tryParse(
+    location,
+  )?.queryParameters[AppRoute.redirectQueryParam];
+  if (requested == null) return null;
+  final String path = _pathOf(requested);
+  final AppRoute? route = AppRoute.forPath(path);
+  if (route == null ||
+      route == AppRoute.consentUpdate ||
+      route == AppRoute.signIn ||
+      route == AppRoute.splash) {
+    return null;
+  }
+  if (route == AppRoute.componentGallery && !allowDevRoutes) return null;
+  final AccessDecision decision = AccessPolicy.evaluate(
+    session: session,
+    requirement: route.requirement,
+  );
+  return decision is AccessAllowed ? path : null;
 }
 
 /// Strips query and fragment from a location.

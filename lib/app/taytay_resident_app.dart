@@ -71,9 +71,21 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
       // Coming back is the moment to notice a token whose own `expires_at` has
       // passed, rather than letting the resident open a screen that can only
       // fail. Fails safe: it can end a session, never extend one.
-      onResume: () =>
-          unawaited(widget.dependencies.session.endSessionIfTokenExpired()),
+      //
+      // It is also when a Terms or Privacy Notice version published while the
+      // app was away is noticed. Starting a session asks on its own; this
+      // asks on return. A failed ask leaves the app open.
+      onResume: () {
+        unawaited(_resumed());
+      },
     );
+  }
+
+  Future<void> _resumed() async {
+    final AppDependencies dependencies = widget.dependencies;
+    final bool ended = await dependencies.session.endSessionIfTokenExpired();
+    if (ended || !dependencies.config.isUsable) return;
+    await dependencies.consentGate.checkOnResume();
   }
 
   GoRouter _buildRouter() {
@@ -84,6 +96,7 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
       session: widget.dependencies.session,
       launch: widget.dependencies.launch,
       platform: widget.dependencies.platform,
+      consent: widget.dependencies.consentGate,
       navigatorKey: _navigatorKey,
       allowDevRoutes:
           widget.dependencies.config.environment == AppEnvironment.dev,
