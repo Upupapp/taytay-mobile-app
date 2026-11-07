@@ -208,7 +208,8 @@
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
-          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          { "name": "verification_status", "in": "query", "description": "The open residents' app accounts (role registered or verified, not closed) with this status: exactly those the dashboard counts by verification. Staff and closed accounts are not listed by it.", "schema": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] } }
         ],
         "responses": {
           "200": {
@@ -2055,7 +2056,7 @@
       "get": {
         "operationId": "getAppConfig",
         "summary": "Public app bootstrap",
-        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, and public feature flags. Flags are not secrets.",
+        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, public feature flags, the privacy notice and the Terms of Use (each a placeholder until published: version 'placeholder'). Flags are not secrets.",
         "security": [],
         "responses": {
           "200": { "description": "Bootstrap config.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigEnvelope" } } } }
@@ -2066,7 +2067,7 @@
       "patch": {
         "operationId": "patchAppConfig",
         "summary": "Update public app config",
-        "description": "Admin only. Null clears a field. A feature flag value of null deletes that key.",
+        "description": "Admin only. Null clears a field. A feature flag value of null deletes that key. terms publishes the Terms of Use: version and body_markdown together, and terms_version set to that version (a different terms_version beside it is 422). The privacy notice is not edited here.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigPatch" } } } },
         "responses": {
@@ -4141,6 +4142,26 @@
               "format": "uuid"
             },
             "description": "Held for assessment by this account. A caseload always reads its own, whatever is sent."
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "The programme type of the request's programme, as the dashboard's filter.",
+            "schema": {
+              "$ref": "#/components/schemas/OfficeProgramCategory"
+            }
+          },
+          {
+            "name": "owing_document",
+            "in": "query",
+            "description": "true: open (not in a terminal status) and still owed a document — one required, or conditional and ruled to apply, neither verified nor waived. The dashboard's missing-requirements figure, from the same SQL. false or absent narrows nothing.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
           }
         ],
         "responses": {
@@ -7539,6 +7560,47 @@
               "type": "string",
               "format": "date"
             }
+          },
+          {
+            "name": "barangay_id",
+            "in": "query",
+            "description": "The release's barangay, as the dashboard's filter. An own-barangay reader asking another is 403.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "The programme type of the request the release pays, as the dashboard's filter.",
+            "schema": {
+              "$ref": "#/components/schemas/OfficeProgramCategory"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "description": "Handed over within the period, by released_at, as the dashboard's period figures. all-time narrows nothing; a release not yet handed over is in no other period.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all-time",
+                "last-30-days",
+                "last-90-days"
+              ]
+            }
+          },
+          {
+            "name": "status_group",
+            "in": "query",
+            "description": "handed-over: released, claimed or completed, the statuses that carry released_at. With period, the releases behind the dashboard's released amount, goods released and residents served; with category too, one row of by_category.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "handed-over"
+              ]
+            }
           }
         ],
         "responses": {
@@ -7747,6 +7809,47 @@
             "schema": {
               "type": "string",
               "format": "date"
+            }
+          },
+          {
+            "name": "barangay_id",
+            "in": "query",
+            "description": "The release's barangay, as the dashboard's filter. An own-barangay reader asking another is 403.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "The programme type of the request the release pays, as the dashboard's filter.",
+            "schema": {
+              "$ref": "#/components/schemas/OfficeProgramCategory"
+            }
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "description": "Handed over within the period, by released_at, as the dashboard's period figures. all-time narrows nothing; a release not yet handed over is in no other period.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all-time",
+                "last-30-days",
+                "last-90-days"
+              ]
+            }
+          },
+          {
+            "name": "status_group",
+            "in": "query",
+            "description": "handed-over: released, claimed or completed, the statuses that carry released_at. With period, the releases behind the dashboard's released amount, goods released and residents served; with category too, one row of by_category.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "handed-over"
+              ]
             }
           }
         ],
@@ -10952,7 +11055,7 @@
       "post": {
         "operationId": "submitIssuanceRequest",
         "summary": "Request a document",
-        "description": "A verified resident only (role verified and verification_status verified): anybody else signed in is 403, with a message saying why. Multipart: type_id, purpose (10-300 characters), and one file per requirement, in the field named by its code. Every required requirement needs its file (422 keyed by the code). PDF, JPEG or PNG by their bytes (422 keyed by the code); at most 10 MB each (413). A field that names no requirement is 422. The server issues reference_number DR-<year>-<six digits>; the request starts submitted. Audited issuance_request.submitted.",
+        "description": "A verified resident only (role verified and verification_status verified): a resident who has not finished verifying is 403 VERIFICATION_REQUIRED, and staff or admin 403 FORBIDDEN, each with a message saying why. Multipart: type_id, purpose (10-300 characters), an optional idempotency_key (a retry under the same key answers 201 with the request as it stands, even after its type was retired; the same key with other fields or files is 409), and one file per requirement, in the field named by its code. Every required requirement needs its file (422 keyed by the code). PDF, JPEG or PNG by their bytes (422 keyed by the code); at most 10 MB each (413). A field that names no requirement is 422. The server issues reference_number DR-<year>-<six digits>; the request starts submitted. Audited issuance_request.submitted.",
         "security": [
           {
             "firebaseIdToken": []
@@ -10990,7 +11093,17 @@
             }
           },
           "403": {
-            "description": "Not a verified resident.",
+            "description": "VERIFICATION_REQUIRED for a resident who has not finished verifying; FORBIDDEN for staff or admin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "An idempotency_key first used for another act, or with other fields or files.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11159,7 +11272,7 @@
       "post": {
         "operationId": "cancelMyIssuanceRequest",
         "summary": "Cancel a document request",
-        "description": "The resident who filed it, while it is submitted, or while the office is waiting on them (needs-info). Anything else is 409. An optional reason is kept on the event and shown to the office. Audited issuance_request.cancelled.",
+        "description": "The resident who filed it, while it is submitted, or while the office is waiting on them (needs-info). Anything else is 409. An optional reason is kept on the event and shown to the office. An optional idempotency_key: a retry under the same key answers 200 with the request as it stands (cancelled), not 409; the same key with another request or reason is 409. Audited issuance_request.cancelled.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11218,7 +11331,7 @@
             }
           },
           "409": {
-            "description": "Past cancelling.",
+            "description": "Past cancelling, or an idempotency_key first used for another act or body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11234,7 +11347,7 @@
       "post": {
         "operationId": "resubmitMyIssuanceRequest",
         "summary": "Send what the office asked for",
-        "description": "The resident who filed it, only from needs-info (409 otherwise). Multipart or JSON: an optional note and any files, one per requirement code, checked like a submission. At least a file or a note (422). Each file is a new version of its requirement; nothing sent before is replaced or deleted. Moves the request back to under-review. Audited issuance_request.resubmitted.",
+        "description": "The resident who filed it, only from needs-info (409 otherwise). Multipart or JSON: an optional note, an optional idempotency_key, and any files, one per requirement code, checked against the request's accepts like a submission. At least a file or a note (422). A retry under the same key answers 200 with the request as it stands (under review), and adds no second version; the same key with another note or other files is 409. Each file is a new version of its requirement; nothing sent before is replaced or deleted. Moves the request back to under-review. Audited issuance_request.resubmitted.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11298,7 +11411,7 @@
             }
           },
           "409": {
-            "description": "The office is not waiting on the resident.",
+            "description": "The office is not waiting on the resident, or an idempotency_key first used for another act or body.",
             "content": {
               "application/json": {
                 "schema": {
@@ -11453,6 +11566,24 @@
           {
             "name": "office_id",
             "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "reference",
+            "in": "query",
+            "description": "The whole reference number, matched exactly; case and surrounding spaces are ignored. Part of one is 422. Inside the offices the account reads: another office's request is not found by its number.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[Dd][Rr]-[0-9]{4}-[0-9]{6,}$"
+            }
+          },
+          {
+            "name": "resident_id",
+            "in": "query",
+            "description": "One resident's requests, inside the offices the account reads.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -11838,7 +11969,7 @@
               "code": {
                 "type": "string",
                 "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked.",
-                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "NOT_FOUND", "CONFLICT", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
+                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "NOT_FOUND", "CONFLICT", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
               },
               "message": { "type": "string" },
               "details": {
@@ -13664,15 +13795,16 @@
       },
       "AppConfig": {
         "type": "object",
-        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "feature_flags", "privacy_notice", "updated_at"],
+        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "feature_flags", "privacy_notice", "terms", "updated_at"],
         "properties": {
           "contact_line": { "type": ["string", "null"] },
           "support_email": { "type": ["string", "null"] },
           "privacy_version": { "type": ["string", "null"] },
-          "terms_version": { "type": ["string", "null"] },
+          "terms_version": { "type": ["string", "null"], "description": "Kept for older clients. Publishing terms sets it to the same version." },
           "minimum_app_version": { "type": ["string", "null"] },
           "feature_flags": { "type": "object", "additionalProperties": { "type": "string" } },
           "privacy_notice": { "$ref": "#/components/schemas/PrivacyNotice" },
+          "terms": { "$ref": "#/components/schemas/TermsOfUse" },
           "updated_at": { "type": "string", "format": "date-time" }
         }
       },
@@ -13683,6 +13815,25 @@
           "version": { "type": "string" },
           "updated_at": { "type": "string", "format": "date-time" },
           "body_markdown": { "type": "string" }
+        }
+      },
+      "TermsOfUse": {
+        "type": "object",
+        "description": "The Terms of Use residents are asked to accept, the same shape as the privacy notice. Until an administrator publishes the approved text, version is 'placeholder' and the body says it is a placeholder.",
+        "required": ["version", "updated_at", "body_markdown"],
+        "properties": {
+          "version": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "body_markdown": { "type": "string" }
+        }
+      },
+      "TermsOfUseWrite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "body_markdown"],
+        "properties": {
+          "version": { "type": "string", "minLength": 1, "maxLength": 32, "description": "Not 'placeholder', in any case." },
+          "body_markdown": { "type": "string", "minLength": 1, "maxLength": 20000 }
         }
       },
       "AppConfigEnvelope": {
@@ -13697,6 +13848,7 @@
           "support_email": { "type": ["string", "null"] },
           "privacy_version": { "type": ["string", "null"] },
           "terms_version": { "type": ["string", "null"] },
+          "terms": { "$ref": "#/components/schemas/TermsOfUseWrite" },
           "minimum_app_version": { "type": ["string", "null"] },
           "feature_flags": { "type": "object", "additionalProperties": { "type": ["string", "null"] } }
         }
@@ -19251,6 +19403,8 @@
           "acknowledged",
           "outstanding",
           "deferred",
+          "deferred_only",
+          "unclaimed",
           "needs_correction",
           "released_total_centavos"
         ],
@@ -19271,7 +19425,15 @@
           },
           "deferred": {
             "type": "integer",
-            "description": "Deferred or unclaimed."
+            "description": "Deferred or unclaimed, together: kept for clients that read it before the two were sent apart. Read deferred_only and unclaimed."
+          },
+          "deferred_only": {
+            "type": "integer",
+            "description": "Deferred by the office: the office's own failing (DL-94)."
+          },
+          "unclaimed": {
+            "type": "integer",
+            "description": "Nobody came. Never counted with a deferral (DL-94)."
           },
           "needs_correction": {
             "type": "integer"
@@ -21509,6 +21671,7 @@
           "processing_days",
           "claim_instructions",
           "requirements",
+          "accepts",
           "attachments",
           "claim_details",
           "needs_info_message",
@@ -21603,6 +21766,9 @@
               "$ref": "#/components/schemas/IssuanceRequirement"
             },
             "description": "As asked when filed."
+          },
+          "accepts": {
+            "$ref": "#/components/schemas/IssuanceAccepts"
           },
           "attachments": {
             "type": "array",
@@ -21845,6 +22011,7 @@
           "processing_days",
           "claim_instructions",
           "requirements",
+          "accepts",
           "attachments",
           "claim_details",
           "resident",
@@ -21939,6 +22106,9 @@
             },
             "description": "As asked when filed."
           },
+          "accepts": {
+            "$ref": "#/components/schemas/IssuanceAccepts"
+          },
           "attachments": {
             "type": "array",
             "items": {
@@ -22024,6 +22194,35 @@
           }
         }
       },
+      "IssuanceAccepts": {
+        "type": "object",
+        "required": [
+          "mime_types",
+          "max_bytes"
+        ],
+        "properties": {
+          "mime_types": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "application/pdf",
+                "image/jpeg",
+                "image/png"
+              ]
+            }
+          },
+          "max_bytes": {
+            "type": "integer"
+          }
+        },
+        "description": "What a file sent with this request is checked against, on a resubmission too. The server's limits, the same for every type, so they are there after the type is retired."
+      },
+      "IssuanceIdempotencyKey": {
+        "type": "string",
+        "format": "uuid",
+        "description": "Optional. Minted in the app when the resident presses send and held across retries; sent in the body because the console's CORS policy allows four request headers. The same key with the same fields and files from the same resident answers with the request as it stands now, with the first send's status. The same key with another act, request, fields or files is 409 CONFLICT. A refused send claims no key."
+      },
       "IssuanceSubmit": {
         "type": "object",
         "required": [
@@ -22039,6 +22238,9 @@
             "type": "string",
             "minLength": 10,
             "maxLength": 300
+          },
+          "idempotency_key": {
+            "$ref": "#/components/schemas/IssuanceIdempotencyKey"
           }
         },
         "additionalProperties": {
@@ -22054,6 +22256,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 1000
+          },
+          "idempotency_key": {
+            "$ref": "#/components/schemas/IssuanceIdempotencyKey"
           }
         },
         "additionalProperties": {
@@ -22070,6 +22275,9 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 500
+          },
+          "idempotency_key": {
+            "$ref": "#/components/schemas/IssuanceIdempotencyKey"
           }
         }
       },

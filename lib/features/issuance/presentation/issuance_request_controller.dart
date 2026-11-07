@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 
-import '../../../core/api/request_context.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/result/result.dart';
 import '../domain/issuance_form.dart';
 import '../domain/issuance_repository.dart';
 import '../domain/issuance_request.dart';
 import '../domain/issuance_type.dart';
+import 'issuance_send_key.dart';
 
 /// Where the request form is.
 enum IssuanceFormStage { editing, reviewing, sending, done }
@@ -22,8 +22,10 @@ class IssuanceRequestController extends ChangeNotifier {
     required IssuanceRepository repository,
     required DocumentPicker picker,
     required this.type,
+    IssuanceSendKey? sendKey,
   }) : _repository = repository,
-       _picker = picker;
+       _picker = picker,
+       _key = sendKey ?? IssuanceSendKey();
 
   final IssuanceRepository _repository;
   final DocumentPicker _picker;
@@ -65,7 +67,9 @@ class IssuanceRequestController extends ChangeNotifier {
   /// The request as the server filed it, once [stage] is done.
   IssuanceRequestDetail? get filed => _filed;
 
-  String? _idempotencyKey;
+  /// One key per set of answers: a retry of the same request carries the same
+  /// key, an edited request a new one.
+  final IssuanceSendKey _key;
 
   PurposeProblem? get purposeProblem => checkPurpose(_purpose);
 
@@ -133,9 +137,7 @@ class IssuanceRequestController extends ChangeNotifier {
   /// the screen says plainly that nothing was submitted.
   Future<void> submit() async {
     if (_stage != IssuanceFormStage.reviewing || !isComplete) return;
-    // One key per set of answers: a retry of the same request carries the
-    // same key, an edited request a new one.
-    _idempotencyKey ??= generateRequestId();
+    final String key = _key.take();
     _stage = IssuanceFormStage.sending;
     _failure = null;
     notifyListeners();
@@ -144,8 +146,9 @@ class IssuanceRequestController extends ChangeNotifier {
       typeId: type.id,
       purpose: _purpose,
       files: Map<String, CapturedDocument>.of(_files),
-      idempotencyKey: _idempotencyKey!,
+      idempotencyKey: key,
     );
+    _key.settle(result);
     switch (result) {
       case Ok(:final value):
         _filed = value;
@@ -168,7 +171,7 @@ class IssuanceRequestController extends ChangeNotifier {
   void _edited() {
     _failure = null;
     _serverFlagged = const <String>{};
-    _idempotencyKey = null;
+    _key.reset();
     notifyListeners();
   }
 

@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/api/request_context.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
@@ -22,6 +21,7 @@ import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_failure_copy.dart';
 import 'issuance_file_slot.dart';
+import 'issuance_send_key.dart';
 import 'issuance_widgets.dart';
 
 /// One of the resident's own document requests: where it stands, what the
@@ -44,6 +44,9 @@ class _IssuanceRequestDetailScreenState
   IssuanceRequestDetail? _detail;
   bool _cancelling = false;
 
+  /// Held across a cancel that timed out, so pressing it again cancels once.
+  final IssuanceSendKey _cancelKey = IssuanceSendKey();
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -59,6 +62,7 @@ class _IssuanceRequestDetailScreenState
     super.didUpdateWidget(oldWidget);
     if (oldWidget.requestId == widget.requestId) return;
     _detail = null;
+    _cancelKey.reset();
     _load();
   }
 
@@ -96,7 +100,8 @@ class _IssuanceRequestDetailScreenState
     setState(() => _cancelling = true);
     final Result<IssuanceRequestDetail> result = await AppDependencies.of(
       context,
-    ).issuanceRepository.cancel(detail.id, idempotencyKey: generateRequestId());
+    ).issuanceRepository.cancel(detail.id, idempotencyKey: _cancelKey.take());
+    _cancelKey.settle(result);
     if (!mounted) return;
     setState(() {
       _cancelling = false;
@@ -108,7 +113,7 @@ class _IssuanceRequestDetailScreenState
       case Err(:final failure):
         Outcome.problem(
           context,
-          issuanceSendFailure(failure, nothing: 'Nothing was cancelled.').body,
+          issuanceSendFailure(failure, act: IssuanceAct.cancel).body,
         );
     }
   }
@@ -443,19 +448,22 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
   bool _checked = false;
   bool _sending = false;
   AppFailure? _failure;
-  String? _key;
+  final IssuanceSendKey _key = IssuanceSendKey();
 
-  /// The detail carries no `accepts` block, so the policy is the labelled
-  /// fallback until the type is read. The server still checks every file.
-  UploadPolicy _policy = UploadPolicy.fallback;
+  /// The request's own `accepts` block (backend `0d1cb14`): what the server
+  /// checks a resubmission against, still there after the type is retired.
+  /// The server checks every file again regardless.
+  late UploadPolicy _policy = widget.detail.uploadPolicy;
 
   @override
   void initState() {
     super.initState();
-    _readPolicy();
+    if (_policy.source == UploadPolicySource.fallback) _readPolicy();
   }
 
-  /// A retired type is a 404, and the fallback stays: the conservative
+  /// Only for a request read from a server older than `0d1cb14`, which sent
+  /// no `accepts` on it: the type's block, if the type is still listed. A
+  /// retired type is a 404 and the labelled fallback stays — the lower
   /// ceiling costs a resident at most a smaller photo.
   Future<void> _readPolicy() async {
     final String? typeId = widget.detail.summary.typeId;
@@ -476,7 +484,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
 
   void _edited() {
     _failure = null;
-    _key = null;
+    _key.reset();
   }
 
   Future<void> _add(IssuanceRequirement requirement) async {
@@ -508,7 +516,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
     setState(() => _checked = true);
     if (!resubmissionHasContent(note: _note.text, files: _files)) return;
     if (_note.text.trim().length > issuanceNoteMax) return;
-    _key ??= generateRequestId();
+    final String key = _key.take();
     setState(() {
       _sending = true;
       _failure = null;
@@ -518,8 +526,9 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
           widget.detail.id,
           note: _note.text,
           files: Map<String, CapturedDocument>.of(_files),
-          idempotencyKey: _key!,
+          idempotencyKey: key,
         );
+    _key.settle(result);
     if (!mounted) return;
     switch (result) {
       case Ok(:final value):
@@ -543,7 +552,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
     final ({String title, String body, bool offerVerification})? copy =
         failure == null
         ? null
-        : issuanceSendFailure(failure, nothing: 'Nothing was sent.');
+        : issuanceSendFailure(failure, act: IssuanceAct.resubmit);
     return IssuanceCard(
       title: 'Send what the office asked for',
       child: Column(

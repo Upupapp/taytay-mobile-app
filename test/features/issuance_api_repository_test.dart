@@ -242,9 +242,13 @@ void main() {
         expect(request.path, 'me/issuance-requests');
         expect(request.headers['Authorization'], 'Bearer tok');
         expect(request.headers['Idempotency-Key'], 'key-1');
+        // The Node API reads the key from the body, as a multipart field
+        // beside the others; the header is this app's transport's, for its
+        // retry rule.
         expect(request.body, <String, Object?>{
           'type_id': 'dt-1',
           'purpose': 'For a school enrolment.',
+          'idempotency_key': 'key-1',
         });
         final MultipartFile part = request.files.single;
         expect(part.field, 'valid-id');
@@ -275,14 +279,14 @@ void main() {
     });
 
     test(
-      'an unverified resident gets a typed refusal, not the server text',
+      'an unverified resident gets VERIFICATION_REQUIRED, not the server text',
       () async {
         const String serverText =
             'Only a verified resident can request a document. Finish verification first.';
         transport.responses.add(
           _json(403, <String, Object?>{
             'error': <String, Object?>{
-              'code': 'FORBIDDEN',
+              'code': 'VERIFICATION_REQUIRED',
               'message': serverText,
               'request_id': 'req-403',
             },
@@ -298,9 +302,39 @@ void main() {
 
         final AppFailure? failure = result.failureOrNull;
         expect(failure, isA<ForbiddenFailure>());
-        expect(failure?.residentMessage, isNot(contains(serverText)));
+        expect((failure! as ForbiddenFailure).requiresVerification, isTrue);
+        expect(failure.kind, 'verification_required');
+        expect(failure.requestId, 'req-403');
+        expect(failure.residentMessage, isNot(contains(serverText)));
       },
     );
+
+    test('a plain FORBIDDEN is another refusal, not "verify first"', () async {
+      const String serverText =
+          'Document requests are for residents. Staff accounts file nothing here.';
+      transport.responses.add(
+        _json(403, <String, Object?>{
+          'error': <String, Object?>{
+            'code': 'FORBIDDEN',
+            'message': serverText,
+            'request_id': 'req-403b',
+          },
+        }),
+      );
+
+      final Result<IssuanceRequestDetail> result = await repository.submit(
+        typeId: 'dt-1',
+        purpose: 'For a school enrolment.',
+        files: const <String, CapturedDocument>{},
+        idempotencyKey: 'key-1',
+      );
+
+      final AppFailure? failure = result.failureOrNull;
+      expect(failure, isA<ForbiddenFailure>());
+      expect((failure! as ForbiddenFailure).requiresVerification, isFalse);
+      expect(failure.kind, 'forbidden');
+      expect(failure.residentMessage, isNot(contains(serverText)));
+    });
 
     test('a 422 keyed by requirement code keeps the keys', () async {
       transport.responses.add(
@@ -389,6 +423,45 @@ void main() {
       },
     );
 
+    test(
+      'the request\'s own accepts block is read, and its absence is labelled',
+      () async {
+        transport.responses
+          ..add(
+            _json(200, <String, Object?>{
+              'data': _requestWire()
+                ..['accepts'] = <String, Object?>{
+                  'mime_types': <Object?>['application/pdf', 'image/jpeg'],
+                  'max_bytes': 10485760,
+                },
+              'meta': <String, Object?>{},
+            }),
+          )
+          ..add(
+            _json(200, <String, Object?>{
+              'data': _requestWire(),
+              'meta': <String, Object?>{},
+            }),
+          );
+
+        final IssuanceRequestDetail served = (await repository.loadOwn(
+          'r-1',
+        )).valueOrNull!;
+        final IssuanceRequestDetail older = (await repository.loadOwn(
+          'r-1',
+        )).valueOrNull!;
+
+        expect(served.uploadPolicy.source, UploadPolicySource.served);
+        expect(served.uploadPolicy.maxBytes, 10485760);
+        expect(served.uploadPolicy.mimeTypes, <String>{
+          'application/pdf',
+          'image/jpeg',
+        });
+        // A server older than 0d1cb14 sent none: the fallback, and it says so.
+        expect(older.uploadPolicy.source, UploadPolicySource.fallback);
+      },
+    );
+
     test('a missing flag never offers an act', () async {
       final Map<String, Object?> wire = _requestWire()
         ..remove('can_cancel')
@@ -426,10 +499,15 @@ void main() {
       expect(transport.requests.map((ApiRequest r) => r.path).toSet(), <String>{
         'me/issuance-requests/r-1/cancel',
       });
-      expect(transport.requests[0].body, <String, Object?>{});
-      expect(transport.requests[1].body, <String, Object?>{});
+      expect(transport.requests[0].body, <String, Object?>{
+        'idempotency_key': 'k',
+      });
+      expect(transport.requests[1].body, <String, Object?>{
+        'idempotency_key': 'k',
+      });
       expect(transport.requests[2].body, <String, Object?>{
         'reason': 'Filed by mistake',
+        'idempotency_key': 'k',
       });
     });
 
@@ -452,7 +530,11 @@ void main() {
 
         final ApiRequest request = transport.requests.single;
         expect(request.path, 'me/issuance-requests/r-1/resubmit');
-        expect(request.body, <String, Object?>{'note': 'A newer certificate.'});
+        expect(request.body, <String, Object?>{
+          'note': 'A newer certificate.',
+          'idempotency_key': 'k',
+        });
+        expect(request.headers['Idempotency-Key'], 'k');
         expect(request.files.single.field, 'valid-id');
         expect(result.valueOrNull?.status, IssuanceStatus.underReview);
       },

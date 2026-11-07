@@ -122,6 +122,8 @@ abstract final class IssuanceCodec {
       claimInstructions: _text(data['claim_instructions']),
       claimDetails: _text(data['claim_details']),
       needsInfoMessage: _text(data['needs_info_message']),
+      // Backend `0d1cb14`. Absent from an older server: the labelled fallback.
+      uploadPolicy: UploadPolicy.decode(data['accepts']),
     );
   }
 

@@ -9,9 +9,15 @@ import 'issuance_type.dart';
 /// Document requests: the public catalogue, and a verified resident's own
 /// requests to a municipal office.
 ///
-/// **The server decides who may file.** Only a verified resident may submit;
-/// anybody else gets a `ForbiddenFailure` back, and the screen explains it.
-/// Nothing here checks a tier before asking.
+/// **The server decides who may file.** Only a verified resident may submit.
+/// A resident who has not finished verifying gets a `ForbiddenFailure` whose
+/// `requiresVerification` is true; any other account a plain one. The screen
+/// explains each. Nothing here checks a tier before asking.
+///
+/// **Every send takes an idempotency key**: a UUID minted when the resident
+/// presses send and the same on every retry of that send, so a retry after a
+/// timeout is answered with what the first send did instead of filing twice.
+/// The same key with other fields or files is a `ConflictFailure`.
 abstract interface class IssuanceRepository {
   /// `GET issuance-types`. Public; the whole list.
   Future<Result<List<IssuanceType>>> listTypes();

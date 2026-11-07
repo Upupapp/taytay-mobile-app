@@ -110,19 +110,31 @@ final class UnauthenticatedFailure extends AppFailure {
   bool get requiresReauthentication => true;
 }
 
-/// Authenticated, but not permitted (HTTP 403 / `FORBIDDEN`).
+/// Authenticated, but not permitted (HTTP 403 / `FORBIDDEN` /
+/// `VERIFICATION_REQUIRED`).
 ///
-/// For a resident this usually means the action needs a verified account, or it
-/// belongs to someone else. The copy deliberately does not say which.
+/// A plain `FORBIDDEN` does not say why, and neither does the copy. Where the
+/// server says the reason is an unfinished verification, it sends its own code
+/// and [requiresVerification] is true: only then may a screen point the
+/// resident at verification.
 final class ForbiddenFailure extends AppFailure {
-  const ForbiddenFailure({super.requestId, super.debugMessage});
+  const ForbiddenFailure({
+    this.requiresVerification = false,
+    super.requestId,
+    super.debugMessage,
+  });
+
+  /// True for `VERIFICATION_REQUIRED`, false for plain `FORBIDDEN`.
+  final bool requiresVerification;
 
   @override
-  String get kind => 'forbidden';
+  String get kind =>
+      requiresVerification ? 'verification_required' : 'forbidden';
 
   @override
-  String get residentMessage =>
-      'This service is not available for your account right now.';
+  String get residentMessage => requiresVerification
+      ? 'Verify your account first to use this service.'
+      : 'This service is not available for your account right now.';
 }
 
 /// The resource does not exist, or the actor may not know that it does
@@ -445,6 +457,12 @@ AppFailure failureFromApiError({
       );
     case ApiErrorCode.forbidden:
       return ForbiddenFailure(requestId: requestId, debugMessage: message);
+    case ApiErrorCode.verificationRequired:
+      return ForbiddenFailure(
+        requiresVerification: true,
+        requestId: requestId,
+        debugMessage: message,
+      );
     case ApiErrorCode.notFound:
       return NotFoundFailure(requestId: requestId, debugMessage: message);
     case ApiErrorCode.validationFailed:

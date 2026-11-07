@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../../../core/documents/upload_policy.dart';
 import 'issuance_status.dart';
 import 'issuance_type.dart';
 
@@ -30,8 +31,9 @@ class IssuanceRequestSummary {
   final String typeName;
   final String officeName;
 
-  /// The document type it was filed for, to read the type's `accepts` block
-  /// when the resident sends more. `null` when the server did not say.
+  /// The document type it was filed for. A resubmission reads the type's
+  /// `accepts` block only when the request carries none of its own (a server
+  /// older than backend `0d1cb14`). `null` when the server did not say.
   final String? typeId;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -106,6 +108,7 @@ class IssuanceRequestDetail {
     this.claimInstructions,
     this.claimDetails,
     this.needsInfoMessage,
+    this.uploadPolicy = UploadPolicy.fallback,
   });
 
   final IssuanceRequestSummary summary;
@@ -130,6 +133,12 @@ class IssuanceRequestDetail {
 
   /// What the office asked for, while the request needs more information.
   final String? needsInfoMessage;
+
+  /// The request's own `accepts` block: what a file sent with it, on a
+  /// resubmission too, is checked against. The server's limits, so it is
+  /// there after the type is retired. [UploadPolicy.fallback] when a server
+  /// older than backend `0d1cb14` sent none.
+  final UploadPolicy uploadPolicy;
 
   String get id => summary.id;
   IssuanceStatus? get status => summary.status;

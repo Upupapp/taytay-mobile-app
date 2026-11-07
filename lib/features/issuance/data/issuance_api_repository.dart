@@ -11,10 +11,19 @@ import '../domain/issuance_request.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_codec.dart';
 
-/// Document requests on the Node API (backend `2fd0566`).
+/// Document requests on the Node API (backend `2fd0566`, `0d1cb14`).
 ///
 /// The catalogue is public and read anonymously. Everything under `me/` is the
 /// signed-in resident's own, and the server answers for nobody else's.
+///
+/// **A retried send files once.** Submit, resubmit and cancel carry the
+/// caller's key as `idempotency_key` in the body — a multipart field for the
+/// two that send files — because that is where the Node API reads it: the
+/// same key with the same fields and files is answered with the request as it
+/// stands, and never acts twice. The key also goes to [ApiClient] as the
+/// `Idempotency-Key` header, which the server ignores and this app's transport
+/// reads: it is what lets a send lost to a dropped connection be repeated
+/// automatically (`RetryPolicy`).
 class IssuanceApiRepository implements IssuanceRepository {
   const IssuanceApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -65,7 +74,11 @@ class IssuanceApiRepository implements IssuanceRepository {
           // for a request the server did not say it opened.
           requiredStatus: 201,
           idempotencyKey: idempotencyKey,
-          body: <String, Object?>{'type_id': typeId, 'purpose': purpose.trim()},
+          body: <String, Object?>{
+            'type_id': typeId,
+            'purpose': purpose.trim(),
+            'idempotency_key': idempotencyKey,
+          },
           files: _parts(files),
           decode: IssuanceCodec.detail,
         );
@@ -117,6 +130,7 @@ class IssuanceApiRepository implements IssuanceRepository {
           idempotencyKey: idempotencyKey,
           body: <String, Object?>{
             if (said != null && said.isNotEmpty) 'reason': said,
+            'idempotency_key': idempotencyKey,
           },
           decode: IssuanceCodec.detail,
         );
@@ -139,6 +153,7 @@ class IssuanceApiRepository implements IssuanceRepository {
           idempotencyKey: idempotencyKey,
           body: <String, Object?>{
             if (said != null && said.isNotEmpty) 'note': said,
+            'idempotency_key': idempotencyKey,
           },
           files: _parts(files),
           decode: IssuanceCodec.detail,

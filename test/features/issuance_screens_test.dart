@@ -28,11 +28,17 @@ class _Picker implements DocumentPicker {
 
   CapturedDocument? document;
 
+  /// The policy each pick was asked to honour, in order.
+  final List<UploadPolicy> policies = <UploadPolicy>[];
+
   @override
   Future<CapturedDocument?> pick(
     DocumentSource source,
     UploadPolicy policy,
-  ) async => document;
+  ) async {
+    policies.add(policy);
+    return document;
+  }
 
   @override
   bool supports(DocumentSource source) => true;
@@ -53,12 +59,19 @@ class _Issuance implements IssuanceRepository {
   final List<Map<String, CapturedDocument>> submitted =
       <Map<String, CapturedDocument>>[];
 
+  /// Answers for the next cancels, in order, before the mock is asked.
+  final List<AppFailure> failCancel = <AppFailure>[];
+  final List<String> cancelKeys = <String>[];
+  int typeReads = 0;
+
   @override
   Future<Result<List<IssuanceType>>> listTypes() => _inner.listTypes();
 
   @override
-  Future<Result<IssuanceType>> loadType(String typeId) =>
-      _inner.loadType(typeId);
+  Future<Result<IssuanceType>> loadType(String typeId) {
+    typeReads++;
+    return _inner.loadType(typeId);
+  }
 
   @override
   Future<Result<IssuanceRequestDetail>> submit({
@@ -91,8 +104,17 @@ class _Issuance implements IssuanceRepository {
     String requestId, {
     String? reason,
     required String idempotencyKey,
-  }) =>
-      _inner.cancel(requestId, reason: reason, idempotencyKey: idempotencyKey);
+  }) async {
+    cancelKeys.add(idempotencyKey);
+    if (failCancel.isNotEmpty) {
+      return Err<IssuanceRequestDetail>(failCancel.removeAt(0));
+    }
+    return _inner.cancel(
+      requestId,
+      reason: reason,
+      idempotencyKey: idempotencyKey,
+    );
+  }
 
   @override
   Future<Result<IssuanceRequestDetail>> resubmit(
@@ -349,12 +371,13 @@ void main() {
     });
 
     testWidgets(
-      'a refusal from the server says nothing was sent, in our words',
+      'VERIFICATION_REQUIRED says nothing was sent and offers verification',
       (tester) async {
         final _Booted booted = await _boot(tester, location: _form);
         const String serverText =
             'Only a verified resident can request a document.';
         booted.issuance.failSubmit = const ForbiddenFailure(
+          requiresVerification: true,
           debugMessage: serverText,
         );
 
@@ -377,6 +400,37 @@ void main() {
         expect(find.text('Go to verification'), findsOneWidget);
         // Still on review, with everything kept, ready to send again.
         expect(find.byKey(const Key('issuance-send')), findsOneWidget);
+
+        await _tap(tester, find.text('Go to verification'));
+        expect(_path(tester), '/verification');
+      },
+    );
+
+    testWidgets(
+      'a plain FORBIDDEN is a generic refusal, with no way to verification',
+      (tester) async {
+        final _Booted booted = await _boot(tester, location: _form);
+        const String serverText =
+            'Document requests are for residents. Staff accounts file nothing.';
+        booted.issuance.failSubmit = const ForbiddenFailure(
+          debugMessage: serverText,
+        );
+
+        await tester.enterText(
+          find.byKey(const Key('issuance-purpose')),
+          'For a school enrolment requirement',
+        );
+        await _tap(tester, find.byKey(const Key('issuance-add-valid-id')));
+        await _tap(tester, find.byKey(const Key('issuance-source-file')));
+        await _tap(tester, find.byKey(const Key('issuance-review')));
+        await _tap(tester, find.byKey(const Key('issuance-send')));
+
+        expect(find.byKey(const Key('issuance-send-failure')), findsOneWidget);
+        expect(find.text('Not available for this account'), findsOneWidget);
+        expect(find.textContaining('Nothing was sent.'), findsOneWidget);
+        expect(find.text('Only verified residents can do this'), findsNothing);
+        expect(find.text('Go to verification'), findsNothing);
+        expect(find.textContaining(serverText), findsNothing);
       },
     );
 
@@ -451,6 +505,63 @@ void main() {
       expect(find.textContaining('Civil Registry window'), findsWidgets);
       expect(find.text('Claimed at the office'), findsOneWidget);
       expect(find.byKey(const Key('issuance-cancel')), findsNothing);
+    });
+
+    testWidgets(
+      'a resubmission is checked against the request\'s own accepts block',
+      (tester) async {
+        // 9 MB: over the 8 MB fallback, inside the 10 MB the request carries.
+        final Uint8List bytes = Uint8List(9 * 1024 * 1024)
+          ..setAll(0, <int>[0x25, 0x50, 0x44, 0x46]);
+        final _Booted booted = await _boot(
+          tester,
+          location: '/documents/mine/dr-sample-needs-info',
+          document: CapturedDocument(
+            bytes: bytes,
+            fileName: 'scan.pdf',
+            mimeType: 'application/pdf',
+            source: DocumentSource.file,
+          ),
+        );
+
+        await _tap(tester, find.byKey(const Key('issuance-add-valid-id')));
+        await _tap(tester, find.byKey(const Key('issuance-source-file')));
+
+        final UploadPolicy asked = booted.picker.policies.single;
+        expect(asked.source, UploadPolicySource.served);
+        expect(asked.maxBytes, 10485760);
+        // The request said; the type was not read for it.
+        expect(booted.issuance.typeReads, 0);
+        expect(find.textContaining('PDF added'), findsOneWidget);
+        expect(find.textContaining('too large'), findsNothing);
+      },
+    );
+
+    testWidgets('a cancel retried after a timeout carries the same key', (
+      tester,
+    ) async {
+      final _Booted booted = await _boot(
+        tester,
+        location: '/documents/mine/dr-sample-needs-info',
+      );
+      booted.issuance.failCancel.add(const TimeoutFailure());
+
+      await _tap(tester, find.byKey(const Key('issuance-cancel')));
+      await _tap(tester, find.text('Cancel request'));
+      expect(find.textContaining('it will not be sent twice'), findsOneWidget);
+      // Nothing moved: the request is still open, and can be cancelled again.
+      expect(find.byKey(const Key('issuance-cancel')), findsOneWidget);
+
+      await _tap(tester, find.byKey(const Key('issuance-cancel')));
+      await _tap(tester, find.text('Cancel request'));
+
+      expect(find.text('Cancelled'), findsOneWidget);
+      expect(booted.issuance.cancelKeys, hasLength(2));
+      expect(booted.issuance.cancelKeys.toSet(), hasLength(1));
+      expect(
+        booted.issuance.cancelKeys.first,
+        matches(RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-')),
+      );
     });
 
     testWidgets('cancel asks first, then follows the server', (tester) async {

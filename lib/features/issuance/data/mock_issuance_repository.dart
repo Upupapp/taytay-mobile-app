@@ -89,6 +89,7 @@ class MockIssuanceRepository implements IssuanceRepository {
       feeCentavos: type.feeCentavos,
       processingDays: type.processingDays,
       claimInstructions: type.claimInstructions,
+      uploadPolicy: type.uploadPolicy,
     );
     final Result<IssuanceRequestDetail> answer = await _behavior
         .respond<IssuanceRequestDetail>(filed);
@@ -220,6 +221,7 @@ class MockIssuanceRepository implements IssuanceRepository {
       feeCentavos: request.feeCentavos,
       processingDays: request.processingDays,
       claimInstructions: request.claimInstructions,
+      uploadPolicy: request.uploadPolicy,
     );
     final Result<IssuanceRequestDetail> answer = await _behavior
         .respond<IssuanceRequestDetail>(moved);
@@ -271,7 +273,8 @@ class MockIssuanceRepository implements IssuanceRepository {
   }
 }
 
-/// The `accepts` block the API publishes on every type, in its wire shape.
+/// The `accepts` block the API publishes on every type and, since backend
+/// `0d1cb14`, on every request, in its wire shape.
 const Map<String, Object?> _accepts = <String, Object?>{
   'mime_types': <Object?>['application/pdf', 'image/jpeg', 'image/png'],
   'max_bytes': 10485760,
@@ -447,6 +450,7 @@ final List<Map<String, Object?>> _requestFixtures = <Map<String, Object?>>[
     ],
     'can_cancel': false,
     'can_resubmit': false,
+    'accepts': _accepts,
   },
   <String, Object?>{
     'id': 'dr-sample-needs-info',
@@ -511,6 +515,7 @@ final List<Map<String, Object?>> _requestFixtures = <Map<String, Object?>>[
     ],
     'can_cancel': true,
     'can_resubmit': true,
+    'accepts': _accepts,
   },
   <String, Object?>{
     'id': 'dr-sample-released',
@@ -543,5 +548,6 @@ final List<Map<String, Object?>> _requestFixtures = <Map<String, Object?>>[
     ],
     'can_cancel': false,
     'can_resubmit': false,
+    'accepts': _accepts,
   },
 ];

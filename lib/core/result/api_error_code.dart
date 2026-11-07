@@ -21,6 +21,12 @@ enum ApiErrorCode {
   /// 403 — authenticated but not permitted.
   forbidden('FORBIDDEN'),
 
+  /// 403 — a resident who has not finished verifying asked for something
+  /// only a verified resident may (backend `0d1cb14`, requesting a document).
+  /// Kept apart from [forbidden] so the app offers the way to verification
+  /// when that is the reason, and only then.
+  verificationRequired('VERIFICATION_REQUIRED'),
+
   /// 404 — the resource does not exist, **or** the actor may not know it does.
   notFound('NOT_FOUND'),
 

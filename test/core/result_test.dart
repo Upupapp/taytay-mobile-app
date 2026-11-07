@@ -88,6 +88,27 @@ void main() {
 
       expect(map(ApiErrorCode.unauthenticated), isA<UnauthenticatedFailure>());
       expect(map(ApiErrorCode.forbidden), isA<ForbiddenFailure>());
+      expect(
+        map(ApiErrorCode.forbidden),
+        isA<ForbiddenFailure>().having(
+          (ForbiddenFailure f) => f.requiresVerification,
+          'requiresVerification',
+          isFalse,
+        ),
+      );
+      // A distinct code, so the app can say "verify first" only when it is so.
+      expect(
+        map(ApiErrorCode.verificationRequired, status: 403),
+        isA<ForbiddenFailure>().having(
+          (ForbiddenFailure f) => f.requiresVerification,
+          'requiresVerification',
+          isTrue,
+        ),
+      );
+      expect(
+        ApiErrorCode.parse('VERIFICATION_REQUIRED'),
+        ApiErrorCode.verificationRequired,
+      );
       expect(map(ApiErrorCode.notFound), isA<NotFoundFailure>());
       expect(map(ApiErrorCode.validationFailed), isA<ValidationFailure>());
       expect(map(ApiErrorCode.conflict), isA<ConflictFailure>());

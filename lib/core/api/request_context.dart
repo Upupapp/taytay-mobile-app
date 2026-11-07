@@ -87,3 +87,28 @@ String generateRequestId() {
   );
   return 'tay-$timestamp-$suffix';
 }
+
+final Random _idempotencyRandom = Random.secure();
+
+/// A fresh idempotency key: a random (version 4) UUID.
+///
+/// The Node API reads a key from the request body and accepts a UUID only
+/// (backend `0d1cb14`). A caller mints one when the resident presses send and
+/// holds it across every retry of that send, so a retry after a timeout is
+/// answered with what the first send did instead of acting twice.
+///
+/// Drawn from the platform's secure source: a key another device could guess
+/// is a key somebody else could replay. It names no device and no resident.
+String generateIdempotencyKey() {
+  final List<int> bytes = List<int>.generate(
+    16,
+    (_) => _idempotencyRandom.nextInt(256),
+  );
+  bytes[6] = (bytes[6] & 0x0f) | 0x40;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  final String hex = bytes
+      .map((int byte) => byte.toRadixString(16).padLeft(2, '0'))
+      .join();
+  return '${hex.substring(0, 8)}-${hex.substring(8, 12)}-'
+      '${hex.substring(12, 16)}-${hex.substring(16, 20)}-${hex.substring(20)}';
+}

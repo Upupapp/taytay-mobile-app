@@ -482,7 +482,7 @@ class _FailureNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ({String title, String body, bool offerVerification}) copy =
-        issuanceSendFailure(failure, nothing: 'Nothing was sent.');
+        issuanceSendFailure(failure, act: IssuanceAct.submit);
     return Semantics(
       liveRegion: true,
       child: Container(
