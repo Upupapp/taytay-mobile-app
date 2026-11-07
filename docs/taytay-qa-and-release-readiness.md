@@ -56,7 +56,7 @@ the tests paper over.
 | 9 | Event register / waitlist / cancel | ✅ Ben reaches his place; registering needs an account; a guest still reads the event |
 | 10 | Notification deep link, signed in and out | ✅ opens directly, or lands on sign-in — never "not found" |
 | 11 | Expired session | ✅ moved off the gated screen; public content still there |
-| 12 | Weak / offline network | ✅ banner + "nothing has been sent"; a `403` never dressed up as offline; public browsing continues |
+| 12 | Weak / offline network | ✅ banner, with no claim about what was sent (D-189); a `403` never dressed up as offline; public browsing continues |
 | 13 | Large text | ✅ all seven personas reach Home at 200% |
 | 14 | Reduced motion | ✅ nothing reachable changes |
 | 15 | Device sizes and safe areas | ✅ covered by `device_adaptation_test.dart` — 5 shapes, notch, landscape |

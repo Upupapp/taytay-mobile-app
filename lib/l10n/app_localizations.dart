@@ -182,10 +182,10 @@ abstract class AppStrings {
   /// **'Not reaching Taytay LGU'**
   String get networkUnreachableTitle;
 
-  /// Offline banner body. Must keep the promise that nothing was sent.
+  /// Offline banner body. Says only what the app knows about the connection and never what happened to a send: the failures that raise the banner include timeouts and connections that dropped after the request left the phone, which the office may already hold. Each send says for itself whether it went (D-188, D-189). The Filipino text needs review by a native speaker.
   ///
   /// In en, this message translates to:
-  /// **'The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.'**
+  /// **'The app cannot get through right now. Anything you have typed is still here.'**
   String get networkUnreachableMessage;
 
   /// Heading for work the resident finished that the office has not received. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it.

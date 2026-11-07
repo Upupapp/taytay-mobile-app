@@ -261,7 +261,58 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Not reaching Taytay LGU'), findsOneWidget);
-      expect(find.textContaining('nothing has been sent'), findsOneWidget);
+      expect(
+        find.text(
+          'The app cannot get through right now. '
+          'Anything you have typed is still here.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    // D-189. The banner cannot tell which failures raised it, and a timeout or
+    // a connection dropped after sending may have reached the office.
+    testWidgets('makes no claim about what was sent, however the requests '
+        'failed', (tester) async {
+      final booted = await bootOffline(tester, catalogFailure: null);
+
+      booted.monitor
+        ..reset()
+        ..recordOutcome(const TimeoutFailure())
+        ..recordOutcome(const NetworkFailure(mayHaveArrived: true));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not reaching Taytay LGU'), findsOneWidget);
+      final banner = tester
+          .widgetList<Text>(
+            find.descendant(
+              of: find.byType(OfflineBanner),
+              matching: find.byType(Text),
+            ),
+          )
+          .map((text) => text.data ?? '')
+          .join('\n')
+          .toLowerCase();
+      expect(banner, contains('anything you have typed is still here.'));
+      expect(banner, isNot(contains('sent')));
+      expect(banner, isNot(contains('nothing')));
+    });
+
+    test('says nothing about sending in either language', () {
+      final english = lookupAppStrings(AppLocales.english);
+      final filipino = lookupAppStrings(AppLocales.filipino);
+
+      expect(
+        english.networkUnreachableMessage.toLowerCase(),
+        isNot(contains('sent')),
+      );
+      // "Ipadala" is the app's word for send ("Subukang ipadala muli");
+      // "naipadala" and "naipapadala" are its sent forms.
+      expect(
+        filipino.networkUnreachableMessage.toLowerCase(),
+        isNot(contains('padala')),
+      );
+      expect(filipino.networkUnreachableMessage, isNot(contains('wala pang')));
     });
 
     testWidgets('goes away as soon as something gets through', (tester) async {

@@ -76,6 +76,12 @@ fact, and a per-screen banner is a banner some screens forget (D-148).
 It says **"Not reaching Taytay LGU"**, not "you appear to be offline". The second
 is a guess about the resident's phone; the first is what the app actually knows.
 
+It says nothing about what happened to a send (D-189). The failures that raise
+it include timeouts and connections dropped after the request left the phone,
+when the office may already hold it, so "nothing has been sent" — which it used
+to say — was true only some of the time. Each send says for itself whether it
+went (D-188).
+
 It disappears the moment anything gets through.
 
 ---

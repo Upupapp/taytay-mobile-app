@@ -24,6 +24,12 @@ import 'app_banner.dart';
 /// **It never appears over a server refusal.** A `403` or a `404` is the server
 /// speaking, and telling somebody to check their connection over a permission
 /// decision sends them to a load-up stall for nothing.
+///
+/// **It never says what happened to a send.** The failures that raise it
+/// include timeouts and connections that dropped after the request left the
+/// phone, when the office may already hold what was sent. It used to promise
+/// "nothing has been sent", which was true only for some of them (D-189). Each
+/// send says for itself whether it went (D-188).
 class OfflineBanner extends StatelessWidget {
   const OfflineBanner({this.onRetry, super.key});
 

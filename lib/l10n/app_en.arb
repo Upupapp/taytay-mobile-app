@@ -44,9 +44,9 @@
   "@networkUnreachableTitle": {
     "description": "Offline banner heading. Deliberately not 'you appear to be offline' — that is a guess about the resident's phone, where this is what the app actually knows."
   },
-  "networkUnreachableMessage": "The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.",
+  "networkUnreachableMessage": "The app cannot get through right now. Anything you have typed is still here.",
   "@networkUnreachableMessage": {
-    "description": "Offline banner body. Must keep the promise that nothing was sent."
+    "description": "Offline banner body. Says only what the app knows about the connection and never what happened to a send: the failures that raise the banner include timeouts and connections that dropped after the request left the phone, which the office may already hold. Each send says for itself whether it went (D-188, D-189). The Filipino text needs review by a native speaker."
   },
   "unsentTitle": "Not sent yet",
   "@unsentTitle": {

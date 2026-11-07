@@ -14,7 +14,7 @@
   "actionSignOut": "Mag-sign out",
   "actionTrySendingAgain": "Subukang ipadala muli",
   "networkUnreachableTitle": "Hindi maabot ang Taytay LGU",
-  "networkUnreachableMessage": "Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo, at wala pang naipadala.",
+  "networkUnreachableMessage": "Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo.",
   "unsentTitle": "Hindi pa naipapadala",
   "unsentMessage": "Wala pa sa Taytay LGU ang {what}. Nandito pa sa telepono mo ang lahat ng na-type mo. Walang naisumite, kaya hindi magiging dalawa kapag ipinadala mong muli.",
   "staleContentMessage": "Ipinapakita ang naitago noong {timestamp}. Maaaring nagbago na ito.",

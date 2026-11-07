@@ -52,7 +52,7 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get networkUnreachableMessage =>
-      'The app cannot get through right now. Anything you have typed is still here, and nothing has been sent.';
+      'The app cannot get through right now. Anything you have typed is still here.';
 
   @override
   String get unsentTitle => 'Not sent yet';

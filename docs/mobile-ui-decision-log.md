@@ -1961,6 +1961,36 @@ only in some. When the app cannot tell which, it says the one that is true.
 
 ---
 
+## D-189 — The offline banner makes no claim about what was sent
+
+**Status: settled.** Category: errors / honesty. Recorded 2026-11-07, following
+D-188.
+
+**Context.** The offline banner said "Anything you have typed is still here, and
+nothing has been sent." It appears after two failed requests in a row
+(`NetworkMonitor.shouldWarn`), and those include timeouts and connections that
+dropped after the request left the phone. Then the office may already hold what
+was sent, and the banner's promise is untrue. It is also wider than any one
+send: it stays up while the resident sends something new.
+
+**Chosen.** The clause is dropped. The banner now says "The app cannot get
+through right now. Anything you have typed is still here." In Filipino: "Hindi
+makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo." The Filipino
+was shortened, not rewritten, and still needs review by a native speaker.
+
+**Rejected.** A banner that keeps "nothing has been sent" while every failure
+in the run never left the phone, and says "something you sent may not have
+arrived" otherwise. The monitor does not know which requests were writes, so
+two failed reads would raise a warning about a send nobody made. A banner that
+says "check before sending again" also contradicts the send screens, which say
+that sending again is safe where the idempotency key makes it so (D-188).
+
+**Why.** The banner speaks about the connection. What happened to a send is
+said by the screen that made it, which knows whether it was a write and whether
+a retry is safe (D-188).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2153,5 +2183,6 @@ only in some. When the app cannot tell which, it says the one that is true.
 | D-186 | Google Play App Signing holds the app signing key. The upload key is created by Paul with the Play Console listing, kept in a password vault, and handed to the municipality at turnover through the credentials register; its password is never committed. Settled under Ella's standing "decide best practice" instruction, 2026-11-07 | release / security | settled |
 | D-187 | A new Terms of Use or Privacy Notice version is asked for when a session begins and on return to the app. Only a successful answer closes the gate; an empty version or a failed read leaves the app open. Registration and the update and maintenance gates are exempt, a guest is never asked, and Sign out returns to guest browsing. A failed agreement is never called recorded, and only then is Continue for now offered | privacy / access | settled |
 | D-188 | "Nothing was sent" only when the connection failed before the request left the phone. The transport sets `NetworkFailure.mayHaveArrived`, `AppFailure.outcomeUnknown` names the uncertain cases, and a retried write keeps the earlier unknown. Where a retry is safe, an unknown outcome says it could not be confirmed and that sending again is safe | errors / honesty | settled |
+| D-189 | The offline banner says the app cannot get through and that typed text is kept. It makes no claim about what was sent: a timeout or a connection dropped after sending may have reached the office, and each send says for itself what happened to it | errors / honesty | settled |
 
-**188 decisions — 184 settled, 4 provisional.**
+**189 decisions — 185 settled, 4 provisional.**

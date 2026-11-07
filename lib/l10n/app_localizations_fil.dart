@@ -52,7 +52,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get networkUnreachableMessage =>
-      'Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo, at wala pang naipadala.';
+      'Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo.';
 
   @override
   String get unsentTitle => 'Hindi pa naipapadala';

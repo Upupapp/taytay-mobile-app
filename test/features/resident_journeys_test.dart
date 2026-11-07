@@ -395,16 +395,24 @@ void main() {
   // ── 12. A weak connection ───────────────────────────────────────────────
 
   group('Journey: a weak or dead connection', () {
-    testWidgets('the app says so, and says nothing was sent', (tester) async {
+    // D-189: a timeout may have reached the office, so the banner never says
+    // nothing was sent. Each send says for itself whether it went (D-188).
+    testWidgets('the app says so, and makes no claim about what was sent', (
+      tester,
+    ) async {
       final booted = await live(tester, verified);
 
       booted.network
         ..recordOutcome(const NetworkFailure())
-        ..recordOutcome(const NetworkFailure());
+        ..recordOutcome(const TimeoutFailure());
       await tester.pumpAndSettle();
 
       expect(find.text('Not reaching Taytay LGU'), findsOneWidget);
-      expect(renderedText(tester), contains('nothing has been sent'));
+      expect(
+        renderedText(tester),
+        contains('anything you have typed is still here.'),
+      );
+      expect(renderedText(tester), isNot(contains('nothing has been sent')));
     });
 
     testWidgets('a server refusal is never dressed up as a dead connection', (
