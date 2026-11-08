@@ -319,6 +319,10 @@ class AppConfig {
   /// never makes a resident's phone contact a host the API does not run, which
   /// would learn the phone's address and when the screen was opened (D-192).
   /// A missing port is the scheme's default on both sides.
+  ///
+  /// No screen loads a payload's picture URL as given since D-193: an event
+  /// cover, like a Balita cover, is read by path from the configured base. This
+  /// stays the test any picture loaded by its URL must pass.
   bool isOnApiOrigin(String url) {
     final Uri? uri = Uri.tryParse(url.trim());
     if (uri == null || !uri.hasScheme || !uri.hasAuthority) return false;

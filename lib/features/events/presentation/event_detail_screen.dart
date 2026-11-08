@@ -268,7 +268,7 @@ class _Detail extends StatelessWidget {
     return ListView(
       padding: EdgeInsets.zero,
       children: <Widget>[
-        EventCover(url: event.coverImageUrl, height: 200),
+        EventCover(event: event, height: 200),
 
         Padding(
           padding: const EdgeInsets.all(Spacing.lg),

@@ -21,6 +21,12 @@ names events opens it, and the office sets banners. A walk-in event
 scheme, host and port of the configured base URL); a link to any other host
 draws nothing, so viewing an event never makes the phone contact a third party.
 
+**Since D-193:** covers are uploaded through the API (backend `7522174`).
+`EventCover` reads `GET events/{id}/cover` by the event's id from the configured
+base, through `MediaBytesApi.eventCover`; `cover_image.url` only says a cover
+exists, and its host is never requested. The office's `alt_text` is the
+picture's label for a screen reader.
+
 ---
 
 ## 1. Asia/Manila, stated

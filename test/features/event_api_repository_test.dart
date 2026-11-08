@@ -268,6 +268,7 @@ void main() {
       expect(first.organiser, 'SAMPLE health office');
       expect(first.contact, 'Desk officer, SAMPLE health office');
       expect(first.coverImageUrl, 'https://example.test/covers/sample.jpg');
+      expect(first.coverAltText, 'A SAMPLE covered court');
       expect(first.whatToBring, 'A valid ID.');
       expect(first.registrationRules, 'Residents of Taytay.');
       expect(first.shareUrl, isNull);
@@ -319,22 +320,38 @@ void main() {
       );
     });
 
-    test('only an https cover is drawn', () async {
-      transport.responses.add(
-        _page(<Object?>[
-          _event(
-            cover: const <String, Object?>{
-              'url': 'http://example.test/plain.jpg',
-              'alt_text': 'x',
-            },
-          ),
-        ]),
-      );
+    test(
+      "a cover's address is only a sign, http included; its words are kept",
+      () async {
+        // Behind a proxy that ends TLS the API writes its own origin as
+        // http://. The address is never requested (D-193): the bytes are read
+        // from `events/{id}/cover` on the configured base.
+        transport.responses.add(
+          _page(<Object?>[
+            _event(
+              cover: const <String, Object?>{
+                'url': 'http://example.test/api/v1/events/e-1/cover',
+                'alt_text': '  Volunteers at the covered court  ',
+              },
+            ),
+            _event(
+              id: 'e-2',
+              cover: const <String, Object?>{'url': '', 'alt_text': 'x'},
+            ),
+          ]),
+        );
 
-      final LguEvent event =
-          (await repository.listEvents()).valueOrNull!.items.single;
-      expect(event.coverImageUrl, isNull);
-    });
+        final List<LguEvent> items =
+            (await repository.listEvents()).valueOrNull!.items;
+        expect(
+          items.first.coverImageUrl,
+          'http://example.test/api/v1/events/e-1/cover',
+        );
+        expect(items.first.coverAltText, 'Volunteers at the covered court');
+        // No address, no cover: an empty one is not a sign of anything.
+        expect(items.last.coverImageUrl, isNull);
+      },
+    );
 
     test('pages by cursor, per scope, and page 1 starts again', () async {
       transport.responses.addAll(<Result<ApiHttpResponse>>[

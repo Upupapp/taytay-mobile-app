@@ -8,9 +8,10 @@ import 'api_transport.dart';
 
 /// Public image bytes, read through [ApiClient].
 ///
-/// `GET news/{id}/cover` and `GET services/{slug}/hero`. The path is always
-/// relative to the configured base URL. A `cover_url` or `hero_url` string is
-/// only a signal that a picture may exist; its host is never requested.
+/// `GET news/{id}/cover`, `GET events/{id}/cover` and `GET services/{slug}/hero`.
+/// The path is always relative to the configured base URL. A `cover_url`,
+/// `cover_image.url` or `hero_url` string is only a signal that a picture may
+/// exist; its host is never requested.
 ///
 /// A 404 is [Ok] of null: there is no picture. Any other failure is [Err].
 /// Neither path throws, and neither renders the server's error message.
@@ -48,6 +49,31 @@ class MediaBytesApi {
       },
       // A draft is 404 to an anonymous reader. Do not remember that as a
       // public picture, and do not keep the absence either.
+      rememberMiss: false,
+    );
+  }
+
+  /// `GET /events/{id}/cover`. Public, for an event residents are shown with
+  /// its cover: published or completed. `cover_image.url` only says a cover
+  /// exists; its host is never requested (D-193).
+  Future<Result<Uint8List?>> eventCover(String id) {
+    if (!_segment.hasMatch(id)) {
+      return Future<Result<Uint8List?>>.value(const Ok<Uint8List?>(null));
+    }
+    return _cached(
+      'events/$id/cover',
+      () {
+        return _apiClient.send<Uint8List?>(
+          method: HttpMethod.get,
+          path: 'events/$id/cover',
+          authenticated: false,
+          binary: true,
+          endSessionOn401: false,
+          decode: _ignoreJson,
+        );
+      },
+      // A cancelled event's cover is 404 from then on. Do not keep the
+      // absence: the same id may be shown again once the list is read again.
       rememberMiss: false,
     );
   }

@@ -864,6 +864,48 @@ void main() {
     expect(failed.requests, hasLength(2));
   });
 
+  test(
+    'an event cover is read by id from the base, unsigned, and a 404 is kept '
+    'neither as a picture nor as an absence (D-193)',
+    () async {
+      const String eventId = '33333333-3333-4333-8333-333333333333';
+      final _Scripted transport = _Scripted(<ApiHttpResponse>[
+        _missing('do not show this operator text'),
+        _image(_png),
+        _image(_png),
+      ]);
+      final MediaBytesApi api = MediaBytesApi(
+        apiClient: _client(transport),
+        cache: MediaByteCache(),
+      );
+
+      // Cancelled after the list was read: nothing to draw, and not remembered,
+      // because the same id may be shown with a cover again.
+      final Result<Uint8List?> gone = await api.eventCover(eventId);
+      expect(gone, isA<Ok<Uint8List?>>());
+      expect(gone.valueOrNull, isNull);
+      expect('$gone', isNot(contains('do not show this')));
+      expect((await api.eventCover(eventId)).valueOrNull, _png);
+      expect((await api.eventCover(eventId)).valueOrNull, _png);
+      expect(transport.requests, hasLength(2));
+      expect(
+        transport.requests.every(
+          (ApiRequest request) =>
+              request.path == 'events/$eventId/cover' &&
+              !request.headers.containsKey('Authorization'),
+        ),
+        isTrue,
+      );
+
+      // An address is never a path: nothing is asked for.
+      expect(
+        (await api.eventCover('http://covers.example.org/x.jpg')).valueOrNull,
+        isNull,
+      );
+      expect(transport.requests, hasLength(2));
+    },
+  );
+
   test('media content 404 is empty and a 5xx is an error', () async {
     final _Scripted missing = _Scripted(<ApiHttpResponse>[
       _error(404, 'NOT_FOUND'),

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -8,7 +10,7 @@ import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/remote_image.dart';
+import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/status_view.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../domain/event_repository.dart';
@@ -297,7 +299,7 @@ class EventCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          EventCover(url: event.coverImageUrl, gapBelow: Spacing.md),
+          EventCover(event: event, gapBelow: Spacing.md),
 
           if (event.isRegistered) ...<Widget>[
             Row(
@@ -420,52 +422,89 @@ class _IconLine extends StatelessWidget {
   }
 }
 
-/// An event cover, with its space reserved and a failure that does not take the
-/// event down with it.
+/// An event cover, read through the API, with its space reserved and a failure
+/// that does not take the event down with it.
 ///
-/// **The one place an event's cover link becomes a picture.** It is loaded only
-/// when the link is on the API's own origin (`AppConfig.isOnApiOrigin`). A link
-/// the office typed can name any host, and fetching it would tell that host the
-/// resident's address and that they opened the event. Anything else draws
-/// nothing, and no space: the cover is decorative (D-192).
+/// **The one place an event's cover becomes a picture.** The bytes are read
+/// from `GET events/{id}/cover` on the configured API base
+/// (`MediaBytesApi.eventCover`), never from the address in the payload. The
+/// office uploads a cover through the API (D-193), so there is no other host to
+/// ask, and the address's own scheme and host are not taken on trust: a phone
+/// that loads a cover talks to the API it was built for and nothing else. An
+/// event with no cover draws nothing and takes no space.
+///
+/// The office's description of the picture, which it must write before
+/// publishing, is read to a resident who cannot see it. With none, the picture
+/// is unlabelled rather than described by words this app made up.
 class EventCover extends StatelessWidget {
-  const EventCover({required this.url, this.height, this.gapBelow, super.key});
+  const EventCover({
+    required this.event,
+    this.height,
+    this.gapBelow,
+    this.load,
+    super.key,
+  });
 
-  /// The event's cover link, or null when it has none.
-  final String? url;
+  final LguEvent event;
   final double? height;
 
   /// Space under a drawn cover. None when there is no cover to draw.
   final double? gapBelow;
 
+  /// Reads the cover by event id. Defaults to `MediaBytesApi.eventCover`, and
+  /// to nothing in a mock build, which has no API to ask.
+  final MediaBytesLoader? load;
+
   @override
   Widget build(BuildContext context) {
-    final String? url = this.url;
-    if (url == null || !AppDependencies.of(context).config.isOnApiOrigin(url)) {
+    final String? url = event.coverImageUrl;
+    if (url == null || url.isEmpty) {
       return const SizedBox.shrink();
     }
-    // Decorative: the title, date and venue below carry every fact. Giving it
-    // a description this app invented for a picture it cannot see would be
-    // worse than silence — so no `semanticLabel`.
-    final image = RemoteImage(
-      url: url,
-      placeholderIcon: Icons.event_outlined,
-      errorIcon: Icons.event_outlined,
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final MediaBytesLoader? load =
+        this.load ??
+        (dependencies.config.usesMockData
+            ? null
+            : dependencies.mediaBytes.eventCover);
+    final ColorScheme scheme = Theme.of(context).colorScheme;
+    // Shown while the bytes are on their way, and if they never come. It says
+    // nothing to a screen reader: the title, date and venue carry every fact.
+    final Widget placeholder = ExcludeSemantics(
+      child: ColoredBox(
+        color: scheme.surfaceContainerHighest,
+        child: Center(
+          child: Icon(Icons.event_outlined, color: scheme.onSurfaceVariant),
+        ),
+      ),
     );
 
-    final Widget cover = ClipRRect(
-      borderRadius: BorderRadius.circular(Radii.md),
-      child: height == null
-          ? AspectRatio(aspectRatio: 16 / 9, child: image)
-          : SizedBox(height: height, width: double.infinity, child: image),
+    return MediaBytesHost(
+      id: event.id,
+      load: load,
+      builder: (Uint8List? bytes) {
+        final Widget image = bytes == null
+            ? placeholder
+            : DecodedMemoryImage(
+                bytes: bytes,
+                placeholder: placeholder,
+                semanticLabel: event.coverAltText,
+              );
+        final Widget cover = ClipRRect(
+          borderRadius: BorderRadius.circular(Radii.md),
+          child: height == null
+              ? AspectRatio(aspectRatio: 16 / 9, child: image)
+              : SizedBox(height: height, width: double.infinity, child: image),
+        );
+        final double? gap = gapBelow;
+        return gap == null
+            ? cover
+            : Padding(
+                padding: EdgeInsets.only(bottom: gap),
+                child: cover,
+              );
+      },
     );
-    final double? gap = gapBelow;
-    return gap == null
-        ? cover
-        : Padding(
-            padding: EdgeInsets.only(bottom: gap),
-            child: cover,
-          );
   }
 }
 

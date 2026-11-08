@@ -70,6 +70,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'barangays', 'barangay_api_repository.dart'),
   BackendRoute('GET', 'events', 'event_api_repository.dart'),
   BackendRoute('GET', 'events/{}', 'event_api_repository.dart'),
+  BackendRoute('GET', 'events/{}/cover', 'media_bytes_api.dart'),
   BackendRoute('POST', 'events/{}/registrations', 'event_api_repository.dart'),
   BackendRoute(
     'POST',

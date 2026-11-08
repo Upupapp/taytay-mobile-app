@@ -5,7 +5,6 @@ import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/page_policy.dart';
 import '../../../core/api/paginated.dart';
-import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/telemetry/telemetry.dart';
 import '../domain/event_repository.dart';
@@ -365,9 +364,9 @@ class EventApiRepository implements EventRepository {
     final Map<String, dynamic>? window = registration is Map<String, dynamic>
         ? registration
         : null;
-    final Object? cover = raw['cover_image'];
-    final String? coverUrl = cover is Map<String, dynamic>
-        ? _text(cover['url'])
+    final Object? rawCover = raw['cover_image'];
+    final Map<String, dynamic>? cover = rawCover is Map<String, dynamic>
+        ? rawCover
         : null;
     final Object? capacity = raw['capacity'];
 
@@ -381,9 +380,11 @@ class EventApiRepository implements EventRepository {
       // The server's own label, shown as sent. The code beside it decides
       // nothing in this app.
       category: _text(raw['category_label']),
-      // A link the office typed. Only `https` is kept, as with directions, and
-      // `EventCover` draws it only from the API's own origin (D-192).
-      coverImageUrl: ExternalLink.isSafe(coverUrl) ? coverUrl : null,
+      // The API's own cover route, kept only as a sign that a cover exists.
+      // Its host is never requested: `EventCover` reads `events/{id}/cover`
+      // from the configured base (D-193), as a Balita cover is read.
+      coverImageUrl: _text(cover?['url']),
+      coverAltText: _text(cover?['alt_text']),
       organiser: _text(raw['organiser']),
       contact: _contact(raw['contact']),
       registrationRules: _text(window?['rules']),

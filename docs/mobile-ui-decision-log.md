@@ -2218,6 +2218,64 @@ the server answers; "nothing was sent" was true only of the last try.
 
 ---
 
+## D-193 — An event cover is uploaded through the API and read by the event's id, never from the address the payload gives
+
+**Status: settled.** Category: privacy / contract. Recorded 2026-11-08,
+following D-192, whose owner question it answers. The owner delegated it with
+"decide the best practice" (Ella, Michaela Cailing; see D-185).
+
+**Context.** D-192 drew a cover only from the API's own origin, so a cover
+the office typed was never shown, and asked whether covers should be uploaded
+through the API as Balita covers are. They now are: backend `7522174` stores
+an event's cover as an uploaded image (migration `0043`), serves it from
+`GET /events/{id}/cover` while the event is published or completed (404
+otherwise, a cancelled event included), and sends `cover_image` as
+`{ url, alt_text }`, the URL being that route, absolute, built from the
+request's origin as a Balita `cover_url` is. The staff console uploads it and
+requires the description before publishing (its DL-193, DL-125). Behind the
+staging proxy the API writes its own origin as `http://`, because it does not
+trust the proxy's forwarded scheme; `isOnApiOrigin` compares the scheme, so a
+cover whose URL is used as given would never be shown there.
+
+**Chosen.**
+
+1. **The bytes are read by the event's id.** `MediaBytesApi.eventCover` asks
+   `events/{id}/cover` on the configured base, unsigned, as `newsCover` does.
+   A 404 is no picture and is not remembered, because a cancelled event's
+   cover stops being served; a hit is cached like any public picture.
+2. **The URL is only a sign that a cover exists.** The decoder keeps
+   `cover_image.url` as sent, `http` included, and its host is never
+   requested, whatever it names. The `https`-only filter of D-191 is dropped
+   for it: it guarded a request that is no longer made, and on staging it would
+   hide every cover.
+3. **`EventCover` stays the one place a cover becomes a picture**, now through
+   `MediaBytesHost`, on the list and on the page. An event with no cover draws
+   nothing and takes no space; one with a cover keeps its 16:9 box, or 200 on
+   the page, with the event icon until the bytes arrive, and keeps it if they
+   never do, as `RemoteImage` did. A mock build asks for nothing.
+4. **The office's description is read to a resident who cannot see the
+   picture.** `LguEvent.coverAltText` holds `cover_image.alt_text`, and it
+   becomes the picture's semantic label. D-192 left the cover unlabelled
+   because the app had no words for it; the office now must write them before
+   publishing. With none, the picture stays unlabelled rather than described by
+   words this app made up.
+
+`AppConfig.isOnApiOrigin` stays, with its tests, as the check any picture
+loaded by its URL must pass; no screen loads one that way any more.
+
+**Rejected.** Loading the URL as sent once it is on the API's origin: it is
+not on it on staging, for a reason outside the app, and the configured base is
+the only origin the app was built to trust. Rewriting the URL's scheme to the
+base's: a guess about somebody else's proxy. Hiding a cover until it loads:
+the list would jump as each arrives.
+
+**Why.** A picture should come from the API the app was built for, by a path
+the app composes, so no payload can point a phone at another host. The office
+writes a description because the console will not publish without one, and a
+resident who cannot see the picture should hear it.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2414,5 +2472,6 @@ the server answers; "nothing was sent" was true only of the last try.
 | D-190 | Starting a thread and replying send `idempotency_key` (backend `a7a1884`). `SendKey`, promoted from issuance, binds the key to the office or thread, subject, words and attachment: the same message keeps it across retries, a changed one gets a new one, and a `409` is never retried. An unknown outcome says sending again is safe and will not post twice | errors / idempotency | settled |
 | D-191 | Events run on the Node API (backend `580acbb`). Every method decodes explicitly, and an answer the app cannot read is a `ContractFailure`, never a blank. No seats-left number. `full` and `closed` are outcomes, the four refusals are `refused`, and a lost answer is "not confirmed" with trying again safe, even after a retry that fails before sending. `idempotency_key` in the body only, a `SendKey` UUID. `UnsentNotice` says "not confirmed" and promises no duplicate only for a keyed send. One model addition, `LguEvent.isCalledOff` | contract / idempotency | settled |
 | D-192 | A home banner whose link names events opens Events; the tab bar is unchanged (D-178). A walk-in event (`not_required`) reads "No registration needed" and offers no register control. `EventCover` loads a cover only from the API's own origin (`AppConfig.isOnApiOrigin`). `SendKey.unconfirmed` holds a lost answer for events and messages alike, so a message retry that fails before sending still says it could not be confirmed. Owner question: upload event covers through the API | navigation / privacy / errors | settled |
+| D-193 | Event covers are uploaded through the API (backend `7522174`). `MediaBytesApi.eventCover` reads `events/{id}/cover` by the event id from the configured base; `cover_image.url` is only a sign and its host is never requested, `http` included. `EventCover` draws through `MediaBytesHost`, with the office's `alt_text` as the label (`LguEvent.coverAltText`) | privacy / contract | settled |
 
 **191 decisions — 187 settled, 4 provisional.**

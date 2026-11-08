@@ -146,6 +146,7 @@ class LguEvent {
     this.venue,
     this.category,
     this.coverImageUrl,
+    this.coverAltText,
     this.organiser,
     this.contact,
     this.registrationRules,
@@ -174,10 +175,15 @@ class LguEvent {
   /// app takes no decision from it.
   final String? category;
 
-  /// The cover link the office typed. `EventCover` draws it only from the
-  /// API's own origin, so a cover never makes the phone contact another host
-  /// (D-192).
+  /// The API's own address for the cover, `GET events/{id}/cover`, sent only
+  /// while residents are shown it (D-193). Only a sign that a cover exists:
+  /// `EventCover` reads the bytes by path through the API client, so the host
+  /// written here is never contacted, whatever it says.
   final String? coverImageUrl;
+
+  /// The office's description of the cover, which it must write before the
+  /// event is published. Read to a resident who cannot see the picture.
+  final String? coverAltText;
 
   /// The Taytay office running it.
   final String? organiser;
@@ -255,6 +261,7 @@ class LguEvent {
     venue: venue,
     category: category,
     coverImageUrl: coverImageUrl,
+    coverAltText: coverAltText,
     organiser: organiser,
     contact: contact,
     registrationRules: registrationRules,

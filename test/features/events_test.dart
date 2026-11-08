@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,7 +24,6 @@ import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/events_controller.dart';
 import 'package:taytay_resident/features/events/presentation/events_screen.dart';
-import 'package:taytay_resident/shared/widgets/remote_image.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -50,6 +50,7 @@ LguEvent event({
   String? whatToBring,
   String? shareUrl,
   String? coverImageUrl,
+  String? coverAltText,
   EventCapacity capacity = const EventCapacity(),
   ServerValue<EventRegistrationState>? registrationState,
   ServerValue<PublicationState>? publicationState,
@@ -69,6 +70,7 @@ LguEvent event({
   whatToBring: whatToBring,
   shareUrl: shareUrl,
   coverImageUrl: coverImageUrl,
+  coverAltText: coverAltText,
   capacity: capacity,
   registrationState: registrationState,
   publicationState: publicationState ?? publication(PublicationState.published),
@@ -1210,73 +1212,118 @@ void main() {
     });
   });
 
-  group('an event cover — D-192', () {
-    // `config()` serves the API from https://example.test/api/v1.
-    const String onApi = 'https://example.test/media/covers/sample.jpg';
-    const String elsewhere = 'https://covers.example.org/sample.jpg';
+  group('an event cover — D-193', () {
+    // Only a sign that a cover exists. Behind the staging proxy the API writes
+    // its own origin as http://, and an address on another host is no
+    // different: the bytes are read from `events/{id}/cover` on the configured
+    // base, https://example.test/api/v1.
+    const String sent = 'http://covers.example.org/e-1/cover.jpg';
+    const String words =
+        'Volunteers handing out food packs at the covered court.';
 
-    Finder drawn() => find.descendant(
-      of: find.byType(EventCover),
-      matching: find.byType(RemoteImage),
+    Iterable<Image> drawn(WidgetTester tester) => tester.widgetList<Image>(
+      find.descendant(
+        of: find.byType(EventCover),
+        matching: find.byType(Image),
+      ),
     );
 
-    testWidgets("is drawn from the API's own origin on its row", (
+    testWidgets("is read from the API by the event's id on its row", (
       tester,
     ) async {
+      final _Covers covers = _Covers();
       await bootEvents(
         tester,
-        pages: <EventScope, dynamic>{
-          EventScope.upcoming: pageOf(<LguEvent>[event(coverImageUrl: onApi)]),
-        },
-      );
-
-      expect(drawn(), findsOneWidget);
-      expect(tester.widget<RemoteImage>(drawn()).url, onApi);
-    });
-
-    testWidgets("is drawn from the API's own origin on its page", (
-      tester,
-    ) async {
-      await bootEvents(
-        tester,
-        detail: event(coverImageUrl: onApi),
-        location: '/events/e-1',
-      );
-
-      expect(drawn(), findsOneWidget);
-    });
-
-    testWidgets('from another host is not loaded, and takes no space', (
-      tester,
-    ) async {
-      await bootEvents(
-        tester,
+        transport: covers,
         pages: <EventScope, dynamic>{
           EventScope.upcoming: pageOf(<LguEvent>[
-            event(coverImageUrl: elsewhere),
+            event(coverImageUrl: sent, coverAltText: words),
+          ]),
+        },
+      );
+      await tester.pumpAndSettle();
+
+      expect(covers.paths, contains('events/e-1/cover'));
+      expect(
+        covers.paths.where((String path) => path.contains('example.org')),
+        isEmpty,
+      );
+      expect(drawn(tester), isNotEmpty);
+      expect(
+        drawn(tester).any((Image image) => image.image is NetworkImage),
+        isFalse,
+      );
+      // The office's own words, read to a resident who cannot see it.
+      expect(drawn(tester).first.semanticLabel, words);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets("is read from the API by the event's id on its page", (
+      tester,
+    ) async {
+      final _Covers covers = _Covers();
+      await bootEvents(
+        tester,
+        transport: covers,
+        detail: event(coverImageUrl: sent, coverAltText: words),
+        location: '/events/e-1',
+      );
+      await tester.pumpAndSettle();
+
+      expect(covers.paths, contains('events/e-1/cover'));
+      expect(drawn(tester), isNotEmpty);
+      expect(
+        drawn(tester).any((Image image) => image.image is NetworkImage),
+        isFalse,
+      );
+    });
+
+    testWidgets('an event with no cover asks for nothing and takes no space', (
+      tester,
+    ) async {
+      final _Covers covers = _Covers();
+      await bootEvents(
+        tester,
+        transport: covers,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: pageOf(<LguEvent>[
             event(id: 'e-2', title: 'Clean-up drive'),
           ]),
         },
       );
+      await tester.pumpAndSettle();
 
-      expect(find.byType(EventCover), findsNWidgets(2));
-      expect(find.byType(RemoteImage), findsNothing);
-      expect(find.byType(Image), findsNothing);
-      // The same as an event with no cover at all: no box, no gap.
-      expect(tester.getSize(find.byType(EventCover).first).height, 0);
-      expect(tester.getSize(find.byType(EventCover).last).height, 0);
+      expect(
+        covers.paths.where((String path) => path.contains('/cover')),
+        isEmpty,
+      );
+      expect(find.byType(EventCover), findsOneWidget);
+      expect(tester.getSize(find.byType(EventCover)).height, 0);
     });
 
-    testWidgets('from another host is not loaded on its page', (tester) async {
+    testWidgets('a cover the API will not give keeps its place and the event', (
+      tester,
+    ) async {
+      final _Covers covers = _Covers(serves: false);
       await bootEvents(
         tester,
-        detail: event(coverImageUrl: elsewhere),
+        transport: covers,
+        detail: event(coverImageUrl: sent, coverAltText: words),
         location: '/events/e-1',
       );
+      await tester.pumpAndSettle();
 
-      expect(find.byType(RemoteImage), findsNothing);
-      expect(find.byType(Image), findsNothing);
+      expect(covers.paths, contains('events/e-1/cover'));
+      expect(drawn(tester), isEmpty);
+      expect(
+        find.descendant(
+          of: find.byType(EventCover),
+          matching: find.byIcon(Icons.event_outlined),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Medical mission'), findsWidgets);
+      expect(tester.takeException(), isNull);
     });
   });
 
@@ -1299,6 +1346,54 @@ void main() {
     });
   });
 }
+
+/// Answers `events/{id}/cover` with a picture, or with the API's 404, and
+/// every other path with a 404. Records what was asked for.
+class _Covers implements ApiTransport {
+  _Covers({this.serves = true});
+
+  final bool serves;
+  final List<String> paths = <String>[];
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async {
+    paths.add(request.path);
+    if (serves && RegExp(r'^events/[^/]+/cover$').hasMatch(request.path)) {
+      return Ok<ApiHttpResponse>(
+        ApiHttpResponse(
+          statusCode: 200,
+          body: '',
+          bodyBytes: _png,
+          headers: const <String, String>{'content-type': 'image/png'},
+        ),
+      );
+    }
+    return Ok<ApiHttpResponse>(
+      ApiHttpResponse(
+        statusCode: 404,
+        body: jsonEncode(<String, Object?>{
+          'error': <String, Object?>{
+            'code': 'NOT_FOUND',
+            'message': 'Not found.',
+            'details': <String, Object?>{},
+            'request_id': 'req-1',
+          },
+        }),
+        headers: const <String, String>{'content-type': 'application/json'},
+      ),
+    );
+  }
+}
+
+/// A 1×1 PNG, enough for the API's image check and the decoder.
+final Uint8List _png = Uint8List.fromList(<int>[
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, //
+  0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00, //
+  0x0C, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0xF8, 0xCF, 0xC0, 0x00, //
+  0x00, 0x03, 0x01, 0x01, 0x00, 0xC9, 0xFE, 0x92, 0xEF, 0x00, 0x00, 0x00, //
+  0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82, //
+]);
 
 /// Answers `GET home` with one active banner linking to [href], and refuses
 /// every other request, as a server with nothing else to say would.

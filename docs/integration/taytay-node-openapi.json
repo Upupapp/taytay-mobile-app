@@ -15849,6 +15849,60 @@
         }
       }
     },
+    "/api/v1/events/{id}/cover": {
+      "get": {
+        "operationId": "getEventCover",
+        "summary": "Event cover image",
+        "description": "Public bytes for the cover of an event residents are shown with it: published or completed. A draft, a cancelled or an archived event, an event with no cover, or an unknown id is 404. The office reads a draft's cover through GET /api/v1/media/{id}/content.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image bytes.",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not shown to residents, no cover, or no such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/events/{id}": {
       "get": {
         "operationId": "getResidentEvent",
@@ -29315,7 +29369,7 @@
           "summary",
           "details",
           "category",
-          "image_url",
+          "image_media_id",
           "image_alt_text",
           "starts_at",
           "ends_at",
@@ -29362,13 +29416,13 @@
               "seminar"
             ]
           },
-          "image_url": {
+          "image_media_id": {
             "type": [
               "string",
               "null"
             ],
-            "maxLength": 2000,
-            "description": "http(s) only."
+            "format": "uuid",
+            "description": "The cover: an image this member of staff stored through POST /api/v1/media, or one already an event's cover. Any other upload is refused. A typed image_url is no longer accepted; the app loads a cover only from the API."
           },
           "image_alt_text": {
             "type": [
@@ -29376,7 +29430,7 @@
               "null"
             ],
             "maxLength": 300,
-            "description": "Sent with image_url. May be empty on a draft; publication asks for it (DL-125)."
+            "description": "What the cover shows, in the office's words; sent with image_media_id, or neither is. May be empty on a draft; publication asks for it (DL-125)."
           },
           "starts_at": {
             "type": "string",
@@ -29478,6 +29532,7 @@
           "summary",
           "details",
           "category",
+          "image_media_id",
           "image_url",
           "image_alt_text",
           "starts_at",
@@ -29540,13 +29595,20 @@
               "seminar"
             ]
           },
+          "image_media_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The stored cover. Staff read its bytes through GET /api/v1/media/{id}/content, a draft's as well."
+          },
           "image_url": {
             "type": [
               "string",
               "null"
             ],
-            "maxLength": 2000,
-            "description": "http(s) only."
+            "description": "Absolute GET /api/v1/events/{id}/cover, built from the request's origin as a Balita cover_url is. Set only while the cover is served (published or completed); null for a draft, a cancelled or an archived event, and for an event with no cover."
           },
           "image_alt_text": {
             "type": [
@@ -29554,7 +29616,7 @@
               "null"
             ],
             "maxLength": 300,
-            "description": "Sent with image_url. May be empty on a draft; publication asks for it (DL-125)."
+            "description": "What the cover shows, in the office's words; sent with image_media_id, or neither is. May be empty on a draft; publication asks for it (DL-125)."
           },
           "starts_at": {
             "type": "string",
@@ -30375,6 +30437,7 @@
               "object",
               "null"
             ],
+            "description": "Set while the event is published or completed and has a cover. url is the absolute GET /api/v1/events/{id}/cover on the API's own origin; alt_text is the office's description of the picture (DL-125).",
             "additionalProperties": false,
             "required": [
               "url",
