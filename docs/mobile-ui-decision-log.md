@@ -2334,6 +2334,73 @@ they registered through.
 
 ---
 
+## D-195 — The name on the account is checked against the ID, so a resident sets it before sending an ID and after a rejection, and not between
+
+**Status: settled.** Category: product / contract / privacy. Recorded
+2026-11-09, following D-194. The owner decided that an ID reviewer confirms the
+ID shows the name the account gives (Ella, Michaela Cailing; the staff
+console's DL-197, built on backend `c5e1a7d`).
+
+**Context.** The backend now sends the reviewer the account's `name` and
+`birthdate` while a request is pending, requires the confirmed name back on
+approval, and refuses `PATCH /me` changing `name` or `birthdate` with `409`
+while `verification_status` is `pending` or `verified`. Sending the same value
+is not a change; `unverified` and `rejected` may change both. The app set the
+name only in the sign-up wizard, and Edit profile offered mobile, email and
+barangay. A resident whose request was rejected because their name did not
+match their ID had no way to correct it.
+
+**Chosen.**
+
+1. **Edit profile shows the name, and it is a field only while it is open.**
+   `NameLock.forTier` reads the `verification_status` that `GET /me` sent:
+   `unverified` and `rejected` are open, `pending` is under review, `verified`
+   (through `AccessLevel.fromVerificationTier`) is checked, and anything else,
+   or a failed read, is unknown. An open name is a text field labelled "Full
+   name" with the sentence "Write your name exactly as it is printed on your
+   government ID. Taytay LGU checks it against your ID." Every other state draws
+   the name as text with a lock and one sentence: it is being checked and
+   cannot be changed while the check is pending; it was checked and cannot be
+   changed here, so ask Taytay LGU; or the app could not check. A changed name
+   is sent as `name` in the same `PATCH /me` as the other fields; an empty name
+   or one over 120 characters is refused before sending. The birth date is not
+   offered: the app has never collected it.
+2. **A `409` on a name change is explained, never silent.** The code alone does
+   not say it was the name, because a used email is also `409`. The screen
+   reads `GET /me` again; if the name is no longer open, it locks the field,
+   shows the account's name again, and says why, that nothing was saved, and
+   that other changes can be saved again. Otherwise the existing "Nothing was
+   changed" stands. The server's message is never shown (Article 5.5).
+3. **The resident is told before sending an ID.** The start page and the
+   needs-correction page carry "Your name and your ID" ahead of the photos:
+   Taytay LGU will check that the ID shows the name on the account, make sure
+   the two match before sending, and the name cannot be changed while the check
+   is pending or after it is approved. "Check the name on your account" opens
+   Edit profile, which was reachable only from a verified resident's account
+   home; it is the way in for the resident this decision exists for.
+4. **Literal English**, as the account and verification screens are. The
+   sentences live in `NameCheckCopy` and add no Filipino strings for native
+   review.
+
+The vendored Node export was refreshed from `c5e1a7d`.
+
+**Not built.** Editing the name from the LGU-verified list on the account
+centre: its sheet still points to the municipal hall. Refreshing the session's
+greeting name after a change: it updates on the next sign-in.
+
+**Rejected.** Reading the `409` message to tell the name from the email:
+branching on a message is forbidden (Article 8). Offering the name whenever the
+access level is unverified: `pending` is unverified too, and the server refuses
+it there. Offering it for an unknown status: a field that is refused after
+typing is worse than one that says the app could not tell.
+
+**Why.** The digital ID shows the account's name, and the office now vouches
+for it. A resident must be able to correct it before that check, and after a
+rejection, and must know before sending that it will be compared and then
+fixed.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2532,5 +2599,6 @@ they registered through.
 | D-192 | A home banner whose link names events opens Events; the tab bar is unchanged (D-178). A walk-in event (`not_required`) reads "No registration needed" and offers no register control. `EventCover` loads a cover only from the API's own origin (`AppConfig.isOnApiOrigin`). `SendKey.unconfirmed` holds a lost answer for events and messages alike, so a message retry that fails before sending still says it could not be confirmed. Owner question: upload event covers through the API | navigation / privacy / errors | settled |
 | D-193 | Event covers are uploaded through the API (backend `7522174`). `MediaBytesApi.eventCover` reads `events/{id}/cover` by the event id from the configured base; `cover_image.url` is only a sign and its host is never requested, `http` included. `EventCover` draws through `MediaBytesHost`, with the office's `alt_text` as the label (`LguEvent.coverAltText`) | privacy / contract | settled |
 | D-194 | Who may register is the event's (backend `cf30686`, migration `0044`): `LguEvent.openTo` holds `registration.open_to` and the event page says "Who can register" in this app's words; the form's flag already gated, so an unverified resident reaches the form only where the office opened the event to every account. A corrected event's notice (`event_registration_updated`, with the old and the new date, time and venue) opens the event. Not built: notes or an assistance-needs checklist on a registration (health information, RA 10173 §3(l), §13; no retention schedule) | contract / product / privacy | settled |
+| D-195 | The account's name is checked against the ID (console DL-197, backend `c5e1a7d`). `NameLock.forTier` on `GET /me`'s status: Edit profile offers "Full name" as a field for `unverified` and `rejected`, and as locked text with one sentence for `pending`, `verified` and an unknown status. A `409` on a name change re-reads the status and says why; the message is never shown. The start and needs-correction pages say before the photos that the ID must show the account's name and that it then cannot change, with a link to Edit profile | product / contract / privacy | settled |
 
-**192 decisions — 188 settled, 4 provisional.**
+**193 decisions — 189 settled, 4 provisional.**

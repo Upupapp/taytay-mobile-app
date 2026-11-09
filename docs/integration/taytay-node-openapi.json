@@ -93,7 +93,7 @@
       "patch": {
         "operationId": "patchMe",
         "summary": "Update the signed-in profile",
-        "description": "Null clears an optional field. Role and verification status cannot be patched. A different email clears email_verified. An email already used by another open account is 409. street and purok are optional structured lines and do not replace address.",
+        "description": "Null clears an optional field. Role and verification status cannot be patched. A different email clears email_verified. An email already used by another open account is 409. street and purok are optional structured lines and do not replace address. A change of name or birthdate is 409 while the verification status is pending or verified, because those are checked against the ID.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -105,7 +105,7 @@
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserProfileEnvelope" } } }
           },
           "422": { "description": "Validation failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "That email is already in use.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "409": { "description": "That email is already in use, or a change of name or birthdate while verification is pending or verified.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -338,19 +338,19 @@
       "post": {
         "operationId": "approveVerification",
         "summary": "Approve a verification request",
-        "description": "Sets the resident to verified. A registered role becomes verified. Staff and admin roles are left unchanged.",
+        "description": "Sets the resident to verified. A registered role becomes verified. Staff and admin roles are left unchanged. The reviewer confirms the name and birth date the account gives (account_name, account_birthdate) against the ID by sending them back as confirmed_name and confirmed_birthdate. They are compared with the account under a lock, and the name is kept as the one confirmed.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
         ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReviewNotes" } } }
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationApproval" } } }
         },
         "responses": {
           "200": { "description": "Approved. The response includes staff-only notes.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationStaffEnvelope" } } } },
           "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "Not pending.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "409": { "description": "Not pending, the account gives no name, or its name or birth date is not the one confirmed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -16546,15 +16546,6 @@
           "saved-view.share",
           "visit.view",
           "visit.manage",
-          "newsfeed.view",
-          "newsfeed.create",
-          "newsfeed.edit",
-          "newsfeed.publish",
-          "newsfeed.schedule",
-          "newsfeed.archive",
-          "newsfeed.pin",
-          "newsfeed.moderate",
-          "newsfeed.view-insights",
           "event.view",
           "event.create",
           "event.edit",
@@ -16571,7 +16562,7 @@
       "Permission": {
         "type": "string",
         "description": "Every key GET /me may carry: StaffCapability, then CaseworkPermission.",
-        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "newsfeed.view", "newsfeed.create", "newsfeed.edit", "newsfeed.publish", "newsfeed.schedule", "newsfeed.archive", "newsfeed.pin", "newsfeed.moderate", "newsfeed.view-insights", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
+        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
       },
       "OfficeRole": {
         "type": "string",
@@ -16841,7 +16832,9 @@
             "type": "object",
             "description": "Staff view. notes is staff-only and is omitted from citizen responses.",
             "properties": {
-              "notes": { "type": ["string", "null"], "description": "Staff only. Omitted from citizen responses." }
+              "notes": { "type": ["string", "null"], "description": "Staff only. Omitted from citizen responses." },
+              "account_name": { "type": ["string", "null"], "description": "Staff only, and present only while status is pending: the name the account gives, for the reviewer to check against the ID. Null when the account gives none." },
+              "account_birthdate": { "type": ["string", "null"], "format": "date", "description": "Staff only, and present only while status is pending: the birth date the account gives. Null when it holds none." }
             }
           }
         ]
@@ -16884,9 +16877,14 @@
           }
         }
       },
-      "ReviewNotes": {
+      "VerificationApproval": {
         "type": "object",
-        "properties": { "notes": { "type": "string", "maxLength": 1000 } }
+        "required": ["confirmed_name", "confirmed_birthdate"],
+        "properties": {
+          "notes": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "For the office. The resident never reads it." },
+          "confirmed_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The account name the reviewer checked against the ID, as account_name gave it." },
+          "confirmed_birthdate": { "type": ["string", "null"], "format": "date", "description": "The account birth date the reviewer checked against the ID, as account_birthdate gave it. Null when the account holds none." }
+        }
       },
       "RejectNotes": {
         "type": "object",

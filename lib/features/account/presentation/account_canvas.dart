@@ -102,12 +102,21 @@ class AccountField {
     this.controller,
     this.onChanged,
     this.onTap,
+    this.locked = false,
+    this.note,
   });
 
   final String label;
   final String value;
   final bool verified;
   final bool chevron;
+
+  /// Draws a lock: the value is shown and cannot be changed on this screen.
+  final bool locked;
+
+  /// One sentence under the field, saying what the value is or why it is
+  /// locked.
+  final String? note;
 
   /// When set, the row is a text field and Save reads what was typed.
   final TextEditingController? controller;
@@ -165,6 +174,7 @@ class AccountCanvas extends StatelessWidget {
     this.fields = AccountSpecimen.fields,
     this.onSave,
     this.onLegalName,
+    this.showLegalNameNote = true,
     this.toggles = AccountSpecimen.toggles,
     this.onLanguage,
     this.onChangePassword,
@@ -222,6 +232,10 @@ class AccountCanvas extends StatelessWidget {
   final List<AccountField> fields;
   final VoidCallback? onSave;
   final VoidCallback? onLegalName;
+
+  /// The design's legal-name line on Edit profile. The live screen draws the
+  /// name as a field with its own note instead (D-195).
+  final bool showLegalNameNote;
   final List<AccountToggle> toggles;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
@@ -348,6 +362,7 @@ class AccountCanvas extends StatelessWidget {
         fields: fields,
         onSave: onSave,
         onLegalName: onLegalName,
+        showLegalNameNote: showLegalNameNote,
       ),
       AccountFrame.settings => _SettingsBody(
         toggles: toggles,
@@ -1269,12 +1284,14 @@ class _EditBody extends StatelessWidget {
     required this.fields,
     this.onSave,
     this.onLegalName,
+    this.showLegalNameNote = true,
   });
 
   final String initials;
   final List<AccountField> fields;
   final VoidCallback? onSave;
   final VoidCallback? onLegalName;
+  final bool showLegalNameNote;
 
   @override
   Widget build(BuildContext context) {
@@ -1288,9 +1305,10 @@ class _EditBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              if (!fields.any(
-                (AccountField field) => field.label == 'Display name',
-              )) ...<Widget>[
+              if (showLegalNameNote &&
+                  !fields.any(
+                    (AccountField field) => field.label == 'Display name',
+                  )) ...<Widget>[
                 _LegalNameNote(onTap: onLegalName),
                 const SizedBox(height: S8Space.fieldStack),
               ],
@@ -1339,6 +1357,13 @@ class _EditField extends StatelessWidget {
               children: <Widget>[
                 Expanded(child: _fieldValue()),
                 if (field.verified) const _Pill('Verified'),
+                if (field.locked)
+                  const TaytayIcon(
+                    icon: TaytayIcons.lock,
+                    size: 18,
+                    color: BrandColors.chevron,
+                    semanticLabel: 'Cannot be changed here',
+                  ),
                 if (field.chevron)
                   const TaytayIcon(
                     icon: TaytayIcons.chevronDown,
@@ -1350,6 +1375,10 @@ class _EditField extends StatelessWidget {
               ],
             ),
           ),
+          if (field.note case final String note) ...<Widget>[
+            const SizedBox(height: S8Space.labelGap),
+            Text(note, style: _legal),
+          ],
         ],
       ),
     );

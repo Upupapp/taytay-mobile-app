@@ -5,6 +5,7 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../profile/domain/name_lock.dart';
 import '../domain/field_correction_note.dart';
 import 's3_chrome.dart';
 
@@ -411,6 +412,7 @@ class NeedsCorrectionPage extends StatelessWidget {
     this.onFront,
     this.onBackPhoto,
     this.onRetake,
+    this.onCheckName,
     this.notice = '',
     super.key,
   });
@@ -434,6 +436,9 @@ class NeedsCorrectionPage extends StatelessWidget {
   final VoidCallback? onFront;
   final VoidCallback? onBackPhoto;
   final VoidCallback? onRetake;
+
+  /// Opens Edit profile, where a rejected resident can change their name.
+  final VoidCallback? onCheckName;
   final String notice;
 
   @override
@@ -557,6 +562,8 @@ class NeedsCorrectionPage extends StatelessWidget {
           // One logical px under the shared 12. The reason card's border
           // box is that much taller than the design's card edge.
           const SizedBox(height: 11),
+          NameCheckNote(onCheckName: onCheckName),
+          const SizedBox(height: s3CardGap),
           S3Card(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -714,6 +721,50 @@ class UnverifiedStatusPage extends StatelessWidget {
 }
 
 String _orDash(String value) => value.trim().isEmpty ? '—' : value.trim();
+
+/// Said before an ID is sent: Taytay LGU checks that the ID shows the name on
+/// the account, and the name cannot change while it does (D-195).
+///
+/// On the start and the resubmit pages, ahead of the photos, because a
+/// resident who changes their name first does not pick the photos twice.
+class NameCheckNote extends StatelessWidget {
+  const NameCheckNote({this.onCheckName, super.key});
+
+  /// Opens Edit profile. Null draws the sentence alone.
+  final VoidCallback? onCheckName;
+
+  @override
+  Widget build(BuildContext context) {
+    final VoidCallback? open = onCheckName;
+    return S3Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            NameCheckCopy.beforeSendingTitle,
+            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
+          ),
+          const SizedBox(height: 6),
+          const S3Lines(
+            NameCheckCopy.beforeSending,
+            size: 13,
+            weight: AppTypography.body,
+            color: BrandColors.textSecondary,
+            height: 1.5,
+          ),
+          if (open != null) ...<Widget>[
+            const SizedBox(height: 12),
+            SecondaryButton(
+              key: const Key('verification-check-name'),
+              label: NameCheckCopy.checkName,
+              onPressed: open,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 /// Reason callout. The 3px danger border follows the 8px radius, so the
 /// run starts at the top of the curve rather than after a clipped bar.

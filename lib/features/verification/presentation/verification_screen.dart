@@ -231,6 +231,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         onBackPhoto: _mayEdit ? () => _pick(VerificationPhotoSlot.back) : null,
         onRetake: _mayEdit ? () => _pick(VerificationPhotoSlot.selfie) : null,
         onResubmit: _mayEdit && !_controller.submitting ? _resubmit : null,
+        onCheckName: _checkName,
       ),
       VerificationFace.unverified => UnverifiedStatusPage(
         onBack: () => _leave(context),
@@ -238,7 +239,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
             ? _onStart
             : null,
         notice: _notice,
-        below: _mayStart ? _startPhotos() : null,
+        below: _mayStart
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  NameCheckNote(onCheckName: _checkName),
+                  const SizedBox(height: s3CardGap),
+                  _startPhotos(),
+                ],
+              )
+            : null,
       ),
     };
     if (!_tierReady && _controller.status == null && _controller.loading) {
@@ -362,6 +372,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
       _selfieSent = false;
     });
   }
+
+  /// Edit profile, where the name is a field while no ID is pending or
+  /// approved (D-195). The screen there reads the status itself.
+  void _checkName() => context.goNamed(AppRoute.profileEdit.routeName);
 
   Future<void> _onStart() async {
     final CapturedDocument? front = _front;

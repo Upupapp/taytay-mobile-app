@@ -60,7 +60,11 @@ void main() {
     final pages = <Widget>[
       const PendingStatusPage(onBack: _noop),
       const VerifiedStatusPage(onBack: _noop, onHome: _noop, completeness: 60),
-      const NeedsCorrectionPage(onBack: _noop, onResubmit: _noop),
+      const NeedsCorrectionPage(
+        onBack: _noop,
+        onResubmit: _noop,
+        onCheckName: _noop,
+      ),
       const UnverifiedStatusPage(onBack: _noop, onStart: _noop),
       const UnverifiedGatePreview(),
       const UnverifiedGateSheet(

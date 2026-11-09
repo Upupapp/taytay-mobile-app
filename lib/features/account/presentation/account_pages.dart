@@ -21,7 +21,9 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
+import '../../profile/domain/name_lock.dart';
 import '../../profile/domain/profile_fields.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../domain/account_password_client.dart';
 import 'account_canvas.dart';
@@ -581,7 +583,11 @@ class _CloseConversationAction extends StatelessWidget {
   }
 }
 
-/// Correctable profile fields. Legal name changes stay on the resident record.
+/// The name, mobile, email and barangay the resident sets on `PATCH /me`.
+///
+/// The name is the legal name, exactly as the government ID prints it. Taytay
+/// LGU checks it against the ID, so it is a field only while no ID is pending
+/// or approved, and read-only with the reason otherwise (D-195).
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
 
@@ -591,8 +597,15 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   bool _started = false;
+  final TextEditingController _name = TextEditingController();
   final TextEditingController _mobile = TextEditingController();
   final TextEditingController _email = TextEditingController();
+  String _nameOriginal = '';
+  NameLock _nameLock = NameLock.unknown;
+
+  /// False until `GET /me` answered, so a loading screen does not say the
+  /// status could not be checked.
+  bool _nameRead = false;
   String _mobileOriginal = '';
   String _emailOriginal = '';
   String _barangay = '';
@@ -604,6 +617,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   void dispose() {
+    _name.dispose();
     _mobile.dispose();
     _email.dispose();
     super.dispose();
@@ -631,9 +645,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _mobileOriginal = mobile.trim();
       _emailOriginal = email.trim();
       setState(() {
+        _showName(value);
         _barangay = value.valueOf(ResidentProfileField.barangay) ?? '';
         _emailVerified = value.emailVerified;
       });
+    } else {
+      // A failed read is not a status. The name stays locked, and its note
+      // says the app could not tell rather than inventing a reason.
+      setState(() => _nameRead = true);
     }
     final Result<List<Barangay>> barangays = await dependencies
         .barangayDirectory
@@ -648,6 +667,34 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         _barangayIdOriginal = _barangayId;
       });
     }
+  }
+
+  /// The name and whether it is the resident's to change, from one read.
+  void _showName(ResidentProfileDetail detail) {
+    final String name = detail.valueOf(ResidentProfileField.fullName) ?? '';
+    _name.text = name;
+    _nameOriginal = name.trim();
+    _nameLock = NameLock.forTier(detail.verificationTier);
+    _nameRead = true;
+  }
+
+  /// After a `409` on a name change, reads `GET /me` again.
+  ///
+  /// True when the name is no longer open: an ID was sent from somewhere else,
+  /// or approved, since this screen loaded. The field locks and shows the
+  /// account's name again. False when the read fails or the name is still
+  /// open, because then the refusal was about something else.
+  Future<bool> _nameLockedSinceLoad() async {
+    final Result<ResidentProfileDetail> result = await AppDependencies.of(
+      context,
+    ).residentProfileRepository.loadOwnDetail();
+    if (!mounted) return false;
+    if (result case Ok(:final value)) {
+      if (NameLock.forTier(value.verificationTier).allowsChange) return false;
+      setState(() => _showName(value));
+      return true;
+    }
+    return false;
   }
 
   Future<void> _pickBarangay() async {
@@ -676,14 +723,33 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _save() async {
     final Map<String, Object?> changes = <String, Object?>{};
+    final String name = _name.text.trim();
     final String mobile = _mobile.text.trim();
     final String email = _email.text.trim();
+    // ProfilePatch.name is the legal name. There is no display-name field.
+    // It is sent only while it is the resident's to change: a locked name is
+    // drawn as text, so nothing typed reaches here (D-195).
+    if (_nameLock.allowsChange && name != _nameOriginal) {
+      final String? problem = name.isEmpty
+          ? NameCheckCopy.emptyName
+          : name.length > NameLock.maxLength
+          ? NameCheckCopy.tooLong
+          : null;
+      if (problem != null) {
+        await AppDialog.acknowledge(
+          context: context,
+          title: 'Nothing was changed',
+          message: problem,
+        );
+        return;
+      }
+      changes['name'] = name;
+    }
     if (mobile != _mobileOriginal) changes['mobile'] = mobile;
     if (email != _emailOriginal) changes['email'] = email;
     if (_barangayId != null && _barangayId != _barangayIdOriginal) {
       changes['barangay_id'] = _barangayId;
     }
-    // ProfilePatch.name is the legal name. There is no display-name field.
     if (changes.isEmpty) {
       await AppDialog.acknowledge(
         context: context,
@@ -715,6 +781,24 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         return;
       }
       _idempotencyKey = null;
+      // A 409 is also an email another account uses, so the code alone does
+      // not say it was the name. The status read after it does, and the
+      // server's message is never shown (Article 5.5).
+      if (failure is ConflictFailure &&
+          changes.containsKey('name') &&
+          await _nameLockedSinceLoad()) {
+        if (!mounted) return;
+        await AppDialog.acknowledge(
+          context: context,
+          title: 'Your name was not changed',
+          message: changes.length > 1
+              ? '${_nameLock.explanation} Nothing was saved. Save again to '
+                    'keep your other changes.'
+              : '${_nameLock.explanation} Nothing was saved.',
+        );
+        return;
+      }
+      if (!mounted) return;
       await AppDialog.acknowledge(
         context: context,
         title: 'Nothing was changed',
@@ -734,8 +818,22 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
-      onLegalName: () => context.goNamed(AppRoute.profileRecord.routeName),
+      showLegalNameNote: false,
       fields: <AccountField>[
+        if (_nameLock.allowsChange)
+          AccountField(
+            label: NameCheckCopy.fieldLabel,
+            value: _name.text,
+            controller: _name,
+            note: _nameLock.explanation,
+          )
+        else
+          AccountField(
+            label: NameCheckCopy.fieldLabel,
+            value: _name.text,
+            locked: _nameRead,
+            note: _nameRead ? _nameLock.explanation : null,
+          ),
         AccountField(
           label: 'Mobile number',
           value: _mobile.text,

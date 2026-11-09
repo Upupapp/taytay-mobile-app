@@ -31,6 +31,10 @@ It was re-vendored again from backend `7522174` the same day for
 `GET /events/{id}/cover`, read by `MediaBytesApi.eventCover` (D-193), and
 from backend `cf30686` on 9 November 2026 for `registration.open_to` and
 corrected events' notices (D-194); that commit adds no route this app calls.
+It was re-vendored from backend `c5e1a7d` the same day for the name check
+(D-195): `PATCH /me` answers `409` to a change of `name` or `birthdate` while
+`verification_status` is `pending` or `verified`, and the staff approval
+carries the confirmed name. No route this app calls was added.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

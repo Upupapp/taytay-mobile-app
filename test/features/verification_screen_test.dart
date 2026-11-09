@@ -15,6 +15,7 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
@@ -25,6 +26,7 @@ import 'package:taytay_resident/features/verification/domain/verification_status
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/shared/widgets/s3_surface.dart';
 import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
@@ -467,6 +469,43 @@ void main() {
       expect(repository.lastIdType, 'passport');
     });
 
+    testWidgets('the start page says the name is checked before Start', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.notStarted,
+          rawState: '',
+        ),
+      );
+
+      expect(_lines(NameCheckCopy.beforeSending), findsOneWidget);
+      expect(find.byKey(const Key('verification-check-name')), findsOneWidget);
+      // Ahead of the photos, so the name is fixed before they are picked.
+      expect(
+        tester.getTopLeft(_lines(NameCheckCopy.beforeSending)).dy,
+        lessThan(
+          tester.getTopLeft(find.byKey(const Key('verification-id-front'))).dy,
+        ),
+      );
+    });
+
+    testWidgets('a pending request sends nothing, so it says nothing', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.manualReview,
+          rawState: 'pending',
+        ),
+      );
+
+      expect(find.text('Pending review'), findsOneWidget);
+      expect(_lines(NameCheckCopy.beforeSending), findsNothing);
+    });
+
     testWidgets('a verified stage raises the session without a restart', (
       tester,
     ) async {
@@ -497,3 +536,9 @@ void main() {
     expect(AppLocales.english.languageCode, 'en');
   });
 }
+
+/// [S3Lines] draws each wrapped line as its own [Text], so the sentence is
+/// found by the widget that holds it.
+Finder _lines(String text) => find.byWidgetPredicate(
+  (Widget widget) => widget is S3Lines && widget.text == text,
+);
