@@ -393,6 +393,7 @@ class EventApiRepository implements EventRepository {
       // never computed.
       capacity: EventCapacity(capacity: capacity is int ? capacity : null),
       registrationState: _registrationState(window?['state']),
+      openTo: _eligibility(window?['open_to']),
       publicationState: _publication(raw['status']),
       myRegistration: _optionalRegistration(raw['my_registration']),
     );
@@ -490,6 +491,20 @@ class EventApiRepository implements EventRepository {
             value,
             EventRegistrationState.values,
             (EventRegistrationState state) => state.wireValue,
+          );
+  }
+
+  static ServerValue<EventEligibility>? _eligibility(Object? raw) {
+    // A value this build does not know is kept as unknown and shown as
+    // nothing: the form's own flag still decides whether the app offers the
+    // flow, and the server decides on submission (D-194).
+    final String? value = _text(raw);
+    return value == null
+        ? null
+        : ServerValue.parse<EventEligibility>(
+            value,
+            EventEligibility.values,
+            (EventEligibility eligibility) => eligibility.wireValue,
           );
   }
 

@@ -38,6 +38,23 @@ enum EventScope {
 /// reports and offers no register button — a control that cannot complete is
 /// worse than an absent one, and registration has its own flow with capacity and
 /// waitlist rules that belong together.
+/// Who the office opened an event's registration to (backend `0044`, D-194).
+///
+/// The office's setting, per event. An event that gives out cash, goods or a
+/// benefit is always [verifiedResidents]: the server refuses anything else, so
+/// the app never infers it from a category.
+enum EventEligibility {
+  /// Residents whose ID Taytay LGU has verified. The default.
+  verifiedResidents('verified_residents'),
+
+  /// Anyone signed in to the app, verified or not.
+  appAccounts('app_accounts');
+
+  const EventEligibility(this.wireValue);
+
+  final String wireValue;
+}
+
 enum EventRegistrationState {
   /// The event takes no registration: residents come on the day. There is
   /// nothing to register for, so no register control is offered (D-192).
@@ -154,6 +171,7 @@ class LguEvent {
     this.shareUrl,
     this.capacity = const EventCapacity(),
     this.registrationState,
+    this.openTo,
     this.publicationState,
     this.myRegistration,
   });
@@ -204,6 +222,12 @@ class LguEvent {
   final EventCapacity capacity;
 
   final ServerValue<EventRegistrationState>? registrationState;
+
+  /// Who may register, as the office set it (D-194). Shown on the event page
+  /// so a resident knows before tapping register; whether they may is still
+  /// the server's answer on the form and on submission.
+  final ServerValue<EventEligibility>? openTo;
+
   final ServerValue<PublicationState>? publicationState;
 
   /// The signed-in resident's own registration, when the server sent one.
@@ -269,6 +293,7 @@ class LguEvent {
     shareUrl: shareUrl,
     capacity: capacity,
     registrationState: registrationState,
+    openTo: openTo,
     publicationState: publicationState,
     myRegistration: registration,
   );

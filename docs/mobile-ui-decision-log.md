@@ -2272,7 +2272,65 @@ the list would jump as each arrives.
 **Why.** A picture should come from the API the app was built for, by a path
 the app composes, so no payload can point a phone at another host. The office
 writes a description because the console will not publish without one, and a
-resident who cannot see the picture should hear it.
+a resident who cannot see the picture should hear it.
+
+---
+
+## D-194 — An event says who may register, an unverified resident registers where the office opened it to every account, and a corrected event's notice opens the event
+
+**Status: settled.** Category: contract / product / privacy. Recorded 2026-11-09,
+following D-193. The owner delegated the four decisions with "research best
+practices and do what's best" (Ella, Michaela Cailing; see D-185); they are the
+staff console's DL-195, built on backend `cf30686` (migration `0044`).
+
+**Context.** The office asked four things of its events once they were running:
+to correct a published event without losing what it said, to stop admissions at
+the venue's real limit, to show staff the name a resident's ID was approved
+under, and to open some events to residents who have not verified their ID. Two
+of them reach this app.
+
+**Chosen.**
+
+1. **Who may register is the event's, and the event says it.** The backend
+   sends `registration.open_to` (`verified_residents` or `app_accounts`) on every
+   event, with the office's sentence, and `registration_form.allows_unverified_residents`
+   is now true for an `app_accounts` event instead of always false.
+   `LguEvent.openTo` holds it as a `ServerValue<EventEligibility>`, and the
+   event page adds "Who can register" in this app's words: residents whose ID
+   Taytay LGU has verified, or anyone signed in to the app. Nothing is shown for
+   a walk-in event or for a value this build does not know. The gate itself did
+   not change: `EventRegistrationController.block` already asked the form's flag
+   (D-191), so an unverified resident now reaches the form where the office
+   allowed it and is sent to verification where it did not. An event that gives
+   out cash, goods or a benefit is always verified-only, and the server refuses
+   anything else; the app never infers it from a category.
+2. **A corrected event tells the resident in the inbox, and the notice opens the
+   event.** A correction the office makes to when, where or who may register, or
+   one that cuts the number of places, sends `event_registration_updated` to
+   everybody holding a place or a waitlist place, with the old and the new date,
+   time and venue and a sentence that their registration stands. The existing
+   route (`_deepLinkTarget`) opens the event, which shows the new details, and
+   the resident gives up their place there as before. An event notice may now
+   run to 2,000 characters on the server; the inbox has never clipped a body.
+3. **Literal English, as the events screens are.** The events screens carry no
+   ARB keys today, so the two new sentences follow them and add no Filipino
+   strings for native review.
+
+**Not built.** Notes, or an assistance-needs checklist, on a registration. Such
+needs are health information, which is sensitive personal information under
+RA 10173 §3(l) and §13: holding them properly needs the resident's explicit
+consent, a grant for who may read them, and deletion on a retention period the
+office sets, and no retention schedule exists (the console's DL-113). An owner
+question for when the schedule exists.
+
+**Rejected.** Reading `open_to_words` as the label: a server sentence would
+stay English on a translated page and could not be checked by a test. Hiding
+the register button from an unverified resident on the event page: the form is
+where the app learns the answer, and the server decides on submission anyway.
+
+**Why.** A resident should know before tapping register whether they can, and a
+resident whose event moved should hear it with what it moved from, in the app
+they registered through.
 
 ---
 
@@ -2473,5 +2531,6 @@ resident who cannot see the picture should hear it.
 | D-191 | Events run on the Node API (backend `580acbb`). Every method decodes explicitly, and an answer the app cannot read is a `ContractFailure`, never a blank. No seats-left number. `full` and `closed` are outcomes, the four refusals are `refused`, and a lost answer is "not confirmed" with trying again safe, even after a retry that fails before sending. `idempotency_key` in the body only, a `SendKey` UUID. `UnsentNotice` says "not confirmed" and promises no duplicate only for a keyed send. One model addition, `LguEvent.isCalledOff` | contract / idempotency | settled |
 | D-192 | A home banner whose link names events opens Events; the tab bar is unchanged (D-178). A walk-in event (`not_required`) reads "No registration needed" and offers no register control. `EventCover` loads a cover only from the API's own origin (`AppConfig.isOnApiOrigin`). `SendKey.unconfirmed` holds a lost answer for events and messages alike, so a message retry that fails before sending still says it could not be confirmed. Owner question: upload event covers through the API | navigation / privacy / errors | settled |
 | D-193 | Event covers are uploaded through the API (backend `7522174`). `MediaBytesApi.eventCover` reads `events/{id}/cover` by the event id from the configured base; `cover_image.url` is only a sign and its host is never requested, `http` included. `EventCover` draws through `MediaBytesHost`, with the office's `alt_text` as the label (`LguEvent.coverAltText`) | privacy / contract | settled |
+| D-194 | Who may register is the event's (backend `cf30686`, migration `0044`): `LguEvent.openTo` holds `registration.open_to` and the event page says "Who can register" in this app's words; the form's flag already gated, so an unverified resident reaches the form only where the office opened the event to every account. A corrected event's notice (`event_registration_updated`, with the old and the new date, time and venue) opens the event. Not built: notes or an assistance-needs checklist on a registration (health information, RA 10173 §3(l), §13; no retention schedule) | contract / product / privacy | settled |
 
-**191 decisions — 187 settled, 4 provisional.**
+**192 decisions — 188 settled, 4 provisional.**

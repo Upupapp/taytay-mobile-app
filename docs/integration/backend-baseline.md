@@ -28,7 +28,9 @@ on 8 November 2026 for the resident events routes (D-191): `GET /events`,
 `POST /events/{id}/registrations/{registration_id}/cancel`. The staff routes
 under `/office/events` came with it and are not called. Events left F32 then.
 It was re-vendored again from backend `7522174` the same day for
-`GET /events/{id}/cover`, read by `MediaBytesApi.eventCover` (D-193).
+`GET /events/{id}/cover`, read by `MediaBytesApi.eventCover` (D-193), and
+from backend `cf30686` on 9 November 2026 for `registration.open_to` and
+corrected events' notices (D-194); that commit adds no route this app calls.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

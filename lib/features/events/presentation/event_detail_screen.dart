@@ -387,6 +387,11 @@ class _Detail extends StatelessWidget {
                 _Section(title: 'Who can join', body: event.registrationRules!),
               ],
 
+              if (openToWords(event) case final String openTo) ...<Widget>[
+                const SizedBox(height: Spacing.lg),
+                _Section(title: 'Who can register', body: openTo),
+              ],
+
               if (event.capacity.isStated) ...<Widget>[
                 const SizedBox(height: Spacing.lg),
                 _Capacity(capacity: event.capacity),
@@ -610,6 +615,27 @@ class _Capacity extends StatelessWidget {
           : line,
     );
   }
+}
+
+/// Who the office opened registration to, in this app's words (D-194).
+///
+/// Nothing for a walk-in event, which takes no registration, and nothing for a
+/// value this build does not know: the form's own flag still decides whether
+/// the flow is offered, and the server decides on submission.
+@visibleForTesting
+String? openToWords(LguEvent event) {
+  if (event.registrationState?.known == EventRegistrationState.notRequired) {
+    return null;
+  }
+  return switch (event.openTo?.known) {
+    EventEligibility.verifiedResidents =>
+      'Residents whose ID Taytay LGU has verified. Verifying takes a few '
+          'steps and only has to be done once.',
+    EventEligibility.appAccounts =>
+      'Anyone signed in to the app. You do not need a verified ID to '
+          'register for this event.',
+    null => null,
+  };
 }
 
 class _Section extends StatelessWidget {

@@ -11,6 +11,8 @@ import 'package:taytay_resident/core/router/deep_link.dart';
 import 'package:taytay_resident/features/events/data/event_api_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
+import 'package:taytay_resident/features/events/presentation/event_detail_screen.dart'
+    show openToWords;
 import 'package:taytay_resident/features/notifications/data/notification_api_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 
@@ -128,6 +130,8 @@ Map<String, Object?> _event({
   },
   Object? myRegistration,
   bool detail = false,
+  Object? openTo,
+  bool allowsUnverified = false,
 }) => <String, Object?>{
   'id': id,
   'title': 'SAMPLE medical mission',
@@ -165,13 +169,16 @@ Map<String, Object?> _event({
     'state': state,
     'words': 'The office sentence, which the app does not show.',
     'rules': 'Residents of Taytay.',
+    'open_to': ?openTo,
+    if (openTo != null)
+      'open_to_words': 'The office sentence for who may register.',
   },
   'my_registration': myRegistration,
   if (detail)
     'registration_form': <String, Object?>{
       'fields': <Object?>[],
       'consents': <Object?>[],
-      'allows_unverified_residents': false,
+      'allows_unverified_residents': allowsUnverified,
       'can_cancel': true,
       'notice': 'Bring the reference you are given.',
     },
@@ -926,7 +933,112 @@ void main() {
     });
   });
 
+  group('who may register — open_to (D-194)', () {
+    test('reads the office\'s setting on every event', () async {
+      transport.responses.add(
+        _page(<Object?>[
+          _event(id: 'e-1', openTo: 'verified_residents'),
+          _event(id: 'e-2', openTo: 'app_accounts'),
+          _event(id: 'e-3', openTo: 'members_only'),
+          _event(id: 'e-4'),
+        ]),
+      );
+
+      final List<LguEvent> items =
+          (await repository.listEvents()).valueOrNull!.items;
+
+      expect(items[0].openTo?.known, EventEligibility.verifiedResidents);
+      expect(items[1].openTo?.known, EventEligibility.appAccounts);
+      expect(
+        items[2].openTo?.known,
+        isNull,
+        reason: 'a value this build does not know is kept, and decides nothing',
+      );
+      expect(items[2].openTo?.raw, 'members_only');
+      expect(items[3].openTo, isNull);
+    });
+
+    test('an event open to every app account lets an unverified resident '
+        'into the form', () async {
+      transport.responses.add(
+        _ok(
+          _event(detail: true, openTo: 'app_accounts', allowsUnverified: true),
+        ),
+      );
+
+      final EventRegistrationForm form = (await repository.loadRegistrationForm(
+        _eventId,
+      )).valueOrNull!;
+
+      expect(form.allowsUnverifiedResidents, isTrue);
+    });
+
+    test('the event page says who may register, and nothing for a walk-in '
+        'event or a value it does not know', () async {
+      transport.responses.add(
+        _page(<Object?>[
+          _event(id: 'e-1', openTo: 'verified_residents'),
+          _event(id: 'e-2', openTo: 'app_accounts'),
+          _event(id: 'e-3', openTo: 'app_accounts', state: 'not_required'),
+          _event(id: 'e-4', openTo: 'members_only'),
+        ]),
+      );
+
+      final List<LguEvent> items =
+          (await repository.listEvents()).valueOrNull!.items;
+
+      expect(openToWords(items[0]), contains('ID Taytay LGU has verified'));
+      expect(openToWords(items[1]), contains('do not need a verified ID'));
+      expect(openToWords(items[2]), isNull);
+      expect(openToWords(items[3]), isNull);
+    });
+
+    test('a correction keeps who may register on the event the resident '
+        'holds a place at', () async {
+      transport.responses.add(
+        _ok(_event(openTo: 'app_accounts', myRegistration: _own())),
+      );
+      final LguEvent event = (await repository.loadEvent(
+        _eventId,
+      )).valueOrNull!;
+      final LguEvent cancelled = event.withRegistration(event.myRegistration!);
+      expect(cancelled.openTo?.known, EventEligibility.appAccounts);
+    });
+  });
+
   group('the event registration notification', () {
+    test('a correction notice opens the event it names, like any other '
+        '(D-194)', () async {
+      transport.responses.add(
+        _ok(<Object?>[
+          <String, Object?>{
+            'id': 'n-2',
+            'type': 'event_registration_updated',
+            'title': 'An event you registered for has changed',
+            'body':
+                '“SAMPLE medical mission” has changed. The venue is now '
+                'SAMPLE gym (it was SAMPLE covered court). Your registration '
+                'still stands. If you can no longer go, you can give up your '
+                'place in the app.',
+            'subject_id': _eventId,
+            'read_at': null,
+            'created_at': '2026-11-09T05:20:00Z',
+          },
+        ]),
+      );
+
+      final ResidentNotification notification =
+          (await NotificationApiRepository(
+            apiClient: _client(transport),
+          ).listOwn()).valueOrNull!.items.single;
+
+      expect(notification.body, contains('it was SAMPLE covered court'));
+      final DeepLinkResult link = DeepLink.resolve(notification.target);
+      final DeepLinkTarget target = (link as DeepLinkResolved).target;
+      expect(target.route, AppRoute.eventDetail);
+      expect(target.location, '/events/$_eventId');
+    });
+
     test('opens the event it names', () async {
       transport.responses.add(
         _ok(<Object?>[

@@ -14351,7 +14351,7 @@
       "patch": {
         "operationId": "editOfficeEventDraft",
         "summary": "Replace a draft’s content",
-        "description": "Needs event.edit. Every field is sent, as for a new draft. Only a draft (409 otherwise): residents have read a published event and made plans around it, and the database keeps it as it was published. Audited as office_event.updated.",
+        "description": "Needs event.edit. Every field is sent, as for a new draft. Only a draft (409 otherwise): a published event is corrected with POST …/correct, with a reason, by a holder of event.publish (DL-195). Audited as office_event.updated.",
         "security": [
           {
             "firebaseIdToken": []
@@ -15344,7 +15344,7 @@
       "post": {
         "operationId": "restoreOfficeEventRegistration",
         "summary": "Restore a registration",
-        "description": "Needs event.manage-registrations. cancelled → registered. Only while the event is published (409 otherwise, and for a move the registration cannot make). The reason is kept in the event’s history; audited as office_event.registration_moved. The resident is told in the app (event_registration_updated, never pushed), without the reason.",
+        "description": "Needs event.manage-registrations. cancelled → registered. Only while the event is published (409 otherwise, and for a move the registration cannot make). The reason is kept in the event’s history; audited as office_event.registration_moved. The resident is told in the app (event_registration_updated, never pushed), without the reason. Never past the event’s safe limit (409, DL-195); an admission past the number of places says so on its history entry (`past_capacity`), beside its reason.",
         "security": [
           {
             "firebaseIdToken": []
@@ -15450,7 +15450,7 @@
       "post": {
         "operationId": "promoteOfficeEventRegistration",
         "summary": "Move a registration off the waitlist",
-        "description": "Needs event.manage-registrations. waitlisted (or cancelled) → registered. Not capped by the event’s capacity: the office’s stated figure is the office’s to exceed, with a reason, after the console has warned (DL-129, DL-91). A resident’s own registration is capped, inside the event’s row lock. Only while the event is published (409 otherwise, and for a move the registration cannot make). The reason is kept in the event’s history; audited as office_event.registration_moved. The resident is told in the app (event_registration_updated, never pushed), without the reason.",
+        "description": "Needs event.manage-registrations. waitlisted (or cancelled) → registered. Not capped by the event’s capacity: the office’s stated figure is the office’s to exceed, with a reason, after the console has warned (DL-129, DL-91). A resident’s own registration is capped, inside the event’s row lock. Only while the event is published (409 otherwise, and for a move the registration cannot make). The reason is kept in the event’s history; audited as office_event.registration_moved. The resident is told in the app (event_registration_updated, never pushed), without the reason. Never past the event’s safe limit (409, DL-195); an admission past the number of places says so on its history entry (`past_capacity`), beside its reason.",
         "security": [
           {
             "firebaseIdToken": []
@@ -16146,6 +16146,189 @@
           },
           "422": {
             "description": "A field that is not idempotency_key.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/office/events/{id}/correct": {
+      "post": {
+        "operationId": "correctOfficeEvent",
+        "summary": "Correct a published event before it starts",
+        "description": "Needs event.publish: a correction goes out in the office’s name, as the event did (DL-195, superseding DL-192’s “only a draft can be edited”; cancelling stays one-way, DL-131). Only a published event that has not started (409 otherwise: a draft is edited with PATCH, a cancelled, completed or archived event is kept as it stands). The draft rules and the publication rules apply again (422), and the correction’s own: whether registration is required is fixed, the start cannot move into the past, the capacity and the safe limit cannot go below the places already held, and the waitlist cannot be turned off while anybody is on it (422, keyed by field). Kept as an appended act with its reason and a revision holding what the event said before; the database refuses a change to a published event in a transaction that kept none. A material change tells every resident holding a place or a waitlist place in the app (`event_registration_updated`), with the old and the new date, time and venue; their registrations stand. Any other change tells them only when `tell_registrants` is true. A correction that changes nothing records nothing and tells nobody, so a retry answers as the first did. Audited as office_event.corrected.",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The event."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OfficeEventCorrection"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The event as corrected.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficeEventEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Without event.publish.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "A draft, an event that has started, or a cancelled, completed or archived one.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A field missing or malformed, a draft rule, a publication rule, or a correction rule broken.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/office/events/{id}/check-in": {
+      "get": {
+        "operationId": "checkInOfficeEventRegistrant",
+        "summary": "Find one registrant at the door",
+        "description": "Needs event.mark-attendance. Check-in mode (DL-195): a name or a reference, required, and at most five matches with whether more matched — never the list, the NPC’s concern with logbooks open to whoever stands at the table (Advisory Opinion 2018-003). Names match as the registrant list shows them, accents and ñ folded; a reference matches exactly. The same closed set as the registrant list.",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "The event."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 100
+            },
+            "description": "Up to six words of the name, or the reference (ER-YYYY-NNNNNN)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The matches.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OfficeEventCheckInEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Without event.mark-attendance.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such event.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "No q, fewer than two characters, or more than six words.",
             "content": {
               "application/json": {
                 "schema": {
@@ -17544,15 +17727,52 @@
       },
       "Notification": {
         "type": "object",
-        "required": ["id", "type", "title", "body", "created_at"],
+        "required": [
+          "id",
+          "type",
+          "title",
+          "body",
+          "created_at"
+        ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "type": { "type": "string", "enum": ["verification_decided", "message_received", "issuance_request_updated", "event_registration_updated"] },
-          "title": { "type": "string" },
-          "body": { "type": "string" },
-          "subject_id": { "type": ["string", "null"], "format": "uuid" },
-          "read_at": { "type": ["string", "null"], "format": "date-time" },
-          "created_at": { "type": "string", "format": "date-time" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "verification_decided",
+              "message_received",
+              "issuance_request_updated",
+              "event_registration_updated"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string",
+            "description": "Up to 300 characters; an event notice (event_registration_updated) up to 2000, so a correction can carry the old and the new date, time and venue."
+          },
+          "subject_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "read_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
         }
       },
       "NotificationEnvelope": {
@@ -29384,7 +29604,10 @@
           "registration_opens_at",
           "registration_closes_at",
           "capacity",
+          "safe_limit",
           "waitlist_enabled",
+          "registration_eligibility",
+          "gives_out_benefit",
           "participation_note",
           "reminders"
         ],
@@ -29503,8 +29726,29 @@
             "minimum": 1,
             "maximum": 100000
           },
+          "safe_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "The most people the venue holds (its posted occupant load) or the stock on hand covers (DL-195). Only beside a capacity, and at or above it (422 otherwise). No act — a resident registering, the office promoting or restoring — brings confirmed places past it."
+          },
           "waitlist_enabled": {
             "type": "boolean"
+          },
+          "registration_eligibility": {
+            "type": "string",
+            "enum": [
+              "verified-residents",
+              "app-accounts"
+            ],
+            "description": "Who may register: residents whose ID the office verified, or any account signed in to the app (DL-195). An event that gives out cash, goods or a benefit is verified-residents only (422 otherwise; the database holds the same rule)."
+          },
+          "gives_out_benefit": {
+            "type": "boolean",
+            "description": "Whether the event gives out cash, goods or a benefit. Always true for payout, relief-distribution, feeding-programme and medical-mission (422 otherwise); the office says for the other categories, which cannot tell."
           },
           "participation_note": {
             "type": [
@@ -29561,7 +29805,10 @@
           "created_at",
           "created_by",
           "updated_at",
-          "updated_by"
+          "updated_by",
+          "safe_limit",
+          "registration_eligibility",
+          "gives_out_benefit"
         ],
         "description": "An event as the office reads it.",
         "properties": {
@@ -29689,8 +29936,29 @@
             "minimum": 1,
             "maximum": 100000
           },
+          "safe_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "The most people the venue holds (its posted occupant load) or the stock on hand covers (DL-195). Only beside a capacity, and at or above it (422 otherwise). No act — a resident registering, the office promoting or restoring — brings confirmed places past it."
+          },
           "waitlist_enabled": {
             "type": "boolean"
+          },
+          "registration_eligibility": {
+            "type": "string",
+            "enum": [
+              "verified-residents",
+              "app-accounts"
+            ],
+            "description": "Who may register: residents whose ID the office verified, or any account signed in to the app (DL-195). An event that gives out cash, goods or a benefit is verified-residents only (422 otherwise; the database holds the same rule)."
+          },
+          "gives_out_benefit": {
+            "type": "boolean",
+            "description": "Whether the event gives out cash, goods or a benefit. Always true for payout, relief-distribution, feeding-programme and medical-mission (422 otherwise); the office says for the other categories, which cannot tell."
           },
           "participation_note": {
             "type": [
@@ -29974,12 +30242,14 @@
           "id",
           "reference",
           "display_name",
+          "name_source",
+          "identity_verified",
           "barangay_id",
           "registered_at",
           "status",
           "attendance"
         ],
-        "description": "One registration, composed (DL-130).",
+        "description": "One registration, composed (DL-130, DL-195).",
         "properties": {
           "id": {
             "type": "string",
@@ -29991,7 +30261,19 @@
           },
           "display_name": {
             "type": "string",
-            "description": "The name on the resident’s app account as they gave it; \"No name recorded on the account\" or \"An account since closed\" otherwise."
+            "description": "In full (initials cannot identify somebody at the door). For an ID-verified account, the name it carried when its ID was approved; otherwise the name on the app account as they gave it; \"No name recorded on the account\" or \"An account since closed\" otherwise."
+          },
+          "name_source": {
+            "type": "string",
+            "enum": [
+              "id-approval",
+              "account"
+            ],
+            "description": "id-approval: the name the account carried when the office approved its ID, kept as it stood then. account: the name as the resident typed it — an account not ID-verified, or verified before a name was kept at approval with none recorded."
+          },
+          "identity_verified": {
+            "type": "boolean",
+            "description": "Whether the office verified this account’s ID. Lists mark the accounts nobody has checked (DL-195)."
           },
           "barangay_id": {
             "type": [
@@ -30143,6 +30425,8 @@
           "category",
           "summary",
           "reason",
+          "changed_fields",
+          "past_capacity",
           "actor_id",
           "actor_name",
           "occurred_at"
@@ -30171,7 +30455,8 @@
               "registration-restored",
               "registration-promoted",
               "registration-waitlisted",
-              "attendance-marked"
+              "attendance-marked",
+              "corrected"
             ]
           },
           "category": {
@@ -30198,6 +30483,39 @@
               "string",
               "null"
             ]
+          },
+          "changed_fields": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string",
+              "enum": [
+                "title",
+                "summary",
+                "details",
+                "category",
+                "cover",
+                "starts-at",
+                "ends-at",
+                "venue",
+                "contact",
+                "registration-window",
+                "capacity",
+                "safe-limit",
+                "waitlist",
+                "eligibility",
+                "gives-out-benefit",
+                "participation-note",
+                "reminders"
+              ]
+            },
+            "description": "What a correction moved, by name and never by value; null for every other act."
+          },
+          "past_capacity": {
+            "type": "boolean",
+            "description": "A promotion or restoration that took somebody past the event’s number of places, with its reason."
           },
           "actor_id": {
             "type": "string",
@@ -30476,7 +30794,9 @@
               "joins_waitlist",
               "state",
               "words",
-              "rules"
+              "rules",
+              "open_to",
+              "open_to_words"
             ],
             "properties": {
               "required": {
@@ -30534,6 +30854,18 @@
                   "null"
                 ],
                 "description": "Who it is for, in the office’s words."
+              },
+              "open_to": {
+                "type": "string",
+                "enum": [
+                  "verified_residents",
+                  "app_accounts"
+                ],
+                "description": "Who may register (DL-195): residents whose ID the office verified, or anyone signed in to the app."
+              },
+              "open_to_words": {
+                "type": "string",
+                "description": "The office’s sentence for who may register."
               }
             }
           },
@@ -30569,7 +30901,8 @@
                 "items": {}
               },
               "allows_unverified_residents": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "True only for an event the office opened to every app account (registration.open_to app_accounts)."
               },
               "can_cancel": {
                 "type": "boolean"
@@ -30719,6 +31052,242 @@
         "properties": {
           "data": {
             "$ref": "#/components/schemas/ResidentEventRegistration"
+          },
+          "meta": {
+            "type": "object"
+          }
+        }
+      },
+      "OfficeEventCorrection": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "A correction to a published event (DL-195): every field of the composer, as a draft is saved, with the reason and whether to tell residents of a change that would not otherwise reach them.",
+        "required": [
+          "title",
+          "summary",
+          "details",
+          "category",
+          "image_media_id",
+          "image_alt_text",
+          "starts_at",
+          "ends_at",
+          "venue_name",
+          "venue_address",
+          "venue_map_url",
+          "venue_barangay_id",
+          "contact_name",
+          "contact_office",
+          "contact_phone",
+          "registration_required",
+          "registration_opens_at",
+          "registration_closes_at",
+          "capacity",
+          "safe_limit",
+          "waitlist_enabled",
+          "registration_eligibility",
+          "gives_out_benefit",
+          "participation_note",
+          "reminders",
+          "reason",
+          "tell_registrants"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 300,
+            "description": "May be empty on a draft; publication asks for it."
+          },
+          "details": {
+            "type": "string",
+            "maxLength": 8000
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "medical-mission",
+              "feeding-programme",
+              "livelihood-training",
+              "payout",
+              "assembly",
+              "relief-distribution",
+              "seminar"
+            ]
+          },
+          "image_media_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The cover: an image this member of staff stored through POST /api/v1/media, or one already an event's cover. Any other upload is refused. A typed image_url is no longer accepted; the app loads a cover only from the API."
+          },
+          "image_alt_text": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 300,
+            "description": "What the cover shows, in the office's words; sent with image_media_id, or neither is. May be empty on a draft; publication asks for it (DL-125)."
+          },
+          "starts_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ends_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "venue_name": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "venue_address": {
+            "type": "string",
+            "maxLength": 300
+          },
+          "venue_map_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000,
+            "description": "A link to a map, never coordinates (DL-86)."
+          },
+          "venue_barangay_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "contact_name": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "contact_office": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "contact_phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 40
+          },
+          "registration_required": {
+            "type": "boolean"
+          },
+          "registration_opens_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "registration_closes_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "capacity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000
+          },
+          "safe_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 100000,
+            "description": "The most people the venue holds (its posted occupant load) or the stock on hand covers (DL-195). Only beside a capacity, and at or above it (422 otherwise). No act — a resident registering, the office promoting or restoring — brings confirmed places past it."
+          },
+          "waitlist_enabled": {
+            "type": "boolean"
+          },
+          "registration_eligibility": {
+            "type": "string",
+            "enum": [
+              "verified-residents",
+              "app-accounts"
+            ],
+            "description": "Who may register: residents whose ID the office verified, or any account signed in to the app (DL-195). An event that gives out cash, goods or a benefit is verified-residents only (422 otherwise; the database holds the same rule)."
+          },
+          "gives_out_benefit": {
+            "type": "boolean",
+            "description": "Whether the event gives out cash, goods or a benefit. Always true for payout, relief-distribution, feeding-programme and medical-mission (422 otherwise); the office says for the other categories, which cannot tell."
+          },
+          "participation_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 1000,
+            "description": "Who it is for, in words. Guidance, never a gate."
+          },
+          "reminders": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 2000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "Why it is corrected. Kept with the act; never sent to residents."
+          },
+          "tell_registrants": {
+            "type": "boolean",
+            "description": "Tell everybody holding a place or a waitlist place, for a change that is not material (title, description, contact, cover, what to bring). A material change — when it starts or ends, the venue, who may register, fewer places — tells them whatever this says."
+          }
+        }
+      },
+      "OfficeEventCheckIn": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "matches",
+          "more_matches"
+        ],
+        "description": "At most five registrants matching what was typed, never the list (DL-195).",
+        "properties": {
+          "matches": {
+            "type": "array",
+            "maxItems": 5,
+            "items": {
+              "$ref": "#/components/schemas/OfficeEventRegistrant"
+            },
+            "description": "An exact reference first, then by name."
+          },
+          "more_matches": {
+            "type": "boolean",
+            "description": "More registrants matched than were sent: type more of the name, or the reference."
+          }
+        }
+      },
+      "OfficeEventCheckInEnvelope": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OfficeEventCheckIn"
           },
           "meta": {
             "type": "object"

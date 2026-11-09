@@ -27,6 +27,16 @@ base, through `MediaBytesApi.eventCover`; `cover_image.url` only says a cover
 exists, and its host is never requested. The office's `alt_text` is the
 picture's label for a screen reader.
 
+**Since D-194:** who may register is the event's (backend `cf30686`). The page
+says "Who can register" from `registration.open_to`: residents whose ID Taytay
+LGU has verified, or anyone signed in to the app. The form's
+`allows_unverified_residents` follows the event, so an unverified resident
+reaches the form only where the office allowed it. When the office corrects a
+published event's date, time, venue or who may register, or cuts its places,
+everybody holding a place or a waitlist place gets `event_registration_updated`
+with the old and the new values; it opens the event, and their registration
+stands.
+
 ---
 
 ## 1. Asia/Manila, stated
