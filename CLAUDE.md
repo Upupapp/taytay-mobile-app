@@ -39,6 +39,7 @@ the wrong repository.
 | Source | Standing |
 | --- | --- |
 | **Taytay LGU IDS backend** (`Upupapp/taytay-backend`) | **Authoritative.** Clarence Taytay's Node.js API: Firebase Auth only, everything else on Linode. The contract, the schema, and every authorization decision. The PHP tables in `docs/integration/backend-baseline.md` are the historical contract this client still speaks until each repository is re-pointed. Until an endpoint exists, the client mocks behind the repository interface, and only in a dev build. |
+| `docs/design/` (the 2026-11 redesign) | **The look**: tokens, shared widgets, screen patterns (Article 6). Its mock-ups carry sample data and are never a source of content, fields or rules. |
 | Esperanza-Mobile | Reference **only** for resident function and onboarding flow. Not a source of API shape or brand. |
 | ServanaClientAPP | Reference **only** for design, motion and haptics craft. Not a source of product decisions. |
 | Any other app in the workspace | Not a source. Do not copy business rules from it. |
@@ -214,37 +215,43 @@ This app holds Philippine personal data and is subject to the **Data Privacy Act
 
 ---
 
-## Article 6 — Design, accessibility, motion and haptics
+## Article 6 — Design
 
-**Material 3 is the accessibility foundation.** Its colour roles carry tested contrast,
-its components ship correct semantics and focus indicators, and it responds to system text
-scaling and high-contrast settings without per-widget work.
+The look is the 2026-11 redesign, and **[`docs/design/DESIGN_SYSTEM.md`](docs/design/DESIGN_SYSTEM.md)
+is its reference**: the tokens, every shared widget, the screen patterns and the rules. The
+mock-ups beside it (`docs/design/mobile/screens/`) are drawings with sample data; their content
+is never copied into the app.
 
-* **All colour comes from `BrandColors` via the `ColorScheme`.** A widget that hard-codes a
-  colour bypasses dark mode and high-contrast handling. **Light mode is what the app
-  shows now** (decision D9). `ThemeData` for dark stays built so contrast tests and the
-  later dark-scheme pass have a scheme to check. Dark mode remains an accessibility
-  feature; it is sequenced, not dropped.
-* **Contrast:** body text meets WCAG 2.2 AA (4.5:1), large text and meaningful graphics
-  meet 3:1. Enforced by tests over the real theme, not by eye.
-* **Tap targets are at least 48×48 dp**, satisfying both Material guidance and WCAG 2.2
-  target-size.
-* **Text scaling is honoured, clamped, never ignored** — up to 200%. Layouts scroll rather
-  than shrink text. A government service a person cannot read is a service they cannot use.
-* **Motion tokens only** (`MotionTokens`), and **reduced motion is respected everywhere**
-  via `Motion.reduced(context)`. Functional motion shortens; decorative motion disappears.
-  Vestibular disorders are common and this app is not optional for the people who have one.
-* **Haptics are never the only signal**, never fire on typing or passive scrolling, never
-  repeat per retry, and never throw. They are declared by intent (`HapticIntent`), not by
-  strength.
-* **The typeface is Plus Jakarta Sans, bundled** (weights 400–800, SIL OFL 1.1). No
-  runtime download and no `google_fonts` package. A font fetched from a third-party CDN
-  is an avoidable data disclosure and renders unstyled text on the weak connections
-  many residents have.
-* **Icons are the vendored Lucide font, drawn only through `TaytayIcon`**, which
-  requires a semantic label.
-* **The back control is a 44 dp circle inside a 48 dp target** (`A11y.backButtonVisual`,
-  `A11y.minTapTarget`).
+* **Theme tokens and shared widgets only.** Colour, type, radii, sizes and spacing come from
+  `lib/core/design/` (`BrandColors` and the `ColorScheme`, `AppTypography`, `Radii`,
+  `ComponentSizes`, `Spacing`); screens are built from `lib/shared/widgets/`. **Never hard-code
+  a colour, size or radius in feature code, and draw no shadow.** `test/core/design_guard_test.dart`
+  fails on colour, font-size, radius and shadow literals anywhere in `lib/` outside those two
+  folders. A value two screens need becomes a token or a shared widget, with a gallery entry.
+* **A new screen picks a pattern** from the table in DESIGN_SYSTEM.md §4 and starts from its
+  skeleton and reference screen. It shows API data only, in four states: loading, empty, error
+  and offline. Dialogs are centred (`AppDialog`).
+* **Material 3 is the accessibility foundation.** Light mode is what the app shows (decision D9);
+  the dark theme stays built so contrast tests have a scheme to check. Body text meets WCAG 2.2
+  AA 4.5:1, large text and meaningful graphics 3:1, enforced by tests over the real theme.
+* **Semantics and targets.** Every icon that carries meaning has a label (`TaytayIcon` requires
+  one); a tappable card or row reads as one label; colour is never the only signal. Tap targets
+  are at least 48×48 dp whatever the visible size. The back control is a 44 dp circle inside a
+  48 dp target (`TaytayBackButton`).
+* **Text scaling is honoured, clamped, never ignored**, up to 200%: every screen fits 360, 375
+  and 430 dp wide at 200% text (`test/support/layout_matrix.dart`), and layouts scroll rather
+  than shrink text. A government service a person cannot read is one they cannot use.
+* **Motion tokens only** (`MotionTokens`), and **reduced motion is respected everywhere** via
+  `Motion.reduced(context)`: functional motion shortens, decorative motion disappears.
+* **Haptics** go through `AppHaptics.fire` and are declared by intent (`HapticIntent`). They are
+  never the only signal, never fire on typing or passive scrolling, never repeat per retry, and
+  never throw.
+* **Typeface and icons are bundled.** Plus Jakarta Sans (400–800, SIL OFL 1.1), with no
+  runtime download and no `google_fonts`. Interface icons are the vendored Lucide font
+  (`TaytayIcons`, drawn through `TaytayIcon` or a shared widget); gradient tiles use the
+  design's solid SVG glyphs (`TaytayGlyph`, `assets/icons/`). No Material `Icons` in feature code.
+* **Privacy wins over a mock-up** (Article 5). A design element whose data the API does not
+  send is hidden, never faked.
 
 ---
 
@@ -309,6 +316,9 @@ A change is done when:
    token or personal data in `toString`, no authority-shaped request header.
 6. The build compiles for the platforms the change affects.
 7. Docs updated when a boundary, convention or decision changed.
+8. A visual change keeps `test/core/design_guard_test.dart` green and moves only the goldens it
+   meant to move; they are regenerated deliberately and named in the commit
+   (`docs/design/DESIGN_SYSTEM.md` §7).
 
 ---
 
