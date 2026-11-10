@@ -227,6 +227,7 @@ class HeaderIconButton extends StatelessWidget {
     required this.semanticLabel,
     required this.onPressed,
     this.badgeCount,
+    this.visualKey,
     super.key,
   });
 
@@ -234,6 +235,10 @@ class HeaderIconButton extends StatelessWidget {
   final String semanticLabel;
   final VoidCallback? onPressed;
   final int? badgeCount;
+
+  /// Key on the painted 44 dp circle, inside the 48 dp hit target. A test
+  /// that measures the target finds the gesture detector above this key.
+  final Key? visualKey;
 
   @override
   Widget build(BuildContext context) {
@@ -256,6 +261,7 @@ class HeaderIconButton extends StatelessWidget {
               clipBehavior: Clip.none,
               children: <Widget>[
                 Container(
+                  key: visualKey,
                   width: ComponentSizes.headerIconButton,
                   height: ComponentSizes.headerIconButton,
                   alignment: Alignment.center,

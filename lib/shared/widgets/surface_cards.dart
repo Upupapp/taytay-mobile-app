@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../core/design/brand_gradients.dart';
 import '../../core/design/design_tokens.dart';
@@ -189,5 +190,74 @@ class _CardSurface extends StatelessWidget {
       label: label,
       child: card,
     );
+  }
+}
+
+/// Pulls [child] up over the bottom of the glass header above it.
+///
+/// CSS `.glass .body { margin-top: -32px }`. The child is laid out at its own
+/// height, painted [amount] higher, and this box reports [amount] less, so
+/// the next sibling follows the child's real bottom edge. Hit testing covers
+/// the raised part too, so a control in the overlap stays tappable.
+class GlassOverlap extends SingleChildRenderObjectWidget {
+  const GlassOverlap({
+    required Widget super.child,
+    this.amount = HeaderShapes.glassOverlap,
+    super.key,
+  });
+
+  final double amount;
+
+  @override
+  RenderObject createRenderObject(BuildContext context) =>
+      _RenderGlassOverlap(amount);
+
+  @override
+  void updateRenderObject(BuildContext context, RenderObject renderObject) {
+    (renderObject as _RenderGlassOverlap).amount = amount;
+  }
+}
+
+class _RenderGlassOverlap extends RenderShiftedBox {
+  _RenderGlassOverlap(this._amount) : super(null);
+
+  double _amount;
+  set amount(double value) {
+    if (value == _amount) return;
+    _amount = value;
+    markNeedsLayout();
+  }
+
+  @override
+  void performLayout() {
+    final RenderBox? child = this.child;
+    if (child == null) {
+      size = constraints.smallest;
+      return;
+    }
+    child.layout(constraints.loosen(), parentUsesSize: true);
+    (child.parentData as BoxParentData).offset = Offset(0, -_amount);
+    size = constraints.constrain(
+      Size(
+        child.size.width,
+        (child.size.height - _amount).clamp(0.0, double.infinity),
+      ),
+    );
+  }
+
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    final Rect area = Rect.fromLTWH(
+      0,
+      -_amount,
+      size.width,
+      size.height + _amount,
+    );
+    if (!area.contains(position)) return false;
+    if (hitTestChildren(result, position: position) || hitTestSelf(position)) {
+      result.add(BoxHitTestEntry(this, position));
+      return true;
+    }
+    return false;
   }
 }

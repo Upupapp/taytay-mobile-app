@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
+import '../../../core/design/design_tokens.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
@@ -168,7 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
           AccessLevel.verified => HomeStatusKind.none,
         };
         return Scaffold(
-          backgroundColor: const Color(0xFFF3F5FA),
+          backgroundColor: BrandColors.glassBackground,
           body: HomeCanvas(
             greeting: HomeGreeting.line(
               dependencies.clock(),

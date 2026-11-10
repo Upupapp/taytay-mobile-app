@@ -290,6 +290,9 @@ abstract final class Radii {
 
   static const double pill = 999;
 
+  /// Small square tags on a photo or card (CSS `.hero .ey`, radius 6).
+  static const double tag = 6;
+
   // Redesign (design/README.md "Radii and sizes").
 
   /// Buttons.
@@ -346,6 +349,9 @@ abstract final class ComponentSizes {
   static const double tile = 44;
   static const double tileSmall = 36;
   static const double tileLarge = 56;
+
+  /// Home launcher squares (CSS `.launch .sq`, 62 at radius 20).
+  static const double launchTile = 62;
 
   /// Round icon buttons on the header (bell, back, search).
   static const double headerIconButton = 44;

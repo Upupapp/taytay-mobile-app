@@ -483,9 +483,16 @@ void main() {
     testWidgets('Create account is the full label on one line', (tester) async {
       await bootHome(tester, size: const Size(390, 844));
 
+      // Redesign P3b: the label is the themed filled button (14 / 600 from
+      // the button theme), not a hand-drawn 14 / 800 outline.
       final Text label = tester.widget<Text>(find.text('Create account'));
-      expect(label.style?.fontSize, 14);
-      expect(label.style?.fontWeight, FontWeight.w800);
+      expect(
+        find.ancestor(
+          of: find.text('Create account'),
+          matching: find.byType(FilledButton),
+        ),
+        findsOneWidget,
+      );
       expect(label.overflow, isNot(TextOverflow.ellipsis));
       expect(label.maxLines, 1);
 
@@ -508,16 +515,6 @@ void main() {
         paragraph.size.width + 0.01,
         greaterThanOrEqualTo(paragraph.getMaxIntrinsicWidth(double.infinity)),
       );
-
-      final Padding padding = tester.widget<Padding>(
-        find
-            .ancestor(
-              of: find.text('Create account'),
-              matching: find.byType(Padding),
-            )
-            .first,
-      );
-      expect((padding.padding as EdgeInsets).horizontal, 28);
     });
 
     testWidgets('the sign-in invitation is present but not coercive', (

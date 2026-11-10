@@ -97,6 +97,14 @@ abstract final class AppTypography {
     letterSpacing: -0.27,
   );
 
+  /// Story and card headline on a photo or feature card. 16 / 700.
+  static final TextStyle storyTitle = _base.copyWith(
+    fontSize: 16,
+    fontWeight: strong,
+    height: 1.2,
+    letterSpacing: -0.16,
+  );
+
   /// Section title. 15 / 600.
   static final TextStyle sectionTitle = _base.copyWith(
     fontSize: 15,

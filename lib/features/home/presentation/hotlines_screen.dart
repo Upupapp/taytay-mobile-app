@@ -2,14 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../../citizen_api/domain/citizen_contract.dart';
 import '../data/home_catalogue.dart';
 import '../domain/home_content.dart';
@@ -27,6 +34,7 @@ class HotlinesScreen extends StatefulWidget {
 
 class _HotlinesScreenState extends State<HotlinesScreen> {
   bool _started = false;
+  bool _loaded = false;
   List<HomeHotline> _lines = const <HomeHotline>[];
 
   @override
@@ -67,7 +75,10 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
       resolved = (await HomeCatalogue.mockFeed()).hotlines;
     }
     if (!mounted) return;
-    setState(() => _lines = resolved);
+    setState(() {
+      _lines = resolved;
+      _loaded = true;
+    });
   }
 
   Future<void> _dial(String number) async {
@@ -84,6 +95,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
   Widget build(BuildContext context) {
     return HotlinesCanvas(
       lines: _lines,
+      loading: !_loaded,
       onBack: () {
         if (context.canPop()) {
           context.pop();
@@ -102,12 +114,16 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
 class HotlinesCanvas extends StatelessWidget {
   const HotlinesCanvas({
     required this.lines,
+    this.loading = false,
     this.onBack,
     this.onCall,
     super.key,
   });
 
   final List<HomeHotline> lines;
+
+  /// True until the first read answers. The list draws a skeleton meanwhile.
+  final bool loading;
   final VoidCallback? onBack;
   final Future<void> Function(String number)? onCall;
 
@@ -120,18 +136,33 @@ class HotlinesCanvas extends StatelessWidget {
         .where((HomeHotline line) => line.isBarangay)
         .toList(growable: false);
     return ColoredBox(
-      color: BrandColors.surface,
+      color: BrandColors.background,
       child: Column(
         children: <Widget>[
-          MunicipalHeader(
+          BlueHeader(
             title: 'Emergency hotlines',
             subtitle: 'Bayan ng Taytay · Rizal',
+            showBack: true,
             onBack: onBack,
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                Spacing.lg,
+                Spacing.lg,
+                Spacing.xl,
+              ),
               children: <Widget>[
+                if (loading)
+                  const LoadingSkeleton(semanticLabel: 'Loading hotlines')
+                else if (lines.isEmpty)
+                  const EmptyState(
+                    title: 'No hotlines to show',
+                    message:
+                        'Taytay LGU has not published any hotlines here yet.',
+                    boxed: true,
+                  ),
                 if (municipal.isNotEmpty) ...<Widget>[
                   const _Heading('Municipal', first: true),
                   _Group(
@@ -140,22 +171,18 @@ class HotlinesCanvas extends StatelessWidget {
                   ),
                 ],
                 if (barangay.isNotEmpty) ...<Widget>[
-                  const _Heading('Barangay'),
+                  _Heading('Barangay', first: municipal.isEmpty),
                   _Group(
                     lines: barangay,
                     onCall: (String number) => onCall?.call(number),
                   ),
                 ],
-                const SizedBox(height: 8),
-                const Text(
+                const SizedBox(height: Spacing.md),
+                Text(
                   'Source: Taytay LGU / Taytay Public Information Office.',
-                  style: TextStyle(
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    height: 1.5,
-                    color: BrandColors.listMeta,
-                    decoration: TextDecoration.none,
+                  style: AppTypography.tiny.copyWith(
+                    fontWeight: AppTypography.medium,
+                    color: BrandColors.muted,
                   ),
                 ),
               ],
@@ -176,15 +203,20 @@ class _Heading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.only(top: first ? 4 : 16, bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: 'Plus Jakarta Sans',
-          fontSize: 15,
-          fontWeight: FontWeight.w800,
-          color: BrandColors.textPrimary,
-          decoration: TextDecoration.none,
+      padding: EdgeInsets.fromLTRB(
+        Spacing.xxs,
+        first ? 0 : Spacing.lg,
+        Spacing.xxs,
+        Spacing.sm,
+      ),
+      child: Semantics(
+        header: true,
+        child: Text(
+          text,
+          style: AppTypography.sectionTitle.copyWith(
+            fontWeight: AppTypography.strong,
+            color: BrandColors.ink,
+          ),
         ),
       ),
     );
@@ -199,19 +231,14 @@ class _Group extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BrandColors.cardLine),
-      ),
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
       child: Column(
         children: <Widget>[
           for (var i = 0; i < lines.length; i++)
             _Line(
               line: lines[i],
-              border: i < lines.length - 1,
+              divider: i > 0,
               onCall: () => onCall(lines[i].number),
             ),
         ],
@@ -221,92 +248,83 @@ class _Group extends StatelessWidget {
 }
 
 class _Line extends StatelessWidget {
-  const _Line({required this.line, required this.border, required this.onCall});
+  const _Line({
+    required this.line,
+    required this.divider,
+    required this.onCall,
+  });
 
   final HomeHotline line;
-  final bool border;
+  final bool divider;
   final VoidCallback onCall;
 
   @override
   Widget build(BuildContext context) {
     final bool emergency = !line.isBarangay && line.name != 'Taytay PNP';
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.35),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          border: border
-              ? const Border(bottom: BorderSide(color: Color(0xFFEEF1F6)))
-              : null,
-        ),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: divider
+            ? const Border(top: BorderSide(color: BrandColors.divider))
+            : null,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Spacing.md),
         child: Row(
           children: <Widget>[
-            _Tile(
-              background: emergency
-                  ? const Color(0xFFFDECEC)
-                  : BrandColors.surfaceMuted,
-              icon: emergency ? TaytayIcons.siren : TaytayIcons.phone,
-              color: emergency ? BrandColors.danger : BrandColors.taytayBlue,
+            IconTile.glyph(
+              glyph: emergency ? TaytayGlyph.siren : TaytayGlyph.phone,
+              tone: emergency ? TileTone.red : TileTone.blue,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: Spacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
                     line.name,
-                    style: const TextStyle(
-                      fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: BrandColors.textPrimary,
-                      decoration: TextDecoration.none,
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: BrandColors.ink,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: Spacing.xxs),
                   Text(
                     line.number,
-                    style: const TextStyle(
-                      fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: BrandColors.listMeta,
-                      decoration: TextDecoration.none,
+                    style: AppTypography.listDetail.copyWith(
+                      color: BrandColors.muted,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures(),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            SizedBox(
-              width: 36,
-              height: 36,
-              child: OverflowBox(
-                minWidth: 48,
-                maxWidth: 48,
-                minHeight: 48,
-                maxHeight: 48,
-                child: Semantics(
-                  button: true,
-                  label: 'Call ${line.name}',
-                  child: GestureDetector(
-                    key: Key('hotline-call-${line.id}'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: onCall,
-                    child: Center(
-                      child: Container(
-                        width: 36,
-                        height: 36,
-                        decoration: const BoxDecoration(
-                          color: BrandColors.surfaceMuted,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: TaytayIcon(
-                            icon: TaytayIcons.phone,
-                            semanticLabel: '',
-                            excludeSemantics: true,
-                            size: 16,
-                            color: BrandColors.taytayBlue,
-                          ),
+            Semantics(
+              button: true,
+              label: 'Call ${line.name}',
+              excludeSemantics: true,
+              child: GestureDetector(
+                key: Key('hotline-call-${line.id}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onCall,
+                child: SizedBox.square(
+                  dimension: A11y.minTapTarget,
+                  child: Center(
+                    child: Container(
+                      width: ComponentSizes.headerIconButton,
+                      height: ComponentSizes.headerIconButton,
+                      decoration: const BoxDecoration(
+                        color: BrandColors.blue50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Center(
+                        child: TaytayIcon(
+                          icon: TaytayIcons.phone,
+                          semanticLabel: '',
+                          excludeSemantics: true,
+                          size: IconSizes.sm,
+                          color: BrandColors.blue,
                         ),
                       ),
                     ),
@@ -315,39 +333,6 @@ class _Line extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.background,
-    required this.icon,
-    required this.color,
-  });
-
-  final Color background;
-  final IconData icon;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: TaytayIcon(
-          icon: icon,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: 20,
-          color: color,
         ),
       ),
     );
