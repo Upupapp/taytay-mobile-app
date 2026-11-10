@@ -56,8 +56,8 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     // The welcome's photo zone without the photo: the header gradient, the
-    // seal and the municipality, and a short gold bar while the session
-    // restores. Nothing here is data.
+    // seal, the app's name over the municipality, and a short gold bar while
+    // the session restores. Nothing here is data.
     return Scaffold(
       backgroundColor: BrandColors.navy,
       body: DecoratedBox(
@@ -74,7 +74,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   const HeaderSeal(diameter: _sealDiameter),
                   const SizedBox(height: Spacing.lg),
                   Text(
-                    'Bayan ng Taytay',
+                    'Taytay LGU IDS',
                     textAlign: TextAlign.center,
                     style: AppTypography.hero.copyWith(
                       color: BrandColors.white,
@@ -82,7 +82,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                   const SizedBox(height: Spacing.xs),
                   Text(
-                    'Lalawigan ng Rizal',
+                    'Bayan ng Taytay · Lalawigan ng Rizal',
                     textAlign: TextAlign.center,
                     style: AppTypography.listTitle.copyWith(
                       fontWeight: AppTypography.strong,
