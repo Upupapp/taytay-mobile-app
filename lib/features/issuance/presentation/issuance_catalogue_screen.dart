@@ -2,14 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
-import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
-import '../../../shared/widgets/s3_surface.dart';
-import '../../../shared/widgets/taytay_rows.dart';
+import '../../../shared/widgets/header_search_field.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
@@ -20,6 +23,10 @@ import 'issuance_widgets.dart';
 /// Public, like the API's own catalogue. A guest or an unverified resident
 /// reads it with a notice saying what it takes to send a request; nothing is
 /// hidden from them.
+///
+/// Drawn as the `List + search + filters` pattern (Directory.dc): the blue
+/// header with the back control and, once the list is long, the search field;
+/// the documents as soft lists under each office's name.
 class IssuanceCatalogueScreen extends StatefulWidget {
   const IssuanceCatalogueScreen({super.key});
 
@@ -72,11 +79,21 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
     });
   }
 
+  bool get _searchable => _types.length >= IssuanceCatalogueScreen.searchFrom;
+
   @override
   Widget build(BuildContext context) {
     final AppDependencies dependencies = AppDependencies.of(context);
     return IssuanceScaffold(
       title: 'Request documents',
+      bottom: _failure == null && _searchable
+          ? HeaderSearchField(
+              fieldKey: const Key('issuance-search'),
+              hint: 'Search documents',
+              controller: _search,
+              onChanged: (_) => setState(() {}),
+            )
+          : null,
       body: AnimatedBuilder(
         animation: dependencies.session,
         builder: (BuildContext context, Widget? _) {
@@ -101,33 +118,31 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
           return RefreshIndicator(
             onRefresh: _load,
             child: ListView(
-              padding: s3PagePadding,
+              padding: issuanceListPadding(context),
               children: <Widget>[
                 IssuanceAccessNotice(decision: decision),
                 if (signedIn)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: s3CardGap),
-                    child: S3Card(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ListRow(
-                        key: const Key('issuance-my-requests'),
-                        title: 'My document requests',
-                        subtitle: 'Follow what you have sent',
-                        icon: TaytayIcons.inbox,
-                        iconLabel: 'Your requests',
-                        trailing: const Icon(
-                          TaytayIcons.chevronRight,
-                          size: 18,
-                          color: BrandColors.chevron,
+                    padding: const EdgeInsets.only(bottom: Spacing.section),
+                    child: SettingsList(
+                      children: <Widget>[
+                        SettingsRow(
+                          key: const Key('issuance-my-requests'),
+                          title: 'My document requests',
+                          detail: 'Follow what you have sent',
+                          leading: const IconTile.lucide(
+                            icon: TaytayIcons.inbox,
+                            tone: TileTone.navy,
+                          ),
+                          onTap: () => context.pushNamed(
+                            AppRoute.issuanceRequests.routeName,
+                          ),
                         ),
-                        onTap: () => context.pushNamed(
-                          AppRoute.issuanceRequests.routeName,
-                        ),
-                      ),
+                      ],
                     ),
                   ),
                 const Padding(
-                  padding: EdgeInsets.only(bottom: s3CardGap),
+                  padding: EdgeInsets.only(bottom: Spacing.section),
                   child: IssuanceText(
                     'Certificates and certified copies the municipal offices '
                     'issue. Choose one to see what it needs. Any fee is paid '
@@ -135,7 +150,7 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
                   ),
                 ),
                 if (_loading && _types.isEmpty)
-                  ..._skeleton()
+                  const LoadingSkeleton(semanticLabel: 'Loading documents')
                 else if (_types.isEmpty)
                   const EmptyState(
                     title: 'No documents listed yet',
@@ -143,6 +158,7 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
                         'The municipal offices have not listed any documents '
                         'in the app yet. You can still ask at the Municipal '
                         'Hall.',
+                    boxed: true,
                   )
                 else
                   ..._catalogue(context),
@@ -154,81 +170,39 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
     );
   }
 
-  List<Widget> _skeleton() => <Widget>[
-    for (var i = 0; i < 3; i++)
-      const Padding(
-        padding: EdgeInsets.only(bottom: s3CardGap),
-        child: SkeletonBlock(height: 72, radius: Radii.lg),
-      ),
-  ];
-
   List<Widget> _catalogue(BuildContext context) {
-    final bool searchable = _types.length >= IssuanceCatalogueScreen.searchFrom;
-    final List<IssuanceType> shown = searchable
+    final List<IssuanceType> shown = _searchable
         ? searchTypes(_types, _search.text)
         : _types;
     return <Widget>[
-      if (searchable)
-        Padding(
-          padding: const EdgeInsets.only(bottom: s3CardGap),
-          child: TextField(
-            key: const Key('issuance-search'),
-            controller: _search,
-            onChanged: (_) => setState(() {}),
-            textInputAction: TextInputAction.search,
-            decoration: const InputDecoration(
-              labelText: 'Search documents',
-              prefixIcon: Icon(TaytayIcons.search),
-            ),
-          ),
-        ),
       if (shown.isEmpty)
         const EmptyState(
           title: 'No document matches',
           message: 'Try another word, or clear the search to see them all.',
+          boxed: true,
         ),
       for (final (String office, List<IssuanceType> types) in groupByOffice(
         shown,
       )) ...<Widget>[
+        SettingsSectionTitle(office),
         Padding(
-          padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
-          child: Semantics(
-            header: true,
-            child: Text(
-              office,
-              style: s3Type(13, AppTypography.black, BrandColors.textSecondary),
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: s3CardGap),
-          child: S3Card(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: <Widget>[
-                for (var i = 0; i < types.length; i++) ...<Widget>[
-                  if (i > 0) const Divider(height: 1),
-                  ListRow(
-                    key: Key('issuance-type-${types[i].id}'),
-                    title: types[i].name,
-                    subtitle:
-                        '${issuanceFeeLine(types[i].feeCentavos)} · '
-                        '${issuanceProcessingLine(types[i].processingDays)}',
-                    icon: TaytayIcons.fileText,
-                    iconLabel: 'Document',
-                    trailing: const Icon(
-                      TaytayIcons.chevronRight,
-                      size: 18,
-                      color: BrandColors.chevron,
-                    ),
-                    onTap: () => context.pushNamed(
-                      AppRoute.issuanceType.routeName,
-                      pathParameters: <String, String>{'typeId': types[i].id},
-                    ),
+          padding: const EdgeInsets.only(bottom: Spacing.section),
+          child: SettingsList(
+            children: <Widget>[
+              for (final IssuanceType type in types)
+                SettingsRow(
+                  key: Key('issuance-type-${type.id}'),
+                  title: type.name,
+                  detail:
+                      '${issuanceFeeLine(type.feeCentavos)} · '
+                      '${issuanceProcessingLine(type.processingDays)}',
+                  leading: const IconTile.glyph(glyph: TaytayGlyph.document),
+                  onTap: () => context.pushNamed(
+                    AppRoute.issuanceType.routeName,
+                    pathParameters: <String, String>{'typeId': type.id},
                   ),
-                ],
-              ],
-            ),
+                ),
+            ],
           ),
         ),
       ],

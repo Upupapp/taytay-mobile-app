@@ -3,12 +3,18 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
-import '../../../shared/widgets/s3_surface.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/success_screen.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/issuance_form.dart';
 import '../domain/issuance_request.dart';
@@ -104,7 +110,16 @@ class _IssuanceRequestFormScreenState extends State<IssuanceRequestFormScreen> {
                 onRetry: _load,
                 what: 'this document',
               )
-            : const Center(child: CircularProgressIndicator()),
+            : ListView(
+                padding: const EdgeInsets.all(Spacing.lg),
+                children: const <Widget>[
+                  LoadingSkeleton(
+                    layout: SkeletonLayout.detail,
+                    count: 1,
+                    semanticLabel: 'Opening the form',
+                  ),
+                ],
+              ),
       );
     }
     return IssuanceRequestFormView(controller: controller);
@@ -176,76 +191,73 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
         : controller.serverFlagged('purpose')
         ? 'The office could not accept this. Check what you wrote.'
         : null;
-    return IssuanceScaffold(
+    return AuthFormPage(
       title: 'Request a document',
+      subtitle: type.name,
+      stepLabel: 'Step 1 of 2',
+      progress: 0.5,
+      progressSemanticLabel: 'Step 1 of 2',
       footer: PrimaryButton(
         key: const Key('issuance-review'),
         label: 'Review request',
         onPressed: controller.review,
       ),
-      body: ListView(
-        padding: s3PagePadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (controller.failure case final AppFailure failure)
             _FailureNotice(failure: failure),
           _TypeSummary(type: type),
-          IssuanceCard(
-            title: 'What is the document for?',
-            child: TextField(
-              key: const Key('issuance-purpose'),
-              controller: _purpose,
-              onChanged: controller.setPurpose,
-              minLines: 2,
-              maxLines: 5,
-              maxLength: issuancePurposeMax,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: InputDecoration(
-                labelText: 'Purpose',
-                hintText: 'For example: for a school enrolment requirement',
-                helperText: 'The office reads this. Keep it short.',
-                errorText: purposeError,
-                errorMaxLines: 3,
-                helperMaxLines: 2,
-              ),
+          const SizedBox(height: Spacing.formGap),
+          const AuthFieldLabel('What is the document for?'),
+          const SizedBox(height: Spacing.sm),
+          TextField(
+            key: const Key('issuance-purpose'),
+            controller: _purpose,
+            onChanged: controller.setPurpose,
+            minLines: 2,
+            maxLines: 5,
+            maxLength: issuancePurposeMax,
+            textCapitalization: TextCapitalization.sentences,
+            style: AppTypography.fieldValue.copyWith(color: BrandColors.ink),
+            decoration: InputDecoration(
+              hintText: 'For example: for a school enrolment requirement',
+              helperText: 'The office reads this. Keep it short.',
+              errorText: purposeError,
+              errorMaxLines: 3,
+              helperMaxLines: 2,
             ),
           ),
-          if (type.requirements.isNotEmpty)
-            IssuanceCard(
-              title: 'Files the office needs',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  IssuanceText(
-                    'One file each: ${acceptedFilesLine(type.uploadPolicy)}. '
-                    'Lay paper flat, fill the frame, and make every word '
-                    'readable.',
-                  ),
-                  for (final IssuanceRequirement requirement
-                      in type.requirements)
-                    IssuanceFileSlot(
-                      requirement: requirement,
-                      chosen: controller.files[requirement.code],
-                      refused: controller.refusedFor(requirement.code),
-                      policy: type.uploadPolicy,
-                      missing: missing.contains(requirement.code),
-                      flagged: controller.serverFlagged(requirement.code),
-                      onAdd: () => _add(requirement),
-                      onRemove: () => controller.remove(requirement.code),
-                    ),
-                ],
-              ),
+          if (type.requirements.isNotEmpty) ...<Widget>[
+            const SizedBox(height: Spacing.formGap),
+            const IssuanceHeading('Files the office needs'),
+            const SizedBox(height: Spacing.xs),
+            IssuanceText(
+              'One file each: ${acceptedFilesLine(type.uploadPolicy)}. '
+              'Lay paper flat, fill the frame, and make every word '
+              'readable.',
+              color: BrandColors.muted,
+              small: true,
             ),
-          if (controller.showProblems && !controller.isComplete)
-            Semantics(
-              liveRegion: true,
-              child: const Padding(
-                padding: EdgeInsets.only(bottom: s3CardGap),
-                child: IssuanceText(
-                  'Some answers are missing. They are marked above.',
-                  color: BrandColors.danger,
-                ),
+            for (final IssuanceRequirement requirement in type.requirements)
+              IssuanceFileSlot(
+                requirement: requirement,
+                chosen: controller.files[requirement.code],
+                refused: controller.refusedFor(requirement.code),
+                policy: type.uploadPolicy,
+                missing: missing.contains(requirement.code),
+                flagged: controller.serverFlagged(requirement.code),
+                onAdd: () => _add(requirement),
+                onRemove: () => controller.remove(requirement.code),
               ),
+          ],
+          if (controller.showProblems && !controller.isComplete) ...<Widget>[
+            const SizedBox(height: Spacing.formGap),
+            const SoftNote(
+              tone: NoteTone.error,
+              message: 'Some answers are missing. They are marked above.',
             ),
+          ],
         ],
       ),
     );
@@ -254,8 +266,13 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
   Widget _review(BuildContext context, IssuanceRequestController controller) {
     final IssuanceType type = controller.type;
     final bool sending = controller.stage == IssuanceFormStage.sending;
-    return IssuanceScaffold(
+    return AuthFormPage(
       title: 'Review your request',
+      subtitle: type.name,
+      stepLabel: 'Step 2 of 2',
+      progress: 1,
+      progressSemanticLabel: 'Step 2 of 2',
+      backEnabled: !sending,
       footer: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -265,7 +282,7 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
             label: sending ? 'Sending…' : 'Send request',
             onPressed: sending ? null : controller.submit,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: Spacing.sm),
           SecondaryButton(
             key: const Key('issuance-edit'),
             label: 'Change something',
@@ -273,12 +290,13 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
           ),
         ],
       ),
-      body: ListView(
-        padding: s3PagePadding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           if (controller.failure case final AppFailure failure)
             _FailureNotice(failure: failure),
           _TypeSummary(type: type),
+          const SizedBox(height: Spacing.formGap),
           IssuanceCard(
             title: 'You are asking for it',
             child: IssuanceQuote(
@@ -309,121 +327,61 @@ class _IssuanceRequestFormViewState extends State<IssuanceRequestFormView> {
                 ],
               ),
             ),
-          const IssuanceCard(
-            child: IssuanceText(
-              'Check it before sending. You can cancel the request yourself '
-              'until the office starts on it. After that, message the office.',
-            ),
+          const SoftNote(
+            message:
+                'Check it before sending. You can cancel the request yourself '
+                'until the office starts on it. After that, message the office.',
           ),
         ],
       ),
     );
   }
 
+  /// RegDone: the medal, the reference number on the receipt, what happens
+  /// next, and the two ways on.
   Widget _done(BuildContext context, IssuanceRequestController controller) {
     final IssuanceRequestDetail? filed = controller.filed;
     final IssuanceType type = controller.type;
-    return IssuanceScaffold(
-      title: 'Request sent',
-      footer: Column(
-        mainAxisSize: MainAxisSize.min,
+    return SuccessScreen(
+      mark: SuccessMarkStyle.medal,
+      title: 'The office has your request',
+      message:
+          'Keep this number. The office uses it when you ask about your '
+          'request.',
+      details: <SuccessDetail>[
+        SuccessDetail(
+          label: 'Reference number',
+          value: filed?.summary.referenceNumber ?? '—',
+        ),
+        SuccessDetail(label: 'Document', value: type.name),
+        SuccessDetail(label: 'Office', value: type.officeName),
+      ],
+      note:
+          'The office will review it. Each step shows here and in your '
+          'notifications, including when it is ready to claim.',
+      body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          PrimaryButton(
-            key: const Key('issuance-view-filed'),
-            label: 'Follow this request',
-            onPressed: filed == null
-                ? null
-                : () => context.goNamed(
-                    AppRoute.issuanceRequestDetail.routeName,
-                    pathParameters: <String, String>{'requestId': filed.id},
-                  ),
+          IssuanceFact(
+            icon: TaytayIcons.clock,
+            text: issuanceProcessingLine(type.processingDays),
           ),
-          const SizedBox(height: 8),
-          SecondaryButton(
-            label: 'Back to documents',
-            onPressed: () =>
-                context.goNamed(AppRoute.issuanceCatalogue.routeName),
+          IssuanceFact(
+            icon: TaytayIcons.handCoins,
+            text: issuanceFeeLine(type.feeCentavos),
           ),
         ],
       ),
-      body: ListView(
-        padding: s3PagePadding,
-        children: <Widget>[
-          IssuanceCard(
-            child: Column(
-              children: <Widget>[
-                const IconTile(
-                  icon: TaytayIcons.circleCheck,
-                  fill: BrandColors.chipGreenBg,
-                  ink: BrandColors.success,
-                  size: 60,
-                  iconSize: 30,
-                ),
-                const SizedBox(height: 10),
-                Semantics(
-                  header: true,
-                  child: Text(
-                    'The office has your request',
-                    textAlign: TextAlign.center,
-                    style: s3Type(
-                      16,
-                      AppTypography.black,
-                      BrandColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Reference number',
-                  style: s3Type(
-                    12,
-                    AppTypography.strong,
-                    BrandColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                SelectableText(
-                  filed?.summary.referenceNumber ?? '—',
-                  key: const Key('issuance-reference'),
-                  textAlign: TextAlign.center,
-                  style: s3Type(
-                    22,
-                    AppTypography.black,
-                    BrandColors.taytayBlue,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const IssuanceText(
-                  'Keep this number. The office uses it when you ask about '
-                  'your request.',
-                ),
-              ],
+      showBack: true,
+      primaryLabel: 'Follow this request',
+      onPrimary: filed == null
+          ? null
+          : () => context.goNamed(
+              AppRoute.issuanceRequestDetail.routeName,
+              pathParameters: <String, String>{'requestId': filed.id},
             ),
-          ),
-          IssuanceCard(
-            title: 'What happens next',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                const IssuanceText(
-                  'The office will review it. Each step shows here and in your '
-                  'notifications, including when it is ready to claim.',
-                  color: BrandColors.textPrimary,
-                ),
-                IssuanceFact(
-                  icon: TaytayIcons.clock,
-                  text: issuanceProcessingLine(type.processingDays),
-                ),
-                IssuanceFact(
-                  icon: TaytayIcons.handCoins,
-                  text: issuanceFeeLine(type.feeCentavos),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+      secondaryLabel: 'Back to documents',
+      onSecondary: () => context.goNamed(AppRoute.issuanceCatalogue.routeName),
     );
   }
 }
@@ -436,32 +394,27 @@ class _TypeSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return IssuanceCard(
+    return SoftCard(
+      filled: true,
       child: Row(
         children: <Widget>[
-          const IconTile(
-            icon: TaytayIcons.fileText,
-            fill: BrandColors.chipBlueBg,
-            ink: BrandColors.taytayBlue,
-            size: 44,
-            iconSize: 22,
-            radius: 12,
-          ),
-          const SizedBox(width: 12),
+          const IconTile.glyph(glyph: TaytayGlyph.document),
+          const SizedBox(width: Spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   type.name,
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
                   ),
                 ),
+                const SizedBox(height: Spacing.xxs),
                 IssuanceText(
                   '${type.officeName} · ${issuanceFeeLine(type.feeCentavos)}',
+                  color: BrandColors.muted,
+                  small: true,
                 ),
               ],
             ),
@@ -485,40 +438,48 @@ class _FailureNotice extends StatelessWidget {
         issuanceSendFailure(failure, act: IssuanceAct.submit);
     return Semantics(
       liveRegion: true,
-      child: Container(
+      child: Padding(
         key: const Key('issuance-send-failure'),
-        margin: const EdgeInsets.only(bottom: s3CardGap),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: BrandColors.chipRedBg,
-          borderRadius: BorderRadius.circular(Radii.lg),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              copy.title,
-              style: s3Type(14, AppTypography.black, BrandColors.danger),
-            ),
-            const SizedBox(height: 4),
-            IssuanceText(copy.body, color: BrandColors.textPrimary),
-            if (failure.requestId case final String reference)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: SelectableText(
-                  'Reference: $reference',
-                  style: s3Type(11, FontWeight.w400, BrandColors.textSecondary),
+        padding: const EdgeInsets.only(bottom: Spacing.formGap),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: BrandColors.red50,
+            borderRadius: BorderRadius.circular(Radii.note),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.section),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  copy.title,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.redInk,
+                  ),
                 ),
-              ),
-            if (copy.offerVerification) ...<Widget>[
-              const SizedBox(height: 10),
-              SecondaryButton(
-                label: 'Go to verification',
-                onPressed: () =>
-                    context.goNamed(AppRoute.verification.routeName),
-              ),
-            ],
-          ],
+                const SizedBox(height: Spacing.xs),
+                IssuanceText(copy.body, color: BrandColors.ink),
+                if (failure.requestId case final String reference)
+                  Padding(
+                    padding: const EdgeInsets.only(top: Spacing.xs),
+                    child: SelectableText(
+                      'Reference: $reference',
+                      style: AppTypography.small.copyWith(
+                        color: BrandColors.muted,
+                      ),
+                    ),
+                  ),
+                if (copy.offerVerification) ...<Widget>[
+                  const SizedBox(height: Spacing.md),
+                  SecondaryButton(
+                    label: 'Go to verification',
+                    onPressed: () =>
+                        context.goNamed(AppRoute.verification.routeName),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ),
       ),
     );

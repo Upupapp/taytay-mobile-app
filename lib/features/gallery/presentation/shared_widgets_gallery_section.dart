@@ -9,6 +9,7 @@ import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/feed_row.dart';
+import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
@@ -23,6 +24,7 @@ import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_glyph.dart';
 import '../../../shared/widgets/taytay_states.dart';
+import '../../../shared/widgets/upload_slot.dart';
 import '../../../shared/widgets/wave_header.dart';
 
 /// The redesign's shared widgets (MOBILE_TASK Phase 2), for the dev gallery.
@@ -370,6 +372,40 @@ class SharedWidgetsGallerySection extends StatelessWidget {
                 HeaderChoiceChip(label: 'Other', selected: false, onTap: () {}),
               ],
             ),
+          ),
+        ),
+        const _Heading('HeaderSearchField'),
+        const BlueHeader(
+          title: 'Page title',
+          showBack: true,
+          includeSafeArea: false,
+          bottom: HeaderSearchField(hint: 'Search'),
+        ),
+        const _Heading('UploadSlot, AttachedFileCard'),
+        _Padded(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              UploadSlot(label: 'Add file', onPressed: () {}),
+              const SizedBox(height: Spacing.md),
+              AttachedFileCard(
+                title: 'File label',
+                status: 'Photo added · 120 KB',
+                actionLabel: 'Remove',
+                onAction: () {},
+              ),
+            ],
+          ),
+        ),
+        const _Heading('IconTile.lucide'),
+        const _Padded(
+          Wrap(
+            spacing: Spacing.sm,
+            children: <Widget>[
+              IconTile.lucide(icon: TaytayIcons.lock),
+              IconTile.lucide(icon: TaytayIcons.bell, tone: TileTone.gold),
+              IconTile.lucide(icon: TaytayIcons.users, tone: TileTone.green),
+            ],
           ),
         ),
         const _Heading('SuccessScreen'),

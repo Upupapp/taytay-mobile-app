@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
+import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/haptics/app_haptics.dart';
@@ -11,15 +15,20 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/pills.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../../services/domain/lgu_service.dart' show ServerValue;
 import '../domain/resident_requirement.dart';
 import 'requirements_controller.dart';
@@ -36,6 +45,9 @@ import 'requirements_controller.dart';
 /// **There is no completion meter.** A local percentage implies approval, and
 /// approval is a decision only LGU staff make. The screen counts what is still
 /// outstanding — a statement about the resident's to-do list — and stops there.
+///
+/// Drawn as the `List` pattern (Directory.dc): the blue header with the back
+/// control, the count, and one soft card per document.
 class RequirementsScreen extends StatefulWidget {
   const RequirementsScreen({required this.requestId, super.key});
 
@@ -100,26 +112,53 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Documents needed'),
+      backgroundColor: BrandColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const BlueHeader(title: 'Documents needed', showBack: true),
+          const OfflineBanner(),
+          Expanded(
+            child: CapabilityGate(
+              capability: ResidentCapability.submitRequirements,
+              child: switch ((_idIsValid, controller)) {
+                (false, _) => _Unavailable(
+                  message: DeepLinkRejection.invalidIdentifier.residentMessage,
+                ),
+                (_, null) => const _Loading(),
+                (_, final RequirementsController active) => _Checklist(
+                  controller: active,
+                  onUpload: _openUploadSheet,
+                ),
+              },
+            ),
+          ),
+        ],
       ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.submitRequirements,
-          child: switch ((_idIsValid, controller)) {
-            (false, _) => _Unavailable(
-              message: DeepLinkRejection.invalidIdentifier.residentMessage,
-            ),
-            (_, null) => const AppLoadingView(),
-            (_, final RequirementsController active) => _Checklist(
-              controller: active,
-              onUpload: _openUploadSheet,
-            ),
-          },
+    );
+  }
+}
+
+EdgeInsets _pagePadding(BuildContext context) => EdgeInsets.fromLTRB(
+  Spacing.lg,
+  Spacing.section,
+  Spacing.lg,
+  Spacing.xl + MediaQuery.paddingOf(context).bottom,
+);
+
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: _pagePadding(context),
+      children: const <Widget>[
+        LoadingSkeleton(
+          layout: SkeletonLayout.cards,
+          semanticLabel: 'Checking what is needed…',
         ),
-      ),
+      ],
     );
   }
 }
@@ -132,9 +171,7 @@ class _Checklist extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.isLoading) {
-      return const AppLoadingView(message: 'Checking what is needed…');
-    }
+    if (controller.isLoading) return const _Loading();
 
     final checklist = controller.checklist;
     if (checklist == null) {
@@ -146,23 +183,19 @@ class _Checklist extends StatelessWidget {
       );
     }
     if (checklist.isEmpty) {
-      return const StatusView(
-        title: 'Nothing is outstanding',
-        kind: StatusKind.success,
-        icon: Icons.task_alt_outlined,
-        message:
-            'Taytay LGU is not waiting on any documents from you for this '
-            'request.',
+      return ListView(
+        padding: _pagePadding(context),
+        children: const <Widget>[_NothingOutstanding()],
       );
     }
 
-    final theme = Theme.of(context);
     final outstanding = checklist.outstandingCount;
 
     return RefreshIndicator(
       onRefresh: controller.load,
       child: ListView(
-        padding: const EdgeInsets.all(Spacing.lg),
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: _pagePadding(context),
         children: <Widget>[
           Semantics(
             liveRegion: true,
@@ -174,18 +207,18 @@ class _Checklist extends StatelessWidget {
                   : outstanding == 1
                   ? 'Taytay LGU is waiting for 1 document.'
                   : 'Taytay LGU is waiting for $outstanding documents.',
-              style: theme.textTheme.titleMedium,
+              style: AppTypography.sectionTitle.copyWith(
+                color: BrandColors.ink,
+              ),
             ),
           ),
-          const SizedBox(height: Spacing.sm),
+          const SizedBox(height: Spacing.xs),
           Text(
             'Sending a document is not the same as it being accepted. The '
             'office checks each one, and this list changes when they do.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           ),
-          const SizedBox(height: Spacing.lg),
+          const SizedBox(height: Spacing.section),
           for (final requirement in checklist.items)
             Padding(
               padding: const EdgeInsets.only(bottom: Spacing.md),
@@ -200,6 +233,52 @@ class _Checklist extends StatelessWidget {
   }
 }
 
+/// Nothing outstanding: a statement, not a celebration — the office still
+/// decides the request.
+class _NothingOutstanding extends StatelessWidget {
+  const _NothingOutstanding();
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          const IconTile.lucide(
+            icon: TaytayIcons.circleCheck,
+            tone: TileTone.green,
+          ),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Nothing is outstanding',
+                    style: AppTypography.listTitle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Spacing.xxs),
+                Text(
+                  'Taytay LGU is not waiting on any documents from you for '
+                  'this request.',
+                  style: AppTypography.bodyStyle.copyWith(
+                    color: BrandColors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RequirementCard extends StatelessWidget {
   const _RequirementCard({required this.requirement, required this.onUpload});
 
@@ -208,75 +287,90 @@ class _RequirementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final presentation = _StatusPresentation.of(requirement.status, theme);
+    final presentation = _StatusPresentation.of(requirement.status);
+    final String? instruction = requirement.instruction;
+    final String? reviewerMessage = requirement.reviewerMessage;
+    final DateTime? lastSubmittedAt = requirement.lastSubmittedAt;
 
-    return AppCard(
+    return SoftCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               // Never colour alone: the icon, the words and the colour all
               // carry the state.
-              Icon(
-                presentation.icon,
-                size: IconSizes.md,
-                color: presentation.colour,
-              ),
-              const SizedBox(width: Spacing.sm),
+              SettingsIcon(icon: presentation.icon, tone: presentation.tone),
+              const SizedBox(width: Spacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(requirement.label, style: theme.textTheme.titleSmall),
+                    Text(
+                      requirement.label,
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.ink,
+                      ),
+                    ),
                     const SizedBox(height: Spacing.xxs),
                     Text(
                       presentation.label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: presentation.colour,
+                      style: AppTypography.listDetail.copyWith(
+                        fontWeight: AppTypography.strong,
+                        color: presentation.ink,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: Spacing.sm),
               _ObligationChip(obligation: requirement.obligation),
             ],
           ),
 
-          if (requirement.instruction != null) ...<Widget>[
-            const SizedBox(height: Spacing.sm),
-            Text(requirement.instruction!, style: theme.textTheme.bodySmall),
-          ],
-
-          if (requirement.reviewerMessage != null) ...<Widget>[
+          if (instruction != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            AppBanner(
-              tone: BannerTone.warning,
-              title: 'What the office said',
-              message: requirement.reviewerMessage!,
+            Text(
+              instruction,
+              style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
           ],
 
-          if (requirement.lastSubmittedAt != null) ...<Widget>[
+          if (reviewerMessage != null) ...<Widget>[
+            const SizedBox(height: Spacing.md),
+            _Note(
+              tone: _NoteTone.warning,
+              title: 'What the office said',
+              message: reviewerMessage,
+            ),
+          ],
+
+          if (lastSubmittedAt != null) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             Text(
-              'Last sent ${_formatDate(requirement.lastSubmittedAt!)}',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              'Last sent ${_formatDate(lastSubmittedAt)}',
+              style: AppTypography.small.copyWith(color: BrandColors.muted),
             ),
           ],
 
           if (requirement.acceptsUpload) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            AppButton(
-              label: requirement.status.known == RequirementStatus.missing
-                  ? 'Send this document'
-                  : 'Replace this document',
-              variant: AppButtonVariant.secondary,
+            FilledButton.icon(
+              style: TaytayButtonStyles.soft(),
               onPressed: onUpload,
+              icon: const TaytayIcon(
+                icon: TaytayIcons.paperclip,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.blue,
+              ),
+              label: Text(
+                requirement.status.known == RequirementStatus.missing
+                    ? 'Send this document'
+                    : 'Replace this document',
+              ),
             ),
           ] else if (requirement.status.known ==
               RequirementStatus.underVerification) ...<Widget>[
@@ -284,8 +378,8 @@ class _RequirementCard extends StatelessWidget {
             Text(
               'You cannot replace this while it is being checked. If something '
               'is wrong with it, the office will ask you for another one.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
               ),
             ),
           ],
@@ -302,7 +396,6 @@ class _ObligationChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final label = switch (obligation.known) {
       RequirementObligation.required => 'Required',
       RequirementObligation.optional => 'Optional',
@@ -312,12 +405,7 @@ class _ObligationChip extends StatelessWidget {
       null => 'Required',
     };
 
-    return Text(
-      label,
-      style: theme.textTheme.labelSmall?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-      ),
-    );
+    return StatusPill(label: label, tone: PillTone.neutral);
   }
 }
 
@@ -326,57 +414,144 @@ class _ObligationChip extends StatelessWidget {
 /// The wording is the whole point of this class: `submitted` reads as "Sent, not
 /// checked yet", never as "Done".
 class _StatusPresentation {
-  const _StatusPresentation(this.label, this.icon, this.colour);
+  const _StatusPresentation(this.label, this.icon, this.tone, this.ink);
 
   final String label;
   final IconData icon;
-  final Color colour;
+  final SettingsTone tone;
+  final Color ink;
 
-  static _StatusPresentation of(
-    ServerValue<RequirementStatus> status,
-    ThemeData theme,
-  ) {
-    final scheme = theme.colorScheme;
+  static _StatusPresentation of(ServerValue<RequirementStatus> status) {
     return switch (status.known) {
-      RequirementStatus.missing => _StatusPresentation(
+      RequirementStatus.missing => const _StatusPresentation(
         'Not sent yet',
-        Icons.upload_file_outlined,
-        scheme.onSurfaceVariant,
+        TaytayIcons.paperclip,
+        SettingsTone.blue,
+        BrandColors.muted,
       ),
-      RequirementStatus.submitted => _StatusPresentation(
+      RequirementStatus.submitted => const _StatusPresentation(
         'Sent — not checked yet',
-        Icons.schedule_outlined,
-        scheme.onSurfaceVariant,
+        TaytayIcons.clock,
+        SettingsTone.blue,
+        BrandColors.muted,
       ),
-      RequirementStatus.underVerification => _StatusPresentation(
+      RequirementStatus.underVerification => const _StatusPresentation(
         'Being checked by the office',
-        Icons.hourglass_top_outlined,
-        scheme.primary,
+        TaytayIcons.hourglass,
+        SettingsTone.gold,
+        BrandColors.blue,
       ),
-      RequirementStatus.needsReplacement => _StatusPresentation(
+      RequirementStatus.needsReplacement => const _StatusPresentation(
         'Needs to be sent again',
-        Icons.error_outline,
-        scheme.error,
+        TaytayIcons.circleAlert,
+        SettingsTone.red,
+        BrandColors.redInk,
       ),
-      RequirementStatus.verified => _StatusPresentation(
+      RequirementStatus.verified => const _StatusPresentation(
         'Checked and accepted',
-        Icons.verified_outlined,
-        scheme.primary,
+        TaytayIcons.badgeCheck,
+        SettingsTone.green,
+        BrandColors.green,
       ),
-      RequirementStatus.expired => _StatusPresentation(
+      RequirementStatus.expired => const _StatusPresentation(
         'Out of date — send a current one',
-        Icons.update_disabled_outlined,
-        scheme.error,
+        TaytayIcons.calendarX,
+        SettingsTone.red,
+        BrandColors.redInk,
       ),
       // A status this build does not recognise is reported neutrally rather
       // than guessed. "Being processed" is true of every state the app might
       // not know about, and alarms nobody.
-      null => _StatusPresentation(
+      null => const _StatusPresentation(
         'Being processed',
-        Icons.info_outline,
-        scheme.onSurfaceVariant,
+        TaytayIcons.info,
+        SettingsTone.blue,
+        BrandColors.muted,
       ),
     };
+  }
+}
+
+enum _NoteTone { info, warning, error }
+
+/// A tinted note (`.soft .note`) whose title and message are separate lines,
+/// so the office's own sentence is shown exactly as it was sent.
+class _Note extends StatelessWidget {
+  const _Note({required this.title, required this.message, required this.tone});
+
+  final String title;
+  final String message;
+  final _NoteTone tone;
+
+  @override
+  Widget build(BuildContext context) {
+    final (Color fill, Color ink, IconData icon) = switch (tone) {
+      _NoteTone.info => (
+        BrandColors.blue50,
+        BrandColors.blue,
+        TaytayIcons.info,
+      ),
+      _NoteTone.warning => (
+        BrandColors.gold50,
+        BrandColors.goldInk,
+        TaytayIcons.triangleAlert,
+      ),
+      _NoteTone.error => (
+        BrandColors.red50,
+        BrandColors.redInk,
+        TaytayIcons.circleAlert,
+      ),
+    };
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: fill,
+          borderRadius: BorderRadius.circular(Radii.note),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(Spacing.md),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.only(top: Spacing.xxs),
+                child: TaytayIcon(
+                  icon: icon,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: IconSizes.sm,
+                  color: ink,
+                ),
+              ),
+              const SizedBox(width: Spacing.sm + Spacing.xxs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      title,
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xxs),
+                    Text(
+                      message,
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.text,
+                        height: 1.45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -450,8 +625,8 @@ class _ChooseStage extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (rejection != null) ...<Widget>[
-          AppBanner(
-            tone: BannerTone.error,
+          _Note(
+            tone: _NoteTone.error,
             title: AppStrings.of(context).uploadRefusedTitle,
             message: localisedDocumentRejection(
               context,
@@ -483,17 +658,17 @@ class _ChooseStage extends StatelessWidget {
                     ? AppButtonVariant.primary
                     : AppButtonVariant.secondary,
                 icon: switch (source) {
-                  DocumentSource.camera => Icons.photo_camera_outlined,
-                  DocumentSource.gallery => Icons.photo_library_outlined,
-                  DocumentSource.file => Icons.folder_open_outlined,
+                  DocumentSource.camera => TaytayIcons.camera,
+                  DocumentSource.gallery => TaytayIcons.image,
+                  DocumentSource.file => TaytayIcons.fileText,
                 },
                 onPressed: () => controller.choose(source),
               ),
             ),
 
         if (!DocumentSource.values.any(controller.supportsSource))
-          const AppBanner(
-            tone: BannerTone.info,
+          const _Note(
+            tone: _NoteTone.info,
             title: 'This device cannot pick a document',
             message:
                 'Taytay municipal hall can take the document in person, or you '
@@ -549,21 +724,19 @@ class _PreviewStage extends StatelessWidget {
                 )
               : Container(
                   height: 120,
-                  color: theme.colorScheme.surfaceContainerHighest,
+                  color: BrandColors.background,
                   alignment: Alignment.center,
-                  child: Icon(
-                    Icons.picture_as_pdf_outlined,
+                  child: const Icon(
+                    TaytayIcons.fileText,
                     size: IconSizes.xxl,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: BrandColors.muted,
                   ),
                 ),
         ),
         const SizedBox(height: Spacing.sm),
         Text(
           '${document.fileName} · ${document.readableSize}',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted),
         ),
         const SizedBox(height: Spacing.lg),
 
@@ -599,14 +772,14 @@ class _PreviewFallback extends StatelessWidget {
     return Container(
       height: 120,
       padding: const EdgeInsets.all(Spacing.md),
-      color: theme.colorScheme.surfaceContainerHighest,
+      color: BrandColors.background,
       alignment: Alignment.center,
       child: Row(
         children: <Widget>[
-          Icon(
-            Icons.broken_image_outlined,
+          const Icon(
+            TaytayIcons.image,
             size: IconSizes.lg,
-            color: theme.colorScheme.onSurfaceVariant,
+            color: BrandColors.muted,
           ),
           const SizedBox(width: Spacing.sm),
           Expanded(child: Text(message, style: theme.textTheme.bodySmall)),
@@ -647,9 +820,7 @@ class _UploadingStage extends StatelessWidget {
         // than a resident leaving on the strength of it.
         Text(
           'Keep this open until Taytay LGU confirms it has the document.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted),
         ),
         const SizedBox(height: Spacing.lg),
         AppButton(
@@ -677,9 +848,9 @@ class _AcceptedStage extends StatelessWidget {
       children: <Widget>[
         Row(
           children: <Widget>[
-            Icon(
-              Icons.check_circle_outline,
-              color: theme.colorScheme.primary,
+            const Icon(
+              TaytayIcons.circleCheck,
+              color: BrandColors.green,
               size: IconSizes.lg,
             ),
             const SizedBox(width: Spacing.sm),
@@ -750,7 +921,7 @@ class _StoppedStage extends StatelessWidget {
           Text(
             'If you contact the office, quote ${failure!.requestId}.',
             style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+              color: BrandColors.muted,
             ),
           ),
         ],
@@ -779,21 +950,23 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusView(
-      title: 'Documents are not available here yet',
-      kind: StatusKind.empty,
-      icon: Icons.folder_off_outlined,
-      message: message,
-      primaryAction: onRetry == null
-          ? null
-          : TextButton(
-              onPressed: () => onRetry!(),
-              child: const Text('Check again'),
-            ),
-      secondaryAction: TextButton(
-        onPressed: () => context.goNamed(AppRoute.requests.routeName),
-        child: const Text('See my requests'),
-      ),
+    final Future<void> Function()? retry = onRetry;
+    return ListView(
+      padding: _pagePadding(context),
+      children: <Widget>[
+        EmptyState(
+          title: 'Documents are not available here yet',
+          message: message,
+          actionLabel: retry == null ? null : 'Check again',
+          onAction: retry,
+          boxed: true,
+        ),
+        const SizedBox(height: Spacing.sm),
+        AuthLink(
+          'See my requests',
+          onPressed: () => context.goNamed(AppRoute.requests.routeName),
+        ),
+      ],
     );
   }
 }

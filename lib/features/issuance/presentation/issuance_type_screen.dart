@@ -3,19 +3,26 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
-import '../../../shared/widgets/s3_surface.dart';
+import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/issuance_terms.dart';
 import '../domain/issuance_type.dart';
 import 'issuance_widgets.dart';
 
 /// One document type: what it is, what it needs, what it costs, how long it
 /// takes and how to claim it.
+///
+/// Drawn as the Office detail pattern without a photo: the blue header with
+/// the back control over the white sheet, the facts as `.fact` rows.
 class IssuanceTypeScreen extends StatefulWidget {
   const IssuanceTypeScreen({required this.typeId, super.key});
 
@@ -78,6 +85,7 @@ class _IssuanceTypeScreenState extends State<IssuanceTypeScreen> {
         );
         return IssuanceScaffold(
           title: 'Document details',
+          white: failure == null,
           footer: type != null && decision is AccessAllowed
               ? PrimaryButton(
                   key: const Key('issuance-start-request'),
@@ -95,7 +103,16 @@ class _IssuanceTypeScreenState extends State<IssuanceTypeScreen> {
                   what: 'this document',
                 )
               : type == null
-              ? const Center(child: CircularProgressIndicator())
+              ? ListView(
+                  padding: const EdgeInsets.all(Spacing.lg),
+                  children: const <Widget>[
+                    LoadingSkeleton(
+                      layout: SkeletonLayout.detail,
+                      count: 1,
+                      semanticLabel: 'Opening this document',
+                    ),
+                  ],
+                )
               : IssuanceTypeDetails(type: type, decision: decision),
         );
       },
@@ -120,89 +137,89 @@ class IssuanceTypeDetails extends StatelessWidget {
     final String? description = type.description;
     final String? claim = type.claimInstructions;
     return ListView(
-      padding: s3PagePadding,
+      padding: EdgeInsets.only(
+        bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+      ),
       children: <Widget>[
-        IssuanceAccessNotice(decision: decision),
-        IssuanceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const IconTile(
-                    icon: TaytayIcons.fileText,
-                    fill: BrandColors.chipBlueBg,
-                    ink: BrandColors.taytayBlue,
-                    size: 44,
-                    iconSize: 22,
-                    radius: 12,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Semantics(
-                          header: true,
-                          child: Text(
-                            type.name,
-                            style: s3Type(
-                              16,
-                              AppTypography.black,
-                              BrandColors.textPrimary,
-                            ),
+        DetailSheet(
+          children: <Widget>[
+            IssuanceAccessNotice(decision: decision),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const IconTile.glyph(
+                  glyph: TaytayGlyph.document,
+                  tileSize: IconTileSize.large,
+                ),
+                const SizedBox(width: Spacing.section),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          type.name,
+                          style: AppTypography.pageTitle.copyWith(
+                            color: BrandColors.ink,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        IssuanceText(type.officeName),
-                      ],
+                      ),
+                      const SizedBox(height: Spacing.xxs),
+                      IssuanceText(type.officeName, color: BrandColors.muted),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (description != null) ...<Widget>[
+              const SizedBox(height: Spacing.section),
+              IssuanceText(description),
+            ],
+            const SizedBox(height: Spacing.sm),
+            DetailFactRow(
+              icon: TaytayIcons.handCoins,
+              label: 'Fee',
+              value: issuanceFeeLine(type.feeCentavos),
+            ),
+            DetailFactRow(
+              icon: TaytayIcons.clock,
+              label: 'Processing time',
+              value: issuanceProcessingLine(type.processingDays),
+              divider: false,
+            ),
+            const SizedBox(height: Spacing.formGap),
+            IssuanceCard(
+              title: 'What you need to send',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  if (type.requirements.isEmpty)
+                    const IssuanceText(
+                      'No files. The purpose of your request is enough.',
                     ),
+                  for (final IssuanceRequirement requirement
+                      in type.requirements)
+                    _RequirementLine(requirement: requirement),
+                  const SizedBox(height: Spacing.md),
+                  IssuanceText(
+                    'Send each one as a photo or a file: '
+                    '${acceptedFilesLine(type.uploadPolicy)}.',
+                    color: BrandColors.muted,
+                    small: true,
                   ),
                 ],
               ),
-              if (description != null) ...<Widget>[
-                const SizedBox(height: 10),
-                IssuanceText(description, color: BrandColors.textPrimary),
-              ],
-              const SizedBox(height: 6),
-              IssuanceFact(
-                icon: TaytayIcons.handCoins,
-                text: issuanceFeeLine(type.feeCentavos),
+            ),
+            IssuanceCard(
+              title: 'How to claim it',
+              child: IssuanceText(
+                claim ??
+                    'The office will tell you here when and where to claim '
+                        'it, once it is ready.',
               ),
-              IssuanceFact(
-                icon: TaytayIcons.clock,
-                text: issuanceProcessingLine(type.processingDays),
-              ),
-            ],
-          ),
-        ),
-        IssuanceCard(
-          title: 'What you need to send',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              if (type.requirements.isEmpty)
-                const IssuanceText(
-                  'No files. The purpose of your request is enough.',
-                ),
-              for (final IssuanceRequirement requirement in type.requirements)
-                _RequirementLine(requirement: requirement),
-              const SizedBox(height: 8),
-              IssuanceText(
-                'Send each one as a photo or a file: '
-                '${acceptedFilesLine(type.uploadPolicy)}.',
-              ),
-            ],
-          ),
-        ),
-        IssuanceCard(
-          title: 'How to claim it',
-          child: IssuanceText(
-            claim ??
-                'The office will tell you here when and where to claim it, '
-                    'once it is ready.',
-            color: BrandColors.textPrimary,
-          ),
+            ),
+          ],
         ),
       ],
     );
@@ -218,19 +235,21 @@ class _RequirementLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final String? hint = requirement.hint;
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
+      padding: const EdgeInsets.only(top: Spacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           const Padding(
-            padding: EdgeInsets.only(top: 2),
-            child: Icon(
-              TaytayIcons.paperclip,
-              size: 16,
-              color: BrandColors.taytayBlue,
+            padding: EdgeInsets.only(top: Spacing.xxs),
+            child: TaytayIcon(
+              icon: TaytayIcons.paperclip,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm - Spacing.xxs,
+              color: BrandColors.blue,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: Spacing.sm + Spacing.xxs),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,14 +257,13 @@ class _RequirementLine extends StatelessWidget {
                 Text(
                   '${requirement.label} · '
                   '${requirement.required ? 'Required' : 'Optional'}',
-                  style: s3Type(
-                    13,
-                    AppTypography.strong,
-                    BrandColors.textPrimary,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
                     height: 1.5,
                   ),
                 ),
-                if (hint != null) IssuanceText(hint),
+                if (hint != null)
+                  IssuanceText(hint, color: BrandColors.muted, small: true),
               ],
             ),
           ),

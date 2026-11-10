@@ -3,16 +3,21 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
-import '../../../shared/widgets/s3_surface.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/issuance_form.dart';
 import '../domain/issuance_repository.dart';
 import '../domain/issuance_request.dart';
@@ -124,6 +129,7 @@ class _IssuanceRequestDetailScreenState
     final AppFailure? failure = _failure;
     return IssuanceScaffold(
       title: 'Document request',
+      white: failure == null,
       body: failure != null
           ? IssuanceLoadFailure(
               failure: failure,
@@ -131,7 +137,16 @@ class _IssuanceRequestDetailScreenState
               what: 'this request',
             )
           : detail == null
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView(
+              padding: const EdgeInsets.all(Spacing.lg),
+              children: const <Widget>[
+                LoadingSkeleton(
+                  layout: SkeletonLayout.detail,
+                  count: 1,
+                  semanticLabel: 'Opening your request',
+                ),
+              ],
+            )
           : RefreshIndicator(
               onRefresh: _load,
               child: IssuanceRequestDetailView(
@@ -147,8 +162,10 @@ class _IssuanceRequestDetailScreenState
   }
 }
 
-/// The request itself. Public so the design frames can draw it from sample
-/// data.
+/// The request itself, as the Office detail pattern: the white sheet with
+/// the document, its status in words and the reference, then what the office
+/// said, the progress and what was sent. Public so the design frames can draw
+/// it from sample data.
 class IssuanceRequestDetailView extends StatelessWidget {
   const IssuanceRequestDetailView({
     required this.detail,
@@ -172,157 +189,219 @@ class IssuanceRequestDetailView extends StatelessWidget {
     final String? claim = detail.claimDetails;
     final String? refusal = detail.refusalReason;
     final String? instructions = detail.claimInstructions;
+    final VoidCallback? onCancel = this.onCancel;
     return ListView(
-      padding: s3PagePadding,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+      ),
       children: <Widget>[
-        IssuanceCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  detail.summary.typeName,
-                  style: s3Type(
-                    16,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
+        DetailSheet(
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                IconTile.glyph(
+                  glyph: TaytayGlyph.document,
+                  tone: status == IssuanceStatus.needsInfo
+                      ? TileTone.gold
+                      : TileTone.blue,
+                  tileSize: IconTileSize.large,
+                ),
+                const SizedBox(width: Spacing.section),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          detail.summary.typeName,
+                          style: AppTypography.pageTitle.copyWith(
+                            color: BrandColors.ink,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xxs),
+                      IssuanceText(
+                        detail.summary.officeName,
+                        color: BrandColors.muted,
+                      ),
+                      const SizedBox(height: Spacing.sm),
+                      IssuanceStatusChip(status: status),
+                    ],
                   ),
                 ),
+              ],
+            ),
+            const SizedBox(height: Spacing.section),
+            IssuanceText(issuanceStatusExplanation(status)),
+            const SizedBox(height: Spacing.sm),
+            const Divider(height: 1, thickness: 1, color: BrandColors.divider),
+            _ReferenceFact(reference: detail.summary.referenceNumber),
+            const SizedBox(height: Spacing.formGap),
+            if (status == IssuanceStatus.needsInfo && asked != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.section),
+                child: IssuanceQuote(
+                  key: const Key('issuance-needs-info'),
+                  label: 'What the office asked for',
+                  text: asked,
+                  tone: IssuanceQuoteTone.action,
+                ),
               ),
-              const SizedBox(height: 2),
-              IssuanceText(detail.summary.officeName),
-              const SizedBox(height: 8),
-              Row(
+            if (detail.canResubmit)
+              IssuanceResubmitSection(
+                key: ValueKey<String>('resubmit-${detail.id}'),
+                detail: detail,
+                repository: repository,
+                picker: picker,
+                onSent: onChanged,
+              ),
+            if (status == IssuanceStatus.readyForPickup)
+              IssuanceCard(
+                title: 'How to claim it',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    if (claim != null)
+                      IssuanceQuote(
+                        key: const Key('issuance-claim-details'),
+                        label: 'From the office',
+                        text: claim,
+                        tone: IssuanceQuoteTone.ready,
+                      ),
+                    if (instructions != null) ...<Widget>[
+                      const SizedBox(height: Spacing.sm),
+                      IssuanceText(instructions, color: BrandColors.ink),
+                    ],
+                    IssuanceFact(
+                      icon: TaytayIcons.handCoins,
+                      text: issuanceFeeLine(detail.feeCentavos),
+                    ),
+                    const IssuanceFact(
+                      icon: TaytayIcons.idCard,
+                      text: 'Bring a valid ID and your reference number.',
+                    ),
+                  ],
+                ),
+              ),
+            if (status == IssuanceStatus.rejected && refusal != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: Spacing.section),
+                child: IssuanceQuote(
+                  label: "The office's reason",
+                  text: refusal,
+                  tone: IssuanceQuoteTone.refused,
+                ),
+              ),
+            IssuanceCard(
+              title: 'Progress',
+              child: IssuanceHistoryTimeline(detail: detail),
+            ),
+            IssuanceCard(
+              title: 'Your request',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  IssuanceStatusChip(status: status),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: SelectableText(
-                      detail.summary.referenceNumber,
-                      key: const Key('issuance-detail-reference'),
-                      style: s3Type(
-                        13,
-                        AppTypography.strong,
-                        BrandColors.taytayBlue,
+                  IssuanceQuote(label: 'Purpose', text: detail.purpose),
+                  if (status != IssuanceStatus.readyForPickup) ...<Widget>[
+                    IssuanceFact(
+                      icon: TaytayIcons.handCoins,
+                      text: issuanceFeeLine(detail.feeCentavos),
+                    ),
+                    IssuanceFact(
+                      icon: TaytayIcons.clock,
+                      text: issuanceProcessingLine(detail.processingDays),
+                    ),
+                  ],
+                  if (detail.attachments.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: Spacing.md),
+                    Text(
+                      'Files you sent',
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.ink,
                       ),
                     ),
-                  ),
+                    for (final IssuanceAttachment attachment
+                        in detail.attachments)
+                      _AttachmentLine(
+                        detail: detail,
+                        attachment: attachment,
+                        repository: repository,
+                      ),
+                  ],
                 ],
               ),
-              const SizedBox(height: 8),
-              IssuanceText(
-                issuanceStatusExplanation(status),
-                color: BrandColors.textPrimary,
+            ),
+            if (onCancel != null)
+              FilledButton(
+                key: const Key('issuance-cancel'),
+                style: TaytayButtonStyles.soft(),
+                onPressed: onCancel,
+                child: const Text('Cancel this request'),
               ),
-            ],
-          ),
+          ],
         ),
-        if (status == IssuanceStatus.needsInfo && asked != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: s3CardGap),
-            child: IssuanceQuote(
-              key: const Key('issuance-needs-info'),
-              label: 'What the office asked for',
-              text: asked,
-              tone: IssuanceQuoteTone.action,
-            ),
-          ),
-        if (detail.canResubmit)
-          IssuanceResubmitSection(
-            key: ValueKey<String>('resubmit-${detail.id}'),
-            detail: detail,
-            repository: repository,
-            picker: picker,
-            onSent: onChanged,
-          ),
-        if (status == IssuanceStatus.readyForPickup)
-          IssuanceCard(
-            title: 'How to claim it',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                if (claim != null)
-                  IssuanceQuote(
-                    key: const Key('issuance-claim-details'),
-                    label: 'From the office',
-                    text: claim,
-                    tone: IssuanceQuoteTone.ready,
-                  ),
-                if (instructions != null) ...<Widget>[
-                  const SizedBox(height: 8),
-                  IssuanceText(instructions, color: BrandColors.textPrimary),
-                ],
-                IssuanceFact(
-                  icon: TaytayIcons.handCoins,
-                  text: issuanceFeeLine(detail.feeCentavos),
-                ),
-                const IssuanceFact(
-                  icon: TaytayIcons.idCard,
-                  text: 'Bring a valid ID and your reference number.',
-                ),
-              ],
-            ),
-          ),
-        if (status == IssuanceStatus.rejected && refusal != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: s3CardGap),
-            child: IssuanceQuote(
-              label: "The office's reason",
-              text: refusal,
-              tone: IssuanceQuoteTone.refused,
-            ),
-          ),
-        IssuanceCard(
-          title: 'Progress',
-          child: IssuanceHistoryTimeline(detail: detail),
-        ),
-        IssuanceCard(
-          title: 'Your request',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              IssuanceQuote(label: 'Purpose', text: detail.purpose),
-              if (status != IssuanceStatus.readyForPickup) ...<Widget>[
-                IssuanceFact(
-                  icon: TaytayIcons.handCoins,
-                  text: issuanceFeeLine(detail.feeCentavos),
-                ),
-                IssuanceFact(
-                  icon: TaytayIcons.clock,
-                  text: issuanceProcessingLine(detail.processingDays),
-                ),
-              ],
-              if (detail.attachments.isNotEmpty) ...<Widget>[
-                const SizedBox(height: 10),
-                Text(
-                  'Files you sent',
-                  style: s3Type(
-                    13,
-                    AppTypography.strong,
-                    BrandColors.textPrimary,
-                  ),
-                ),
-                for (final IssuanceAttachment attachment in detail.attachments)
-                  _AttachmentLine(
-                    detail: detail,
-                    attachment: attachment,
-                    repository: repository,
-                  ),
-              ],
-            ],
-          ),
-        ),
-        if (onCancel != null)
-          Padding(
-            padding: const EdgeInsets.only(bottom: s3CardGap),
-            child: SecondaryButton(
-              key: const Key('issuance-cancel'),
-              label: 'Cancel this request',
-              onPressed: onCancel,
-            ),
-          ),
       ],
+    );
+  }
+}
+
+/// The reference as an Office `.fact` row, selectable so it can be copied
+/// for the office.
+class _ReferenceFact extends StatelessWidget {
+  const _ReferenceFact({required this.reference});
+
+  final String reference;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.section),
+      child: Row(
+        children: <Widget>[
+          Container(
+            width: ComponentSizes.tileSmall,
+            height: ComponentSizes.tileSmall,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: BrandColors.background,
+              borderRadius: BorderRadius.circular(Radii.md),
+            ),
+            child: const TaytayIcon(
+              icon: TaytayIcons.fileText,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+              color: BrandColors.blue,
+            ),
+          ),
+          const SizedBox(width: Spacing.section),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Reference number',
+                  style: AppTypography.small.copyWith(
+                    fontWeight: AppTypography.medium,
+                    color: BrandColors.muted,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                SelectableText(
+                  reference,
+                  key: const Key('issuance-detail-reference'),
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.blue,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

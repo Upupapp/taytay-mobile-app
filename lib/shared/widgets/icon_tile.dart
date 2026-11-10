@@ -58,6 +58,22 @@ class IconTile extends StatelessWidget {
        iconSize = null,
        radius = null;
 
+  /// The gradient tile with a Lucide [icon], for something no solid glyph
+  /// names (a lock, an inbox, a bell). Same sizes, tones and semantics as
+  /// [IconTile.glyph].
+  const IconTile.lucide({
+    required IconData this.icon,
+    this.tone = TileTone.blue,
+    IconTileSize this.tileSize = IconTileSize.medium,
+    this.semanticLabel,
+    super.key,
+  }) : glyph = null,
+       fill = null,
+       ink = null,
+       size = 0,
+       iconSize = null,
+       radius = null;
+
   final IconData? icon;
   final Color? fill;
   final Color? ink;
@@ -74,16 +90,14 @@ class IconTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TaytayGlyph? glyph = this.glyph;
     final IconTileSize? tileSize = this.tileSize;
-    if (glyph != null && tileSize != null) {
-      return _gradientTile(glyph, tileSize);
-    }
+    if (tileSize != null) return _gradientTile(tileSize);
     return _flatTile();
   }
 
-  Widget _gradientTile(TaytayGlyph glyph, IconTileSize tileSize) {
+  Widget _gradientTile(IconTileSize tileSize) {
     final BrandGradient gradient = BrandGradients.tile(tone);
+    final TaytayGlyph? glyph = this.glyph;
     final Widget tile = Container(
       width: tileSize.dimension,
       height: tileSize.dimension,
@@ -92,11 +106,15 @@ class IconTile extends StatelessWidget {
         gradient: gradient.toLinearGradient(),
         borderRadius: BorderRadius.circular(tileSize.radius),
       ),
-      child: GlyphIcon(
-        glyph,
-        size: tileSize.glyphSize,
-        color: gradient.onColor,
-      ),
+      child: glyph != null
+          ? GlyphIcon(glyph, size: tileSize.glyphSize, color: gradient.onColor)
+          : TaytayIcon(
+              icon: icon ?? Icons.circle,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: tileSize.glyphSize * 0.86,
+              color: gradient.onColor,
+            ),
     );
     final String? label = semanticLabel;
     if (label == null || label.isEmpty) return ExcludeSemantics(child: tile);

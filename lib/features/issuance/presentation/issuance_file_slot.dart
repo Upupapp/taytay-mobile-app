@@ -8,8 +8,7 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_sheet.dart';
-import '../../../shared/widgets/s3_surface.dart';
-import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/upload_slot.dart';
 import '../domain/issuance_type.dart';
 
 /// Asks which way to add a file: camera, photo library or file, whichever
@@ -42,7 +41,7 @@ Future<DocumentSource?> chooseIssuanceSource(
             ),
           for (final DocumentSource source in offered)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: Spacing.sm),
               child: AppButton(
                 key: Key('issuance-source-${source.name}'),
                 label: documentSourceLabel(sheetContext, source),
@@ -50,9 +49,9 @@ Future<DocumentSource?> chooseIssuanceSource(
                     ? AppButtonVariant.primary
                     : AppButtonVariant.secondary,
                 icon: switch (source) {
-                  DocumentSource.camera => Icons.photo_camera_outlined,
-                  DocumentSource.gallery => Icons.photo_library_outlined,
-                  DocumentSource.file => Icons.folder_open_outlined,
+                  DocumentSource.camera => TaytayIcons.camera,
+                  DocumentSource.gallery => TaytayIcons.image,
+                  DocumentSource.file => TaytayIcons.fileText,
                 },
                 onPressed: () => Navigator.of(sheetContext).pop(source),
               ),
@@ -116,94 +115,53 @@ class IssuanceFileSlot extends StatelessWidget {
         : missing
         ? 'Add this file to continue.'
         : null;
-    return Container(
+    return Padding(
       key: Key('issuance-slot-${requirement.code}'),
-      margin: const EdgeInsets.only(top: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.md),
-        border: Border.all(
-          color: problem == null ? BrandColors.cardLine : BrandColors.danger,
-        ),
-      ),
+      padding: const EdgeInsets.only(top: Spacing.formGap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Text(
             '${requirement.label} · $need',
-            style: s3Type(
-              13,
-              AppTypography.strong,
-              BrandColors.textPrimary,
-              height: 1.5,
-            ),
+            style: AppTypography.label.copyWith(color: BrandColors.text),
           ),
-          if (hint != null)
+          if (hint != null) ...<Widget>[
+            const SizedBox(height: Spacing.xxs),
             Text(
               hint,
-              style: s3Type(
-                12,
-                AppTypography.body,
-                BrandColors.textSecondary,
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
                 height: 1.5,
               ),
             ),
-          const SizedBox(height: 8),
+          ],
+          const SizedBox(height: Spacing.sm),
           if (file != null)
-            Row(
-              children: <Widget>[
-                TaytayIcon(
-                  icon: file.isImage ? TaytayIcons.image : TaytayIcons.fileText,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 18,
-                  color: BrandColors.success,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${file.isImage ? 'Photo' : 'PDF'} added · '
-                    '${file.readableSize}',
-                    style: s3Type(
-                      13,
-                      AppTypography.body,
-                      BrandColors.textPrimary,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  key: Key('issuance-remove-${requirement.code}'),
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(
-                      A11y.minTapTarget,
-                      A11y.minTapTarget,
-                    ),
-                  ),
-                  onPressed: onRemove,
-                  child: const Text('Remove'),
-                ),
-              ],
+            AttachedFileCard(
+              icon: file.isImage ? TaytayIcons.image : TaytayIcons.fileText,
+              title: requirement.label,
+              status:
+                  '${file.isImage ? 'Photo' : 'PDF'} added · '
+                  '${file.readableSize}',
+              actionLabel: 'Remove',
+              actionKey: Key('issuance-remove-${requirement.code}'),
+              onAction: onRemove,
             )
           else
-            AppButton(
+            UploadSlot(
               key: Key('issuance-add-${requirement.code}'),
               label: 'Add file',
-              variant: AppButtonVariant.secondary,
-              icon: Icons.add,
+              error: problem != null,
               onPressed: onAdd,
             ),
           if (problem != null) ...<Widget>[
-            const SizedBox(height: 6),
+            const SizedBox(height: Spacing.xs + Spacing.xxs),
             Semantics(
               liveRegion: true,
               child: Text(
                 problem,
-                style: s3Type(
-                  12,
-                  AppTypography.body,
-                  BrandColors.danger,
+                style: AppTypography.fieldHelp.copyWith(
+                  color: BrandColors.danger,
                   height: 1.5,
                 ),
               ),
