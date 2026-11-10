@@ -14,6 +14,7 @@ import '../../../shared/widgets/taytay_rows.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../../../shared/widgets/taytay_step_thread.dart';
 import '../../../shared/widgets/taytay_text_field.dart';
+import 'theme_gallery_section.dart';
 
 /// Every shared component, on the light theme, in a dev build only.
 ///
@@ -39,7 +40,9 @@ class ComponentGalleryScreen extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.only(bottom: Spacing.xxl),
           children: <Widget>[
-            const WovenHeader(),
+            // The woven painter fills a whole sign-in page; clipped here so it
+            // does not paint under the specimens below it.
+            const ClipRect(child: WovenHeader()),
             const Padding(
               padding: EdgeInsets.all(Spacing.lg),
               child: Column(
@@ -59,6 +62,8 @@ class ComponentGalleryScreen extends StatelessWidget {
               ),
             ),
             if (behavior != null) _MockSwitch(behavior: behavior!),
+            // The redesign's tokens and themed Material components.
+            const ThemeGallerySection(),
             const _Heading('Headers'),
             // The page's own back button is the route control. This specimen
             // shows the bar without a second one.

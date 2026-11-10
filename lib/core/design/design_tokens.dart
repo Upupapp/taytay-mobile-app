@@ -11,6 +11,14 @@ import 'package:flutter/painting.dart';
 /// These are *brand* colours. Screens read semantic roles from
 /// `Theme.of(context).colorScheme`, which is derived from these; a widget that
 /// hard-codes a value from here bypasses dark mode and high-contrast handling.
+///
+/// **The 2026-11 redesign.** The first block below is the redesign palette,
+/// named as `design/README.md` names it (blue, navy, gold, ink, text, muted…).
+/// The second block keeps the names feature code already uses and re-points
+/// each one at the redesign value nearest its old meaning, so every screen
+/// compiles and moves toward the new look before Phase 3 restyles it. New code
+/// uses the first block.
+///
 /// **A note on what these values are, and are not.**
 ///
 /// These are *application interface* colours chosen for this app. They are **not**
@@ -23,125 +31,216 @@ import 'package:flutter/painting.dart';
 /// If the LGU issues a brand manual, these values are reconciled against it in a
 /// deliberate change, and the source is cited at that point.
 abstract final class BrandColors {
-  /// Deep blue — the app's primary colour and the Material 3 seed.
-  ///
-  /// Chosen as a conventional Philippine civic blue that meets 4.5:1 against
-  /// white (see `brand_test.dart`). Continuous with the earlier Taytay prototype
-  /// so residents who saw it recognise this app.
-  static const Color taytayBlue = Color(0xFF0B3D91);
-  static const Color taytayBlueDark = Color(0xFF062358);
-  static const Color taytayBlueLight = Color(0xFF1E5BC6);
+  // ---------------------------------------------------------------------------
+  // Redesign palette (design/README.md, design-system.css).
+  // ---------------------------------------------------------------------------
 
-  /// Gold accent, in the family of the gold in the municipal seal. Accent only —
-  /// never a text colour on light surfaces, where it cannot reach 4.5:1.
-  static const Color sealGold = Color(0xFFFCD116);
+  /// Primary blue. The Material 3 seed and `ColorScheme.primary`.
+  static const Color blue = Color(0xFF0A2071);
 
-  /// Philippine flag red. Reserved for the national/emergency context; not a
-  /// generic error colour.
-  static const Color flagRed = Color(0xFFCE1126);
+  /// Deepest blue: the start of the header gradient, gold-button ink.
+  static const Color navy = Color(0xFF08124A);
 
-  /// Status colours, contrast-checked against their `on` pairs in the theme.
-  static const Color success = Color(0xFF0F7A4D);
-  static const Color warning = Color(0xFF8A5A00);
-  static const Color danger = Color(0xFFB3261E);
-  static const Color info = Color(0xFF1B5EA8);
+  /// Bright blue: the end of the header gradient and the sky tile.
+  static const Color sky = Color(0xFF2D54E0);
 
-  /// Light surfaces from the resident mockups. The page is [surface]; cards and
-  /// the welcome sheet sit on [surfaceMuted] or white.
-  static const Color surface = Color(0xFFF3F5FA);
-  static const Color surfaceMuted = Color(0xFFEAF0FB);
-  static const Color surfaceCard = Color(0xFFFFFFFF);
+  /// The lighter end of the sky icon tile.
+  static const Color skyLight = Color(0xFF5C7DF2);
 
-  /// Text greys. [textPrimary] is body and titles. [textSecondary] and
-  /// [textMuted] are supporting copy. All three clear 4.5:1 on [surface].
-  static const Color textPrimary = Color(0xFF0F1A33);
-  static const Color textSecondary = Color(0xFF55607A);
-  static const Color textMuted = Color(0xFF5B6680);
+  /// Gold. Accent and fill only — about 1.4:1 on white, never text on a light
+  /// surface.
+  static const Color gold = Color(0xFFF5DA18);
 
-  /// Gold darkened so it can be *text* on a light surface. [sealGold] stays
-  /// accent-only: it is about 1.6:1 on white. This value is the eyebrow gold
-  /// measured on the welcome and sign-in screens (5.6:1 on [surface]).
-  static const Color inkGold = Color(0xFF7A5E0C);
+  /// Gold dark enough to be text on a light surface (eyebrows, pill ink).
+  static const Color goldInk = Color(0xFF6B5A00);
 
-  /// Welcome body copy. CSS `.body` is `#46506A`.
-  static const Color welcomeCopy = Color(0xFF46506A);
+  /// Gold tint behind gold pills and notes.
+  static const Color gold50 = Color(0xFFFEF7CF);
 
-  /// The stitched thread. CSS stroke `#C9A227`.
+  /// Red. Error borders and the emergency context.
+  static const Color red = Color(0xFFE0090A);
+
+  /// Red dark enough for error text on light surfaces and on [red50].
+  static const Color redInk = Color(0xFFA30708);
+
+  /// Red tint behind red pills and notes.
+  static const Color red50 = Color(0xFFFDECEC);
+
+  /// Green. Success and "open".
+  static const Color green = Color(0xFF17663A);
+
+  /// Green tint behind green pills and notes.
+  static const Color green50 = Color(0xFFE4F4EA);
+
+  /// Soft blue: the soft secondary button and quiet chips.
+  static const Color blue50 = Color(0xFFECF1FC);
+
+  /// Pressed soft button; the selected bottom-navigation indicator.
+  static const Color blue100 = Color(0xFFDCE5FA);
+
+  /// Headings.
+  static const Color ink = Color(0xFF0E1733);
+
+  /// Body copy.
+  static const Color text = Color(0xFF2B3550);
+
+  /// Supporting copy, list details, timestamps.
+  static const Color muted = Color(0xFF5B6680);
+
+  /// Screen background behind soft cards.
+  static const Color background = Color(0xFFF4F6FA);
+
+  /// Glass screens' page colour, under the colour blobs.
+  static const Color glassBackground = Color(0xFFEEF2FA);
+
+  /// Filled text fields at rest.
+  static const Color softFill = Color(0xFFF2F4F8);
+
+  /// Filled text field under a pointer. CSS `.inp:hover`.
+  static const Color softFillHover = Color(0xFFECEFF5);
+
+  /// Quiet (unselected) chip fill. CSS `.soft .chip`.
+  static const Color chipFill = Color(0xFFEEF1F7);
+
+  /// Hairline between list rows.
+  static const Color divider = Color(0xFFEEF1F6);
+
+  /// Light structural line (foot bars, steppers).
+  static const Color line = Color(0xFFECEFF5);
+
+  /// Stronger line (unselected check cards on white).
+  static const Color line2 = Color(0xFFDCE2EC);
+
+  /// Header subtitle on the blue gradient. CSS `.tt .s`.
+  static const Color onHeaderMuted = Color(0xFFC3CDE6);
+
+  /// Lede copy on the blue gradient. CSS `.lede`, `.wtitle p`.
+  static const Color onHeaderLede = Color(0xFFD5DDF2);
+
+  /// Error field fill. CSS `.inp.err`.
+  static const Color errorFill = Color(0xFFFFF5F5);
+
+  /// Fully transparent. The resting border of a filled field.
+  static const Color transparent = Color(0x00000000);
+
+  static const Color white = Color(0xFFFFFFFF);
+
+  // ---------------------------------------------------------------------------
+  // Names feature code already uses, re-pointed at the redesign palette.
+  // ---------------------------------------------------------------------------
+
+  /// Re-pointed to [blue].
+  static const Color taytayBlue = blue;
+
+  /// Re-pointed to [navy].
+  static const Color taytayBlueDark = navy;
+
+  /// Re-pointed to [sky].
+  static const Color taytayBlueLight = sky;
+
+  /// Re-pointed to [gold]. Accent only — never a text colour on light
+  /// surfaces, where it cannot reach 4.5:1.
+  static const Color sealGold = gold;
+
+  /// Re-pointed to [red]. Reserved for the national/emergency context.
+  static const Color flagRed = red;
+
+  /// Status colours, contrast-checked against white in `brand_test.dart`.
+  static const Color success = green;
+  static const Color warning = goldInk;
+
+  /// The error role. [redInk] rather than [red] so error *text* clears 4.5:1
+  /// on white and on [red50]; error borders use [red].
+  static const Color danger = redInk;
+  static const Color info = blue;
+
+  /// The page is [surface]; cards sit on [surfaceCard].
+  static const Color surface = background;
+  static const Color surfaceMuted = blue50;
+  static const Color surfaceCard = white;
+
+  /// Headings and primary copy.
+  static const Color textPrimary = ink;
+
+  /// Supporting copy. Re-pointed to [muted].
+  static const Color textSecondary = muted;
+  static const Color textMuted = muted;
+
+  /// Re-pointed to [goldInk] (6.3:1 on [surface]).
+  static const Color inkGold = goldInk;
+
+  /// Welcome body copy. Re-pointed to [text].
+  static const Color welcomeCopy = text;
+
+  /// The stitched thread on the old welcome screen. Kept until Phase 3
+  /// rebuilds onboarding.
   static const Color threadGold = Color(0xFFC9A227);
 
-  /// Photo-credit chip ink. CSS `.cr` is `#5E5843`.
+  /// Photo-credit chip ink on the old welcome screen.
   static const Color creditInk = Color(0xFF5E5843);
 
-  /// Core of the travelling light. CSS `.speck` is `#FFF6C2`.
+  /// Core of the travelling light on the old welcome screen.
   static const Color speckCore = Color(0xFFFFF6C2);
 
-  /// Sign-in sheet body. CSS `.sub` is `#4a5470`.
-  static const Color sheetBody = Color(0xFF4A5470);
+  /// Sheet body copy. Re-pointed to [text].
+  static const Color sheetBody = text;
 
-  /// Field label. CSS `.f label` is `#3a4560`.
-  static const Color fieldLabel = Color(0xFF3A4560);
+  /// Field label. Re-pointed to [text] (CSS `.fld`).
+  static const Color fieldLabel = text;
 
-  /// Resting field fill and border. CSS `.in` is `#FBF8F0` / `#E3DCC6`.
-  static const Color fieldFill = Color(0xFFFBF8F0);
-  static const Color fieldBorder = Color(0xFFE3DCC6);
+  /// Field fill and resting border. A filled field has a transparent border.
+  static const Color fieldFill = softFill;
+  static const Color fieldBorder = transparent;
 
-  /// Error field fill. CSS `.in.bad` background is `#FFF7F7`.
-  static const Color fieldErrorFill = Color(0xFFFFF7F7);
+  /// Error field fill. Re-pointed to [errorFill].
+  static const Color fieldErrorFill = errorFill;
 
-  /// Placeholder ink. Polished from `#9aa0ad`.
-  static const Color fieldHint = Color(0xFF6B7186);
+  /// Placeholder ink. The mock-up's `#8A93A6` is 2.8:1 on [softFill]; [muted]
+  /// keeps a placeholder readable (5.2:1).
+  static const Color fieldHint = muted;
 
-  /// Card hairline. CSS `.card` border is `#E7EBF3`.
-  static const Color cardLine = Color(0xFFE7EBF3);
+  /// Card hairline. Re-pointed to [divider].
+  static const Color cardLine = divider;
 
-  /// List meta. Polished from `#6b7590`.
-  static const Color listMeta = Color(0xFF5A6480);
+  /// List meta. Re-pointed to [muted].
+  static const Color listMeta = muted;
 
-  /// Field value. CSS `.in` is `#1c2540`.
-  static const Color fieldInk = Color(0xFF1C2540);
+  /// Field value. Re-pointed to [ink].
+  static const Color fieldInk = ink;
 
-  /// Trailing chevron. Polished from `#9aa3b8`.
+  /// Trailing chevron. Kept at 3.6:1 on white: the mock-up's `#B4BCCB` is
+  /// below the 3:1 a meaningful graphic needs.
   static const Color chevron = Color(0xFF7D869C);
 
-  /// SAMPLE dashed stroke. CSS `.sample` border is `#E0A400`.
+  /// SAMPLE dashed stroke, dev gallery only.
   static const Color sampleBorder = Color(0xFFE0A400);
 
-  /// Dimmed issued card. CSS `.idc.dim` is 160° `#6E7C99 → #4A5674 → #333D55`.
+  /// Dimmed issued card, 160° `#6E7C99 → #4A5674 → #333D55`.
   static const Color cardDimStart = Color(0xFF6E7C99);
   static const Color cardDimMid = Color(0xFF4A5674);
   static const Color cardDimEnd = Color(0xFF333D55);
 
-  /// Dashed frame around the scannable code. CSS `.qr` border is `#9AA6BF`.
+  /// Dashed frame around the scannable code.
   static const Color qrFrame = Color(0xFF9AA6BF);
 
-  /// Status chip fills from `.bdg` / `.tag` in the mockup CSS.
-  static const Color chipAmberBg = Color(0xFFFFF4D6);
-  static const Color chipGreenBg = Color(0xFFE6F4EC);
-  static const Color chipRedBg = Color(0xFFFDECEC);
-  static const Color chipBlueBg = Color(0xFFEAF0FB);
-  static const Color chipGreyBg = Color(0xFFEEF1F6);
-  static const Color chipGoldBg = Color(0xFFFFF6CC);
+  /// Status chip fills, re-pointed to the redesign tints.
+  static const Color chipAmberBg = gold50;
+  static const Color chipGreenBg = green50;
+  static const Color chipRedBg = red50;
+  static const Color chipBlueBg = blue50;
+  static const Color chipGreyBg = chipFill;
+  static const Color chipGoldBg = gold50;
 }
 
-/// Soft shadows for surfaces that float. The colour is the brand navy at low
-/// opacity so a card does not cast a neutral grey that fights the palette.
-///
-/// Depth in Material 3 is still mostly surface tone ([Elevation]). These exist
-/// for the cards and the raised centre tab, where the mockups show a shadow.
+/// Shadows. **The redesign has none** ("no shadows or glows anywhere"): every
+/// list is empty, so old callers compile and paint flat. Do not add a value
+/// here; depth comes from surface colour, glass and the header shapes.
 abstract final class TaytayShadows {
-  static const List<BoxShadow> card = <BoxShadow>[
-    BoxShadow(color: Color(0x0D101828), blurRadius: 2, offset: Offset(0, 1)),
-    BoxShadow(color: Color(0x0A101828), blurRadius: 10, offset: Offset(0, 2)),
-  ];
+  static const List<BoxShadow> card = <BoxShadow>[];
 
-  static const List<BoxShadow> raised = <BoxShadow>[
-    BoxShadow(color: Color(0x24062358), blurRadius: 28, offset: Offset(0, 12)),
-  ];
+  static const List<BoxShadow> raised = <BoxShadow>[];
 
-  /// Issued card. CSS `.idc` is `0 8px 24px rgba(6,35,88,.28)`.
-  static const List<BoxShadow> digitalId = <BoxShadow>[
-    BoxShadow(color: Color(0x47062358), blurRadius: 24, offset: Offset(0, 8)),
-  ];
+  static const List<BoxShadow> digitalId = <BoxShadow>[];
 }
 
 /// Spacing scale, in logical pixels.
@@ -160,9 +259,21 @@ abstract final class Spacing {
 
   /// Default horizontal page padding.
   static const double screenGutter = lg;
+
+  /// Horizontal padding of form and onboarding screens (CSS `.obbody`).
+  static const double formGutter = 20;
+
+  /// Gap between form fields (CSS `.form`).
+  static const double formGap = 18;
+
+  /// Gap between stacked cards on a screen body (CSS `.body`).
+  static const double section = 14;
 }
 
 /// Corner radii.
+///
+/// The first block is the original scale, kept for callers. The second block
+/// is the redesign, named by what it rounds; new code uses those.
 abstract final class Radii {
   static const double xs = 4;
   static const double sm = 8;
@@ -170,7 +281,7 @@ abstract final class Radii {
   static const double lg = 16;
   static const double xl = 24;
 
-  /// Bottom sheets. The mockups sit between 22 and 28.
+  /// Bottom sheets: top corners.
   static const double sheet = 24;
   static const double sheetLarge = 28;
 
@@ -178,32 +289,106 @@ abstract final class Radii {
   static const double arch = 120;
 
   static const double pill = 999;
+
+  // Redesign (design/README.md "Radii and sizes").
+
+  /// Buttons.
+  static const double button = 16;
+
+  /// Filled text fields and search boxes.
+  static const double field = 14;
+
+  /// Soft cards and lists.
+  static const double card = 20;
+
+  /// Glass cards and boxed empty states.
+  static const double cardLarge = 22;
+
+  /// Icon tiles: 44 dp tile.
+  static const double tile = 14;
+
+  /// Icon tiles: 36 dp tile.
+  static const double tileSmall = 11;
+
+  /// Icon tiles: 56 dp tile.
+  static const double tileLarge = 17;
+
+  /// Bottom corners of the blue header.
+  static const double header = 28;
+
+  /// Centred dialogs.
+  static const double dialog = 22;
+
+  /// Notes (inset callouts, soft variant).
+  static const double note = 14;
+
+  /// Check cards (consent rows).
+  static const double check = 16;
 }
 
-/// Elevation steps, in Material 3 terms.
-///
-/// Material 3 expresses depth primarily through *surface tone*, not shadow, which
-/// is why these are levels rather than shadow definitions: `surfaceContainerLow`
-/// through `surfaceContainerHighest` already encode depth and stay legible in
-/// dark mode and high-contrast, where a hand-rolled shadow disappears.
-///
-/// A shadow is used only where a surface genuinely floats above scrolling
-/// content — a menu, a sheet, a dialog scrim edge.
+/// Component sizes from the redesign. A visual size, not a tap target: a 36 dp
+/// chip still reserves [A11y.minTapTarget] through the theme's padded tap
+/// target size.
+abstract final class ComponentSizes {
+  /// Primary and soft buttons.
+  static const double buttonHeight = 52;
+
+  /// Compact button (CSS `.btn.sm`).
+  static const double buttonHeightSmall = 44;
+
+  /// Filled text fields.
+  static const double fieldHeight = 54;
+
+  /// Chips and filter pills (CSS `.soft .chip`).
+  static const double chipHeight = 36;
+
+  /// Icon tiles.
+  static const double tile = 44;
+  static const double tileSmall = 36;
+  static const double tileLarge = 56;
+
+  /// Round icon buttons on the header (bell, back, search).
+  static const double headerIconButton = 44;
+
+  /// Initials avatar on the header.
+  static const double avatar = 44;
+
+  /// Seal on the header.
+  static const double seal = 38;
+
+  /// Minimum list row height (CSS `.li`).
+  static const double listRow = 64;
+
+  /// Bottom navigation bar, without the safe-area inset.
+  static const double navigationBar = 80;
+
+  /// Selected-destination indicator (CSS `.tab .ind`).
+  static const Size navigationIndicator = Size(56, 30);
+}
+
+/// Focus treatment for filled fields and search boxes: white fill, a 1.5 px
+/// blue border and a 3 px ring of blue at 14% outside it (CSS `.inp:focus`).
+/// A ring is not a shadow: it is the visible focus indicator and must stay.
+abstract final class FocusRing {
+  static const double borderWidth = 1.5;
+  static const double ringWidth = 3;
+
+  /// [BrandColors.blue] at 14%.
+  static const Color ring = Color(0x240A2071);
+
+  /// [BrandColors.red] at 16%, for a focused field in error.
+  static const Color errorRing = Color(0x29E0090A);
+}
+
+/// Elevation steps. **The redesign is flat**: every step is 0, so no Material
+/// surface casts a shadow or picks up an elevation tint. The names stay so
+/// callers compile.
 abstract final class Elevation {
-  /// Flat against the background. Cards, list rows.
   static const double none = 0;
-
-  /// Raised just enough to separate from content that scrolls under it.
-  static const double raised = 1;
-
-  /// App bar once content has scrolled beneath it.
-  static const double scrolledUnder = 3;
-
-  /// Menus, bottom sheets.
-  static const double floating = 6;
-
-  /// Dialogs — the only thing above everything else.
-  static const double dialog = 8;
+  static const double raised = 0;
+  static const double scrolledUnder = 0;
+  static const double floating = 0;
+  static const double dialog = 0;
 }
 
 /// Opacity steps.

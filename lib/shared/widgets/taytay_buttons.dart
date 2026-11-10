@@ -18,7 +18,6 @@ class _TaytayButton extends StatelessWidget {
     required this.background,
     required this.foreground,
     required this.kind,
-    this.borderColor,
     this.icon,
     this.expand = true,
     this.shadows,
@@ -29,7 +28,6 @@ class _TaytayButton extends StatelessWidget {
   final Color background;
   final Color foreground;
   final TaytayButtonKind kind;
-  final Color? borderColor;
   final TaytayIcon? icon;
   final bool expand;
   final List<BoxShadow>? shadows;
@@ -42,12 +40,7 @@ class _TaytayButton extends StatelessWidget {
       color: onPressed == null
           ? background.withValues(alpha: Opacities.disabled)
           : background,
-      shape: RoundedRectangleBorder(
-        borderRadius: radius,
-        side: borderColor == null
-            ? BorderSide.none
-            : BorderSide(color: borderColor!, width: metrics.borderWidth),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: radius),
       child: InkWell(
         borderRadius: radius,
         onTap: onPressed == null
@@ -133,7 +126,8 @@ class PrimaryButton extends StatelessWidget {
   }
 }
 
-/// An alternative action. Navy outline, navy label, light fill.
+/// An alternative action: the redesign's soft secondary, blue label on a
+/// blue-50 fill, no border.
 class SecondaryButton extends StatelessWidget {
   const SecondaryButton({
     required this.label,
@@ -156,9 +150,8 @@ class SecondaryButton extends StatelessWidget {
       label: label,
       onPressed: onPressed,
       kind: kind,
-      background: BrandColors.surfaceCard,
-      foreground: BrandColors.taytayBlue,
-      borderColor: BrandColors.taytayBlue,
+      background: BrandColors.blue50,
+      foreground: BrandColors.blue,
       icon: icon,
       expand: expand,
     );

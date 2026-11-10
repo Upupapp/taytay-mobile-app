@@ -145,7 +145,11 @@ void main() {
     expect(S8Space.line(20), 25);
   });
 
-  testWidgets('08 DOM boxes', (WidgetTester tester) async {
+  // Redesign Phase 1: these boxes are the old Account mock-up's DOM, and the
+  // re-pointed type scale moves them (the SAMPLE chip is now 11.5 / 700).
+  // Phase 3 #6 rebuilds Account against design/mobile/screens/Account and
+  // replaces this with that screen's boxes. Skipped until then.
+  testWidgets('08 DOM boxes', skip: true, (WidgetTester tester) async {
     await _pump(tester, const AccountCanvas(frame: AccountFrame.home));
     _expectBox(
       tester,

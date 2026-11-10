@@ -68,3 +68,7 @@ app.*.map.json
 
 # Local design PNGs for golden comparison. Not shipped.
 /design-refs/
+
+# Redesign hand-off pack (design/README.md, mock-ups). Reference only; Phase 5 copies
+# what stays into docs/design/.
+/design/

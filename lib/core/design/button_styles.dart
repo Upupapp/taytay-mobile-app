@@ -1,23 +1,21 @@
-import 'package:flutter/painting.dart';
+import 'package:flutter/material.dart';
 
 import 'design_tokens.dart';
 import 'typography.dart';
 
-/// Which CSS button the control follows.
+/// Which old CSS button the control followed.
 ///
-/// Sign-in, welcome and in-app buttons do not share a size or a radius.
-/// One style for all three was a compromise the mockups do not make.
+/// The redesign has one button: 52 high, radius 16, 14 / 600, no shadow. The
+/// three kinds stay so callers compile; all three now resolve to the same
+/// metrics, and Phase 3 drops the argument screen by screen.
 enum TaytayButtonKind {
-  /// gen.py `.btn`: 16 / 800, pill, height 50. Primary shadow
-  /// `0 8px 20px rgba(11,61,145,.28)`. Secondary inset 1.6 px.
+  /// Formerly the sign-in pill. Now the redesign button.
   signIn,
 
-  /// gen1.py `.fin`: 16 / 800, pill, height 52. Primary shadow
-  /// `0 10px 22px rgba(11,61,145,.3)`. Secondary inset 1.6 px.
+  /// Formerly the welcome pill. Now the redesign button.
   welcome,
 
-  /// The later `.btn`: 15 / 800, radius 12, height 48. Primary has no
-  /// shadow. Secondary inset 1.5 px.
+  /// The in-app button. The redesign button.
   inApp,
 }
 
@@ -35,42 +33,81 @@ class TaytayButtonMetrics {
   final double radius;
   final TextStyle label;
   final double borderWidth;
+
+  /// Always null: the redesign has no shadows. Kept so callers compile.
   final List<BoxShadow>? primaryShadow;
 
-  static const TaytayButtonMetrics signIn = TaytayButtonMetrics(
-    height: 50,
-    radius: Radii.pill,
-    label: AppTypography.buttonSignIn,
-    borderWidth: 1.6,
-    primaryShadow: <BoxShadow>[
-      BoxShadow(color: Color(0x470B3D91), blurRadius: 20, offset: Offset(0, 8)),
-    ],
-  );
-
-  static const TaytayButtonMetrics welcome = TaytayButtonMetrics(
-    height: 52,
-    radius: Radii.pill,
-    label: AppTypography.buttonWelcome,
-    borderWidth: 1.6,
-    primaryShadow: <BoxShadow>[
-      BoxShadow(
-        color: Color(0x4C0B3D91),
-        blurRadius: 22,
-        offset: Offset(0, 10),
-      ),
-    ],
-  );
-
-  static const TaytayButtonMetrics inApp = TaytayButtonMetrics(
-    height: 48,
-    radius: Radii.md,
+  /// The redesign button (design/README.md "Radii and sizes").
+  static const TaytayButtonMetrics redesign = TaytayButtonMetrics(
+    height: ComponentSizes.buttonHeight,
+    radius: Radii.button,
     label: AppTypography.button,
     borderWidth: 1.5,
   );
+
+  static const TaytayButtonMetrics signIn = redesign;
+
+  static const TaytayButtonMetrics welcome = redesign;
+
+  static const TaytayButtonMetrics inApp = redesign;
 
   static TaytayButtonMetrics of(TaytayButtonKind kind) => switch (kind) {
     TaytayButtonKind.signIn => signIn,
     TaytayButtonKind.welcome => welcome,
     TaytayButtonKind.inApp => inApp,
   };
+}
+
+/// Button styles for Material buttons that are not the theme's default.
+///
+/// The theme already makes [FilledButton] the primary, and
+/// [FilledButton.tonal] and [OutlinedButton] the soft secondary. These are
+/// for a [FilledButton] that must look like one of the others (gold), or a
+/// compact one.
+abstract final class TaytayButtonStyles {
+  static final OutlinedBorder _shape = RoundedRectangleBorder(
+    borderRadius: BorderRadius.circular(Radii.button),
+  );
+
+  /// Soft secondary: blue-50 fill, blue label, blue-100 when pressed.
+  static ButtonStyle soft() => FilledButton.styleFrom(
+    backgroundColor: BrandColors.blue50,
+    foregroundColor: BrandColors.blue,
+    disabledBackgroundColor: BrandColors.chipFill,
+    disabledForegroundColor: BrandColors.muted,
+    minimumSize: const Size(64, ComponentSizes.buttonHeight),
+    shape: _shape,
+    elevation: 0,
+    shadowColor: BrandColors.transparent,
+    textStyle: AppTypography.button,
+  ).copyWith(overlayColor: _pressed(BrandColors.blue100));
+
+  /// Gold: gold fill, navy label (CSS `.btn.gold`).
+  static ButtonStyle gold() => FilledButton.styleFrom(
+    backgroundColor: BrandColors.gold,
+    foregroundColor: BrandColors.navy,
+    minimumSize: const Size(64, ComponentSizes.buttonHeight),
+    shape: _shape,
+    elevation: 0,
+    shadowColor: BrandColors.transparent,
+    textStyle: AppTypography.button,
+  );
+
+  /// Compact: 44 high, 13.5 / 600 (CSS `.btn.sm`). Merge over another style.
+  static ButtonStyle compact() => FilledButton.styleFrom(
+    minimumSize: const Size(64, ComponentSizes.buttonHeightSmall),
+    textStyle: AppTypography.sbtn,
+  );
+
+  /// A pressed/hovered/focused layer that *replaces* the fill rather than
+  /// tinting it: CSS moves blue-50 to blue-100 on hover.
+  static WidgetStateProperty<Color?> _pressed(Color color) =>
+      WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> states) {
+        if (states.contains(WidgetState.pressed) ||
+            states.contains(WidgetState.hovered) ||
+            states.contains(WidgetState.focused)) {
+          return color;
+        }
+        return null;
+      });
 }

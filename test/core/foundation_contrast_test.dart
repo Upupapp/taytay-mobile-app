@@ -24,17 +24,12 @@ void main() {
   });
 
   test('white and seal gold clear the navy header, including the glow', () {
-    for (final gradient in <BrandGradient>[
+    for (final BrandGradient gradient in <BrandGradient>[
       BrandGradients.inAppHeader,
       BrandGradients.woven,
     ]) {
       expect(gradient.worstCaseContrastRatio(), greaterThanOrEqualTo(4.5));
       for (final stop in gradient.colors) {
-        expect(
-          contrastRatio(BrandColors.sealGold, stop),
-          greaterThanOrEqualTo(4.5),
-          reason: gradient.name,
-        );
         expect(
           contrastRatio(Colors.white, WovenGoldGlow.blendOver(stop)),
           greaterThanOrEqualTo(4.5),
@@ -42,6 +37,34 @@ void main() {
         );
       }
     }
+    // Gold *text* sits on the navy half: the woven field's eyebrows, and the
+    // redesign header's brand line at its top-left. 4.5:1 there.
+    for (final stop in BrandGradients.woven.colors) {
+      expect(
+        contrastRatio(BrandColors.sealGold, stop),
+        greaterThanOrEqualTo(4.5),
+        reason: 'woven',
+      );
+    }
+    for (final stop in <Color>[BrandColors.navy, BrandColors.blue]) {
+      expect(
+        contrastRatio(BrandColors.sealGold, stop),
+        greaterThanOrEqualTo(4.5),
+        reason: 'header, navy half',
+      );
+    }
+    // Redesign: the header now runs out to sky (#2D54E0), where gold is 4.3:1.
+    // Gold there is a fill or accent (avatar, progress bar, the 16% circle),
+    // never text, so it is held to the 3:1 of a meaningful graphic.
+    const BrandGradient goldOnHeader = BrandGradient(
+      name: 'goldOnHeader',
+      colors: <Color>[BrandColors.navy, BrandColors.blue, BrandColors.sky],
+      onColor: BrandColors.sealGold,
+    );
+    expect(
+      goldOnHeader.worstCaseContrastRatio(),
+      greaterThanOrEqualTo(A11y.minLargeTextContrastRatio),
+    );
   });
 
   test('the gold button label clears the gold fill', () {
