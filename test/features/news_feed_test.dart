@@ -631,10 +631,13 @@ void main() {
         ),
       );
 
+      // Redesign P3b: Balita.dc.html puts the date on its own line (`.dt`)
+      // under the title; the eyebrow keeps the category and the office.
       expect(
-        find.text('COMMUNITY · Taytay Public Information Office · 10 Aug 2026'),
+        find.text('COMMUNITY · Taytay Public Information Office'),
         findsOneWidget,
       );
+      expect(find.text('10 Aug 2026'), findsOneWidget);
     });
 
     testWidgets('the list does not invent an end-of-feed sentence', (

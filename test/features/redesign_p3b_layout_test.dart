@@ -1,9 +1,12 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
 import 'package:taytay_resident/features/home/presentation/hotlines_screen.dart';
+import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
+import 'package:taytay_resident/features/news/presentation/balita_canvas.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
 import 'package:taytay_resident/shared/widgets/feed_row.dart';
 import 'package:taytay_resident/shared/widgets/surface_cards.dart';
@@ -106,6 +109,83 @@ void main() {
     });
   });
 
+  group('news', () {
+    testWidgets('every Balita list frame lays out cleanly', (tester) async {
+      for (final BalitaFrame frame in <BalitaFrame>[
+        BalitaFrame.feed,
+        BalitaFrame.loading,
+        BalitaFrame.failed,
+        BalitaFrame.emptyFeed,
+      ]) {
+        await expectCleanLayouts(
+          tester,
+          () => BalitaCanvas(
+            frame: frame,
+            articles: _articles,
+            onShare: (_) {},
+            onArticle: (_) {},
+            onRetry: () {},
+          ),
+          height: 1200,
+          scrollable: false,
+        );
+      }
+      await expectCleanLayouts(
+        tester,
+        () => BalitaCanvas(
+          frame: BalitaFrame.emptyCategory,
+          selectedChip: 'Events',
+          onSeeAll: () {},
+        ),
+        scrollable: false,
+      );
+      await expectCleanLayouts(
+        tester,
+        () => BalitaCanvas(
+          frame: BalitaFrame.filter,
+          selectedChip: 'Advisory',
+          articles: _articles,
+        ),
+        height: 1200,
+        scrollable: false,
+      );
+    });
+
+    testWidgets('the article page lays out cleanly with and without a photo', (
+      tester,
+    ) async {
+      for (final Announcement article in _articles) {
+        await expectCleanLayouts(
+          tester,
+          () => BalitaCanvas(frame: BalitaFrame.article, article: article),
+          height: 1200,
+          scrollable: false,
+        );
+      }
+    });
+
+    testWidgets('Balita draws no featured story and keeps share', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        layoutHost(
+          BalitaCanvas(
+            frame: BalitaFrame.feed,
+            articles: _articles,
+            onShare: (_) {},
+          ),
+          scrollable: false,
+        ),
+      );
+      expect(find.byType(GlassBackground), findsOneWidget);
+      expect(find.byType(PageView), findsNothing);
+      expect(find.text('Pinned advisory'), findsOneWidget);
+      for (final Announcement article in _articles) {
+        expect(find.byKey(Key('balita-share-${article.id}')), findsOneWidget);
+      }
+    });
+  });
+
   test('restyled screens use tokens: no raw colours, sizes or shadows', () {
     final List<String> offenders = <String>[];
     for (final String path in _restyled) {
@@ -128,6 +208,9 @@ const List<String> _restyled = <String>[
   'lib/features/home/presentation/home_canvas.dart',
   'lib/features/home/presentation/home_screen.dart',
   'lib/features/home/presentation/hotlines_screen.dart',
+  'lib/features/news/presentation/balita_canvas.dart',
+  'lib/features/news/presentation/news_screen.dart',
+  'lib/features/news/presentation/news_post_screen.dart',
 ];
 
 const List<HomeSlide> _slides = <HomeSlide>[
@@ -179,3 +262,31 @@ const HomeHotline _barangay = HomeHotline(
   number: '0900-000-0001',
   category: 'barangay',
 );
+
+final List<Announcement> _articles = <Announcement>[
+  Announcement(
+    id: 'a1',
+    title: 'A synthetic notice title that runs long enough to wrap twice',
+    body: 'A synthetic body for the layout check.',
+    category: 'Advisory',
+    author: 'Synthetic Office With A Long Name',
+    publishedAt: DateTime.utc(2026, 7, 1),
+    isPinned: true,
+    presentation: const BalitaPresentation(
+      coverAsset: 'assets/photos/municipal_hall.jpg',
+      listCover: true,
+      photoCredit: 'Photo: synthetic credit line',
+      facts: <BalitaFact>[
+        BalitaFact(label: 'Where', value: 'A synthetic hall', icon: 'map-pin'),
+      ],
+      footer: 'A synthetic footer line.',
+    ),
+  ),
+  Announcement(
+    id: 'a2',
+    title: 'A second synthetic notice',
+    body: 'A second synthetic body.',
+    category: 'Safety',
+    publishedAt: DateTime.utc(2026, 6, 1),
+  ),
+];

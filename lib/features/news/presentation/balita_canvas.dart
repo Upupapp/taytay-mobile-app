@@ -2,15 +2,25 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/feed_row.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/taytay_glyph.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/announcement_repository.dart';
 
 /// Which Balita frame the canvas is painting.
@@ -46,10 +56,11 @@ class BalitaChip {
   ];
 }
 
-/// The Balita list, filters, and article page.
+/// The Balita list (design `Balita.dc.html`) and the article page, which
+/// follows the Office detail pattern (photo, white sheet, pill actions).
 ///
-/// The shell paints the tab bar, including the raised centre disc. This
-/// canvas is the page above that bar.
+/// The shell paints the tab bar. Balita is read-only: a resident reads and
+/// shares; nothing here publishes, reacts or comments.
 class BalitaCanvas extends StatelessWidget {
   const BalitaCanvas({
     required this.frame,
@@ -86,305 +97,265 @@ class BalitaCanvas extends StatelessWidget {
   /// `GET /news/{id}/cover`. Null on a dev mock, where covers are assets.
   final MediaBytesLoader? loadCover;
 
-  static const Color _pageTop = Color(0xFFEAF0FB);
-
   @override
   Widget build(BuildContext context) {
-    return DefaultTextStyle(
-      style: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        color: BrandColors.textPrimary,
-        decoration: TextDecoration.none,
-      ),
-      // CSS line-height keeps half the extra leading above the first line
-      // and below the last. Material's default trims both, which pulls
-      // every following run up.
-      textHeightBehavior: _cssHalfLeading,
-      child: ColoredBox(
-        color: BrandColors.surface,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[_pageTop, BrandColors.surface],
-              stops: <double>[0, 260 / 844],
+    if (frame == BalitaFrame.article) {
+      return _ArticlePage(
+        article: article,
+        loadCover: loadCover,
+        onBack: onBack,
+      );
+    }
+    final bool all = selectedChip == BalitaChip.all.label;
+    return GlassBackground(
+      child: ListView(
+        controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
+        children: <Widget>[
+          BlueHeader(
+            overlap: true,
+            leading: const HeaderSeal(),
+            title: all
+                ? 'Balita'
+                : (selectedChip == 'Advisory' ? 'Advisories' : selectedChip),
+            subtitle: all ? 'Bayan ng Taytay · Rizal' : 'Balita · filtered',
+            actions: <Widget>[
+              HeaderIconButton(
+                key: const Key('balita-bell'),
+                icon: TaytayIcons.bell,
+                semanticLabel: 'Notifications',
+                onPressed: onBell,
+              ),
+            ],
+            bottom: _Chips(
+              chips: chips,
+              selected: frame == BalitaFrame.loading
+                  ? BalitaChip.all.label
+                  : selectedChip,
+              onChip: onChip,
             ),
           ),
-          child: Column(
-            children: <Widget>[
-              _header(),
-              Expanded(child: _fade(_body(context))),
-            ],
+          GlassOverlap(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+              child: AnimatedSwitcher(
+                duration: Motion.decorative(context, MotionTokens.standard),
+                switchInCurve: MotionTokens.enterEase,
+                switchOutCurve: MotionTokens.exitEase,
+                layoutBuilder: (Widget? current, List<Widget> previous) =>
+                    Stack(
+                      alignment: Alignment.topCenter,
+                      children: <Widget>[...previous, ?current],
+                    ),
+                child: KeyedSubtree(
+                  key: ValueKey<String>('${frame.name}-$selectedChip'),
+                  child: _body(),
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _header() {
+  Widget _body() {
     return switch (frame) {
-      BalitaFrame.filter || BalitaFrame.emptyCategory => MunicipalHeader(
-        title: selectedChip == 'Advisory' ? 'Advisories' : selectedChip,
-        subtitle: 'Balita · filtered',
-        onBack: onBack,
-        plainSeal: true,
+      BalitaFrame.loading => const LoadingSkeleton(
+        layout: SkeletonLayout.feed,
+        count: 4,
+        semanticLabel: 'Loading Balita',
       ),
-      BalitaFrame.article => MunicipalHeader(
-        title: 'Balita',
-        subtitle: 'Bayan ng Taytay · Rizal',
-        onBack: onBack,
-        plainSeal: true,
-      ),
-      _ => _ListHeader(onBell: onBell),
-    };
-  }
-
-  Widget _body(BuildContext context) {
-    final Widget body = switch (frame) {
-      BalitaFrame.loading => _LoadingBody(chips: chips),
-      BalitaFrame.failed => _MessageBody(
-        chips: chips,
+      BalitaFrame.failed => ErrorState(
         title: 'Announcements are not available right now',
         message:
             'We could not reach Taytay LGU. Check your connection and try '
             'again. Municipal notices are also posted at the municipal hall '
             'and barangay halls.',
-        action: 'Try again',
-        onAction: onRetry,
+        onRetry: onRetry,
+        offline: true,
+        boxed: true,
       ),
-      BalitaFrame.emptyFeed => _MessageBody(
-        chips: chips,
+      BalitaFrame.emptyFeed => const EmptyState(
         title: 'Nothing new right now',
         message: 'New Taytay LGU announcements will appear here.',
+        boxed: true,
       ),
       BalitaFrame.emptyCategory => _EmptyCategory(
-        chips: chips,
         chip: selectedChip,
-        onChip: onChip,
         onSeeAll: onSeeAll,
       ),
-      BalitaFrame.article when article != null => _ArticleBody(
-        article: article!,
-        loadCover: loadCover,
-      ),
-      BalitaFrame.feed || BalitaFrame.filter => _FeedBody(
-        chips: chips,
+      _ => _Feed(
         articles: articles,
-        selectedChip: selectedChip,
         showBanner:
             frame == BalitaFrame.filter ||
             articles.any((Announcement article) => article.isPinned),
-        onChip: onChip,
         onArticle: onArticle,
         onShare: onShare,
-        scrollController: scrollController,
         loadCover: loadCover,
       ),
-      _ => const SizedBox.shrink(),
     };
-    return AnimatedSwitcher(
-      duration: Motion.decorative(context, MotionTokens.standard),
-      switchInCurve: MotionTokens.enterEase,
-      switchOutCurve: MotionTokens.exitEase,
-      child: KeyedSubtree(
-        key: ValueKey<String>('${frame.name}-$selectedChip'),
-        child: body,
+  }
+}
+
+/// Header chips (`.chip.bar` / `.chip.onbar`), scrolling sideways.
+class _Chips extends StatelessWidget {
+  const _Chips({required this.chips, required this.selected, this.onChip});
+
+  final List<BalitaChip> chips;
+  final String selected;
+  final ValueChanged<BalitaChip>? onChip;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: 'Filter Balita',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        child: Row(
+          children: <Widget>[
+            for (var i = 0; i < chips.length; i++) ...<Widget>[
+              if (i > 0) const SizedBox(width: Spacing.sm),
+              _Chip(
+                chip: chips[i],
+                on: chips[i].label == selected,
+                onTap: onChip == null ? null : () => onChip?.call(chips[i]),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  /// Last 28 dp dissolve into the page colour.
-  ///
-  /// A [ShaderMask] here repainted the last card's line in the fade, which
-  /// the designs do not have. An overlay matches the CSS mask on this
-  /// background without a second copy of the glyphs.
-  Widget _fade(Widget child) {
-    return Stack(
-      children: <Widget>[
-        child,
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 28,
-          child: IgnorePointer(
-            child: DecoratedBox(
+class _Chip extends StatelessWidget {
+  const _Chip({required this.chip, required this.on, this.onTap});
+
+  final BalitaChip chip;
+  final bool on;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: on,
+      label: chip.label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        key: Key('balita-chip-${chip.label}'),
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: ComponentSizes.chipHeight,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: Spacing.xs,
+              ),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0x00F3F5FA), BrandColors.surface],
+                color: on ? BrandColors.white : BrandColors.transparent,
+                borderRadius: BorderRadius.circular(Radii.pill),
+                border: Border.all(
+                  color: on
+                      ? BrandColors.white
+                      : BrandColors.white.withValues(alpha: 0.4),
+                  width: FocusRing.borderWidth,
+                ),
+              ),
+              child: Text(
+                chip.label,
+                maxLines: 1,
+                style: AppTypography.chip.copyWith(
+                  color: on ? BrandColors.blue : BrandColors.white,
                 ),
               ),
             ),
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _ListHeader extends StatelessWidget {
-  const _ListHeader({this.onBell});
-
-  final VoidCallback? onBell;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 46, 16, 14),
-        child: Row(
-          children: <Widget>[
-            const _HeaderSeal(),
-            const SizedBox(width: 11),
-            const Expanded(
-              child: MunicipalHeaderTitles(
-                title: 'Balita',
-                subtitle: 'Municipal news',
-              ),
-            ),
-            const SizedBox(width: 11),
-            _Bell(onTap: onBell),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _HeaderSeal extends StatelessWidget {
-  const _HeaderSeal();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/brand/taytay_seal.png',
-          fit: BoxFit.contain,
-          semanticLabel: 'Seal of Taytay, Rizal',
-        ),
-      ),
-    );
-  }
-}
-
-class _Bell extends StatelessWidget {
-  const _Bell({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: const Key('balita-bell'),
-      label: 'Notifications',
-      width: 44,
-      height: 44,
-      onTap: onTap,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          shape: BoxShape.circle,
-        ),
-        child: const Stack(
-          children: <Widget>[
-            Center(
-              child: TaytayIcon(
-                icon: TaytayIcons.bell,
-                size: 19,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-            ),
-            Positioned(
-              top: 6,
-              right: 7,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: BrandColors.sealGold,
-                  shape: BoxShape.circle,
-                  border: Border.fromBorderSide(
-                    BorderSide(color: BrandColors.taytayBlue, width: 1.5),
-                  ),
-                ),
-                child: SizedBox(width: 8, height: 8),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FeedBody extends StatelessWidget {
-  const _FeedBody({
-    required this.chips,
+class _Feed extends StatelessWidget {
+  const _Feed({
     required this.articles,
-    required this.selectedChip,
     required this.showBanner,
-    this.onChip,
     this.onArticle,
     this.onShare,
-    this.scrollController,
     this.loadCover,
   });
 
-  final List<BalitaChip> chips;
   final List<Announcement> articles;
-  final String selectedChip;
   final bool showBanner;
-  final ValueChanged<BalitaChip>? onChip;
   final ValueChanged<Announcement>? onArticle;
   final ValueChanged<Announcement>? onShare;
-  final ScrollController? scrollController;
   final MediaBytesLoader? loadCover;
 
   @override
   Widget build(BuildContext context) {
     final Announcement? banner = _bannerOf(articles, showBanner);
-    return ListView(
-      controller: scrollController,
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    // The design's featured carousel needs a `featured` flag the feed does
+    // not send. It is not drawn, and no post is promoted in its place.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(chips: chips, selected: selectedChip, onChip: onChip),
-        ),
         if (banner != null) ...<Widget>[
-          _PinnedBanner(article: banner),
-          const SizedBox(height: 12),
-        ],
-        for (var i = 0; i < articles.length; i++) ...<Widget>[
-          _StoryCard(
-            article: articles[i],
-            loadCover: loadCover,
-            onOpen: onArticle == null ? null : () => onArticle!(articles[i]),
-            onShare: onShare == null ? null : () => onShare!(articles[i]),
+          _PinnedCard(
+            article: banner,
+            onOpen: onArticle == null ? null : () => onArticle?.call(banner),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: Spacing.section),
         ],
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.xs,
+            Spacing.xxs,
+            Spacing.xs,
+            Spacing.sm,
+          ),
+          child: Semantics(
+            header: true,
+            child: Text(
+              'Latest Balita',
+              style: AppTypography.sectionTitle.copyWith(
+                fontWeight: AppTypography.strong,
+                color: BrandColors.ink,
+              ),
+            ),
+          ),
+        ),
+        GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (var i = 0; i < articles.length; i++)
+                _StoryRow(
+                  article: articles[i],
+                  divider: i > 0,
+                  loadCover: loadCover,
+                  onOpen: onArticle == null
+                      ? null
+                      : () => onArticle?.call(articles[i]),
+                  onShare: onShare == null
+                      ? null
+                      : () => onShare?.call(articles[i]),
+                ),
+            ],
+          ),
+        ),
       ],
     );
   }
@@ -400,192 +371,123 @@ Announcement? _bannerOf(List<Announcement> articles, bool showBanner) {
   return null;
 }
 
-class _Chips extends StatelessWidget {
-  const _Chips({required this.chips, required this.selected, this.onChip});
-
-  final List<BalitaChip> chips;
-  final String selected;
-  final ValueChanged<BalitaChip>? onChip;
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 7,
-      runSpacing: 7,
-      children: <Widget>[
-        for (final BalitaChip chip in chips)
-          _Hit(
-            hitKey: Key('balita-chip-${chip.label}'),
-            label: chip.label,
-            height: 36,
-            onTap: onChip == null ? null : () => onChip!(chip),
-            child: _Chip(label: chip.label, on: chip.label == selected),
-          ),
-      ],
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.on});
-
-  final String label;
-  final bool on;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: on ? BrandColors.taytayBlue : Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: on ? BrandColors.taytayBlue : const Color(0xFFE1E6F0),
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: SizedBox(
-          height: 36,
-          child: Align(
-            alignment: Alignment.center,
-            widthFactor: 1,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: on ? Colors.white : const Color(0xFF33405C),
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StoryCard extends StatelessWidget {
-  const _StoryCard({
+/// `.row`: eyebrow, title, date, and the 76 px cover (or a sky tile).
+class _StoryRow extends StatelessWidget {
+  const _StoryRow({
     required this.article,
+    required this.divider,
     this.onOpen,
     this.onShare,
     this.loadCover,
   });
 
   final Announcement article;
+  final bool divider;
   final VoidCallback? onOpen;
   final VoidCallback? onShare;
   final MediaBytesLoader? loadCover;
 
   @override
   Widget build(BuildContext context) {
-    final BalitaPresentation? presentation = article.presentation;
-    final bool sample = presentation?.sample == true;
-    final String? asset = presentation?.listCover == true
-        ? presentation?.coverAsset
-        : null;
-    final bool remote = asset == null && _hasRemoteCover(article);
-    return Opacity(
-      opacity: sample ? 0.9 : 1,
-      child: _Hit(
-        hitKey: Key('balita-article-${article.id}'),
-        label: article.title,
-        onTap: onOpen,
-        child: Container(
-          decoration: _card,
-          // Photo cards and the skeleton use 16 dp. A text card's first
-          // line is on the specimen at a 15 dp top inset; 16 dp puts it
-          // 3 px low. The bottom inset is 16 dp.
-          padding: asset != null
-              ? _cardPadding
-              : const EdgeInsets.fromLTRB(16, 15, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (asset != null) ...<Widget>[
-                _Cover(
-                  asset: asset,
-                  height: 150,
-                  radius: 12,
-                  label: presentation?.photoCredit ?? article.title,
-                  darken: false,
+    final String date = _listDate(article);
+    final Widget row = Padding(
+      padding: const EdgeInsets.only(top: 14, bottom: Spacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                _Eyebrow(article: article),
+                const SizedBox(height: Spacing.xs),
+                Text(
+                  article.title,
+                  style: AppTypography.listTitle.copyWith(
+                    fontWeight: AppTypography.strong,
+                    color: BrandColors.ink,
+                  ),
                 ),
-                const SizedBox(height: 10),
-              ] else if (remote)
-                _RemoteCover(
-                  id: article.id,
-                  height: 150,
-                  radius: 12,
-                  label: presentation?.photoCredit ?? article.title,
-                  reserve: _reservesCover(article),
-                  gap: 10,
-                  load: loadCover,
-                ),
-              Row(
-                // Sample rows centre the tile on the copy. The other
-                // cards pin it to the top, matching the specimens.
-                crossAxisAlignment: sample
-                    ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (asset == null) ...<Widget>[
-                    _Tile(
-                      icon: _tileIcon(article),
-                      background: _tileBackground(article),
-                      color: _ink(article),
-                    ),
-                    const SizedBox(width: 12),
-                  ],
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        _Eyebrow(article: article),
-                        // Story cards set margin-top 3 on `.lt`. The sample
-                        // card's title does not.
-                        SizedBox(height: sample ? 0 : 3),
-                        if (asset != null)
-                          _CssLines(article.title, style: _storyTitle)
-                        else
-                          Text(article.title, style: _storyTitle),
-                        const SizedBox(height: 4),
-                        Text(article.preview, style: _storySummary),
-                      ],
+                if (date.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    date,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: AppTypography.medium,
+                      color: BrandColors.muted,
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          _Thumbnail(article: article, load: loadCover),
+        ],
+      ),
+    );
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: divider
+            ? Border(
+                top: BorderSide(color: BrandColors.ink.withValues(alpha: 0.07)),
+              )
+            : null,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Semantics(
+            button: true,
+            label: article.title,
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                key: Key('balita-article-${article.id}'),
+                onTap: onOpen,
+                child: row,
               ),
-              if (!sample) ...<Widget>[
-                // The action row's margin-top is 10. Save was the first
-                // flex item. With it gone, Share is that first item and the
-                // gap between the two actions collapses.
-                const SizedBox(height: 10),
-                _Hit(
-                  hitKey: Key('balita-share-${article.id}'),
-                  label: 'Share ${article.title}',
-                  height: 16,
-                  onTap: onShare,
-                  child: const Row(
+            ),
+          ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Semantics(
+              button: true,
+              label: 'Share ${article.title}',
+              excludeSemantics: true,
+              child: GestureDetector(
+                key: Key('balita-share-${article.id}'),
+                behavior: HitTestBehavior.opaque,
+                onTap: onShare,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(
+                    minWidth: A11y.minTapTarget,
+                    minHeight: A11y.minTapTarget,
+                  ),
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
-                      TaytayIcon(
+                      const TaytayIcon(
                         icon: TaytayIcons.share,
                         size: 16,
-                        color: BrandColors.listMeta,
+                        color: BrandColors.muted,
                         semanticLabel: '',
                         excludeSemantics: true,
                       ),
-                      SizedBox(width: 6),
-                      Text('Share', style: _action),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Share',
+                        style: AppTypography.label.copyWith(
+                          color: BrandColors.muted,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ],
-            ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -598,29 +500,24 @@ class _Eyebrow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final BalitaPresentation? presentation = article.presentation;
-    final String date = _listDate(article);
     final String office = article.author ?? article.officeSlug ?? '';
     final String category = (article.category ?? '').toUpperCase();
+    final bool sample = article.presentation?.sample == true;
     return Text.rich(
       TextSpan(
-        style: _eyebrow.copyWith(color: _ink(article)),
+        style: AppTypography.category.copyWith(color: _ink(article)),
         children: <InlineSpan>[
           if (category.isNotEmpty) TextSpan(text: category),
           if (office.isNotEmpty)
             TextSpan(text: category.isNotEmpty ? ' · $office' : office),
-          if (presentation?.sample == true) ...<InlineSpan>[
-            const TextSpan(text: ' · '),
-            const WidgetSpan(
+          // Dev mock rows are marked so nobody reads a fixture as a notice.
+          if (sample) ...const <InlineSpan>[
+            TextSpan(text: ' '),
+            WidgetSpan(
               alignment: PlaceholderAlignment.middle,
-              // `.sample` is 11 / 800 with no line-height, so the inline box
-              // is the font's normal 1.26 plus the 2 px padding and 1 px
-              // border. labelStrong is 1.2, which makes this line short and
-              // pulls the title up.
-              child: SampleTag(lineHeight: _cssNormal),
+              child: SampleTag(),
             ),
           ],
-          if (date.isNotEmpty) TextSpan(text: ' · $date'),
         ],
       ),
       maxLines: 1,
@@ -629,10 +526,68 @@ class _Eyebrow extends StatelessWidget {
   }
 }
 
-class _PinnedBanner extends StatelessWidget {
-  const _PinnedBanner({required this.article});
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({required this.article, this.load});
 
   final Announcement article;
+  final MediaBytesLoader? load;
+
+  @override
+  Widget build(BuildContext context) {
+    final BalitaPresentation? presentation = article.presentation;
+    final String? asset = presentation?.listCover == true
+        ? presentation?.coverAsset
+        : null;
+    final Widget placeholder = _placeholder();
+    Widget? photo;
+    if (asset != null) {
+      photo = Image.asset(
+        asset,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        excludeFromSemantics: true,
+      );
+    } else if (_reservesCover(article) && load != null) {
+      photo = MediaBytesHost(
+        id: article.id,
+        load: load,
+        builder: (Uint8List? bytes) => bytes == null
+            ? placeholder
+            : DecodedMemoryImage(bytes: bytes, placeholder: placeholder),
+      );
+    }
+    if (photo == null) return placeholder;
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(Radii.lg),
+        child: SizedBox.square(dimension: FeedRow.thumbnailSize, child: photo),
+      ),
+    );
+  }
+
+  Widget _placeholder() {
+    final BrandGradient sky = BrandGradients.tile(TileTone.sky);
+    return ExcludeSemantics(
+      child: Container(
+        width: FeedRow.thumbnailSize,
+        height: FeedRow.thumbnailSize,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: sky.toLinearGradient(),
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+        child: GlyphIcon(_glyph(article), size: 28, color: sky.onColor),
+      ),
+    );
+  }
+}
+
+/// `.card.pin3`: the pinned or emergency advisory, gold-tinted glass.
+class _PinnedCard extends StatelessWidget {
+  const _PinnedCard({required this.article, this.onOpen});
+
+  final Announcement article;
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -642,579 +597,444 @@ class _PinnedBanner extends StatelessWidget {
         ? 'Emergency advisory'
         : article.presentation?.pinnedTitle ?? 'Pinned advisory';
     final String body = article.presentation?.pinnedBody ?? article.title;
-    return Container(
-      decoration: BoxDecoration(
-        color: BrandColors.chipAmberBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF2D77A)),
-      ),
-      // The specimen banner is the height of a 15 dp top inset. The other
-      // three sides are the card's 16 dp.
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 16),
+    return GlassCard(
+      key: Key('balita-pinned-${article.id}'),
+      pinned: true,
+      padding: const EdgeInsets.all(Spacing.md),
+      onTap: onOpen,
+      semanticLabel: '$title. $body',
       child: Row(
         children: <Widget>[
-          const _Tile(
-            icon: TaytayIcons.triangleAlert,
-            background: Colors.white,
-            color: BrandColors.warning,
+          IconTile.glyph(
+            glyph: emergency ? TaytayGlyph.siren : TaytayGlyph.megaphone,
+            tone: emergency ? TileTone.red : TileTone.gold,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: Spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text(title, style: _storyTitle),
+                Text(
+                  title,
+                  style: AppTypography.category.copyWith(
+                    color: emergency ? BrandColors.redInk : BrandColors.goldInk,
+                  ),
+                ),
+                const SizedBox(height: Spacing.xxs),
                 Text(
                   body,
-                  style: _storySummary.copyWith(fontSize: 13, height: 1.5),
+                  style: AppTypography.listTitle.copyWith(
+                    fontWeight: AppTypography.strong,
+                    color: BrandColors.ink,
+                  ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ArticleBody extends StatelessWidget {
-  const _ArticleBody({required this.article, this.loadCover});
-
-  final Announcement article;
-  final MediaBytesLoader? loadCover;
-
-  @override
-  Widget build(BuildContext context) {
-    final BalitaPresentation? presentation = article.presentation;
-    final String? asset = presentation?.coverAsset;
-    final bool remote = asset == null && _hasRemoteCover(article);
-    final String lead = presentation?.lead ?? article.body;
-    final String meta = <String>[
-      if ((article.author ?? article.officeSlug ?? '').isNotEmpty)
-        article.author ?? article.officeSlug!,
-      if ((presentation?.dateLabel ?? _listDate(article)).isNotEmpty)
-        presentation?.dateLabel?.isNotEmpty == true
-            ? presentation!.dateLabel!
-            : _listDate(article),
-    ].join(' · ');
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        if (asset != null)
-          _Cover(
-            asset: asset,
-            height: presentation?.coverHeight ?? 180,
-            radius: 16,
-            label: presentation?.photoCredit ?? article.title,
-            darken: true,
-          )
-        else if (remote)
-          _RemoteCover(
-            id: article.id,
-            height: presentation?.coverHeight ?? 180,
-            radius: 16,
-            label: presentation?.photoCredit ?? article.title,
-            reserve: _reservesCover(article),
-            load: loadCover,
-          ),
-        if ((presentation?.photoCredit ?? '').isNotEmpty) ...<Widget>[
-          const SizedBox(height: 6),
-          Text(presentation!.photoCredit!, style: _credit),
-        ],
-        const SizedBox(height: 12),
-        Wrap(
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 8,
-          children: <Widget>[
-            if ((article.category ?? '').isNotEmpty)
-              _Tag(label: article.category!.toUpperCase(), article: article),
-            if (meta.isNotEmpty) Text(meta, style: _credit),
+          if (onOpen != null) ...<Widget>[
+            const SizedBox(width: Spacing.sm),
+            const TaytayIcon(
+              icon: TaytayIcons.chevronRight,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+              color: BrandColors.chevron,
+            ),
           ],
-        ),
-        const SizedBox(height: 6),
-        Text(article.title, style: _articleTitle),
-        const SizedBox(height: 8),
-        // `.cs` lead is 14 / 1.6. The engine rounds 22.4 dp to 22.
-        _CssLines(lead, style: _lead),
-        if ((presentation?.facts ?? const <BalitaFact>[])
-            .isNotEmpty) ...<Widget>[
-          // `.card` margin-top 12, padding 4 × 16. The border sits outside
-          // the padding.
-          const SizedBox(height: 12),
-          Container(
-            decoration: _card,
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-            child: Column(
-              children: <Widget>[
-                for (var i = 0; i < presentation!.facts.length; i++)
-                  _FactRow(
-                    fact: presentation.facts[i],
-                    last: i == presentation.facts.length - 1,
-                  ),
-              ],
-            ),
-          ),
         ],
-        if ((presentation?.footer ?? '').isNotEmpty) ...<Widget>[
-          // The card's margin-bottom is 12 and the footer's margin-top is
-          // 4. Adjacent margins collapse to 12. `.cs` at 12px keeps
-          // line-height 1.5.
-          const SizedBox(height: 12),
-          Text(presentation!.footer!, style: _storySummary),
-        ],
-      ],
-    );
-  }
-}
-
-class _FactRow extends StatelessWidget {
-  const _FactRow({required this.fact, required this.last});
-
-  final BalitaFact fact;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: last
-            ? null
-            : const Border(bottom: BorderSide(color: Color(0xFFEEF1F6))),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _Tile(
-            icon: _namedIcon(fact.icon),
-            background: BrandColors.chipBlueBg,
-            color: BrandColors.taytayBlue,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // `.ls` is 12 / 700, margin 0, with no line-height, so the
-                // advance is the font's normal 1.26 (15.12 dp). The engine
-                // rounds that line to 15 dp and trims the remainder off the
-                // top. The label sits on the bottom of the CSS advance.
-                SizedBox(
-                  height: 12 * _cssNormal,
-                  width: double.infinity,
-                  child: Align(
-                    alignment: Alignment.bottomLeft,
-                    child: Text(
-                      fact.label,
-                      style: _credit.copyWith(fontWeight: FontWeight.w700),
-                      textHeightBehavior: _cssHalfLeading,
-                      strutStyle: _strutFor(
-                        _credit.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                _CssLines(fact.value, style: _factValue),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Tag extends StatelessWidget {
-  const _Tag({required this.label, required this.article});
-
-  final String label;
-  final Announcement article;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: _tagBackground(article),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        child: Text(label, style: _eyebrow.copyWith(color: _ink(article))),
       ),
     );
   }
 }
 
 class _EmptyCategory extends StatelessWidget {
-  const _EmptyCategory({
-    required this.chips,
-    required this.chip,
-    this.onChip,
-    this.onSeeAll,
-  });
+  const _EmptyCategory({required this.chip, this.onSeeAll});
 
-  final List<BalitaChip> chips;
   final String chip;
-  final ValueChanged<BalitaChip>? onChip;
   final VoidCallback? onSeeAll;
 
   @override
   Widget build(BuildContext context) {
     final bool events = chip == 'Events';
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(chips: chips, selected: chip, onChip: onChip),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 28, 18, 0),
-          child: Column(
-            children: <Widget>[
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  color: BrandColors.chipBlueBg,
-                  shape: BoxShape.circle,
-                ),
-                child: SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: Center(
-                    child: TaytayIcon(
-                      icon: TaytayIcons.calendarX,
-                      size: 32,
-                      color: BrandColors.taytayBlue,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              Text(
-                events ? 'Walang events pa' : 'Walang ${chip.toLowerCase()} pa',
-                textAlign: TextAlign.center,
-                style: _storyTitle.copyWith(fontSize: 16),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                events
-                    ? "No upcoming municipal events have been posted. We'll "
-                          'notify you when the LGU announces one.'
-                    : 'No ${chip.toLowerCase()} posts have been published yet.',
-                textAlign: TextAlign.center,
-                style: _storySummary.copyWith(fontSize: 13),
-              ),
-              const SizedBox(height: 16),
-              _Hit(
-                hitKey: const Key('balita-see-all'),
-                label: 'See all Balita',
-                onTap: onSeeAll,
-                child: Container(
-                  height: 48,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: BrandColors.taytayBlue,
-                      width: 1.5,
-                    ),
-                  ),
-                  child: const Text(
-                    'See all Balita',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: BrandColors.taytayBlue,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LoadingBody extends StatelessWidget {
-  const _LoadingBody({required this.chips});
-
-  final List<BalitaChip> chips;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(chips: chips, selected: 'Lahat'),
-        ),
-        const _SkeletonCard(photo: true),
-        const SizedBox(height: 12),
-        const _SkeletonCard(),
-        const SizedBox(height: 12),
-        const _SkeletonCard(),
-      ],
-    );
-  }
-}
-
-class _SkeletonCard extends StatelessWidget {
-  const _SkeletonCard({this.photo = false});
-
-  final bool photo;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: _card,
-      padding: _cardPadding,
+    return GlassCard(
+      padding: const EdgeInsets.only(bottom: Spacing.xl),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          if (photo) ...<Widget>[
-            const _Bone(height: 150, radius: 12),
-            const SizedBox(height: 12),
-          ],
-          const _Bone(widthFactor: 0.35, height: 11),
-          const SizedBox(height: 10),
-          const _Bone(widthFactor: 0.9, height: 14),
-          const SizedBox(height: 8),
-          const _Bone(widthFactor: 0.75, height: 12),
-          const SizedBox(height: 6),
-          const _Bone(widthFactor: 0.55, height: 12),
+          EmptyState(
+            title: events
+                ? 'Walang events pa'
+                : 'Walang ${chip.toLowerCase()} pa',
+            message: events
+                ? "No upcoming municipal events have been posted. We'll "
+                      'notify you when the LGU announces one.'
+                : 'No ${chip.toLowerCase()} posts have been published yet.',
+          ),
+          FilledButton.tonal(
+            key: const Key('balita-see-all'),
+            onPressed: onSeeAll,
+            child: const Text('See all Balita'),
+          ),
         ],
       ),
     );
   }
 }
 
-class _Bone extends StatelessWidget {
-  const _Bone({this.widthFactor, this.height = 12, this.radius = 8});
+/// The article (Office detail pattern): cover photo, white sheet pulled up
+/// over it, the category and byline, the title and the text. The article
+/// offers no actions, so the pattern's pill row is not drawn.
+class _ArticlePage extends StatelessWidget {
+  const _ArticlePage({required this.article, this.loadCover, this.onBack});
 
-  final double? widthFactor;
-  final double height;
-  final double radius;
+  final Announcement? article;
+  final MediaBytesLoader? loadCover;
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
-    final Widget box = DecoratedBox(
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6EAF2),
-        borderRadius: BorderRadius.circular(radius),
+    final Announcement? article = this.article;
+    final BalitaPresentation? presentation = article?.presentation;
+    final String? asset = presentation?.coverAsset;
+    final bool remote =
+        article != null && asset == null && _reservesCover(article);
+    final bool hero = asset != null || remote;
+    final Widget header = hero
+        ? _ArticleHero(
+            article: article,
+            asset: asset,
+            loadCover: loadCover,
+            onBack: onBack,
+          )
+        : BlueHeader(
+            title: 'Balita',
+            subtitle: 'Bayan ng Taytay · Rizal',
+            showBack: true,
+            onBack: onBack,
+          );
+    final Widget sheet = article == null
+        ? const SizedBox.shrink()
+        : _Sheet(article: article);
+    return ColoredBox(
+      color: BrandColors.white,
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
+        children: <Widget>[
+          header,
+          if (hero)
+            GlassOverlap(amount: Radii.sheetLarge, child: sheet)
+          else
+            sheet,
+        ],
       ),
-      child: SizedBox(
-        height: height,
-        width: widthFactor == null ? double.infinity : null,
-      ),
-    );
-    if (widthFactor == null) return box;
-    return FractionallySizedBox(
-      widthFactor: widthFactor,
-      alignment: Alignment.centerLeft,
-      child: box,
     );
   }
 }
 
-class _MessageBody extends StatelessWidget {
-  const _MessageBody({
-    required this.chips,
-    required this.title,
-    required this.message,
-    this.action,
-    this.onAction,
+class _ArticleHero extends StatelessWidget {
+  const _ArticleHero({
+    required this.article,
+    required this.asset,
+    this.loadCover,
+    this.onBack,
   });
 
-  final List<BalitaChip> chips;
-  final String title;
-  final String message;
-  final String? action;
-  final VoidCallback? onAction;
+  final Announcement? article;
+  final String? asset;
+  final MediaBytesLoader? loadCover;
+  final VoidCallback? onBack;
+
+  static const double _height = 250;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: _Chips(chips: chips, selected: 'Lahat'),
-        ),
-        Text(title, style: _storyTitle.copyWith(fontSize: 16)),
-        const SizedBox(height: 8),
-        Text(message, style: _storySummary),
-        if (action != null) ...<Widget>[
-          const SizedBox(height: 12),
-          _Hit(
-            hitKey: const Key('balita-retry'),
-            label: action!,
-            onTap: onAction,
-            child: SizedBox(
-              height: 48,
+    final Announcement? article = this.article;
+    final String? asset = this.asset;
+    final String? credit = article?.presentation?.photoCredit;
+    final String label = credit ?? article?.title ?? '';
+    final MediaBytesLoader? load = loadCover;
+    Widget photo = const SizedBox.expand();
+    if (asset != null) {
+      photo = Image.asset(
+        asset,
+        fit: BoxFit.cover,
+        filterQuality: FilterQuality.medium,
+        semanticLabel: label,
+      );
+    } else if (article != null && load != null) {
+      photo = MediaBytesHost(
+        id: article.id,
+        load: load,
+        builder: (Uint8List? bytes) => bytes == null
+            ? const SizedBox.expand()
+            : DecodedMemoryImage(
+                bytes: bytes,
+                height: _height,
+                semanticLabel: label,
+                placeholder: const SizedBox.expand(),
+              ),
+      );
+    }
+    final double top = MediaQuery.paddingOf(context).top;
+    return SizedBox(
+      height: _height + top,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          ColoredBox(color: BrandColors.navy, child: photo),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[
+                  BrandColors.navy.withValues(alpha: 0.55),
+                  BrandColors.navy.withValues(alpha: 0),
+                ],
+                stops: const <double>[0, 0.38],
+              ),
+            ),
+          ),
+          Positioned(
+            left: Spacing.lg,
+            right: Spacing.lg,
+            top: top + 14,
+            child: Row(
+              children: <Widget>[
+                Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    Container(
+                      width: A11y.backButtonVisual,
+                      height: A11y.backButtonVisual,
+                      decoration: BoxDecoration(
+                        color: BrandColors.navy.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    TaytayBackButton(onPressed: onBack, translucent: true),
+                  ],
+                ),
+                const Spacer(),
+                const HeaderSeal(),
+              ],
+            ),
+          ),
+          if (credit != null && credit.isNotEmpty)
+            Positioned(
+              right: 14,
+              left: Spacing.lg,
+              bottom: 42,
               child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  action!,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: BrandColors.taytayBlue,
-                    decoration: TextDecoration.none,
+                alignment: Alignment.centerRight,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BrandColors.navy.withValues(alpha: 0.55),
+                    borderRadius: BorderRadius.circular(Radii.pill),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: Spacing.xs,
+                    ),
+                    child: Text(
+                      credit,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.tiny.copyWith(
+                        fontWeight: AppTypography.medium,
+                        color: BrandColors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
-      ],
+      ),
     );
   }
 }
 
-class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.icon,
-    required this.background,
-    required this.color,
-  });
+class _Sheet extends StatelessWidget {
+  const _Sheet({required this.article});
 
-  final IconData icon;
-  final Color background;
-  final Color color;
+  final Announcement article;
+
+  @override
+  Widget build(BuildContext context) {
+    final BalitaPresentation? presentation = article.presentation;
+    final String lead = presentation?.lead ?? article.body;
+    final String office = article.author ?? article.officeSlug ?? '';
+    final String labelled = presentation?.dateLabel ?? '';
+    final String date = labelled.isNotEmpty ? labelled : _listDate(article);
+    final String meta = <String>[
+      if (office.isNotEmpty) office,
+      if (date.isNotEmpty) date,
+    ].join(' · ');
+    final List<BalitaFact> facts = presentation?.facts ?? const <BalitaFact>[];
+    final String category = (article.category ?? '').toUpperCase();
+    final String footer = presentation?.footer ?? '';
+    final List<Widget> blocks = <Widget>[
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          if (category.isNotEmpty || meta.isNotEmpty)
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: Spacing.sm,
+              runSpacing: Spacing.xs,
+              children: <Widget>[
+                if (category.isNotEmpty)
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: _tagBackground(article),
+                      borderRadius: BorderRadius.circular(Radii.pill),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: Spacing.xs,
+                      ),
+                      child: Text(
+                        category,
+                        style: AppTypography.category.copyWith(
+                          color: _ink(article),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (meta.isNotEmpty)
+                  Text(
+                    meta,
+                    style: AppTypography.listDetail.copyWith(
+                      color: BrandColors.muted,
+                    ),
+                  ),
+              ],
+            ),
+          const SizedBox(height: Spacing.sm),
+          Semantics(
+            header: true,
+            child: Text(
+              article.title,
+              style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
+            ),
+          ),
+        ],
+      ),
+      if (lead.isNotEmpty)
+        Semantics(
+          container: true,
+          label: lead,
+          child: ExcludeSemantics(
+            child: Text(
+              lead,
+              style: AppTypography.bodyStyle.copyWith(
+                height: 1.55,
+                color: BrandColors.text,
+              ),
+            ),
+          ),
+        ),
+      if (facts.isNotEmpty)
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            border: Border(top: BorderSide(color: BrandColors.divider)),
+          ),
+          child: Column(
+            children: <Widget>[for (final BalitaFact f in facts) _Fact(f)],
+          ),
+        ),
+      if (footer.isNotEmpty)
+        Text(
+          footer,
+          style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
+        ),
+    ];
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: BrandColors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Radii.sheetLarge),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.formGutter,
+          22,
+          Spacing.formGutter,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            for (var i = 0; i < blocks.length; i++) ...<Widget>[
+              if (i > 0) const SizedBox(height: Spacing.formGap),
+              blocks[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.fact`: a 36 px glyph square, the label and the value.
+class _Fact extends StatelessWidget {
+  const _Fact(this.fact);
+
+  final BalitaFact fact;
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(12),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: BrandColors.divider)),
       ),
-      child: SizedBox(
-        width: 44,
-        height: 44,
-        child: Center(
-          child: TaytayIcon(
-            icon: icon,
-            size: 20,
-            color: color,
-            semanticLabel: '',
-            excludeSemantics: true,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Hit extends StatelessWidget {
-  const _Hit({
-    required this.child,
-    required this.label,
-    this.hitKey,
-    this.onTap,
-    this.width,
-    this.height,
-  });
-
-  final Widget child;
-  final String label;
-  final Key? hitKey;
-  final VoidCallback? onTap;
-  final double? width;
-  final double? height;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? slotW = width;
-    final double? slotH = height;
-    if (slotW == null && slotH == null) {
-      return Semantics(
-        button: onTap != null,
-        label: label,
-        child: GestureDetector(
-          key: hitKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: child,
-        ),
-      );
-    }
-    // A short control keeps its layout and grows the hit to 48 dp. The extra
-    // area is transparent, so it does not move the ink the designs measure.
-    if (slotW == null && slotH != null) {
-      final double extra = slotH >= 48 ? 0 : (48 - slotH) / 2;
-      return Semantics(
-        button: onTap != null,
-        label: label,
-        child: Stack(
-          clipBehavior: Clip.none,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            child,
-            Positioned(
-              left: 0,
-              right: 0,
-              top: -extra,
-              bottom: -extra,
-              child: GestureDetector(
-                key: hitKey,
-                behavior: HitTestBehavior.translucent,
-                onTap: onTap,
+            Container(
+              width: ComponentSizes.tileSmall,
+              height: ComponentSizes.tileSmall,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: BrandColors.background,
+                borderRadius: BorderRadius.circular(Radii.md),
+              ),
+              child: TaytayIcon(
+                icon: _namedIcon(fact.icon),
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.blue,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    fact.label,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: AppTypography.medium,
+                      color: BrandColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    fact.value,
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-        ),
-      );
-    }
-    if (slotH == null) {
-      return Semantics(
-        button: onTap != null,
-        label: label,
-        child: GestureDetector(
-          key: hitKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: child,
-        ),
-      );
-    }
-    final double w = slotW!;
-    final double h = slotH;
-    final double hitW = w < 48 ? 48 : w;
-    final double hitH = h < 48 ? 48 : h;
-    return SizedBox(
-      width: w,
-      height: h,
-      child: OverflowBox(
-        minWidth: hitW,
-        maxWidth: hitW,
-        minHeight: hitH,
-        maxHeight: hitH,
-        child: Semantics(
-          button: onTap != null,
-          label: label,
-          child: GestureDetector(
-            key: hitKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: SizedBox(
-              width: hitW,
-              height: hitH,
-              child: Center(child: child),
-            ),
-          ),
         ),
       ),
     );
@@ -1233,39 +1053,35 @@ String _listDate(Announcement article) {
 
 Color _ink(Announcement article) {
   return switch ((article.category ?? '').toLowerCase()) {
-    'abiso' => BrandColors.success,
-    'negosyo' => BrandColors.inkGold,
-    'safety' => BrandColors.danger,
-    _ => BrandColors.taytayBlue,
+    'abiso' => CategoryTone.green.color,
+    'negosyo' => CategoryTone.gold.color,
+    'safety' => CategoryTone.red.color,
+    _ => CategoryTone.blue.color,
   };
 }
 
 Color _tagBackground(Announcement article) {
   return switch ((article.category ?? '').toLowerCase()) {
-    'abiso' => BrandColors.chipGreenBg,
-    'negosyo' => BrandColors.chipGoldBg,
-    'safety' => BrandColors.chipRedBg,
-    _ => BrandColors.chipBlueBg,
+    'abiso' => BrandColors.green50,
+    'negosyo' => BrandColors.gold50,
+    'safety' => BrandColors.red50,
+    _ => BrandColors.blue50,
   };
 }
 
-Color _tileBackground(Announcement article) {
-  if ((article.category ?? '').toLowerCase() == 'negosyo') {
-    return BrandColors.chipGoldBg;
-  }
-  if ((article.category ?? '').toLowerCase() == 'safety') {
-    return BrandColors.chipRedBg;
-  }
-  return BrandColors.chipBlueBg;
-}
-
-IconData _tileIcon(Announcement article) {
+TaytayGlyph _glyph(Announcement article) {
   final String? named = article.presentation?.tileIcon;
-  if (named != null && named.isNotEmpty) return _namedIcon(named);
-  return switch ((article.category ?? '').toLowerCase()) {
-    'negosyo' => TaytayIcons.briefcase,
-    'safety' => TaytayIcons.siren,
-    _ => TaytayIcons.landmark,
+  return switch (named ?? (article.category ?? '').toLowerCase()) {
+    'cloud' || 'cloud-rain' => TaytayGlyph.cloud,
+    'briefcase' || 'negosyo' => TaytayGlyph.briefcase,
+    'bell' || 'siren' || 'safety' => TaytayGlyph.siren,
+    'calendar' || 'calendar-x' || 'events' => TaytayGlyph.clock,
+    'phone' => TaytayGlyph.phone,
+    'map-pin' => TaytayGlyph.pin,
+    'file-text' => TaytayGlyph.document,
+    'globe' => TaytayGlyph.globe,
+    'message-square' => TaytayGlyph.chat,
+    _ => TaytayGlyph.megaphone,
   };
 }
 
@@ -1289,306 +1105,9 @@ IconData _namedIcon(String name) {
   };
 }
 
-bool _hasRemoteCover(Announcement article) => _reservesCover(article);
-
+/// A cover is read only when the item says it has one (`cover_url`), and
+/// always through `GET /news/{id}/cover`, never from that address.
 bool _reservesCover(Announcement article) {
   final String? url = article.coverUrl;
   return url != null && url.isNotEmpty;
 }
-
-class _RemoteCover extends StatelessWidget {
-  const _RemoteCover({
-    required this.id,
-    required this.height,
-    required this.radius,
-    required this.label,
-    required this.reserve,
-    this.gap = 0,
-    this.load,
-  });
-
-  final String id;
-  final double height;
-  final double radius;
-  final String label;
-  final bool reserve;
-  final double gap;
-  final MediaBytesLoader? load;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget hole = SizedBox(height: height, width: double.infinity);
-    return MediaBytesHost(
-      id: id,
-      load: load,
-      builder: (Uint8List? bytes) {
-        if (!reserve && bytes == null) return const SizedBox.shrink();
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            ClipRRect(
-              borderRadius: BorderRadius.circular(radius),
-              child: bytes == null
-                  ? hole
-                  : DecodedMemoryImage(
-                      bytes: bytes,
-                      height: height,
-                      semanticLabel: label,
-                      placeholder: hole,
-                    ),
-            ),
-            if (gap > 0) SizedBox(height: gap),
-          ],
-        );
-      },
-    );
-  }
-}
-
-class _Cover extends StatelessWidget {
-  const _Cover({
-    required this.asset,
-    required this.height,
-    required this.radius,
-    required this.label,
-    required this.darken,
-  });
-
-  final String asset;
-  final double height;
-  final double radius;
-  final String label;
-  final bool darken;
-
-  @override
-  Widget build(BuildContext context) {
-    Widget image = Image.asset(
-      asset,
-      height: height,
-      width: double.infinity,
-      fit: BoxFit.cover,
-      filterQuality: FilterQuality.medium,
-      semanticLabel: label,
-    );
-    if (darken) {
-      // The fixture photo sits one level above the design on a single row
-      // of the 190 dp cover, which splits that photo into two runs.
-      image = ColorFiltered(
-        colorFilter: const ColorFilter.matrix(<double>[
-          1,
-          0,
-          0,
-          0,
-          -2,
-          0,
-          1,
-          0,
-          0,
-          -2,
-          0,
-          0,
-          1,
-          0,
-          -2,
-          0,
-          0,
-          0,
-          1,
-          0,
-        ]),
-        child: image,
-      );
-    }
-    return ClipRRect(borderRadius: BorderRadius.circular(radius), child: image);
-  }
-}
-
-/// `.card` padding is 16 dp on every side. The 1 dp border is painted on
-/// that box; it is the inset, not a second padding.
-const EdgeInsets _cardPadding = EdgeInsets.all(16);
-
-const BoxDecoration _card = BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.all(Radius.circular(16)),
-  border: Border.fromBorderSide(BorderSide(color: BrandColors.cardLine)),
-  boxShadow: <BoxShadow>[
-    BoxShadow(color: Color(0x0D101828), blurRadius: 2, offset: Offset(0, 1)),
-    BoxShadow(color: Color(0x0A101828), blurRadius: 10, offset: Offset(0, 2)),
-  ],
-);
-
-/// A paragraph whose line boxes are [TextStyle.fontSize] × [TextStyle.height].
-///
-/// The design sets `line-height: 1.6` on the article lead, which is 22.4 dp.
-/// SkParagraph rounds the line box to a whole logical pixel (`round(descent
-/// − ascent)`), so the lead is 22 dp and each further line is about 1 image
-/// px short at 3×. The strut keeps the CSS half-leading. Lines then sit on
-/// the unrounded advance, and the paragraph is `n` times that advance tall.
-class _CssLines extends StatelessWidget {
-  const _CssLines(this.text, {required this.style});
-
-  final String text;
-  final TextStyle style;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? fontSize = style.fontSize;
-    final double? height = style.height;
-    final StrutStyle strut = _strutFor(style);
-    if (fontSize == null || height == null) {
-      return Text(text, style: style, strutStyle: strut);
-    }
-    final double step = fontSize * height;
-    if ((step - step.roundToDouble()).abs() < 0.001) {
-      return Text(text, style: style, strutStyle: strut);
-    }
-    return Semantics(
-      label: text,
-      child: ExcludeSemantics(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final TextPainter painter = TextPainter(
-              text: TextSpan(text: text, style: style),
-              textDirection: Directionality.of(context),
-              textScaler: MediaQuery.textScalerOf(context),
-              textHeightBehavior: _cssHalfLeading,
-              strutStyle: strut,
-            )..layout(maxWidth: constraints.maxWidth);
-            final List<String> lines = <String>[];
-            var start = 0;
-            while (start < text.length) {
-              final TextRange range = painter.getLineBoundary(
-                TextPosition(offset: start),
-              );
-              if (range.end <= start) {
-                break;
-              }
-              lines.add(text.substring(range.start, range.end).trimRight());
-              start = range.end;
-            }
-            painter.dispose();
-            if (lines.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return SizedBox(
-              width: constraints.maxWidth,
-              height: step * lines.length,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  for (var i = 0; i < lines.length; i++)
-                    Positioned(
-                      top: step * i,
-                      left: 0,
-                      right: 0,
-                      child: Text(
-                        lines[i],
-                        maxLines: 1,
-                        softWrap: false,
-                        textHeightBehavior: _cssHalfLeading,
-                        strutStyle: strut,
-                        style: style,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-StrutStyle _strutFor(TextStyle style) {
-  return StrutStyle(
-    fontFamily: style.fontFamily,
-    fontSize: style.fontSize,
-    fontWeight: style.fontWeight,
-    height: style.height,
-    leadingDistribution: TextLeadingDistribution.even,
-    forceStrutHeight: true,
-  );
-}
-
-/// Plus Jakarta Sans `line-height: normal` (hhea 1038 / -222).
-const double _cssNormal = 1.26;
-
-/// CSS half-leading. The line box keeps the extra space above the first
-/// ascent and below the last descent, split evenly.
-const TextHeightBehavior _cssHalfLeading = TextHeightBehavior(
-  applyHeightToFirstAscent: true,
-  applyHeightToLastDescent: true,
-  leadingDistribution: TextLeadingDistribution.even,
-);
-
-const TextStyle _eyebrow = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  decoration: TextDecoration.none,
-  height: _cssNormal,
-);
-
-const TextStyle _storyTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-  height: _cssNormal,
-);
-
-const TextStyle _storySummary = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-  height: 1.5,
-);
-
-const TextStyle _action = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _credit = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-  height: _cssNormal,
-);
-
-const TextStyle _articleTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 22,
-  fontWeight: FontWeight.w800,
-  letterSpacing: -0.4,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-  height: _cssNormal,
-);
-
-const TextStyle _lead = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w500,
-  color: Color(0xFF33405C),
-  decoration: TextDecoration.none,
-  height: 1.6,
-);
-
-const TextStyle _factValue = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w700,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-  height: _cssNormal,
-);

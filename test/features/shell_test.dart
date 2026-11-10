@@ -175,7 +175,8 @@ void main() {
       expect(find.text('Municipal offices'), findsOneWidget);
 
       await tapDestination(tester, 'Balita');
-      expect(find.text('Municipal news'), findsOneWidget);
+      // Redesign P3b: the Balita header subtitle is Balita.dc.html's.
+      expect(find.text('Bayan ng Taytay · Rizal'), findsOneWidget);
 
       await tapDestination(tester, 'Tulong');
       expect(find.textContaining('Social services'), findsWidgets);
@@ -209,7 +210,8 @@ void main() {
 
       // The escape hatch from a screen a resident deep-linked into.
       await tapDestination(tester, 'Balita');
-      expect(find.text('Municipal news'), findsOneWidget);
+      // Redesign P3b: the Balita header subtitle is Balita.dc.html's.
+      expect(find.text('Bayan ng Taytay · Rizal'), findsOneWidget);
     });
   });
 

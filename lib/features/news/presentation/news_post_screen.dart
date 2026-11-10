@@ -5,8 +5,9 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
-import '../../../shared/widgets/municipal_header.dart';
-import '../../../shared/widgets/status_view.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/announcement_repository.dart';
 import 'balita_canvas.dart';
 import 'post_detail_controller.dart';
@@ -76,7 +77,10 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
     final PostDetailController? controller = _controller;
     if (controller == null || controller.isLoading) {
       return const _Shell(
-        child: Center(child: CircularProgressIndicator()),
+        child: LoadingSkeleton(
+          layout: SkeletonLayout.detail,
+          semanticLabel: 'Loading the announcement',
+        ),
       );
     }
 
@@ -90,7 +94,7 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
     }
 
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.white,
       body: BalitaCanvas(
         frame: BalitaFrame.article,
         article: post,
@@ -110,22 +114,22 @@ class _Shell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: BrandColors.surface,
-      body: Column(
+      backgroundColor: BrandColors.background,
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
-          const MunicipalHeader(
+          const BlueHeader(
             title: 'Balita',
             subtitle: 'Bayan ng Taytay · Rizal',
-            plainSeal: true,
+            showBack: true,
           ),
-          Expanded(child: child),
+          Padding(padding: const EdgeInsets.all(Spacing.lg), child: child),
         ],
       ),
     );
   }
 }
 
-/// The honest dead end for a link that cannot be opened.
 class _NotAvailable extends StatelessWidget {
   const _NotAvailable({required this.message});
 
@@ -133,15 +137,13 @@ class _NotAvailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusView(
+    return EmptyState(
       title: 'This announcement is not available',
-      kind: StatusKind.empty,
-      icon: Icons.link_off_outlined,
       message: message,
-      primaryAction: FilledButton(
-        onPressed: () => context.goNamed(AppRoute.news.routeName),
-        child: const Text('See all announcements'),
-      ),
+      boxed: true,
+      primaryAction: true,
+      actionLabel: 'See all announcements',
+      onAction: () => context.goNamed(AppRoute.news.routeName),
     );
   }
 }

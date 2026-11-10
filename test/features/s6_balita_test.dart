@@ -686,22 +686,9 @@ void main() {
     _expectAtLeast48(tester, Key('balita-article-${story.id}'));
     expect(find.byKey(Key('balita-save-${story.id}')), findsNothing);
     expect(find.text('Save'), findsNothing);
-    // Share is the first flex item, so it starts on the card content edge,
-    // the same left as the category tile. No gap is left where Save was.
-    final Finder card = find.byKey(Key('balita-article-${story.id}'));
-    final double tileLeft = tester
-        .getTopLeft(
-          find.descendant(
-            of: card,
-            matching: find.byWidgetPredicate(
-              (Widget widget) =>
-                  widget is SizedBox &&
-                  widget.width == 44 &&
-                  widget.height == 44,
-            ),
-          ),
-        )
-        .dx;
+    // Redesign P3b: the row is Balita.dc.html `.row` (no 44 px category
+    // tile). Share sits under the row and starts on the text column's edge.
+    final double textLeft = tester.getTopLeft(find.text(story.title)).dx;
     final double shareLeft = tester
         .getTopLeft(
           find.byWidgetPredicate(
@@ -710,7 +697,7 @@ void main() {
           ),
         )
         .dx;
-    expect(shareLeft, tileLeft);
+    expect(shareLeft, textLeft);
     final Iterable<Icon> icons = tester.widgetList<Icon>(find.byType(Icon));
     expect(icons, isNotEmpty);
     expect(

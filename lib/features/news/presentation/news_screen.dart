@@ -167,7 +167,7 @@ class _NewsScreenState extends State<NewsScreen> {
     final bool guest = dependencies.session.state is! AuthenticatedSession;
 
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.glassBackground,
       body: RefreshIndicator(
         onRefresh: () => controller?.refresh() ?? Future<void>.value(),
         child: BalitaCanvas(
