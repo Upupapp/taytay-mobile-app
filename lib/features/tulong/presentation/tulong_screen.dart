@@ -98,7 +98,7 @@ class _TulongScreenState extends State<TulongScreen> {
         ? TulongFrame.loading
         : TulongFrame.list;
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.background,
       body: RefreshIndicator(
         onRefresh: _load,
         child: TulongCanvas(

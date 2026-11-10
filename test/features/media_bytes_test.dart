@@ -40,6 +40,7 @@ import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service_repository.dart';
 import 'package:taytay_resident/features/tulong/presentation/service_info_screen.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
+import 'package:taytay_resident/shared/widgets/detail_page.dart';
 import 'package:taytay_resident/shared/widgets/media_bytes_image.dart';
 
 const String _newsId = '11111111-1111-4111-8111-111111111111';
@@ -599,20 +600,17 @@ void main() {
         (Widget widget) => widget is Image && _isMemory(widget.image),
       ),
     );
-    expect(painted.height, 196);
-    final BoxShadow heroShadow = tester
+    // Redesign (Office.dc hero): the photo is the 250 px hero, no shadow.
+    expect(painted.height, DetailHero.photoHeight);
+    final Iterable<BoxShadow> shadows = tester
         .widgetList<DecoratedBox>(find.byType(DecoratedBox))
         .map((DecoratedBox box) => box.decoration)
         .whereType<BoxDecoration>()
         .expand(
           (BoxDecoration decoration) =>
               decoration.boxShadow ?? const <BoxShadow>[],
-        )
-        .singleWhere(
-          (BoxShadow shadow) =>
-              shadow.blurRadius == 24 && shadow.offset == const Offset(0, 10),
         );
-    expect(heroShadow.color, const Color.fromRGBO(6, 35, 88, 0.16));
+    expect(shadows, isEmpty);
   });
 
   test('binary responses skip the public catalogue cache', () async {

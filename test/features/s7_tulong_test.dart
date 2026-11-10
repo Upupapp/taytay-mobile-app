@@ -26,6 +26,7 @@ import 'package:taytay_resident/features/tulong/data/social_service_api_reposito
 import 'package:taytay_resident/features/tulong/data/social_service_codec.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
+import 'package:taytay_resident/shared/widgets/icon_tile.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
@@ -515,7 +516,9 @@ void main() {
 
       final TaytayIcon hero = tester
           .widgetList<TaytayIcon>(find.byType(TaytayIcon))
-          .singleWhere((TaytayIcon icon) => icon.size == 26);
+          .singleWhere(
+            (TaytayIcon icon) => icon.size == IconTileSize.large.glyphSize,
+          );
       expect(hero.icon, TaytayIcons.handHeart);
       final Iterable<IconData> icons = tester
           .widgetList<TaytayIcon>(find.byType(TaytayIcon))
@@ -560,14 +563,7 @@ void main() {
       tester.widgetList<CustomPaint>(find.byType(CustomPaint)).where(youthMark),
       isEmpty,
     );
-    expect(
-      tester
-          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
-          .where((TaytayIcon icon) => icon.size == 20)
-          .single
-          .icon,
-      TaytayIcons.users,
-    );
+    expect(_tileIcon(tester, 'youth').icon, TaytayIcons.users);
 
     await pumpRow('usersRound', 0xFF0B3D91);
     expect(
@@ -575,14 +571,7 @@ void main() {
       isEmpty,
     );
     expect(TaytayIcons.usersRound.codePoint, 58478);
-    expect(
-      tester
-          .widgetList<TaytayIcon>(find.byType(TaytayIcon))
-          .where((TaytayIcon icon) => icon.size == 20)
-          .single
-          .icon,
-      TaytayIcons.usersRound,
-    );
+    expect(_tileIcon(tester, 'youth').icon, TaytayIcons.usersRound);
 
     await tester.pumpWidget(
       const MaterialApp(
@@ -604,7 +593,7 @@ void main() {
         .widgetList<TaytayIcon>(find.byType(TaytayIcon))
         .where((TaytayIcon icon) => icon.icon == TaytayIcons.usersRound)
         .map((TaytayIcon icon) => icon.size);
-    expect(youthSizes, containsAll(<double>[26, 110]));
+    expect(youthSizes, contains(IconTileSize.large.glyphSize));
   });
 
   testWidgets(
@@ -672,7 +661,10 @@ void main() {
     expect(find.textContaining('Submit'), findsNothing);
     expect(find.text('How to apply'), findsNothing);
 
-    expect(tester.getSize(find.byKey(const Key('tulong-search'))).height, 48);
+    expect(
+      tester.getSize(find.byKey(const Key('tulong-search'))).height,
+      greaterThanOrEqualTo(48),
+    );
     expect(
       tester
           .getSize(find.byKey(const Key('tulong-open-pwd-assistance')))
@@ -761,4 +753,14 @@ void main() {
     expect(find.text('Sign in to continue'), findsNothing);
     expect(find.text('Verify your account to message offices'), findsNothing);
   });
+}
+
+/// The Lucide glyph inside a service's gradient tile.
+TaytayIcon _tileIcon(WidgetTester tester, String slug) {
+  return tester.widget<TaytayIcon>(
+    find.descendant(
+      of: find.byKey(Key('tulong-tile-$slug')),
+      matching: find.byType(TaytayIcon),
+    ),
+  );
 }

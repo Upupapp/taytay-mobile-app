@@ -10,8 +10,11 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/sharing/share_service.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/social_service.dart';
 import '../domain/social_service_repository.dart';
 import 'tulong_canvas.dart';
@@ -176,7 +179,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
     final SocialService? service = _service;
     if (service != null) {
       return Scaffold(
-        backgroundColor: BrandColors.surface,
+        backgroundColor: BrandColors.white,
         body: TulongCanvas(
           frame: TulongFrame.detail,
           service: service,
@@ -192,36 +195,42 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
         ),
       );
     }
-    final String title = _missing
-        ? 'This programme is not available'
+    // Loading, not found and failed share the page: the blue header with
+    // the back control, then the state on the soft background.
+    final Widget state = _missing
+        ? const EmptyState(
+            title: 'This programme is not available',
+            message: 'Go back to Tulong to see the programmes listed now.',
+            boxed: true,
+          )
         : _failed
-        ? 'Programme pages need a connection'
-        : 'Tulong';
-    final String subtitle = _failed
-        ? 'Check your connection and try again.'
-        : 'Tulong';
+        ? ErrorState(
+            title: 'Programme pages need a connection',
+            message: 'Check your connection and try again.',
+            offline: true,
+            boxed: true,
+            onRetry: () {
+              setState(() => _failed = false);
+              _load();
+            },
+          )
+        : const LoadingSkeleton(
+            layout: SkeletonLayout.detail,
+            count: 1,
+            semanticLabel: 'Loading programme',
+          );
     return Scaffold(
-      backgroundColor: BrandColors.surface,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: BrandColors.background,
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
-          MunicipalHeader(
-            title: title,
-            subtitle: subtitle,
+          BlueHeader(
+            title: 'Tulong',
+            subtitle: TulongCanvas.listSubtitle,
+            showBack: true,
             onBack: _back,
-            plainSeal: true,
           ),
-          if (_failed)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: () {
-                  setState(() => _failed = false);
-                  _load();
-                },
-                child: const Text('Try again'),
-              ),
-            ),
+          Padding(padding: const EdgeInsets.all(Spacing.lg), child: state),
         ],
       ),
     );

@@ -377,6 +377,9 @@ abstract final class ComponentSizes {
   /// The red count on a row (CSS `.cnt`).
   static const double countBadge = 22;
 
+  /// The numbered disc beside a step (claim steps, event agenda).
+  static const double stepDisc = 26;
+
   /// The thin completion bar under a row (CSS `.prog`).
   static const double progressBar = 6;
 

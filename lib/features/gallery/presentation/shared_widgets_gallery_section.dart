@@ -6,6 +6,7 @@ import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/consent_check_card.dart';
+import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -309,6 +310,34 @@ class SharedWidgetsGallerySection extends StatelessWidget {
         const _Padded(LoadingSkeleton(count: 2)),
         const SizedBox(height: Spacing.md),
         const _Padded(LoadingSkeleton(layout: SkeletonLayout.feed, count: 2)),
+        const _Heading('DetailHero, DetailSheet, DetailFactRow'),
+        MediaQuery.removePadding(
+          context: context,
+          removeTop: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              DetailHero(
+                onBack: () {},
+                credit: 'Photo credit',
+                photo: const ColoredBox(color: BrandColors.blue100),
+              ),
+              const GlassOverlap(
+                amount: Radii.sheetLarge,
+                child: DetailSheet(
+                  children: <Widget>[
+                    Text('Sheet title'),
+                    DetailFactRow(
+                      icon: TaytayIcons.mapPin,
+                      label: 'Fact label',
+                      value: 'Fact value',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
         const _Heading('SuccessScreen'),
         SizedBox(
           height: 720,

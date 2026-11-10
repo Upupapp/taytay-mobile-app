@@ -2,23 +2,40 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/design/brand_gradients.dart';
+import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/ringed_input_border.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/social_service.dart';
 
 /// Which Tulong frame the canvas is painting.
 enum TulongFrame { list, detail, offline, loading }
 
-/// The Tulong list, a service page, the featured specimen, and offline.
+/// The Tulong tab, a service page, the featured page, and offline.
 ///
-/// The shell paints the tab bar. This canvas is the page above that bar.
-/// A service uses the featured layout when it has a featured headline and
-/// at least one claim step. The `featured` boolean alone does not.
+/// The tab is the glass main-tab pattern (`Home.dc.html` / `Balita.dc.html`):
+/// the blue header with the search field, the list in a glass card. A service
+/// page is the `Office.dc.html` detail pattern: the hero photo when the API
+/// has one (otherwise the blue header), then the white sheet with pill
+/// actions. The shell paints the tab bar and the offline banner.
+///
+/// A service uses the featured layout when it has a featured headline and at
+/// least one claim step. The `featured` boolean alone does not.
 class TulongCanvas extends StatelessWidget {
   const TulongCanvas({
     required this.frame,
@@ -47,11 +64,11 @@ class TulongCanvas extends StatelessWidget {
   final SocialService? service;
   final List<SocialService> saved;
 
-  /// The offline header's second line. The specimen names MSWDO. A live
-  /// failure passes the list subtitle instead of inventing an office.
+  /// The offline header's second line. A live failure passes the list
+  /// subtitle instead of inventing an office.
   final String offlineSubtitle;
 
-  /// Shown under the note when a search matches nothing.
+  /// The empty state's title when a search matches nothing.
   final String? emptyMessage;
 
   final ValueChanged<SocialService>? onOpen;
@@ -70,302 +87,204 @@ class TulongCanvas extends StatelessWidget {
   /// Null on a dev mock. The list does not paint it.
   final MediaBytesLoader? loadHero;
 
-  static const Color _pageTop = Color(0xFFEAF0FB);
-  static const Color _searchBorder = Color(0xFFE1E6F0);
-  static const Color _searchInk = Color(0xFF5F6880);
-  static const Color _bodyInk = Color(0xFF33405C);
-  static const Color _hairline = Color(0xFFEEF1F6);
+  /// The tab's second line.
+  static const String listSubtitle = 'Social services & programmes';
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTextStyle(
-      style: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        color: BrandColors.textPrimary,
-        decoration: TextDecoration.none,
-      ),
-      textHeightBehavior: _cssHalfLeading,
-      child: ColoredBox(
-        color: BrandColors.surface,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[_pageTop, BrandColors.surface],
-              stops: <double>[0, 260 / 844],
-            ),
-          ),
-          child: Column(
-            children: <Widget>[
-              _header(),
-              Expanded(child: _fade(_body())),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header() {
     final SocialService? current = service;
-    return switch (frame) {
-      TulongFrame.detail when current != null => MunicipalHeader(
-        title: current.headerTitle,
-        subtitle: current.headerSubtitle,
-        onBack: onBack,
-        plainSeal: true,
-      ),
-      TulongFrame.offline => _ListHeader(
-        subtitle: offlineSubtitle,
-        onBell: onBell,
-      ),
-      _ => _ListHeader(onBell: onBell),
-    };
-  }
-
-  Widget _body() {
-    return switch (frame) {
-      TulongFrame.offline => _OfflineBody(
-        saved: saved,
-        onRetry: onRetry,
-        onOpen: onOpen,
-      ),
-      TulongFrame.detail when service != null && service!.showsFeaturedLayout =>
-        _FeaturedBody(service: service!, onShare: onShare, loadHero: loadHero),
-      TulongFrame.detail when service != null => _DetailBody(
-        service: service!,
-        onCall: onCall,
-        onDirections: onDirections,
-        onMessage: onMessage,
-        onOffice: onOffice,
-        loadHero: loadHero,
-      ),
-      _ => _ListBody(
-        services: services,
-        showNote: true,
-        emptyMessage: frame == TulongFrame.loading ? null : emptyMessage,
-        onOpen: onOpen,
-        onSearch: onSearch,
-        searchController: searchController,
-      ),
-    };
-  }
-
-  Widget _fade(Widget child) {
-    return Stack(
-      children: <Widget>[
-        child,
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 28,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0x00F3F5FA), BrandColors.surface],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return Material(
+      type: MaterialType.transparency,
+      child: frame == TulongFrame.detail && current != null
+          ? _DetailPage(
+              service: current,
+              loadHero: loadHero,
+              onBack: onBack,
+              onCall: onCall,
+              onDirections: onDirections,
+              onMessage: onMessage,
+              onOffice: onOffice,
+              onShare: onShare,
+            )
+          : _ListPage(canvas: this),
     );
   }
 }
 
-class _ListHeader extends StatelessWidget {
-  const _ListHeader({
-    this.subtitle = 'Social services & programmes',
-    this.onBell,
-  });
+/// The glass tab: blue header with the seal, the bell and the search field,
+/// then the frame's body pulled up over the header.
+class _ListPage extends StatelessWidget {
+  const _ListPage({required this.canvas});
 
-  final String subtitle;
-  final VoidCallback? onBell;
+  final TulongCanvas canvas;
 
   @override
   Widget build(BuildContext context) {
-    final double top = MediaQuery.paddingOf(context).top;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, top == 0 ? 46 : top, 16, 14),
-        child: Row(
-          children: <Widget>[
-            const _HeaderSeal(),
-            const SizedBox(width: 11),
-            Expanded(
-              child: MunicipalHeaderTitles(title: 'Tulong', subtitle: subtitle),
-            ),
-            const SizedBox(width: 11),
-            _Bell(onTap: onBell),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _HeaderSeal extends StatelessWidget {
-  const _HeaderSeal();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/brand/taytay_seal.png',
-          fit: BoxFit.contain,
-          semanticLabel: 'Seal of Taytay, Rizal',
-        ),
-      ),
-    );
-  }
-}
-
-class _Bell extends StatelessWidget {
-  const _Bell({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // The circle stays 44 dp. The hit and its semantics are 48, centred on
-    // that circle, so the header row does not grow.
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: OverflowBox(
-        maxWidth: 48,
-        maxHeight: 48,
-        child: Semantics(
-          button: onTap != null,
-          label: 'Notifications',
-          child: GestureDetector(
-            key: const Key('tulong-bell'),
-            behavior: HitTestBehavior.translucent,
-            onTap: onTap,
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(child: _BellFace()),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BellFace extends StatelessWidget {
-  const _BellFace();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.14),
-        shape: BoxShape.circle,
-      ),
-      child: const Stack(
+    final TulongCanvas c = canvas;
+    final bool offline = c.frame == TulongFrame.offline;
+    return GlassBackground(
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
-          Center(
-            child: TaytayIcon(
-              icon: TaytayIcons.bell,
-              size: 19,
-              color: Colors.white,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-          ),
-          Positioned(
-            top: 6,
-            right: 7,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: BrandColors.sealGold,
-                shape: BoxShape.circle,
-                border: Border.fromBorderSide(
-                  BorderSide(color: BrandColors.taytayBlue, width: 1.5),
-                ),
+          BlueHeader(
+            overlap: true,
+            leading: const HeaderSeal(),
+            title: 'Tulong',
+            subtitle: offline ? c.offlineSubtitle : TulongCanvas.listSubtitle,
+            actions: <Widget>[
+              HeaderIconButton(
+                key: const Key('tulong-bell'),
+                icon: TaytayIcons.bell,
+                semanticLabel: 'Notifications',
+                onPressed: c.onBell,
               ),
-              child: SizedBox(width: 8, height: 8),
+            ],
+            bottom: offline
+                ? null
+                : _SearchField(
+                    controller: c.searchController,
+                    onChanged: c.onSearch,
+                  ),
+          ),
+          GlassOverlap(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+              child: _body(c),
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _body(TulongCanvas c) {
+    return switch (c.frame) {
+      TulongFrame.loading => const LoadingSkeleton(
+        count: 6,
+        semanticLabel: 'Loading programmes',
+      ),
+      TulongFrame.offline => _OfflineBody(
+        saved: c.saved,
+        onRetry: c.onRetry,
+        onOpen: c.onOpen,
+      ),
+      _ => _ListBody(
+        services: c.services,
+        emptyMessage: c.emptyMessage,
+        onOpen: c.onOpen,
+      ),
+    };
+  }
 }
 
-class _ListBody extends StatelessWidget {
-  const _ListBody({
-    required this.services,
-    required this.showNote,
-    this.emptyMessage,
-    this.onOpen,
-    this.onSearch,
-    this.searchController,
-  });
+/// CSS `.soft .search` on the blue header: white, 16 radius, the search
+/// glyph, and a gold focus ring.
+class _SearchField extends StatelessWidget {
+  const _SearchField({this.controller, this.onChanged});
 
-  final List<SocialService> services;
-  final bool showNote;
-  final String? emptyMessage;
-  final ValueChanged<SocialService>? onOpen;
-  final ValueChanged<String>? onSearch;
-  final TextEditingController? searchController;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    const BorderRadius corners = BorderRadius.all(Radius.circular(Radii.lg));
+    return TextField(
+      key: const Key('tulong-search'),
+      controller: controller,
+      onChanged: onChanged,
+      onSubmitted: onChanged,
+      maxLines: 1,
+      textInputAction: TextInputAction.search,
+      style: AppTypography.fieldValue.copyWith(
+        fontWeight: AppTypography.body,
+        color: BrandColors.ink,
+      ),
+      decoration: InputDecoration(
+        hintText: 'Search programmes',
+        filled: true,
+        fillColor: BrandColors.white,
+        constraints: const BoxConstraints(
+          minHeight: ComponentSizes.fieldHeight,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md,
+          vertical: Spacing.md,
+        ),
+        prefixIcon: const TaytayIcon(
+          icon: TaytayIcons.search,
+          semanticLabel: '',
+          excludeSemantics: true,
+          size: IconSizes.sm,
+          color: BrandColors.muted,
+        ),
+        border: const RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+        ),
+        enabledBorder: const RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+        ),
+        focusedBorder: RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+          ring: BorderSide(
+            color: BrandColors.gold.withValues(alpha: 0.7),
+            width: FocusRing.ringWidth,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ListBody extends StatelessWidget {
+  const _ListBody({required this.services, this.emptyMessage, this.onOpen});
+
+  final List<SocialService> services;
+  final String? emptyMessage;
+  final ValueChanged<SocialService>? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? noMatch = emptyMessage;
+    final ValueChanged<SocialService>? open = onOpen;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _SearchBox(controller: searchController, onChanged: onSearch),
-        if (showNote) const _Note(),
-        if (emptyMessage != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(2, 4, 2, 0),
-            child: Text(emptyMessage!, style: _noteStyle),
-          ),
         if (services.isNotEmpty)
-          _Card(
-            padding: const EdgeInsets.fromLTRB(16, 3, 16, 3),
-            child: Column(
-              children: <Widget>[
-                for (var i = 0; i < services.length; i++)
-                  _CompactRow(
-                    service: services[i],
-                    last: i == services.length - 1,
-                    onTap: onOpen == null ? null : () => onOpen!(services[i]),
-                  ),
-              ],
-            ),
+          SettingsList(
+            glass: true,
+            children: <Widget>[
+              for (final SocialService service in services)
+                _ServiceRow(
+                  service: service,
+                  onTap: open == null ? null : () => open(service),
+                ),
+            ],
+          )
+        else if (noMatch != null)
+          EmptyState(
+            title: noMatch,
+            message:
+                'Try another word, or clear the search to see every '
+                'programme.',
+            boxed: true,
+          )
+        else
+          const EmptyState(
+            title: 'No programmes listed yet',
+            message: 'Programme information from Taytay LGU will appear here.',
+            boxed: true,
           ),
+        const _Note(),
       ],
     );
   }
 }
 
+/// Tulong is information, never an application. Said under the list.
 class _Note extends StatelessWidget {
   const _Note();
 
@@ -374,210 +293,131 @@ class _Note extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.fromLTRB(2, 10, 2, 10),
-      child: _CssLines(copy, style: _noteStyle),
-    );
-  }
-}
-
-class _SearchBox extends StatelessWidget {
-  const _SearchBox({this.controller, this.onChanged});
-
-  final TextEditingController? controller;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const TextStyle ink = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 14,
-      height: 1,
-      fontWeight: FontWeight.w500,
-      color: TulongCanvas._searchInk,
-      decoration: TextDecoration.none,
-    );
-    // The field is 44 dp. The hit grows to 48 without moving the ink.
-    return Semantics(
-      textField: true,
-      label: 'Search programmes',
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: TulongCanvas._searchBorder),
-            ),
-            child: Row(
-              children: <Widget>[
-                const TaytayIcon(
-                  icon: TaytayIcons.search,
-                  size: 18,
-                  color: TulongCanvas._searchInk,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Material(
-                    type: MaterialType.transparency,
-                    child: TextField(
-                      controller: controller,
-                      onChanged: onChanged,
-                      onSubmitted: onChanged,
-                      maxLines: 1,
-                      style: ink,
-                      cursorColor: BrandColors.taytayBlue,
-                      cursorWidth: 1.2,
-                      textAlignVertical: TextAlignVertical.center,
-                      decoration: const InputDecoration(
-                        isCollapsed: true,
-                        isDense: true,
-                        filled: false,
-                        border: InputBorder.none,
-                        enabledBorder: InputBorder.none,
-                        focusedBorder: InputBorder.none,
-                        hintText: 'Search programmes',
-                        hintStyle: ink,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Positioned(
-            left: 0,
-            right: 0,
-            top: -2,
-            bottom: -2,
-            child: IgnorePointer(child: SizedBox(key: Key('tulong-search'))),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(Spacing.xs, Spacing.md, Spacing.xs, 0),
+      child: Text(
+        copy,
+        style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
       ),
     );
   }
 }
 
-class _CompactRow extends StatelessWidget {
-  const _CompactRow({required this.service, required this.last, this.onTap});
+class _ServiceRow extends StatelessWidget {
+  const _ServiceRow({required this.service, this.onTap, this.saved = false});
 
   final SocialService service;
-  final bool last;
   final VoidCallback? onTap;
+
+  /// A saved row reads the saved line and may carry the sample tag.
+  final bool saved;
 
   @override
   Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(service.tileColor);
-    return _Hit(
-      hitKey: Key('tulong-open-${service.slug}'),
-      label: service.listTitle,
+    final bool sample = saved && (service.presentation?.heroSample ?? false);
+    return SettingsRow(
+      key: Key('tulong-open-${service.slug}'),
+      title: saved ? service.name : service.listTitle,
+      detail: saved ? service.savedLine : service.summary,
+      leading: _ServiceTile(service: service),
+      trailing: sample ? const SampleTag() : null,
+      titleMaxLines: 2,
+      detailMaxLines: 2,
       onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 52),
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : const Border(bottom: BorderSide(color: TulongCanvas._hairline)),
-        ),
-        child: Row(
-          children: <Widget>[
-            _Tile(
-              size: 40,
-              radius: 12,
-              background: background,
-              icon: _glyph(service.iconKey),
-              color: foreground,
-              iconSize: 20,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    service.listTitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _compactTitle,
-                    strutStyle: _strutFor(_compactTitle),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    service.summary,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: _compactMeta,
-                    strutStyle: _strutFor(_compactMeta),
-                  ),
-                ],
-              ),
-            ),
-            const TaytayIcon(
-              icon: TaytayIcons.chevronRight,
-              size: 18,
-              color: BrandColors.chevron,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
 
-class _DetailBody extends StatelessWidget {
-  const _DetailBody({
+/// The service's gradient tile (CSS `.gt`). The icon is the service's own
+/// Lucide glyph (the API's icon key); the tone follows its tile colour.
+class _ServiceTile extends StatelessWidget {
+  const _ServiceTile({
     required this.service,
-    this.onCall,
-    this.onDirections,
-    this.onMessage,
-    this.onOffice,
-    this.loadHero,
+    this.tileSize = IconTileSize.medium,
   });
 
   final SocialService service;
-  final VoidCallback? onCall;
-  final VoidCallback? onDirections;
-  final VoidCallback? onMessage;
-  final VoidCallback? onOffice;
-  final MediaBytesLoader? loadHero;
+  final IconTileSize tileSize;
 
   @override
   Widget build(BuildContext context) {
-    final String? source = service.legalBasis;
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    final BrandGradient gradient = BrandGradients.tile(
+      _toneOf(service.tileColor),
+    );
+    return ExcludeSemantics(
+      child: Container(
+        key: Key('tulong-tile-${service.slug}'),
+        width: tileSize.dimension,
+        height: tileSize.dimension,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          gradient: gradient.toLinearGradient(),
+          borderRadius: BorderRadius.circular(tileSize.radius),
+        ),
+        child: TaytayIcon(
+          icon: _glyph(service.iconKey),
+          semanticLabel: '',
+          excludeSemantics: true,
+          size: tileSize.glyphSize,
+          color: gradient.onColor,
+        ),
+      ),
+    );
+  }
+}
+
+/// The list could not be read: the offline state with Try again, then the
+/// pages this phone kept.
+class _OfflineBody extends StatelessWidget {
+  const _OfflineBody({required this.saved, this.onRetry, this.onOpen});
+
+  final List<SocialService> saved;
+  final VoidCallback? onRetry;
+  final ValueChanged<SocialService>? onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    final ValueChanged<SocialService>? open = onOpen;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        _MaybeHeroPhoto(
-          service: service,
-          load: loadHero,
-          child: _Hero(service: service),
+        ErrorState(
+          title: 'Programme pages need a connection',
+          message: saved.isEmpty
+              ? "We couldn't load the latest programme information."
+              : "We couldn't load the latest programme information. Pages "
+                    'you opened before are saved below.',
+          onRetry: onRetry,
+          offline: true,
+          boxed: true,
         ),
-        const SizedBox(height: 12),
-        _Actions(
-          onCall: onCall,
-          onDirections: onDirections,
-          onMessage: onMessage,
-        ),
-        const SizedBox(height: 12),
-        _AboutCard(service: service),
-        const SizedBox(height: 12),
-        _FactsCard(service: service, onOffice: onOffice),
-        if (source != null) ...<Widget>[
-          const SizedBox(height: 4),
+        if (saved.isNotEmpty) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          const SettingsSectionTitle('Saved pages'),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 2),
-            child: _CssLines(source, style: _sourceStyle),
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.xxs,
+              0,
+              Spacing.xxs,
+              Spacing.sm,
+            ),
+            child: Text(
+              'Showing what was saved on this phone',
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
+              ),
+            ),
+          ),
+          SettingsList(
+            glass: true,
+            children: <Widget>[
+              for (final SocialService service in saved)
+                _ServiceRow(
+                  service: service,
+                  saved: true,
+                  onTap: open == null ? null : () => open(service),
+                ),
+            ],
           ),
         ],
       ],
@@ -585,283 +425,340 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
-class _MaybeHeroPhoto extends StatelessWidget {
-  const _MaybeHeroPhoto({
+/// A service page. The hero photo arrives through the API; until it does
+/// (or when there is none) the page has the blue header instead.
+class _DetailPage extends StatelessWidget {
+  const _DetailPage({
     required this.service,
-    required this.child,
-    this.load,
+    this.loadHero,
+    this.onBack,
+    this.onCall,
+    this.onDirections,
+    this.onMessage,
+    this.onOffice,
+    this.onShare,
   });
 
   final SocialService service;
-  final Widget child;
-  final MediaBytesLoader? load;
+  final MediaBytesLoader? loadHero;
+  final VoidCallback? onBack;
+  final VoidCallback? onCall;
+  final VoidCallback? onDirections;
+  final VoidCallback? onMessage;
+  final VoidCallback? onOffice;
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context) {
     final String? url = service.heroUrl;
-    if (url == null || url.isEmpty || load == null) return child;
-    return MediaBytesHost(
-      id: service.slug,
-      load: load,
-      builder: (Uint8List? bytes) {
-        if (bytes == null) return child;
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            DecoratedBox(
-              decoration: const BoxDecoration(
-                borderRadius: BorderRadius.all(Radius.circular(20)),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Color.fromRGBO(6, 35, 88, 0.16),
-                    blurRadius: 24,
-                    offset: Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: SizedBox(
-                  height: 196,
-                  width: double.infinity,
-                  child: DecodedMemoryImage(
-                    bytes: bytes,
-                    height: 196,
-                    semanticLabel: service.name,
-                    placeholder: const SizedBox(
-                      height: 196,
-                      width: double.infinity,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            child,
-          ],
-        );
-      },
-    );
+    final MediaBytesLoader? load = loadHero;
+    if (url == null || url.isEmpty || load == null) return _page(null);
+    return MediaBytesHost(id: service.slug, load: load, builder: _page);
   }
-}
 
-class _Hero extends StatelessWidget {
-  const _Hero({required this.service});
-
-  final SocialService service;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(service.tileColor);
-    final String? badge = service.heroBadge;
-    final bool sample = service.presentation?.heroSample ?? false;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
-          ),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      _Tile(
-                        size: 52,
-                        radius: 16,
-                        background: background,
-                        icon: _glyph(service.iconKey),
-                        color: foreground,
-                        iconSize: 26,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            if (badge != null)
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 6,
-                                children: <Widget>[
-                                  _GoldTag(badge),
-                                  if (sample)
-                                    const SampleTag(lineHeight: _cssNormal),
-                                ],
-                              ),
-                            const SizedBox(height: 6),
-                            Text(
-                              service.name,
-                              style: _heroTitle,
-                              strutStyle: _strutFor(_heroTitle),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  _CssLines(service.details, style: _heroBlurb),
-                ],
+  Widget _page(Uint8List? bytes) {
+    final Widget sheet = DetailSheet(
+      children: service.showsFeaturedLayout
+          ? _featured(service, onShare)
+          : _standard(
+              service,
+              onCall: onCall,
+              onDirections: onDirections,
+              onMessage: onMessage,
+              onOffice: onOffice,
+            ),
+    );
+    return ColoredBox(
+      color: BrandColors.white,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: Spacing.xl),
+        children: <Widget>[
+          if (bytes != null && bytes.isNotEmpty) ...<Widget>[
+            DetailHero(
+              onBack: onBack,
+              photo: DecodedMemoryImage(
+                bytes: bytes,
+                height: DetailHero.photoHeight,
+                semanticLabel: service.name,
+                placeholder: const SizedBox.expand(),
               ),
             ),
-            Positioned(
-              right: -14,
-              bottom: -18,
-              child: Opacity(
-                opacity: 0.12,
-                child: TaytayIcon(
-                  icon: _glyph(service.iconKey),
-                  size: 110,
-                  color: BrandColors.sealGold,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                ),
-              ),
+            GlassOverlap(amount: Radii.sheetLarge, child: sheet),
+          ] else ...<Widget>[
+            BlueHeader(
+              title: service.headerTitle,
+              subtitle: service.headerSubtitle,
+              showBack: true,
+              onBack: onBack,
             ),
+            sheet,
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _GoldTag extends StatelessWidget {
-  const _GoldTag(this.label);
+/// The service page: tile and name, Call / Directions / Message, what the
+/// programme is, who can avail, the requirements (information only), the
+/// office's facts and the legal source.
+List<Widget> _standard(
+  SocialService service, {
+  VoidCallback? onCall,
+  VoidCallback? onDirections,
+  VoidCallback? onMessage,
+  VoidCallback? onOffice,
+}) {
+  final String? eligibility = service.eligibility;
+  final String? source = service.legalBasis;
+  final List<_Fact> facts = _factsOf(service);
+  return <Widget>[
+    _SheetTitle(service: service, title: service.name),
+    const SizedBox(height: Spacing.formGap),
+    PillButtonRow(
+      padding: EdgeInsets.zero,
+      wrap: true,
+      actions: <PillAction>[
+        PillAction(
+          buttonKey: const Key('tulong-call'),
+          label: 'Call',
+          glyph: TaytayGlyph.phone,
+          primary: true,
+          onPressed: onCall,
+        ),
+        PillAction(
+          buttonKey: const Key('tulong-directions'),
+          label: 'Directions',
+          glyph: TaytayGlyph.pin,
+          onPressed: onDirections,
+        ),
+        PillAction(
+          buttonKey: const Key('tulong-message'),
+          label: 'Message',
+          glyph: TaytayGlyph.chat,
+          onPressed: onMessage,
+        ),
+      ],
+    ),
+    if (service.details.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      _BodyText(service.details),
+    ],
+    if (eligibility != null && eligibility.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      const _SectionTitle('Who can avail'),
+      const SizedBox(height: Spacing.xs + Spacing.xxs),
+      _BodyText(eligibility),
+    ],
+    if (service.requirements.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      Semantics(
+        header: true,
+        child: Text.rich(
+          TextSpan(
+            text: 'Requirements ',
+            style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
+            children: <InlineSpan>[
+              TextSpan(
+                text: '(information only)',
+                style: AppTypography.listDetail.copyWith(
+                  fontWeight: AppTypography.medium,
+                  color: BrandColors.muted,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      for (final ServiceRequirement item in service.requirements)
+        _RequirementLine(requirement: item),
+    ],
+    if (facts.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      const Divider(height: 1, thickness: 1, color: BrandColors.divider),
+      for (final _Fact fact in facts)
+        DetailFactRow(
+          icon: fact.icon,
+          label: fact.label,
+          value: fact.value,
+          onTap: fact.office ? onOffice : null,
+          tapKey: fact.office ? const Key('tulong-office') : null,
+        ),
+    ],
+    if (source != null && source.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.section),
+      Text(
+        source,
+        style: AppTypography.small.copyWith(color: BrandColors.muted),
+      ),
+    ],
+  ];
+}
+
+/// The featured page: the headline, what it is, how to claim, when and
+/// whom to ask, and Share.
+List<Widget> _featured(SocialService service, VoidCallback? onShare) {
+  final TulongPresentation? presentation = service.presentation;
+  final String headline = service.featuredHeadline ?? service.name;
+  final List<String> steps = service.claimSteps;
+  final String? schedule = service.schedule;
+  final String? questions = presentation?.questionsValue;
+  return <Widget>[
+    _SheetTitle(service: service, title: headline),
+    if (service.details.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      _BodyText(service.details),
+    ],
+    if (steps.isNotEmpty) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      const _SectionTitle('How to claim'),
+      for (var i = 0; i < steps.length; i++)
+        _StepLine(number: i + 1, text: steps[i]),
+    ],
+    if (schedule != null || questions != null) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      const Divider(height: 1, thickness: 1, color: BrandColors.divider),
+      if (schedule != null)
+        DetailFactRow(
+          icon: TaytayIcons.calendar,
+          label: 'Schedule',
+          value: schedule,
+        ),
+      if (questions != null)
+        DetailFactRow(
+          icon: TaytayIcons.phone,
+          label: presentation?.questionsLabel ?? 'Questions',
+          value: questions,
+        ),
+    ],
+    const SizedBox(height: Spacing.formGap),
+    FilledButton.icon(
+      key: const Key('tulong-share'),
+      style: TaytayButtonStyles.soft(),
+      onPressed: onShare,
+      icon: const TaytayIcon(
+        icon: TaytayIcons.share,
+        semanticLabel: '',
+        excludeSemantics: true,
+        size: IconSizes.sm,
+      ),
+      label: Text(presentation?.shareLabel ?? 'Share with a family member'),
+    ),
+  ];
+}
+
+/// The sheet's first row: the large tile beside the badge and the title.
+class _SheetTitle extends StatelessWidget {
+  const _SheetTitle({required this.service, required this.title});
+
+  final SocialService service;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? badge = service.heroBadge;
+    final bool sample = service.presentation?.heroSample ?? false;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        _ServiceTile(service: service, tileSize: IconTileSize.large),
+        const SizedBox(width: Spacing.section),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (badge != null || sample) ...<Widget>[
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: Spacing.xs + Spacing.xxs,
+                  runSpacing: Spacing.xs,
+                  children: <Widget>[
+                    if (badge != null) _Badge(badge),
+                    if (sample) const SampleTag(),
+                  ],
+                ),
+                const SizedBox(height: Spacing.xs + Spacing.xxs),
+              ],
+              Semantics(
+                header: true,
+                child: Text(
+                  title,
+                  style: AppTypography.pageTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// The office or programme badge: a category label in a soft blue pill.
+class _Badge extends StatelessWidget {
+  const _Badge(this.label);
 
   final String label;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: BrandColors.chipGoldBg,
-        borderRadius: BorderRadius.circular(999),
+        color: BrandColors.blue50,
+        borderRadius: BorderRadius.circular(Radii.pill),
       ),
-      child: Text(label, style: _tag, strutStyle: _strutFor(_tag)),
-    );
-  }
-}
-
-class _Actions extends StatelessWidget {
-  const _Actions({this.onCall, this.onDirections, this.onMessage});
-
-  final VoidCallback? onCall;
-  final VoidCallback? onDirections;
-  final VoidCallback? onMessage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: <Widget>[
-        Expanded(
-          child: _PrimaryButton(
-            hitKey: const Key('tulong-call'),
-            label: 'Call',
-            icon: TaytayIcons.phone,
-            onTap: onCall,
-          ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm + Spacing.xxs,
+          vertical: Spacing.xxs + 1,
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SecondaryButton(
-            hitKey: const Key('tulong-directions'),
-            label: 'Directions',
-            icon: TaytayIcons.send,
-            onTap: onDirections,
-          ),
+        child: Text(
+          label.toUpperCase(),
+          style: AppTypography.category.copyWith(color: BrandColors.blue),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _SecondaryButton(
-            hitKey: const Key('tulong-message'),
-            label: 'Message',
-            icon: TaytayIcons.messageSquare,
-            onTap: onMessage,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AboutCard extends StatelessWidget {
-  const _AboutCard({required this.service});
-
-  final SocialService service;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? eligibility = service.eligibility;
-    return _Card(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          if (eligibility != null && eligibility.isNotEmpty) ...<Widget>[
-            Text(
-              'Who can avail',
-              style: _cardTitle,
-              strutStyle: _strutFor(_cardTitle),
-            ),
-            // .bl margin-top is 6. One image px of the browser line box
-            // sits below that, which is what keeps the body run on the
-            // specimen's start row.
-            const SizedBox(height: 6 + 1 / 3),
-            _CssLines(eligibility, style: _body),
-          ],
-          if (service.requirements.isNotEmpty) ...<Widget>[
-            const SizedBox(height: 12),
-            const _RequirementsHeading(),
-            // ul.bl margin-top 6 collapses with the first li margin-top 3.
-            // Adjacent li margins then collapse to 3, not 6.
-            const SizedBox(height: 6),
-            for (var i = 0; i < service.requirements.length; i++)
-              Padding(
-                padding: EdgeInsets.only(top: i == 0 ? 0 : 3),
-                child: _RequirementLine(requirement: service.requirements[i]),
-              ),
-            if (service.requirements.any(
-              (ServiceRequirement item) => item.sample,
-            ))
-              // One image px of the chip line box is left after the
-              // per-line overflow, and it shows up on the fact rows.
-              const SizedBox(height: 1 / 3),
-          ],
-        ],
       ),
     );
   }
 }
 
-class _RequirementsHeading extends StatelessWidget {
-  const _RequirementsHeading();
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    return const Text.rich(
-      TextSpan(
-        text: 'Requirements ',
-        style: _cardTitle,
-        children: <InlineSpan>[
-          TextSpan(text: '(information only)', style: _requirementAside),
-        ],
+    return Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
       ),
-      strutStyle: _cardTitleStrut,
     );
   }
 }
 
+class _BodyText extends StatelessWidget {
+  const _BodyText(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: AppTypography.bodyStyle.copyWith(
+        color: BrandColors.text,
+        height: 1.55,
+      ),
+    );
+  }
+}
+
+/// One requirement: a dot, the text, and the sample tag on bundled lines.
 class _RequirementLine extends StatelessWidget {
   const _RequirementLine({required this.requirement});
 
@@ -869,33 +766,31 @@ class _RequirementLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Chrome's default ul padding-inline-start is 40. The li margin-left is
-    // 18, and the disc sits in that margin (list-style-position: outside).
     return Padding(
-      padding: const EdgeInsets.only(left: 40),
+      padding: const EdgeInsets.only(top: Spacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const SizedBox(
-            width: 18,
-            child: Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: TulongCanvas._bodyInk,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(width: 4, height: 4),
-                ),
+          const Padding(
+            padding: EdgeInsets.only(top: Spacing.sm, right: Spacing.md),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: BrandColors.blue,
+                shape: BoxShape.circle,
               ),
+              child: SizedBox.square(dimension: Spacing.xs + Spacing.xxs),
             ),
           ),
           Expanded(
-            child: requirement.sample
-                ? _SampleLines(requirement.text)
-                : _CssLines(requirement.text, style: _body),
+            child: Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: Spacing.xs + Spacing.xxs,
+              runSpacing: Spacing.xs,
+              children: <Widget>[
+                _BodyText(requirement.text),
+                if (requirement.sample) const SampleTag(),
+              ],
+            ),
           ),
         ],
       ),
@@ -903,131 +798,45 @@ class _RequirementLine extends StatelessWidget {
   }
 }
 
-/// Requirement copy with the SAMPLE chip in the inline position the
-/// specimen uses: after the last word when the line has room, otherwise
-/// on the following line. A full-width text block would always drop it.
-class _SampleLines extends StatelessWidget {
-  const _SampleLines(this.text);
+/// One claim step: the number in a blue disc, then the step.
+class _StepLine extends StatelessWidget {
+  const _StepLine({required this.number, required this.text});
 
+  final int number;
   final String text;
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double maxWidth = constraints.maxWidth;
-        final TextScaler scaler = MediaQuery.textScalerOf(context);
-        final TextDirection direction = Directionality.of(context);
-        final StrutStyle strut = _strutFor(_body);
-        final List<String> lines = _cssLineBreaks(
-          text,
-          style: _body,
-          strut: strut,
-          maxWidth: maxWidth,
-          textScaler: scaler,
-          direction: direction,
-        );
-        final double step = (_body.fontSize ?? 13) * (_body.height ?? 1);
-        final String lastLine = lines.isEmpty ? '' : lines.last;
-        final TextPainter lastPainter = TextPainter(
-          text: TextSpan(text: lastLine, style: _body),
-          textDirection: direction,
-          textScaler: scaler,
-          strutStyle: strut,
-          textHeightBehavior: _cssHalfLeading,
-        )..layout();
-        final double lastWidth = lastPainter.width;
-        lastPainter.dispose();
-        final TextPainter spacePainter = TextPainter(
-          text: const TextSpan(text: ' ', style: _body),
-          textDirection: direction,
-          textScaler: scaler,
-        )..layout();
-        final double gap = spacePainter.width;
-        spacePainter.dispose();
-        final TextPainter chipPainter = TextPainter(
-          text: TextSpan(
-            text: 'SAMPLE',
-            style: AppTypography.labelStrong.copyWith(
-              letterSpacing: 0.6,
-              height: _cssNormal,
-            ),
-          ),
-          textDirection: direction,
-          textScaler: scaler,
-        )..layout();
-        // Border 1 + padding 7 on each side, matching `.sample`.
-        final double chipWidth = chipPainter.width + 16;
-        chipPainter.dispose();
-        final bool fits =
-            lines.isNotEmpty && lastWidth + gap + chipWidth <= maxWidth;
-        final int chipLine = fits ? lines.length - 1 : lines.length;
-        final int slots = lines.length + (fits ? 0 : 1);
-        // `.sample` is an inline-block taller than the 13/1.55 line, so
-        // the line box grows by the overflow. 8 image px on the specimen.
-        const double chipOverflow = 8 / 3;
-        final double height = step * slots + chipOverflow;
-        return SizedBox(
-          width: maxWidth,
-          height: height,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              for (var i = 0; i < lines.length; i++)
-                Positioned(
-                  top: step * i + (i > chipLine ? chipOverflow : 0),
-                  left: 0,
-                  right: 0,
-                  height: step,
-                  child: Text(
-                    lines[i],
-                    maxLines: 1,
-                    softWrap: false,
-                    overflow: TextOverflow.visible,
-                    style: _body,
-                    strutStyle: strut,
-                    textHeightBehavior: _cssHalfLeading,
-                  ),
-                ),
-              Positioned(
-                top: step * chipLine,
-                left: fits ? lastWidth + gap : 0,
-                height: step,
-                child: const Align(
-                  alignment: Alignment.centerLeft,
-                  child: SampleTag(lineHeight: _cssNormal),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FactsCard extends StatelessWidget {
-  const _FactsCard({required this.service, this.onOffice});
-
-  final SocialService service;
-  final VoidCallback? onOffice;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<_Fact> facts = _factsOf(service);
-    return _Card(
-      // The 4 image px on top is what the card above gave up, so these
-      // lines stay put while the border moves up.
-      padding: const EdgeInsets.fromLTRB(16, 2 + 4 / 3, 16, 2),
-      child: Column(
+    return Padding(
+      padding: const EdgeInsets.only(top: Spacing.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          for (var i = 0; i < facts.length; i++)
-            _FactRow(
-              fact: facts[i],
-              last: i == facts.length - 1,
-              onTap: facts[i].office ? onOffice : null,
-              hitKey: facts[i].office ? const Key('tulong-office') : null,
+          Container(
+            constraints: const BoxConstraints(
+              minWidth: ComponentSizes.stepDisc,
+              minHeight: ComponentSizes.stepDisc,
             ),
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(
+              color: BrandColors.blue,
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              '$number',
+              style: AppTypography.small.copyWith(
+                fontWeight: AppTypography.black,
+                color: BrandColors.white,
+              ),
+            ),
+          ),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(top: Spacing.xxs),
+              child: _BodyText(text),
+            ),
+          ),
         ],
       ),
     );
@@ -1090,982 +899,14 @@ List<_Fact> _factsOf(SocialService service) {
   return rows;
 }
 
-class _FactRow extends StatelessWidget {
-  const _FactRow({
-    required this.fact,
-    required this.last,
-    this.onTap,
-    this.hitKey,
-  });
-
-  final _Fact fact;
-  final bool last;
-  final VoidCallback? onTap;
-  final Key? hitKey;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget row = Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: last
-            ? null
-            : const Border(bottom: BorderSide(color: TulongCanvas._hairline)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _Tile(
-            size: 44,
-            radius: 12,
-            background: BrandColors.chipBlueBg,
-            icon: fact.icon,
-            color: BrandColors.taytayBlue,
-            iconSize: 20,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  fact.label,
-                  style: _factLabel,
-                  strutStyle: _strutFor(_factLabel),
-                ),
-                const SizedBox(height: 2),
-                _CssLines(fact.value, style: _factValue),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (onTap == null) return row;
-    return _Hit(hitKey: hitKey, label: fact.label, onTap: onTap, child: row);
-  }
-}
-
-class _FeaturedBody extends StatelessWidget {
-  const _FeaturedBody({required this.service, this.onShare, this.loadHero});
-
-  final SocialService service;
-  final VoidCallback? onShare;
-  final MediaBytesLoader? loadHero;
-
-  @override
-  Widget build(BuildContext context) {
-    final TulongPresentation? presentation = service.presentation;
-    final String headline = service.featuredHeadline ?? service.name;
-    final List<String> steps = service.claimSteps;
-    final String? schedule = service.schedule;
-    final String? questions = presentation?.questionsValue;
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        _MaybeHeroPhoto(
-          service: service,
-          load: loadHero,
-          child: _FeaturedHero(service: service, headline: headline),
-        ),
-        if (steps.isNotEmpty) ...<Widget>[
-          const SizedBox(height: 12),
-          _Card(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 16 + 5 / 3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'How to claim',
-                  style: _cardTitle,
-                  strutStyle: _strutFor(_cardTitle),
-                ),
-                for (var i = 0; i < steps.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          width: 26,
-                          height: 26,
-                          alignment: Alignment.center,
-                          decoration: const BoxDecoration(
-                            color: BrandColors.taytayBlue,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text('${i + 1}', style: _stepNumber),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: _CssLines(steps[i], style: _noteStyle),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        if (schedule != null || questions != null) ...<Widget>[
-          const SizedBox(height: 12),
-          _Card(
-            // Same 4 image px the steps card gave up, so the schedule
-            // line stays while this border moves up.
-            padding: const EdgeInsets.fromLTRB(16, 2 + 4 / 3, 16, 2),
-            child: Column(
-              children: <Widget>[
-                if (schedule != null)
-                  _FactRow(
-                    fact: _Fact(
-                      label: 'Schedule',
-                      value: schedule,
-                      icon: TaytayIcons.calendar,
-                    ),
-                    last: questions == null,
-                  ),
-                if (questions != null)
-                  _FactRow(
-                    fact: _Fact(
-                      label: presentation?.questionsLabel ?? 'Questions',
-                      value: questions,
-                      icon: TaytayIcons.phone,
-                    ),
-                    last: true,
-                  ),
-              ],
-            ),
-          ),
-        ],
-        const SizedBox(height: 12),
-        _SecondaryButton(
-          hitKey: const Key('tulong-share'),
-          label: presentation?.shareLabel ?? 'Share with a family member',
-          icon: TaytayIcons.share,
-          onTap: onShare,
-        ),
-      ],
-    );
-  }
-}
-
-class _FeaturedHero extends StatelessWidget {
-  const _FeaturedHero({required this.service, required this.headline});
-
-  final SocialService service;
-  final String headline;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? badge = service.heroBadge;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
-          ),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Padding(
-              // The painted hero is 7 image px short of the specimen at
-              // line-height 1.2. The extra bottom padding is that remainder.
-              padding: const EdgeInsets.fromLTRB(18, 18, 18, 18 + 7 / 3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (badge != null) _GoldTag(badge),
-                  const SizedBox(height: 10),
-                  _CssLines(headline, style: _featuredTitle),
-                  const SizedBox(height: 6),
-                  _CssLines(service.details, style: _featuredBlurb),
-                ],
-              ),
-            ),
-            Positioned(
-              right: -10,
-              bottom: -14,
-              child: Opacity(
-                opacity: 0.18,
-                child: TaytayIcon(
-                  icon: _glyph(service.iconKey),
-                  size: 120,
-                  color: BrandColors.sealGold,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OfflineBody extends StatelessWidget {
-  const _OfflineBody({required this.saved, this.onRetry, this.onOpen});
-
-  final List<SocialService> saved;
-  final VoidCallback? onRetry;
-  final ValueChanged<SocialService>? onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: BrandColors.textPrimary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Row(
-            children: <Widget>[
-              TaytayIcon(
-                icon: TaytayIcons.wifiOff,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text("You're offline", style: _offlineTitle),
-                    Text(
-                      'Showing what was saved on this phone',
-                      style: _offlineMeta,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 28, 18, 28),
-          child: Column(
-            children: <Widget>[
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  color: BrandColors.chipGreyBg,
-                  shape: BoxShape.circle,
-                ),
-                child: SizedBox(
-                  width: 72,
-                  height: 72,
-                  child: Center(
-                    child: TaytayIcon(
-                      icon: TaytayIcons.wifiOff,
-                      size: 32,
-                      color: BrandColors.listMeta,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-              const Text(
-                'Programme pages need a connection',
-                textAlign: TextAlign.center,
-                style: _offlineHeading,
-              ),
-              const SizedBox(height: 4),
-              const _CssLines(
-                "We couldn't load the latest programme information. Pages you opened before are saved below.",
-                style: _noteStyle,
-                align: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              _PrimaryButton(
-                hitKey: const Key('tulong-retry'),
-                label: 'Try again',
-                icon: TaytayIcons.refreshCw,
-                onTap: onRetry,
-              ),
-            ],
-          ),
-        ),
-        if (saved.isNotEmpty) ...<Widget>[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(0, 4, 0, 8),
-            child: Text('Saved pages', style: _sectionTitle),
-          ),
-          _Card(
-            padding: const EdgeInsets.fromLTRB(16, 2, 16, 4),
-            child: Column(
-              children: <Widget>[
-                for (var i = 0; i < saved.length; i++)
-                  _SavedRow(
-                    service: saved[i],
-                    last: i == saved.length - 1,
-                    onTap: onOpen == null ? null : () => onOpen!(saved[i]),
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SavedRow extends StatelessWidget {
-  const _SavedRow({required this.service, required this.last, this.onTap});
-
-  final SocialService service;
-  final bool last;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color background, Color foreground) = _tileColors(service.tileColor);
-    final bool sample = service.presentation?.heroSample ?? false;
-    return _Hit(
-      hitKey: Key('tulong-open-${service.slug}'),
-      label: service.listTitle,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : const Border(bottom: BorderSide(color: TulongCanvas._hairline)),
-        ),
-        child: Row(
-          children: <Widget>[
-            _Tile(
-              size: 44,
-              radius: 12,
-              background: background,
-              icon: _glyph(service.iconKey),
-              color: foreground,
-              iconSize: 20,
-              dropIcon: true,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Wrap(
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 6,
-                    children: <Widget>[
-                      Text(service.name, style: _savedTitle),
-                      if (sample) const SampleTag(lineHeight: _cssNormal),
-                    ],
-                  ),
-                  // The chip is taller than `.lt` and the row is centred on
-                  // the icon, so the line box has to carry the overflow or
-                  // the subtitle rides up into the title.
-                  if (sample) const SizedBox(height: 2),
-                  const SizedBox(height: 2),
-                  Text(service.savedLine, style: _compactMeta),
-                ],
-              ),
-            ),
-            const TaytayIcon(
-              icon: TaytayIcons.chevronRight,
-              size: 18,
-              color: BrandColors.chevron,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
-
-  final Widget child;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-        border: Border.fromBorderSide(BorderSide(color: BrandColors.cardLine)),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x0D101828),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      // CSS `border-box` takes the 1 px stroke out of the content width.
-      // A vertical inset would move every line by 3 image px.
-      child: Padding(
-        padding: padding + const EdgeInsets.symmetric(horizontal: 1),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.size,
-    required this.radius,
-    required this.background,
-    required this.icon,
-    required this.color,
-    required this.iconSize,
-    this.dropIcon = false,
-  });
-
-  final double size;
-  final double radius;
-  final Color background;
-  final IconData icon;
-  final Color color;
-  final double iconSize;
-
-  /// The Lucide users glyph has a neck the SVG stroke does not. One pixel
-  /// down puts that gap on the specimen's subtitle row.
-  final bool dropIcon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Padding(
-        // Centering a child that is 2 px taller on top drops the glyph 1 px.
-        padding: dropIcon ? const EdgeInsets.only(top: 2) : EdgeInsets.zero,
-        child: TaytayIcon(
-          icon: icon,
-          size: iconSize,
-          color: color,
-          semanticLabel: '',
-          excludeSemantics: true,
-        ),
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({
-    required this.hitKey,
-    required this.label,
-    required this.icon,
-    this.onTap,
-  });
-
-  final Key hitKey;
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: hitKey,
-      label: label,
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: BrandColors.taytayBlue,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TaytayIcon(
-              icon: icon,
-              size: 16,
-              color: Colors.white,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _primaryLabel,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SecondaryButton extends StatelessWidget {
-  const _SecondaryButton({
-    required this.hitKey,
-    required this.label,
-    required this.icon,
-    this.onTap,
-  });
-
-  final Key hitKey;
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: hitKey,
-      label: label,
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BrandColors.taytayBlue, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TaytayIcon(
-              icon: icon,
-              size: 16,
-              color: BrandColors.taytayBlue,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _secondaryLabel,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Hit extends StatelessWidget {
-  const _Hit({
-    required this.child,
-    required this.label,
-    this.hitKey,
-    this.onTap,
-  });
-
-  final Widget child;
-  final String label;
-  final Key? hitKey;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: onTap != null,
-      label: label,
-      child: GestureDetector(
-        key: hitKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: child,
-      ),
-    );
-  }
-}
-
-class _CssLines extends StatelessWidget {
-  const _CssLines(
-    this.text, {
-    required this.style,
-    this.align = TextAlign.start,
-  });
-
-  final String text;
-  final TextStyle style;
-  final TextAlign align;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? fontSize = style.fontSize;
-    final double? height = style.height;
-    final StrutStyle strut = _strutFor(style);
-    if (fontSize == null || height == null) {
-      return Text(text, style: style, strutStyle: strut, textAlign: align);
-    }
-    final double step = fontSize * height;
-    if ((step - step.roundToDouble()).abs() < 0.001) {
-      return Text(
-        text,
-        style: style,
-        strutStyle: strut,
-        textAlign: align,
-        textHeightBehavior: _cssHalfLeading,
-      );
-    }
-    return Semantics(
-      label: text,
-      child: ExcludeSemantics(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final List<String> lines = _cssLineBreaks(
-              text,
-              style: style,
-              strut: strut,
-              maxWidth: constraints.maxWidth,
-              textScaler: MediaQuery.textScalerOf(context),
-              direction: Directionality.of(context),
-            );
-            if (lines.isEmpty) return const SizedBox.shrink();
-            return SizedBox(
-              width: constraints.maxWidth,
-              height: step * lines.length,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  for (var i = 0; i < lines.length; i++)
-                    Positioned(
-                      top: step * i,
-                      left: 0,
-                      right: 0,
-                      child: Text(
-                        lines[i],
-                        maxLines: 1,
-                        softWrap: false,
-                        textAlign: align,
-                        textHeightBehavior: _cssHalfLeading,
-                        strutStyle: strut,
-                        style: style,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// Hard breaks are their own lines. A painter given the whole string keeps
-/// the characters after a newline on the first line's boundary.
-List<String> _cssLineBreaks(
-  String text, {
-  required TextStyle style,
-  required StrutStyle strut,
-  required double maxWidth,
-  required TextScaler textScaler,
-  required TextDirection direction,
-}) {
-  final List<String> lines = <String>[];
-  for (final String paragraph in text.split('\n')) {
-    if (paragraph.isEmpty) {
-      lines.add('');
-      continue;
-    }
-    final TextPainter painter = TextPainter(
-      text: TextSpan(text: paragraph, style: style),
-      textDirection: direction,
-      textScaler: textScaler,
-      textHeightBehavior: _cssHalfLeading,
-      strutStyle: strut,
-    )..layout(maxWidth: maxWidth);
-    var start = 0;
-    while (start < paragraph.length) {
-      final TextRange range = painter.getLineBoundary(
-        TextPosition(offset: start),
-      );
-      if (range.end <= start) break;
-      lines.add(paragraph.substring(range.start, range.end).trimRight());
-      start = range.end;
-    }
-    painter.dispose();
-  }
-  return lines;
-}
-
-StrutStyle _strutFor(TextStyle style) {
-  return StrutStyle(
-    fontFamily: style.fontFamily,
-    fontSize: style.fontSize,
-    fontWeight: style.fontWeight,
-    height: style.height,
-    leadingDistribution: TextLeadingDistribution.even,
-    forceStrutHeight: true,
-  );
-}
-
-const double _cssNormal = 1.26;
-
-const TextHeightBehavior _cssHalfLeading = TextHeightBehavior(
-  applyHeightToFirstAscent: true,
-  applyHeightToLastDescent: true,
-  leadingDistribution: TextLeadingDistribution.even,
-);
-
-const StrutStyle _cardTitleStrut = StrutStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  height: _cssNormal,
-  leadingDistribution: TextLeadingDistribution.even,
-  forceStrutHeight: true,
-);
-
-const TextStyle _noteStyle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: 1.5,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _compactTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _compactMeta = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: _cssNormal,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _heroTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 18,
-  fontWeight: FontWeight.w800,
-  height: 1.2,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _heroBlurb = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w400,
-  height: 1.5,
-  color: Color(0xF2FFFFFF),
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _featuredTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 22,
-  fontWeight: FontWeight.w800,
-  height: 1.2,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _featuredBlurb = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w400,
-  height: 1.5,
-  color: Color(0xE6FFFFFF),
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _tag = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.inkGold,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _cardTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _requirementAside = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  height: _cssNormal,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _body = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: 1.55,
-  color: TulongCanvas._bodyInk,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _factLabel = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  height: _cssNormal,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _factValue = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w700,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _sourceStyle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w600,
-  height: 1.5,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _primaryLabel = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: 1,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _secondaryLabel = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: 1,
-  color: BrandColors.taytayBlue,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _offlineTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  height: 1.26,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _offlineMeta = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w500,
-  height: 1.26,
-  color: Color(0xD9FFFFFF),
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _offlineHeading = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 16,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _sectionTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 15,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _savedTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: _cssNormal,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _stepNumber = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w800,
-  height: 1,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-/// Brand gold `#7A5E0C`.
-const int _goldTile = 0xFF7A5E0C;
-
-(Color, Color) _tileColors(int? tile) {
+/// The tile tone for the API's tile colour. An unknown colour is blue.
+TileTone _toneOf(int? tile) {
   return switch (tile) {
-    0xFF0F7A4D => (BrandColors.chipGreenBg, BrandColors.success),
-    _goldTile => (BrandColors.chipGoldBg, BrandColors.inkGold),
-    0xFFB3261E => (BrandColors.chipRedBg, BrandColors.danger),
-    0xFF0B3D91 => (BrandColors.chipBlueBg, BrandColors.taytayBlue),
-    null => (BrandColors.chipBlueBg, BrandColors.taytayBlue),
-    final int value => (_lightTile(value), Color(value)),
+    0xFF0F7A4D => TileTone.green,
+    0xFF7A5E0C => TileTone.gold,
+    0xFFB3261E => TileTone.red,
+    _ => TileTone.blue,
   };
-}
-
-Color _lightTile(int argb) {
-  final int red = (argb >> 16) & 0xFF;
-  final int green = (argb >> 8) & 0xFF;
-  final int blue = argb & 0xFF;
-  int mix(int channel) => (channel * 0.14 + 255 * 0.86).round().clamp(0, 255);
-  return Color.fromARGB(255, mix(red), mix(green), mix(blue));
 }
 
 IconData _glyph(String name) {
