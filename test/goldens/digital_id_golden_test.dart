@@ -35,16 +35,13 @@ void main() {
   final List<_Specimen> specimens = <_Specimen>[
     _Specimen(
       'active',
-      design: '08-11_My-Account_Digital-ID-Active.png',
       card: _sampleCard(issued, expires, qr: qr),
       nameText: 'Juan Dela Cruz',
       now: now,
       sample: true,
-      maskQr: true,
     ),
     _Specimen(
       'suspended',
-      design: '08-11b_My-Account_Digital-ID-Suspended.png',
       card: _sampleCard(
         issued,
         expires,
@@ -56,7 +53,6 @@ void main() {
     ),
     _Specimen(
       'revoked',
-      design: '08-11c_My-Account_Digital-ID-Revoked.png',
       card: _sampleCard(
         issued,
         expires,
@@ -68,24 +64,18 @@ void main() {
     ),
     _Specimen(
       'expired',
-      design: '08-11d_My-Account_Digital-ID-Expired.png',
       card: _sampleCard(issued, expires),
       nameText: 'Juan Dela Cruz',
       now: DateTime(2029, 10, 23),
       sample: true,
     ),
-    _Specimen(
-      'not-issued',
-      design: '08-11e_My-Account_Digital-ID-Not-Issued.png',
-      now: now,
-    ),
+    _Specimen('not-issued', now: now),
     _Specimen(
       'long-name',
       card: _sampleCard(issued, expires, qr: qr),
       nameText: _longName,
       now: now,
       sample: true,
-      maskQr: true,
     ),
     _Specimen(
       'ellipsis',
@@ -93,7 +83,6 @@ void main() {
       nameText: '$_longName Reyes',
       now: now,
       sample: true,
-      maskQr: true,
     ),
     _Specimen(
       'empty-name',
@@ -101,58 +90,21 @@ void main() {
       nameText: '   ',
       now: now,
       sample: true,
-      maskQr: true,
     ),
   ];
 
   for (final _Specimen specimen in specimens) {
     testWidgets('${specimen.name} matches its golden', (tester) async {
       final img.Image rendered = await _paint(tester, specimen);
-      final String? designName = specimen.design;
-      GoldenMask? mask;
-      String? lineReport;
-      if (designName != null) {
-        final img.Image? design = img.decodePng(
-          File('test/goldens/design/digital-id/$designName').readAsBytesSync(),
-        );
-        expect(design, isNotNull, reason: designName);
-        if (specimen.maskQr) {
-          final Rect qr = tester.getRect(find.byKey(DigitalIdView.qrKey));
-          final Rect phone = tester.getRect(
-            find.byKey(const ValueKey<String>('digital-id-frame')),
-          );
-          mask = GoldenMask(
-            ((qr.left - phone.left) * 3).floor(),
-            ((qr.top - phone.top) * 3).floor(),
-            (qr.width * 3).ceil(),
-            (qr.height * 3).ceil(),
-          );
-        }
-        lineReport = _lineReport(design!, rendered, mask);
-      }
-
+      // Redesign P3b: the card is DigitalID.dc.html now. The old specimen
+      // PNGs (test/goldens/design/digital-id) were the retired card, so the
+      // row-by-row comparison with them and its side-by-side images are gone.
+      // Each face is still pinned, pixel for pixel, to its own golden.
       final String goldenPath = 'test/goldens/digital_id/${specimen.name}.png';
-      final String sidePath =
-          'test/goldens/compare/digital-id/${specimen.name}.png';
       if (autoUpdateGoldenFiles) {
         final File golden = File(goldenPath);
         golden.parent.createSync(recursive: true);
         golden.writeAsBytesSync(img.encodePng(rendered));
-        if (designName != null) {
-          final img.Image? design = img.decodePng(
-            File(
-              'test/goldens/design/digital-id/$designName',
-            ).readAsBytesSync(),
-          );
-          final GoldenReport report = compareImages(
-            design!,
-            rendered,
-            masks: mask == null ? const <GoldenMask>[] : <GoldenMask>[mask],
-          );
-          final File side = File(sidePath);
-          side.parent.createSync(recursive: true);
-          side.writeAsBytesSync(img.encodePng(report.sideBySide));
-        }
       }
 
       final File goldenFile = File(goldenPath);
@@ -162,14 +114,6 @@ void main() {
       final GoldenReport self = compareImages(committed!, rendered);
       expect(self.sameSize, isTrue, reason: specimen.name);
       expect(self.mismatchPercent, 0, reason: specimen.name);
-      if (lineReport != null) {
-        expect(lineReport, startsWith('dev '), reason: specimen.name);
-        final int deviation = int.parse(lineReport.split(' ').elementAt(1));
-        expect(deviation, lessThanOrEqualTo(2), reason: lineReport);
-      }
-      if (designName != null) {
-        expect(File(sidePath).existsSync(), isTrue, reason: sidePath);
-      }
     });
   }
 }
@@ -195,20 +139,16 @@ class _Specimen {
   const _Specimen(
     this.name, {
     required this.now,
-    this.design,
     this.card,
     this.nameText,
     this.sample = false,
-    this.maskQr = false,
   });
 
   final String name;
-  final String? design;
   final ResidentCredential? card;
   final String? nameText;
   final DateTime now;
   final bool sample;
-  final bool maskQr;
 
   String? get residentName => nameText;
 }
@@ -341,62 +281,3 @@ class _Phone extends StatelessWidget {
 }
 
 void _ignore(int index) {}
-
-String _lineReport(img.Image design, img.Image render, GoldenMask? mask) {
-  final img.Image left = img.Image.from(design);
-  final img.Image right = img.Image.from(render);
-  if (mask != null) {
-    _whiten(left, mask);
-    _whiten(right, mask);
-  }
-  final List<int> designStarts = _darkStarts(left);
-  final List<int> renderStarts = _darkStarts(right);
-  if (designStarts.length != renderStarts.length) {
-    return 'dev 999 lines ${renderStarts.length}/${designStarts.length} '
-        'design $designStarts render $renderStarts';
-  }
-  var max = 0;
-  for (var i = 0; i < designStarts.length; i++) {
-    final int delta = (designStarts[i] - renderStarts[i]).abs();
-    if (delta > max) max = delta;
-  }
-  return 'dev $max lines ${renderStarts.length}/${designStarts.length}';
-}
-
-void _whiten(img.Image image, GoldenMask mask) {
-  final int x1 = (mask.x + mask.width).clamp(0, image.width);
-  final int y1 = (mask.y + mask.height).clamp(0, image.height);
-  for (var y = mask.y.clamp(0, image.height); y < y1; y++) {
-    for (var x = mask.x.clamp(0, image.width); x < x1; x++) {
-      image.setPixelRgb(x, y, 255, 255, 255);
-    }
-  }
-}
-
-/// A row is dark when any pixel from x 60 to 1110 has mean RGB below 110.
-/// Runs shorter than 8 rows are dropped. The value is the start row.
-List<int> _darkStarts(img.Image image) {
-  final List<bool> rows = List<bool>.filled(image.height, false);
-  final int x1 = image.width < 1110 ? image.width : 1110;
-  for (var y = 0; y < image.height; y++) {
-    for (var x = 60; x < x1; x++) {
-      final img.Pixel pixel = image.getPixel(x, y);
-      final num mean = (pixel.r + pixel.g + pixel.b) / 3;
-      if (mean < 110) {
-        rows[y] = true;
-        break;
-      }
-    }
-  }
-  final List<int> starts = <int>[];
-  int? start;
-  for (var y = 0; y < rows.length; y++) {
-    if (rows[y] && start == null) start = y;
-    if (!rows[y] && start != null) {
-      if (y - start >= 8) starts.add(start);
-      start = null;
-    }
-  }
-  if (start != null && rows.length - start >= 8) starts.add(start);
-  return starts;
-}

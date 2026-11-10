@@ -157,42 +157,45 @@ void main() {
     expect(find.text('MUNICIPALITY OF TAYTAY'), findsOneWidget);
   });
 
-  testWidgets('a long name stays 17/800 and ellipsizes on line 2', (
+  // Redesign P3b: DigitalID.dc.html prints the name at 14 / 800 (`.nm`) in
+  // the card grid, not 17 / 800 across the old card. Still two lines, still
+  // ellipsized, still as the server sent it.
+  testWidgets('a long name stays 14/800 and ellipsizes on line 2', (
     tester,
   ) async {
     await _loadFonts();
+    tester.view
+      ..devicePixelRatio = 1
+      ..physicalSize = const Size(390, 844);
+    addTearDown(tester.view.reset);
     await _pump(
       tester,
       DigitalIdView(
         card: _card(CredentialLifecycleState.active, qr: _qr),
-        name:
-            'Maria Concepcion Josefina Dela Paz-Villanueva Santiago Fernandez',
+        name: 'Maria Concepcion Dela Paz',
         now: _localNow,
       ),
     );
     final Text text = tester.widget<Text>(find.byKey(DigitalIdView.nameKey));
+    expect(text.data, 'Maria Concepcion Dela Paz');
     expect(text.maxLines, 2);
     expect(text.overflow, TextOverflow.ellipsis);
     expect(text.softWrap, isTrue);
-    expect(text.style?.fontSize, 17);
+    expect(text.style?.fontSize, 14);
     expect(text.style?.fontWeight, FontWeight.w800);
     expect(text.style?.height, 1.25);
     final RenderParagraph paragraph = tester.renderObject<RenderParagraph>(
       find.byKey(DigitalIdView.nameKey),
     );
-    // At 17 px this sample fits on two lines. The ellipsis is the overflow
-    // rule, proven with one more word below.
     expect(paragraph.didExceedMaxLines, isFalse);
-    expect(paragraph.size.height, greaterThan(30));
-    expect(paragraph.size.height, lessThanOrEqualTo(45));
-    expect(paragraph.size.width, lessThanOrEqualTo(300));
 
     await _pump(
       tester,
       DigitalIdView(
         card: _card(CredentialLifecycleState.active, qr: _qr),
         name:
-            'Maria Concepcion Josefina Dela Paz-Villanueva Santiago Fernandez Reyes',
+            'Maria Concepcion Josefina Dela Paz-Villanueva Santiago Fernandez '
+            'Reyes Bautista Concepcion',
         now: _localNow,
       ),
     );
@@ -200,7 +203,7 @@ void main() {
       find.byKey(DigitalIdView.nameKey),
     );
     expect(longer.didExceedMaxLines, isTrue);
-    expect(longer.size.width, lessThanOrEqualTo(300));
+    expect(longer.size.height, lessThanOrEqualTo(14 * 1.25 * 2 + 1));
   });
 
   testWidgets('the QR token is not a label and is not in the widget dump', (

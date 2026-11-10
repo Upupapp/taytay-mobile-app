@@ -2,6 +2,9 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taytay_resident/core/result/app_failure.dart';
+import 'package:taytay_resident/features/credential/domain/credential_repository.dart';
+import 'package:taytay_resident/features/credential/presentation/digital_id_canvas.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
 import 'package:taytay_resident/features/home/presentation/hotlines_screen.dart';
@@ -186,6 +189,63 @@ void main() {
     });
   });
 
+  group('credential', () {
+    testWidgets('every digital ID face lays out cleanly', (tester) async {
+      final DateTime now = DateTime(2026, 10, 22, 12);
+      final List<DigitalIdView> views = <DigitalIdView>[
+        for (final CredentialLifecycleState state in <CredentialLifecycleState>[
+          CredentialLifecycleState.active,
+          CredentialLifecycleState.suspended,
+          CredentialLifecycleState.revoked,
+          CredentialLifecycleState.expired,
+        ])
+          DigitalIdView(
+            now: now,
+            sample: true,
+            name: 'A Synthetic Resident With A Rather Long Name',
+            card: ResidentCredential(
+              id: 'card-1',
+              state: state,
+              rawState: state.name,
+              idNumber: 'TYT-0000-0000',
+              issuedAt: DateTime(2026, 10, 22),
+              expiresAt: DateTime(2029, 10, 22),
+              qr: PresentationArtifact(
+                payload: 'synthetic-not-a-credential',
+                expiresAt: DateTime(2026, 10, 22, 21, 42),
+              ),
+            ),
+          ),
+        DigitalIdView(now: now),
+        DigitalIdView(now: now, loading: true),
+        DigitalIdView(
+          now: now,
+          failure: const NetworkFailure(),
+          onRetry: () {},
+        ),
+      ];
+      for (final DigitalIdView view in views) {
+        await expectCleanLayouts(
+          tester,
+          () => view,
+          height: 1400,
+          scrollable: false,
+        );
+      }
+    });
+
+    testWidgets('loading never claims the card is not issued', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          DigitalIdView(now: DateTime(2026, 10, 22), loading: true),
+          scrollable: false,
+        ),
+      );
+      expect(find.text('Not yet issued'), findsNothing);
+      expect(find.byType(GlassBackground), findsOneWidget);
+    });
+  });
+
   test('restyled screens use tokens: no raw colours, sizes or shadows', () {
     final List<String> offenders = <String>[];
     for (final String path in _restyled) {
@@ -211,6 +271,8 @@ const List<String> _restyled = <String>[
   'lib/features/news/presentation/balita_canvas.dart',
   'lib/features/news/presentation/news_screen.dart',
   'lib/features/news/presentation/news_post_screen.dart',
+  'lib/features/credential/presentation/digital_id_canvas.dart',
+  'lib/features/credential/presentation/digital_id_screen.dart',
 ];
 
 const List<HomeSlide> _slides = <HomeSlide>[

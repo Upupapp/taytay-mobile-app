@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'dart:typed_data';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:qr/qr.dart';
@@ -11,19 +10,22 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/app_failure.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/failure_view.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
 import '../domain/credential_repository.dart';
 import '../domain/digital_id_face.dart';
 
-/// The issued card, the four non-active explanations, and the not-issued card.
+/// The issued card, the four non-active explanations, and the not-issued card
+/// (design `DigitalID.dc.html`, the card pattern on a glass page).
 ///
-/// The shell paints the tab bar. A golden composes this view with that bar.
-/// The QR token is painted and then dropped: it is not a label, a key, or a
-/// diagnostic field.
+/// The shell paints the tab bar. The QR token is painted and then dropped: it
+/// is not a label, a key, or a diagnostic field. The card shows what the
+/// server sent and nothing else; this phone never decides it is genuine.
 class DigitalIdView extends StatelessWidget {
   const DigitalIdView({
     required this.now,
@@ -34,6 +36,7 @@ class DigitalIdView extends StatelessWidget {
     this.environment = AppEnvironment.dev,
     this.onRetry,
     this.loadPhoto,
+    this.loading = false,
     super.key,
   });
 
@@ -57,325 +60,95 @@ class DigitalIdView extends StatelessWidget {
   /// `GET /media/{id}/content` for the card portrait. Null keeps the placeholder.
   final MediaBytesLoader? loadPhoto;
 
+  /// True until the first read answers, so "Not yet issued" is never shown
+  /// for a card that is still loading.
+  final bool loading;
+
   @override
   Widget build(BuildContext context) {
     final String? published = publishedResidentName(name);
+    final ResidentCredential? card = this.card;
     final DigitalIdFace? face = digitalIdFace(card, now);
-    return DefaultTextStyle(
-      style: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        color: BrandColors.textPrimary,
-        decoration: TextDecoration.none,
-      ),
-      child: ColoredBox(
-        color: BrandColors.surface,
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double height = constraints.maxHeight;
-            final double stop = height <= 0
-                ? 1
-                : (260 / height).clamp(0.0, 1.0);
-            return DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: const <Color>[
-                    BrandColors.surfaceMuted,
-                    BrandColors.surface,
-                  ],
-                  stops: <double>[0, stop],
-                ),
-              ),
-              child: Column(
-                children: <Widget>[
-                  const MunicipalHeader(
-                    title: 'My Taytay ID',
-                    subtitle: 'Bayan ng Taytay · Rizal',
-                    plainSeal: true,
-                  ),
-                  Expanded(
-                    child: Stack(
-                      children: <Widget>[
-                        Positioned.fill(
-                          child: _Body(
-                            card: card,
-                            name: published,
-                            face: face,
-                            sample: sample,
-                            failure: failure,
-                            environment: environment,
-                            onRetry: onRetry,
-                            now: now,
-                            loadPhoto: loadPhoto,
-                          ),
-                        ),
-                        const Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 28,
-                          child: IgnorePointer(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                  colors: <Color>[
-                                    Color(0x00F3F5FA),
-                                    BrandColors.surface,
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _Body extends StatelessWidget {
-  const _Body({
-    required this.card,
-    required this.name,
-    required this.face,
-    required this.sample,
-    required this.failure,
-    required this.environment,
-    required this.onRetry,
-    required this.now,
-    this.loadPhoto,
-  });
-
-  final ResidentCredential? card;
-  final String? name;
-  final DigitalIdFace? face;
-  final bool sample;
-  final AppFailure? failure;
-  final AppEnvironment environment;
-  final VoidCallback? onRetry;
-  final DateTime now;
-  final MediaBytesLoader? loadPhoto;
-
-  @override
-  Widget build(BuildContext context) {
     final AppFailure? failure = this.failure;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        if (failure != null)
-          FailureView(
+    final List<Widget> body;
+    if (loading) {
+      body = const <Widget>[
+        LoadingSkeleton(
+          layout: SkeletonLayout.detail,
+          semanticLabel: 'Loading your digital ID',
+        ),
+      ];
+    } else if (failure != null) {
+      body = <Widget>[
+        GlassCard(
+          child: FailureView(
             failure: failure,
             environment: environment,
             onRetry: onRetry,
-          )
-        else if (card == null || face == null)
-          const _NotIssued()
-        else
-          _Issued(
-            card: card!,
-            name: name,
-            face: face!,
-            sample: sample,
-            now: now,
-            loadPhoto: loadPhoto,
-          ),
-      ],
-    );
-  }
-}
-
-class _NotIssued extends StatelessWidget {
-  const _NotIssued();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Column(
-      children: <Widget>[
-        _CardShell(
-          dimmed: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _SealRow(),
-              SizedBox(height: 40),
-              _Ink(
-                'Not yet issued',
-                size: 13,
-                weight: FontWeight.w700,
-                color: Color(0xCCFFFFFF),
-              ),
-            ],
           ),
         ),
-        SizedBox(height: 14),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 6),
-          child: _Ink(
-            'Your digital ID will appear here once Taytay LGU issues it.',
-            size: 13,
-            weight: FontWeight.w500,
-            color: BrandColors.textSecondary,
-            height: 1.5,
-            align: TextAlign.center,
-            maxLines: 4,
-          ),
+      ];
+    } else if (card == null || face == null) {
+      body = <Widget>[
+        const _IdCard(),
+        Text(
+          'Your digital ID will appear here once Taytay LGU issues it.',
+          textAlign: TextAlign.center,
+          style: _note,
         ),
-      ],
-    );
-  }
-}
-
-class _Issued extends StatelessWidget {
-  const _Issued({
-    required this.card,
-    required this.name,
-    required this.face,
-    required this.sample,
-    required this.now,
-    this.loadPhoto,
-  });
-
-  final ResidentCredential card;
-  final String? name;
-  final DigitalIdFace face;
-  final bool sample;
-  final DateTime now;
-  final MediaBytesLoader? loadPhoto;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool dimmed = face != DigitalIdFace.active;
-    final PresentationArtifact? qr = face == DigitalIdFace.active
-        ? card.qr
-        : null;
-    final String? resident = name;
-    return Column(
-      children: <Widget>[
-        _CardShell(
-          dimmed: dimmed,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const _SealRow(),
-              if (resident != null) ...<Widget>[
-                const SizedBox(height: 14),
-                _MiddleLine(
-                  text: 'NAME ',
-                  style: _label,
-                  // `.kv` is `opacity: .75`, and the SAMPLE chip sits inside it.
-                  chip: sample ? const _SampleChip(opacity: 0.75) : null,
-                ),
-                const SizedBox(height: 2),
-                _ResidentName(name: resident),
-              ],
-              SizedBox(height: resident == null ? 16 : 12),
-              _PhotoRow(
-                card: card,
-                face: face,
-                sample: sample,
-                loadPhoto: loadPhoto,
-              ),
-            ],
-          ),
+      ];
+    } else {
+      final PresentationArtifact? qr = face == DigitalIdFace.active
+          ? card.qr
+          : null;
+      body = <Widget>[
+        _IdCard(
+          card: card,
+          name: published,
+          face: face,
+          sample: sample,
+          loadPhoto: loadPhoto,
         ),
-        if (qr != null) ...<Widget>[
-          const SizedBox(height: 14),
-          _QrCard(qr: qr, now: now),
-          // `.card` margin-bottom 12 and `.cs` margin-top 12 collapse.
-          const SizedBox(height: 12),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: _FractionalLines(
-              text:
-                  'Taytay LGU issued this card. A scanner checks the code. '
-                  'This phone does not decide that the card is genuine.',
-              size: 13,
-              weight: FontWeight.w500,
-              color: BrandColors.textSecondary,
-              step: _bodyLine,
-              align: TextAlign.center,
-            ),
-          ),
-        ],
-        if (dimmed) ...<Widget>[
-          const SizedBox(height: 14),
-          _Notice(face: face),
-        ],
-        if (sample) ...<Widget>[
-          // Active: the disclaimer margin-bottom is 0, so the footer
-          // margin-top of 10 stands. Dimmed: the sheet margin-bottom of
-          // 12 collapses with that 10.
-          SizedBox(height: dimmed ? 12 : 10),
-          const _SampleFooter(),
-        ],
-      ],
-    );
-  }
-}
-
-class _CardShell extends StatelessWidget {
-  const _CardShell({required this.dimmed, required this.child});
-
-  final bool dimmed;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    // CSS 160deg: 0° is up and the angle grows clockwise, so the last stop
-    // sits down and to the right.
-    const Alignment end = Alignment(0.3420201433, 0.9396926208);
-    const Alignment begin = Alignment(-0.3420201433, -0.9396926208);
-    final List<Color> colors = dimmed
-        ? const <Color>[
-            BrandColors.cardDimStart,
-            BrandColors.cardDimMid,
-            BrandColors.cardDimEnd,
-          ]
-        : const <Color>[
-            BrandColors.taytayBlueLight,
-            BrandColors.taytayBlue,
-            BrandColors.taytayBlueDark,
-          ];
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: TaytayShadows.digitalId,
-        gradient: LinearGradient(
-          begin: begin,
-          end: end,
-          colors: colors,
-          stops: const <double>[0, 0.45, 1],
+        if (qr != null) _QrCard(qr: qr, now: now),
+        if (face != DigitalIdFace.active) _Notice(face: face),
+        Text(
+          'Taytay LGU issued this card. A scanner checks the code. '
+          'This phone does not decide that the card is genuine.',
+          textAlign: TextAlign.center,
+          style: _note,
         ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
+        if (sample) const _SampleFooter(),
+      ];
+    }
+    // Material gives the page the theme's text style wherever it is hosted
+    // (the shell, a golden frame), so no text falls back to the debug style.
+    return Material(
+      type: MaterialType.transparency,
+      child: GlassBackground(
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: Spacing.xl),
           children: <Widget>[
-            // The design SVG viewport is 120×214. The paths are authored
-            // out to y 220, and the viewport clips them.
-            const Positioned(
-              right: -6,
-              top: 0,
-              width: 120,
-              height: 214,
-              child: ClipRect(
-                child: CustomPaint(
-                  painter: _StitchPainter(),
-                  size: Size(120, 214),
+            const BlueHeader(
+              title: 'My Taytay ID',
+              subtitle: 'Bayan ng Taytay · Rizal',
+              showBack: true,
+              overlap: true,
+              actions: <Widget>[HeaderSeal()],
+            ),
+            GlassOverlap(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    for (var i = 0; i < body.length; i++) ...<Widget>[
+                      if (i > 0) const SizedBox(height: Spacing.section),
+                      body[i],
+                    ],
+                  ],
                 ),
               ),
             ),
-            Padding(padding: const EdgeInsets.all(16), child: child),
           ],
         ),
       ),
@@ -383,259 +156,486 @@ class _CardShell extends StatelessWidget {
   }
 }
 
-class _SealRow extends StatelessWidget {
-  const _SealRow();
+final TextStyle _note = AppTypography.listDetail.copyWith(
+  color: BrandColors.muted,
+);
+
+/// `.idc`: the card. A null [card] draws the not-issued face.
+class _IdCard extends StatelessWidget {
+  const _IdCard({
+    this.card,
+    this.name,
+    this.face,
+    this.sample = false,
+    this.loadPhoto,
+  });
+
+  final ResidentCredential? card;
+  final String? name;
+  final DigitalIdFace? face;
+  final bool sample;
+  final MediaBytesLoader? loadPhoto;
+
+  /// A card does not stretch across a tablet: ID-1 proportions stop here.
+  static const double _maxWidth = 420;
+
+  /// ID-1 card proportions (85.6 × 54 mm). Large text grows the card instead.
+  static const double _ratio = 1.586;
 
   @override
   Widget build(BuildContext context) {
-    const BrandAsset seal = BrandAssets.municipalSeal;
-    return const Row(
-      children: <Widget>[
-        _Seal(seal: seal),
-        SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _Ink(
-                'MUNICIPALITY OF TAYTAY',
-                size: 11,
-                weight: FontWeight.w800,
-                color: Color(0xCCFFFFFF),
-                letterSpacing: 1.2,
+    final ResidentCredential? card = this.card;
+    final DigitalIdFace? face = this.face;
+    final bool dimmed = face != null && face != DigitalIdFace.active;
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _maxWidth),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            final double width = constraints.maxWidth;
+            Widget content = Semantics(
+              container: true,
+              label: 'Resident Digital ID',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(Radii.lg),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BrandColors.white,
+                    borderRadius: BorderRadius.circular(Radii.lg),
+                    border: Border.all(color: BrandColors.line2),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: width / _ratio),
+                    child: Stack(
+                      fit: StackFit.passthrough,
+                      children: <Widget>[
+                        const Positioned.fill(
+                          child: ExcludeSemantics(
+                            child: Opacity(
+                              opacity: 0.55,
+                              child: CustomPaint(painter: _GuillochePainter()),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: -34,
+                          bottom: -30,
+                          width: 190,
+                          height: 190,
+                          child: ExcludeSemantics(
+                            child: Opacity(
+                              opacity: 0.09,
+                              child: ColorFiltered(
+                                colorFilter: _grayscale(1),
+                                child: Image.asset(
+                                  BrandAssets.municipalSeal.assetPath,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            if (card == null || face == null) ...<Widget>[
+                              const _Band(),
+                              Padding(
+                                padding: const EdgeInsets.all(Spacing.lg),
+                                child: Text(
+                                  'Not yet issued',
+                                  textAlign: TextAlign.center,
+                                  style: AppTypography.label.copyWith(
+                                    fontWeight: AppTypography.black,
+                                    letterSpacing: 1,
+                                    color: BrandColors.muted,
+                                  ),
+                                ),
+                              ),
+                              const _Stripe(),
+                            ] else ...<Widget>[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  const _Band(),
+                                  _Middle(
+                                    card: card,
+                                    name: name,
+                                    face: face,
+                                    sample: sample,
+                                    photoWidth: width * 0.27,
+                                    loadPhoto: loadPhoto,
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: <Widget>[
+                                  _Bottom(face: face),
+                                  const _Stripe(),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              SizedBox(height: 1),
-              _Ink(
-                'Resident Digital ID',
-                size: 16,
-                weight: FontWeight.w800,
-                color: Colors.white,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Seal extends StatelessWidget {
-  const _Seal({required this.seal});
-
-  final BrandAsset seal;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: seal.semanticLabel,
-      image: true,
-      child: Container(
-        width: 40,
-        height: 40,
-        padding: const EdgeInsets.all(2),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-        ),
-        child: Image.asset(
-          seal.assetPath,
-          fit: BoxFit.contain,
-          filterQuality: FilterQuality.high,
-          semanticLabel: seal.semanticLabel,
+            );
+            if (dimmed) {
+              content = ColorFiltered(
+                colorFilter: _grayscale(0.7),
+                child: content,
+              );
+            }
+            return content;
+          },
         ),
       ),
     );
   }
 }
 
-class _PhotoRow extends StatelessWidget {
-  const _PhotoRow({
-    required this.card,
-    required this.face,
-    required this.sample,
-    this.loadPhoto,
-  });
+/// CSS `grayscale(amount)` as a colour matrix.
+ColorFilter _grayscale(double amount) {
+  final double k = 1 - amount;
+  return ColorFilter.matrix(<double>[
+    0.2126 + 0.7874 * k,
+    0.7152 - 0.7152 * k,
+    0.0722 - 0.0722 * k,
+    0,
+    0,
+    0.2126 - 0.2126 * k,
+    0.7152 + 0.2848 * k,
+    0.0722 - 0.0722 * k,
+    0,
+    0,
+    0.2126 - 0.2126 * k,
+    0.7152 - 0.7152 * k,
+    0.0722 + 0.9278 * k,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
+  ]);
+}
 
-  final ResidentCredential card;
-  final DigitalIdFace face;
-  final bool sample;
-  final MediaBytesLoader? loadPhoto;
+/// `.idc .top`: the municipal band with its gold underline.
+class _Band extends StatelessWidget {
+  const _Band();
 
   @override
   Widget build(BuildContext context) {
-    final String? number = card.idNumber;
-    final DateTime? issued = card.issuedAt;
-    final DateTime? expires = card.expiresAt;
-    final String? media = card.photoMediaId;
-    final Widget portrait = media == null || media.isEmpty || loadPhoto == null
-        ? const _PhotoPlaceholder()
-        : MediaBytesHost(
-            id: media,
-            load: loadPhoto,
-            builder: (Uint8List? bytes) {
-              if (bytes == null) return const _PhotoPlaceholder();
-              return _PhotoBytes(bytes: bytes);
-            },
-          );
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        portrait,
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _Ink(
-                'ID NUMBER',
-                size: 11,
-                weight: FontWeight.w700,
-                color: _labelColor,
-                letterSpacing: 0.4,
-                slot: TypeMetrics.line(11),
+    const BrandAsset seal = BrandAssets.municipalSeal;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: <Color>[
+            BrandColors.navy,
+            BrandColors.blue,
+            Color.lerp(BrandColors.blue, BrandColors.sky, 0.4) ??
+                BrandColors.blue,
+          ],
+          stops: const <double>[0, 0.6, 1],
+        ),
+        border: const Border(
+          bottom: BorderSide(color: BrandColors.gold, width: 3),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        child: Row(
+          children: <Widget>[
+            Semantics(
+              label: seal.semanticLabel,
+              image: true,
+              child: Container(
+                width: 34,
+                height: 34,
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: BrandColors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Image.asset(
+                  seal.assetPath,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  excludeFromSemantics: true,
+                ),
               ),
-              const SizedBox(height: 1),
-              _MiddleLine(
-                text: number == null ? '' : '$number ',
-                style: _value,
-                chip: sample ? const _SampleChip() : null,
-              ),
-              const SizedBox(height: 8),
-              _Ink(
-                'STATUS',
-                size: 11,
-                weight: FontWeight.w700,
-                color: _labelColor,
-                letterSpacing: 0.4,
-                slot: TypeMetrics.line(11),
-              ),
-              const SizedBox(height: 3),
-              _StatusTag(face: face),
-              const SizedBox(height: 8),
-              Row(
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  if (issued != null)
-                    Flexible(
-                      child: _DateColumn(
-                        label: 'ISSUED',
-                        value: formatDigitalIdDate(issued),
-                      ),
+                  Text(
+                    'LALAWIGAN NG RIZAL',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.category.copyWith(
+                      fontWeight: AppTypography.strong,
+                      letterSpacing: 1.2,
+                      color: BrandColors.onHeaderMuted,
                     ),
-                  if (issued != null && expires != null)
-                    const SizedBox(width: 16),
-                  if (expires != null)
-                    Flexible(
-                      child: _DateColumn(
-                        label: 'EXPIRES',
-                        value: formatDigitalIdDate(expires),
-                      ),
+                  ),
+                  Text(
+                    'MUNICIPALITY OF TAYTAY',
+                    maxLines: 2,
+                    style: AppTypography.category.copyWith(
+                      color: BrandColors.white,
                     ),
+                  ),
                 ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: Spacing.sm),
+            Text(
+              'Resident\nDigital ID',
+              textAlign: TextAlign.right,
+              style: AppTypography.small.copyWith(
+                fontWeight: AppTypography.black,
+                height: 1.1,
+                color: BrandColors.gold,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-class _DateColumn extends StatelessWidget {
-  const _DateColumn({required this.label, required this.value});
+/// `.idc .mid`: the portrait and the four fields.
+class _Middle extends StatelessWidget {
+  const _Middle({
+    required this.card,
+    required this.name,
+    required this.face,
+    required this.sample,
+    required this.photoWidth,
+    this.loadPhoto,
+  });
+
+  final ResidentCredential card;
+  final String? name;
+  final DigitalIdFace face;
+  final bool sample;
+  final double photoWidth;
+  final MediaBytesLoader? loadPhoto;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? resident = name;
+    final String? number = card.idNumber;
+    final DateTime? issued = card.issuedAt;
+    final DateTime? expires = card.expiresAt;
+    final bool expired = face == DigitalIdFace.expired;
+    final String? media = card.photoMediaId;
+    final MediaBytesLoader? load = loadPhoto;
+    final Size photo = Size(photoWidth, photoWidth * 4 / 3);
+    final Widget portrait = media == null || media.isEmpty || load == null
+        ? _PhotoPlaceholder(size: photo)
+        : MediaBytesHost(
+            id: media,
+            load: load,
+            builder: (Uint8List? bytes) => bytes == null
+                ? _PhotoPlaceholder(size: photo)
+                : ClipRRect(
+                    borderRadius: BorderRadius.circular(Radii.tag),
+                    child: SizedBox.fromSize(
+                      size: photo,
+                      child: DecodedMemoryImage(
+                        bytes: bytes,
+                        fit: BoxFit.cover,
+                        semanticLabel: 'ID photo',
+                        keepInImageCache: false,
+                        placeholder: _PhotoPlaceholder(size: photo),
+                      ),
+                    ),
+                  ),
+          );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          portrait,
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                if (resident != null) ...<Widget>[
+                  const _Key('NAME'),
+                  Text(
+                    resident,
+                    key: DigitalIdView.nameKey,
+                    maxLines: 2,
+                    softWrap: true,
+                    overflow: TextOverflow.ellipsis,
+                    style: _nameStyle,
+                  ),
+                  const SizedBox(height: 6),
+                ],
+                const _Key('ID NUMBER'),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 6,
+                  children: <Widget>[
+                    Text(
+                      number ?? '',
+                      style: AppTypography.listTitle.copyWith(
+                        fontWeight: AppTypography.black,
+                        letterSpacing: 0.54,
+                        color: BrandColors.ink,
+                        fontFeatures: const <FontFeature>[
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
+                    ),
+                    if (sample) const SampleTag(),
+                  ],
+                ),
+                if (issued != null || expires != null) ...<Widget>[
+                  const SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      if (issued != null)
+                        Expanded(
+                          child: _Field(
+                            label: 'ISSUED',
+                            value: formatDigitalIdDate(issued),
+                          ),
+                        ),
+                      if (issued != null && expires != null)
+                        const SizedBox(width: 10),
+                      if (expires != null)
+                        Expanded(
+                          child: _Field(
+                            label: 'EXPIRES',
+                            value: formatDigitalIdDate(expires),
+                            color: expired ? BrandColors.redInk : null,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The name: 14 / 800 at line height 1.25, as printed. Never recased.
+final TextStyle _nameStyle = AppTypography.fieldValue.copyWith(
+  fontWeight: AppTypography.black,
+  height: 1.25,
+  color: BrandColors.ink,
+);
+
+class _Key extends StatelessWidget {
+  const _Key(this.text, {this.color});
+
+  final String text;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      maxLines: 1,
+      style: AppTypography.category.copyWith(
+        letterSpacing: 1.2,
+        color: color ?? BrandColors.muted,
+      ),
+    );
+  }
+}
+
+class _Field extends StatelessWidget {
+  const _Field({required this.label, required this.value, this.color});
 
   final String label;
   final String value;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _Ink(
-          label,
-          size: 11,
-          weight: FontWeight.w700,
-          color: _labelColor,
-          letterSpacing: 0.4,
-          slot: TypeMetrics.line(11),
-        ),
-        const SizedBox(height: 1),
-        _Ink(
+        _Key(label, color: color),
+        Text(
           value,
-          size: 13,
-          weight: FontWeight.w800,
-          color: Colors.white,
-          features: const <FontFeature>[FontFeature.tabularFigures()],
-          slot: TypeMetrics.line(13),
-          // 13 px normal is a 16.33 line. The rounded strut sits the
-          // glyphs above Chrome's baseline, which is 13.33 into that line.
-          pinBaseline: true,
+          style: AppTypography.small.copyWith(
+            fontWeight: AppTypography.black,
+            height: 1.25,
+            color: color ?? BrandColors.ink,
+            fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+          ),
         ),
       ],
     );
   }
 }
 
-class _PhotoBytes extends StatelessWidget {
-  const _PhotoBytes({required this.bytes});
-
-  final Uint8List bytes;
-
-  @override
-  Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: SizedBox(
-        width: 84,
-        height: 104,
-        child: DecodedMemoryImage(
-          bytes: bytes,
-          fit: BoxFit.cover,
-          semanticLabel: 'ID photo',
-          keepInImageCache: false,
-          placeholder: const _PhotoPlaceholder(),
-        ),
-      ),
-    );
-  }
-}
-
 class _PhotoPlaceholder extends StatelessWidget {
-  const _PhotoPlaceholder();
+  const _PhotoPlaceholder({required this.size});
+
+  final Size size;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Photo placeholder',
-      child: CustomPaint(
-        foregroundPainter: const _DashedRRectPainter(
-          color: Color(0x99FFFFFF),
-          radius: 12,
-          strokeWidth: 1.5,
-        ),
-        child: Container(
-          width: 84,
-          height: 104,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0x1AFFFFFF),
-            borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: size.width,
+        height: size.height,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[BrandColors.blue50, BrandColors.blue100],
           ),
-          child: const ExcludeSemantics(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                TaytayIcon(
-                  icon: TaytayIcons.userRound,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 26,
-                  color: Colors.white,
+          borderRadius: BorderRadius.circular(Radii.tag),
+          border: Border.all(color: BrandColors.line2),
+        ),
+        child: ExcludeSemantics(
+          child: Column(
+            children: <Widget>[
+              const SizedBox(height: 6),
+              Text(
+                'PHOTO',
+                maxLines: 1,
+                style: AppTypography.category.copyWith(
+                  color: BrandColors.muted,
                 ),
-                SizedBox(height: 6),
-                _PhotoCaption(),
-              ],
-            ),
+              ),
+              Expanded(
+                child: FittedBox(
+                  child: TaytayIcon(
+                    icon: TaytayIcons.userRound,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: size.width * 0.84,
+                    color: BrandColors.muted.withValues(alpha: 0.6),
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -643,41 +643,48 @@ class _PhotoPlaceholder extends StatelessWidget {
   }
 }
 
-class _StatusTag extends StatelessWidget {
-  const _StatusTag({required this.face});
+/// `.idc .bot`: decorative bars and the status pill.
+class _Bottom extends StatelessWidget {
+  const _Bottom({required this.face});
 
   final DigitalIdFace face;
 
   @override
   Widget build(BuildContext context) {
     final _TagStyle style = _TagStyle.of(face);
-    // The chip is inline-flex in a block that inherits the body's 16 px
-    // normal line. Its baseline is the bottom of the 12 px icon, a replaced
-    // flex item centered on the 11 px label. The chip therefore starts below
-    // the strut and the line grows to 20.5 instead of the chip's own 19.67.
-    const double icon = 12;
-    const double pad = 3;
-    final double label = TypeMetrics.line(11);
-    final double chip = label + pad * 2;
-    final double baseline = pad + (label - icon) / 2 + icon;
-    final double top = TypeMetrics.ascender(16) - baseline;
-    final double line = math.max(TypeMetrics.line(16), top + chip);
-    return SizedBox(
-      height: line,
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Padding(
-          padding: EdgeInsets.only(top: top),
-          child: Semantics(
-            label: style.label,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: style.background,
-                borderRadius: BorderRadius.circular(Radii.pill),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, Spacing.sm, 14, Spacing.sm),
+      child: Row(
+        children: <Widget>[
+          const Expanded(
+            child: ExcludeSemantics(
+              child: FractionallySizedBox(
+                alignment: Alignment.centerLeft,
+                widthFactor: 0.6,
+                child: SizedBox(
+                  height: 18,
+                  child: Opacity(
+                    opacity: 0.55,
+                    child: CustomPaint(painter: _BarsPainter()),
+                  ),
+                ),
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                child: ExcludeSemantics(
+            ),
+          ),
+          const SizedBox(width: 10),
+          Semantics(
+            label: 'Status: ${style.label}',
+            child: ExcludeSemantics(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: style.background,
+                  borderRadius: BorderRadius.circular(Radii.pill),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.sm,
+                    vertical: Spacing.xxs,
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: <Widget>[
@@ -688,13 +695,13 @@ class _StatusTag extends StatelessWidget {
                         size: 12,
                         color: style.foreground,
                       ),
-                      const SizedBox(width: 4),
-                      _Ink(
+                      const SizedBox(width: Spacing.xs),
+                      Text(
                         style.label,
-                        size: 11,
-                        weight: FontWeight.w800,
-                        color: style.foreground,
-                        slot: TypeMetrics.line(11),
+                        style: AppTypography.category.copyWith(
+                          letterSpacing: 0,
+                          color: style.foreground,
+                        ),
                       ),
                     ],
                   ),
@@ -702,7 +709,7 @@ class _StatusTag extends StatelessWidget {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -719,31 +726,120 @@ class _TagStyle {
   static _TagStyle of(DigitalIdFace face) => switch (face) {
     DigitalIdFace.active => const _TagStyle(
       'Active',
-      BrandColors.chipGreenBg,
-      BrandColors.success,
+      BrandColors.green50,
+      BrandColors.green,
       TaytayIcons.circleCheck,
     ),
     DigitalIdFace.suspended => const _TagStyle(
       'Suspended',
-      BrandColors.chipAmberBg,
-      BrandColors.warning,
+      BrandColors.gold,
+      BrandColors.navy,
       TaytayIcons.pause,
     ),
     DigitalIdFace.revoked => const _TagStyle(
       'Revoked',
-      BrandColors.chipRedBg,
-      BrandColors.danger,
+      BrandColors.red,
+      BrandColors.white,
       TaytayIcons.circleSlash,
     ),
     DigitalIdFace.expired => const _TagStyle(
       'Expired',
-      BrandColors.chipGreyBg,
-      BrandColors.textSecondary,
+      BrandColors.line2,
+      BrandColors.text,
       TaytayIcons.clock,
     ),
   };
 }
 
+/// `.idc .stripe`: blue, red and gold.
+class _Stripe extends StatelessWidget {
+  const _Stripe();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ExcludeSemantics(
+      child: SizedBox(
+        height: 6,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Expanded(flex: 70, child: ColoredBox(color: BrandColors.blue)),
+            Expanded(flex: 18, child: ColoredBox(color: BrandColors.red)),
+            Expanded(flex: 12, child: ColoredBox(color: BrandColors.gold)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// `.idc .guil`: fine rings and diagonal hatching, the card's security print.
+class _GuillochePainter extends CustomPainter {
+  const _GuillochePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint ring = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = BrandColors.sky.withValues(alpha: 0.10);
+    final Offset centre = Offset(size.width * 0.78, size.height * 0.62);
+    final double reach = size.longestSide * 1.2;
+    for (double r = 7.5; r < reach; r += 8) {
+      canvas.drawCircle(centre, r, ring);
+    }
+    final Paint hatch = Paint()
+      ..strokeWidth = 1
+      ..color = BrandColors.gold.withValues(alpha: 0.10);
+    // 115deg hatching: lines rising to the right, 15 px apart.
+    final double slope = math.tan(25 * math.pi / 180);
+    for (double x = -size.height; x < size.width + size.height; x += 15) {
+      canvas.drawLine(
+        Offset(x, size.height),
+        Offset(x + size.height * slope, 0),
+        hatch,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GuillochePainter oldDelegate) => false;
+}
+
+/// `.idc .bars`: a printed-barcode texture. It encodes nothing.
+class _BarsPainter extends CustomPainter {
+  const _BarsPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint bar = Paint()..color = BrandColors.text;
+    const List<(double, double)> unit = <(double, double)>[
+      (0, 2),
+      (4, 1),
+      (8, 3),
+    ];
+    for (double x = 0; x < size.width; x += 13) {
+      for (final (double, double) b in unit) {
+        final double left = x + b.$1;
+        if (left >= size.width) break;
+        canvas.drawRect(
+          Rect.fromLTWH(
+            left,
+            0,
+            math.min(b.$2, size.width - left),
+            size.height,
+          ),
+          bar,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _BarsPainter oldDelegate) => false;
+}
+
+/// The active card's code, in a glass card.
 class _QrCard extends StatelessWidget {
   const _QrCard({required this.qr, required this.now});
 
@@ -757,30 +853,23 @@ class _QrCard extends StatelessWidget {
     final String refresh = expiry == null
         ? 'Code refreshes'
         : 'Code refreshes · valid until ${formatDigitalIdClock(expiry)}';
-    // Container keeps the 1 dp border outside the 16 dp padding. A bare
-    // DecoratedBox paints that stroke over the padding and the sheet is
-    // 2 dp short of the CSS border box.
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BrandColors.cardLine),
-        boxShadow: TaytayShadows.card,
-      ),
+    return GlassCard(
       child: Column(
         children: <Widget>[
-          _FractionalLines(
-            text: 'Show this code to be scanned',
-            size: 14,
-            weight: FontWeight.w800,
-            color: BrandColors.textPrimary,
-            step: TypeMetrics.line(14),
-            align: TextAlign.center,
+          Semantics(
+            header: true,
+            child: Text(
+              'Show this code to be scanned',
+              textAlign: TextAlign.center,
+              style: AppTypography.sectionTitle.copyWith(
+                fontWeight: AppTypography.strong,
+                color: BrandColors.ink,
+              ),
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: Spacing.md),
           if (live) _QrFrame(token: qr.payload) else const _RefreshingCode(),
-          const SizedBox(height: 12),
+          const SizedBox(height: Spacing.md),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
@@ -789,17 +878,17 @@ class _QrCard extends StatelessWidget {
                 semanticLabel: '',
                 excludeSemantics: true,
                 size: 14,
-                color: BrandColors.textSecondary,
+                color: BrandColors.text,
               ),
               const SizedBox(width: 6),
               Flexible(
-                child: _Ink(
+                child: Text(
                   refresh,
-                  size: 12,
-                  weight: FontWeight.w700,
-                  color: BrandColors.textSecondary,
-                  align: TextAlign.center,
-                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.listDetail.copyWith(
+                    fontWeight: AppTypography.medium,
+                    color: BrandColors.text,
+                  ),
                 ),
               ),
             ],
@@ -809,6 +898,8 @@ class _QrCard extends StatelessWidget {
     );
   }
 }
+
+const double _qrSide = 200;
 
 /// Paints the token as modules. The field is omitted from diagnostics.
 class _QrFrame extends StatelessWidget {
@@ -820,14 +911,15 @@ class _QrFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     return Semantics(
       key: DigitalIdView.qrKey,
+      container: true,
       label: 'QR code',
       image: true,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(Radii.lg),
         child: ColoredBox(
-          color: Colors.white,
+          color: BrandColors.white,
           child: CustomPaint(
-            size: const Size(208, 208),
+            size: const Size(_qrSide, _qrSide),
             painter: _QrPainter(token, View.of(context).devicePixelRatio),
           ),
         ),
@@ -843,21 +935,15 @@ class _RefreshingCode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      width: 208,
-      height: 208,
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minWidth: _qrSide, minHeight: _qrSide),
       child: Center(
         child: Text(
           'Refreshing code…',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            height: 1.25,
-            leadingDistribution: TextLeadingDistribution.even,
-            color: BrandColors.textSecondary,
-            decoration: TextDecoration.none,
+          style: AppTypography.fieldValue.copyWith(
+            fontWeight: AppTypography.strong,
+            color: BrandColors.text,
           ),
         ),
       ),
@@ -865,6 +951,7 @@ class _RefreshingCode extends StatelessWidget {
   }
 }
 
+/// Suspended, revoked or expired: what happened and what to do.
 class _Notice extends StatelessWidget {
   const _Notice({required this.face});
 
@@ -873,69 +960,64 @@ class _Notice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final _NoticeCopy copy = _NoticeCopy.of(face);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BrandColors.cardLine),
-        boxShadow: TaytayShadows.card,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: copy.tile,
-                  borderRadius: BorderRadius.circular(12),
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: GlassCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Container(
+                  width: 40,
+                  height: 40,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: copy.tile,
+                    borderRadius: BorderRadius.circular(Radii.md),
+                  ),
+                  child: TaytayIcon(
+                    icon: copy.icon,
+                    semanticLabel: copy.title,
+                    size: 20,
+                    color: copy.ink,
+                  ),
                 ),
-                child: TaytayIcon(
-                  icon: copy.icon,
-                  semanticLabel: copy.title,
-                  size: 20,
-                  color: copy.ink,
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        copy.title,
+                        style: AppTypography.fieldValue.copyWith(
+                          fontWeight: AppTypography.strong,
+                          color: BrandColors.ink,
+                        ),
+                      ),
+                      const SizedBox(height: Spacing.xs),
+                      Text(
+                        copy.body,
+                        style: AppTypography.bodyStyle.copyWith(
+                          color: BrandColors.text,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: Spacing.md),
+            Text(
+              'No code is shown while the card is not active.',
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _FractionalLines(
-                      text: copy.title,
-                      size: 14,
-                      weight: FontWeight.w800,
-                      color: BrandColors.textPrimary,
-                      step: TypeMetrics.line(14),
-                    ),
-                    const SizedBox(height: 4),
-                    _FractionalLines(
-                      text: copy.body,
-                      size: 13,
-                      weight: FontWeight.w500,
-                      color: BrandColors.textSecondary,
-                      step: _bodyLine,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          const _Ink(
-            'No code is shown while the card is not active.',
-            size: 12,
-            weight: FontWeight.w500,
-            color: BrandColors.listMeta,
-            maxLines: 2,
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -955,755 +1037,50 @@ class _NoticeCopy {
       'Your ID is suspended',
       'Taytay LGU has paused this card. Visit the Municipal Hall or '
           'message the LGU to find out why.',
-      BrandColors.chipAmberBg,
-      BrandColors.warning,
+      BrandColors.gold50,
+      BrandColors.goldInk,
       TaytayIcons.shieldAlert,
     ),
     DigitalIdFace.revoked => const _NoticeCopy(
       'This ID is no longer valid',
       'Taytay LGU has revoked this card. Visit the Municipal Hall if you '
           'need a new one.',
-      BrandColors.chipRedBg,
-      BrandColors.danger,
+      BrandColors.red50,
+      BrandColors.redInk,
       TaytayIcons.circleSlash,
     ),
     DigitalIdFace.expired => const _NoticeCopy(
       'Your ID has expired',
       'This card passed its expiry date. Visit the Municipal Hall to renew it.',
-      BrandColors.chipGreyBg,
-      BrandColors.textSecondary,
+      BrandColors.blue50,
+      BrandColors.muted,
       TaytayIcons.clock,
     ),
     DigitalIdFace.active => const _NoticeCopy(
       '',
       '',
-      BrandColors.surface,
-      BrandColors.textPrimary,
+      BrandColors.background,
+      BrandColors.ink,
       TaytayIcons.circleCheck,
     ),
   };
 }
 
+/// Dev mock only: says the number and dates are illustrations.
 class _SampleFooter extends StatelessWidget {
   const _SampleFooter();
 
   @override
   Widget build(BuildContext context) {
-    // The line's strut is the body's 16 px `normal` box. The chip is
-    // `vertical-align: middle` on that strut, and the 12 px label sits on
-    // the same baseline. Centering the two on each other lifts the label.
-    final double strut = TypeMetrics.line(16);
-    final double chipHeight = TypeMetrics.line(11) + 6;
-    final double chipTop = _middleTop(
-      fontSize: 16,
-      weight: FontWeight.w400,
-      boxHeight: chipHeight,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      spacing: Spacing.xs,
+      children: <Widget>[
+        const SampleTag(),
+        Text('number and dates for illustration', style: _note),
+      ],
     );
-    final double textLine = TypeMetrics.line(12);
-    final double textTop = TypeMetrics.ascender(16) - TypeMetrics.ascender(12);
-    final double shift = math.max(0, math.max(-chipTop, -textTop));
-    final double height =
-        math.max(strut, math.max(chipTop + chipHeight, textTop + textLine)) +
-        shift;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double chipWidth = _sampleChipWidth();
-          final double textWidth = _spanWidth(
-            _sampleCaption,
-            _sampleCaptionStyle,
-          );
-          const double gap = 4;
-          final double total = chipWidth + gap + textWidth;
-          final double left = math.max(0, (constraints.maxWidth - total) / 2);
-          return Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              Positioned(
-                left: left,
-                top: shift + chipTop,
-                width: chipWidth,
-                height: chipHeight,
-                child: const _SampleChip(),
-              ),
-              Positioned(
-                left: left + chipWidth + gap,
-                top: shift + textTop,
-                width: textWidth,
-                height: textLine,
-                child: const Text(
-                  _sampleCaption,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.clip,
-                  style: _sampleCaptionStyle,
-                  strutStyle: _sampleCaptionStrut,
-                  textHeightBehavior: _evenLeading,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-}
-
-const String _sampleCaption = 'number and dates for illustration';
-
-const TextStyle _sampleCaptionStyle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: 15 / 12,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const StrutStyle _sampleCaptionStrut = StrutStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: 15 / 12,
-  leadingDistribution: TextLeadingDistribution.even,
-  forceStrutHeight: true,
-);
-
-class _SampleChip extends StatelessWidget {
-  const _SampleChip({this.opacity = 1});
-
-  /// `.kv` sets `opacity: .75` on the NAME line. The ID number chip sits in
-  /// `.vv`, which does not, so only the NAME chip passes this.
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget tag = SampleTag(
-      lineHeight: TypeMetrics.line(11) / 11,
-      lineSlot: TypeMetrics.line(11),
-    );
-    if (opacity == 1) return tag;
-    return Opacity(opacity: opacity, child: tag);
-  }
-}
-
-/// CSS `vertical-align: middle` for a SAMPLE chip on a label line.
-///
-/// The parent's line stays at the top. The line grows downward when the chip
-/// hangs below that strut. The centre is the alphabetic baseline plus half
-/// the x-height. On a 14 px line that baseline is 14.33, and the ID-number
-/// row is 20.34 rather than the 20.68 a 14.67 ascender would make.
-class _MiddleLine extends StatelessWidget {
-  const _MiddleLine({required this.text, required this.style, this.chip});
-
-  final String text;
-  final TextStyle style;
-  final Widget? chip;
-
-  @override
-  Widget build(BuildContext context) {
-    final double fontSize = style.fontSize ?? 11;
-    final FontWeight weight = style.fontWeight ?? FontWeight.w400;
-    final double strut = TypeMetrics.line(fontSize);
-    final Widget? chip = this.chip;
-    final double chipHeight = chip == null ? 0 : TypeMetrics.line(11) + 6;
-    final double chipTop = chip == null
-        ? 0
-        : _middleTop(fontSize: fontSize, weight: weight, boxHeight: chipHeight);
-    final double shift = math.max(0.0, -chipTop);
-    final double height = math.max(strut, chipTop + chipHeight) + shift;
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: LayoutBuilder(
-        builder: (BuildContext context, BoxConstraints constraints) {
-          final double leadWidth = text.isEmpty ? 0 : _spanWidth(text, style);
-          final double chipWidth = chip == null ? 0 : _sampleChipWidth();
-          var x = 0.0;
-          final List<Widget> children = <Widget>[];
-          if (text.isNotEmpty) {
-            children.add(
-              Positioned(
-                left: x,
-                top: shift,
-                width: leadWidth,
-                height: strut,
-                child: Text(
-                  text,
-                  maxLines: 1,
-                  softWrap: false,
-                  overflow: TextOverflow.clip,
-                  style: style,
-                  textHeightBehavior: _evenLeading,
-                ),
-              ),
-            );
-            x += leadWidth;
-          }
-          if (chip != null) {
-            children.add(
-              Positioned(
-                left: x,
-                top: shift + chipTop,
-                width: chipWidth,
-                height: chipHeight,
-                child: chip,
-              ),
-            );
-          }
-          return Stack(clipBehavior: Clip.none, children: children);
-        },
-      ),
-    );
-  }
-}
-
-double _middleTop({
-  required double fontSize,
-  required FontWeight weight,
-  required double boxHeight,
-}) {
-  final int units = switch (weight) {
-    FontWeight.w500 => 539,
-    FontWeight.w600 => 541,
-    FontWeight.w700 => 544,
-    FontWeight.w800 || FontWeight.w900 => 546,
-    _ => 536,
-  };
-  final double centre =
-      TypeMetrics.baseline(fontSize) - (fontSize * units / 1000) / 2;
-  return centre - boxHeight / 2;
-}
-
-double _spanWidth(String text, TextStyle style) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    textScaler: TextScaler.noScaling,
-    textHeightBehavior: _evenLeading,
-  )..layout();
-  final double width = painter.width;
-  painter.dispose();
-  return width;
-}
-
-double _sampleChipWidth() {
-  return _spanWidth(
-        'SAMPLE',
-        AppTypography.labelStrong.copyWith(letterSpacing: 0.6),
-      ) +
-      16;
-}
-
-const TextHeightBehavior _evenLeading = TextHeightBehavior(
-  applyHeightToFirstAscent: true,
-  applyHeightToLastDescent: true,
-  leadingDistribution: TextLeadingDistribution.even,
-);
-
-const Color _labelColor = Color(0xBFFFFFFF);
-
-const TextStyle _label = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w700,
-  height: 13.6666667 / 11,
-  letterSpacing: 0.4,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: _labelColor,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _value = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: 17.6666667 / 14,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: Colors.white,
-  fontFeatures: <FontFeature>[FontFeature.tabularFigures()],
-  decoration: TextDecoration.none,
-);
-
-/// Glyphs are 17 / 800, line-height 1.25, as specified.
-///
-/// The screenshotted HTML had already been polished from 17 to 18, so the
-/// design's line box is 22.5. The strut keeps that box. The following rows
-/// stay on the specimen while the letters stay 17.
-const TextStyle _nameStyle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 17,
-  fontWeight: FontWeight.w800,
-  height: 1.25,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: Colors.white,
-  decoration: TextDecoration.none,
-);
-
-const StrutStyle _nameStrut = StrutStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 18,
-  height: 1.25,
-  leadingDistribution: TextLeadingDistribution.even,
-  forceStrutHeight: true,
-);
-
-/// `.nmv` in the screenshotted HTML is 18 × 1.25, so each line box is 22.5.
-///
-/// The glyphs stay 17. SkParagraph rounds the strut to a whole logical
-/// pixel (22 with Plus Jakarta loaded), which shortens the block and pulls
-/// the photo row up. The slot keeps the CSS advance.
-class _ResidentName extends StatelessWidget {
-  const _ResidentName({required this.name});
-
-  final String name;
-
-  static const double _step = 22.5;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 300),
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double maxWidth = constraints.maxWidth.isFinite
-                ? constraints.maxWidth
-                : 300;
-            final int lines = _nameLines(name, maxWidth, context);
-            return SizedBox(
-              height: _step * lines,
-              width: maxWidth,
-              child: Text(
-                name,
-                key: DigitalIdView.nameKey,
-                maxLines: 2,
-                softWrap: true,
-                overflow: TextOverflow.ellipsis,
-                style: _nameStyle,
-                strutStyle: _nameStrut,
-                textHeightBehavior: _evenLeading,
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-int _nameLines(String text, double maxWidth, BuildContext context) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: text, style: _nameStyle),
-    textDirection: Directionality.of(context),
-    textScaler: MediaQuery.textScalerOf(context),
-    textHeightBehavior: _evenLeading,
-    strutStyle: _nameStrut,
-    maxLines: 2,
-    ellipsis: '…',
-  )..layout(maxWidth: maxWidth);
-  var lines = 0;
-  var start = 0;
-  while (start < text.length && lines < 2) {
-    final TextRange range = painter.getLineBoundary(
-      TextPosition(offset: start),
-    );
-    if (range.end <= start) break;
-    lines += 1;
-    start = range.end;
-  }
-  painter.dispose();
-  return lines == 0 ? 1 : lines;
-}
-
-/// `.ph1` caption: 11 / 700, line-height 1.25, two lines, centered under the
-/// icon with a 6 px gap. The step stays 13.75 so the second line is not the
-/// rounded 14 px strut.
-class _PhotoCaption extends StatelessWidget {
-  const _PhotoCaption();
-
-  static const double _step = 11 * 1.25;
-
-  static const TextStyle _style = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 11,
-    fontWeight: FontWeight.w700,
-    height: 1.25,
-    leadingDistribution: TextLeadingDistribution.even,
-    color: Colors.white,
-    decoration: TextDecoration.none,
-  );
-
-  static const StrutStyle _strut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 11,
-    fontWeight: FontWeight.w700,
-    height: 1.25,
-    leadingDistribution: TextLeadingDistribution.even,
-    forceStrutHeight: true,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: _step * 2,
-      width: double.infinity,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: <Widget>[
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: Text(
-              'Photo',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: _style,
-              strutStyle: _strut,
-              textHeightBehavior: _evenLeading,
-            ),
-          ),
-          Positioned(
-            top: _step,
-            left: 0,
-            right: 0,
-            child: Text(
-              'placeholder',
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              style: _style,
-              strutStyle: _strut,
-              textHeightBehavior: _evenLeading,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// `.cs` is 13 px at `line-height: 1.5`. Chrome's line boxes are exactly
-/// 19.5 apart, and a 3-line block is 58.5.
-const double _bodyLine = 13 * 1.5;
-
-/// Lines stacked on a CSS `line-height`, not on the rounded strut.
-///
-/// SkParagraph rounds a fractional strut to a whole logical pixel. A 14 px
-/// normal line becomes 18 instead of 17.67, and 13 × 1.5 becomes 20 instead
-/// of 19.5. Each line is placed `step` apart, so the paragraph is `n` times
-/// the CSS advance. A normal line then pins its glyphs to Chrome's alphabetic
-/// baseline inside that box. An explicit line-height, such as 13 × 1.5, keeps
-/// the strut: those lines are already 19.5 apart.
-class _FractionalLines extends StatelessWidget {
-  const _FractionalLines({
-    required this.text,
-    required this.size,
-    required this.weight,
-    required this.color,
-    required this.step,
-    this.align = TextAlign.start,
-  });
-
-  final String text;
-  final double size;
-  final FontWeight weight;
-  final Color color;
-  final double step;
-  final TextAlign align;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool normal = (step - TypeMetrics.line(size)).abs() < 0.001;
-    // A normal line is an em box pinned to the baseline. The explicit
-    // line-height keeps its own strut, which is what spaces 13 × 1.5.
-    final double fontHeight = normal ? 1 : step / size;
-    final TextStyle style = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: size,
-      fontWeight: weight,
-      height: fontHeight,
-      leadingDistribution: TextLeadingDistribution.even,
-      color: color,
-      decoration: TextDecoration.none,
-    );
-    final StrutStyle strut = StrutStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: size,
-      fontWeight: weight,
-      height: fontHeight,
-      leadingDistribution: TextLeadingDistribution.even,
-      forceStrutHeight: true,
-    );
-    final double topInset = normal
-        ? TypeMetrics.baseline(size) - _emBaseline(size, weight)
-        : 0;
-    return Semantics(
-      label: text,
-      child: ExcludeSemantics(
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final TextPainter painter = TextPainter(
-              text: TextSpan(text: text, style: style),
-              textAlign: align,
-              textDirection: Directionality.of(context),
-              textScaler: MediaQuery.textScalerOf(context),
-              textHeightBehavior: _evenLeading,
-              strutStyle: strut,
-            )..layout(maxWidth: constraints.maxWidth);
-            final List<String> lines = <String>[];
-            var start = 0;
-            while (start < text.length) {
-              final TextRange range = painter.getLineBoundary(
-                TextPosition(offset: start),
-              );
-              if (range.end <= start) break;
-              lines.add(text.substring(range.start, range.end).trimRight());
-              start = range.end;
-            }
-            painter.dispose();
-            if (lines.isEmpty) return const SizedBox.shrink();
-            return SizedBox(
-              width: constraints.maxWidth,
-              height: step * lines.length,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: <Widget>[
-                  for (var i = 0; i < lines.length; i++)
-                    Positioned(
-                      top: step * i + topInset,
-                      left: 0,
-                      right: 0,
-                      child: Text(
-                        lines[i],
-                        maxLines: 1,
-                        softWrap: false,
-                        overflow: TextOverflow.clip,
-                        textAlign: align,
-                        style: style,
-                        strutStyle: strut,
-                        textHeightBehavior: _evenLeading,
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-/// Baseline of an em-box strut (`height: 1`) for [size] and [weight].
-double _emBaseline(double size, FontWeight weight) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(
-      text: 'Ag',
-      style: TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: size,
-        fontWeight: weight,
-        height: 1,
-        leadingDistribution: TextLeadingDistribution.even,
-      ),
-    ),
-    textDirection: TextDirection.ltr,
-    textHeightBehavior: _evenLeading,
-    strutStyle: StrutStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: size,
-      fontWeight: weight,
-      height: 1,
-      leadingDistribution: TextLeadingDistribution.even,
-      forceStrutHeight: true,
-    ),
-  )..layout();
-  final double baseline = painter.computeLineMetrics().first.baseline;
-  painter.dispose();
-  return baseline;
-}
-
-class _Ink extends StatelessWidget {
-  const _Ink(
-    this.text, {
-    required this.size,
-    required this.weight,
-    required this.color,
-    this.height,
-    this.letterSpacing,
-    this.align,
-    this.maxLines = 1,
-    this.features,
-    this.slot,
-    this.pinBaseline = false,
-  });
-
-  final String text;
-  final double size;
-  final FontWeight weight;
-  final Color color;
-  final double? height;
-  final double? letterSpacing;
-  final TextAlign? align;
-  final int maxLines;
-  final List<FontFeature>? features;
-
-  /// CSS line box when the strut would round to a whole logical pixel.
-  final double? slot;
-
-  /// Place the glyphs on Chrome's alphabetic baseline inside [slot].
-  final bool pinBaseline;
-
-  @override
-  Widget build(BuildContext context) {
-    final double line = height ?? (TypeMetrics.line(size) / size);
-    final TextStyle style = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: size,
-      fontWeight: weight,
-      height: line,
-      letterSpacing: letterSpacing,
-      leadingDistribution: TextLeadingDistribution.even,
-      color: color,
-      fontFeatures: features,
-      decoration: TextDecoration.none,
-    );
-    final Widget textWidget = Text(
-      text,
-      maxLines: maxLines,
-      softWrap: maxLines > 1,
-      overflow: TextOverflow.ellipsis,
-      textAlign: align,
-      style: style,
-      strutStyle: StrutStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: size,
-        fontWeight: weight,
-        height: line,
-        leadingDistribution: TextLeadingDistribution.even,
-        forceStrutHeight: true,
-      ),
-      textHeightBehavior: _evenLeading,
-    );
-    final double? slot = this.slot;
-    if (slot == null) return textWidget;
-    if (!pinBaseline) return SizedBox(height: slot, child: textWidget);
-    final double top = TypeMetrics.baseline(size) - _emBaseline(size, weight);
-    return SizedBox(
-      height: slot,
-      child: Align(
-        alignment: Alignment.topLeft,
-        child: Padding(
-          padding: EdgeInsets.only(top: top),
-          child: Text(
-            text,
-            maxLines: maxLines,
-            softWrap: maxLines > 1,
-            overflow: TextOverflow.ellipsis,
-            textAlign: align,
-            style: style.copyWith(height: 1),
-            strutStyle: StrutStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: size,
-              fontWeight: weight,
-              height: 1,
-              leadingDistribution: TextLeadingDistribution.even,
-              forceStrutHeight: true,
-            ),
-            textHeightBehavior: _evenLeading,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StitchPainter extends CustomPainter {
-  const _StitchPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Path solid = Path()
-      ..moveTo(86, -6)
-      ..cubicTo(48, 60, 48, 150, 84, 220);
-    canvas.drawPath(
-      solid,
-      Paint()
-        ..color = BrandColors.sealGold
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4,
-    );
-    final Path dashed = Path()
-      ..moveTo(96, -6)
-      ..cubicTo(60, 60, 60, 150, 94, 220);
-    final Paint dashPaint = Paint()
-      ..color = BrandColors.threadGold.withValues(alpha: 0.9)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
-    for (final ui.PathMetric metric in dashed.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final double next = math.min(distance + 6, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), dashPaint);
-        distance = next + 5;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _StitchPainter oldDelegate) => false;
-}
-
-class _DashedRRectPainter extends CustomPainter {
-  const _DashedRRectPainter({
-    required this.color,
-    required this.radius,
-    required this.strokeWidth,
-  });
-
-  final Color color;
-  final double radius;
-  final double strokeWidth;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double inset = strokeWidth / 2;
-    final Path path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            inset,
-            inset,
-            size.width - strokeWidth,
-            size.height - strokeWidth,
-          ),
-          Radius.circular(math.max(0, radius - inset)),
-        ),
-      );
-    final Paint paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = strokeWidth;
-    for (final ui.PathMetric metric in path.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        final double next = math.min(distance + 4, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + 3;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedRRectPainter oldDelegate) {
-    return oldDelegate.color != color ||
-        oldDelegate.radius != radius ||
-        oldDelegate.strokeWidth != strokeWidth;
   }
 }
 

@@ -43,6 +43,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   bool _started = false;
   CredentialRepository? _repository;
   ResidentCredential? _card;
+  bool _loaded = false;
   String? _name;
   AppFailure? _failure;
   Timer? _timer;
@@ -120,6 +121,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     final Result<String?> nameResult = await nameFuture;
     if (!mounted || generation != _generation) return;
     setState(() {
+      _loaded = true;
       switch (cardResult) {
         case Ok(:final value):
           _failure = null;
@@ -172,6 +174,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
       failure: _failure,
       environment: _environment(context),
       onRetry: _failure == null ? null : () => unawaited(_load()),
+      loading: _repository != null && !_loaded,
       loadPhoto: dependencies == null || dependencies.config.usesMockData
           ? null
           : dependencies.mediaBytes.mediaContent,
