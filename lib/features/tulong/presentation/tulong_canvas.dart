@@ -124,6 +124,11 @@ class _ListPage extends StatelessWidget {
     final bool offline = c.frame == TulongFrame.offline;
     return GlassBackground(
       child: ListView(
+        // No per-item repaint / semantics wrappers: they hit-test only their
+        // own box, so the strip GlassOverlap raises over the header would not
+        // take a tap.
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
@@ -471,6 +476,8 @@ class _DetailPage extends StatelessWidget {
     return ColoredBox(
       color: BrandColors.white,
       child: ListView(
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[

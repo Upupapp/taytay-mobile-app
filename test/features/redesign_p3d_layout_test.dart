@@ -114,6 +114,29 @@ void main() {
       expect(find.byKey(const Key('tulong-open-sample-one')), findsOneWidget);
     });
 
+    testWidgets(
+      'the first row takes a tap in the strip raised over the header',
+      (WidgetTester tester) async {
+        final List<String> opened = <String>[];
+        await pump(
+          tester,
+          TulongCanvas(
+            frame: TulongFrame.list,
+            services: _services,
+            onOpen: (SocialService service) => opened.add(service.slug),
+          ),
+        );
+        final Rect row = tester.getRect(
+          find.byKey(const Key('tulong-open-sample-one')),
+        );
+        final Rect header = tester.getRect(find.byType(BlueHeader));
+        // The row starts inside the header's box: that is the raised strip.
+        expect(row.top, lessThan(header.bottom));
+        await tester.tapAt(Offset(row.center.dx, row.top + Spacing.xs));
+        expect(opened, <String>['sample-one']);
+      },
+    );
+
     testWidgets('loading is a skeleton, empty and no-match are states', (
       WidgetTester tester,
     ) async {
