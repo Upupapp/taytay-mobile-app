@@ -4,9 +4,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taytay_resident/core/api/server_value.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/features/services/domain/assistance_history.dart';
+import 'package:taytay_resident/features/services/presentation/release_and_referral.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/features/tulong/presentation/tulong_canvas.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
@@ -14,6 +17,7 @@ import 'package:taytay_resident/shared/widgets/detail_page.dart';
 import 'package:taytay_resident/shared/widgets/error_state.dart';
 import 'package:taytay_resident/shared/widgets/loading_skeleton.dart';
 import 'package:taytay_resident/shared/widgets/pill_button_row.dart';
+import 'package:taytay_resident/shared/widgets/pills.dart';
 import 'package:taytay_resident/shared/widgets/surface_cards.dart';
 import 'package:taytay_resident/shared/widgets/taytay_states.dart';
 
@@ -254,9 +258,86 @@ void main() {
         tester.getSize(find.byKey(const Key('fact-tap'))).height,
         greaterThanOrEqualTo(A11y.minTapTarget),
       );
-      expect(find.bySemanticsLabel('Office, Sample office'), findsOneWidget);
+      expect(
+        tester.getSemantics(find.byKey(const Key('fact-tap'))),
+        isSemantics(
+          label: 'Office, Sample office',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
       await tester.tap(find.byKey(const Key('fact-tap')));
       expect(taps, 1);
+    });
+  });
+
+  group('assistance request parts', () {
+    testWidgets('release and referral panels lay out', (
+      WidgetTester tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => Padding(
+          padding: const EdgeInsets.all(Spacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              ReleaseCard(
+                release: ReleaseDetail(
+                  amountDescription: 'One sack of rice, 25 kg',
+                  scheduledAt: DateTime.utc(2026, 7, 20),
+                  location: 'Sample hall, window 4',
+                  instructions: 'Bring a valid ID and your reference number.',
+                  acknowledgement: const ServerValue<ReleaseAcknowledgement>(
+                    raw: 'awaiting_resident',
+                    known: ReleaseAcknowledgement.awaitingResident,
+                  ),
+                ),
+              ),
+              const SizedBox(height: Spacing.md),
+              const ReferralCard(
+                referral: ReferralDetail(
+                  destination: 'Sample Provincial Office',
+                  serviceRequested: 'A synthetic service',
+                  contact: '555-0100',
+                  instructions: 'A synthetic instruction.',
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+
+    testWidgets('scope chips and status pills lay out and say their state', (
+      WidgetTester tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => Wrap(
+          children: <Widget>[
+            SoftChoiceChip(label: 'Open', selected: true, onTap: () {}),
+            SoftChoiceChip(label: 'Past', selected: false, onTap: () {}),
+            const StatusPill(label: 'Being checked'),
+          ],
+        ),
+      );
+      await tester.pumpWidget(
+        layoutHost(SoftChoiceChip(label: 'Open', selected: true, onTap: () {})),
+      );
+      expect(
+        tester.getSize(find.byType(SoftChoiceChip)).height,
+        greaterThanOrEqualTo(A11y.minTapTarget),
+      );
+      expect(
+        tester.getSemantics(find.byType(SoftChoiceChip)),
+        isSemantics(
+          label: 'Open',
+          isButton: true,
+          isSelected: true,
+          hasTapAction: true,
+        ),
+      );
     });
   });
 
@@ -280,6 +361,10 @@ void main() {
 
 const List<String> _restyled = <String>[
   'lib/shared/widgets/detail_page.dart',
+  'lib/shared/widgets/pills.dart',
+  'lib/features/services/presentation/assistance_requests_screen.dart',
+  'lib/features/services/presentation/assistance_case_screen.dart',
+  'lib/features/services/presentation/release_and_referral.dart',
   'lib/features/tulong/presentation/tulong_canvas.dart',
   'lib/features/tulong/presentation/tulong_screen.dart',
   'lib/features/tulong/presentation/service_info_screen.dart',

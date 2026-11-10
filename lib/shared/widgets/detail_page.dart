@@ -258,6 +258,7 @@ class DetailFactRow extends StatelessWidget {
     return Semantics(
       button: true,
       label: '$label, $value',
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(key: tapKey, onTap: onTap, child: lined),
     );

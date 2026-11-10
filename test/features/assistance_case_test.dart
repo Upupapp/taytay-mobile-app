@@ -532,5 +532,40 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Being checked'), findsOneWidget);
     });
+
+    // Redesign P3d: the detail pattern at 360 / 375 / 430 dp, 100% and 200%.
+    for (final double width in <double>[360, 375, 430]) {
+      for (final double scale in <double>[1, 2]) {
+        testWidgets('the case lays out at $width dp, text × $scale', (
+          tester,
+        ) async {
+          await bootCase(
+            tester,
+            detail: caseDetail(
+              outcomeReason: 'The office needs one more document.',
+              release: const ReleaseDetail(
+                amountDescription: 'One sack of rice, 25 kg',
+                location: 'Taytay municipal hall, window 4',
+                instructions: 'Bring a valid ID and your reference number.',
+              ),
+              referral: const ReferralDetail(
+                destination: 'Provincial Social Welfare Office',
+                contact: '(02) 8000 0000',
+              ),
+              nextActions: <CaseNextAction>[
+                CaseNextAction(
+                  kind: actionKind(NextActionKind.uploadRequirement),
+                  label: 'Send your barangay clearance',
+                  detail: 'The office cannot continue without it.',
+                ),
+              ],
+            ),
+            textScaler: TextScaler.linear(scale),
+            size: Size(width, 800),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

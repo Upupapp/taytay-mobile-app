@@ -15,6 +15,7 @@ import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/notice_panel.dart';
 import '../../../shared/widgets/photo_carousel.dart';
 import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/status_line.dart';
@@ -335,6 +336,21 @@ class SharedWidgetsGallerySection extends StatelessWidget {
                   ],
                 ),
               ),
+            ],
+          ),
+        ),
+        const _Heading('SoftChoiceChip, StatusPill'),
+        _Padded(
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.sm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              SoftChoiceChip(label: 'In force', selected: true, onTap: () {}),
+              SoftChoiceChip(label: 'Other', selected: false, onTap: () {}),
+              const StatusPill(label: 'Status'),
+              const StatusPill(label: 'Done', tone: PillTone.green),
+              const StatusPill(label: 'Waiting', tone: PillTone.gold),
             ],
           ),
         ),

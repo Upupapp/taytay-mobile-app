@@ -571,5 +571,30 @@ void main() {
       expect(tester.takeException(), isNull);
       expect(find.text('Open'), findsOneWidget);
     });
+
+    // Redesign P3d: the list pattern at 360 / 375 / 430 dp, 100% and 200%.
+    for (final double width in <double>[360, 375, 430]) {
+      for (final double scale in <double>[1, 2]) {
+        testWidgets('the list lays out at $width dp, text × $scale', (
+          tester,
+        ) async {
+          await bootHistory(
+            tester,
+            open: <AssistanceHistoryEntry>[
+              entry(
+                outcomeSummary: 'PHP 5,000 cash assistance released.',
+                submittedAt: DateTime.utc(2026, 7, 1),
+                completedAt: DateTime.utc(2026, 7, 20),
+                receiptReference: 'RCPT-0099',
+              ),
+              entry(requestId: 'req-2', serviceName: null),
+            ],
+            textScaler: TextScaler.linear(scale),
+            size: Size(width, 800),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
   });
 }

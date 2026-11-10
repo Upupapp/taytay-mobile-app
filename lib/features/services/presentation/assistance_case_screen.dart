@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
+import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
-import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/assistance_case.dart';
 import '../domain/request_status_copy.dart';
 import '../domain/service_request_repository.dart';
@@ -36,6 +41,10 @@ import 'release_and_referral.dart';
 /// **This screen never acts on the case.** It is a push-notification target, and
 /// a link must not submit, cancel or confirm anything on somebody's behalf. Its
 /// actions navigate.
+///
+/// Drawn as the detail pattern (Office.dc) without a photo: the blue header
+/// with the back control, then the white sheet. It has no pill actions,
+/// because nothing here acts.
 class AssistanceCaseScreen extends StatefulWidget {
   const AssistanceCaseScreen({required this.requestId, super.key});
 
@@ -81,34 +90,43 @@ class _AssistanceCaseScreenState extends State<AssistanceCaseScreen> {
     final detail = _detail;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Request status'),
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.trackAssistanceRequests,
-          child: switch ((_idIsValid, _loading, detail)) {
-            (false, _, _) => _Unavailable(
-              message: DeepLinkRejection.invalidIdentifier.residentMessage,
+      backgroundColor: BrandColors.white,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const BlueHeader(title: 'Request status', showBack: true),
+          Expanded(
+            child: CapabilityGate(
+              capability: ResidentCapability.trackAssistanceRequests,
+              child: switch ((_idIsValid, _loading, detail)) {
+                (false, _, _) => _Unavailable(
+                  message: DeepLinkRejection.invalidIdentifier.residentMessage,
+                ),
+                (_, true, null) => ListView(
+                  padding: const EdgeInsets.all(Spacing.lg),
+                  children: const <Widget>[
+                    LoadingSkeleton(
+                      layout: SkeletonLayout.detail,
+                      count: 1,
+                      semanticLabel: 'Opening your request…',
+                    ),
+                  ],
+                ),
+                (_, _, null) => _Unavailable(
+                  message:
+                      'Taytay LGU has not switched on request tracking in '
+                      'this app yet. The municipal hall can tell you where '
+                      'your request stands.',
+                  onRetry: _load,
+                ),
+                (_, _, final AssistanceCaseDetail loaded) => RefreshIndicator(
+                  onRefresh: _load,
+                  child: _Case(detail: loaded, requestId: widget.requestId),
+                ),
+              },
             ),
-            (_, true, null) => const AppLoadingView(
-              message: 'Opening your request…',
-            ),
-            (_, _, null) => _Unavailable(
-              message:
-                  'Taytay LGU has not switched on request tracking in this app '
-                  'yet. The municipal hall can tell you where your request '
-                  'stands.',
-              onRetry: _load,
-            ),
-            (_, _, final AssistanceCaseDetail loaded) => RefreshIndicator(
-              onRefresh: _load,
-              child: _Case(detail: loaded, requestId: widget.requestId),
-            ),
-          },
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -123,91 +141,143 @@ class _Case extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final request = detail.request;
+    final String? reason = detail.outcomeReason;
+    final release = detail.release;
+    final referral = detail.referral;
 
     return ListView(
-      padding: const EdgeInsets.all(Spacing.lg),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+      ),
       children: <Widget>[
-        _StatusCard(request: request),
-        const SizedBox(height: Spacing.lg),
+        DetailSheet(
+          children: <Widget>[
+            _Status(request: request),
 
-        // The outcome reason, only when the office chose to publish one.
-        if (detail.outcomeReason != null) ...<Widget>[
-          AppBanner(
-            tone: BannerTone.warning,
-            title: 'What Taytay LGU said',
-            message: detail.outcomeReason!,
-          ),
-          const SizedBox(height: Spacing.lg),
-        ],
+            // The outcome reason, only when the office chose to publish one.
+            if (reason != null) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              CasePanel(
+                icon: TaytayIcons.info,
+                title: 'What Taytay LGU said',
+                children: <Widget>[
+                  Text(
+                    reason,
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ],
+              ),
+            ],
 
-        if (detail.release != null && !detail.release!.isEmpty) ...<Widget>[
-          ReleaseCard(release: detail.release!),
-          const SizedBox(height: Spacing.lg),
-        ],
+            if (release != null && !release.isEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              ReleaseCard(release: release),
+            ],
 
-        if (detail.referral != null) ...<Widget>[
-          ReferralCard(referral: detail.referral!),
-          const SizedBox(height: Spacing.lg),
-        ],
+            if (referral != null) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              ReferralCard(referral: referral),
+            ],
 
-        if (detail.nextActions.isNotEmpty) ...<Widget>[
-          _NextActions(actions: detail.nextActions, requestId: requestId),
-          const SizedBox(height: Spacing.lg),
-        ],
+            if (detail.nextActions.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              _NextActions(actions: detail.nextActions, requestId: requestId),
+            ],
 
-        _Timeline(entries: detail.timeline),
+            const SizedBox(height: Spacing.formGap),
+            _Timeline(entries: detail.timeline),
+          ],
+        ),
       ],
     );
   }
 }
 
 /// Where the request stands, and whose turn it is.
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.request});
+class _Status extends StatelessWidget {
+  const _Status({required this.request});
 
   final ServiceRequest request;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final state = request.state;
     final waitingOnResident = state?.needsResident ?? false;
+    final String? reference = request.referenceNumber;
+    final DateTime? sent = request.submittedAt;
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Semantics(
-            header: true,
-            child: Text(
-              requestStatusLabel(state),
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: waitingOnResident
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurface,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            IconTile.glyph(
+              glyph: TaytayGlyph.document,
+              tone: waitingOnResident ? TileTone.gold : TileTone.blue,
+              tileSize: IconTileSize.large,
+            ),
+            const SizedBox(width: Spacing.section),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      requestStatusLabel(state),
+                      style: AppTypography.pageTitle.copyWith(
+                        color: waitingOnResident
+                            ? BrandColors.blue
+                            : BrandColors.ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    requestStatusMeaning(state),
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.text,
+                    ),
+                  ),
+                ],
               ),
             ),
+          ],
+        ),
+        const SizedBox(height: Spacing.formGap),
+        const Divider(height: 1, thickness: 1, color: BrandColors.divider),
+        if (request.serviceCode.isNotEmpty)
+          DetailFactRow(
+            icon: TaytayIcons.handHeart,
+            label: 'Service',
+            value: request.serviceCode,
           ),
-          const SizedBox(height: Spacing.sm),
-          Text(requestStatusMeaning(state), style: theme.textTheme.bodyMedium),
-          const SizedBox(height: Spacing.md),
-          const Divider(),
-          const SizedBox(height: Spacing.sm),
-
-          _Line(label: 'Service', value: request.serviceCode),
-          if (request.referenceNumber != null)
-            _Line(label: 'Reference', value: request.referenceNumber!),
-          if (request.submittedAt != null)
-            _Line(label: 'Sent', value: formatCaseDate(request.submittedAt!)),
-          // The office's own vocabulary, kept visible so a resident and a clerk
-          // are talking about the same thing. Labelled as such rather than
-          // presented as the status, which is the friendly line above.
-          _Line(
+        if (reference != null && reference.isNotEmpty)
+          DetailFactRow(
+            icon: TaytayIcons.fileText,
+            label: 'Reference',
+            value: reference,
+          ),
+        if (sent != null)
+          DetailFactRow(
+            icon: TaytayIcons.calendar,
+            label: 'Sent',
+            value: formatCaseDate(sent),
+          ),
+        // The office's own vocabulary, kept visible so a resident and a clerk
+        // are talking about the same thing. Labelled as such rather than
+        // presented as the status, which is the friendly line above.
+        if (request.rawState.isNotEmpty)
+          DetailFactRow(
+            icon: TaytayIcons.info,
             label: 'Status code used by the office',
             value: request.rawState,
           ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -221,19 +291,13 @@ class _NextActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text('What to do next', style: theme.textTheme.titleMedium),
-        ),
-        const SizedBox(height: Spacing.sm),
+        const _SectionTitle('What to do next'),
         for (final action in actions)
           Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.md),
+            padding: const EdgeInsets.only(top: Spacing.md),
             child: _NextActionTile(action: action, requestId: requestId),
           ),
       ],
@@ -260,27 +324,36 @@ class _NextActionTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final destination = _destination;
+    final String? detail = action.detail;
 
-    return AppCard(
+    return SoftCard(
+      filled: true,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(action.label, style: theme.textTheme.titleSmall),
-          if (action.detail != null) ...<Widget>[
+          Text(
+            action.label,
+            style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
+          ),
+          if (detail != null) ...<Widget>[
             const SizedBox(height: Spacing.xs),
-            Text(action.detail!, style: theme.textTheme.bodySmall),
+            Text(
+              detail,
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
+              ),
+            ),
           ],
           if (destination != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            AppButton(
-              label: 'Open',
-              variant: AppButtonVariant.secondary,
+            FilledButton(
+              style: TaytayButtonStyles.soft(),
               onPressed: () => context.goNamed(
                 destination.routeName,
                 pathParameters: <String, String>{'requestId': requestId},
               ),
+              child: const Text('Open'),
             ),
           ],
         ],
@@ -297,14 +370,10 @@ class _Timeline extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (entries.isEmpty) {
       return Text(
         'Taytay LGU has not recorded any updates on this yet.',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        style: AppTypography.bodyStyle.copyWith(color: BrandColors.muted),
       );
     }
 
@@ -313,12 +382,9 @@ class _Timeline extends StatelessWidget {
     final ordered = entries.reversed.toList(growable: false);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text('History', style: theme.textTheme.titleMedium),
-        ),
+        const _SectionTitle('History'),
         const SizedBox(height: Spacing.md),
         for (var index = 0; index < ordered.length; index++)
           _TimelineRow(
@@ -344,10 +410,7 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final accent = isLatest
-        ? theme.colorScheme.primary
-        : theme.colorScheme.outlineVariant;
+    final String? detail = entry.detail;
 
     return IntrinsicHeight(
       child: Row(
@@ -356,24 +419,27 @@ class _TimelineRow extends StatelessWidget {
           // The rail is decoration; every row states its own date and summary in
           // text, so nothing here depends on seeing the line.
           ExcludeSemantics(
-            child: Column(
-              children: <Widget>[
-                Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: accent,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                if (!isLast)
-                  Expanded(
-                    child: Container(
-                      width: 2,
-                      color: theme.colorScheme.outlineVariant,
+            child: Padding(
+              padding: const EdgeInsets.only(top: Spacing.xs),
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    width: Spacing.md,
+                    height: Spacing.md,
+                    decoration: BoxDecoration(
+                      color: isLatest ? BrandColors.blue : BrandColors.line2,
+                      shape: BoxShape.circle,
                     ),
                   ),
-              ],
+                  if (!isLast)
+                    Expanded(
+                      child: Container(
+                        width: Spacing.xxs,
+                        color: BrandColors.divider,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
           const SizedBox(width: Spacing.md),
@@ -385,15 +451,27 @@ class _TimelineRow extends StatelessWidget {
                 children: <Widget>[
                   Text(
                     formatCaseDate(entry.occurredAt),
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: AppTypography.medium,
+                      color: BrandColors.muted,
                     ),
                   ),
                   const SizedBox(height: Spacing.xxs),
-                  Text(entry.summary, style: theme.textTheme.bodyLarge),
-                  if (entry.detail != null) ...<Widget>[
+                  Text(
+                    entry.summary,
+                    style: AppTypography.bodyStyle.copyWith(
+                      fontWeight: AppTypography.medium,
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                  if (detail != null) ...<Widget>[
                     const SizedBox(height: Spacing.xxs),
-                    Text(entry.detail!, style: theme.textTheme.bodySmall),
+                    Text(
+                      detail,
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.muted,
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -405,39 +483,18 @@ class _TimelineRow extends StatelessWidget {
   }
 }
 
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
 
-  final String label;
-  final String value;
+  final String text;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    if (value.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.sm),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Expanded(
-            child: Text(
-              label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(width: Spacing.md),
-          Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodyMedium,
-            ),
-          ),
-        ],
+    return Semantics(
+      header: true,
+      child: Text(
+        text,
+        style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
       ),
     );
   }
@@ -451,21 +508,25 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusView(
-      title: 'This request is not available',
-      kind: StatusKind.empty,
-      icon: Icons.assignment_outlined,
-      message: message,
-      primaryAction: onRetry == null
-          ? null
-          : TextButton(
-              onPressed: () => onRetry!(),
-              child: const Text('Check again'),
-            ),
-      secondaryAction: TextButton(
-        onPressed: () => context.goNamed(AppRoute.requests.routeName),
-        child: const Text('See my requests'),
-      ),
+    final Future<void> Function()? retry = onRetry;
+    return ListView(
+      padding: const EdgeInsets.all(Spacing.lg),
+      children: <Widget>[
+        EmptyState(
+          title: 'This request is not available',
+          message: message,
+          actionLabel: retry == null ? null : 'Check again',
+          onAction: retry,
+          boxed: true,
+        ),
+        const SizedBox(height: Spacing.sm),
+        Center(
+          child: TextButton(
+            onPressed: () => context.goNamed(AppRoute.requests.routeName),
+            child: const Text('See my requests'),
+          ),
+        ),
+      ],
     );
   }
 }

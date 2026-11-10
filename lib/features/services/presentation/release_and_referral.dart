@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
-import '../../../shared/widgets/app_card.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/assistance_history.dart';
 
 /// What a resident is receiving, and how to collect it.
@@ -29,81 +32,61 @@ class ReleaseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final acknowledgement = release.acknowledgement?.known;
+    final String? amount = release.amountDescription;
+    final DateTime? scheduled = release.scheduledAt;
+    final String? location = release.location;
+    final String? instructions = release.instructions;
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
+    return CasePanel(
+      icon: TaytayIcons.handHeart,
+      title: 'What you are receiving',
+      children: <Widget>[
+        if (amount != null) CaseLine(label: 'Approved', value: amount),
+        if (scheduled != null)
+          CaseLine(label: 'When', value: formatCaseDate(scheduled)),
+        if (location != null) CaseLine(label: 'Where', value: location),
+
+        if (instructions != null) ...<Widget>[
+          const SizedBox(height: Spacing.xs),
+          Text(instructions, style: _bodyInk),
+        ],
+
+        if (acknowledgement != null &&
+            acknowledgement != ReleaseAcknowledgement.notRequired) ...<Widget>[
+          const SizedBox(height: Spacing.md),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Icon(
-                Icons.card_giftcard_outlined,
-                size: IconSizes.md,
-                color: theme.colorScheme.primary,
+              TaytayIcon(
+                icon: acknowledgement == ReleaseAcknowledgement.acknowledged
+                    ? TaytayIcons.circleCheck
+                    : TaytayIcons.hourglass,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.muted,
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'What you are receiving',
-                    style: theme.textTheme.titleSmall,
+                child: Text(
+                  acknowledgement == ReleaseAcknowledgement.acknowledged
+                      ? 'You have confirmed you received this.'
+                      // Stated, not offered as a button: acknowledging receipt
+                      // is a signature at a counter, and an app that let a
+                      // resident tap it in advance would be recording a
+                      // confirmation for something they may not have.
+                      : 'Taytay LGU will ask you to confirm receipt when you '
+                            'collect this.',
+                  style: AppTypography.listDetail.copyWith(
+                    color: BrandColors.muted,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: Spacing.md),
-
-          if (release.amountDescription != null)
-            _Line(label: 'Approved', value: release.amountDescription!),
-          if (release.scheduledAt != null)
-            _Line(label: 'When', value: formatCaseDate(release.scheduledAt!)),
-          if (release.location != null)
-            _Line(label: 'Where', value: release.location!),
-
-          if (release.instructions != null) ...<Widget>[
-            const SizedBox(height: Spacing.xs),
-            Text(release.instructions!, style: theme.textTheme.bodyMedium),
-          ],
-
-          if (acknowledgement != null &&
-              acknowledgement !=
-                  ReleaseAcknowledgement.notRequired) ...<Widget>[
-            const SizedBox(height: Spacing.md),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Icon(
-                  acknowledgement == ReleaseAcknowledgement.acknowledged
-                      ? Icons.check_circle_outline
-                      : Icons.pending_outlined,
-                  size: IconSizes.sm,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: Spacing.sm),
-                Expanded(
-                  child: Text(
-                    acknowledgement == ReleaseAcknowledgement.acknowledged
-                        ? 'You have confirmed you received this.'
-                        // Stated, not offered as a button: acknowledging receipt
-                        // is a signature at a counter, and an app that let a
-                        // resident tap it in advance would be recording a
-                        // confirmation for something they may not have.
-                        : 'Taytay LGU will ask you to confirm receipt when you '
-                              'collect this.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }
@@ -116,52 +99,31 @@ class ReferralCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final String? service = referral.serviceRequested;
+    final status = referral.status;
+    final String? contact = referral.contact;
+    final String? instructions = referral.instructions;
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Row(
-            children: <Widget>[
-              Icon(
-                Icons.alt_route_outlined,
-                size: IconSizes.md,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: Spacing.sm),
-              Expanded(
-                child: Semantics(
-                  header: true,
-                  child: Text(
-                    'Referred to another office',
-                    style: theme.textTheme.titleSmall,
-                  ),
-                ),
-              ),
-            ],
+    return CasePanel(
+      icon: TaytayIcons.building2,
+      title: 'Referred to another office',
+      children: <Widget>[
+        CaseLine(label: 'Office', value: referral.destination),
+        if (service != null) CaseLine(label: 'For', value: service),
+        if (status != null)
+          CaseLine(
+            label: 'Referral status',
+            value: referralStatusLabel(status.known),
           ),
-          const SizedBox(height: Spacing.md),
+        // Shown only when the backend sent one, because a contact detail is
+        // published deliberately or not at all.
+        if (contact != null) CaseLine(label: 'Contact', value: contact),
 
-          _Line(label: 'Office', value: referral.destination),
-          if (referral.serviceRequested != null)
-            _Line(label: 'For', value: referral.serviceRequested!),
-          if (referral.status != null)
-            _Line(
-              label: 'Referral status',
-              value: referralStatusLabel(referral.status!.known),
-            ),
-          // Shown only when the backend sent one, because a contact detail is
-          // published deliberately or not at all.
-          if (referral.contact != null)
-            _Line(label: 'Contact', value: referral.contact!),
-
-          if (referral.instructions != null) ...<Widget>[
-            const SizedBox(height: Spacing.xs),
-            Text(referral.instructions!, style: theme.textTheme.bodyMedium),
-          ],
+        if (instructions != null) ...<Widget>[
+          const SizedBox(height: Spacing.xs),
+          Text(instructions, style: _bodyInk),
         ],
-      ),
+      ],
     );
   }
 }
@@ -182,15 +144,76 @@ String referralStatusLabel(ReferralStatus? status) => switch (status) {
   null => 'Being processed',
 };
 
-class _Line extends StatelessWidget {
-  const _Line({required this.label, required this.value});
+/// A part of a request on the white sheet: a filled soft card with a soft
+/// icon square, a heading, and its lines.
+class CasePanel extends StatelessWidget {
+  const CasePanel({
+    required this.icon,
+    required this.title,
+    required this.children,
+    super.key,
+  });
+
+  final IconData icon;
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      filled: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Container(
+                width: ComponentSizes.tileSmall,
+                height: ComponentSizes.tileSmall,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: BrandColors.white,
+                  borderRadius: BorderRadius.circular(Radii.md),
+                ),
+                child: TaytayIcon(
+                  icon: icon,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: IconSizes.sm,
+                  color: BrandColors.blue,
+                ),
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Semantics(
+                  header: true,
+                  child: Text(
+                    title,
+                    style: AppTypography.sectionTitle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.md),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+/// A label and its value on one line; nothing when the value is empty.
+class CaseLine extends StatelessWidget {
+  const CaseLine({required this.label, required this.value, super.key});
 
   final String label;
   final String value;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     if (value.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -201,24 +224,25 @@ class _Line extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: theme.textTheme.labelMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              style: AppTypography.small.copyWith(
+                fontWeight: AppTypography.medium,
+                color: BrandColors.muted,
               ),
             ),
           ),
           const SizedBox(width: Spacing.md),
           Flexible(
-            child: Text(
-              value,
-              textAlign: TextAlign.end,
-              style: theme.textTheme.bodyMedium,
-            ),
+            child: Text(value, textAlign: TextAlign.end, style: _bodyInk),
           ),
         ],
       ),
     );
   }
 }
+
+final TextStyle _bodyInk = AppTypography.bodyStyle.copyWith(
+  color: BrandColors.ink,
+);
 
 /// `dd MMM yyyy`, written out because a numeric date is ambiguous between
 /// Philippine and US conventions and there is no localisation seam yet.
