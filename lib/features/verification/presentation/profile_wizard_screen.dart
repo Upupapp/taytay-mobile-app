@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/design_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/network_status_views.dart';
 import '../domain/resident_record.dart';
 import '../domain/resident_record_repository.dart';
 import '../domain/verification_repository.dart';
@@ -142,11 +147,32 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
     if (record == null) {
       final Object? message = _failureMessage;
       return Scaffold(
-        backgroundColor: const Color(0xFFF3F5FA),
-        body: Center(
-          child: message == null
-              ? const CircularProgressIndicator()
-              : Text('$message'),
+        backgroundColor: BrandColors.background,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const BlueHeader(title: 'Resident profile', showBack: true),
+            const OfflineBanner(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(Spacing.lg),
+                children: <Widget>[
+                  if (message == null)
+                    const LoadingSkeleton(
+                      layout: SkeletonLayout.detail,
+                      count: 1,
+                      semanticLabel: 'Loading your profile',
+                    )
+                  else
+                    ErrorState(
+                      title: '$message',
+                      onRetry: widget.preview == null ? _load : null,
+                      boxed: true,
+                    ),
+                ],
+              ),
+            ),
+          ],
         ),
       );
     }

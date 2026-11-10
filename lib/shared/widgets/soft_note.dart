@@ -25,6 +25,9 @@ enum NoteTone {
 /// colour is never the only signal (WCAG 1.4.1).
 ///
 /// [title] is drawn bold in front of [message], on the same run of text.
+/// [heading] is a bold line of its own above [message] instead — for a note
+/// whose title is a statement in its own right ("Taytay LGU has your
+/// report"), or whose message is somebody else's words kept exactly.
 /// A note is a live region by default, so a screen reader announces it when
 /// it appears. Pass [focusNode] when focus should move to it, as an error
 /// summary does after a refused submit.
@@ -32,6 +35,7 @@ class SoftNote extends StatelessWidget {
   const SoftNote({
     required this.message,
     this.title,
+    this.heading,
     this.tone = NoteTone.info,
     this.live = true,
     this.focusNode,
@@ -40,6 +44,7 @@ class SoftNote extends StatelessWidget {
 
   final String message;
   final String? title;
+  final String? heading;
   final NoteTone tone;
   final bool live;
   final FocusNode? focusNode;
@@ -78,6 +83,7 @@ class SoftNote extends StatelessWidget {
       ),
     };
     final String? title = this.title;
+    final String? heading = this.heading;
     final TextStyle style = AppTypography.listDetail.copyWith(
       color: ink,
       height: 1.45,
@@ -103,21 +109,35 @@ class SoftNote extends StatelessWidget {
             ),
             const SizedBox(width: Spacing.sm + Spacing.xxs),
             Expanded(
-              child: Text.rich(
-                TextSpan(
-                  style: style,
-                  children: <InlineSpan>[
-                    if (title != null)
-                      TextSpan(
-                        text: title,
-                        style: const TextStyle(
-                          fontWeight: AppTypography.strong,
+              child: heading != null
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          heading,
+                          style: style.copyWith(
+                            fontWeight: AppTypography.strong,
+                          ),
                         ),
+                        const SizedBox(height: Spacing.xxs),
+                        Text(message, style: style),
+                      ],
+                    )
+                  : Text.rich(
+                      TextSpan(
+                        style: style,
+                        children: <InlineSpan>[
+                          if (title != null)
+                            TextSpan(
+                              text: title,
+                              style: const TextStyle(
+                                fontWeight: AppTypography.strong,
+                              ),
+                            ),
+                          TextSpan(text: message),
+                        ],
                       ),
-                    TextSpan(text: message),
-                  ],
-                ),
-              ),
+                    ),
             ),
           ],
         ),

@@ -26,7 +26,6 @@ import 'package:taytay_resident/features/verification/domain/verification_status
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
-import 'package:taytay_resident/shared/widgets/s3_surface.dart';
 import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
@@ -537,8 +536,6 @@ void main() {
   });
 }
 
-/// [S3Lines] draws each wrapped line as its own [Text], so the sentence is
-/// found by the widget that holds it.
-Finder _lines(String text) => find.byWidgetPredicate(
-  (Widget widget) => widget is S3Lines && widget.text == text,
-);
+/// The name-check statement. The redesign draws it as one plain [Text]
+/// (it was split line by line by the retired S3Lines).
+Finder _lines(String text) => find.text(text);

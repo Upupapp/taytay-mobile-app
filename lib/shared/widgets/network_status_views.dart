@@ -41,13 +41,18 @@ class OfflineBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final monitor = AppDependencies.of(context).network;
-    final strings = AppStrings.of(context);
+    // A design specimen drawn without the app has no network monitor, so
+    // there is nothing to warn about.
+    final AppDependenciesScope? scope = context
+        .dependOnInheritedWidgetOfExactType<AppDependenciesScope>();
+    if (scope == null) return const SizedBox.shrink();
+    final monitor = scope.dependencies.network;
 
     return AnimatedBuilder(
       animation: monitor,
       builder: (context, _) {
         if (!monitor.shouldWarn) return const SizedBox.shrink();
+        final strings = AppStrings.of(context);
 
         final banner = Padding(
           padding: const EdgeInsets.fromLTRB(

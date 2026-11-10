@@ -16,6 +16,8 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/household/presentation/household_correction_screen.dart';
+import 'package:taytay_resident/features/household/presentation/household_screen.dart';
 import 'package:taytay_resident/features/issuance/domain/issuance_type.dart';
 import 'package:taytay_resident/features/issuance/presentation/issuance_catalogue_screen.dart';
 import 'package:taytay_resident/features/issuance/presentation/issuance_request_controller.dart';
@@ -23,7 +25,14 @@ import 'package:taytay_resident/features/issuance/presentation/issuance_request_
 import 'package:taytay_resident/features/issuance/presentation/issuance_request_form_screen.dart';
 import 'package:taytay_resident/features/issuance/presentation/issuance_type_screen.dart';
 import 'package:taytay_resident/features/issuance/presentation/my_issuance_requests_screen.dart';
+import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
+import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
+import 'package:taytay_resident/features/verification/domain/resident_record.dart';
+import 'package:taytay_resident/features/verification/presentation/kyc_claim_screen.dart';
+import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
+import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
+import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
 import 'package:taytay_resident/shared/widgets/detail_page.dart';
@@ -194,6 +203,137 @@ void main() {
     });
   });
 
+  group('household', () {
+    testWidgets('the household page and the report form lay out', (
+      tester,
+    ) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.verified,
+      );
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const HouseholdScreen(),
+      );
+      expect(find.text('Household and family'), findsOneWidget);
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const HouseholdCorrectionScreen(),
+      );
+      expect(find.byType(WaveHeader), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
+  });
+
+  group('verification', () {
+    const ResidentRecord record = MockResidentRecordRepository.sampleRecord;
+    final Map<String, Widget Function()> pages = <String, Widget Function()>{
+      'pending': () => const PendingStatusPage(
+        onBack: _noop,
+        accountCreated: '05 Nov 2026, 9:14 AM',
+        email: 'sample@example.test',
+        idType: 'Passport',
+        submittedOn: '06 Nov 2026',
+        residentMessage: 'A message the resident sent with a correction.',
+        categories: <String>['Your details', 'ID photo'],
+      ),
+      'verified': () => const VerifiedStatusPage(
+        onBack: _noop,
+        onHome: _noop,
+        onProfile: _noop,
+        onRequestDocuments: _noop,
+        verifiedOn: '07 Nov 2026',
+        completeness: 60,
+      ),
+      'needs correction': () => const NeedsCorrectionPage(
+        onBack: _noop,
+        onResubmit: _noop,
+        onCheckName: _noop,
+        reason: 'The photo of the ID is blurred. Send a clearer one.',
+        reviewedOn: '07 Nov 2026',
+        submittedOn: '06 Nov 2026',
+        notice: 'Could not send the new photo. Nothing was replaced.',
+        categories: <String>['ID photo'],
+      ),
+      'unverified': () => const UnverifiedStatusPage(
+        onBack: _noop,
+        onStart: _noop,
+        below: NameCheckNote(onCheckName: _noop),
+      ),
+      'gate sheet': () => const UnverifiedGatePreview(),
+      'profile overview': () => const ProfileWizardPage(
+        step: ProfileWizardStep.overview,
+        record: record,
+        onBack: _noop,
+        onPersonal: _noop,
+      ),
+      'profile personal': () => const ProfileWizardPage(
+        step: ProfileWizardStep.personal,
+        record: record,
+        onBack: _noop,
+        onContinue: _noop,
+      ),
+      'profile household': () => const ProfileWizardPage(
+        step: ProfileWizardStep.household,
+        record: record,
+        onBack: _noop,
+        onContinue: _noop,
+      ),
+      'profile review': () => ProfileWizardPage(
+        step: ProfileWizardStep.review,
+        record: record,
+        onBack: _noop,
+        onContinue: _noop,
+        onEditPersonal: _noop,
+        onCertified: (_) {},
+      ),
+      'profile submitted': () => ProfileWizardPage(
+        step: ProfileWizardStep.submitted,
+        record: record,
+        submittedAt: MockResidentRecordRepository.sampleSubmittedAt,
+        onBack: _noop,
+        onContinue: _noop,
+      ),
+    };
+    for (final MapEntry<String, Widget Function()> page in pages.entries) {
+      testWidgets('${page.key} lays out cleanly', (tester) async {
+        await expectCleanLayouts(tester, page.value, scrollable: false);
+      });
+    }
+
+    testWidgets('the rejection reason and the name-on-ID statement stay', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        layoutHost(
+          const NeedsCorrectionPage(
+            onBack: _noop,
+            onResubmit: _noop,
+            onCheckName: _noop,
+          ),
+          scrollable: false,
+        ),
+      );
+      expect(find.text('REASON FROM TAYTAY LGU'), findsOneWidget);
+      expect(find.text(NameCheckCopy.beforeSending), findsOneWidget);
+      expect(find.text('Needs correction'), findsNWidgets(2));
+      expect(find.byType(BlueHeader), findsOneWidget);
+    });
+
+    testWidgets('the identity claim is the wave-header form', (tester) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.unverified,
+      );
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const KycClaimScreen(),
+      );
+      expect(find.byType(WaveHeader), findsOneWidget);
+    });
+  });
+
   group('requirements', () {
     testWidgets('the checklist lays out', (tester) async {
       final AppDependencies dependencies = await _dependencies(
@@ -249,6 +389,8 @@ void main() {
   });
 }
 
+void _noop() {}
+
 const List<String> _restyled = <String>[
   'lib/shared/widgets/header_search_field.dart',
   'lib/shared/widgets/upload_slot.dart',
@@ -260,6 +402,15 @@ const List<String> _restyled = <String>[
   'lib/features/issuance/presentation/my_issuance_requests_screen.dart',
   'lib/features/issuance/presentation/issuance_file_slot.dart',
   'lib/features/requirements/presentation/requirements_screen.dart',
+  'lib/features/household/presentation/household_screen.dart',
+  'lib/features/household/presentation/household_correction_screen.dart',
+  'lib/features/verification/presentation/s3_chrome.dart',
+  'lib/features/verification/presentation/verification_status_pages.dart',
+  'lib/features/verification/presentation/verification_screen.dart',
+  'lib/features/verification/presentation/kyc_claim_screen.dart',
+  'lib/features/verification/presentation/profile_wizard_screen.dart',
+  'lib/features/verification/presentation/profile_wizard_page.dart',
+  'lib/features/verification/presentation/unverified_gate_sheet.dart',
 ];
 
 /// A photo of a document, as the camera would hand it back. Only the JPEG

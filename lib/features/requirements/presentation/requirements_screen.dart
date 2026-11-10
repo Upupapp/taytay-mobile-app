@@ -26,6 +26,7 @@ import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_states.dart';
@@ -339,9 +340,9 @@ class _RequirementCard extends StatelessWidget {
 
           if (reviewerMessage != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            _Note(
-              tone: _NoteTone.warning,
-              title: 'What the office said',
+            SoftNote(
+              tone: NoteTone.warning,
+              heading: 'What the office said',
               message: reviewerMessage,
             ),
           ],
@@ -472,89 +473,6 @@ class _StatusPresentation {
   }
 }
 
-enum _NoteTone { info, warning, error }
-
-/// A tinted note (`.soft .note`) whose title and message are separate lines,
-/// so the office's own sentence is shown exactly as it was sent.
-class _Note extends StatelessWidget {
-  const _Note({required this.title, required this.message, required this.tone});
-
-  final String title;
-  final String message;
-  final _NoteTone tone;
-
-  @override
-  Widget build(BuildContext context) {
-    final (Color fill, Color ink, IconData icon) = switch (tone) {
-      _NoteTone.info => (
-        BrandColors.blue50,
-        BrandColors.blue,
-        TaytayIcons.info,
-      ),
-      _NoteTone.warning => (
-        BrandColors.gold50,
-        BrandColors.goldInk,
-        TaytayIcons.triangleAlert,
-      ),
-      _NoteTone.error => (
-        BrandColors.red50,
-        BrandColors.redInk,
-        TaytayIcons.circleAlert,
-      ),
-    };
-    return Semantics(
-      container: true,
-      liveRegion: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: fill,
-          borderRadius: BorderRadius.circular(Radii.note),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Padding(
-                padding: const EdgeInsets.only(top: Spacing.xxs),
-                child: TaytayIcon(
-                  icon: icon,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: IconSizes.sm,
-                  color: ink,
-                ),
-              ),
-              const SizedBox(width: Spacing.sm + Spacing.xxs),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      style: AppTypography.listTitle.copyWith(
-                        color: BrandColors.ink,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xxs),
-                    Text(
-                      message,
-                      style: AppTypography.listDetail.copyWith(
-                        color: BrandColors.text,
-                        height: 1.45,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ─── The upload sheet ───────────────────────────────────────────────────────
 
 /// Choose → preview → send → result, in one sheet.
@@ -625,9 +543,9 @@ class _ChooseStage extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (rejection != null) ...<Widget>[
-          _Note(
-            tone: _NoteTone.error,
-            title: AppStrings.of(context).uploadRefusedTitle,
+          SoftNote(
+            tone: NoteTone.error,
+            heading: AppStrings.of(context).uploadRefusedTitle,
             message: localisedDocumentRejection(
               context,
               rejection,
@@ -667,9 +585,9 @@ class _ChooseStage extends StatelessWidget {
             ),
 
         if (!DocumentSource.values.any(controller.supportsSource))
-          const _Note(
-            tone: _NoteTone.info,
-            title: 'This device cannot pick a document',
+          const SoftNote(
+            tone: NoteTone.info,
+            heading: 'This device cannot pick a document',
             message:
                 'Taytay municipal hall can take the document in person, or you '
                 'can try again from a phone with a camera.',

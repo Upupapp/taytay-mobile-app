@@ -1,28 +1,21 @@
-import 'dart:math' as math;
 import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 
-import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
-import '../../../shared/widgets/s3_surface.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
-import '../../../shared/widgets/taytay_headers.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/taytay_icon.dart';
-import 's3_stroke.dart';
 
 // The card, timeline and type scale moved to `shared/widgets/s3_surface.dart`
 // so document requests can draw progress the same way. Re-exported here so the
 // verification screens keep one import.
 export '../../../shared/widgets/s3_surface.dart';
 
-/// In-app header for the verification and profile screens.
-///
-/// The band is 104 logical px. The back control is the design's translucent
-/// disc: a 44 dp circle at 14% white, with a white Lucide arrow-left, inside
-/// a 48 dp target. These screens have no bell.
+/// In-app header for the verification and profile screens: the redesign's
+/// [BlueHeader] with the translucent back control, the title and the
+/// "Bayan ng Taytay · Rizal" line. These screens have no bell.
 class S3Header extends StatelessWidget {
   const S3Header({
     required this.title,
@@ -35,66 +28,19 @@ class S3Header extends StatelessWidget {
   final String subtitle;
   final VoidCallback? onBack;
 
-  static const double height = 104;
-
   @override
   Widget build(BuildContext context) {
-    const gradient = BrandGradients.inAppHeader;
-    final double scale = MediaQuery.textScalerOf(context).scale(1);
-    final double band = math.max(height, 52 + 36 * scale);
-    return SizedBox(
-      height: band,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: gradient.begin,
-            end: gradient.end,
-            colors: gradient.colors,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(6, 44, 16, 8),
-          child: Row(
-            children: <Widget>[
-              TaytayBackButton(onPressed: onBack, translucent: true),
-              const SizedBox(width: 8),
-              const FramedSeal(diameter: 36, shadowBlur: 8, shadowOffsetY: 2),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.headerTitle.copyWith(
-                        color: Colors.white,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    Text(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.headerSubtitle.copyWith(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+    return BlueHeader(
+      title: title,
+      subtitle: subtitle,
+      showBack: true,
+      onBack: onBack,
     );
   }
 }
 
-/// `.bdg` (with an icon) or `.chip` (text only) from the verification CSS.
+/// A status on a soft pill (CSS `.pill`), with its icon when [icon] is set.
+/// The words are the status; the colour and the icon only repeat it.
 class StatusChip extends StatelessWidget {
   const StatusChip({
     required this.label,
@@ -106,16 +52,16 @@ class StatusChip extends StatelessWidget {
   final String label;
   final StatusTone tone;
 
-  /// `.bdg` carries a 12px icon. `.chip` on the profile sections does not.
+  /// The status icon before the words. The profile sections draw none.
   final bool icon;
 
   @override
   Widget build(BuildContext context) {
     final (Color ink, Color fill) = switch (tone) {
-      StatusTone.pending => (BrandColors.warning, BrandColors.chipAmberBg),
-      StatusTone.verified => (BrandColors.success, BrandColors.chipGreenBg),
-      StatusTone.correction => (BrandColors.danger, BrandColors.chipRedBg),
-      StatusTone.neutral => (BrandColors.textSecondary, BrandColors.chipGreyBg),
+      StatusTone.pending => (BrandColors.goldInk, BrandColors.gold50),
+      StatusTone.verified => (BrandColors.green, BrandColors.green50),
+      StatusTone.correction => (BrandColors.redInk, BrandColors.red50),
+      StatusTone.neutral => (BrandColors.text, BrandColors.chipFill),
     };
     final IconData mark = switch (tone) {
       StatusTone.verified => TaytayIcons.badgeCheck,
@@ -124,12 +70,12 @@ class StatusChip extends StatelessWidget {
       StatusTone.pending => TaytayIcons.clock,
     };
     return DecoratedBox(
-      decoration: BoxDecoration(
-        color: fill,
-        borderRadius: BorderRadius.circular(Radii.pill),
-      ),
+      decoration: ShapeDecoration(color: fill, shape: const StadiumBorder()),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm + Spacing.xxs,
+          vertical: Spacing.xs,
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
@@ -138,18 +84,18 @@ class StatusChip extends StatelessWidget {
                 icon: mark,
                 semanticLabel: '',
                 excludeSemantics: true,
-                size: 12,
+                size: IconSizes.sm - Spacing.xs,
                 color: ink,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: Spacing.xs),
             ],
-            Text(
-              label,
-              style: s3Type(
-                11,
-                AppTypography.black,
-                ink,
-                height: icon ? 1.2 : s3Line,
+            Flexible(
+              child: Text(
+                label,
+                style: AppTypography.small.copyWith(
+                  fontWeight: AppTypography.strong,
+                  color: ink,
+                ),
               ),
             ),
           ],
@@ -167,7 +113,8 @@ enum StatusTone {
   neutral,
 }
 
-/// `.f` label. The red asterisk is the design's required mark.
+/// The field label (CSS `.soft .lbl`): 12.5 / 600 above the field, with the
+/// red required mark.
 class S3Label extends StatelessWidget {
   const S3Label(this.text, {this.asterisk = false, super.key});
 
@@ -177,16 +124,16 @@ class S3Label extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
+      padding: const EdgeInsets.only(bottom: Spacing.sm),
       child: Text.rich(
         TextSpan(
           text: text,
-          style: s3Type(12, AppTypography.strong, BrandColors.fieldLabel),
+          style: AppTypography.label.copyWith(color: BrandColors.text),
           children: <InlineSpan>[
             if (asterisk)
-              TextSpan(
+              const TextSpan(
                 text: ' *',
-                style: s3Type(12, AppTypography.strong, BrandColors.danger),
+                style: TextStyle(color: BrandColors.redInk),
               ),
           ],
         ),
@@ -195,10 +142,10 @@ class S3Label extends StatelessWidget {
   }
 }
 
-const Color _inputLine = Color(0xFFD6DCE8);
-const Color _inputRead = Color(0xFFF6F8FB);
-
-/// `.in`: 44px field, optional chevron, chip, or dashed upload.
+/// A read-out field (CSS `.soft .field`): 54 tall, filled `#F2F4F8`, 14
+/// radius, no border. [dashed] is the RegID `.add` slot (white, 2 px dashed
+/// outline, blue words); [readOnly] is a value the resident cannot change
+/// here; [chevron] marks a picker.
 class S3Input extends StatelessWidget {
   const S3Input({
     required this.value,
@@ -219,74 +166,92 @@ class S3Input extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final Widget? leading = this.leading;
+    final Widget? trailing = this.trailing;
     final Color ink = dashed
-        ? BrandColors.taytayBlue
+        ? BrandColors.blue
         : readOnly
-        ? BrandColors.textSecondary
-        : BrandColors.fieldInk;
-    final FontWeight weight = dashed
-        ? AppTypography.black
-        : AppTypography.medium;
+        ? BrandColors.muted
+        : BrandColors.ink;
     final Widget label = Text(
       value,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
-      style: s3Type(14, weight, ink),
+      style: AppTypography.fieldValue.copyWith(
+        color: ink,
+        fontWeight: dashed ? AppTypography.strong : null,
+      ),
     );
     final Widget row = Row(
       mainAxisAlignment: dashed
           ? MainAxisAlignment.center
           : MainAxisAlignment.start,
       children: <Widget>[
-        if (leading != null) ...<Widget>[leading!, const SizedBox(width: 8)],
-        if (dashed) label else Expanded(child: label),
-        if (trailing != null) ...<Widget>[const SizedBox(width: 8), trailing!],
-        if (chevron) S3StrokeIcon.chevronDown,
+        if (leading != null) ...<Widget>[
+          leading,
+          const SizedBox(width: Spacing.sm),
+        ],
+        if (dashed) Flexible(child: label) else Expanded(child: label),
+        if (trailing != null) ...<Widget>[
+          const SizedBox(width: Spacing.sm),
+          trailing,
+        ],
+        if (chevron)
+          const TaytayIcon(
+            icon: TaytayIcons.chevronDown,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm,
+            color: BrandColors.muted,
+          ),
       ],
     );
     return CustomPaint(
       foregroundPainter: dashed ? const _DashBorder() : null,
       child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        constraints: const BoxConstraints(
+          minHeight: ComponentSizes.fieldHeight,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.lg,
+          vertical: Spacing.sm,
+        ),
         alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
-          color: readOnly ? _inputRead : BrandColors.surfaceCard,
-          borderRadius: BorderRadius.circular(Radii.md),
-          border: dashed ? null : Border.all(color: _inputLine, width: 1.3),
+          color: dashed
+              ? BrandColors.white
+              : readOnly
+              ? BrandColors.background
+              : BrandColors.softFill,
+          borderRadius: BorderRadius.circular(Radii.field),
         ),
-        // 2/3 below the row lifts the glyphs 1 device px at 3×. The cap of
-        // a 14px field otherwise starts one pixel under the design.
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 2 / 3),
-          child: row,
-        ),
+        child: row,
       ),
     );
   }
 }
 
+/// `.add { border: 2px dashed var(--line2) }`.
 class _DashBorder extends CustomPainter {
   const _DashBorder();
 
   @override
   void paint(Canvas canvas, Size size) {
+    const double stroke = 2;
     final Paint paint = Paint()
-      ..color = _inputLine
+      ..color = BrandColors.line2
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3;
+      ..strokeWidth = stroke;
     final Path path = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
-          Offset.zero & size,
-          const Radius.circular(Radii.md),
+          (Offset.zero & size).deflate(stroke / 2),
+          const Radius.circular(Radii.field),
         ),
       );
     for (final PathMetric metric in path.computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {
-        canvas.drawPath(metric.extractPath(distance, distance + 5), paint);
-        distance += 9;
+        canvas.drawPath(metric.extractPath(distance, distance + 6), paint);
+        distance += 10;
       }
     }
   }
@@ -295,12 +260,13 @@ class _DashBorder extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-/// Label, 5px gap, then a 44px input. `.f` margin-top defaults to 12.
+/// Label above a 54 px field (RegDetails `.soft .f`). [top] is the gap above
+/// the label.
 class S3Field extends StatelessWidget {
   const S3Field({
     required this.label,
     required this.value,
-    this.top = 12,
+    this.top = Spacing.section,
     this.asterisk = false,
     this.readOnly = false,
     this.dashed = false,
@@ -329,7 +295,7 @@ class S3Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Widget column = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         S3Label(label, asterisk: asterisk),
         S3Input(
@@ -351,7 +317,11 @@ class S3Field extends StatelessWidget {
           : Semantics(
               button: true,
               label: label,
-              child: InkWell(onTap: tap, child: column),
+              child: InkWell(
+                onTap: tap,
+                borderRadius: BorderRadius.circular(Radii.field),
+                child: column,
+              ),
             ),
     );
   }

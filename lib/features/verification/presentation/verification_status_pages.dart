@@ -1,13 +1,23 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/name_lock.dart';
 import '../domain/field_correction_note.dart';
 import 's3_chrome.dart';
+
+// The verification status pages follow the Account pattern of the redesign:
+// the blue header with the back control over the `#F4F6FA` page, a status
+// card (gradient tile, the status in words on a pill), then soft cards and
+// lists. The ID slots on the correction and start pages are RegID's fields.
 
 /// `03-01` Pending review.
 ///
@@ -45,70 +55,29 @@ class PendingStatusPage extends StatelessWidget {
       title: 'Verification status',
       onBack: onBack,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          S3Card(
-            child: Column(
-              children: <Widget>[
-                const IconTile(
-                  icon: TaytayIcons.hourglass,
-                  fill: BrandColors.chipAmberBg,
-                  ink: BrandColors.warning,
-                  size: 60,
-                  iconSize: 28,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "We're reviewing your account",
-                  textAlign: TextAlign.center,
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const StatusChip(
-                  label: 'Pending review',
-                  tone: StatusTone.pending,
-                ),
-                const SizedBox(height: 6),
-                const S3Lines(
-                  'Taytay LGU staff are checking your valid ID and '
-                  'selfie. This usually takes 1–3 working days. No action '
-                  'needed.',
-                  size: 13,
-                  weight: AppTypography.body,
-                  color: BrandColors.textSecondary,
-                  height: 1.5,
-                  align: TextAlign.center,
-                ),
-                if (residentMessage.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 8),
-                  S3Lines(
-                    residentMessage,
-                    size: 13,
-                    weight: AppTypography.body,
-                    color: BrandColors.textSecondary,
-                    height: 1.5,
-                    align: TextAlign.center,
-                  ),
-                ],
-              ],
+          _StatusCard(
+            icon: TaytayIcons.hourglass,
+            tone: TileTone.gold,
+            title: "We're reviewing your account",
+            chip: const StatusChip(
+              label: 'Pending review',
+              tone: StatusTone.pending,
             ),
+            body: <String>[
+              'Taytay LGU staff are checking your valid ID and selfie. This '
+                  'usually takes 1–3 working days. No action needed.',
+              if (residentMessage.isNotEmpty) residentMessage,
+            ],
           ),
-          const SizedBox(height: s3CardGap),
-          S3Card(
+          const SizedBox(height: Spacing.section),
+          SoftCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text(
-                  'Progress',
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
-                  ),
-                ),
+                const _CardTitle('Progress'),
+                const SizedBox(height: Spacing.xs),
                 Timeline(
                   steps: <TimelineStep>[
                     TimelineStep(
@@ -143,69 +112,20 @@ class PendingStatusPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                if (submittedOn.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      'Submitted $submittedOn',
-                      style: s3Type(
-                        12,
-                        FontWeight.w400,
-                        BrandColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                if (categories.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 12),
-                  Text(
-                    'What Taytay LGU has from you',
-                    style: s3Type(
-                      14,
-                      AppTypography.black,
-                      BrandColors.textPrimary,
-                    ),
-                  ),
-                  for (final String label in categories)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        label,
-                        style: s3Type(
-                          13,
-                          AppTypography.body,
-                          BrandColors.textSecondary,
-                        ),
-                      ),
-                    ),
+                if (submittedOn.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: Spacing.sm),
+                  _Small('Submitted $submittedOn'),
                 ],
+                if (categories.isNotEmpty) _Categories(labels: categories),
               ],
             ),
           ),
-          const SizedBox(height: s3CardGap),
-          const S3Card(
-            child: Row(
-              children: <Widget>[
-                IconTile(
-                  icon: TaytayIcons.info,
-                  fill: BrandColors.chipBlueBg,
-                  ink: BrandColors.taytayBlue,
-                  size: 44,
-                  iconSize: 22,
-                  radius: 12,
-                ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: S3Lines(
-                    'While pending you can browse services, '
-                    'news and events, and use emergency hotlines.',
-                    size: 13,
-                    weight: AppTypography.body,
-                    color: BrandColors.textSecondary,
-                    height: 1.5,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: Spacing.section),
+          const SoftNote(
+            live: false,
+            message:
+                'While pending you can browse services, news and events, and '
+                'use emergency hotlines.',
           ),
         ],
       ),
@@ -255,54 +175,25 @@ class VerifiedStatusPage extends StatelessWidget {
       footer: 'Go to Home',
       onFooter: onHome,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          S3Card(
-            child: Column(
-              children: <Widget>[
-                const IconTile(
-                  icon: TaytayIcons.badgeCheck,
-                  fill: BrandColors.chipGreenBg,
-                  ink: BrandColors.success,
-                  size: 60,
-                  iconSize: 30,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Your account is verified',
-                  textAlign: TextAlign.center,
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const StatusChip(label: 'Verified', tone: StatusTone.verified),
-                const SizedBox(height: 6),
-                S3Lines(
-                  body,
-                  size: 13,
-                  weight: AppTypography.body,
-                  color: BrandColors.textSecondary,
-                  height: 1.5,
-                  align: TextAlign.center,
-                ),
-              ],
+          _StatusCard(
+            icon: TaytayIcons.badgeCheck,
+            tone: TileTone.green,
+            title: 'Your account is verified',
+            chip: const StatusChip(
+              label: 'Verified',
+              tone: StatusTone.verified,
             ),
+            body: <String>[body],
           ),
-          const SizedBox(height: s3CardGap),
-          S3Card(
+          const SizedBox(height: Spacing.section),
+          SoftCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text(
-                  'You can now',
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
-                  ),
-                ),
+                const _CardTitle('You can now'),
+                const SizedBox(height: Spacing.xs),
                 Timeline(
                   steps: <TimelineStep>[
                     TimelineStep(
@@ -331,61 +222,17 @@ class VerifiedStatusPage extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: s3CardGap),
-          S3Card(
-            padding: EdgeInsets.zero,
-            child: InkWell(
-              onTap: onProfile,
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: <Widget>[
-                    const IconTile(
-                      icon: TaytayIcons.user,
-                      fill: BrandColors.chipGreyBg,
-                      ink: BrandColors.textSecondary,
-                      size: 44,
-                      iconSize: 22,
-                      radius: 12,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            'Complete your Resident Profile',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: s3Type(
-                              14,
-                              AppTypography.black,
-                              BrandColors.textPrimary,
-                            ),
-                          ),
-                          if (percent != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2),
-                              child: S3Lines(
-                                '$percent% complete',
-                                size: 13,
-                                weight: AppTypography.body,
-                                color: BrandColors.textSecondary,
-                                height: 1.5,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      TaytayIcons.chevronRight,
-                      size: 18,
-                      color: BrandColors.chevron,
-                    ),
-                  ],
-                ),
+          const SizedBox(height: Spacing.section),
+          SettingsList(
+            children: <Widget>[
+              SettingsRow(
+                icon: TaytayIcons.user,
+                title: 'Complete your Resident Profile',
+                detail: percent == null ? null : '$percent% complete',
+                progress: percent == null ? null : percent / 100,
+                onTap: onProfile,
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -454,41 +301,31 @@ class NeedsCorrectionPage extends StatelessWidget {
       onFooter: onResubmit,
       notice: notice,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          S3Card(
+          SoftCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                const Row(
+                Row(
                   children: <Widget>[
-                    IconTile(
+                    const IconTile.lucide(
                       icon: TaytayIcons.triangleAlert,
-                      fill: BrandColors.chipRedBg,
-                      ink: BrandColors.danger,
-                      size: 44,
-                      iconSize: 22,
-                      radius: 12,
+                      tone: TileTone.red,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: Spacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
                             'Needs correction',
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              height: s3Line,
-                              leadingDistribution: TextLeadingDistribution.even,
-                              color: BrandColors.textPrimary,
-                              decoration: TextDecoration.none,
+                            style: AppTypography.sectionTitle.copyWith(
+                              color: BrandColors.ink,
                             ),
                           ),
-                          SizedBox(height: 4),
-                          StatusChip(
+                          const SizedBox(height: Spacing.xs),
+                          const StatusChip(
                             label: 'Needs correction',
                             tone: StatusTone.correction,
                           ),
@@ -497,85 +334,39 @@ class NeedsCorrectionPage extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: Spacing.section),
                 _ReasonBox(reason: shown, reviewed: reviewed),
                 for (final FieldCorrectionNote note in notes) ...<Widget>[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: Spacing.md),
                   _FieldNote(note: note),
                 ],
                 if (residentMessage.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 10),
+                  const SizedBox(height: Spacing.md),
                   Text(
                     'Your message',
-                    style: s3Type(
-                      14,
-                      AppTypography.strong,
-                      BrandColors.textPrimary,
+                    style: AppTypography.listTitle.copyWith(
+                      color: BrandColors.ink,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  S3Lines(
-                    residentMessage,
-                    size: 13,
-                    weight: AppTypography.body,
-                    color: BrandColors.textSecondary,
-                    height: 1.5,
-                  ),
+                  const SizedBox(height: Spacing.xs),
+                  _Body(residentMessage),
                 ],
                 if (submittedOn.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 8),
-                  Text(
-                    'Submitted $submittedOn',
-                    style: s3Type(
-                      11,
-                      FontWeight.w400,
-                      BrandColors.textSecondary,
-                    ),
-                  ),
+                  const SizedBox(height: Spacing.sm),
+                  _Small('Submitted $submittedOn'),
                 ],
-                if (categories.isNotEmpty) ...<Widget>[
-                  const SizedBox(height: 12),
-                  Text(
-                    'What Taytay LGU has from you',
-                    style: s3Type(
-                      14,
-                      AppTypography.black,
-                      BrandColors.textPrimary,
-                    ),
-                  ),
-                  for (final String label in categories)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        label,
-                        style: s3Type(
-                          13,
-                          AppTypography.body,
-                          BrandColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                ],
+                if (categories.isNotEmpty) _Categories(labels: categories),
               ],
             ),
           ),
-          // One logical px under the shared 12. The reason card's border
-          // box is that much taller than the design's card edge.
-          const SizedBox(height: 11),
+          const SizedBox(height: Spacing.section),
           NameCheckNote(onCheckName: onCheckName),
-          const SizedBox(height: s3CardGap),
-          S3Card(
+          const SizedBox(height: Spacing.section),
+          SoftCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Text(
-                  'Send a new valid ID',
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
-                  ),
-                ),
+                const _CardTitle('Send a new valid ID'),
                 S3Field(
                   label: 'Type of ID',
                   asterisk: true,
@@ -588,26 +379,14 @@ class NeedsCorrectionPage extends StatelessWidget {
                   value: frontValue,
                   dashed: true,
                   onTap: onFront,
-                  leading: const TaytayIcon(
-                    icon: TaytayIcons.plus,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                    size: 16,
-                    color: BrandColors.taytayBlue,
-                  ),
+                  leading: const _Plus(),
                 ),
                 S3Field(
                   label: 'Back of ID (optional)',
                   value: backValue,
                   dashed: true,
                   onTap: onBackPhoto,
-                  leading: const TaytayIcon(
-                    icon: TaytayIcons.plus,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                    size: 16,
-                    color: BrandColors.taytayBlue,
-                  ),
+                  leading: const _Plus(),
                 ),
                 if (selfieKept)
                   S3Field(
@@ -616,22 +395,16 @@ class NeedsCorrectionPage extends StatelessWidget {
                     readOnly: true,
                     onTap: onRetake,
                     leading: const TaytayIcon(
-                      icon: TaytayIcons.check,
+                      icon: TaytayIcons.circleCheck,
                       semanticLabel: '',
                       excludeSemantics: true,
-                      size: 16,
-                      color: BrandColors.success,
+                      size: IconSizes.sm,
+                      color: BrandColors.green,
                     ),
-                    trailing: const Text(
+                    trailing: Text(
                       'Retake',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        height: s3Line,
-                        leadingDistribution: TextLeadingDistribution.even,
-                        color: BrandColors.taytayBlue,
-                        decoration: TextDecoration.none,
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.blue,
                       ),
                     ),
                   )
@@ -641,13 +414,7 @@ class NeedsCorrectionPage extends StatelessWidget {
                     value: selfieValue,
                     dashed: true,
                     onTap: onRetake,
-                    leading: const TaytayIcon(
-                      icon: TaytayIcons.plus,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                      size: 16,
-                      color: BrandColors.taytayBlue,
-                    ),
+                    leading: const _Plus(),
                   ),
               ],
             ),
@@ -678,22 +445,29 @@ class UnverifiedStatusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget card = S3Card(
-      child: Column(
+    final Widget card = SoftCard(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            'Not verified',
-            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
-          ),
-          const SizedBox(height: 6),
-          const S3Lines(
-            'Taytay LGU has not confirmed this account. '
-            'You can browse services while you complete your resident profile.',
-            size: 13,
-            weight: AppTypography.body,
-            color: BrandColors.textSecondary,
-            height: 1.5,
+          const IconTile.lucide(icon: TaytayIcons.shieldCheck),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'Not verified',
+                  style: AppTypography.sectionTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
+                ),
+                const SizedBox(height: Spacing.xs),
+                const _Body(
+                  'Taytay LGU has not confirmed this account. You can browse '
+                  'services while you complete your resident profile.',
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -712,7 +486,7 @@ class UnverifiedStatusPage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
                 card,
-                const SizedBox(height: s3CardGap),
+                const SizedBox(height: Spacing.section),
                 extra,
               ],
             ),
@@ -727,6 +501,7 @@ String _orDash(String value) => value.trim().isEmpty ? '—' : value.trim();
 ///
 /// On the start and the resubmit pages, ahead of the photos, because a
 /// resident who changes their name first does not pick the photos twice.
+/// Drawn as RegID's `.namechk`: a filled card with the statement.
 class NameCheckNote extends StatelessWidget {
   const NameCheckNote({this.onCheckName, super.key});
 
@@ -736,24 +511,34 @@ class NameCheckNote extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final VoidCallback? open = onCheckName;
-    return S3Card(
+    return SoftCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            NameCheckCopy.beforeSendingTitle,
-            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
-          ),
-          const SizedBox(height: 6),
-          const S3Lines(
-            NameCheckCopy.beforeSending,
-            size: 13,
-            weight: AppTypography.body,
-            color: BrandColors.textSecondary,
-            height: 1.5,
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const SettingsIcon(icon: TaytayIcons.idCard),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      NameCheckCopy.beforeSendingTitle,
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.ink,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xs),
+                    const _Body(NameCheckCopy.beforeSending),
+                  ],
+                ),
+              ),
+            ],
           ),
           if (open != null) ...<Widget>[
-            const SizedBox(height: 12),
+            const SizedBox(height: Spacing.md),
             SecondaryButton(
               key: const Key('verification-check-name'),
               label: NameCheckCopy.checkName,
@@ -766,8 +551,137 @@ class NameCheckNote extends StatelessWidget {
   }
 }
 
-/// Reason callout. The 3px danger border follows the 8px radius, so the
-/// run starts at the top of the curve rather than after a clipped bar.
+/// The status card at the top of a page: a large gradient tile, the status
+/// as a title and on a pill, and what it means.
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.icon,
+    required this.tone,
+    required this.title,
+    required this.chip,
+    required this.body,
+  });
+
+  final IconData icon;
+  final TileTone tone;
+  final String title;
+  final Widget chip;
+  final List<String> body;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: const EdgeInsets.all(Spacing.formGutter),
+      child: Column(
+        children: <Widget>[
+          IconTile.lucide(icon: icon, tone: tone, tileSize: IconTileSize.large),
+          const SizedBox(height: Spacing.md),
+          Semantics(
+            header: true,
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
+            ),
+          ),
+          const SizedBox(height: Spacing.sm),
+          chip,
+          for (final String line in body) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            _Body(line, align: TextAlign.center),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CardTitle extends StatelessWidget {
+  const _CardTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(
+      text,
+      style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
+    ),
+  );
+}
+
+class _Body extends StatelessWidget {
+  const _Body(this.text, {this.align = TextAlign.start});
+
+  final String text;
+  final TextAlign align;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    textAlign: align,
+    style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
+  );
+}
+
+class _Small extends StatelessWidget {
+  const _Small(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) =>
+      Text(text, style: AppTypography.small.copyWith(color: BrandColors.muted));
+}
+
+class _Plus extends StatelessWidget {
+  const _Plus();
+
+  @override
+  Widget build(BuildContext context) => const TaytayIcon(
+    icon: TaytayIcons.plus,
+    semanticLabel: '',
+    excludeSemantics: true,
+    size: IconSizes.sm,
+    color: BrandColors.blue,
+  );
+}
+
+/// What the office already holds from the resident, as it named it.
+class _Categories extends StatelessWidget {
+  const _Categories({required this.labels});
+
+  final List<String> labels;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: Spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(
+            'What Taytay LGU has from you',
+            style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
+          ),
+          for (final String label in labels)
+            Padding(
+              padding: const EdgeInsets.only(top: Spacing.xs),
+              child: Text(
+                label,
+                style: AppTypography.bodyStyle.copyWith(
+                  color: BrandColors.text,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The office's reason, in its own words, under the category label.
 class _ReasonBox extends StatelessWidget {
   const _ReasonBox({required this.reason, required this.reviewed});
 
@@ -776,67 +690,37 @@ class _ReasonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(
-      painter: const _ReasonBorder(),
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: BrandColors.red50,
+        borderRadius: BorderRadius.circular(Radii.note),
+      ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(15, 10, 12, 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.section,
+          vertical: Spacing.md,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Text(
               'REASON FROM TAYTAY LGU',
-              style: s3Type(11, AppTypography.black, BrandColors.danger),
+              style: AppTypography.category.copyWith(color: BrandColors.redInk),
             ),
-            const SizedBox(height: 4),
-            S3Lines(
+            const SizedBox(height: Spacing.xs),
+            Text(
               reason,
-              size: 13,
-              weight: AppTypography.body,
-              color: const Color(0xFF3A1A1A),
-              height: 1.5,
+              style: AppTypography.bodyStyle.copyWith(color: BrandColors.ink),
             ),
             if (reviewed.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 5),
-              Text(
-                'Reviewed $reviewed',
-                style: s3Type(11, FontWeight.w400, BrandColors.textSecondary),
-              ),
+              const SizedBox(height: Spacing.xs),
+              _Small('Reviewed $reviewed'),
             ],
           ],
         ),
       ),
     );
   }
-}
-
-class _ReasonBorder extends CustomPainter {
-  const _ReasonBorder();
-
-  static const Color _fill = Color(0xFFFDF3F3);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final RRect rect = RRect.fromRectAndRadius(
-      Offset.zero & size,
-      const Radius.circular(8),
-    );
-    canvas.drawRRect(rect, Paint()..color = _fill);
-    canvas.save();
-    canvas.clipRRect(rect);
-    // The left border, including the corner curve. CSS `border-left` does this.
-    canvas.clipRect(Rect.fromLTWH(0, 0, 8, size.height));
-    canvas.drawRRect(
-      rect.deflate(1.5),
-      Paint()
-        ..color = BrandColors.danger
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 3,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _FieldNote extends StatelessWidget {
@@ -851,15 +735,12 @@ class _FieldNote extends StatelessWidget {
       children: <Widget>[
         Text(
           note.label,
-          style: s3Type(14, AppTypography.strong, BrandColors.textPrimary),
+          style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
         ),
-        const SizedBox(height: 4),
-        S3Lines(
+        const SizedBox(height: Spacing.xs),
+        Text(
           note.note,
-          size: 13,
-          weight: AppTypography.body,
-          color: BrandColors.danger,
-          height: 1.5,
+          style: AppTypography.bodyStyle.copyWith(color: BrandColors.redInk),
         ),
       ],
     );
@@ -886,29 +767,47 @@ class _StatusScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? label = footer;
+    final double safeBottom = MediaQuery.paddingOf(context).bottom;
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.background,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           S3Header(
             title: title,
             subtitle: 'Bayan ng Taytay · Rizal',
             onBack: onBack,
           ),
+          const OfflineBanner(),
           Expanded(
-            child: ListView(padding: s3PagePadding, children: <Widget>[child]),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                Spacing.section,
+                Spacing.lg,
+                Spacing.xl,
+              ),
+              children: <Widget>[child],
+            ),
           ),
           if (notice.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Text(
-                notice,
-                style: s3Type(13, AppTypography.body, BrandColors.danger),
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                0,
+                Spacing.lg,
+                Spacing.sm,
               ),
+              child: SoftNote(tone: NoteTone.error, message: notice),
             ),
           if (label != null)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 34),
+              padding: EdgeInsets.fromLTRB(
+                Spacing.formGutter,
+                Spacing.sm,
+                Spacing.formGutter,
+                Spacing.xl + safeBottom,
+              ),
               child: PrimaryButton(label: label, onPressed: onFooter),
             ),
         ],

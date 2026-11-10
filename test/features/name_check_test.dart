@@ -16,7 +16,6 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_detail.
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
-import 'package:taytay_resident/shared/widgets/s3_surface.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 /// D-195: the account's name is checked against the ID, so it is the
@@ -406,8 +405,6 @@ class _Barangays implements BarangayDirectory {
       ]);
 }
 
-/// [S3Lines] draws each wrapped line as its own [Text], so the sentence is
-/// found by the widget that holds it.
-Finder _lines(String text) => find.byWidgetPredicate(
-  (Widget widget) => widget is S3Lines && widget.text == text,
-);
+/// The name-check statement. The redesign draws it as one plain [Text]
+/// (it was split line by line by the retired S3Lines).
+Finder _lines(String text) => find.text(text);

@@ -2,16 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
-import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/household_summary.dart';
 
 /// Household and family — what Taytay LGU records about the resident's home.
@@ -102,45 +107,55 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
     final summary = _summary;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Household and family'),
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.viewHouseholdSummary,
-          child: RefreshIndicator(
-            onRefresh: _load,
-            child: ListView(
-              padding: const EdgeInsets.all(Spacing.lg),
-              children: <Widget>[
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: Spacing.xxl),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (summary == null) ...<Widget>[
-                  if (_none) const _NoHousehold() else const _Unavailable(),
-                ] else ...<Widget>[
-                  _HouseholdSection(summary: summary),
-                  const SizedBox(height: Spacing.xl),
-                  _FamilySection(summary: summary),
-                ],
-                const SizedBox(height: Spacing.xl),
-                const _WhatIsNotShown(),
-                const SizedBox(height: Spacing.xl),
-                _CorrectionEntry(hasRecord: summary != null),
-              ],
+      backgroundColor: BrandColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const BlueHeader(title: 'Household and family', showBack: true),
+          const OfflineBanner(),
+          Expanded(
+            child: CapabilityGate(
+              capability: ResidentCapability.viewHouseholdSummary,
+              child: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: EdgeInsets.fromLTRB(
+                    Spacing.lg,
+                    Spacing.lg,
+                    Spacing.lg,
+                    Spacing.xl + MediaQuery.paddingOf(context).bottom,
+                  ),
+                  children: <Widget>[
+                    if (_loading)
+                      const LoadingSkeleton(
+                        count: 4,
+                        semanticLabel: 'Loading your household record',
+                      )
+                    else if (summary == null) ...<Widget>[
+                      if (_none) const _NoHousehold() else const _Unavailable(),
+                    ] else ...<Widget>[
+                      _HouseholdSection(summary: summary),
+                      const SizedBox(height: Spacing.xl),
+                      _FamilySection(summary: summary),
+                    ],
+                    const SizedBox(height: Spacing.xl),
+                    const _WhatIsNotShown(),
+                    const SizedBox(height: Spacing.xl),
+                    _CorrectionEntry(hasRecord: summary != null),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Where the LGU believes this home is, and how large it is.
+/// Where the LGU believes this home is, and how large it is (Account.dc
+/// list rows: the label over the value, no chevron — nothing here is a link).
 class _HouseholdSection extends StatelessWidget {
   const _HouseholdSection({required this.summary});
 
@@ -148,35 +163,36 @@ class _HouseholdSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
+    final String? label = summary.label;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text('Your household', style: theme.textTheme.titleMedium),
-        ),
-        const SizedBox(height: Spacing.sm),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: Column(
-            children: <Widget>[
-              if (summary.label != null)
-                _Row(label: 'Household', value: summary.label!),
-              _Row(label: 'Barangay', value: summary.barangay),
-              _Row(label: 'Street address', value: summary.streetAddress),
-              _Row(
-                label: 'People recorded here',
-                // An aggregate, and the only thing shown about the others. It
-                // lets a resident notice the office is serving the wrong number
-                // of people while naming nobody.
-                value: summary.memberCount == null
-                    ? null
-                    : '${summary.memberCount}',
-              ),
-            ],
-          ),
+        const SettingsSectionTitle('Your household'),
+        SettingsList(
+          children: <Widget>[
+            if (label != null)
+              _Row(icon: TaytayIcons.house, label: 'Household', value: label),
+            _Row(
+              icon: TaytayIcons.landmark,
+              label: 'Barangay',
+              value: summary.barangay,
+            ),
+            _Row(
+              icon: TaytayIcons.mapPin,
+              label: 'Street address',
+              value: summary.streetAddress,
+            ),
+            _Row(
+              icon: TaytayIcons.users,
+              label: 'People recorded here',
+              // An aggregate, and the only thing shown about the others. It
+              // lets a resident notice the office is serving the wrong number
+              // of people while naming nobody.
+              value: summary.memberCount == null
+                  ? null
+                  : '${summary.memberCount}',
+            ),
+          ],
         ),
       ],
     );
@@ -191,49 +207,42 @@ class _FamilySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text('Your family record', style: theme.textTheme.titleMedium),
-        ),
-        const SizedBox(height: Spacing.sm),
-        AppCard(
-          child: Column(
+        const SettingsSectionTitle('Your family record'),
+        SoftCard(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Icon(
-                    Icons.person_outline,
-                    color: theme.colorScheme.primary,
-                    size: IconSizes.md,
-                  ),
-                  const SizedBox(width: Spacing.md),
-                  Expanded(
-                    child: Text(
+              const SettingsIcon(icon: TaytayIcons.user),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
                       householdRoleLabel(context, summary.role),
-                      style: theme.textTheme.titleSmall,
+                      style: AppTypography.listTitle.copyWith(
+                        color: BrandColors.ink,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                switch (summary.role) {
-                  HouseholdRole.head =>
-                    'Taytay LGU records you as the person who answers for this '
-                        'household. The office keeps that record. This app '
-                        'does not take applications.',
-                  HouseholdRole.member =>
-                    'Taytay LGU records you as part of this household. This '
-                        'app does not take applications.',
-                },
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+                    const SizedBox(height: Spacing.xs),
+                    Text(
+                      switch (summary.role) {
+                        HouseholdRole.head =>
+                          'Taytay LGU records you as the person who answers '
+                              'for this household. The office keeps that '
+                              'record. This app does not take applications.',
+                        HouseholdRole.member =>
+                          'Taytay LGU records you as part of this household. '
+                              'This app does not take applications.',
+                      },
+                      style: AppTypography.bodyStyle.copyWith(
+                        color: BrandColors.text,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -251,26 +260,37 @@ class _WhatIsNotShown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AppCard(
-      child: Column(
+    return SoftCard(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Semantics(
-            header: true,
-            child: Text(
-              'Why you cannot see the other people here',
-              style: theme.textTheme.titleSmall,
-            ),
-          ),
-          const SizedBox(height: Spacing.sm),
-          Text(
-            'The details of everyone else in your household belong to them, not '
-            'to your account — so this app does not show their names, their '
-            'situation or anything they have applied for. Taytay LGU staff can '
-            'go through the household record with you in person.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          const SettingsIcon(icon: TaytayIcons.shield, tone: SettingsTone.gold),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    'Why you cannot see the other people here',
+                    style: AppTypography.listTitle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Spacing.xs),
+                Text(
+                  'The details of everyone else in your household belong to '
+                  'them, not to your account — so this app does not show '
+                  'their names, their situation or anything they have applied '
+                  'for. Taytay LGU staff can go through the household record '
+                  'with you in person.',
+                  style: AppTypography.bodyStyle.copyWith(
+                    color: BrandColors.text,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -286,13 +306,13 @@ class _NoHousehold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const AppBanner(
-      tone: BannerTone.info,
+    return const EmptyState(
       title: 'No household on your account yet',
       message:
           'Your account is not part of a household in this app, and this '
           'version of the app cannot set one up. The municipal hall keeps its '
           'own household record, and staff can go through it with you.',
+      boxed: true,
     );
   }
 }
@@ -303,20 +323,15 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppBanner(
-      tone: BannerTone.info,
+    return EmptyState(
       title: 'Not available in this app yet',
       message:
           'Taytay LGU has not switched on household records here. Your '
           'household record still exists at the municipal hall, and staff can '
           'go through it with you.',
-      action: AppButton(
-        label: 'Report an error',
-        variant: AppButtonVariant.secondary,
-        fullWidth: false,
-        onPressed: () =>
-            context.goNamed(AppRoute.householdCorrection.routeName),
-      ),
+      actionLabel: 'Report an error',
+      onAction: () => context.goNamed(AppRoute.householdCorrection.routeName),
+      boxed: true,
     );
   }
 }
@@ -331,36 +346,21 @@ class _CorrectionEntry extends StatelessWidget {
   Widget build(BuildContext context) {
     if (!hasRecord) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text(
-            'Is something wrong?',
-            style: theme.textTheme.titleMedium,
-          ),
-        ),
-        const SizedBox(height: Spacing.sm),
+        const SettingsSectionTitle('Is something wrong?'),
         Text(
           'Tell Taytay LGU what looks wrong and they will check the record. '
           'Nothing changes until staff review it.',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
         const SizedBox(height: Spacing.md),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: AppButton(
-            label: 'Report an error',
-            variant: AppButtonVariant.secondary,
-            fullWidth: false,
-            onPressed: () =>
-                context.goNamed(AppRoute.householdCorrection.routeName),
-          ),
+        FilledButton(
+          style: TaytayButtonStyles.soft(),
+          onPressed: () =>
+              context.goNamed(AppRoute.householdCorrection.routeName),
+          child: const Text('Report an error'),
         ),
       ],
     );
@@ -369,29 +369,28 @@ class _CorrectionEntry extends StatelessWidget {
 
 /// One labelled row. Absent values say which kind of absent they are.
 class _Row extends StatelessWidget {
-  const _Row({required this.label, required this.value});
+  const _Row({required this.icon, required this.label, required this.value});
 
+  final IconData icon;
   final String label;
   final String? value;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final known = value != null && value!.isNotEmpty;
+    final String? value = this.value;
+    final bool known = value != null && value.isNotEmpty;
 
-    return ListTile(
-      title: Text(label),
-      subtitle: Text(
-        // Never a blank or a dash: an empty row on a government record reads as
-        // data loss, and a resident cannot tell it from a screen that failed.
-        known ? value! : 'Not on file',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: known
-              ? theme.colorScheme.onSurface
-              : theme.colorScheme.onSurfaceVariant,
-          fontStyle: known ? null : FontStyle.italic,
-        ),
+    return SettingsRow(
+      icon: icon,
+      title: label,
+      // Never a blank or a dash: an empty row on a government record reads as
+      // data loss, and a resident cannot tell it from a screen that failed.
+      detail: known ? value : 'Not on file',
+      detailStyle: AppTypography.bodyStyle.copyWith(
+        color: known ? BrandColors.ink : BrandColors.muted,
+        fontStyle: known ? null : FontStyle.italic,
       ),
+      showChevron: false,
     );
   }
 }

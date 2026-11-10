@@ -185,18 +185,19 @@ class TimelineStep {
   final VoidCallback? onTap;
 }
 
-/// `.tl`: a 22px disc, a 13px title in the body strut, and a 12px detail.
+/// A list of steps: a numbered-step disc (green done, blue for what the
+/// resident can now do, gold for the step in hand, hollow for what is next),
+/// the step in words and a supporting line. A step with [TimelineStep.onTap]
+/// is one 48 dp button with a chevron.
 class Timeline extends StatelessWidget {
   const Timeline({required this.steps, super.key});
 
   final List<TimelineStep> steps;
 
-  static const Color _amber = Color(0xFFE0A400);
-  static const Color _future = Color(0xFFAEB6C8);
-
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (final TimelineStep step in steps) _TimelineRow(step: step),
       ],
@@ -211,107 +212,88 @@ class _TimelineRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color fill, Widget mark) = switch (step.tone) {
-      TimelineTone.done => (
-        BrandColors.success,
-        const TaytayIcon(
-          icon: TaytayIcons.check,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: 13,
-          color: Colors.white,
-        ),
+    final (Color fill, Color ink, Color? ring) = switch (step.tone) {
+      TimelineTone.done => (BrandColors.green, BrandColors.white, null),
+      TimelineTone.navy => (BrandColors.blue, BrandColors.white, null),
+      TimelineTone.current => (BrandColors.gold, BrandColors.navy, null),
+      TimelineTone.upcoming => (
+        BrandColors.white,
+        BrandColors.muted,
+        BrandColors.line2,
       ),
-      TimelineTone.navy => (
-        BrandColors.taytayBlue,
-        const TaytayIcon(
-          icon: TaytayIcons.check,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: 13,
-          color: Colors.white,
-        ),
-      ),
-      TimelineTone.current => (
-        Timeline._amber,
-        Text('•', style: s3Type(12, AppTypography.black, Colors.white)),
-      ),
-      TimelineTone.upcoming => (Timeline._future, const SizedBox.shrink()),
     };
+    final VoidCallback? onTap = step.onTap;
     final Widget row = Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
           Container(
-            width: 22,
-            height: 22,
+            width: ComponentSizes.stepDisc,
+            height: ComponentSizes.stepDisc,
             alignment: Alignment.center,
-            decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
-            child: mark,
+            decoration: BoxDecoration(
+              color: fill,
+              shape: BoxShape.circle,
+              border: ring == null ? null : Border.all(color: ring, width: 2),
+            ),
+            child: TaytayIcon(
+              icon: step.icon,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm - Spacing.xs,
+              color: ink,
+            ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: Spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                // 16×1.26. The strut rounds to 20; the slot keeps the CSS box.
-                SizedBox(
-                  height: 16 * s3Line,
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Text(
-                      step.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      strutStyle: s3BodyStrut,
-                      style: s3Type(
-                        13,
-                        AppTypography.strong,
-                        BrandColors.fieldInk,
-                      ),
-                    ),
+                Text(
+                  step.title,
+                  style: AppTypography.listTitle.copyWith(
+                    color: step.tone == TimelineTone.upcoming
+                        ? BrandColors.muted
+                        : BrandColors.ink,
                   ),
                 ),
-                if (step.detail.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 1),
-                    child: SizedBox(
-                      height: 12 * s3Line,
-                      child: Align(
-                        alignment: Alignment.topLeft,
-                        child: Text(
-                          step.detail,
-                          style: s3Type(
-                            12,
-                            FontWeight.w400,
-                            BrandColors.textSecondary,
-                          ),
-                        ),
-                      ),
+                if (step.detail.isNotEmpty) ...<Widget>[
+                  const SizedBox(height: Spacing.xxs),
+                  Text(
+                    step.detail,
+                    style: AppTypography.listDetail.copyWith(
+                      color: BrandColors.muted,
                     ),
                   ),
+                ],
               ],
             ),
           ),
+          if (onTap != null) ...<Widget>[
+            const SizedBox(width: Spacing.sm),
+            const Padding(
+              padding: EdgeInsets.only(top: Spacing.xs),
+              child: TaytayIcon(
+                icon: TaytayIcons.chevronRight,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.chevron,
+              ),
+            ),
+          ],
         ],
       ),
     );
-    final VoidCallback? onTap = step.onTap;
     if (onTap == null) return row;
-    // The disc row is shorter than 48. The target hangs off it.
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        row,
-        Positioned(
-          left: 0,
-          right: 0,
-          top: 0,
-          height: A11y.minTapTarget,
-          child: InkWell(onTap: onTap),
-        ),
-      ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(Radii.md),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+        child: row,
+      ),
     );
   }
 }

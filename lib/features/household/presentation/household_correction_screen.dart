@@ -2,16 +2,17 @@ import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/resident_capability.dart';
-import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/capability_gate.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../domain/household_summary.dart';
 
 /// Report an error in the household record.
@@ -102,120 +103,120 @@ class _HouseholdCorrectionScreenState extends State<HouseholdCorrectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Report an error'),
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.viewHouseholdSummary,
-          child: ListView(
-            padding: const EdgeInsets.all(Spacing.lg),
-            children: <Widget>[
-              Text('What looks wrong?', style: theme.textTheme.headlineSmall),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                'Pick the closest one. Taytay LGU staff will check the record — '
-                'nothing changes until they do.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+    return AuthFormPage(
+      title: 'Report an error',
+      subtitle: 'Household and family',
+      // The whole form, Send included, sits inside the gate: an account that
+      // may not read the household record is not offered a way to report on
+      // it either.
+      child: CapabilityGate(
+        capability: ResidentCapability.viewHouseholdSummary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Semantics(
+              header: true,
+              child: Text(
+                'What looks wrong?',
+                style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
               ),
-              const SizedBox(height: Spacing.lg),
+            ),
+            const SizedBox(height: Spacing.xs),
+            Text(
+              'Pick the closest one. Taytay LGU staff will check the record — '
+              'nothing changes until they do.',
+              style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
+            ),
+            const SizedBox(height: Spacing.lg),
 
-              for (final kind in HouseholdCorrectionKind.values)
-                RadioListTile<HouseholdCorrectionKind>(
-                  value: kind,
-                  // ignore: deprecated_member_use
-                  groupValue: _selected,
-                  // ignore: deprecated_member_use
-                  onChanged: _sent
-                      ? null
-                      : (value) => setState(() => _selected = value),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(householdCorrectionCopy(context, kind).label),
-                  subtitle: Text(
-                    householdCorrectionCopy(context, kind).description,
-                  ),
-                  isThreeLine: false,
-                ),
-
-              const SizedBox(height: Spacing.lg),
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Semantics(
-                      header: true,
-                      child: Text(
-                        'Please do not type personal details here',
-                        style: theme.textTheme.titleSmall,
+            SoftCard(
+              filled: true,
+              padding: const EdgeInsets.symmetric(vertical: Spacing.xs),
+              child: Column(
+                children: <Widget>[
+                  for (final kind in HouseholdCorrectionKind.values)
+                    RadioListTile<HouseholdCorrectionKind>(
+                      value: kind,
+                      // ignore: deprecated_member_use
+                      groupValue: _selected,
+                      // ignore: deprecated_member_use
+                      onChanged: _sent
+                          ? null
+                          : (value) => setState(() => _selected = value),
+                      title: Text(
+                        householdCorrectionCopy(context, kind).label,
+                        style: AppTypography.listTitle.copyWith(
+                          color: BrandColors.ink,
+                        ),
                       ),
+                      subtitle: Text(
+                        householdCorrectionCopy(context, kind).description,
+                        style: AppTypography.listDetail.copyWith(
+                          color: BrandColors.muted,
+                        ),
+                      ),
+                      isThreeLine: false,
                     ),
-                    const SizedBox(height: Spacing.sm),
-                    Text(
-                      'This app asks only what kind of thing is wrong. Names, '
-                      'health information and reasons belong in the '
-                      'conversation with staff, who can record them properly '
-                      'and act on them.',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
+                ],
               ),
-              const SizedBox(height: Spacing.lg),
+            ),
 
-              const AppBanner(
-                tone: BannerTone.info,
-                title: 'Bring it to the municipal hall',
+            const SizedBox(height: Spacing.formGap),
+            const SoftNote(
+              tone: NoteTone.warning,
+              live: false,
+              heading: 'Please do not type personal details here',
+              message:
+                  'This app asks only what kind of thing is wrong. Names, '
+                  'health information and reasons belong in the conversation '
+                  'with staff, who can record them properly and act on them.',
+            ),
+            const SizedBox(height: Spacing.md),
+            const SoftNote(
+              live: false,
+              heading: 'Bring it to the municipal hall',
+              message:
+                  'Household records are changed by Taytay LGU staff after '
+                  'they look at your documents. Visit the municipal hall with '
+                  'a valid ID — you do not need this app or your phone to be '
+                  'served there.',
+            ),
+
+            if (_sent) ...<Widget>[
+              const SizedBox(height: Spacing.md),
+              const SoftNote(
+                tone: NoteTone.success,
+                heading: 'Taytay LGU has your report',
                 message:
-                    'Household records are changed by Taytay LGU staff after '
-                    'they look at your documents. Visit the municipal hall with '
-                    'a valid ID — you do not need this app or your phone to be '
-                    'served there.',
-              ),
-              const SizedBox(height: Spacing.lg),
-
-              if (_sent)
-                const AppBanner(
-                  tone: BannerTone.success,
-                  title: 'Taytay LGU has your report',
-                  message:
-                      'Staff will check the record. Nothing has been changed '
-                      'yet, and you will be told what they find.',
-                ),
-              if (_failure != null)
-                const AppBanner(
-                  tone: BannerTone.warning,
-                  title: 'Could not send your report',
-                  message:
-                      'Taytay LGU has not switched on household reports in '
-                      'this app yet. Nothing was sent, and nothing has changed. '
-                      'The municipal hall can take it in person.',
-                ),
-              const SizedBox(height: Spacing.lg),
-
-              AppButton(
-                label: 'Send report',
-                loading: _sending,
-                onPressed: _selected == null || _sending || _sent
-                    ? null
-                    : _send,
-              ),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                'Sending this does not change your household record.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
+                    'Staff will check the record. Nothing has been changed '
+                    'yet, and you will be told what they find.',
               ),
             ],
-          ),
+            if (_failure != null) ...<Widget>[
+              const SizedBox(height: Spacing.md),
+              const SoftNote(
+                tone: NoteTone.warning,
+                heading: 'Could not send your report',
+                message:
+                    'Taytay LGU has not switched on household reports in '
+                    'this app yet. Nothing was sent, and nothing has changed. '
+                    'The municipal hall can take it in person.',
+              ),
+            ],
+
+            const SizedBox(height: Spacing.formGap),
+            AppButton(
+              label: 'Send report',
+              loading: _sending,
+              onPressed: _selected == null || _sending || _sent ? null : _send,
+            ),
+            const SizedBox(height: Spacing.sm),
+            Text(
+              'Sending this does not change your household record.',
+              textAlign: TextAlign.center,
+              style: AppTypography.small.copyWith(color: BrandColors.muted),
+            ),
+          ],
         ),
       ),
     );

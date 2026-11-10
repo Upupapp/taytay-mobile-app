@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/intent/resident_intent.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import 's3_chrome.dart';
 
@@ -72,38 +74,39 @@ class UnverifiedGateSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle body = s3Type(
-      13,
-      AppTypography.body,
-      BrandColors.textSecondary,
-      height: 1.5,
+    final TextStyle body = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.text,
     );
     return Material(
-      color: BrandColors.surfaceCard,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+      color: BrandColors.white,
+      borderRadius: const BorderRadius.vertical(
+        top: Radius.circular(Radii.sheet),
+      ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
-        // Handle margin-top -8 against padding-top 22 lands the bar at 14.
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 22),
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.formGutter,
+          Spacing.section,
+          Spacing.formGutter,
+          Spacing.xl,
+        ),
         child: Column(
           mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
             const _DragHandle(),
-            const SizedBox(height: 16),
-            const IconTile(
+            const SizedBox(height: Spacing.lg),
+            const IconTile.lucide(
               icon: TaytayIcons.lock,
-              fill: BrandColors.chipAmberBg,
-              ink: BrandColors.warning,
-              size: 60,
-              iconSize: 28,
+              tone: TileTone.gold,
+              tileSize: IconTileSize.large,
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: Spacing.md),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: s3Type(18, AppTypography.black, BrandColors.textPrimary),
+              style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: Spacing.sm),
             Text.rich(
               TextSpan(
                 style: body,
@@ -121,24 +124,23 @@ class UnverifiedGateSheet extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: Spacing.lg),
             PrimaryButton(
               label: 'Continue verification',
               onPressed: onContinue,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: Spacing.sm),
             SizedBox(
-              height: 48,
+              height: A11y.minTapTarget,
               width: double.infinity,
               child: InkWell(
                 onTap: onDismiss,
+                borderRadius: BorderRadius.circular(Radii.button),
                 child: Center(
                   child: Text(
                     'Not now',
-                    style: s3Type(
-                      15,
-                      AppTypography.black,
-                      BrandColors.textSecondary,
+                    style: AppTypography.button.copyWith(
+                      color: BrandColors.muted,
                     ),
                   ),
                 ),
@@ -159,10 +161,10 @@ class _DragHandle extends StatelessWidget {
     return const Center(
       child: DecoratedBox(
         decoration: BoxDecoration(
-          color: Color(0xFFD6DCE8),
-          borderRadius: BorderRadius.all(Radius.circular(2)),
+          color: BrandColors.line2,
+          borderRadius: BorderRadius.all(Radius.circular(Radii.pill)),
         ),
-        child: SizedBox(width: 40, height: 4),
+        child: SizedBox(width: Spacing.xxxl - Spacing.sm, height: Spacing.xs),
       ),
     );
   }
@@ -175,13 +177,13 @@ class GateBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ColoredBox(
-      color: BrandColors.surface,
+      color: BrandColors.background,
       child: Column(
         children: <Widget>[
           S3Header(title: 'Messages', subtitle: 'Municipal offices'),
           Expanded(
             child: Padding(
-              padding: s3PagePadding,
+              padding: EdgeInsets.all(Spacing.lg),
               child: Column(
                 children: <Widget>[
                   Opacity(
@@ -191,7 +193,7 @@ class GateBackdrop extends StatelessWidget {
                       detail: 'Real property tax, payments',
                     ),
                   ),
-                  SizedBox(height: s3CardGap),
+                  SizedBox(height: Spacing.md),
                   Opacity(
                     opacity: 0.55,
                     child: _OfficeCard(
@@ -217,37 +219,25 @@ class _OfficeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return S3Card(
+    return SoftCard(
       child: Row(
         children: <Widget>[
-          const IconTile(
-            icon: TaytayIcons.landmark,
-            fill: BrandColors.chipBlueBg,
-            ink: BrandColors.taytayBlue,
-            size: 44,
-            iconSize: 22,
-            radius: 12,
-          ),
-          const SizedBox(width: 12),
+          const IconTile.lucide(icon: TaytayIcons.landmark),
+          const SizedBox(width: Spacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text(
                   title,
-                  style: s3Type(
-                    14,
-                    AppTypography.black,
-                    BrandColors.textPrimary,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
                   ),
                 ),
                 Text(
                   detail,
-                  style: s3Type(
-                    13,
-                    AppTypography.body,
-                    BrandColors.textSecondary,
-                    height: 1.5,
+                  style: AppTypography.listDetail.copyWith(
+                    color: BrandColors.muted,
                   ),
                 ),
               ],

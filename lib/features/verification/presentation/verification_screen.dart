@@ -11,7 +11,11 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/message_field.dart';
+import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -244,7 +248,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   NameCheckNote(onCheckName: _checkName),
-                  const SizedBox(height: s3CardGap),
+                  const SizedBox(height: Spacing.section),
                   _startPhotos(),
                 ],
               )
@@ -252,26 +256,30 @@ class _VerificationScreenState extends State<VerificationScreen> {
       ),
     };
     if (!_tierReady && _controller.status == null && _controller.loading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF3F5FA),
-        body: Center(child: CircularProgressIndicator()),
+      return _StatePage(
+        onBack: () => _leave(context),
+        child: const LoadingSkeleton(
+          layout: SkeletonLayout.detail,
+          count: 1,
+          semanticLabel: 'Checking your verification status',
+        ),
       );
     }
     // A failed check is not a tier. Showing "Not verified" here would invent
     // a status the server never sent.
+    final String? tier = _tier;
     if (_controller.failure != null &&
         _controller.status == null &&
-        (_tier == null || _tier!.isEmpty)) {
-      return const Scaffold(
-        backgroundColor: Color(0xFFF3F5FA),
-        body: Column(
-          children: <Widget>[
-            S3Header(
-              title: 'Verification status',
-              subtitle: 'Bayan ng Taytay · Rizal',
-            ),
-            Expanded(child: Center(child: Text('Could not check your status'))),
-          ],
+        (tier == null || tier.isEmpty)) {
+      return _StatePage(
+        onBack: () => _leave(context),
+        child: ErrorState(
+          title: 'Could not check your status',
+          onRetry: () {
+            _controller.refresh();
+            _loadTier();
+          },
+          boxed: true,
         ),
       );
     }
@@ -411,13 +419,18 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Widget _startPhotos() {
-    return S3Card(
+    return SoftCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(
-            'Send a new valid ID',
-            style: s3Type(14, AppTypography.black, BrandColors.textPrimary),
+          Semantics(
+            header: true,
+            child: Text(
+              'Send a new valid ID',
+              style: AppTypography.sectionTitle.copyWith(
+                color: BrandColors.ink,
+              ),
+            ),
           ),
           S3Field(
             key: const Key('verification-id-type'),
@@ -442,8 +455,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
               icon: TaytayIcons.plus,
               semanticLabel: '',
               excludeSemantics: true,
-              size: 16,
-              color: BrandColors.taytayBlue,
+              size: IconSizes.sm,
+              color: BrandColors.blue,
             ),
           ),
           S3Field(
@@ -455,8 +468,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
               icon: TaytayIcons.plus,
               semanticLabel: '',
               excludeSemantics: true,
-              size: 16,
-              color: BrandColors.taytayBlue,
+              size: IconSizes.sm,
+              color: BrandColors.blue,
             ),
           ),
           S3Field(
@@ -473,8 +486,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
               icon: TaytayIcons.plus,
               semanticLabel: '',
               excludeSemantics: true,
-              size: 16,
-              color: BrandColors.taytayBlue,
+              size: IconSizes.sm,
+              color: BrandColors.blue,
             ),
           ),
         ],
@@ -498,6 +511,39 @@ class _VerificationScreenState extends State<VerificationScreen> {
 }
 
 enum VerificationPhotoSlot { front, back, selfie }
+
+/// The status page while it has nothing to show yet, or could not read the
+/// status: the same header over the soft page, with the state in the body.
+class _StatePage extends StatelessWidget {
+  const _StatePage({required this.child, required this.onBack});
+
+  final Widget child;
+  final VoidCallback onBack;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: BrandColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          S3Header(
+            title: 'Verification status',
+            subtitle: 'Bayan ng Taytay · Rizal',
+            onBack: onBack,
+          ),
+          const OfflineBanner(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(Spacing.lg),
+              children: <Widget>[child],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 /// Optional note on resubmit. The field lives in the sheet so it is disposed
 /// with the sheet, the same way a directory message field owns its text.
