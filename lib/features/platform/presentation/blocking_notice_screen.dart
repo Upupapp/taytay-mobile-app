@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
+import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/wave_header.dart';
 import '../domain/app_bootstrap.dart';
 
 /// The two screens the server can put in front of everything else.
@@ -29,70 +36,90 @@ class BlockingNoticeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppStrings strings = AppStrings.of(context);
-    final ThemeData theme = Theme.of(context);
     final SupportContact support = AppDependencies.of(context).platform.support;
 
     final bool isUpgrade = kind == BlockingNoticeKind.updateRequired;
 
+    // The notice pattern (RegTerms / DirectoryOffline): a centred wave header
+    // with the reason's tile, the explanation, and the office's contact as a
+    // card. No back control: this screen is in front of everything else.
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            // Scrolls rather than shrinks: this screen must survive 200% text,
-            // and it is the one screen a resident cannot navigate away from.
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
+      backgroundColor: BrandColors.white,
+      body: SingleChildScrollView(
+        // Scrolls rather than shrinks: this screen must survive 200% text,
+        // and it is the one screen a resident cannot navigate away from.
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            WaveHeader(
+              centered: true,
+              badge: IconTile.lucide(
+                icon: isUpgrade ? TaytayIcons.download : TaytayIcons.settings,
+                tone: isUpgrade ? TileTone.blue : TileTone.gold,
+                tileSize: IconTileSize.large,
+              ),
+              title: isUpgrade
+                  ? strings.updateRequiredTitle
+                  : strings.maintenanceTitle,
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                Spacing.formGutter,
+                Spacing.sm,
+                Spacing.formGutter,
+                Spacing.xl + MediaQuery.paddingOf(context).bottom,
+              ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Icon(
-                    isUpgrade
-                        ? Icons.system_update_outlined
-                        : Icons.construction_outlined,
-                    size: 48,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                    isUpgrade
-                        ? strings.updateRequiredTitle
-                        : strings.maintenanceTitle,
-                    style: theme.textTheme.headlineSmall,
-                  ),
-                  const SizedBox(height: 12),
                   Text(
                     isUpgrade
                         ? strings.updateRequiredBody
                         : strings.maintenanceBody,
-                    style: theme.textTheme.bodyLarge,
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.text,
+                    ),
                   ),
                   if (support.hasAny) ...<Widget>[
-                    const SizedBox(height: 24),
-                    Text(
-                      strings.blockingNoticeSupport,
-                      style: theme.textTheme.titleSmall,
+                    const SizedBox(height: Spacing.formGap),
+                    SoftCard(
+                      filled: true,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          Text(
+                            strings.blockingNoticeSupport,
+                            style: AppTypography.listTitle.copyWith(
+                              color: BrandColors.ink,
+                            ),
+                          ),
+                          const SizedBox(height: Spacing.xs),
+                          // Rendered as text rather than a launcher: this
+                          // screen can be reached with no connection, and a
+                          // dead call button is worse than a number
+                          // somebody can read out.
+                          if (support.phone.isNotEmpty)
+                            SelectableText(
+                              support.phone,
+                              style: AppTypography.bodyStyle.copyWith(
+                                color: BrandColors.ink,
+                              ),
+                            ),
+                          if (support.email.isNotEmpty)
+                            SelectableText(
+                              support.email,
+                              style: AppTypography.bodyStyle.copyWith(
+                                color: BrandColors.ink,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 4),
-                    // Rendered as text rather than a launcher: this screen can be
-                    // reached with no connection, and a dead "call" button is
-                    // worse than a number somebody can read out.
-                    if (support.phone.isNotEmpty)
-                      SelectableText(
-                        support.phone,
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                    if (support.email.isNotEmpty)
-                      SelectableText(
-                        support.email,
-                        style: theme.textTheme.bodyMedium,
-                      ),
                   ],
                 ],
               ),
             ),
-          ),
+          ],
         ),
       ),
     );

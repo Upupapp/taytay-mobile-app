@@ -9,8 +9,10 @@ import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/consent_gate_controller.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
-import '../../../shared/widgets/s3_surface.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/consent_review.dart';
 import '../domain/privacy_notice.dart';
@@ -45,7 +47,7 @@ class ConsentUpdateScreen extends StatelessWidget {
         final ConsentReview? review = gate.review;
         if (review == null) {
           // Nothing is owed: the guard is already sending the resident on.
-          return const Scaffold(backgroundColor: BrandColors.surface);
+          return const Scaffold(backgroundColor: BrandColors.white);
         }
         return _ConsentUpdateBody(
           review: review,
@@ -103,122 +105,112 @@ class _ConsentUpdateBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final AppFailure? failed = failure;
-    return Scaffold(
-      backgroundColor: BrandColors.surface,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            // Scrolls rather than shrinks: this screen must survive 200% text,
-            // and a resident cannot go around it while signed in.
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: IconTile(
-                      icon: TaytayIcons.fileText,
-                      fill: BrandColors.chipBlueBg,
-                      ink: BrandColors.taytayBlue,
-                      size: 52,
-                      iconSize: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Semantics(
-                    container: true,
-                    header: true,
-                    child: Text(
-                      _title,
-                      style: s3Type(
-                        20,
-                        AppTypography.black,
-                        BrandColors.textPrimary,
+    // The notice pattern (RegTerms): the wave header carries the title, with
+    // no back control, because a resident cannot go around this screen while
+    // signed in. The changes and the two ways on follow on the white page.
+    return AuthFormPage(
+      showBack: false,
+      title: _title,
+      subtitle: 'Bayan ng Taytay · Rizal',
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PrimaryButton(
+            key: const Key('consent-agree'),
+            label: recording ? 'Recording your agreement…' : 'I agree',
+            onPressed: recording ? null : onAgree,
+          ),
+          if (failed != null && !recording) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            SecondaryButton(
+              key: const Key('consent-continue'),
+              label: 'Continue for now',
+              onPressed: onContinue,
+            ),
+          ],
+          const SizedBox(height: Spacing.xs),
+          TextButton(
+            key: const Key('consent-sign-out'),
+            onPressed: recording ? null : onSignOut,
+            style: TextButton.styleFrom(
+              foregroundColor: BrandColors.muted,
+              minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+              textStyle: AppTypography.link,
+            ),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          SoftCard(
+            filled: true,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const IconTile.lucide(icon: TaytayIcons.fileText),
+                    const SizedBox(width: Spacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          for (final ConsentText text in ConsentText.values)
+                            if (review.missing.contains(text))
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: Spacing.xs,
+                                ),
+                                child: Text(
+                                  _changedLine(text),
+                                  style: AppTypography.listTitle.copyWith(
+                                    color: BrandColors.ink,
+                                  ),
+                                ),
+                              ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  for (final ConsentText text in ConsentText.values)
-                    if (review.missing.contains(text))
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(
-                          _changedLine(text),
-                          style: s3Type(
-                            15,
-                            FontWeight.w600,
-                            BrandColors.textPrimary,
-                          ),
-                        ),
-                      ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Please read what changed. To keep using your account, '
-                    'agree to the updated text. If you do not agree, you can '
-                    'sign out and keep using the app as a guest.',
-                    style: s3Type(
-                      14,
-                      FontWeight.w400,
-                      BrandColors.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  if (_terms) ...<Widget>[
-                    SecondaryButton(
-                      key: const Key('consent-read-terms'),
-                      label: 'Read the Terms of Use',
-                      onPressed: () => _read(context, ConsentText.termsOfUse),
-                    ),
-                    const SizedBox(height: 10),
                   ],
-                  if (_privacy) ...<Widget>[
-                    SecondaryButton(
-                      key: const Key('consent-read-privacy'),
-                      label: 'Read the Privacy Notice',
-                      onPressed: () =>
-                          _read(context, ConsentText.privacyNotice),
-                    ),
-                    const SizedBox(height: 10),
-                  ],
-                  if (failed != null) ...<Widget>[
-                    const SizedBox(height: 6),
-                    _RecordFailure(failure: failed),
-                  ],
-                  const SizedBox(height: 16),
-                  PrimaryButton(
-                    key: const Key('consent-agree'),
-                    label: recording ? 'Recording your agreement…' : 'I agree',
-                    onPressed: recording ? null : onAgree,
+                ),
+                const SizedBox(height: Spacing.sm),
+                Text(
+                  'Please read what changed. To keep using your account, '
+                  'agree to the updated text. If you do not agree, you can '
+                  'sign out and keep using the app as a guest.',
+                  style: AppTypography.bodyStyle.copyWith(
+                    color: BrandColors.text,
                   ),
-                  if (failed != null && !recording) ...<Widget>[
-                    const SizedBox(height: 10),
-                    SecondaryButton(
-                      key: const Key('consent-continue'),
-                      label: 'Continue for now',
-                      onPressed: onContinue,
-                    ),
-                  ],
-                  const SizedBox(height: 6),
-                  TextButton(
-                    key: const Key('consent-sign-out'),
-                    onPressed: recording ? null : onSignOut,
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(
-                        A11y.minTapTarget,
-                        A11y.minTapTarget,
-                      ),
-                    ),
-                    child: const Text('Sign out'),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ),
+          const SizedBox(height: Spacing.formGap),
+          if (_terms) ...<Widget>[
+            SecondaryButton(
+              key: const Key('consent-read-terms'),
+              label: 'Read the Terms of Use',
+              onPressed: () => _read(context, ConsentText.termsOfUse),
+            ),
+            const SizedBox(height: Spacing.sm),
+          ],
+          if (_privacy) ...<Widget>[
+            SecondaryButton(
+              key: const Key('consent-read-privacy'),
+              label: 'Read the Privacy Notice',
+              onPressed: () => _read(context, ConsentText.privacyNotice),
+            ),
+            const SizedBox(height: Spacing.sm),
+          ],
+          if (failed != null) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            _RecordFailure(failure: failed),
+          ],
+        ],
       ),
     );
   }
@@ -270,45 +262,45 @@ class _RecordFailure extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      child: Container(
+      child: DecoratedBox(
         key: const Key('consent-record-failure'),
-        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: BrandColors.chipRedBg,
-          borderRadius: BorderRadius.circular(Radii.lg),
+          color: BrandColors.red50,
+          borderRadius: BorderRadius.circular(Radii.note),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: <Widget>[
-            Text(
-              what,
-              style: s3Type(
-                14,
-                FontWeight.w600,
-                BrandColors.textPrimary,
-                height: 1.45,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'You can also continue for now without it. The app will ask '
-              'again the next time you return to it.',
-              style: s3Type(
-                13,
-                FontWeight.w400,
-                BrandColors.textPrimary,
-                height: 1.45,
-              ),
-            ),
-            if (failure.requestId case final String reference)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: SelectableText(
-                  'Reference: $reference',
-                  style: s3Type(12, FontWeight.w400, BrandColors.textSecondary),
+        child: Padding(
+          padding: const EdgeInsets.all(Spacing.section),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                what,
+                style: AppTypography.listTitle.copyWith(
+                  color: BrandColors.redInk,
+                  height: 1.45,
                 ),
               ),
-          ],
+              const SizedBox(height: Spacing.xs),
+              Text(
+                'You can also continue for now without it. The app will ask '
+                'again the next time you return to it.',
+                style: AppTypography.listDetail.copyWith(
+                  color: BrandColors.ink,
+                  height: 1.45,
+                ),
+              ),
+              if (failure.requestId case final String reference)
+                Padding(
+                  padding: const EdgeInsets.only(top: Spacing.xs),
+                  child: SelectableText(
+                    'Reference: $reference',
+                    style: AppTypography.small.copyWith(
+                      color: BrandColors.muted,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

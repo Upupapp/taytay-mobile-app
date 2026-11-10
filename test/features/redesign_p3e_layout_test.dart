@@ -16,6 +16,9 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/auth/presentation/app_lock_screen.dart';
+import 'package:taytay_resident/features/auth/presentation/sign_in_help_screen.dart';
+import 'package:taytay_resident/features/auth/presentation/too_many_attempts_screen.dart';
 import 'package:taytay_resident/features/household/presentation/household_correction_screen.dart';
 import 'package:taytay_resident/features/household/presentation/household_screen.dart';
 import 'package:taytay_resident/features/issuance/domain/issuance_type.dart';
@@ -28,8 +31,10 @@ import 'package:taytay_resident/features/issuance/presentation/my_issuance_reque
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
 import 'package:taytay_resident/features/notifications/presentation/notification_centre.dart';
 import 'package:taytay_resident/features/notifications/presentation/notification_inbox_screen.dart';
+import 'package:taytay_resident/features/platform/presentation/blocking_notice_screen.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
+import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 import 'package:taytay_resident/features/verification/domain/resident_record.dart';
 import 'package:taytay_resident/features/verification/presentation/kyc_claim_screen.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
@@ -40,6 +45,7 @@ import 'package:taytay_resident/shared/widgets/blue_header.dart';
 import 'package:taytay_resident/shared/widgets/detail_page.dart';
 import 'package:taytay_resident/shared/widgets/header_search_field.dart';
 import 'package:taytay_resident/shared/widgets/success_screen.dart';
+import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/upload_slot.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
@@ -363,7 +369,7 @@ void main() {
         () => NotificationCentre(
           sections: <NoticeSection>[
             NoticeSection(
-              heading: 'Today',
+              heading: 'Recent',
               rows: <NoticeRow>[
                 for (var i = 0; i < 3; i++)
                   NoticeRow(
@@ -385,6 +391,65 @@ void main() {
         ),
         scrollable: false,
       );
+    });
+  });
+
+  group('notices', () {
+    testWidgets('blocking notices, the lock, help and the hold lay out', (
+      tester,
+    ) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.verified,
+      );
+      final Map<String, Widget Function()>
+      screens = <String, Widget Function()>{
+        'update required': () =>
+            const BlockingNoticeScreen(kind: BlockingNoticeKind.updateRequired),
+        'maintenance': () =>
+            const BlockingNoticeScreen(kind: BlockingNoticeKind.maintenance),
+        'app lock': () => AppLockScreen(
+          lock: dependencies.appLock,
+          onUnlock: () async {},
+          onSignOut: () async {},
+        ),
+        'sign-in help': () => const SignInHelpScreen(),
+        'hold waiting': () =>
+            const TooManyAttemptsScreen(fixture: TooManyFixture.waiting),
+        'hold over': () =>
+            const TooManyAttemptsScreen(fixture: TooManyFixture.ready),
+      };
+      for (final MapEntry<String, Widget Function()> screen
+          in screens.entries) {
+        await _expectCleanScreen(tester, dependencies, screen.value);
+        expect(find.byType(WaveHeader), findsOneWidget, reason: screen.key);
+        // The lock and the blocking notices offer no way back.
+        if (!screen.key.startsWith('sign-in') &&
+            !screen.key.startsWith('hold')) {
+          expect(find.byType(TaytayBackButton), findsNothing);
+        }
+      }
+    });
+  });
+
+  group('bottom navigation', () {
+    testWidgets('the tab bar fits 320 to 430 dp at 100% and 200% text', (
+      tester,
+    ) async {
+      for (var i = 0; i < 5; i++) {
+        await expectCleanLayouts(
+          tester,
+          () => Localizations(
+            locale: const Locale('en'),
+            delegates: AppStrings.localizationsDelegates,
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: ShellTabBar(selectedIndex: i, onSelected: (_) {}),
+            ),
+          ),
+          widths: const <double>[320, 360, 375, 430],
+          scrollable: false,
+        );
+      }
     });
   });
 
@@ -447,6 +512,12 @@ void _noop() {}
 
 const List<String> _restyled = <String>[
   'lib/shared/widgets/header_search_field.dart',
+  'lib/features/platform/presentation/blocking_notice_screen.dart',
+  'lib/features/platform/presentation/consent_update_screen.dart',
+  'lib/features/auth/presentation/app_lock_screen.dart',
+  'lib/features/auth/presentation/sign_in_help_screen.dart',
+  'lib/features/auth/presentation/too_many_attempts_screen.dart',
+  'lib/features/shell/presentation/shell_tab_bar.dart',
   'lib/features/notifications/presentation/notification_centre.dart',
   'lib/features/notifications/presentation/notification_inbox_screen.dart',
   'lib/shared/widgets/upload_slot.dart',

@@ -900,15 +900,20 @@ class _Section extends StatelessWidget {
                   ),
                 ),
               ),
+              // Flexible: at 200% text on a small phone the link wraps
+              // instead of pushing the row past the edge.
               if (action != null)
-                _Tap(
-                  label: action,
-                  onTap: onAction,
-                  child: Text(
-                    action,
-                    style: AppTypography.link.copyWith(
-                      fontWeight: AppTypography.strong,
-                      color: BrandColors.blue,
+                Flexible(
+                  child: _Tap(
+                    label: action,
+                    onTap: onAction,
+                    child: Text(
+                      action,
+                      textAlign: TextAlign.end,
+                      style: AppTypography.link.copyWith(
+                        fontWeight: AppTypography.strong,
+                        color: BrandColors.blue,
+                      ),
                     ),
                   ),
                 ),

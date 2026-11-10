@@ -16,8 +16,10 @@ import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
 import '../core/consent_gate_test.dart' show FakeConfig, FakeConsents;
+import '../support/layout_matrix.dart';
 
 /// Terms published on 06 Nov 2026 (Manila) as `terms-3`; the Privacy Notice
 /// still the server's placeholder, under `privacy-3`.
@@ -53,8 +55,9 @@ Future<AppDependencies> _boot(
   AppBootstrap? current,
   bool signedIn = true,
   TextScaler textScaler = TextScaler.noScaling,
+  Size size = const Size(400, 900),
 }) async {
-  tester.view.physicalSize = const Size(400, 900);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
   addTearDown(tester.view.reset);
 
@@ -185,6 +188,26 @@ void main() {
       _go(tester, '/account');
       await tester.pumpAndSettle();
       expect(_path(tester), AppRoute.consentUpdate.path);
+    });
+
+    testWidgets('the notice fits 360/375/430 dp at 100% and 200% text', (
+      tester,
+    ) async {
+      for (final double width in layoutWidths) {
+        for (final double scale in layoutTextScales) {
+          // A fresh app each time: the root element is not reused.
+          await tester.pumpWidget(const SizedBox.shrink());
+          await _boot(
+            tester,
+            consents: _acceptedBefore(),
+            size: Size(width, 800),
+            textScaler: TextScaler.linear(scale),
+          );
+          expect(tester.takeException(), isNull, reason: '$width × $scale');
+          expect(find.byType(WaveHeader), findsOneWidget);
+          expect(find.byKey(const Key('consent-agree')), findsOneWidget);
+        }
+      }
     });
 
     testWidgets('agreeing records the version and continues', (tester) async {

@@ -51,8 +51,9 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
 
 /// Screens whose header is still [WovenHeader]. Redesign P3a: the welcome
 /// is the Main.dc.html photo zone now, and sign-in and the password reset
-/// screens use the [WaveHeader] of the form pattern.
-const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{AppRoute.signInHelp};
+/// screens use the [WaveHeader] of the form pattern. P3e: sign-in help is a
+/// [WaveHeader] page too, so no routed screen draws the woven header.
+const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{};
 
 /// Screens whose header is the redesign's [WaveHeader] (form / step pattern).
 const Set<AppRoute> _waveHeaderRoutes = <AppRoute>{
@@ -62,6 +63,7 @@ const Set<AppRoute> _waveHeaderRoutes = <AppRoute>{
   AppRoute.resetCode,
   AppRoute.setPassword,
   AppRoute.passwordUpdated,
+  AppRoute.signInHelp,
 };
 
 const Map<AppRoute, Map<String, String>>

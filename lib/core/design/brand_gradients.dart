@@ -568,6 +568,15 @@ abstract final class GlassTokens {
   static const Color border = Color(0xD9FFFFFF);
   static const double borderWidth = 1;
 
+  /// The bottom navigation (BottomNav.dc `.bn .row`): white 78% → 92%
+  /// top to bottom, under a 1 px top border of white at 90%.
+  static const LinearGradient navFill = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[Color(0xC7FFFFFF), Color(0xEBFFFFFF)],
+  );
+  static const Color navBorder = Color(0xE6FFFFFF);
+
   /// CSS `blur(18px)`: CSS blur takes a standard deviation, as Flutter does.
   static const double blurSigma = 18;
   static const double saturation = 1.6;
