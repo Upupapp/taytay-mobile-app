@@ -14,6 +14,7 @@ import '../../../shared/widgets/taytay_rows.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../../../shared/widgets/taytay_step_thread.dart';
 import '../../../shared/widgets/taytay_text_field.dart';
+import 'shared_widgets_gallery_section.dart';
 import 'theme_gallery_section.dart';
 
 /// Every shared component, on the light theme, in a dev build only.
@@ -64,6 +65,8 @@ class ComponentGalleryScreen extends StatelessWidget {
             if (behavior != null) _MockSwitch(behavior: behavior!),
             // The redesign's tokens and themed Material components.
             const ThemeGallerySection(),
+            // The redesign's shared widgets (Phase 2).
+            const SharedWidgetsGallerySection(),
             const _Heading('Headers'),
             // The page's own back button is the route control. This specimen
             // shows the bar without a second one.

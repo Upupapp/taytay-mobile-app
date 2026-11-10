@@ -178,6 +178,16 @@ dependencies:
   firebase_core: ^5.1.0
   firebase_auth: ^7.0.1
 
+  # The redesign's solid icons and empty-state illustrations ship as SVG
+  # (design/README.md, MOBILE_TASK Phase 2). Reviewed against Article 1.
+  #
+  # * Maintenance — published by flutter.dev, maintained by the Flutter team.
+  # * Permissions — none. It draws vector files; it requests nothing.
+  # * Data egress — none: the app draws bundled assets only
+  #   (`SvgPicture.asset`). `SvgPicture.network` is not used.
+  # * Scope — presentation only, through `lib/shared/widgets/taytay_glyph.dart`.
+  flutter_svg: ^2.3.0
+
 dev_dependencies:
   # ── Why this dependency exists (Article 1 asks for a stated reason) ──────────
   #
@@ -276,6 +286,10 @@ flutter:
     - assets/home/slides.json
     # Welcome photographs. The design JPEGs, credited on screen.
     - assets/photos/
+    # Redesign solid icons and empty-state illustrations (SVG, declared in
+    # AppAssets). Drawn through TaytayGlyph / TaytayIllustration only.
+    - assets/icons/
+    - assets/illustrations/
 
   fonts:
     - family: Plus Jakarta Sans

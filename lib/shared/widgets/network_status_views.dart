@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_dependencies.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_glyphs.dart';
+import '../../core/design/typography.dart';
 import '../../core/motion/motion_tokens.dart';
 import '../../core/time/manila_time.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_banner.dart';
+import 'taytay_glyph.dart';
 
 /// The strip that appears when Taytay LGU cannot be reached.
 ///
@@ -49,20 +52,15 @@ class OfflineBanner extends StatelessWidget {
         final banner = Padding(
           padding: const EdgeInsets.fromLTRB(
             Spacing.lg,
-            Spacing.sm,
+            Spacing.section,
             Spacing.lg,
             0,
           ),
-          child: AppBanner(
-            tone: BannerTone.warning,
+          child: OfflineNotice(
             title: strings.networkUnreachableTitle,
             message: strings.networkUnreachableMessage,
-            action: onRetry == null
-                ? null
-                : TextButton(
-                    onPressed: onRetry,
-                    child: Text(strings.actionTryAgain),
-                  ),
+            retryLabel: strings.actionTryAgain,
+            onRetry: onRetry,
           ),
         );
 
@@ -77,6 +75,101 @@ class OfflineBanner extends StatelessWidget {
           child: banner,
         );
       },
+    );
+  }
+}
+
+/// The offline strip itself (CSS `.off` on DirectoryOffline): soft gold, a
+/// gold disc with the no-connection glyph, a bold line and a smaller one.
+/// [OfflineBanner] shows it when the network monitor has evidence; use this
+/// directly only where a screen already knows it is showing saved content.
+///
+/// The words come from the caller. Both lines are plain [Text], and the strip
+/// is a status region, so a screen reader hears it once when it appears.
+class OfflineNotice extends StatelessWidget {
+  const OfflineNotice({
+    required this.title,
+    this.message,
+    this.onRetry,
+    this.retryLabel,
+    super.key,
+  });
+
+  final String title;
+  final String? message;
+  final VoidCallback? onRetry;
+  final String? retryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? message = this.message;
+    final VoidCallback? onRetry = this.onRetry;
+    final String? retryLabel = this.retryLabel;
+    return Semantics(
+      container: true,
+      liveRegion: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: BrandColors.gold50,
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+        child: Row(
+          children: <Widget>[
+            Container(
+              width: 34,
+              height: 34,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: BrandColors.gold,
+                shape: BoxShape.circle,
+              ),
+              child: const GlyphIcon(
+                TaytayGlyph.cloudOff,
+                size: 18,
+                color: BrandColors.navy,
+              ),
+            ),
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                  if (message != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        message,
+                        style: AppTypography.small.copyWith(
+                          color: BrandColors.goldInk,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            if (onRetry != null && retryLabel != null) ...<Widget>[
+              const SizedBox(width: Spacing.sm),
+              TextButton(
+                onPressed: onRetry,
+                style: TextButton.styleFrom(
+                  foregroundColor: BrandColors.ink,
+                  textStyle: AppTypography.link,
+                ),
+                child: Text(retryLabel),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

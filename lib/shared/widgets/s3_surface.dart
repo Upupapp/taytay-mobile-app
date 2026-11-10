@@ -5,6 +5,8 @@ import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
 import 'taytay_icon.dart';
 
+export 'icon_tile.dart';
+
 // The card, timeline and type scale the verification status pages drew first.
 // Shared so a second feature can show progress the same way without reaching
 // into another feature's presentation layer (Article 2.2).
@@ -128,7 +130,8 @@ const StrutStyle s3BodyStrut = StrutStyle(
   leadingDistribution: TextLeadingDistribution.even,
 );
 
-/// White card. Radius 16, the design's card shadow.
+/// White card. Drawn as the redesign's `SoftCard` look: radius 20, no border,
+/// no shadow. New code uses `SoftCard` (surface_cards.dart).
 class S3Card extends StatelessWidget {
   const S3Card({
     required this.child,
@@ -141,62 +144,17 @@ class S3Card extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The border insets the child, matching CSS border-box. A Material
-    // shape border paints on the edge and does not.
+    // The old 1 px stroke is gone, but its 1 px inset stays: screens laid
+    // out against this card keep their positions until they are redesigned.
     return Container(
+      padding: const EdgeInsets.all(1),
       decoration: BoxDecoration(
         color: BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.lg),
-        border: Border.all(color: BrandColors.cardLine),
-        boxShadow: TaytayShadows.card,
+        borderRadius: BorderRadius.circular(Radii.card),
       ),
       child: Material(
         type: MaterialType.transparency,
         child: Padding(padding: padding, child: child),
-      ),
-    );
-  }
-}
-
-/// Coloured disc or rounded tile behind an icon.
-class IconTile extends StatelessWidget {
-  const IconTile({
-    required this.icon,
-    required this.fill,
-    required this.ink,
-    this.size = 40,
-    this.iconSize,
-    this.radius,
-    super.key,
-  });
-
-  final IconData icon;
-  final Color fill;
-  final Color ink;
-  final double size;
-  final double? iconSize;
-
-  /// Null paints a circle. A value paints a rounded square.
-  final double? radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? corner = radius;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: fill,
-        shape: corner == null ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius: corner == null ? null : BorderRadius.circular(corner),
-      ),
-      child: TaytayIcon(
-        icon: icon,
-        semanticLabel: '',
-        excludeSemantics: true,
-        size: iconSize ?? size * 0.46,
-        color: ink,
       ),
     );
   }

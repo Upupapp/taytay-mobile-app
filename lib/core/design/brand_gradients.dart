@@ -369,6 +369,56 @@ class WaveLayer {
 abstract final class WaveHeaderShapes {
   static const Size viewBox = Size(390, 50);
 
+  /// The wave's drawn height at the bottom of the header (CSS `.wave`).
+  static const double waveHeight = 50;
+
+  /// `.whead` padding: 12 + safe area, 20 at the sides, 58 at the bottom.
+  static const EdgeInsets padding = EdgeInsets.fromLTRB(20, 12, 20, 58);
+
+  /// `.s1`: white 7%, 200 px, top-right.
+  static const HeaderCircle bubble = HeaderCircle(
+    diameter: 200,
+    color: Color(0x12FFFFFF),
+    top: -70,
+    right: -60,
+  );
+
+  /// `.s3`: sky 55%, 110 px, bottom-left.
+  static const HeaderCircle skyBubble = HeaderCircle(
+    diameter: 110,
+    color: Color(0x8C2D54E0),
+    bottom: 30,
+    left: -30,
+  );
+
+  /// `.s2`: a gold ring at 55%, 48 px with a 6 px stroke.
+  static const Color ringColor = Color(0x8CF5DA18);
+  static const double ringDiameter = 48;
+  static const double ringStroke = 6;
+  static const double ringTop = 104;
+  static const double ringRight = -20;
+
+  /// `.s4`: a 46 × 30 field of white dots at 45%, 1.6 px, every 10 px.
+  static const Color dotColor = Color(0x73FFFFFF);
+  static const Size dotField = Size(46, 30);
+  static const double dotRadius = 1.6;
+  static const double dotPitch = 10;
+  static const double dotFieldRight = 4;
+  static const double dotFieldBottom = 62;
+
+  /// `.s5`: a red dot, 10 px. Hidden below 380 px wide.
+  static const double sparkDiameter = 10;
+  static const double sparkTop = 156;
+  static const double sparkRight = 44;
+  static const double sparkMinWidth = 380;
+
+  /// `.s6`: a gold plus, 14 px with 3 px bars, turned 15°.
+  static const double plusSize = 14;
+  static const double plusBar = 3;
+  static const double plusTop = 18;
+  static const double plusRight = 120;
+  static const double plusTurnDegrees = 15;
+
   static const List<WaveLayer> layers = <WaveLayer>[
     WaveLayer(
       color: Color(0xD9F5DA18),

@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/config/app_environment.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/result/result.dart';
-import 'app_button.dart';
-import 'status_view.dart';
+import 'error_state.dart';
 
 /// The one way a failure is shown to a resident.
 ///
@@ -17,7 +16,7 @@ import 'status_view.dart';
 /// builds the developer-facing detail is shown too, because the alternative is
 /// developers reading it out of logs and, eventually, printing it in release.
 ///
-/// Built on [StatusView] so a failure looks like every other full-surface state
+/// Built on [ErrorState] so a failure looks like every other illustrated state
 /// in the app rather than like a special case.
 class FailureView extends StatelessWidget {
   const FailureView({
@@ -46,43 +45,49 @@ class FailureView extends StatelessWidget {
         '[${environment.badgeLabel}] ${failure.kind}: ${failure.debugMessage}',
     ];
 
-    return StatusView(
-      kind: StatusKind.error,
-      icon: _iconFor(failure),
+    final bool canRetry =
+        onRetry != null && failure.affordance == FailureAffordance.retryNow;
+    final Widget state = ErrorState(
       title: failure.residentMessage,
+      offline: failure is NetworkFailure || failure is TimeoutFailure,
+      icon: _iconFor(failure),
       // Offered only when trying again could work *now*. A `429` is retryable
       // and a button beside it is a lie: the server has said when to come back,
       // and an action that fails again spends a resident's data teaching them
       // nothing.
-      primaryAction:
-          onRetry != null && failure.affordance == FailureAffordance.retryNow
-          ? AppButton(
-              label: 'Try again',
-              variant: AppButtonVariant.secondary,
-              fullWidth: false,
-              onPressed: onRetry,
-            )
-          : null,
-      secondaryAction: details.isEmpty
-          ? null
-          : Column(
-              children: <Widget>[
-                for (final detail in details)
-                  Padding(
-                    padding: const EdgeInsets.only(top: Spacing.xs),
-                    // Selectable so the reference can be copied rather than
-                    // transcribed off a phone screen — which is how a support
-                    // desk ends up searching for an id that was never issued.
-                    child: SelectableText(
-                      detail,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-              ],
+      onRetry: canRetry ? onRetry : null,
+      details: <Widget>[
+        for (final detail in details)
+          Padding(
+            padding: const EdgeInsets.only(top: Spacing.sm),
+            // Selectable so the reference can be copied rather than
+            // transcribed off a phone screen — which is how a support
+            // desk ends up searching for an id that was never issued.
+            child: SelectableText(
+              detail,
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
+          ),
+      ],
+    );
+
+    // A full-surface state: centred when it fits, scrolling rather than
+    // clipping when it does not (200% text on a short screen).
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: const EdgeInsets.all(Spacing.lg),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: constraints.maxHeight.isFinite
+                ? constraints.maxHeight - Spacing.xxl
+                : 0,
+          ),
+          child: Center(child: state),
+        ),
+      ),
     );
   }
 

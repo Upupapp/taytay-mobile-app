@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_glyphs.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
 import '../../core/motion/motion_tokens.dart';
-import 'taytay_buttons.dart';
+import 'error_state.dart';
+import 'taytay_glyph.dart';
 import 'taytay_icon.dart';
 
-/// A white card with the resident radius and shadow.
+/// A white card. Drawn as the redesign's `SoftCard` look: radius 20, no
+/// border, no shadow. New code uses `SoftCard` (surface_cards.dart).
 class SectionCard extends StatelessWidget {
   const SectionCard({
     required this.child,
@@ -20,15 +23,12 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CSS `.card` is border-box. The 1px stroke sits outside the padding;
-    // painting it on top of the child shortens the card by 2px and shifts
-    // the content up and left by 1px.
+    // The old 1 px stroke is gone, but its 1 px inset stays: screens laid
+    // out against this card keep their positions until they are redesigned.
     return DecoratedBox(
       decoration: BoxDecoration(
         color: BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.lg),
-        border: Border.all(color: BrandColors.cardLine),
-        boxShadow: TaytayShadows.card,
+        borderRadius: BorderRadius.circular(Radii.card),
       ),
       child: Padding(
         padding: const EdgeInsets.all(1),
@@ -81,7 +81,7 @@ class _SkeletonBlockState extends State<SkeletonBlock>
   @override
   Widget build(BuildContext context) {
     final reduced = Motion.reduced(context);
-    const base = Color(0xFFE3E8F2);
+    const base = BrandColors.line2;
     if (reduced) {
       return _bar(base);
     }
@@ -89,7 +89,7 @@ class _SkeletonBlockState extends State<SkeletonBlock>
       animation: _controller,
       builder: (context, _) {
         final t = _controller.value;
-        return _bar(Color.lerp(base, const Color(0xFFF7F8FC), t)!);
+        return _bar(Color.lerp(base, BrandColors.background, t) ?? base);
       },
     );
   }
@@ -106,13 +106,21 @@ class _SkeletonBlockState extends State<SkeletonBlock>
   }
 }
 
-/// Nothing to show. The sentence says what is empty and what to do.
+/// Nothing to show (CSS `.es`). The title says what is empty, the sentence
+/// what to do, and the art makes it read as a state rather than a fault.
+///
+/// [illustration] picks the art (null draws none); [boxed] puts the state on
+/// a white card; [primaryAction] makes the action the solid blue pill.
 class EmptyState extends StatelessWidget {
   const EmptyState({
     required this.title,
     required this.message,
     this.actionLabel,
     this.onAction,
+    this.illustration = TaytayIllustration.noResults,
+    this.boxed = false,
+    this.primaryAction = false,
+    this.actionIcon,
     super.key,
   });
 
@@ -120,62 +128,37 @@ class EmptyState extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final TaytayIllustration? illustration;
+  final bool boxed;
+  final bool primaryAction;
+  final IconData? actionIcon;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      // gen2 `.empty` is 28×18. The icon disc is 72; the glyph inside is 32.
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 28),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          Container(
-            width: 72,
-            height: 72,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              color: BrandColors.chipGreyBg,
-              shape: BoxShape.circle,
-            ),
-            child: const TaytayIcon(
-              icon: TaytayIcons.inbox,
-              semanticLabel: '',
-              excludeSemantics: true,
-              size: 32,
-              color: BrandColors.listMeta,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.emptyTitle.copyWith(
-              color: BrandColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: Spacing.xs),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyCompact.copyWith(
-              color: BrandColors.textSecondary,
-            ),
-          ),
-          if (actionLabel != null) ...<Widget>[
-            const SizedBox(height: Spacing.lg),
-            PrimaryButton(
-              label: actionLabel!,
+    final String? actionLabel = this.actionLabel;
+    final TaytayIllustration? illustration = this.illustration;
+    return StatePanel(
+      art: illustration == null
+          ? const SizedBox.shrink()
+          : IllustrationArt(illustration),
+      title: title,
+      message: message,
+      boxed: boxed,
+      action: actionLabel == null
+          ? null
+          : StateActionButton(
+              label: actionLabel,
               onPressed: onAction,
-              expand: false,
+              primary: primaryAction,
+              icon: actionIcon,
             ),
-          ],
-        ],
-      ),
     );
   }
 }
 
 /// The device could not reach Taytay LGU. Retry is optional.
+///
+/// Drawn as [ErrorState] with the offline illustration.
 class OfflineError extends StatelessWidget {
   const OfflineError({
     required this.onRetry,
@@ -191,44 +174,11 @@ class OfflineError extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(Spacing.xl),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const TaytayIcon(
-            icon: TaytayIcons.wifiOff,
-            semanticLabel: '',
-            excludeSemantics: true,
-            size: IconSizes.xl,
-            color: BrandColors.danger,
-          ),
-          const SizedBox(height: Spacing.md),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: AppTypography.titleCompact.copyWith(
-              color: BrandColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: Spacing.xs),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: AppTypography.bodyStyle.copyWith(
-              color: BrandColors.textSecondary,
-            ),
-          ),
-          if (onRetry != null) ...<Widget>[
-            const SizedBox(height: Spacing.lg),
-            PrimaryButton(
-              label: 'Try again',
-              onPressed: onRetry,
-              expand: false,
-            ),
-          ],
-        ],
-      ),
+    return ErrorState(
+      title: title,
+      message: message,
+      onRetry: onRetry,
+      offline: true,
     );
   }
 }

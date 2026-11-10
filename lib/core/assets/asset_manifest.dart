@@ -433,6 +433,293 @@ abstract final class AppAssets {
       sha256:
           '288f8151506341175c98989a2c63335ae3da8497a81832f8ac5c2194abedf473',
     ),
+    AssetEntry(
+      key: 'icon_bank',
+      path: 'assets/icons/bank.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/bank.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: bank',
+      sha256:
+          'a98d9ffdb295d63b37b8e503e08a95294c61b30c1ad942f9c08aa85754ee5d95',
+    ),
+    AssetEntry(
+      key: 'icon_brief',
+      path: 'assets/icons/brief.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/brief.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: briefcase',
+      sha256:
+          '800425199caa42f32d26db8f5ad7480942e48aa4912b5c6eb76d5146c15b236d',
+    ),
+    AssetEntry(
+      key: 'icon_cap',
+      path: 'assets/icons/cap.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/cap.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: graduation cap',
+      sha256:
+          'e2d692fc19655515a7ebafbec3fbe8976378894a6d544d67ea3b607a4e5984ea',
+    ),
+    AssetEntry(
+      key: 'icon_chat',
+      path: 'assets/icons/chat.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/chat.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: chat bubble',
+      sha256:
+          '125cd3f05e3bde8aac90ecde05cdbfba59565117eba2abeed3822a6877f9b83f',
+    ),
+    AssetEntry(
+      key: 'icon_check',
+      path: 'assets/icons/check.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/check.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: check mark',
+      sha256:
+          'ff4cbaa20efb9e2bfb8393572fcee3019236fe149ac18a0930b1a267f917eb7f',
+    ),
+    AssetEntry(
+      key: 'icon_clock',
+      path: 'assets/icons/clock.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/clock.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: clock',
+      sha256:
+          '8d05fc50fed628d482b6d0e4a1891095fec15521408cd1280a4eabcf56d77385',
+    ),
+    AssetEntry(
+      key: 'icon_cloud',
+      path: 'assets/icons/cloud.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/cloud.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: cloud',
+      sha256:
+          'd7e7829833de7f9746fd404ece5115ceaa94dc64d9a8c2906110a0ae6d3c6b56',
+    ),
+    AssetEntry(
+      key: 'icon_cloudoff',
+      path: 'assets/icons/cloudoff.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/cloudoff.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: cloud, crossed out',
+      sha256:
+          '9a39bd021795e72316417ab5fff76d9cb61cd2ae9fcf5d372d29b6e7cc8ef600',
+    ),
+    AssetEntry(
+      key: 'icon_cross',
+      path: 'assets/icons/cross.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/cross.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: medical cross',
+      sha256:
+          '2821b73d56bb2aabc19b095a88fe4c6d9c62ac71e8c514f4685b5363e52a03ec',
+    ),
+    AssetEntry(
+      key: 'icon_dir',
+      path: 'assets/icons/dir.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/dir.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: directory',
+      sha256:
+          '0abaada16bf0c635d6cc0d6b4088946e4c644cfa7ceab3a65e56e15c8bf18c86',
+    ),
+    AssetEntry(
+      key: 'icon_doc',
+      path: 'assets/icons/doc.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/doc.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: document',
+      sha256:
+          '89abab5a5bf572d66cc36425092fda301acced411c0dcd5f3f1102da84087527',
+    ),
+    AssetEntry(
+      key: 'icon_globe',
+      path: 'assets/icons/globe.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/globe.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: globe',
+      sha256:
+          'e426632b2943ffc83587d808d615367a900b9eeea2956d1bc64105b71eda7ba9',
+    ),
+    AssetEntry(
+      key: 'icon_heart',
+      path: 'assets/icons/heart.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/heart.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: heart',
+      sha256:
+          '42f285cdcba9f723a1f86959bb2655107b0e3037ebfae5939a52897d9f708481',
+    ),
+    AssetEntry(
+      key: 'icon_mega',
+      path: 'assets/icons/mega.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/mega.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: megaphone',
+      sha256:
+          'a4a6e524dc158732d0f115cec80cc213b01ed5a1d3005db8abf9eb9877a0b10e',
+    ),
+    AssetEntry(
+      key: 'icon_phone',
+      path: 'assets/icons/phone.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/phone.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: phone',
+      sha256:
+          '05f97d254e626433e236ee249a20a900c6bbbaf8e7d6dfc801c7ec5946627935',
+    ),
+    AssetEntry(
+      key: 'icon_pin',
+      path: 'assets/icons/pin.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/pin.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: map pin',
+      sha256:
+          'eb82c79eb179997aea8c0a9a54b84322fa1145bae279e9687f6ed229cbbea552',
+    ),
+    AssetEntry(
+      key: 'icon_search',
+      path: 'assets/icons/search.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/search.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: magnifying glass',
+      sha256:
+          'c76b843974f4eb77db594fea7c5a3f870376e34c877705ea9aad22ad05cd3ef7',
+    ),
+    AssetEntry(
+      key: 'icon_send',
+      path: 'assets/icons/send.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/send.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: send',
+      sha256:
+          '96e683bcb200161ed4c440379b146a502e0128d556103fd0aa3633510d5e4986',
+    ),
+    AssetEntry(
+      key: 'icon_siren',
+      path: 'assets/icons/siren.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/siren.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: siren',
+      sha256:
+          '5454f7454432f3feb851e1eabf8d3b0bd204c2037068871b2997ee8abc196f3c',
+    ),
+    AssetEntry(
+      key: 'icon_users',
+      path: 'assets/icons/users.svg',
+      kind: AssetKind.icon,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/users.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Icon: people',
+      sha256:
+          '2d9c376f9f08b19eb4e52dbc949bcb2468a7af489daa409e4a112df9a19117d1',
+    ),
+    AssetEntry(
+      key: 'empty_no_results',
+      path: 'assets/illustrations/empty_no_results.svg',
+      kind: AssetKind.illustration,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/empty_no_results.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel: 'Illustration: an empty search with a magnifying glass',
+      sha256:
+          '896ec184f21312bba0f4bfdee3492e64a805538bf25bae7dc2473e82fef70efc',
+    ),
+    AssetEntry(
+      key: 'empty_offline',
+      path: 'assets/illustrations/empty_offline.svg',
+      kind: AssetKind.illustration,
+      format: AssetFormat.svg,
+      licence: AssetLicence.originalWork,
+      provenance:
+          'Redesign handoff pack, design/icons/empty_offline.svg, drawn for this '
+          'project (2026-11-10). Shipped unaltered but for the trailing newline.',
+      semanticLabel:
+          'Illustration: a cloud with a red cross, for no connection',
+      sha256:
+          '210703014cf65ea7f8104f05263c337148509fcedf949a1622ad1cedf81d00f5',
+    ),
   ];
 
   /// Assets warmed before the first screen needs them.
