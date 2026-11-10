@@ -220,37 +220,42 @@ class _HomeCanvasState extends State<HomeCanvas> {
           child: _EmergencyCard(hotline: hotline, onCall: widget.onCall),
         ),
     ];
-    return GlassBackground(
-      child: RefreshIndicator(
-        onRefresh: widget.onRefresh ?? () async {},
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: Spacing.xl),
-          children: <Widget>[
-            _Header(
-              greeting: widget.greeting,
-              initials: widget.initials,
-              bellCount: widget.bellCount,
-              refreshing: widget.refreshing,
-              onBell: widget.onBell,
-              onAvatar: widget.onAvatar,
-              onSignIn: widget.onSignIn,
-            ),
-            GlassOverlap(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    for (var i = 0; i < body.length; i++) ...<Widget>[
-                      if (i > 0) const SizedBox(height: Spacing.section),
-                      body[i],
+    // Material gives the page the theme's text style wherever it is hosted,
+    // so no text falls back to the debug style outside a Scaffold.
+    return Material(
+      type: MaterialType.transparency,
+      child: GlassBackground(
+        child: RefreshIndicator(
+          onRefresh: widget.onRefresh ?? () async {},
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: Spacing.xl),
+            children: <Widget>[
+              _Header(
+                greeting: widget.greeting,
+                initials: widget.initials,
+                bellCount: widget.bellCount,
+                refreshing: widget.refreshing,
+                onBell: widget.onBell,
+                onAvatar: widget.onAvatar,
+                onSignIn: widget.onSignIn,
+              ),
+              GlassOverlap(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      for (var i = 0; i < body.length; i++) ...<Widget>[
+                        if (i > 0) const SizedBox(height: Spacing.section),
+                        body[i],
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

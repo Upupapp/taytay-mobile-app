@@ -135,7 +135,7 @@ class HotlinesCanvas extends StatelessWidget {
     final List<HomeHotline> barangay = lines
         .where((HomeHotline line) => line.isBarangay)
         .toList(growable: false);
-    return ColoredBox(
+    return Material(
       color: BrandColors.background,
       child: Column(
         children: <Widget>[

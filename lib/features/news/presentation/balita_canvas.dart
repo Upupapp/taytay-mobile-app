@@ -99,6 +99,12 @@ class BalitaCanvas extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Material gives the page the theme's text style wherever it is hosted,
+    // so no text falls back to the debug style outside a Scaffold.
+    return Material(type: MaterialType.transparency, child: _page(context));
+  }
+
+  Widget _page(BuildContext context) {
     if (frame == BalitaFrame.article) {
       return _ArticlePage(
         article: article,
