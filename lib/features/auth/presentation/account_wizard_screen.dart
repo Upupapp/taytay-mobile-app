@@ -14,6 +14,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/consent_check_card.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/success_screen.dart';
@@ -30,7 +31,6 @@ import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
-import 'auth_form_page.dart';
 
 /// Which `02` frame the wizard paints.
 enum AccountFixture {

@@ -211,7 +211,7 @@ Future<AppDependencies> bootVerification(
       .descendant(
         of: find
             .ancestor(
-              of: find.widgetWithText(AppBar, 'Profile'),
+              of: find.byKey(const Key('profile-screen')),
               matching: find.byType(Scaffold),
             )
             .first,

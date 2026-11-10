@@ -124,9 +124,13 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const ColoredBox(
-        color: BrandColors.surface,
-        child: Center(child: CircularProgressIndicator()),
+      return AccountCanvas(
+        frame: AccountFrame.inbox,
+        title: 'Messages',
+        showBack: true,
+        loading: true,
+        onBack: () => context.goNamed(AppRoute.profile.routeName),
+        onBell: () => context.goNamed(AppRoute.notifications.routeName),
       );
     }
     final AccountFrame frame = _failed
@@ -154,8 +158,8 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
             ),
             preview: thread.preview,
             icon: TaytayIcons.messageSquare,
-            tile: BrandColors.chipBlueBg,
-            iconColor: BrandColors.taytayBlue,
+            tile: BrandColors.blue50,
+            iconColor: BrandColors.blue,
             badge: thread.unreadCount > 0 ? '${thread.unreadCount}' : null,
             onTap: () => context.goNamed(
               AppRoute.messageThread.routeName,
@@ -815,6 +819,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     return AccountCanvas(
       frame: AccountFrame.editProfile,
       title: 'Edit profile',
+      initials: _initialsOf(_name.text),
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
@@ -935,8 +940,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           title: 'Balita & advisories',
           subtitle: 'Push notifications',
           icon: TaytayIcons.bell,
-          tile: BrandColors.chipBlueBg,
-          iconColor: BrandColors.taytayBlue,
+          tile: BrandColors.blue50,
+          iconColor: BrandColors.blue,
           on: _balita,
           onChanged: (bool on) => _setChannel(
             'balita',
@@ -949,8 +954,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           title: 'Office replies',
           subtitle: 'Push notifications',
           icon: TaytayIcons.messageSquare,
-          tile: BrandColors.chipBlueBg,
-          iconColor: BrandColors.taytayBlue,
+          tile: BrandColors.blue50,
+          iconColor: BrandColors.blue,
           on: _officeReplies,
           onChanged: (bool on) => _setChannel(
             'message_received',
@@ -963,8 +968,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
           title: 'Emergency alerts',
           subtitle: 'Push notifications',
           icon: TaytayIcons.siren,
-          tile: BrandColors.chipRedBg,
-          iconColor: BrandColors.danger,
+          tile: BrandColors.red50,
+          iconColor: BrandColors.redInk,
           on: _emergency,
           onChanged: (bool on) => _setChannel(
             'emergency',
@@ -1060,9 +1065,13 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_ready) {
-      return const ColoredBox(
-        color: BrandColors.surface,
-        child: Center(child: CircularProgressIndicator()),
+      return AccountCanvas(
+        frame: AccountFrame.privacy,
+        title: 'Privacy Notice',
+        showBack: true,
+        showBell: false,
+        loading: true,
+        onBack: () => context.goNamed(AppRoute.profile.routeName),
       );
     }
     return AccountCanvas(
@@ -1109,4 +1118,16 @@ class OfficeBannersScreen extends StatelessWidget {
       onBack: () => context.goNamed(AppRoute.photoCredits.routeName),
     );
   }
+}
+
+/// Two letters for the photo disc on Edit profile, from the name on the
+/// account. Nothing when the name has not loaded.
+String _initialsOf(String name) {
+  final List<String> parts = name
+      .split(RegExp(r'\s+'))
+      .where((String part) => part.isNotEmpty)
+      .toList(growable: false);
+  if (parts.isEmpty) return '';
+  if (parts.length == 1) return parts.first[0].toUpperCase();
+  return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
 }

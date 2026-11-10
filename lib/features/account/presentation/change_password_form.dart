@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/result/result.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/taytay_text_field.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../domain/account_password_client.dart';
 
 /// Current password, then a new one. Firebase does the change.
@@ -75,40 +78,38 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
 
   @override
   Widget build(BuildContext context) {
+    final String? formMessage = _formMessage;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        TaytayTextField(
+        AuthField(
           label: 'Current password',
           controller: _current,
-          obscureText: true,
-          state: _currentMessage == null
-              ? TaytayFieldState.normal
-              : TaytayFieldState.error,
-          message: _currentMessage,
+          obscure: true,
+          error: _currentMessage,
+          icon: TaytayIcons.lock,
         ),
-        const SizedBox(height: 12),
-        TaytayTextField(
+        const SizedBox(height: Spacing.formGap),
+        AuthField(
           label: 'New password',
           controller: _next,
-          obscureText: true,
-          state: _nextMessage == null
-              ? TaytayFieldState.normal
-              : TaytayFieldState.error,
-          message: _nextMessage,
+          obscure: true,
+          error: _nextMessage,
+          icon: TaytayIcons.key,
         ),
-        const SizedBox(height: 12),
-        TaytayTextField(
+        const SizedBox(height: Spacing.formGap),
+        AuthField(
           label: 'Repeat the new password',
           controller: _confirm,
-          obscureText: true,
+          obscure: true,
+          icon: TaytayIcons.key,
         ),
-        if (_formMessage != null) ...<Widget>[
-          const SizedBox(height: 12),
-          Text(_formMessage!),
+        if (formMessage != null) ...<Widget>[
+          const SizedBox(height: Spacing.md),
+          SoftNote(tone: NoteTone.error, message: formMessage),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: Spacing.lg),
         AppButton(
           label: _busy ? 'Saving' : 'Save password',
           onPressed: _busy ? null : _submit,

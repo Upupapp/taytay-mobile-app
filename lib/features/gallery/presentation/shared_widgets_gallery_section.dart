@@ -11,8 +11,10 @@ import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/notice_panel.dart';
 import '../../../shared/widgets/photo_carousel.dart';
 import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/status_line.dart';
 import '../../../shared/widgets/success_screen.dart';
@@ -226,6 +228,54 @@ class SharedWidgetsGallerySection extends StatelessWidget {
               ),
               SizedBox(height: Spacing.sm),
               SoftNote(tone: NoteTone.success, message: 'Done.'),
+            ],
+          ),
+        ),
+        const _Heading('SettingsList, SettingsRow, SettingsSwitchRow'),
+        _Padded(
+          SettingsList(
+            children: <Widget>[
+              SettingsRow(
+                icon: TaytayIcons.idCard,
+                title: 'Row title',
+                detail: 'Row detail',
+                progress: 0.6,
+                onTap: () {},
+              ),
+              SettingsRow(
+                icon: TaytayIcons.messageSquare,
+                title: 'Row with a count',
+                detail: 'The count comes from the API',
+                badgeCount: 1,
+                onTap: () {},
+              ),
+              SettingsSwitchRow(
+                icon: TaytayIcons.bell,
+                title: 'Switch row',
+                detail: 'Detail',
+                value: true,
+                onChanged: (_) {},
+              ),
+              SettingsRow(
+                icon: TaytayIcons.logOut,
+                title: 'Sign out',
+                destructive: true,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+        const _Heading('NoticePanel'),
+        const _Padded(
+          NoticePanel(
+            title: 'Notice title',
+            subtitle: 'Source line',
+            icon: TaytayIcons.shieldCheck,
+            badge: DraftPill('DRAFT · text to be inserted'),
+            intro: 'One paragraph of introduction.',
+            points: <NoticePoint>[
+              NoticePoint(title: 'Point title', body: 'Point body.'),
+              NoticePoint(title: 'Second point', body: 'Point body.'),
             ],
           ),
         ),

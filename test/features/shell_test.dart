@@ -90,7 +90,7 @@ Future<void> scrollProfile(WidgetTester tester, Finder finder) async {
       .descendant(
         of: find
             .ancestor(
-              of: find.widgetWithText(AppBar, 'Profile'),
+              of: find.byKey(const Key('profile-screen')),
               matching: find.byType(Scaffold),
             )
             .first,
@@ -182,7 +182,7 @@ void main() {
       expect(find.textContaining('Social services'), findsWidgets);
 
       await tapDestination(tester, 'My Account');
-      expect(find.widgetWithText(AppBar, 'Profile'), findsOneWidget);
+      expect(find.byKey(const Key('profile-screen')), findsOneWidget);
 
       await tapDestination(tester, 'Home');
       expect(find.textContaining(', Bisita!'), findsOneWidget);

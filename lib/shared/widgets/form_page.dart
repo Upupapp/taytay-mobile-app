@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../../core/design/design_tokens.dart';
-import '../../../core/design/typography.dart';
-import '../../../shared/widgets/blue_header.dart';
-import '../../../shared/widgets/taytay_icon.dart';
-import '../../../shared/widgets/wave_header.dart';
+import '../../core/design/design_tokens.dart';
+import '../../core/design/typography.dart';
+import 'blue_header.dart';
+import 'taytay_icon.dart';
+import 'wave_header.dart';
 
 /// The form / step page of the redesign (`SignIn.dc.html`, `Reg*.dc.html`):
 /// a [WaveHeader] over a white page, the form below it, and the actions in a

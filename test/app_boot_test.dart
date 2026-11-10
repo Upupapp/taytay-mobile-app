@@ -80,7 +80,7 @@ Future<void> openProfileShortcut(WidgetTester tester, String label) async {
   await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
   // The verified home is 08-01. The older capability rows live on the record.
-  if (find.widgetWithText(AppBar, 'Profile').evaluate().isEmpty &&
+  if (find.byKey(const Key('profile-screen')).evaluate().isEmpty &&
       find.text(label).evaluate().isEmpty) {
     GoRouter.of(
       tester.element(find.byType(Scaffold).first),
@@ -102,7 +102,7 @@ Finder profileScrollable() => find
     .descendant(
       of: find
           .ancestor(
-            of: find.widgetWithText(AppBar, 'Profile'),
+            of: find.byKey(const Key('profile-screen')),
             matching: find.byType(Scaffold),
           )
           .first,

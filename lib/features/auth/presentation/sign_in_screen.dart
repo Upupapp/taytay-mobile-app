@@ -10,11 +10,11 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
-import 'auth_form_page.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 

@@ -10,6 +10,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/error_state.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../../profile/domain/verification_decision.dart';
@@ -118,9 +119,15 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           requirement: AccessRequirement.verified,
         );
         if (decision is! AccessAllowed) return const SizedBox.shrink();
-        if (_failed) return const _RecordUnavailable();
+        if (_failed) {
+          return _RecordUnavailable(onRetry: _load);
+        }
         if (_loading && _detail == null) {
-          return const Center(child: CircularProgressIndicator());
+          return AccountCanvas(
+            frame: AccountFrame.home,
+            loading: true,
+            onBell: () => context.goNamed(AppRoute.notifications.routeName),
+          );
         }
         final detail = _detail;
         final String name =
@@ -137,34 +144,38 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
           initials: _initials(name),
           location: location,
           verifiedLabel: 'Verified',
-          sample: false,
           menu: _menu(context),
           onBell: () => context.goNamed(AppRoute.notifications.routeName),
           onSignOut: _signOut,
+          onDigitalId: () => context.pushNamed(AppRoute.digitalId.routeName),
         );
       },
     );
   }
 
   List<AccountMenuRow> _menu(BuildContext context) {
+    final ResidentProfileDetail? detail = _detail;
     final String? decided = manilaDecisionDate(_detail?.verificationDecidedAt);
     return <AccountMenuRow>[
       AccountMenuRow(
         title: 'Resident Profile',
-        subtitle: _detail == null
+        subtitle: detail == null
             ? 'Name, contact, barangay'
-            : '${profileCompletionPercent(_detail!)}% complete',
+            : '${profileCompletionPercent(detail)}% complete',
+        progress: detail == null
+            ? null
+            : profileCompletionPercent(detail) / 100,
         icon: TaytayIcons.idCard,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileEdit.routeName),
       ),
       AccountMenuRow(
         title: 'Messages',
         subtitle: _messagesLine,
         icon: TaytayIcons.messageSquare,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         badge: _unread > 0 ? '$_unread' : null,
         onTap: () => context.goNamed(AppRoute.messagesInbox.routeName),
       ),
@@ -172,8 +183,8 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         title: 'Verification status',
         subtitle: decided == null ? 'Verified' : 'Verified · $decided',
         icon: TaytayIcons.shield,
-        tile: const Color(0xFFE7F6EE),
-        iconColor: BrandColors.success,
+        tile: BrandColors.green50,
+        iconColor: BrandColors.green,
         onTap: () => context.goNamed(AppRoute.verification.routeName),
       ),
       // `/documents` and `/household` are top-level routes, so they are
@@ -182,40 +193,40 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         title: 'Request documents',
         subtitle: 'Certificates and copies from offices',
         icon: TaytayIcons.fileText,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
       ),
       AccountMenuRow(
         title: 'Household',
         subtitle: 'Address and your place in it',
         icon: TaytayIcons.house,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.pushNamed(AppRoute.household.routeName),
       ),
       AccountMenuRow(
         title: 'Settings',
         subtitle: 'Notifications, language',
         icon: TaytayIcons.settings,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileSettings.routeName),
       ),
       AccountMenuRow(
         title: 'Privacy & data',
         subtitle: 'Privacy Notice, your data rights',
         icon: TaytayIcons.lock,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileNotice.routeName),
       ),
       AccountMenuRow(
         title: 'Photo credits & about',
         subtitle: 'Licences, app version',
         icon: TaytayIcons.image,
-        tile: BrandColors.chipBlueBg,
-        iconColor: BrandColors.taytayBlue,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.photoCredits.routeName),
       ),
     ];
@@ -225,47 +236,30 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
 /// Shown when `GET /me` fails. The words are the same ones the resident
 /// record uses, so a missing record is not described as the resident's fault.
 class _RecordUnavailable extends StatelessWidget {
-  const _RecordUnavailable();
+  const _RecordUnavailable({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: <Widget>[
-        const Align(alignment: Alignment.centerLeft, child: _VerifiedBadge()),
-        const SizedBox(height: 16),
-        Text(
-          'Not available in this app yet',
-          style: theme.textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'Taytay LGU has not switched on your record in this app yet. '
-          'The municipal hall can tell you what is on file.',
-        ),
-      ],
-    );
-  }
-}
-
-class _VerifiedBadge extends StatelessWidget {
-  const _VerifiedBadge();
-
-  @override
-  Widget build(BuildContext context) {
-    final ThemeData theme = Theme.of(context);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        Icon(
-          Icons.verified_outlined,
-          color: theme.colorScheme.onSecondaryContainer,
-        ),
-        const SizedBox(width: 8),
-        // Wraps at large text on a small phone instead of running off it.
-        const Flexible(child: Text('Verified by Taytay LGU')),
-      ],
+    return ColoredBox(
+      color: BrandColors.background,
+      child: ListView(
+        padding: const EdgeInsets.all(Spacing.lg),
+        children: <Widget>[
+          const SizedBox(height: Spacing.xl),
+          ErrorState(
+            title: 'Not available in this app yet',
+            message:
+                'Taytay LGU has not switched on your record in this app yet. '
+                'The municipal hall can tell you what is on file.',
+            icon: TaytayIcons.badgeCheck,
+            onRetry: onRetry,
+            boxed: true,
+            details: const <Widget>[Text('Verified by Taytay LGU')],
+          ),
+        ],
+      ),
     );
   }
 }

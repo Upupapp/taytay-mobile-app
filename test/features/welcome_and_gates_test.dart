@@ -108,7 +108,7 @@ Future<void> openProfileShortcut(WidgetTester tester, String label) async {
   await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
   // The verified home is 08-01. The older capability rows live on the record.
-  if (find.widgetWithText(AppBar, 'Profile').evaluate().isEmpty &&
+  if (find.byKey(const Key('profile-screen')).evaluate().isEmpty &&
       find.text(label).evaluate().isEmpty) {
     GoRouter.of(
       tester.element(find.byType(Scaffold).first),
@@ -130,7 +130,7 @@ Finder profileScrollable() => find
     .descendant(
       of: find
           .ancestor(
-            of: find.widgetWithText(AppBar, 'Profile'),
+            of: find.byKey(const Key('profile-screen')),
             matching: find.byType(Scaffold),
           )
           .first,
@@ -483,7 +483,7 @@ void main() {
       // And they are back where they were — the Profile screen the gate was
       // opened from — not stranded on a sheet or bounced to sign-in.
       expect(find.byType(BottomSheet), findsNothing);
-      expect(find.widgetWithText(AppBar, 'Profile'), findsOneWidget);
+      expect(find.byKey(const Key('profile-screen')), findsOneWidget);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });
 

@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
@@ -13,8 +15,9 @@ import '../../../core/session/resident_capability.dart';
 import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../domain/profile_fields.dart';
 import '../domain/resident_profile_detail.dart';
 import 'profile_field_list.dart';
@@ -104,47 +107,71 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (context, _) {
         final session = dependencies.session.state;
 
-        return Scaffold(
-          appBar: AppBar(
-            automaticallyImplyLeading: false,
-            leading: widget.showBack ? const TaytayBackButton() : null,
-            title: const Text('Profile'),
+        final bool glass = !widget.showBack;
+        final bool personal = CapabilityService.canOpen(
+          session: session,
+          capability: ResidentCapability.manageAccount,
+        );
+        final Widget body = Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _IdentityCard(session: session, glass: glass),
+              const SizedBox(height: Spacing.xl),
+              // The same question the read asks, from the same service, so a
+              // section can never be shown that its own fetch refused.
+              if (personal) ...<Widget>[
+                ProfileFieldList(
+                  ownership: FieldOwnership.accountOwned,
+                  detail: _detail,
+                  loading: _loading,
+                  unavailable: _failure != null,
+                  glass: glass,
+                  onEdit: () =>
+                      context.goNamed(AppRoute.profileContact.routeName),
+                ),
+                const SizedBox(height: Spacing.xl),
+                ProfileFieldList(
+                  ownership: FieldOwnership.lguVerified,
+                  detail: _detail,
+                  loading: _loading,
+                  unavailable: _failure != null,
+                  glass: glass,
+                ),
+                const SizedBox(height: Spacing.xl),
+              ],
+              _ShortcutSection(session: session, glass: glass),
+              const SizedBox(height: Spacing.xl),
+            ],
           ),
-          body: SafeArea(
-            child: RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(Spacing.lg),
-                children: <Widget>[
-                  _IdentityCard(session: session),
-                  const SizedBox(height: Spacing.xl),
-                  // The same question the read asks, from the same service, so
-                  // a section can never be shown that its own fetch refused.
-                  if (CapabilityService.canOpen(
-                    session: session,
-                    capability: ResidentCapability.manageAccount,
-                  )) ...<Widget>[
-                    ProfileFieldList(
-                      ownership: FieldOwnership.accountOwned,
-                      detail: _detail,
-                      loading: _loading,
-                      unavailable: _failure != null,
-                      onEdit: () =>
-                          context.goNamed(AppRoute.profileContact.routeName),
-                    ),
-                    const SizedBox(height: Spacing.xl),
-                    ProfileFieldList(
-                      ownership: FieldOwnership.lguVerified,
-                      detail: _detail,
-                      loading: _loading,
-                      unavailable: _failure != null,
-                    ),
-                    const SizedBox(height: Spacing.xl),
-                  ],
-                  _ShortcutSection(session: session),
-                ],
-              ),
-            ),
+        );
+        final Widget header = BlueHeader(
+          leading: widget.showBack ? null : const HeaderSeal(),
+          showBack: widget.showBack,
+          title: widget.showBack ? 'Profile' : 'My Account',
+          subtitle: 'Bayan ng Taytay · Rizal',
+          overlap: glass,
+        );
+        final Widget list = RefreshIndicator(
+          onRefresh: _load,
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              header,
+              if (glass)
+                GlassOverlap(child: body)
+              else ...<Widget>[const SizedBox(height: Spacing.lg), body],
+            ],
+          ),
+        );
+        return Scaffold(
+          backgroundColor: glass
+              ? BrandColors.glassBackground
+              : BrandColors.background,
+          body: KeyedSubtree(
+            key: profileScreenKey,
+            child: glass ? GlassBackground(child: list) : list,
           ),
         );
       },
@@ -152,15 +179,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 }
 
+/// Marks the Profile body, so a test can find this screen's own list among
+/// the shell's live branches. It stays in the tree however far the list
+/// scrolls, unlike the header, which scrolls away.
+const Key profileScreenKey = Key('profile-screen');
+
 /// Who the resident is to this app, and the verification badge.
 class _IdentityCard extends StatelessWidget {
-  const _IdentityCard({required this.session});
+  const _IdentityCard({required this.session, required this.glass});
 
   final SessionState session;
+  final bool glass;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     // First name only. The session holds a greeting name, an opaque account id
     // and a level — nothing else — so there is nothing more here to show even
     // by mistake, and the account id is never rendered.
@@ -195,45 +227,46 @@ class _IdentityCard extends StatelessWidget {
       ),
     };
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Semantics(
-            header: true,
-            child: Text(title, style: theme.textTheme.titleLarge),
+    final Widget content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: AppTypography.pageTitle.copyWith(color: BrandColors.ink),
           ),
-          const SizedBox(height: Spacing.sm),
-          const VerificationBadge(),
-          const SizedBox(height: Spacing.md),
-          Text(
-            body,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(height: Spacing.sm),
+        const VerificationBadge(),
+        const SizedBox(height: Spacing.md),
+        Text(
+          body,
+          style: AppTypography.bodyStyle.copyWith(color: BrandColors.muted),
+        ),
+        if (action != null && route != null) ...<Widget>[
+          const SizedBox(height: Spacing.lg),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppButton(
+              label: action,
+              fullWidth: false,
+              onPressed: () => context.goNamed(route.routeName),
             ),
           ),
-          if (action != null && route != null) ...<Widget>[
-            const SizedBox(height: Spacing.lg),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppButton(
-                label: action,
-                fullWidth: false,
-                onPressed: () => context.goNamed(route.routeName),
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
+    return glass ? GlassCard(child: content) : SoftCard(child: content);
   }
 }
 
 /// Everything else the account centre links to.
 class _ShortcutSection extends StatelessWidget {
-  const _ShortcutSection({required this.session});
+  const _ShortcutSection({required this.session, required this.glass});
 
   final SessionState session;
+  final bool glass;
 
   /// Each entry names a capability, so the tile asks the central service what to
   /// render rather than comparing access levels itself.
@@ -246,80 +279,59 @@ class _ShortcutSection extends StatelessWidget {
   /// preferences row at all.
   static const List<(ResidentCapability, ResidentIntentKind?, IconData)>
   _entries = <(ResidentCapability, ResidentIntentKind?, IconData)>[
-    (
-      ResidentCapability.completeVerification,
-      null,
-      Icons.verified_user_outlined,
-    ),
+    (ResidentCapability.completeVerification, null, TaytayIcons.shieldCheck),
     (
       ResidentCapability.holdDigitalId,
       ResidentIntentKind.viewDigitalId,
-      Icons.badge_outlined,
+      TaytayIcons.idCard,
     ),
-    (
-      ResidentCapability.trackAssistanceRequests,
-      null,
-      Icons.assignment_outlined,
-    ),
-    (
-      ResidentCapability.viewHouseholdSummary,
-      null,
-      Icons.family_restroom_outlined,
-    ),
+    (ResidentCapability.trackAssistanceRequests, null, TaytayIcons.handHelping),
+    (ResidentCapability.viewHouseholdSummary, null, TaytayIcons.users),
     (
       ResidentCapability.manageAccount,
       ResidentIntentKind.manageNotifications,
-      Icons.manage_accounts_outlined,
+      TaytayIcons.settings,
     ),
-    (ResidentCapability.manageSecurity, null, Icons.shield_outlined),
+    (ResidentCapability.manageSecurity, null, TaytayIcons.shield),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Semantics(
-          header: true,
-          child: Text('Your account', style: theme.textTheme.titleMedium),
+        const SettingsSectionTitle('Your account'),
+        SettingsList(
+          glass: glass,
+          children: <Widget>[
+            for (final entry in _entries)
+              _CapabilityTile(
+                capability: entry.$1,
+                intent: entry.$2,
+                icon: entry.$3,
+              ),
+            _MessageOfficeTile(session: session),
+            _DocumentRequestTile(session: session),
+          ],
         ),
-        const SizedBox(height: Spacing.sm),
-        for (final entry in _entries)
-          _CapabilityTile(
-            capability: entry.$1,
-            intent: entry.$2,
-            icon: entry.$3,
-          ),
-        _MessageOfficeTile(session: session),
-        _DocumentRequestTile(session: session),
-        const Divider(height: Spacing.xxl),
-        Semantics(
-          header: true,
-          child: Text('Privacy and help', style: theme.textTheme.titleMedium),
-        ),
-        const SizedBox(height: Spacing.sm),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(
-            Icons.privacy_tip_outlined,
-            color: theme.colorScheme.primary,
-          ),
-          title: const Text('Privacy and your data'),
-          subtitle: const Text(
-            'What Taytay LGU holds, why, and your rights over it.',
-          ),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.goNamed(AppRoute.profilePrivacy.routeName),
-        ),
-        ListTile(
-          contentPadding: EdgeInsets.zero,
-          leading: Icon(Icons.help_outline, color: theme.colorScheme.primary),
-          title: const Text('Help and support'),
-          subtitle: const Text('Trouble signing in, and where to get help.'),
-          trailing: const Icon(Icons.chevron_right),
-          onTap: () => context.goNamed(AppRoute.signInHelp.routeName),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('Privacy and help'),
+        SettingsList(
+          glass: glass,
+          children: <Widget>[
+            SettingsRow(
+              icon: TaytayIcons.lock,
+              title: 'Privacy and your data',
+              detail: 'What Taytay LGU holds, why, and your rights over it.',
+              onTap: () => context.goNamed(AppRoute.profilePrivacy.routeName),
+            ),
+            SettingsRow(
+              icon: TaytayIcons.info,
+              title: 'Help and support',
+              detail: 'Trouble signing in, and where to get help.',
+              onTap: () => context.goNamed(AppRoute.signInHelp.routeName),
+            ),
+          ],
         ),
       ],
     );
@@ -376,14 +388,12 @@ class _CapabilityTile extends StatelessWidget {
     );
     final requirement = capabilityRequirementLabel(context, verdict);
 
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
-      title: Text(capabilityLabel(context, capability)),
+    return SettingsRow(
+      icon: icon,
+      title: capabilityLabel(context, capability),
       // States the requirement instead of hiding the row. A resident can see
       // what the app offers and what it would take to reach it.
-      subtitle: requirement == null ? null : Text(requirement),
-      trailing: const Icon(Icons.chevron_right),
+      detail: requirement,
       onTap: () => _open(context, verdict),
     );
   }
@@ -403,18 +413,13 @@ class _DocumentRequestTile extends StatelessWidget {
       session: session,
       requirement: AccessRequirement.verified,
     );
-    return ListTile(
+    return SettingsRow(
       key: const Key('profile-document-requests'),
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.description_outlined,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: const Text('Request documents'),
-      subtitle: decision is AccessAllowed
+      icon: TaytayIcons.fileText,
+      title: 'Request documents',
+      detail: decision is AccessAllowed
           ? null
-          : const Text('Sending a request needs a verified account'),
-      trailing: const Icon(Icons.chevron_right),
+          : 'Sending a request needs a verified account',
       onTap: () => context.pushNamed(AppRoute.issuanceCatalogue.routeName),
     );
   }
@@ -428,14 +433,9 @@ class _MessageOfficeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.chat_bubble_outline,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-      title: const Text('Message an office'),
-      trailing: const Icon(Icons.chevron_right),
+    return SettingsRow(
+      icon: TaytayIcons.messageSquare,
+      title: 'Message an office',
       onTap: () {
         final decision = AccessPolicy.evaluate(
           session: session,

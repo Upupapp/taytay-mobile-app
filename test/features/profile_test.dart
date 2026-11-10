@@ -9,6 +9,7 @@ import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -571,7 +572,7 @@ void main() {
 
       // The distinction is legible before anything is tapped, and carried by
       // words as well as by iconography.
-      expect(find.byIcon(Icons.lock_outline), findsWidgets);
+      expect(find.byIcon(TaytayIcons.lock), findsWidgets);
       expect(find.text('Mobile number'), findsOneWidget);
       expect(find.text('Full name'), findsOneWidget);
     });
@@ -678,7 +679,7 @@ void main() {
     ) async {
       await bootProfile(tester, level: AccessLevel.verified);
       expect(find.text('Verified by Taytay LGU'), findsOneWidget);
-      expect(find.byIcon(Icons.verified_outlined), findsWidgets);
+      expect(find.byIcon(TaytayIcons.badgeCheck), findsWidgets);
     });
 
     testWidgets('the badge says not yet verified for an unverified one', (
@@ -686,13 +687,13 @@ void main() {
     ) async {
       await bootProfile(tester, level: AccessLevel.unverified);
       expect(find.text('Not yet verified'), findsOneWidget);
-      expect(find.byIcon(Icons.pending_outlined), findsOneWidget);
+      expect(find.byIcon(TaytayIcons.hourglass), findsOneWidget);
     });
 
     testWidgets('the badge says not signed in for a guest', (tester) async {
       await bootProfile(tester);
       expect(find.text('Not signed in'), findsOneWidget);
-      expect(find.byIcon(Icons.person_outline), findsWidgets);
+      expect(find.byIcon(TaytayIcons.circleUser), findsWidgets);
     });
   });
 
@@ -831,7 +832,10 @@ void main() {
       await tester.tap(find.text('Save changes'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Your changes may not have been saved'), findsOneWidget);
+      expect(
+        find.textContaining('Your changes may not have been saved'),
+        findsOneWidget,
+      );
       expect(find.textContaining('Nothing was changed'), findsNothing);
       expect(find.textContaining('has not switched on'), findsNothing);
 
@@ -944,12 +948,15 @@ void main() {
     ) async {
       await bootProfile(tester, location: '/profile/privacy');
 
-      await reveal(tester, find.text('Deleting your record'));
+      await reveal(tester, find.textContaining('Deleting your record'));
       expect(
         find.textContaining('as long as the law requires'),
         findsOneWidget,
       );
-      expect(find.text('Changing what you agreed to'), findsOneWidget);
+      expect(
+        find.textContaining('Changing what you agreed to'),
+        findsOneWidget,
+      );
     });
 
     test('it reads nothing at all', () {

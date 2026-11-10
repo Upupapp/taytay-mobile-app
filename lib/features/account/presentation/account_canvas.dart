@@ -2,13 +2,21 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_version.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
-import '../../../shared/widgets/municipal_header.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/notice_panel.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/notice_markdown.dart';
 import '../domain/photo_credit.dart';
 import 's8_space.dart';
@@ -36,6 +44,7 @@ class AccountMenuRow {
     required this.tile,
     required this.iconColor,
     this.badge,
+    this.progress,
     this.onTap,
   });
 
@@ -47,6 +56,9 @@ class AccountMenuRow {
 
   /// A count drawn on the row, such as the Messages `1`.
   final String? badge;
+
+  /// A completion share (0–1) drawn as a thin bar under the subtitle.
+  final double? progress;
   final VoidCallback? onTap;
 }
 
@@ -147,7 +159,18 @@ class AccountToggle {
   final ValueChanged<bool>? onChanged;
 }
 
-/// My Account, painted to the 08-01 … 08-10 frames.
+/// My Account in the redesign.
+///
+/// The home is the glass main tab of `Account.dc.html`: the tall blue header
+/// with the resident's initials, barangay and the gold "My Taytay ID" button,
+/// and the menu as one glass list. Lists (inbox, settings, credits) are soft
+/// cards under a blue header with a back control; Edit profile is the
+/// RegDetails form and the privacy notice the RegTerms notice, both under the
+/// wave header.
+///
+/// Every name, line and count comes from the screen that builds the canvas.
+/// The defaults are empty: [AccountSpecimen] holds the synthetic design
+/// specimen for tests and captures, and nothing reaches a live screen from it.
 ///
 /// The shell paints the tab bar, except a thread, which fills the phone.
 class AccountCanvas extends StatelessWidget {
@@ -160,22 +183,23 @@ class AccountCanvas extends StatelessWidget {
     this.showBell = true,
     this.onBack,
     this.onBell,
-    this.name = 'Juana Dela Cruz',
-    this.initials = 'JD',
-    this.location = 'Brgy. San Juan, Taytay, Rizal',
+    this.name = '',
+    this.initials = '',
+    this.location = '',
     this.verifiedLabel = 'Verified',
-    this.sample = true,
-    this.menu = AccountSpecimen.homeMenu,
+    this.sample = false,
+    this.menu = const <AccountMenuRow>[],
     this.onSignOut,
-    this.inbox = AccountSpecimen.inbox,
-    this.showSampleNote = true,
+    this.onDigitalId,
+    this.inbox = const <AccountInboxRow>[],
+    this.showSampleNote = false,
     this.onInboxRetry,
     this.onMessageOffice,
-    this.fields = AccountSpecimen.fields,
+    this.fields = const <AccountField>[],
     this.onSave,
     this.onLegalName,
     this.showLegalNameNote = true,
-    this.toggles = AccountSpecimen.toggles,
+    this.toggles = const <AccountToggle>[],
     this.onLanguage,
     this.onChangePassword,
     this.changePasswordSubtitle = '',
@@ -183,11 +207,11 @@ class AccountCanvas extends StatelessWidget {
     this.onConsents,
     this.onBanners,
     this.onExport,
-    this.showDataExport = true,
+    this.showDataExport = false,
     this.noticeMarkdown,
-    this.showBundledDraft = true,
-    this.bubbles = AccountSpecimen.mswdoBubbles,
-    this.dayLabel = 'Mon',
+    this.showBundledDraft = false,
+    this.bubbles = const <AccountBubble>[],
+    this.dayLabel = '',
     this.onSend,
     this.sendEnabled = true,
     this.onInboxNearEnd,
@@ -205,12 +229,15 @@ class AccountCanvas extends StatelessWidget {
     this.threadMoreMessage,
     this.onThreadMoreRetry,
     this.credits = PhotoCredits.all,
+    this.loading = false,
     super.key,
   });
 
   final AccountFrame frame;
   final String title;
   final String subtitle;
+
+  /// Kept for callers; the header wraps a long subtitle on its own.
   final int subtitleLines;
   final bool showBack;
   final bool showBell;
@@ -220,9 +247,14 @@ class AccountCanvas extends StatelessWidget {
   final String initials;
   final String location;
   final String verifiedLabel;
+
+  /// Marks the home name as a design specimen.
   final bool sample;
   final List<AccountMenuRow> menu;
   final VoidCallback? onSignOut;
+
+  /// The gold "My Taytay ID" button on the home header. Null hides it.
+  final VoidCallback? onDigitalId;
   final List<AccountInboxRow> inbox;
 
   /// The SAMPLE illustration line. Live screens pass `usesMockData`.
@@ -283,148 +315,23 @@ class AccountCanvas extends StatelessWidget {
   final VoidCallback? onThreadMoreRetry;
   final List<PhotoCredit> credits;
 
-  static const Color _pageTop = Color(0xFFEAF0FB);
-
-  /// Header titles opt into a tight box. Everything else keeps [S8Space.lineBox].
-  static const TextHeightBehavior _block = TextHeightBehavior(
-    applyHeightToFirstAscent: false,
-    applyHeightToLastDescent: false,
-  );
+  /// The first read has not answered: the header stays and the body is a
+  /// skeleton.
+  final bool loading;
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTextStyle(
-      style: const TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        color: BrandColors.textPrimary,
-        decoration: TextDecoration.none,
-      ),
-      textHeightBehavior: S8Space.lineBox,
-      child: ColoredBox(
-        color: BrandColors.surface,
-        child: DecoratedBox(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: <Color>[_pageTop, BrandColors.surface],
-              stops: <double>[0, 260 / 844],
-            ),
-          ),
-          child: Column(
-            children: <Widget>[
-              _header(),
-              Expanded(child: _fade(_body())),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _header() {
-    if (showBack) {
-      return _BackHeader(
-        title: title,
-        subtitle: subtitle,
-        lines: subtitleLines,
-        showBell: showBell,
-        onBack: onBack,
-        onBell: onBell,
-        onMenu: onThreadMenu,
-      );
-    }
-    return _RootHeader(title: title, subtitle: subtitle, onBell: onBell);
-  }
-
-  Widget _body() {
-    return switch (frame) {
-      AccountFrame.home => _HomeBody(
-        name: name,
-        initials: initials,
-        location: location,
-        verifiedLabel: verifiedLabel,
-        sample: sample,
-        menu: menu,
-        onSignOut: onSignOut,
-      ),
-      AccountFrame.inbox => _InboxBody(
-        rows: inbox,
-        showSampleNote: showSampleNote,
-        onNearEnd: onInboxNearEnd,
-        moreMessage: inboxMoreMessage,
-        onMoreRetry: onInboxMoreRetry,
-      ),
-      AccountFrame.inboxEmpty => _EmptyInbox(onMessageOffice: onMessageOffice),
-      AccountFrame.inboxError => _InboxError(onRetry: onInboxRetry),
-      AccountFrame.editProfile => _EditBody(
-        initials: initials,
-        fields: fields,
-        onSave: onSave,
-        onLegalName: onLegalName,
-        showLegalNameNote: showLegalNameNote,
-      ),
-      AccountFrame.settings => _SettingsBody(
-        toggles: toggles,
-        onLanguage: onLanguage,
-        onChangePassword: onChangePassword,
-        changePasswordSubtitle: changePasswordSubtitle,
-        onPrivacy: onPrivacy,
-        onConsents: onConsents,
-        onExport: onExport,
-        showDataExport: showDataExport,
-      ),
-      AccountFrame.about => _AboutBody(credits: credits, onBanners: onBanners),
-      AccountFrame.thread => _ThreadBody(
-        bubbles: bubbles,
-        dayLabel: dayLabel,
-        showSampleNote: showSampleNote,
-        onSend: onSend,
-        sendEnabled: sendEnabled,
-        composer: composer,
-        onAttach: onAttach,
-        closed: threadClosed,
-        hideComposer: hideComposer,
-        attachmentLabel: attachmentLabel,
-        onClearAttachment: onClearAttachment,
-        onUseMedia: onUseMedia,
-        onNearStart: onThreadNearStart,
-        moreMessage: threadMoreMessage,
-        onMoreRetry: onThreadMoreRetry,
-      ),
-      AccountFrame.privacy =>
-        noticeMarkdown != null
-            ? _PublishedNotice(markdown: noticeMarkdown!)
-            : showBundledDraft
-            ? _PrivacyBody(onExport: onExport, showDataExport: showDataExport)
-            : const _NoticePending(),
-      AccountFrame.banners => _BannersBody(credits: credits),
+    final Widget page = switch (frame) {
+      AccountFrame.home => _HomePage(canvas: this),
+      AccountFrame.editProfile => _EditPage(canvas: this),
+      AccountFrame.privacy => _PrivacyPage(canvas: this),
+      _ => _BackPage(canvas: this),
     };
-  }
-
-  Widget _fade(Widget child) {
-    if (frame == AccountFrame.thread) return child;
-    return Stack(
-      children: <Widget>[
-        child,
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          height: 28,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0x00F3F5FA), BrandColors.surface],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+    return Material(
+      color: frame == AccountFrame.home
+          ? BrandColors.glassBackground
+          : BrandColors.background,
+      child: page,
     );
   }
 }
@@ -436,14 +343,14 @@ abstract final class AccountSpecimen {
       title: 'Resident Profile',
       subtitle: '60% complete',
       icon: TaytayIcons.idCard,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
     ),
     AccountMenuRow(
       title: 'Messages',
       subtitle: '1 new reply from BPLO',
       icon: TaytayIcons.messageSquare,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
       badge: '1',
     ),
@@ -451,28 +358,28 @@ abstract final class AccountSpecimen {
       title: 'Verification status',
       subtitle: 'Verified · Oct 22, 2026',
       icon: TaytayIcons.shield,
-      tile: Color(0xFFE7F6EE),
+      tile: BrandColors.green50,
       iconColor: BrandColors.success,
     ),
     AccountMenuRow(
       title: 'Settings',
       subtitle: 'Notifications, language',
       icon: TaytayIcons.settings,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
     ),
     AccountMenuRow(
       title: 'Privacy & data',
       subtitle: 'Privacy Notice, your data rights',
       icon: TaytayIcons.lock,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
     ),
     AccountMenuRow(
       title: 'Photo credits & about',
       subtitle: 'Licences, app version',
       icon: TaytayIcons.image,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
     ),
   ];
@@ -492,7 +399,7 @@ abstract final class AccountSpecimen {
       when: 'Mon',
       preview: 'You: Salamat po sa impormasyon.',
       icon: TaytayIcons.handHeart,
-      tile: Color(0xFFE7F6EE),
+      tile: BrandColors.green50,
       iconColor: BrandColors.success,
     ),
     AccountInboxRow(
@@ -525,7 +432,7 @@ abstract final class AccountSpecimen {
       title: 'Balita & advisories',
       subtitle: 'Push notifications',
       icon: TaytayIcons.bell,
-      tile: Color(0xFFEAF0FB),
+      tile: BrandColors.blue50,
       iconColor: BrandColors.taytayBlue,
       on: true,
     ),
@@ -541,7 +448,7 @@ abstract final class AccountSpecimen {
       title: 'Emergency alerts',
       subtitle: 'Always on for MDRRMO alerts',
       icon: TaytayIcons.siren,
-      tile: Color(0xFFFDECEC),
+      tile: BrandColors.red50,
       iconColor: BrandColors.danger,
       on: true,
       locked: true,
@@ -606,408 +513,77 @@ abstract final class AccountSpecimen {
   ];
 }
 
-class _RootHeader extends StatelessWidget {
-  const _RootHeader({required this.title, required this.subtitle, this.onBell});
+/// `Account.dc.html`: the glass main tab. The header holds the resident and
+/// the ID button; the menu rides up over it as one glass list, with Sign out
+/// in a list of its own.
+class _HomePage extends StatelessWidget {
+  const _HomePage({required this.canvas});
 
-  final String title;
-  final String subtitle;
-  final VoidCallback? onBell;
-
-  @override
-  Widget build(BuildContext context) {
-    final double top = MediaQuery.paddingOf(context).top;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
-        ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, top == 0 ? 46 : top, 16, 14),
-        child: Row(
-          children: <Widget>[
-            const _Seal(),
-            const SizedBox(width: 11),
-            Expanded(
-              child: MunicipalHeaderTitles(title: title, subtitle: subtitle),
-            ),
-            const SizedBox(width: 11),
-            _Bell(onTap: onBell),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BackHeader extends StatelessWidget {
-  const _BackHeader({
-    required this.title,
-    required this.subtitle,
-    required this.lines,
-    required this.showBell,
-    this.onBack,
-    this.onBell,
-    this.onMenu,
-  });
-
-  final String title;
-  final String subtitle;
-  final int lines;
-  final bool showBell;
-  final VoidCallback? onBack;
-  final VoidCallback? onBell;
-  final VoidCallback? onMenu;
+  final AccountCanvas canvas;
 
   @override
   Widget build(BuildContext context) {
-    final double top = MediaQuery.paddingOf(context).top;
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
+    final VoidCallback? onBell = canvas.onBell;
+    return GlassBackground(
+      child: ListView(
+        key: const Key('account-home-scroll'),
+        padding: EdgeInsets.only(
+          bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
         ),
-      ),
-      child: Padding(
-        // CSS padding is 46×16×14 on every header. A wrapped subtitle does
-        // not add padding; it grows the row. See [_TwoLineTitles].
-        padding: EdgeInsets.fromLTRB(16, top == 0 ? 46 : top, 16, 14),
-        child: Row(
-          children: <Widget>[
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: OverflowBox(
-                minWidth: 48,
-                maxWidth: 48,
-                minHeight: 48,
-                maxHeight: 48,
-                child: TaytayBackButton(onPressed: onBack, translucent: true),
-              ),
-            ),
-            const SizedBox(width: 11),
-            const _Seal(),
-            const SizedBox(width: 11),
-            Expanded(
-              child: lines > 1
-                  ? _TwoLineTitles(title: title, subtitle: subtitle)
-                  : MunicipalHeaderTitles(title: title, subtitle: subtitle),
-            ),
-            if (showBell) ...<Widget>[
-              const SizedBox(width: 11),
-              _Bell(onTap: onBell),
-            ] else if (onMenu != null) ...<Widget>[
-              const SizedBox(width: 11),
-              _ThreadMenu(onTap: onMenu!),
+        children: <Widget>[
+          BlueHeader(
+            leading: const HeaderSeal(),
+            title: canvas.title,
+            subtitle: canvas.subtitle,
+            overlap: true,
+            actions: <Widget>[
+              if (canvas.showBell)
+                HeaderIconButton(
+                  icon: TaytayIcons.bell,
+                  semanticLabel: 'Notifications',
+                  onPressed: onBell,
+                ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TwoLineTitles extends StatelessWidget {
-  const _TwoLineTitles({required this.title, required this.subtitle});
-
-  final String title;
-  final String subtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    // `b` is its own 16 px block (normal → [S8Space.line] of 16). `small` is
-    // inline in that same block, so each wrapped line uses the 16 px strut,
-    // not the 11 px glyph's own 13.67. Two lines plus the title are 61, and
-    // with the 46 + 14 padding the header is 121.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          height: S8Space.line(16),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                height: 1,
-                color: Colors.white,
-                decoration: TextDecoration.none,
-              ),
-              textHeightBehavior: AccountCanvas._block,
-            ),
+            bottom: canvas.loading ? null : _ProfileBlock(canvas: canvas),
           ),
-        ),
-        _CssLines(
-          text: subtitle,
-          style: const TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            height: S8Space.normal,
-            color: Color(0xCCFFFFFF),
-            decoration: TextDecoration.none,
-          ),
-          step: S8Space.line(16),
-        ),
-      ],
-    );
-  }
-}
-
-class _Seal extends StatelessWidget {
-  const _Seal();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          'assets/brand/taytay_seal.png',
-          fit: BoxFit.contain,
-          semanticLabel: 'Seal of Taytay, Rizal',
-        ),
-      ),
-    );
-  }
-}
-
-class _Bell extends StatelessWidget {
-  const _Bell({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: OverflowBox(
-        maxWidth: 48,
-        maxHeight: 48,
-        child: Semantics(
-          button: true,
-          label: 'Notifications',
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              customBorder: const CircleBorder(),
-              onTap: onTap,
-              child: const SizedBox(
-                width: 48,
-                height: 48,
-                child: Center(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0x24FFFFFF),
-                      shape: BoxShape.circle,
-                    ),
-                    child: SizedBox(
-                      width: 44,
-                      height: 44,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: <Widget>[
-                          Center(
-                            child: TaytayIcon(
-                              icon: TaytayIcons.bell,
-                              size: 20,
-                              color: Colors.white,
-                              semanticLabel: '',
-                              excludeSemantics: true,
-                            ),
-                          ),
-                          Positioned(
-                            top: 6,
-                            right: 8,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                color: BrandColors.threadGold,
-                                shape: BoxShape.circle,
-                              ),
-                              child: SizedBox(width: 8, height: 8),
-                            ),
-                          ),
-                        ],
+          GlassOverlap(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+              child: canvas.loading
+                  ? const GlassCard(
+                      child: LoadingSkeleton(
+                        semanticLabel: 'Loading your account',
                       ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _HomeBody extends StatelessWidget {
-  const _HomeBody({
-    required this.name,
-    required this.initials,
-    required this.location,
-    required this.verifiedLabel,
-    required this.sample,
-    required this.menu,
-    this.onSignOut,
-  });
-
-  final String name;
-  final String initials;
-  final String location;
-  final String verifiedLabel;
-  final bool sample;
-  final List<AccountMenuRow> menu;
-  final VoidCallback? onSignOut;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<AccountMenuRow> first = menu.take(3).toList(growable: false);
-    final List<AccountMenuRow> second = menu.skip(3).toList(growable: false);
-    final bool reflow = _largerText(context);
-    // The 08-01 frame is a fixed page whose sign-out card fills what is left.
-    // A longer menu, a shorter phone or larger text leaves nothing to fill, and
-    // a Column then overflowed (9 px at 400×900 with an eighth row). So the
-    // page scrolls, and the card fills the rest only when there is a rest:
-    // otherwise it keeps its own height (Article 6, layouts scroll rather than
-    // shrink text).
-    return CustomScrollView(
-      key: const Key('account-home-scroll'),
-      slivers: <Widget>[
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(
-            S8Space.gutter,
-            S8Space.pagePad,
-            S8Space.gutter,
-            0,
-          ),
-          sliver: SliverList.list(
-            children: <Widget>[
-              _Card(
-                padding: const EdgeInsets.fromLTRB(
-                  S8Space.cardPad,
-                  S8Space.profilePadY,
-                  S8Space.cardPad,
-                  S8Space.profilePadY,
-                ),
-                child: Row(
-                  children: <Widget>[
-                    _Initials(initials),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          if (reflow) ...<Widget>[
-                            Text(name, style: _name),
-                            Text(location, style: _location),
-                          ] else ...<Widget>[
-                            _MiddleLine(
-                              text: sample ? '$name ' : name,
-                              style: _name,
-                              chip: sample ? const _NormalSample() : null,
-                            ),
-                            SizedBox(
-                              height: 13 * S8Space.bodyLineHeight,
-                              child: Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  location,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: _location,
-                                  textHeightBehavior: S8Space.lineBox,
-                                ),
-                              ),
+                    )
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: <Widget>[
+                        if (canvas.menu.isNotEmpty) ...<Widget>[
+                          SettingsList(
+                            glass: true,
+                            children: <Widget>[
+                              for (final AccountMenuRow row in canvas.menu)
+                                _MenuRow(row: row),
+                            ],
+                          ),
+                          const SizedBox(height: Spacing.section),
+                        ],
+                        SettingsList(
+                          glass: true,
+                          children: <Widget>[
+                            SettingsRow(
+                              title: 'Sign out',
+                              icon: TaytayIcons.logOut,
+                              destructive: true,
+                              onTap: canvas.onSignOut,
+                              semanticLabel: 'Sign out',
                             ),
                           ],
-                          const SizedBox(height: 6),
-                          _Pill(verifiedLabel, reflow: reflow),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: S8Space.cardGap),
-              _MenuCard(rows: first),
-              const SizedBox(height: S8Space.cardGap),
-              _MenuCard(rows: second),
-              const SizedBox(height: S8Space.cardGap),
-            ],
-          ),
-        ),
-        SliverPadding(
-          padding: const EdgeInsets.symmetric(horizontal: S8Space.gutter),
-          sliver: SliverFillRemaining(
-            hasScrollBody: false,
-            child: _Card(
-              padding: const EdgeInsets.symmetric(horizontal: S8Space.cardPad),
-              child: _Hit(
-                label: 'Sign out',
-                onTap: onSignOut,
-                child: const Row(
-                  children: <Widget>[
-                    _Tile(
-                      icon: TaytayIcons.logOut,
-                      tile: BrandColors.chipRedBg,
-                      color: BrandColors.danger,
-                    ),
-                    SizedBox(width: S8Space.iconGap),
-                    Expanded(child: Text('Sign out', style: _name)),
-                  ],
-                ),
-              ),
             ),
           ),
-        ),
-      ],
-    );
-  }
-}
-
-/// Whether the resident reads text larger than the design's own size.
-///
-/// The 08-01 lines are drawn in fixed line boxes measured from the design at
-/// 1×. Larger text in them would be clipped or cut short, so past 1× the home
-/// reflows into ordinary wrapping text instead: a name, a row title or a
-/// subtitle is read whole, and the page scrolls (Article 6).
-bool _largerText(BuildContext context) =>
-    MediaQuery.textScalerOf(context).scale(14) > 14;
-
-/// Menu rows sized by their content. The hairline is #EEF1F6.
-class _MenuCard extends StatelessWidget {
-  const _MenuCard({required this.rows});
-
-  final List<AccountMenuRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Card(
-      padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-      child: Column(
-        children: <Widget>[
-          for (var i = 0; i < rows.length; i++) ...<Widget>[
-            if (i > 0) const _RowDivider(),
-            _MenuRow(row: rows[i]),
-          ],
         ],
       ),
     );
@@ -1021,51 +597,360 @@ class _MenuRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool reflow = _largerText(context);
-    return _Hit(
-      label: row.title,
+    final int? count = int.tryParse(row.badge ?? '');
+    return SettingsRow(
+      title: row.title,
+      detail: row.subtitle,
+      icon: row.icon,
+      iconFill: row.tile,
+      iconInk: row.iconColor,
+      badgeCount: count,
+      progress: row.progress,
       onTap: row.onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.cardPad,
-          vertical: S8Space.rowPadY,
-        ),
-        child: Row(
+    );
+  }
+}
+
+/// CSS `.prof` and `.idbtn`: the avatar with its gold ring and verified
+/// tick, the name, the barangay and the verification line, then the gold ID
+/// button when the screen offers one.
+class _ProfileBlock extends StatelessWidget {
+  const _ProfileBlock({required this.canvas});
+
+  final AccountCanvas canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final VoidCallback? onDigitalId = canvas.onDigitalId;
+    final bool verified = canvas.verifiedLabel.isNotEmpty;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Row(
           children: <Widget>[
-            _Tile(icon: row.icon, tile: row.tile, color: row.iconColor),
-            const SizedBox(width: S8Space.iconGap),
+            _Avatar(initials: canvas.initials, verified: verified),
+            const SizedBox(width: Spacing.section),
             Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  if (reflow)
-                    Text(row.title, style: _rowTitle)
-                  else
-                    _Line(row.title, _rowTitle),
-                  const SizedBox(height: S8Space.titleGap),
-                  if (reflow)
-                    Text(row.subtitle, style: _meta)
-                  else
-                    _Line(row.subtitle, _meta),
+                  if (canvas.name.isNotEmpty)
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: Spacing.sm,
+                      children: <Widget>[
+                        Text(
+                          canvas.name,
+                          style: AppTypography.storyTitle.copyWith(
+                            fontWeight: AppTypography.black,
+                            color: BrandColors.white,
+                          ),
+                        ),
+                        if (canvas.sample) const SampleTag(),
+                      ],
+                    ),
+                  if (canvas.location.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    _HeaderLine(
+                      icon: TaytayIcons.mapPin,
+                      text: canvas.location,
+                      color: BrandColors.onHeaderLede,
+                    ),
+                  ],
+                  if (verified) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    _HeaderLine(
+                      icon: TaytayIcons.badgeCheck,
+                      text: canvas.verifiedLabel,
+                      color: BrandColors.onHeaderSuccess,
+                      strong: true,
+                    ),
+                  ],
                 ],
               ),
             ),
-            const SizedBox(width: S8Space.iconGap),
-            if (row.badge != null)
-              _CountBadge(row.badge!)
-            else
-              const TaytayIcon(
-                icon: TaytayIcons.chevronRight,
-                size: 18,
-                color: BrandColors.chevron,
-                semanticLabel: '',
-                excludeSemantics: true,
+          ],
+        ),
+        if (onDigitalId != null) ...<Widget>[
+          const SizedBox(height: Spacing.section),
+          _IdButton(onTap: onDigitalId),
+        ],
+      ],
+    );
+  }
+}
+
+class _HeaderLine extends StatelessWidget {
+  const _HeaderLine({
+    required this.icon,
+    required this.text,
+    required this.color,
+    this.strong = false,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(top: Spacing.xxs),
+          child: TaytayIcon(
+            icon: icon,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm - Spacing.xs,
+            color: color,
+          ),
+        ),
+        const SizedBox(width: Spacing.xs + 1),
+        Flexible(
+          child: Text(
+            text,
+            style: AppTypography.listDetail.copyWith(
+              color: color,
+              fontWeight: strong ? AppTypography.medium : null,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// CSS `.prof .av` and `.vb`: 60 px white disc, 3 px gold ring, blue
+/// initials, and the green tick at the bottom right when verified.
+class _Avatar extends StatelessWidget {
+  const _Avatar({required this.initials, required this.verified});
+
+  final String initials;
+  final bool verified;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: ComponentSizes.profileAvatar,
+        height: ComponentSizes.profileAvatar,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            Container(
+              width: ComponentSizes.profileAvatar,
+              height: ComponentSizes.profileAvatar,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: BrandColors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: BrandColors.gold, width: 3),
+              ),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Padding(
+                  padding: const EdgeInsets.all(Spacing.xs),
+                  child: Text(
+                    initials,
+                    style: AppTypography.storyTitle.copyWith(
+                      fontWeight: AppTypography.black,
+                      color: BrandColors.blue,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (verified)
+              Positioned(
+                right: -3,
+                bottom: -1,
+                child: Container(
+                  width: ComponentSizes.profileBadge,
+                  height: ComponentSizes.profileBadge,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: BrandColors.successBright,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: BrandColors.blue, width: 2.5),
+                  ),
+                  child: const TaytayIcon(
+                    icon: TaytayIcons.check,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: Spacing.md,
+                    color: BrandColors.white,
+                  ),
+                ),
               ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// CSS `.idbtn`: gold, 50 tall, navy 13.5 / 800, the card icon and a chevron.
+class _IdButton extends StatelessWidget {
+  const _IdButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: 'My Taytay ID',
+      child: ExcludeSemantics(
+        child: Material(
+          color: BrandColors.gold,
+          borderRadius: BorderRadius.circular(Radii.md),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(Radii.md),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: ComponentSizes.headerButton,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                child: Row(
+                  children: <Widget>[
+                    const TaytayIcon(
+                      icon: TaytayIcons.idCard,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: IconSizes.sm,
+                      color: BrandColors.navy,
+                    ),
+                    const SizedBox(width: Spacing.sm + Spacing.xxs),
+                    Expanded(
+                      child: Text(
+                        'My Taytay ID',
+                        style: AppTypography.listTitle.copyWith(
+                          fontWeight: AppTypography.black,
+                          color: BrandColors.navy,
+                        ),
+                      ),
+                    ),
+                    const TaytayIcon(
+                      icon: TaytayIcons.chevronRight,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: IconSizes.sm - Spacing.xxs,
+                      color: BrandColors.navy,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Every list frame: the blue header with a back control over the soft
+/// page, the frame's body below.
+class _BackPage extends StatelessWidget {
+  const _BackPage({required this.canvas});
+
+  final AccountCanvas canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final VoidCallback? onBell = canvas.onBell;
+    final VoidCallback? onMenu = canvas.onThreadMenu;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        BlueHeader(
+          title: canvas.title,
+          subtitle: canvas.subtitle.isEmpty ? null : canvas.subtitle,
+          showBack: canvas.showBack,
+          onBack: canvas.onBack,
+          leading: canvas.showBack ? null : const HeaderSeal(),
+          actions: <Widget>[
+            if (canvas.showBell)
+              HeaderIconButton(
+                icon: TaytayIcons.bell,
+                semanticLabel: 'Notifications',
+                onPressed: onBell,
+              ),
+            if (onMenu != null)
+              HeaderIconButton(
+                key: const Key('account-thread-menu'),
+                icon: TaytayIcons.moreVertical,
+                semanticLabel: 'More',
+                onPressed: onMenu,
+              ),
+          ],
+        ),
+        Expanded(child: _body()),
+      ],
+    );
+  }
+
+  Widget _body() {
+    if (canvas.loading) {
+      return ListView(
+        padding: const EdgeInsets.all(Spacing.lg),
+        children: const <Widget>[LoadingSkeleton(semanticLabel: 'Loading')],
+      );
+    }
+    final AccountCanvas c = canvas;
+    return switch (c.frame) {
+      AccountFrame.inbox => _InboxBody(
+        rows: c.inbox,
+        showSampleNote: c.showSampleNote,
+        onNearEnd: c.onInboxNearEnd,
+        moreMessage: c.inboxMoreMessage,
+        onMoreRetry: c.onInboxMoreRetry,
+      ),
+      AccountFrame.inboxEmpty => _EmptyInbox(
+        onMessageOffice: c.onMessageOffice,
+      ),
+      AccountFrame.inboxError => _InboxError(onRetry: c.onInboxRetry),
+      AccountFrame.settings => _SettingsBody(
+        toggles: c.toggles,
+        onLanguage: c.onLanguage,
+        onChangePassword: c.onChangePassword,
+        changePasswordSubtitle: c.changePasswordSubtitle,
+        onPrivacy: c.onPrivacy,
+        onConsents: c.onConsents,
+        onExport: c.onExport,
+        showDataExport: c.showDataExport,
+      ),
+      AccountFrame.about => _AboutBody(
+        credits: c.credits,
+        onBanners: c.onBanners,
+      ),
+      AccountFrame.banners => _BannersBody(credits: c.credits),
+      AccountFrame.thread => _ThreadBody(
+        bubbles: c.bubbles,
+        dayLabel: c.dayLabel,
+        showSampleNote: c.showSampleNote,
+        onSend: c.onSend,
+        sendEnabled: c.sendEnabled,
+        composer: c.composer,
+        onAttach: c.onAttach,
+        closed: c.threadClosed,
+        hideComposer: c.hideComposer,
+        attachmentLabel: c.attachmentLabel,
+        onClearAttachment: c.onClearAttachment,
+        onUseMedia: c.onUseMedia,
+        onNearStart: c.onThreadNearStart,
+        moreMessage: c.threadMoreMessage,
+        onMoreRetry: c.onThreadMoreRetry,
+      ),
+      // Drawn by their own pages.
+      AccountFrame.home ||
+      AccountFrame.editProfile ||
+      AccountFrame.privacy => const SizedBox.shrink(),
+    };
   }
 }
 
@@ -1086,42 +971,41 @@ class _InboxBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? moreMessage = this.moreMessage;
+    final VoidCallback? onMoreRetry = this.onMoreRetry;
     final Widget list = ListView(
       padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.listInset,
-        S8Space.gutter,
-        S8Space.pageBottom,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.xl,
       ),
       children: <Widget>[
-        const _AllFilter(),
-        const SizedBox(height: S8Space.filterGap),
-        _Card(
-          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-          child: Column(
-            children: <Widget>[
-              for (var i = 0; i < rows.length; i++) ...<Widget>[
-                if (i > 0) const _RowDivider(),
-                _InboxRow(row: rows[i]),
-              ],
-            ],
-          ),
+        SettingsList(
+          children: <Widget>[
+            for (final AccountInboxRow row in rows) _InboxRow(row: row),
+          ],
         ),
-        if (moreMessage != null && onMoreRetry != null)
-          _LoadMoreRetry(
-            message: moreMessage!,
-            onRetry: onMoreRetry!,
+        if (moreMessage != null && onMoreRetry != null) ...<Widget>[
+          const SizedBox(height: Spacing.md),
+          _MoreRetry(
+            message: moreMessage,
+            onRetry: onMoreRetry,
             retryKey: const Key('inbox-load-more-retry'),
           ),
+        ],
         if (showSampleNote) ...<Widget>[
-          const SizedBox(height: 14),
-          const Center(
+          const SizedBox(height: Spacing.section),
+          Center(
             child: Wrap(
               crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
+              spacing: Spacing.xs + Spacing.xxs,
               children: <Widget>[
-                SampleTag(),
-                Text('messages for illustration', style: _meta),
+                const SampleTag(),
+                Text(
+                  'messages for illustration',
+                  style: AppTypography.small.copyWith(color: BrandColors.muted),
+                ),
               ],
             ),
           ),
@@ -1142,6 +1026,8 @@ class _InboxBody extends StatelessWidget {
   }
 }
 
+/// One conversation: the office, the last line, the time and the unread
+/// count, read out as one row.
 class _InboxRow extends StatelessWidget {
   const _InboxRow({required this.row});
 
@@ -1149,71 +1035,69 @@ class _InboxRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _Hit(
-      label: row.office,
+    final int? count = int.tryParse(row.badge ?? '');
+    final bool unread = count != null && count > 0;
+    return SettingsRow(
+      title: row.office,
+      detail: row.preview,
+      detailMaxLines: 2,
+      icon: row.icon,
+      iconFill: row.tile,
+      iconInk: row.iconColor,
       onTap: row.onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(
-          S8Space.cardPad,
-          S8Space.rowPadY,
-          S8Space.cardPad,
-          S8Space.rowPadY,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            // The design's office tile is 44 dp. The time sits in the
-            // trailing column, right-aligned, centred on this row.
-            _Tile(
-              icon: row.icon,
-              tile: row.tile,
-              color: row.iconColor,
-              size: S8Space.tile,
+      semanticLabel: <String>[
+        row.office,
+        row.preview,
+        row.when,
+        if (unread) '$count new',
+      ].join(', '),
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          Text(
+            row.when,
+            style: AppTypography.small.copyWith(
+              color: unread ? BrandColors.blue : BrandColors.muted,
+              fontWeight: unread ? AppTypography.strong : null,
             ),
-            const SizedBox(width: S8Space.iconGap),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  SizedBox(
-                    height: S8Space.line(14),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        row.office,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: _rowTitle,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: S8Space.titleGap),
-                  _CssLines(
-                    text: row.preview,
-                    style: S8Space.preview,
-                    step: S8Space.line(12),
-                    maxLines: 2,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: S8Space.iconGap),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: <Widget>[
-                // `.ls` carries margin-top 2, and a flex item does not
-                // collapse it, so the time starts 2 px into the column.
-                const SizedBox(height: S8Space.titleGap),
-                _Line(row.when, _meta, align: Alignment.centerRight),
-                if (row.badge != null) ...<Widget>[
-                  const SizedBox(height: 4),
-                  _CountBadge(row.badge!),
-                ],
-              ],
-            ),
+          ),
+          if (unread) ...<Widget>[
+            const SizedBox(height: Spacing.xs),
+            CountBadge(count: count),
           ],
-        ),
+        ],
       ),
+    );
+  }
+}
+
+/// A page that failed to load more: the sentence and Retry, in a soft note.
+class _MoreRetry extends StatelessWidget {
+  const _MoreRetry({
+    required this.message,
+    required this.onRetry,
+    required this.retryKey,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+  final Key retryKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SoftNote(message: message, tone: NoteTone.error),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton(
+            key: retryKey,
+            onPressed: onRetry,
+            child: const Text('Retry'),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1226,24 +1110,23 @@ class _EmptyInbox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.listInset,
-        S8Space.gutter,
-        S8Space.pageBottom,
-      ),
+      padding: const EdgeInsets.all(Spacing.lg),
       children: <Widget>[
-        const _AllFilter(),
-        const SizedBox(height: S8Space.filterGap),
-        _EmptyCopy(
+        EmptyState(
           title: 'No messages yet',
-          body:
+          message:
               'Questions you send to municipal offices and their replies '
               'will appear here.',
-          button: 'Message an office',
-          buttonIcon: TaytayIcons.messageSquare,
-          note: 'Messaging is available to verified residents.',
-          onButton: onMessageOffice,
+          actionLabel: 'Message an office',
+          onAction: onMessageOffice,
+          boxed: true,
+          primaryAction: true,
+        ),
+        const SizedBox(height: Spacing.md),
+        Text(
+          'Messaging is available to verified residents.',
+          textAlign: TextAlign.center,
+          style: AppTypography.small.copyWith(color: BrandColors.muted),
         ),
       ],
     );
@@ -1258,155 +1141,255 @@ class _InboxError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.listInset,
-        S8Space.gutter,
-        S8Space.pageBottom,
-      ),
+      padding: const EdgeInsets.all(Spacing.lg),
       children: <Widget>[
-        const _AllFilter(),
-        const SizedBox(height: S8Space.filterGap),
-        _EmptyCopy(
+        ErrorState(
           title: 'Messages did not load',
-          body: 'Taytay LGU could not be reached. You can try again.',
-          button: 'Retry',
-          onButton: onRetry,
+          message: 'Taytay LGU could not be reached. You can try again.',
+          onRetry: onRetry,
+          retryLabel: 'Retry',
+          offline: true,
+          boxed: true,
         ),
       ],
     );
   }
 }
 
-class _EditBody extends StatelessWidget {
-  const _EditBody({
-    required this.initials,
-    required this.fields,
-    this.onSave,
-    this.onLegalName,
-    this.showLegalNameNote = true,
-  });
+/// RegDetails: the wave header over the white page, the filled fields, and
+/// Save in the footer.
+class _EditPage extends StatelessWidget {
+  const _EditPage({required this.canvas});
 
-  final String initials;
-  final List<AccountField> fields;
-  final VoidCallback? onSave;
-  final VoidCallback? onLegalName;
-  final bool showLegalNameNote;
+  final AccountCanvas canvas;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-      children: <Widget>[
-        _PhotoNote(initials: initials),
-        const SizedBox(height: S8Space.cardGap),
-        _Card(
-          padding: const EdgeInsets.all(S8Space.cardPad),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (showLegalNameNote &&
-                  !fields.any(
-                    (AccountField field) => field.label == 'Display name',
-                  )) ...<Widget>[
-                _LegalNameNote(onTap: onLegalName),
-                const SizedBox(height: S8Space.fieldStack),
-              ],
-              for (var i = 0; i < fields.length; i++) ...<Widget>[
-                _EditField(
-                  field: fields[i],
-                  padBottom: i == fields.length - 1
-                      ? 0
-                      : fields[i].label == 'Display name'
-                      ? S8Space.legalGap
-                      : S8Space.fieldStack,
-                ),
-                if (fields[i].label == 'Display name') ...<Widget>[
-                  _LegalNameNote(onTap: onLegalName),
-                  const SizedBox(height: S8Space.fieldStack),
+    final List<AccountField> fields = canvas.fields;
+    final bool legalLine =
+        canvas.showLegalNameNote &&
+        !fields.any((AccountField field) => field.label == 'Display name');
+    return AuthFormPage(
+      title: canvas.title,
+      onBack: canvas.onBack,
+      footer: canvas.loading
+          ? null
+          : FilledButton(
+              onPressed: canvas.onSave,
+              child: const Text('Save changes'),
+            ),
+      child: canvas.loading
+          ? const LoadingSkeleton(
+              layout: SkeletonLayout.detail,
+              semanticLabel: 'Loading your profile',
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                _PhotoNote(initials: canvas.initials),
+                const SizedBox(height: Spacing.formGap),
+                if (legalLine) ...<Widget>[
+                  _LegalNameNote(onTap: canvas.onLegalName),
+                  const SizedBox(height: Spacing.formGap),
+                ],
+                for (var i = 0; i < fields.length; i++) ...<Widget>[
+                  if (i > 0) const SizedBox(height: Spacing.formGap),
+                  _EditField(field: fields[i]),
+                  if (fields[i].label == 'Display name' &&
+                      canvas.showLegalNameNote) ...<Widget>[
+                    const SizedBox(height: Spacing.sm),
+                    _LegalNameNote(onTap: canvas.onLegalName),
+                  ],
                 ],
               ],
-            ],
-          ),
-        ),
-        const SizedBox(height: S8Space.cardGap),
-        _PrimaryButton(label: 'Save changes', onTap: onSave),
-      ],
+            ),
     );
   }
 }
 
-class _EditField extends StatelessWidget {
-  const _EditField({required this.field, this.padBottom = S8Space.fieldStack});
+/// The initials disc and the photo sentence above the form.
+class _PhotoNote extends StatelessWidget {
+  const _PhotoNote({required this.initials});
 
-  final AccountField field;
-  final double padBottom;
+  final String initials;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: padBottom),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return SoftCard(
+      filled: true,
+      padding: const EdgeInsets.all(Spacing.md),
+      child: Row(
         children: <Widget>[
-          Text(field.label, style: _label),
-          const SizedBox(height: S8Space.labelGap),
-          _FieldBox(
-            onTap: field.controller == null ? field.onTap : null,
-            child: Row(
-              children: <Widget>[
-                Expanded(child: _fieldValue()),
-                if (field.verified) const _Pill('Verified'),
-                if (field.locked)
-                  const TaytayIcon(
-                    icon: TaytayIcons.lock,
-                    size: 18,
-                    color: BrandColors.chevron,
-                    semanticLabel: 'Cannot be changed here',
+          Semantics(
+            image: true,
+            label: 'Profile photo',
+            child: Container(
+              width: ComponentSizes.avatar,
+              height: ComponentSizes.avatar,
+              alignment: Alignment.center,
+              decoration: const BoxDecoration(
+                color: BrandColors.blue,
+                shape: BoxShape.circle,
+              ),
+              child: ExcludeSemantics(
+                child: Text(
+                  initials,
+                  style: AppTypography.listTitle.copyWith(
+                    fontWeight: AppTypography.black,
+                    color: BrandColors.white,
                   ),
-                if (field.chevron)
-                  const TaytayIcon(
-                    icon: TaytayIcons.chevronDown,
-                    size: 18,
-                    color: BrandColors.chevron,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                  ),
-              ],
+                ),
+              ),
             ),
           ),
-          if (field.note case final String note) ...<Widget>[
-            const SizedBox(height: S8Space.labelGap),
-            Text(note, style: _legal),
-          ],
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Text(
+              'Profile photo · reviewed by LGU before it appears on your ID',
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.muted,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _fieldValue() {
+/// CSS `.fld` + `.inp`: the label above a filled field. A field with a
+/// controller is typed into; one without is a value the resident reads, or
+/// opens a picker when it has [AccountField.onTap].
+class _EditField extends StatelessWidget {
+  const _EditField({required this.field});
+
+  final AccountField field;
+
+  @override
+  Widget build(BuildContext context) {
     final TextEditingController? controller = field.controller;
-    if (controller == null) {
-      return Text(
-        field.value,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: _fieldInk,
-      );
-    }
+    final String? note = field.note;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        AuthFieldLabel(field.label),
+        const SizedBox(height: Spacing.sm),
+        if (controller != null)
+          TextField(
+            controller: controller,
+            onChanged: field.onChanged,
+            maxLines: 1,
+            style: AppTypography.fieldValue.copyWith(color: BrandColors.ink),
+            decoration: InputDecoration(
+              suffixIcon: field.verified
+                  ? const Padding(
+                      padding: EdgeInsets.only(right: Spacing.md),
+                      child: _VerifiedPill(),
+                    )
+                  : null,
+              suffixIconConstraints: const BoxConstraints(),
+            ),
+          )
+        else
+          _ValueBox(field: field),
+        if (note != null) ...<Widget>[
+          const SizedBox(height: Spacing.sm),
+          Text(
+            note,
+            style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// A filled field that is not typed into: a locked value or a picker.
+class _ValueBox extends StatelessWidget {
+  const _ValueBox({required this.field});
+
+  final AccountField field;
+
+  @override
+  Widget build(BuildContext context) {
+    final VoidCallback? onTap = field.onTap;
+    final Widget row = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: ComponentSizes.fieldHeight),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.lg,
+          vertical: Spacing.md,
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: Text(
+                field.value,
+                style: AppTypography.fieldValue.copyWith(
+                  color: field.locked ? BrandColors.text : BrandColors.ink,
+                ),
+              ),
+            ),
+            if (field.verified) ...<Widget>[
+              const SizedBox(width: Spacing.sm),
+              const _VerifiedPill(),
+            ],
+            if (field.locked) ...<Widget>[
+              const SizedBox(width: Spacing.sm),
+              const TaytayIcon(
+                icon: TaytayIcons.lock,
+                size: IconSizes.sm,
+                color: BrandColors.chevron,
+                semanticLabel: 'Cannot be changed here',
+              ),
+            ],
+            if (field.chevron) ...<Widget>[
+              const SizedBox(width: Spacing.sm),
+              const TaytayIcon(
+                icon: TaytayIcons.chevronDown,
+                size: IconSizes.sm,
+                color: BrandColors.chevron,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+    final BorderRadius corners = BorderRadius.circular(Radii.field);
     return Material(
-      type: MaterialType.transparency,
-      child: TextField(
-        controller: controller,
-        onChanged: field.onChanged,
-        maxLines: 1,
-        style: _fieldInk,
-        cursorColor: BrandColors.taytayBlue,
-        textAlignVertical: TextAlignVertical.center,
-        decoration: const InputDecoration(
-          isCollapsed: true,
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
+      color: BrandColors.softFill,
+      borderRadius: corners,
+      child: onTap == null
+          ? row
+          : InkWell(
+              borderRadius: corners,
+              onTap: onTap,
+              child: Semantics(button: true, child: row),
+            ),
+    );
+  }
+}
+
+class _VerifiedPill extends StatelessWidget {
+  const _VerifiedPill();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const ShapeDecoration(
+        color: BrandColors.green50,
+        shape: StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm,
+          vertical: Spacing.xxs,
+        ),
+        child: Text(
+          'Verified',
+          style: AppTypography.pill.copyWith(color: BrandColors.green),
         ),
       ),
     );
@@ -1420,13 +1403,13 @@ class _LegalNameNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: const Text(
-        'Legal name changes go through Resident Profile and re-verification.',
-        style: _legal,
-      ),
+    final Widget text = Text(
+      'Legal name changes go through Resident Profile and re-verification.',
+      style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
     );
+    final VoidCallback? onTap = this.onTap;
+    if (onTap == null) return text;
+    return InkWell(onTap: onTap, child: text);
   }
 }
 
@@ -1453,128 +1436,75 @@ class _SettingsBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.pagePad,
-        S8Space.gutter,
-        0,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.xl,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const _SectionLabel('Notifications'),
-          const SizedBox(height: S8Space.sectionGap),
-          _Card(
-            padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-            child: _InsetRows(
-              children: <Widget>[
-                for (final AccountToggle toggle in toggles)
-                  _ToggleRow(toggle: toggle),
-              ],
-            ),
-          ),
-          const SizedBox(height: S8Space.sectionBreak),
-          const _SectionLabel('App'),
-          const SizedBox(height: S8Space.sectionGap),
-          _Card(
-            padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-            child: _InsetRows(
-              children: <Widget>[
-                _LinkRow(
-                  title: 'Language',
-                  subtitle: 'English · Filipino',
-                  icon: TaytayIcons.languages,
-                  tile: BrandColors.chipBlueBg,
-                  color: BrandColors.taytayBlue,
-                  onTap: onLanguage,
-                ),
-                _LinkRow(
-                  title: 'Change password',
-                  subtitle: changePasswordSubtitle,
-                  icon: TaytayIcons.lock,
-                  tile: BrandColors.chipBlueBg,
-                  color: BrandColors.taytayBlue,
-                  onTap: onChangePassword,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: S8Space.sectionBreak),
-          const _SectionLabel('Privacy'),
-          const SizedBox(height: S8Space.sectionGap),
-          Expanded(
-            child: _Card(
-              padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-              child: _InsetRows(
-                children: <Widget>[
-                  _LinkRow(
-                    title: 'Privacy Notice',
-                    subtitle:
-                        'Data Privacy Act of 2012 · LGU-approved text pending',
-                    icon: TaytayIcons.fileText,
-                    tile: BrandColors.chipBlueBg,
-                    color: BrandColors.taytayBlue,
-                    onTap: onPrivacy,
-                  ),
-                  if (onConsents != null)
-                    _LinkRow(
-                      title: 'Your consents',
-                      subtitle: 'Review or withdraw what you agreed to',
-                      icon: TaytayIcons.shieldCheck,
-                      tile: BrandColors.chipBlueBg,
-                      color: BrandColors.taytayBlue,
-                      onTap: onConsents,
-                    ),
-                  if (showDataExport)
-                    _LinkRow(
-                      title: 'Request a copy of my data',
-                      subtitle: 'Right to access',
-                      icon: TaytayIcons.download,
-                      tile: BrandColors.chipBlueBg,
-                      color: BrandColors.taytayBlue,
-                      onTap: onExport,
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Hairline inset to the row content. 08-01 / 08-04 / 08-10, x = 99–1070.
-class _RowDivider extends StatelessWidget {
-  const _RowDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: S8Space.cardPad),
-      child: ColoredBox(
-        color: BrandColors.chipGreyBg,
-        child: SizedBox(height: S8Space.divider, width: double.infinity),
-      ),
-    );
-  }
-}
-
-/// Settings rows with the hairline inset by the page gutter.
-class _InsetRows extends StatelessWidget {
-  const _InsetRows({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
       children: <Widget>[
-        for (var i = 0; i < children.length; i++) ...<Widget>[
-          if (i > 0) const _RowDivider(),
-          children[i],
+        if (toggles.isNotEmpty) ...<Widget>[
+          const SettingsSectionTitle('Notifications'),
+          SettingsList(
+            children: <Widget>[
+              for (final AccountToggle toggle in toggles)
+                SettingsSwitchRow(
+                  title: toggle.title,
+                  detail: toggle.subtitle,
+                  icon: toggle.icon,
+                  iconFill: toggle.tile,
+                  iconInk: toggle.iconColor,
+                  value: toggle.on || toggle.locked,
+                  onChanged: toggle.locked ? null : toggle.onChanged,
+                ),
+            ],
+          ),
+          const SizedBox(height: Spacing.xl),
         ],
+        const SettingsSectionTitle('App'),
+        SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              title: 'Language',
+              detail: 'English · Filipino',
+              icon: TaytayIcons.languages,
+              onTap: onLanguage,
+            ),
+            SettingsRow(
+              title: 'Change password',
+              detail: changePasswordSubtitle,
+              icon: TaytayIcons.lock,
+              onTap: onChangePassword,
+            ),
+          ],
+        ),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('Privacy'),
+        SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              title: 'Privacy Notice',
+              detail: 'Data Privacy Act of 2012 · LGU-approved text pending',
+              icon: TaytayIcons.fileText,
+              onTap: onPrivacy,
+            ),
+            if (onConsents != null)
+              SettingsRow(
+                title: 'Your consents',
+                detail: 'Review or withdraw what you agreed to',
+                icon: TaytayIcons.shieldCheck,
+                onTap: onConsents,
+              ),
+            if (showDataExport)
+              SettingsRow(
+                title: 'Request a copy of my data',
+                detail: 'Right to access',
+                icon: TaytayIcons.download,
+                onTap: onExport,
+              ),
+          ],
+        ),
       ],
     );
   }
@@ -1593,93 +1523,83 @@ class _AboutBody extends StatelessWidget {
         .toList(growable: false);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.pagePad,
-        S8Space.gutter,
-        S8Space.pageBottom,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.xl,
       ),
       children: <Widget>[
-        _Card(
-          padding: const EdgeInsets.fromLTRB(
-            S8Space.cardPad,
-            S8Space.cardPad,
-            S8Space.cardPad,
-            S8Space.aboutPadBottom,
-          ),
+        SoftCard(
+          padding: const EdgeInsets.all(Spacing.xl),
           child: Column(
             children: <Widget>[
               const SizedBox(
-                width: S8Space.seal,
-                height: S8Space.seal,
+                width: ComponentSizes.tileLarge,
+                height: ComponentSizes.tileLarge,
                 child: Image(
                   image: AssetImage('assets/brand/taytay_seal.png'),
                   fit: BoxFit.contain,
                   semanticLabel: 'Seal of Taytay, Rizal',
                 ),
               ),
-              const SizedBox(height: S8Space.sealGap),
-              _CssLines(
-                text: 'Taytay Resident App',
-                style: _aboutTitle,
-                step: S8Space.line(14),
-                align: TextAlign.center,
+              const SizedBox(height: Spacing.md),
+              Text(
+                'Taytay Resident App',
+                textAlign: TextAlign.center,
+                style: AppTypography.sectionTitle.copyWith(
+                  fontWeight: AppTypography.strong,
+                  color: BrandColors.ink,
+                ),
               ),
-              const SizedBox(height: S8Space.titleGap),
-              const _CssLines(
-                text:
-                    'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
-                style: _version,
-                step: 13 * S8Space.versionLineHeight,
-                align: TextAlign.center,
+              const SizedBox(height: Spacing.xs),
+              Text(
+                'Municipality of Taytay, Rizal · version $appVersion',
+                textAlign: TextAlign.center,
+                style: AppTypography.listDetail.copyWith(
+                  color: BrandColors.muted,
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: S8Space.sectionBreak),
-        const _SectionLabel('Photo credits'),
-        const SizedBox(height: S8Space.sectionGap),
-        _Card(
-          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        if (welcome.isNotEmpty) ...<Widget>[
+          const SizedBox(height: Spacing.xl),
+          const SettingsSectionTitle('Photo credits'),
+          SettingsList(
             children: <Widget>[
-              for (var i = 0; i < welcome.length; i++) ...<Widget>[
-                if (i > 0) const _RowDivider(),
-                _CreditRow(credit: welcome[i]),
-              ],
+              for (final PhotoCredit credit in welcome)
+                _CreditRow(credit: credit),
             ],
           ),
+        ],
+        const SizedBox(height: Spacing.section),
+        SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              title: 'Office banner photos',
+              detail: PhotoCredits.officeBannerSummary,
+              icon: TaytayIcons.images,
+              onTap: onBanners,
+            ),
+          ],
         ),
-        const SizedBox(height: S8Space.cardGap),
-        _Card(
-          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-          child: _LinkRow(
-            title: 'Office banner photos',
-            subtitle: PhotoCredits.officeBannerSummary,
-            icon: TaytayIcons.images,
-            tile: BrandColors.chipBlueBg,
-            color: BrandColors.taytayBlue,
-            onTap: onBanners,
-          ),
-        ),
-        const SizedBox(height: S8Space.sectionBreak),
-        const _SectionLabel('About'),
-        const SizedBox(height: S8Space.sectionGap),
-        const _Card(
-          padding: EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-          child: _LinkRow(
-            title: 'Municipal seal',
-            subtitle: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
-            icon: TaytayIcons.shield,
-            tile: BrandColors.chipBlueBg,
-            color: BrandColors.taytayBlue,
-          ),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('About'),
+        const SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              title: 'Municipal seal',
+              detail: 'Described on taytayrizal.gov.ph/seal · Wikimedia',
+              icon: TaytayIcons.shield,
+            ),
+          ],
         ),
       ],
     );
   }
 }
 
+/// One credited photograph: its title, then the byline on its own line.
 class _CreditRow extends StatelessWidget {
   const _CreditRow({required this.credit});
 
@@ -1687,44 +1607,60 @@ class _CreditRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: S8Space.cardPad,
-        vertical: S8Space.rowPadY,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: <Widget>[
-          const _Tile(
-            icon: TaytayIcons.image,
-            tile: Color(0xFFEAF0FB),
-            color: BrandColors.taytayBlue,
-          ),
-          const SizedBox(width: S8Space.iconGap),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(credit.title, style: _creditTitle),
-                const SizedBox(height: S8Space.titleGap),
-                Text(credit.byline, style: _creditByline),
-              ],
-            ),
-          ),
-          const SizedBox(width: S8Space.iconGap),
-          const TaytayIcon(
-            icon: TaytayIcons.externalLink,
-            size: 16,
-            color: BrandColors.taytayBlue,
-            semanticLabel: '',
-            excludeSemantics: true,
-          ),
-        ],
+    return SettingsRow(
+      title: credit.title,
+      detail: credit.byline,
+      icon: TaytayIcons.image,
+      trailing: const TaytayIcon(
+        icon: TaytayIcons.externalLink,
+        size: IconSizes.sm - Spacing.xxs,
+        color: BrandColors.blue,
+        semanticLabel: '',
+        excludeSemantics: true,
       ),
     );
   }
 }
 
+/// RegTerms: the wave header over the white page and the notice summary.
+/// A published notice replaces the bundled draft, which only a
+/// non-production build shows; production without one says it is coming.
+class _PrivacyPage extends StatelessWidget {
+  const _PrivacyPage({required this.canvas});
+
+  final AccountCanvas canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? markdown = canvas.noticeMarkdown;
+    final Widget body;
+    if (canvas.loading) {
+      body = const LoadingSkeleton(
+        layout: SkeletonLayout.detail,
+        semanticLabel: 'Loading the privacy notice',
+      );
+    } else if (markdown != null) {
+      body = _PublishedNotice(markdown: markdown);
+    } else if (canvas.showBundledDraft) {
+      body = _PrivacyBody(
+        onExport: canvas.onExport,
+        showDataExport: canvas.showDataExport,
+      );
+    } else {
+      body = const _NoticePending();
+    }
+    return AuthFormPage(
+      title: canvas.title,
+      onBack: canvas.onBack,
+      child: body,
+    );
+  }
+}
+
+const String _noticeSource = 'Republic Act No. 10173, Data Privacy Act of 2012';
+
+/// The bundled draft, marked as one, with the data-export button when the
+/// API offers it.
 class _PrivacyBody extends StatelessWidget {
   const _PrivacyBody({this.onExport, this.showDataExport = true});
 
@@ -1733,74 +1669,54 @@ class _PrivacyBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.noticeInset,
-        S8Space.gutter,
-        S8Space.pageBottom,
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _DraftBanner(),
-              SizedBox(height: S8Space.draftGap),
-              Text('Privacy Notice', style: _noticeTitle),
-              SizedBox(height: S8Space.titleGap),
-              Text(
-                'Republic Act No. 10173, Data Privacy Act of 2012',
-                style: _meta,
-              ),
-              SizedBox(height: S8Space.cardGap),
-              _Card(
-                padding: EdgeInsets.all(S8Space.cardPad),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    _NoticeBlock(
-                      title: 'What we collect',
-                      body:
-                          'Name, contact details, address, valid ID and selfie, '
-                          'and messages you send to offices.',
-                    ),
-                    SizedBox(height: S8Space.blockGap),
-                    _NoticeBlock(
-                      title: 'Why',
-                      body:
-                          'To verify that you are a Taytay resident and to '
-                          'deliver the services you request.',
-                    ),
-                    SizedBox(height: S8Space.blockGap),
-                    _NoticeBlock(
-                      title: 'Who can see it',
-                      body:
-                          'Authorised LGU staff of the office you deal with. '
-                          'Not sold or shared for marketing.',
-                    ),
-                    SizedBox(height: S8Space.blockGap),
-                    _NoticeBlock(
-                      title: 'Your rights',
-                      body:
-                          'Access, correction, objection and erasure. Contact '
-                          'the LGU Data Protection Officer ',
-                      trailing: SampleTag(lineHeight: S8Space.bodyLineHeight),
-                      suffix: '.',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+        const NoticePanel(
+          title: 'Privacy Notice',
+          subtitle: _noticeSource,
+          icon: TaytayIcons.shieldCheck,
+          badge: DraftPill('DRAFT · LGU-approved text to be inserted'),
+          points: <NoticePoint>[
+            NoticePoint(
+              title: 'What we collect',
+              body:
+                  'Name, contact details, address, valid ID and selfie, and '
+                  'messages you send to offices.',
+            ),
+            NoticePoint(
+              title: 'Why',
+              body:
+                  'To verify that you are a Taytay resident and to deliver '
+                  'the services you request.',
+            ),
+            NoticePoint(
+              title: 'Who can see it',
+              body:
+                  'Authorised LGU staff of the office you deal with. Not sold '
+                  'or shared for marketing.',
+            ),
+            NoticePoint(
+              title: 'Your rights',
+              body:
+                  'Access, correction, objection and erasure. Contact the LGU '
+                  'Data Protection Officer',
+              trailing: SampleTag(),
+              suffix: '.',
+            ),
+          ],
         ),
         if (showDataExport) ...<Widget>[
-          const SizedBox(height: S8Space.cardGap),
-          _OutlineButton(
-            label: 'Request a copy of my data',
-            icon: TaytayIcons.download,
-            onTap: onExport,
+          const SizedBox(height: Spacing.lg),
+          FilledButton.tonalIcon(
+            onPressed: onExport,
+            icon: const TaytayIcon(
+              icon: TaytayIcons.download,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+            ),
+            label: const Text('Request a copy of my data'),
           ),
         ],
       ],
@@ -1808,6 +1724,7 @@ class _PrivacyBody extends StatelessWidget {
   }
 }
 
+/// The notice the LGU published (`body_markdown`), drawn line by line.
 class _PublishedNotice extends StatelessWidget {
   const _PublishedNotice({required this.markdown});
 
@@ -1816,112 +1733,66 @@ class _PublishedNotice extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<NoticeLine> lines = parseNoticeMarkdown(markdown);
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.pagePad,
-        S8Space.gutter,
-        S8Space.pageBottom,
-      ),
-      children: <Widget>[
-        const Text('Privacy Notice', style: _noticeTitle),
-        const SizedBox(height: S8Space.titleGap),
-        const Text(
-          'Republic Act No. 10173, Data Privacy Act of 2012',
-          style: _meta,
-        ),
-        const SizedBox(height: S8Space.cardGap),
-        _Card(
-          padding: const EdgeInsets.fromLTRB(
-            S8Space.cardPad,
-            S8Space.cardPad,
-            S8Space.cardPad,
-            S8Space.cardPad,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              for (final NoticeLine line in lines) ...<Widget>[
-                Text.rich(
+    final TextStyle body = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.text,
+      height: 1.55,
+    );
+    final TextStyle heading = AppTypography.listTitle.copyWith(
+      fontWeight: AppTypography.strong,
+      color: BrandColors.ink,
+    );
+    return NoticePanel(
+      title: 'Privacy Notice',
+      subtitle: _noticeSource,
+      icon: TaytayIcons.shieldCheck,
+      footer: SoftCard(
+        radius: Radii.lg,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            for (var i = 0; i < lines.length; i++) ...<Widget>[
+              if (i > 0)
+                SizedBox(height: lines[i].heading ? Spacing.md : Spacing.sm),
+              Semantics(
+                header: lines[i].heading,
+                child: Text.rich(
                   TextSpan(
                     children: <InlineSpan>[
-                      if (line.bullet)
-                        const TextSpan(text: '• ', style: _noticeBody),
-                      for (final NoticeRun run in line.runs)
+                      if (lines[i].bullet) TextSpan(text: '• ', style: body),
+                      for (final NoticeRun run in lines[i].runs)
                         TextSpan(
                           text: run.text,
-                          style: line.heading
-                              ? _rowTitle
-                              : _noticeBody.copyWith(
+                          style: lines[i].heading
+                              ? heading
+                              : body.copyWith(
                                   fontWeight: run.strong
-                                      ? FontWeight.w700
-                                      : _noticeBody.fontWeight,
+                                      ? AppTypography.strong
+                                      : null,
                                 ),
                         ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 8),
-              ],
+              ),
             ],
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }
 
-class _NoticeBlock extends StatelessWidget {
-  const _NoticeBlock({
-    required this.title,
-    required this.body,
-    this.trailing,
-    this.suffix = '',
-  });
-
-  final String title;
-  final String body;
-
-  /// The design draws this at the end of the last line of [body].
-  final Widget? trailing;
-
-  /// Text after [trailing]. The SAMPLE chip is followed by a period.
-  final String suffix;
+class _NoticePending extends StatelessWidget {
+  const _NoticePending();
 
   @override
   Widget build(BuildContext context) {
-    final Widget? trailing = this.trailing;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SizedBox(
-          height: S8Space.line(14),
-          width: double.infinity,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: Text(title, style: _rowTitle),
-          ),
-        ),
-        const SizedBox(height: S8Space.noticeGap),
-        if (trailing == null)
-          _CssLines(
-            text: body,
-            style: _noticeBody,
-            step: 13 * S8Space.bodyLineHeight,
-          )
-        else
-          _FlowLines(
-            style: _noticeBody,
-            step: 13 * S8Space.bodyLineHeight,
-            // SAMPLE inherits the 13 / 1.5 line, so that line is 22.5.
-            objectStep: 22.5,
-            pieces: <_FlowPiece>[
-              _FlowPiece.text(body),
-              _FlowPiece.box(width: _sampleChipWidth(), child: trailing),
-              if (suffix.isNotEmpty) _FlowPiece.text(suffix),
-            ],
-          ),
-      ],
+    return const NoticePanel(
+      title: 'Privacy Notice',
+      subtitle: _noticeSource,
+      icon: TaytayIcons.shieldCheck,
+      intro:
+          'The privacy notice will appear here when Taytay LGU publishes it.',
     );
   }
 }
@@ -1936,68 +1807,41 @@ class _BannersBody extends StatelessWidget {
     final List<PhotoCredit> rows = credits
         .where((PhotoCredit credit) => credit.officeBanner)
         .toList(growable: false);
+    final TextStyle intro = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.text,
+    );
     return ListView(
       padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.pagePad,
-        S8Space.gutter,
-        S8Space.pageBottom,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.xl,
       ),
       children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 2),
-          child: _BannerIntro(),
-        ),
-        const SizedBox(height: 10),
-        _Card(
-          padding: const EdgeInsets.symmetric(vertical: S8Space.cardInsetY),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              for (var i = 0; i < rows.length; i++) ...<Widget>[
-                if (i > 0) const _RowDivider(),
-                _BannerRow(credit: rows[i]),
-              ],
+        Text.rich(
+          TextSpan(
+            style: intro,
+            children: const <InlineSpan>[
+              TextSpan(text: 'All from Wikimedia Commons. Photos marked '),
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: _ReplaceMark(),
+              ),
+              TextSpan(
+                text:
+                    ' show people and are placeholders until Taytay LGU '
+                    'supplies its own consented photos.',
+              ),
             ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-class _BannerIntro extends StatelessWidget {
-  const _BannerIntro();
-
-  static const TextStyle _line = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 13,
-    fontWeight: FontWeight.w500,
-    height: S8Space.bodyLineHeight,
-    leadingDistribution: TextLeadingDistribution.even,
-    color: BrandColors.textSecondary,
-    decoration: TextDecoration.none,
-  );
-
-  @override
-  Widget build(BuildContext context) {
-    // The Replace chip inherits the 13 / 1.5 line, so its line is 22.5 and
-    // the other lines stay 19.5. A forced strut rounded every line to 20
-    // and the paragraph came out 60 instead of 61.5.
-    return _FlowLines(
-      style: _line,
-      step: 13 * S8Space.bodyLineHeight,
-      objectStep: 11 * S8Space.introLineHeight + 2 * S8Space.replacePadY,
-      pieces: <_FlowPiece>[
-        const _FlowPiece.text('All from Wikimedia Commons. Photos marked '),
-        _FlowPiece.box(
-          width: _replaceChipWidth(_introChip),
-          child: const _ReplaceMark(intro: true),
-        ),
-        const _FlowPiece.text(
-          ' show people and are placeholders until Taytay LGU '
-          'supplies its own consented photos.',
-        ),
+        const SizedBox(height: Spacing.section),
+        if (rows.isNotEmpty)
+          SettingsList(
+            children: <Widget>[
+              for (final PhotoCredit credit in rows) _BannerRow(credit: credit),
+            ],
+          ),
       ],
     );
   }
@@ -2010,38 +1854,42 @@ class _BannerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The chip centres on the whole row, office label included.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.cardPad,
-        S8Space.bannerPadY,
-        S8Space.cardPad,
-        S8Space.bannerPadY,
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.lg,
+        vertical: Spacing.section,
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                _Line(credit.offices.join(', '), _officeLabel),
-                _CssLines(
-                  text: credit.title,
-                  style: _bannerTitle,
-                  step: S8Space.line(13),
+                Text(
+                  credit.offices.join(', ').toUpperCase(),
+                  style: AppTypography.category.copyWith(
+                    color: BrandColors.blue,
+                  ),
                 ),
-                const SizedBox(height: S8Space.titleGap),
-                _CssLines(
-                  text: credit.byline,
-                  style: _creditByline,
-                  step: S8Space.line(12),
+                const SizedBox(height: Spacing.xxs),
+                Text(
+                  credit.title,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
+                ),
+                const SizedBox(height: Spacing.xxs),
+                Text(
+                  credit.byline,
+                  style: AppTypography.listDetail.copyWith(
+                    color: BrandColors.muted,
+                  ),
                 ),
               ],
             ),
           ),
           if (credit.replace) ...<Widget>[
-            const SizedBox(width: S8Space.iconGap),
+            const SizedBox(width: Spacing.md),
             const _ReplaceMark(),
           ],
         ],
@@ -2050,32 +1898,25 @@ class _BannerRow extends StatelessWidget {
   }
 }
 
-/// Amber Replace chip, sitting on the right of the title row.
+/// The gold "Replace" pill on a placeholder photo of people.
 class _ReplaceMark extends StatelessWidget {
-  const _ReplaceMark({this.intro = false});
-
-  /// The sentence chip is taller than the chip on a credit row.
-  final bool intro;
+  const _ReplaceMark();
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: BrandColors.chipAmberBg,
-        borderRadius: BorderRadius.all(Radius.circular(999)),
+      decoration: const ShapeDecoration(
+        color: BrandColors.gold50,
+        shape: StadiumBorder(),
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.replacePadX,
-          vertical: S8Space.replacePadY,
+          horizontal: Spacing.sm,
+          vertical: Spacing.xxs,
         ),
-        child: SizedBox(
-          height: intro ? 11 * S8Space.introLineHeight : S8Space.line(11),
-          child: Text(
-            'Replace',
-            style: intro ? _introChip : _day,
-            textHeightBehavior: S8Space.lineBox,
-          ),
+        child: Text(
+          'Replace',
+          style: AppTypography.pill.copyWith(color: BrandColors.goldInk),
         ),
       ),
     );
@@ -2367,149 +2208,6 @@ class _Bubble extends StatelessWidget {
   }
 }
 
-class _Card extends StatelessWidget {
-  const _Card({required this.child, this.padding = const EdgeInsets.all(16)});
-
-  final Widget child;
-  final EdgeInsets padding;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-        border: Border.fromBorderSide(
-          BorderSide(
-            color: BrandColors.cardLine,
-            strokeAlign: BorderSide.strokeAlignInside,
-          ),
-        ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Color(0x0D101828),
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-          BoxShadow(
-            color: Color(0x0A101828),
-            blurRadius: 10,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(padding: padding + const EdgeInsets.all(1), child: child),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.icon,
-    required this.tile,
-    required this.color,
-    this.size = S8Space.tile,
-  });
-
-  final IconData icon;
-  final Color tile;
-  final Color color;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: tile,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TaytayIcon(
-        icon: icon,
-        size: 18,
-        color: color,
-        semanticLabel: '',
-        excludeSemantics: true,
-      ),
-    );
-  }
-}
-
-class _Initials extends StatelessWidget {
-  const _Initials(this.initials);
-
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 56,
-      height: 56,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEAF0FB),
-        shape: BoxShape.circle,
-      ),
-      child: Text(
-        initials,
-        style: _initials,
-        strutStyle: S8Space.strut(18, weight: FontWeight.w800),
-        textHeightBehavior: S8Space.lineBox,
-      ),
-    );
-  }
-}
-
-class _Pill extends StatelessWidget {
-  const _Pill(this.label, {this.reflow = false});
-
-  final String label;
-
-  /// Only inside a bounded column: a flexible label needs a width to wrap in.
-  final bool reflow;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: BrandColors.chipGreenBg,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const TaytayIcon(
-            icon: TaytayIcons.badgeCheck,
-            size: 12,
-            color: BrandColors.success,
-            semanticLabel: '',
-            excludeSemantics: true,
-          ),
-          const SizedBox(width: Spacing.xs),
-          // Where the pill sits in a column of reflowed text, the label wraps
-          // in its own height rather than running past a small phone's edge.
-          if (reflow)
-            Flexible(child: Text(label, style: _badge))
-          else
-            // The line box grows with the resident's text size; at 1× it is
-            // the design's 11 × 1.2.
-            SizedBox(
-              height: MediaQuery.textScalerOf(context).scale(11) * 1.2,
-              child: Text(
-                label,
-                style: _badge,
-                textHeightBehavior: S8Space.lineBox,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
 class _Chip extends StatelessWidget {
   const _Chip(this.label);
 
@@ -2536,342 +2234,6 @@ class _Chip extends StatelessWidget {
   }
 }
 
-/// Inbox filters. All is a filled pill. Unread is a white pill with a border.
-class _AllFilter extends StatelessWidget {
-  const _AllFilter();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: <Widget>[
-        _FilterPill(label: 'All', selected: true),
-        SizedBox(width: S8Space.filterGapX),
-        _FilterPill(label: 'Unread'),
-      ],
-    );
-  }
-}
-
-class _FilterPill extends StatelessWidget {
-  const _FilterPill({required this.label, this.selected = false});
-
-  final String label;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    // Border-box: the 1 px stroke sits inside the 36 px height, and the 14 px
-    // padding is inside that stroke. All is then 44.59 and Unread 72.56.
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: selected ? BrandColors.taytayBlue : Colors.white,
-        borderRadius: const BorderRadius.all(Radius.circular(Radii.pill)),
-        border: Border.all(
-          color: selected ? BrandColors.taytayBlue : _chipBorder,
-          strokeAlign: BorderSide.strokeAlignInside,
-        ),
-      ),
-      child: SizedBox(
-        height: S8Space.filterHeight,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 15),
-          child: Center(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                height: S8Space.normal,
-                letterSpacing: 0,
-                leadingDistribution: TextLeadingDistribution.even,
-                color: selected ? Colors.white : _chipInk,
-                decoration: TextDecoration.none,
-              ),
-              strutStyle: S8Space.strut(12, weight: FontWeight.w700),
-              textHeightBehavior: S8Space.lineBox,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: BrandColors.taytayBlue,
-        borderRadius: BorderRadius.all(Radius.circular(999)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.dayPadX,
-          vertical: S8Space.dayPadY,
-        ),
-        child: SizedBox(
-          height: S8Space.line(11),
-          child: Text(
-            label,
-            style: _day.copyWith(color: Colors.white),
-            textHeightBehavior: S8Space.lineBox,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DraftBanner extends StatelessWidget {
-  const _DraftBanner();
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: BrandColors.chipAmberBg,
-        borderRadius: BorderRadius.all(Radius.circular(999)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.dayPadX,
-          vertical: S8Space.dayPadY,
-        ),
-        child: SizedBox(
-          height: S8Space.line(11),
-          child: const Text(
-            'DRAFT · LGU-approved text to be inserted',
-            style: _draft,
-            textHeightBehavior: S8Space.lineBox,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NoticePending extends StatelessWidget {
-  const _NoticePending();
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: const <Widget>[
-        Text('Privacy Notice', style: _noticeTitle),
-        SizedBox(height: 8),
-        Text(
-          'The privacy notice will appear here when Taytay LGU publishes it.',
-          style: _noticeBody,
-        ),
-      ],
-    );
-  }
-}
-
-class _PhotoNote extends StatelessWidget {
-  const _PhotoNote({required this.initials});
-
-  final String initials;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: Spacing.lg),
-      child: Column(
-        children: <Widget>[
-          SizedBox(
-            width: 80,
-            height: 80,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                Container(
-                  width: 80,
-                  height: 80,
-                  alignment: Alignment.center,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEAF0FB),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Text(
-                    initials,
-                    style: _photoInitials,
-                    strutStyle: S8Space.strut(24, weight: FontWeight.w800),
-                    textHeightBehavior: S8Space.lineBox,
-                  ),
-                ),
-                Positioned(
-                  right: -2,
-                  bottom: -2,
-                  child: Container(
-                    width: 30,
-                    height: 30,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: BrandColors.taytayBlue,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                    ),
-                    child: const TaytayIcon(
-                      icon: TaytayIcons.camera,
-                      size: 14,
-                      color: Colors.white,
-                      semanticLabel: 'Profile photo',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Profile photo · reviewed by LGU before it appears on your ID',
-            textAlign: TextAlign.center,
-            style: _photoNote,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OutlineButton extends StatelessWidget {
-  const _OutlineButton({required this.label, required this.icon, this.onTap});
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      label: label,
-      onTap: onTap,
-      child: Container(
-        height: S8Space.buttonHeight,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BrandColors.taytayBlue),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            TaytayIcon(
-              icon: icon,
-              size: 16,
-              color: BrandColors.taytayBlue,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                  color: BrandColors.taytayBlue,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// 08-06 empty state. The circle is 72, the title is 16 / normal, and the
-/// body is 13 / 1.5. Padding is 28 × 18 inside the page gutter.
-class _EmptyCopy extends StatelessWidget {
-  const _EmptyCopy({
-    required this.title,
-    required this.body,
-    required this.button,
-    this.buttonIcon,
-    this.note,
-    this.onButton,
-  });
-
-  final String title;
-  final String body;
-  final String button;
-  final IconData? buttonIcon;
-  final String? note;
-  final VoidCallback? onButton;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? note = this.note;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.emptyPadX,
-        S8Space.emptyPadY,
-        S8Space.emptyPadX,
-        S8Space.emptyPadY,
-      ),
-      child: Column(
-        children: <Widget>[
-          const _EmptyMark(),
-          const SizedBox(height: S8Space.emptyTitleGap),
-          _Line(title, _emptyTitle, align: Alignment.center),
-          const SizedBox(height: S8Space.emptyBodyGap),
-          _CssLines(
-            text: body,
-            style: _emptyBody,
-            step: 13 * S8Space.bodyLineHeight,
-            align: TextAlign.center,
-          ),
-          const SizedBox(height: S8Space.emptyButtonGap),
-          _PrimaryButton(label: button, icon: buttonIcon, onTap: onButton),
-          if (note != null) ...<Widget>[
-            const SizedBox(height: S8Space.emptyNoteGap),
-            _Line(note, _meta, align: Alignment.center),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyMark extends StatelessWidget {
-  const _EmptyMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: S8Space.emptyCircle,
-      height: S8Space.emptyCircle,
-      alignment: Alignment.center,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEAF0FB),
-        shape: BoxShape.circle,
-      ),
-      child: const TaytayIcon(
-        icon: TaytayIcons.inbox,
-        size: S8Space.emptyIcon,
-        color: BrandColors.taytayBlue,
-        semanticLabel: '',
-        excludeSemantics: true,
-      ),
-    );
-  }
-}
-
 class _ClosedLine extends StatelessWidget {
   const _ClosedLine();
 
@@ -2882,57 +2244,6 @@ class _ClosedLine extends StatelessWidget {
       child: Align(
         alignment: Alignment.centerLeft,
         child: Text('This conversation is closed.', style: _hint),
-      ),
-    );
-  }
-}
-
-class _ThreadMenu extends StatelessWidget {
-  const _ThreadMenu({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // 44 dp disc, 48 dp hit. The specimen header does not build this.
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: OverflowBox(
-        maxWidth: 48,
-        maxHeight: 48,
-        child: Semantics(
-          button: true,
-          label: 'More',
-          child: GestureDetector(
-            key: const Key('account-thread-menu'),
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Color(0x24FFFFFF),
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: TaytayIcon(
-                      icon: TaytayIcons.moreVertical,
-                      size: 20,
-                      color: Colors.white,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -3247,328 +2558,6 @@ class _ComposerSend extends StatelessWidget {
   }
 }
 
-class _FieldBox extends StatelessWidget {
-  const _FieldBox({required this.child, this.onTap});
-
-  final Widget child;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        height: S8Space.fieldHeight,
-        padding: const EdgeInsets.symmetric(horizontal: S8Space.fieldPadX),
-        alignment: Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFD6DCE8)),
-        ),
-        child: child,
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.label, this.icon, this.onTap});
-
-  final String label;
-  final IconData? icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final IconData? icon = this.icon;
-    return _Hit(
-      label: label,
-      onTap: onTap,
-      child: Container(
-        height: S8Space.buttonHeight,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: BrandColors.taytayBlue,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (icon != null) ...<Widget>[
-              TaytayIcon(
-                icon: icon,
-                size: 16,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _LinkRow extends StatelessWidget {
-  const _LinkRow({
-    required this.title,
-    this.subtitle = '',
-    required this.icon,
-    required this.tile,
-    required this.color,
-    this.onTap,
-  });
-
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color tile;
-  final Color color;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      label: title,
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.cardPad,
-          vertical: S8Space.rowPadY,
-        ),
-        child: Row(
-          children: <Widget>[
-            _Tile(icon: icon, tile: tile, color: color),
-            const SizedBox(width: S8Space.iconGap),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(title, style: _rowTitle),
-                  if (subtitle.isNotEmpty) ...<Widget>[
-                    const SizedBox(height: S8Space.titleGap),
-                    Text(subtitle, style: _meta),
-                  ],
-                ],
-              ),
-            ),
-            const TaytayIcon(
-              icon: TaytayIcons.chevronRight,
-              size: 18,
-              color: BrandColors.chevron,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ToggleRow extends StatelessWidget {
-  const _ToggleRow({required this.toggle});
-
-  final AccountToggle toggle;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      label: toggle.title,
-      onTap: toggle.locked ? null : () => toggle.onChanged?.call(!toggle.on),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.cardPad,
-          vertical: S8Space.rowPadY,
-        ),
-        child: Row(
-          children: <Widget>[
-            _Tile(
-              icon: toggle.icon,
-              tile: toggle.tile,
-              color: toggle.iconColor,
-            ),
-            const SizedBox(width: S8Space.iconGap),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(toggle.title, style: _rowTitle),
-                  const SizedBox(height: S8Space.titleGap),
-                  Text(toggle.subtitle, style: _meta),
-                ],
-              ),
-            ),
-            _Switch(on: toggle.on, locked: toggle.locked),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Switch extends StatelessWidget {
-  const _Switch({required this.on, required this.locked});
-
-  final bool on;
-  final bool locked;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      toggled: on,
-      enabled: !locked,
-      child: Container(
-        width: 44,
-        height: 26,
-        padding: const EdgeInsets.all(3),
-        alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-        decoration: BoxDecoration(
-          color: on ? BrandColors.taytayBlue : const Color(0xFFD5DBE8),
-          borderRadius: BorderRadius.circular(999),
-        ),
-        child: Container(
-          width: 20,
-          height: 20,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            shape: BoxShape.circle,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: _section,
-      strutStyle: S8Space.strut(15, weight: FontWeight.w800),
-      textHeightBehavior: S8Space.lineBox,
-    );
-  }
-}
-
-class _Hit extends StatelessWidget {
-  const _Hit({required this.child, required this.label, this.onTap});
-
-  final Widget child;
-  final String label;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: onTap != null,
-      label: label,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48, minWidth: 48),
-          child: child,
-        ),
-      ),
-    );
-  }
-}
-
-const TextStyle _emptyTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 16,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _emptyBody = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: S8Space.bodyLineHeight,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _name = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 16,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _initials = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 18,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.taytayBlue,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _location = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: S8Space.bodyLineHeight,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _badge = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  height: 1.2,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.success,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _rowTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
 const TextStyle _meta = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
@@ -3578,22 +2567,6 @@ const TextStyle _meta = TextStyle(
   color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
-
-const TextStyle _label = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.fieldLabel,
-  decoration: TextDecoration.none,
-);
-
-/// Unselected filter ink. CSS `.chip` is `#33405C`.
-const Color _chipInk = Color(0xFF33405C);
-
-/// Unselected filter stroke. CSS `.chip` border is `#E1E6F0`.
-const Color _chipBorder = Color(0xFFE1E6F0);
 
 /// Thread timestamp. CSS `.tm` is 11 / 400 `#5F6880`.
 const Color _timeInk = Color(0xFF5F6880);
@@ -3609,28 +2582,6 @@ const TextStyle _day = TextStyle(
   decoration: TextDecoration.none,
 );
 
-const TextStyle _draft = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  letterSpacing: 0,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.warning,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _introChip = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  height: S8Space.introLineHeight,
-  letterSpacing: 0,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.warning,
-  decoration: TextDecoration.none,
-);
-
 const TextStyle _time = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 11,
@@ -3638,137 +2589,6 @@ const TextStyle _time = TextStyle(
   height: S8Space.normal,
   leadingDistribution: TextLeadingDistribution.even,
   color: _timeInk,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _section = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 15,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _aboutTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _version = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: S8Space.versionLineHeight,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _photoInitials = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 24,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.taytayBlue,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _photoNote = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _fieldInk = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w600,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.fieldInk,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _legal = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _creditTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _noticeBody = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w500,
-  height: S8Space.bodyLineHeight,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.sheetBody,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _creditByline = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _noticeTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 20,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  letterSpacing: -0.4,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _bannerTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _officeLabel = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.taytayBlue,
   decoration: TextDecoration.none,
 );
 
@@ -3801,11 +2621,6 @@ double _sampleChipWidth() {
         AppTypography.labelStrong.copyWith(letterSpacing: 0.6),
       ) +
       16;
-}
-
-/// Replace chip border box. Padding [S8Space.replacePadX], no border.
-double _replaceChipWidth(TextStyle style) {
-  return _spanWidth('Replace', style) + S8Space.replacePadX * 2;
 }
 
 /// 11 px `normal` SAMPLE chip, for a `vertical-align: middle` line.
@@ -3977,192 +2792,6 @@ class _SampleConversation extends StatelessWidget {
   }
 }
 
-/// One CSS line, in Chrome's device-pixel line box rather than Flutter's
-/// rounded strut.
-class _Line extends StatelessWidget {
-  const _Line(this.text, this.style, {this.align = Alignment.centerLeft});
-
-  final String text;
-  final TextStyle style;
-  final Alignment align;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: S8Space.line(style.fontSize ?? 14),
-      child: Align(
-        alignment: align,
-        child: Text(
-          text,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          textAlign: align == Alignment.center ? TextAlign.center : null,
-          style: style,
-          textHeightBehavior: S8Space.lineBox,
-        ),
-      ),
-    );
-  }
-}
-
-/// A text run or a fixed-width chip inside [_FlowLines].
-class _FlowPiece {
-  const _FlowPiece.text(this.text) : child = null, width = 0;
-
-  const _FlowPiece.box({required this.width, required this.child}) : text = '';
-
-  final String text;
-  final Widget? child;
-  final double width;
-}
-
-class _Run {
-  _Run.text(this.text) : child = null, width = 0;
-
-  _Run.box(this.child, this.width) : text = '';
-
-  final String text;
-  final Widget? child;
-  final double width;
-}
-
-/// Wraps [pieces] onto Chrome's line step.
-///
-/// A line that contains a chip uses [objectStep] (the chip's border box).
-/// Other lines use [step]. Flutter's strut would round both to a whole pixel.
-class _FlowLines extends StatelessWidget {
-  const _FlowLines({
-    required this.pieces,
-    required this.style,
-    required this.step,
-    this.objectStep,
-  });
-
-  final List<_FlowPiece> pieces;
-  final TextStyle style;
-  final double step;
-  final double? objectStep;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double maxWidth = constraints.maxWidth;
-        final List<List<_Run>> lines = _wrap(maxWidth);
-        var top = 0.0;
-        final List<Widget> children = <Widget>[];
-        for (final List<_Run> line in lines) {
-          final bool object = line.any((_Run run) => run.child != null);
-          final double height = object ? (objectStep ?? step) : step;
-          final StringBuffer words = StringBuffer();
-          final List<Widget> row = <Widget>[];
-          void flush() {
-            if (words.isEmpty) return;
-            row.add(
-              Text(
-                words.toString(),
-                style: style,
-                textHeightBehavior: S8Space.lineBox,
-              ),
-            );
-            words.clear();
-          }
-
-          for (final _Run run in line) {
-            final Widget? child = run.child;
-            if (child != null) {
-              flush();
-              // The reserved width is the Chrome border box. A test font is
-              // wider than Plus Jakarta, and an unconstrained chip then
-              // overflows the line.
-              row.add(SizedBox(width: run.width, child: child));
-            } else {
-              words.write(run.text);
-            }
-          }
-          flush();
-          children.add(
-            Positioned(
-              top: top,
-              left: 0,
-              right: 0,
-              height: height,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: row,
-              ),
-            ),
-          );
-          top += height;
-        }
-        return SizedBox(
-          width: maxWidth,
-          height: top,
-          child: Stack(clipBehavior: Clip.none, children: children),
-        );
-      },
-    );
-  }
-
-  List<List<_Run>> _wrap(double maxWidth) {
-    final List<_Run> tokens = <_Run>[];
-    for (final _FlowPiece piece in pieces) {
-      final Widget? child = piece.child;
-      if (child != null) {
-        tokens.add(_Run.box(child, piece.width));
-        continue;
-      }
-      for (final String part in piece.text.split(RegExp(r'(?<= )'))) {
-        if (part.isEmpty) continue;
-        tokens.add(_Run.text(part));
-      }
-    }
-    final List<List<_Run>> lines = <List<_Run>>[];
-    var line = <_Run>[];
-    var used = 0.0;
-    for (final _Run token in tokens) {
-      final bool box = token.child != null;
-      final String raw = box ? '' : token.text;
-      final double width = box ? token.width : _measure(raw);
-      if (line.isNotEmpty && used + width > maxWidth + 0.05) {
-        lines.add(line);
-        if (box) {
-          line = <_Run>[token];
-          used = width;
-        } else {
-          final String word = raw.trimLeft();
-          if (word.isEmpty) {
-            line = <_Run>[];
-            used = 0;
-            continue;
-          }
-          line = <_Run>[_Run.text(word)];
-          used = _measure(word);
-        }
-      } else {
-        if (!box && raw.trim().isEmpty && line.isEmpty) continue;
-        line.add(token);
-        used += width;
-      }
-    }
-    if (line.isNotEmpty) lines.add(line);
-    return lines;
-  }
-
-  double _measure(String text) {
-    if (text.isEmpty) return 0;
-    final TextPainter painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: TextScaler.noScaling,
-      textHeightBehavior: S8Space.lineBox,
-    )..layout();
-    final double width = painter.width;
-    painter.dispose();
-    return width;
-  }
-}
-
 /// Paints [text] on Chrome's line step.
 ///
 /// Flutter rounds a fractional strut to a whole logical pixel. The slot keeps
@@ -4172,15 +2801,13 @@ class _CssLines extends StatelessWidget {
     required this.text,
     required this.style,
     required this.step,
-    this.align = TextAlign.start,
-    this.maxLines,
   });
 
   final String text;
   final TextStyle style;
   final double step;
-  final TextAlign align;
-  final int? maxLines;
+  TextAlign get align => TextAlign.start;
+  int? get maxLines => null;
 
   @override
   Widget build(BuildContext context) {

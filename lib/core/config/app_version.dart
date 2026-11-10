@@ -12,3 +12,10 @@
 ///
 /// Compared against the server's published minimum by `SupportedVersion`.
 const String appVersion = '1.0.0';
+
+/// The release pipeline's build label, from `--dart-define=TAYTAY_APP_VERSION`.
+///
+/// Empty when the define is absent, and then not shown: an app that reports a
+/// version it does not have is worse than one that says nothing, because a
+/// support desk will act on it.
+const String kAppVersion = String.fromEnvironment('TAYTAY_APP_VERSION');

@@ -102,12 +102,15 @@ void main() {
     );
     expect(row, lessThan(tester.getTopLeft(find.text('Household')).dy));
     expect(find.text('Certificates and copies from offices'), findsOneWidget);
+    // Redesign P3c: a menu row now reads its title and its detail as one
+    // label ("Request documents, Certificates and copies from offices").
     expect(
       tester
           .getSize(
             find.byWidgetPredicate(
               (Widget widget) =>
-                  widget is Semantics && widget.properties.label == _row,
+                  widget is Semantics &&
+                  (widget.properties.label ?? '').startsWith('$_row, '),
             ),
           )
           .height,
@@ -127,9 +130,10 @@ void main() {
     expect(_overflows(tester), isEmpty);
   });
 
-  testWidgets('at 1× the sign-out card still fills what is left', (
-    tester,
-  ) async {
+  // Redesign P3c: the old 08-01 frame stretched the sign-out card to the foot
+  // of the page. Account.dc.html draws Sign out as its own one-row glass list
+  // under the menu, so the row keeps its own height (a full target) instead.
+  testWidgets('at 1× sign out is its own row under the menu', (tester) async {
     // A tall phone: the design's frame, with room left under the menu.
     await _boot(tester, size: const Size(430, 1400));
     expect(_overflows(tester), isEmpty);
@@ -138,9 +142,13 @@ void main() {
       (Widget widget) =>
           widget is Semantics && widget.properties.label == 'Sign out',
     );
-    // The card runs to the foot of the page rather than sitting at its own
-    // height with a gap beneath it.
-    expect(tester.getSize(signOut).height, greaterThan(200));
+    final double height = tester.getSize(signOut).height;
+    expect(height, greaterThanOrEqualTo(A11y.minTapTarget));
+    expect(height, lessThan(200));
+    expect(
+      tester.getTopLeft(signOut).dy,
+      greaterThan(tester.getBottomLeft(find.text('Photo credits & about')).dy),
+    );
   });
 
   // Text scaling is honoured up to 200% (Article 6). The smallest phone is the

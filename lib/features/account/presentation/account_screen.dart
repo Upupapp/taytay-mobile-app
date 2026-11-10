@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
@@ -10,7 +12,10 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/failure_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/soft_page.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 
 /// Account and preferences for a signed-in resident.
 ///
@@ -79,106 +84,98 @@ class _AccountScreenState extends State<AccountScreen> {
   @override
   Widget build(BuildContext context) {
     final dependencies = AppDependencies.of(context);
-    final theme = Theme.of(context);
     final session = dependencies.session.state;
     final resident = session.residentOrNull;
     final healthFailure = _healthFailure;
+    final healthSummary = _healthSummary;
+    final TextStyle lede = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.muted,
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Account'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(Spacing.lg),
-        children: <Widget>[
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    resident?.displayName ?? 'Resident',
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: Spacing.xs),
-                  Text(
-                    switch (session.accessLevel) {
-                      AccessLevel.guest => 'Not signed in',
-                      AccessLevel.unverified => 'Account not yet verified',
-                      AccessLevel.verified => 'Verified resident',
-                    },
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
+    return SoftPage(
+      title: 'Account',
+      offlineBanner: true,
+      children: <Widget>[
+        SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              icon: TaytayIcons.circleUser,
+              tone: session.accessLevel == AccessLevel.verified
+                  ? SettingsTone.green
+                  : SettingsTone.blue,
+              title: resident?.displayName ?? 'Resident',
+              detail: switch (session.accessLevel) {
+                AccessLevel.guest => 'Not signed in',
+                AccessLevel.unverified => 'Account not yet verified',
+                AccessLevel.verified => 'Verified resident',
+              },
             ),
-          ),
-          const SizedBox(height: Spacing.xl),
-          Text('Preferences', style: theme.textTheme.titleMedium),
-          SwitchListTile(
-            value: _hapticsEnabled,
-            onChanged: (enabled) {
-              AppHaptics.setEnabled(enabled);
-              setState(() => _hapticsEnabled = enabled);
-            },
-            title: const Text('Vibration feedback'),
-            subtitle: const Text(
-              'Short vibrations when an action succeeds or fails.',
+          ],
+        ),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('Preferences'),
+        SettingsList(
+          children: <Widget>[
+            SettingsSwitchRow(
+              value: _hapticsEnabled,
+              onChanged: (enabled) {
+                AppHaptics.setEnabled(enabled);
+                setState(() => _hapticsEnabled = enabled);
+              },
+              icon: TaytayIcons.smartphone,
+              title: 'Vibration feedback',
+              detail: 'Short vibrations when an action succeeds or fails.',
             ),
-          ),
-          const Divider(),
-          const SizedBox(height: Spacing.lg),
-          Text('Security', style: theme.textTheme.titleMedium),
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: const Icon(Icons.shield_outlined),
-            title: const Text('Sign-in and security'),
-            subtitle: const Text(
-              'App lock, signing out, and where you are signed in.',
+          ],
+        ),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('Security'),
+        SettingsList(
+          children: <Widget>[
+            SettingsRow(
+              icon: TaytayIcons.shield,
+              title: 'Sign-in and security',
+              detail: 'App lock, signing out, and where you are signed in.',
+              onTap: () => context.goNamed(AppRoute.security.routeName),
             ),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.goNamed(AppRoute.security.routeName),
-          ),
-          const Divider(),
-          const SizedBox(height: Spacing.lg),
-          Text('Service status', style: theme.textTheme.titleMedium),
-          const SizedBox(height: Spacing.sm),
-          Text(
-            'Check whether Taytay LGU services are reachable. This helps tell a '
-            'service outage from a connection problem.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
+          ],
+        ),
+        const SizedBox(height: Spacing.xl),
+        const SettingsSectionTitle('Service status'),
+        Text(
+          'Check whether Taytay LGU services are reachable. This helps tell a '
+          'service outage from a connection problem.',
+          style: lede,
+        ),
+        const SizedBox(height: Spacing.md),
+        FilledButton.tonal(
+          onPressed: _checkingHealth ? null : _checkHealth,
+          child: Text(_checkingHealth ? 'Checking…' : 'Check service status'),
+        ),
+        if (healthSummary != null) ...<Widget>[
           const SizedBox(height: Spacing.md),
-          OutlinedButton(
-            onPressed: _checkingHealth ? null : _checkHealth,
-            child: Text(_checkingHealth ? 'Checking…' : 'Check service status'),
-          ),
-          if (_healthSummary != null)
-            Padding(
-              padding: const EdgeInsets.only(top: Spacing.md),
-              child: Text(_healthSummary!, style: theme.textTheme.bodyMedium),
-            ),
-          if (healthFailure != null)
-            FailureView(
-              failure: healthFailure,
-              environment: dependencies.config.environment,
-              onRetry: _checkHealth,
-            ),
-          const SizedBox(height: Spacing.xxl),
-          OutlinedButton.icon(
-            onPressed: _signOut,
-            icon: const Icon(Icons.logout),
-            label: const Text('Sign out'),
+          SoftNote(tone: NoteTone.success, message: healthSummary),
+        ],
+        if (healthFailure != null) ...<Widget>[
+          const SizedBox(height: Spacing.md),
+          FailureView(
+            failure: healthFailure,
+            environment: dependencies.config.environment,
+            onRetry: _checkHealth,
           ),
         ],
-      ),
+        const SizedBox(height: Spacing.xxl),
+        OutlinedButton.icon(
+          onPressed: _signOut,
+          icon: const TaytayIcon(
+            icon: TaytayIcons.logOut,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm,
+          ),
+          label: const Text('Sign out'),
+        ),
+      ],
     );
   }
 }

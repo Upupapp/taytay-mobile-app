@@ -117,6 +117,12 @@ abstract final class BrandColors {
   /// Lede copy on the blue gradient. CSS `.lede`, `.wtitle p`.
   static const Color onHeaderLede = Color(0xFFD5DDF2);
 
+  /// "Verified" on the blue gradient. CSS `.vt`.
+  static const Color onHeaderSuccess = Color(0xFF9BE3B4);
+
+  /// The verified tick on the header avatar. CSS `.vb`.
+  static const Color successBright = Color(0xFF2EA05A);
+
   /// Error field fill. CSS `.inp.err`.
   static const Color errorFill = Color(0xFFFFF5F5);
 
@@ -364,6 +370,27 @@ abstract final class ComponentSizes {
 
   /// Minimum list row height (CSS `.li`).
   static const double listRow = 64;
+
+  /// The soft icon square that leads a settings row (CSS `.ic`, radius 12).
+  static const double listIcon = 40;
+
+  /// The red count on a row (CSS `.cnt`).
+  static const double countBadge = 22;
+
+  /// The thin completion bar under a row (CSS `.prog`).
+  static const double progressBar = 6;
+
+  /// The resident's avatar on the My Account header (CSS `.prof .av`).
+  static const double profileAvatar = 60;
+
+  /// The verified tick on that avatar (CSS `.vb`).
+  static const double profileBadge = 22;
+
+  /// The gold "My Taytay ID" button on the My Account header (CSS `.idbtn`).
+  static const double headerButton = 50;
+
+  /// Chat bubbles stop at this share of the row (CSS `.msg` max-width 80%).
+  static const double bubbleWidthFactor = 0.8;
 
   /// Bottom navigation bar, without the safe-area inset.
   static const double navigationBar = 80;

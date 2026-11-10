@@ -10,12 +10,12 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/code_exchange.dart';
 import 'auth_bits.dart';
-import 'auth_form_page.dart';
 
 /// Which `02-02b` frame to paint. [sample] is the design's error state.
 enum ResetCodeFixture { live, sample }

@@ -39,18 +39,19 @@ void main() {
     expect(source.contains('Transform.translate'), isFalse);
   });
 
+  // Redesign P3c: the line used to read a fixed "version 0.1 (design
+  // mockup)", a version this app does not have. It now names the build's own
+  // `appVersion`, which app_version_test keeps equal to pubspec.yaml.
   test('the about version is one sentence with no hard break', () {
     final String source = File(
       'lib/features/account/presentation/account_canvas.dart',
     ).readAsStringSync();
     expect(
-      source.contains(
-        'Municipality of Taytay, Rizal · version 0.1 (design mockup)',
-      ),
+      source.contains(r"'Municipality of Taytay, Rizal · version $appVersion'"),
       isTrue,
     );
-    expect(source.contains('design\n'), isFalse);
-    expect(source.contains(r"design '"), isFalse);
+    expect(source.contains('design mockup'), isFalse);
+    expect(source.contains(r"Rizal '"), isFalse);
   });
 
   test(

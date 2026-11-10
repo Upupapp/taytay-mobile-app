@@ -1,0 +1,568 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:taytay_resident/app/app_dependencies.dart';
+import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/core/design/taytay_icons.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
+import 'package:taytay_resident/core/session/local_authenticator.dart';
+import 'package:taytay_resident/core/session/session_state.dart';
+import 'package:taytay_resident/core/session/session_store.dart';
+import 'package:taytay_resident/core/startup/launch_controller.dart';
+import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
+import 'package:taytay_resident/features/account/presentation/account_screen.dart';
+import 'package:taytay_resident/features/account/presentation/security_screen.dart';
+import 'package:taytay_resident/features/profile/presentation/contact_details_screen.dart';
+import 'package:taytay_resident/features/profile/presentation/privacy_screen.dart';
+import 'package:taytay_resident/features/profile/presentation/profile_screen.dart';
+import 'package:taytay_resident/features/settings/presentation/privacy_controls_screen.dart';
+import 'package:taytay_resident/features/settings/presentation/settings_screen.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
+import 'package:taytay_resident/shared/widgets/blue_header.dart';
+import 'package:taytay_resident/shared/widgets/notice_panel.dart';
+import 'package:taytay_resident/shared/widgets/settings_list.dart';
+import 'package:taytay_resident/shared/widgets/surface_cards.dart';
+import 'package:taytay_resident/shared/widgets/wave_header.dart';
+
+import '../support/layout_matrix.dart';
+
+/// Redesign P3c: My Account, profile and settings at 360 / 375 / 430 dp and
+/// 100% / 200% text, plus the content rules the restyle must keep. The
+/// Account boxes here replace the retired "08 DOM boxes" test.
+void main() {
+  group('account canvas frames', () {
+    final Map<String, AccountCanvas Function()> frames =
+        <String, AccountCanvas Function()>{
+          'home': () => AccountCanvas(
+            frame: AccountFrame.home,
+            name: 'Resident Sample With A Long Name',
+            initials: 'RS',
+            location: 'Brgy. Sample, Taytay, Rizal',
+            menu: AccountSpecimen.homeMenu,
+            onDigitalId: () {},
+            onSignOut: () {},
+          ),
+          'home loading': () =>
+              const AccountCanvas(frame: AccountFrame.home, loading: true),
+          'inbox': () => const AccountCanvas(
+            frame: AccountFrame.inbox,
+            title: 'Messages',
+            showBack: true,
+            inbox: AccountSpecimen.inbox,
+            inboxMoreMessage: 'More messages did not load.',
+            onInboxMoreRetry: _noop,
+          ),
+          'inbox empty': () => const AccountCanvas(
+            frame: AccountFrame.inboxEmpty,
+            title: 'Messages',
+            showBack: true,
+          ),
+          'inbox error': () => const AccountCanvas(
+            frame: AccountFrame.inboxError,
+            title: 'Messages',
+            showBack: true,
+          ),
+          'inbox loading': () => const AccountCanvas(
+            frame: AccountFrame.inbox,
+            title: 'Messages',
+            showBack: true,
+            loading: true,
+          ),
+          'edit profile': () => const AccountCanvas(
+            frame: AccountFrame.editProfile,
+            title: 'Edit profile',
+            showBack: true,
+            showBell: false,
+            initials: 'RS',
+            showLegalNameNote: false,
+            fields: <AccountField>[
+              AccountField(
+                label: 'Name',
+                value: 'Resident Sample With A Long Name',
+                locked: true,
+                note: 'Your name was checked against your ID.',
+              ),
+              AccountField(label: 'Barangay', value: 'Sample', chevron: true),
+            ],
+          ),
+          'settings': () => const AccountCanvas(
+            frame: AccountFrame.settings,
+            title: 'Settings & privacy',
+            showBack: true,
+            showBell: false,
+            toggles: AccountSpecimen.toggles,
+            onConsents: _noop,
+          ),
+          'about': () => const AccountCanvas(
+            frame: AccountFrame.about,
+            title: 'Photo credits & about',
+            showBack: true,
+            showBell: false,
+          ),
+          'banners': () => const AccountCanvas(
+            frame: AccountFrame.banners,
+            title: 'Office banner photos',
+            showBack: true,
+            showBell: false,
+          ),
+          'privacy draft': () => const AccountCanvas(
+            frame: AccountFrame.privacy,
+            title: 'Privacy Notice',
+            showBack: true,
+            showBundledDraft: true,
+          ),
+          'privacy published': () => const AccountCanvas(
+            frame: AccountFrame.privacy,
+            title: 'Privacy Notice',
+            showBack: true,
+            noticeMarkdown:
+                '## What we collect\n\n**Name** and address.\n\n- One',
+          ),
+          'privacy pending': () => const AccountCanvas(
+            frame: AccountFrame.privacy,
+            title: 'Privacy Notice',
+            showBack: true,
+          ),
+        };
+    for (final MapEntry<String, AccountCanvas Function()> frame
+        in frames.entries) {
+      testWidgets('${frame.key} lays out cleanly', (tester) async {
+        await expectCleanLayouts(tester, frame.value, scrollable: false);
+      });
+    }
+
+    testWidgets('home is the glass tab under the blue header', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          AccountCanvas(
+            frame: AccountFrame.home,
+            name: 'Resident Sample',
+            initials: 'RS',
+            location: 'Brgy. Sample, Taytay, Rizal',
+            menu: AccountSpecimen.homeMenu,
+            onDigitalId: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(GlassBackground), findsOneWidget);
+      expect(find.byType(GlassOverlap), findsOneWidget);
+      expect(find.byType(BlueHeader), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(SettingsList),
+          matching: find.byType(GlassCard),
+        ),
+        findsWidgets,
+      );
+      expect(find.text('My Taytay ID'), findsOneWidget);
+      expect(find.text('Resident Sample'), findsOneWidget);
+    });
+
+    testWidgets('Account boxes follow Account.dc.html', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        layoutHost(
+          AccountCanvas(
+            frame: AccountFrame.home,
+            name: 'Resident Sample',
+            initials: 'RS',
+            location: 'Brgy. Sample, Taytay, Rizal',
+            menu: AccountSpecimen.homeMenu,
+            onDigitalId: () {},
+            onSignOut: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      // `.li`: at least 64 tall. `.ic`: 40 square.
+      for (final Element row in find.byType(SettingsRow).evaluate()) {
+        expect(row.size!.height, greaterThanOrEqualTo(ComponentSizes.listRow));
+      }
+      expect(
+        tester.getSize(find.byType(SettingsIcon).first),
+        const Size(ComponentSizes.listIcon, ComponentSizes.listIcon),
+      );
+      // `.idbtn`: at least 50 tall, the width of the header.
+      final Finder id = find.byWidgetPredicate(
+        (Widget widget) =>
+            widget is Semantics && widget.properties.label == 'My Taytay ID',
+      );
+      expect(
+        tester.getSize(id).height,
+        greaterThanOrEqualTo(ComponentSizes.headerButton),
+      );
+      expect(tester.getSize(id).width, 390 - 2 * Spacing.lg);
+      // `.prof .av`: a 60 px disc.
+      expect(
+        tester.getSize(find.text('RS')).height,
+        lessThan(ComponentSizes.profileAvatar),
+      );
+    });
+
+    testWidgets('the defaults carry no specimen name or sample tag', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        layoutHost(
+          const AccountCanvas(frame: AccountFrame.home),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.textContaining('Juana'), findsNothing);
+      expect(find.text('JD'), findsNothing);
+      expect(find.text('SAMPLE'), findsNothing);
+      expect(find.text('Sign out'), findsOneWidget);
+    });
+
+    testWidgets('edit profile is the RegDetails form', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          const AccountCanvas(
+            frame: AccountFrame.editProfile,
+            title: 'Edit profile',
+            showBack: true,
+            fields: <AccountField>[
+              AccountField(label: 'Mobile number', value: ''),
+            ],
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(WaveHeader), findsOneWidget);
+      expect(find.byType(BlueHeader), findsNothing);
+      expect(find.text('Save changes'), findsOneWidget);
+    });
+
+    testWidgets('the privacy notice is the RegTerms notice', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          const AccountCanvas(
+            frame: AccountFrame.privacy,
+            title: 'Privacy Notice',
+            showBack: true,
+            showBundledDraft: true,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(WaveHeader), findsOneWidget);
+      expect(find.byType(NoticePanel), findsOneWidget);
+      expect(find.textContaining('DRAFT'), findsOneWidget);
+    });
+  });
+
+  group('screens', () {
+    testWidgets('settings fits every phone, guest and signed in', (
+      tester,
+    ) async {
+      for (final AccessLevel level in <AccessLevel>[
+        AccessLevel.guest,
+        AccessLevel.verified,
+      ]) {
+        final AppDependencies dependencies = await _dependencies(level);
+        await _expectCleanScreen(
+          tester,
+          dependencies,
+          () => const SettingsScreen(),
+        );
+      }
+    });
+
+    testWidgets('account, security and help fit every phone', (tester) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.verified,
+      );
+      for (final Widget Function() screen in <Widget Function()>[
+        () => const AccountScreen(),
+        () => const SecurityScreen(),
+        () => const HelpScreen(),
+        () => const PrivacyControlsScreen(),
+      ]) {
+        await _expectCleanScreen(tester, dependencies, screen);
+      }
+    });
+
+    testWidgets('profile fits every phone, guest and unverified', (
+      tester,
+    ) async {
+      for (final AccessLevel level in <AccessLevel>[
+        AccessLevel.guest,
+        AccessLevel.unverified,
+      ]) {
+        final AppDependencies dependencies = await _dependencies(level);
+        await _expectCleanScreen(
+          tester,
+          dependencies,
+          () => const ProfileScreen(),
+        );
+        await _expectCleanScreen(
+          tester,
+          dependencies,
+          () => const ProfileScreen(showBack: true),
+        );
+      }
+    });
+
+    testWidgets('contact details and the privacy page fit every phone', (
+      tester,
+    ) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.unverified,
+      );
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const ContactDetailsScreen(),
+      );
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const PrivacyScreen(),
+      );
+    });
+
+    testWidgets('the unverified account tab is glass under the blue header', (
+      tester,
+    ) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.unverified,
+      );
+      await tester.pumpWidget(_host(dependencies, const ProfileScreen()));
+      await tester.pump();
+      expect(find.byType(GlassBackground), findsOneWidget);
+      expect(find.byType(BlueHeader), findsOneWidget);
+      expect(find.byKey(profileScreenKey), findsOneWidget);
+      expect(find.text('Not yet verified'), findsOneWidget);
+      expect(find.byIcon(TaytayIcons.hourglass), findsOneWidget);
+    });
+  });
+
+  group('shared list widgets', () {
+    testWidgets('a row reads its count and keeps a 48 dp target', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        layoutHost(
+          SettingsList(
+            children: <Widget>[
+              SettingsRow(
+                icon: TaytayIcons.messageSquare,
+                title: 'Messages',
+                detail: 'From the API',
+                badgeCount: 2,
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      );
+      final Finder row = find.bySemanticsLabel('Messages, From the API, 2 new');
+      expect(row, findsOneWidget);
+      expect(
+        tester.getSize(find.byType(SettingsRow)).height,
+        greaterThanOrEqualTo(A11y.minTapTarget),
+      );
+      expect(find.text('2'), findsOneWidget);
+    });
+
+    testWidgets('a switch row toggles through the whole row', (tester) async {
+      bool value = false;
+      await tester.pumpWidget(
+        layoutHost(
+          StatefulBuilder(
+            builder: (context, setState) => SettingsList(
+              children: <Widget>[
+                SettingsSwitchRow(
+                  icon: TaytayIcons.bell,
+                  title: 'Alerts',
+                  value: value,
+                  onChanged: (bool next) => setState(() => value = next),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Alerts'));
+      await tester.pump();
+      expect(value, isTrue);
+    });
+
+    testWidgets('list widgets fit every phone', (tester) async {
+      await expectCleanLayouts(
+        tester,
+        () => Padding(
+          padding: const EdgeInsets.all(Spacing.lg),
+          child: Column(
+            children: <Widget>[
+              SettingsList(
+                children: <Widget>[
+                  SettingsRow(
+                    icon: TaytayIcons.idCard,
+                    title: 'A row title long enough to wrap at large text',
+                    detail: 'A detail line that also wraps when text is large',
+                    progress: 0.5,
+                    badgeCount: 12,
+                    onTap: () {},
+                  ),
+                  SettingsSwitchRow(
+                    icon: TaytayIcons.bell,
+                    title: 'A switch row with a long title',
+                    detail: 'And a detail',
+                    value: true,
+                    onChanged: (_) {},
+                  ),
+                ],
+              ),
+              const SizedBox(height: Spacing.lg),
+              const NoticePanel(
+                title: 'Notice title that runs long',
+                subtitle: 'Source line',
+                icon: TaytayIcons.shieldCheck,
+                badge: DraftPill('DRAFT · text to be inserted'),
+                intro: 'Intro paragraph.',
+                points: <NoticePoint>[
+                  NoticePoint(title: 'Point', body: 'Body text.'),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  });
+
+  test('restyled screens use tokens: no raw colours, sizes or shadows', () {
+    final List<String> offenders = <String>[];
+    for (final String path in _restyled) {
+      final List<String> lines = File(path).readAsLinesSync();
+      for (var i = 0; i < lines.length; i++) {
+        final String line = lines[i].trimLeft();
+        if (line.startsWith('//')) continue;
+        if (RegExp(
+          r'Color\(0x|BoxShadow|elevation:|fontSize:',
+        ).hasMatch(line)) {
+          offenders.add('$path:${i + 1}: $line');
+        }
+      }
+    }
+    expect(offenders, isEmpty, reason: offenders.join('\n'));
+  });
+}
+
+void _noop() {}
+
+const List<String> _restyled = <String>[
+  'lib/features/account/presentation/account_home_screen.dart',
+  'lib/features/account/presentation/account_screen.dart',
+  'lib/features/account/presentation/security_screen.dart',
+  'lib/features/account/presentation/change_password_form.dart',
+  'lib/features/profile/presentation/profile_screen.dart',
+  'lib/features/profile/presentation/profile_field_list.dart',
+  'lib/features/profile/presentation/contact_details_screen.dart',
+  'lib/features/profile/presentation/privacy_screen.dart',
+  'lib/features/settings/presentation/settings_screen.dart',
+  'lib/features/settings/presentation/privacy_controls_screen.dart',
+  'lib/shared/widgets/settings_list.dart',
+  'lib/shared/widgets/notice_panel.dart',
+  'lib/shared/widgets/soft_page.dart',
+];
+
+/// The dev mock, with a session at [level] already restored.
+Future<AppDependencies> _dependencies(AccessLevel level) async {
+  final InMemorySecretStore secrets = InMemorySecretStore();
+  await secrets.write(LaunchController.welcomeCompletedKey, 'true');
+  final InMemorySessionStore store = InMemorySessionStore();
+  if (level != AccessLevel.guest) {
+    await store.write(
+      StoredSession(
+        resident: ResidentSession(
+          accountId: 'acct-sample',
+          accessLevel: level,
+          displayName: 'Sample',
+        ),
+        accessToken: 'token-sample',
+      ),
+    );
+  }
+  final AppDependencies dependencies = AppDependencies.build(
+    config: AppConfig.from(
+      rawEnvironment: 'dev',
+      rawApiBaseUrl: '',
+      isReleaseBuild: false,
+      rawDataMode: 'mock',
+      rawMockLatencyMs: '0',
+    ),
+    secrets: secrets,
+    sessionStore: store,
+    localAuthenticator: const UnavailableLocalAuthenticator(),
+  );
+  addTearDown(dependencies.dispose);
+  await dependencies.session.restore();
+  return dependencies;
+}
+
+Widget _host(
+  AppDependencies dependencies,
+  Widget child, {
+  double textScale = 1,
+}) {
+  return AppDependenciesScope(
+    dependencies: dependencies,
+    child: MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.light(),
+      localizationsDelegates: AppStrings.localizationsDelegates,
+      supportedLocales: AppLocales.supported,
+      home: Builder(
+        builder: (context) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(textScale)),
+          child: child,
+        ),
+      ),
+    ),
+  );
+}
+
+/// [expectCleanLayouts] for a screen that needs the app's dependencies and
+/// strings: every width and text scale, failing on any error.
+Future<void> _expectCleanScreen(
+  WidgetTester tester,
+  AppDependencies dependencies,
+  Widget Function() build,
+) async {
+  addTearDown(tester.view.reset);
+  for (final double width in layoutWidths) {
+    for (final double scale in layoutTextScales) {
+      tester.view.physicalSize = Size(width, 800);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        _host(
+          dependencies,
+          KeyedSubtree(key: UniqueKey(), child: build()),
+          textScale: scale,
+        ),
+      );
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      final Object? error = tester.takeException();
+      expect(error, isNull, reason: '$width dp at ${scale}x: $error');
+    }
+  }
+}

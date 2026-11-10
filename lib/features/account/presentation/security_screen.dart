@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/motion/motion_tokens.dart';
@@ -11,11 +13,15 @@ import '../../../core/result/result.dart';
 import '../../../core/session/app_lock_controller.dart';
 import '../../../core/session/local_authenticator.dart';
 import '../../../core/time/manila_time.dart';
-import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/soft_page.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../auth/domain/device_session_repository.dart';
 
 /// Sign-in and security: the controls a resident has over their own session.
@@ -161,90 +167,74 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final dependencies = AppDependencies.of(context);
     final lock = dependencies.appLock;
+    final TextStyle lede = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.muted,
+    );
 
-    return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Sign-in and security'),
-      ),
-      body: SafeArea(
-        child: ListenableBuilder(
-          listenable: lock,
-          builder: (context, _) => ListView(
-            padding: const EdgeInsets.all(Spacing.lg),
+    return ListenableBuilder(
+      listenable: lock,
+      builder: (context, _) => SoftPage(
+        title: 'Sign-in and security',
+        offlineBanner: true,
+        children: <Widget>[
+          const SettingsSectionTitle('App lock'),
+          Text(
+            'Ask for your fingerprint, face or screen lock before showing '
+            'your details again after you leave the app.',
+            style: lede,
+          ),
+          const SizedBox(height: Spacing.md),
+          SettingsList(
             children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text('App lock', style: theme.textTheme.titleMedium),
-              ),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                'Ask for your fingerprint, face or screen lock before showing '
-                'your details again after you leave the app.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: Spacing.md),
-              SwitchListTile(
+              SettingsSwitchRow(
                 value: lock.isEnabled,
                 onChanged: lock.canEnable && !lock.isPrompting
                     ? _toggleLock
                     : null,
-                title: const Text('Lock this app'),
-                subtitle: Text(_availabilityCopy(lock)),
-              ),
-              const SizedBox(height: Spacing.md),
-              const AppBanner(
-                tone: BannerTone.info,
-                message:
-                    'This lock protects this phone only. It is not how Taytay '
-                    'LGU knows who you are, and turning it on does not change '
-                    'what your account can do.',
-              ),
-              const SizedBox(height: Spacing.xxl),
-              Semantics(
-                header: true,
-                child: Text(
-                  'Where you are signed in',
-                  style: theme.textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: Spacing.sm),
-              _DeviceSessions(
-                loading: _loadingDevices,
-                failure: _deviceFailure,
-                devices: _devices,
-                onLoad: _loadDevices,
-                onRevoke: _revokeOne,
-                onRevokeOthers: _revokeOthers,
-              ),
-              const SizedBox(height: Spacing.xxl),
-              Semantics(
-                header: true,
-                child: Text('This device', style: theme.textTheme.titleMedium),
-              ),
-              const SizedBox(height: Spacing.sm),
-              Text(
-                'Signing out removes your session from this phone. Public '
-                'Taytay services stay available to you as a guest.',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: Spacing.md),
-              OutlinedButton.icon(
-                onPressed: _signOut,
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign out of this device'),
+                icon: TaytayIcons.lock,
+                title: 'Lock this app',
+                detail: _availabilityCopy(lock),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: Spacing.md),
+          const SoftNote(
+            message:
+                'This lock protects this phone only. It is not how Taytay '
+                'LGU knows who you are, and turning it on does not change '
+                'what your account can do.',
+          ),
+          const SizedBox(height: Spacing.xl),
+          const SettingsSectionTitle('Where you are signed in'),
+          _DeviceSessions(
+            loading: _loadingDevices,
+            failure: _deviceFailure,
+            devices: _devices,
+            onLoad: _loadDevices,
+            onRevoke: _revokeOne,
+            onRevokeOthers: _revokeOthers,
+          ),
+          const SizedBox(height: Spacing.xl),
+          const SettingsSectionTitle('This device'),
+          Text(
+            'Signing out removes your session from this phone. Public '
+            'Taytay services stay available to you as a guest.',
+            style: lede,
+          ),
+          const SizedBox(height: Spacing.md),
+          OutlinedButton.icon(
+            onPressed: _signOut,
+            icon: const TaytayIcon(
+              icon: TaytayIcons.logOut,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+            ),
+            label: const Text('Sign out of this device'),
+          ),
+        ],
       ),
     );
   }
@@ -298,13 +288,13 @@ class _DeviceSessions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final list = devices;
+    final failure = this.failure;
 
     if (loading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.lg),
-        child: Center(child: CircularProgressIndicator()),
+      return const LoadingSkeleton(
+        count: 2,
+        semanticLabel: 'Checking where you are signed in',
       );
     }
 
@@ -312,29 +302,29 @@ class _DeviceSessions extends StatelessWidget {
       // Wired at TAB 03, so this is a real failure rather than a missing
       // endpoint — and it must not be reassuring. A resident who came here to
       // check for an intruder and is told nothing has learned nothing.
-      return AppBanner(
-        tone: BannerTone.warning,
+      return ErrorState(
         title: 'Could not check your sign-ins',
         message:
             'We could not reach Taytay LGU IDS to list where your account is '
             'signed in. Try again in a moment. Signing out here always ends '
             'this device\'s session.',
-        action: TextButton(onPressed: onLoad, child: const Text('Try again')),
+        onRetry: onLoad,
+        boxed: true,
       );
     }
 
     if (list == null) {
-      return AppCard(
+      return SoftCard(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             Text(
               'Check the devices your Taytay LGU IDS account is currently '
               'signed in on.',
-              style: theme.textTheme.bodyMedium,
+              style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
             ),
             const SizedBox(height: Spacing.md),
-            OutlinedButton(
+            FilledButton.tonal(
               onPressed: onLoad,
               child: const Text('Check my devices'),
             ),
@@ -348,26 +338,32 @@ class _DeviceSessions extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        for (final device in list)
-          ListTile(
-            leading: const Icon(Icons.smartphone_outlined),
-            title: Text(device.label),
-            subtitle: Text(
-              device.isCurrentDevice
-                  ? 'This device'
-                  : _lastSeenCopy(device.lastSeenAt),
-            ),
-            // Only other sign-ins get a revoke action. Ending the current one is
-            // "sign out", which lives above with its own confirmation and its
-            // own local-first behaviour — offering it twice under two names is
-            // how a resident ends up unsure which button did what.
-            trailing: device.isCurrentDevice
-                ? null
-                : TextButton(
-                    onPressed: () => onRevoke(device),
-                    child: const Text('Sign out'),
-                  ),
-          ),
+        SettingsList(
+          children: <Widget>[
+            for (final device in list)
+              SettingsRow(
+                icon: TaytayIcons.smartphone,
+                tone: device.isCurrentDevice
+                    ? SettingsTone.green
+                    : SettingsTone.blue,
+                title: device.label,
+                detail: device.isCurrentDevice
+                    ? 'This device'
+                    : _lastSeenCopy(device.lastSeenAt),
+                // Only other sign-ins get a revoke action. Ending the current
+                // one is "sign out", which lives below with its own
+                // confirmation and its own local-first behaviour — offering it
+                // twice under two names is how a resident ends up unsure which
+                // button did what.
+                trailing: device.isCurrentDevice
+                    ? null
+                    : TextButton(
+                        onPressed: () => onRevoke(device),
+                        child: const Text('Sign out'),
+                      ),
+              ),
+          ],
+        ),
         if (others.length > 1) ...<Widget>[
           const SizedBox(height: Spacing.md),
           // One request, not a loop over the list. A loop that fails halfway
@@ -376,7 +372,12 @@ class _DeviceSessions extends StatelessWidget {
           // lost one.
           OutlinedButton.icon(
             onPressed: onRevokeOthers,
-            icon: const Icon(Icons.logout_outlined),
+            icon: const TaytayIcon(
+              icon: TaytayIcons.logOut,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+            ),
             label: Text('Sign out all ${others.length} other devices'),
           ),
         ],

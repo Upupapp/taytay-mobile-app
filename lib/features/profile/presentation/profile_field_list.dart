@@ -3,12 +3,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/profile_fields.dart';
 import '../domain/resident_profile_detail.dart';
 
@@ -33,6 +37,7 @@ class ProfileFieldList extends StatelessWidget {
     required this.loading,
     required this.unavailable,
     this.onEdit,
+    this.glass = false,
     super.key,
   });
 
@@ -46,9 +51,11 @@ class ProfileFieldList extends StatelessWidget {
   /// Present only for the group the resident owns.
   final VoidCallback? onEdit;
 
+  /// Frosted rows, for the glass My Account tab.
+  final bool glass;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     // THE OFFICE'S GROUPING, NOT THIS APP'S (C-13).
     //
     // `ResidentProfileField.ownedBy` is a declaration written into the enum;
@@ -62,56 +69,51 @@ class ProfileFieldList extends StatelessWidget {
         detail?.fieldsOwnedBy(ownership) ??
         ResidentProfileField.ownedBy(ownership);
     final editable = ownership.isEditableInApp;
+    final copy = profileSectionCopy(context, ownership);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Row(
           children: <Widget>[
-            Icon(
-              editable ? Icons.edit_outlined : Icons.verified_outlined,
-              size: IconSizes.md,
-              color: theme.colorScheme.primary,
+            SettingsIcon(
+              icon: editable ? TaytayIcons.user : TaytayIcons.badgeCheck,
+              tone: editable ? SettingsTone.blue : SettingsTone.green,
             ),
-            const SizedBox(width: Spacing.sm),
+            const SizedBox(width: Spacing.md),
             Expanded(
               child: Semantics(
                 header: true,
                 child: Text(
-                  profileSectionCopy(context, ownership).title,
-                  style: theme.textTheme.titleMedium,
+                  copy.title,
+                  style: AppTypography.sectionTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: Spacing.xs),
+        const SizedBox(height: Spacing.sm),
         Text(
-          profileSectionCopy(context, ownership).explanation,
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          copy.explanation,
+          style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
         ),
         const SizedBox(height: Spacing.md),
         if (loading)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: Spacing.lg),
-            child: Center(child: CircularProgressIndicator()),
-          )
+          const LoadingSkeleton(semanticLabel: 'Loading your record')
         else
-          AppCard(
-            padding: EdgeInsets.zero,
-            child: Column(
-              children: <Widget>[
-                for (final field in fields)
-                  _FieldRow(
-                    field: field,
-                    value: detail?.valueOf(field),
-                    unavailable: unavailable,
-                    onEdit: onEdit,
-                  ),
-              ],
-            ),
+          SettingsList(
+            glass: glass,
+            children: <Widget>[
+              for (final field in fields)
+                _FieldRow(
+                  field: field,
+                  value: detail?.valueOf(field),
+                  unavailable: unavailable,
+                  onEdit: onEdit,
+                ),
+            ],
           ),
         if (unavailable) ...<Widget>[
           const SizedBox(height: Spacing.sm),
@@ -121,9 +123,7 @@ class ProfileFieldList extends StatelessWidget {
                       'yet. Your account still works.'
                 : 'Taytay LGU has not switched on your record in this app yet. '
                       'The municipal hall can tell you what is on file.',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
           ),
         ],
       ],
@@ -147,34 +147,32 @@ class _FieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final known = value != null && value!.isNotEmpty;
+    final String? value = this.value;
+    final bool known = value != null && value.isNotEmpty;
 
-    return ListTile(
-      title: Text(profileFieldLabel(context, field)),
-      subtitle: Text(
-        known
-            ? value!
-            // Never "—" or a blank: an empty row on a government record reads
-            // as data loss. Saying which it is costs one sentence.
-            : unavailable
-            ? 'Not available in this app yet'
-            : 'Not on file',
-        style: theme.textTheme.bodyMedium?.copyWith(
-          color: known
-              ? theme.colorScheme.onSurface
-              : theme.colorScheme.onSurfaceVariant,
-          fontStyle: known ? null : FontStyle.italic,
-        ),
+    return SettingsRow(
+      title: profileFieldLabel(context, field),
+      detail: known
+          ? value
+          // Never "—" or a blank: an empty row on a government record reads
+          // as data loss. Saying which it is costs one sentence.
+          : unavailable
+          ? 'Not available in this app yet'
+          : 'Not on file',
+      detailStyle: AppTypography.listDetail.copyWith(
+        color: known ? BrandColors.text : BrandColors.muted,
+        fontWeight: known ? AppTypography.medium : null,
+        fontStyle: known ? null : FontStyle.italic,
       ),
-      trailing: Icon(
-        field.isEditableInApp ? Icons.chevron_right : Icons.lock_outline,
-        color: field.isEditableInApp
-            ? theme.colorScheme.onSurfaceVariant
-            : theme.colorScheme.primary,
+      trailing: TaytayIcon(
+        icon: field.isEditableInApp
+            ? TaytayIcons.chevronRight
+            : TaytayIcons.lock,
+        semanticLabel: '',
+        excludeSemantics: true,
+        size: IconSizes.sm,
+        color: field.isEditableInApp ? BrandColors.chevron : BrandColors.blue,
       ),
-      // The lock icon alone would be decoration; the semantic label is what a
-      // screen reader announces, and it has to carry the same meaning.
       onTap: field.isEditableInApp
           ? onEdit
           : () => CanonicalFieldSheet.show(context, field),
@@ -284,7 +282,6 @@ class VerificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final level = AppDependencies.of(context).session.accessLevel;
 
     final (
@@ -295,52 +292,60 @@ class VerificationBadge extends StatelessWidget {
     ) = switch (level) {
       AccessLevel.guest => (
         'Not signed in',
-        Icons.person_outline,
-        theme.colorScheme.surfaceContainerHighest,
-        theme.colorScheme.onSurface,
+        TaytayIcons.circleUser,
+        BrandColors.chipFill,
+        BrandColors.text,
       ),
       AccessLevel.unverified => (
         'Not yet verified',
-        Icons.pending_outlined,
-        theme.colorScheme.tertiaryContainer,
-        theme.colorScheme.onTertiaryContainer,
+        TaytayIcons.hourglass,
+        BrandColors.gold50,
+        BrandColors.goldInk,
       ),
       AccessLevel.verified => (
         'Verified by Taytay LGU',
-        Icons.verified_outlined,
-        theme.colorScheme.secondaryContainer,
-        theme.colorScheme.onSecondaryContainer,
+        TaytayIcons.badgeCheck,
+        BrandColors.green50,
+        BrandColors.green,
       ),
     };
 
     return Align(
       alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.sm,
-        ),
-        decoration: BoxDecoration(
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(Radii.pill),
+          shape: const StadiumBorder(),
         ),
         // A badge is exactly the component that becomes colour-only. The icon
         // and the words carry the state; the colour reinforces it.
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(icon, size: IconSizes.sm, color: foreground),
-            const SizedBox(width: Spacing.sm),
-            // Flexible, not a bare Text: "Verified by Taytay LGU" at a large
-            // text scale is wider than a phone, and a badge that overflows is a
-            // badge whose meaning is cut off.
-            Flexible(
-              child: Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(color: foreground),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.md,
+            vertical: Spacing.xs + Spacing.xxs,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TaytayIcon(
+                icon: icon,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm - Spacing.xxs,
+                color: foreground,
               ),
-            ),
-          ],
+              const SizedBox(width: Spacing.xs + Spacing.xxs),
+              // Flexible, not a bare Text: "Verified by Taytay LGU" at a large
+              // text scale is wider than a phone, and a badge that overflows is
+              // a badge whose meaning is cut off.
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppTypography.pill.copyWith(color: foreground),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
