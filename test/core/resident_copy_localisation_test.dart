@@ -125,21 +125,23 @@ void main() {
     //  * `ConsentKind` was said to reach `event_registration_controller.dart`.
     //    It does not — that code operates on `ServerConsent`, whose label comes
     //    from the server and is already in the office's own language.
-    //  * Both render ONLY in `registration_screen.dart`, and TAB 03 made the
+    //  * Both rendered ONLY in `registration_screen.dart`, and TAB 03 made the
     //    registration wizard unreachable: `route_guard.dart:76` redirects
     //    `/register` to sign-in unless the server publishes self-enrolment,
-    //    which it does not.
+    //    which it does not. Redesign Phase 4 deleted that unrouted screen; the
+    //    enums stay in `registration/domain/registration_domain.dart`.
     //
     // So both are gated, not urgent. Localising them would have been a TAB spent
     // translating a screen no resident can open — the same mistake TAB 04 made
     // on the correction flow.
     'RegistrationStep':
-        'registration_screen.dart:88 and :208 (:208 is a semantics label). '
-        'GATED — the wizard is unreachable while onboarding is '
-        'staff-mediated (TAB 03). Localise when F15 is answered.',
+        'Rendered only by the old registration wizard, deleted in redesign '
+        'Phase 4 (it was unreachable while onboarding is staff-mediated, '
+        'TAB 03). The events flow has its own enum of the same name. '
+        'Localise when F15 is answered.',
     'ConsentKind':
-        'registration_screen.dart:655. GATED behind the same wizard. Not '
-        'reached by the events or assistance flows, which use ServerConsent.',
+        'Rendered only by the same deleted wizard. Not reached by the events '
+        'or assistance flows, which use ServerConsent.',
     // The status screen shows these kinds through `_noteLabel`, which is the
     // fixed English on the existing verification frames. Filipino copy for
     // the enum itself arrives with app-wide localisation. The decoder does

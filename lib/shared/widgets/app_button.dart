@@ -120,17 +120,16 @@ class AppButton extends StatelessWidget {
         style: filledStyle(),
         child: child,
       ),
+      // The redesign has no outlined secondary. The theme draws an
+      // OutlinedButton as the soft button (blue-50 fill, blue label, no
+      // border); only size, shape and label are set here, so nothing
+      // overrides that look.
       AppButtonVariant.secondary => OutlinedButton(
         onPressed: _isEnabled ? handlePress : null,
         style: OutlinedButton.styleFrom(
           minimumSize: Size(A11y.minTapTarget, metrics.height),
           shape: shape,
           textStyle: metrics.label,
-          foregroundColor: BrandColors.taytayBlue,
-          side: BorderSide(
-            color: BrandColors.taytayBlue,
-            width: metrics.borderWidth,
-          ),
         ),
         child: child,
       ),

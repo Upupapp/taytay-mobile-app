@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/api/paginated.dart';
 import '../../../core/api/send_key.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
@@ -16,7 +15,6 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
-import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
@@ -537,127 +535,6 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
         emergencyPhone: _phone,
         onBack: () => context.goNamed(AppRoute.services.routeName),
         onMessages: () => context.goNamed(AppRoute.messagesInbox.routeName),
-      ),
-    );
-  }
-}
-
-class OfficeThreadScreen extends StatefulWidget {
-  const OfficeThreadScreen({required this.threadId, super.key});
-
-  final String threadId;
-
-  @override
-  State<OfficeThreadScreen> createState() => _OfficeThreadScreenState();
-}
-
-class _OfficeThreadScreenState extends State<OfficeThreadScreen> {
-  Office? _office;
-  List<DirectoryThreadBubble> _bubbles = const <DirectoryThreadBubble>[];
-  String _dayLabel = '';
-  bool _started = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    _load();
-  }
-
-  Future<void> _load() async {
-    final AppDependencies dependencies = AppDependencies.of(context);
-    final Result<OfficeThread> thread = await dependencies
-        .officeMessagingRepository
-        .loadThread(widget.threadId);
-    final Result<Paginated<OfficeMessage>> messages = await dependencies
-        .officeMessagingRepository
-        .listMessages(widget.threadId);
-    if (!mounted) return;
-    final OfficeThread? loaded = switch (thread) {
-      Ok(:final value) => value,
-      Err() => null,
-    };
-    final String slug = loaded == null
-        ? ''
-        : (loaded.officeSlug.isNotEmpty ? loaded.officeSlug : loaded.officeId);
-    final Office? office = slug.isEmpty
-        ? null
-        : await OfficeCatalogue.byId(
-            slug,
-            mock: dependencies.config.usesMockData,
-            api: dependencies.apiClient,
-          );
-    if (!mounted) return;
-    final String? accountId =
-        dependencies.session.state.residentOrNull?.accountId;
-    if (loaded != null) {
-      await dependencies.officeMessagingRepository.markThreadRead(
-        widget.threadId,
-      );
-    }
-    if (!mounted) return;
-    final List<OfficeMessage> rows = switch (messages) {
-      Ok(:final value) => value.items.reversed.toList(growable: false),
-      Err() => const <OfficeMessage>[],
-    };
-    setState(() {
-      _office =
-          office ??
-          (loaded == null
-              ? null
-              : Office(
-                  id: slug,
-                  serverId: loaded.officeId,
-                  shortName: loaded.officeName,
-                  name: loaded.officeName,
-                  listName: loaded.officeName,
-                  category: '',
-                  listLine: '',
-                  icon: OfficeIcon.building2,
-                  keywords: const <String>[],
-                  eyebrow: '',
-                  summary: '',
-                  heroAsset: 'assets/photos/municipal_hall.jpg',
-                  heroFocus: 0.5,
-                  insetAsset: 'assets/photos/municipal_hall.jpg',
-                  representative: false,
-                  credit: '',
-                  messageable: true,
-                  callLabel: 'Call',
-                  callIsEmergency: false,
-                  phone: '',
-                  directionsQuery: '',
-                  facts: const <OfficeFact>[],
-                  services: const <OfficeServiceLine>[],
-                ));
-      _bubbles = <DirectoryThreadBubble>[
-        for (final OfficeMessage message in rows)
-          DirectoryThreadBubble(
-            fromResident:
-                message.fromResident ||
-                (accountId != null &&
-                    accountId.isNotEmpty &&
-                    message.senderId == accountId),
-            when: ManilaTime.formatTime(message.sentAt),
-            body: message.body,
-          ),
-      ];
-      _dayLabel = rows.isEmpty ? '' : ManilaTime.formatDate(rows.first.sentAt);
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: BrandColors.background,
-      body: DirectoryCanvas(
-        frame: DirectoryFrame.thread,
-        offices: const <Office>[],
-        office: _office,
-        bubbles: _bubbles,
-        dayLabel: _dayLabel,
-        onBack: () => _back(context),
       ),
     );
   }

@@ -30,8 +30,6 @@ class ThemeGallerySection extends StatelessWidget {
         _GlassSpecimen(),
         _Heading('Type'),
         _TypeScale(),
-        _Heading('App bar'),
-        _AppBarSpecimen(),
         _Heading('Card and list rows'),
         _CardSpecimen(),
         _Heading('Filled fields'),
@@ -420,25 +418,6 @@ class _TypeScale extends StatelessWidget {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _AppBarSpecimen extends StatelessWidget {
-  const _AppBarSpecimen();
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      primary: false,
-      automaticallyImplyLeading: false,
-      title: const Text('Themed app bar'),
-      actions: const <Widget>[
-        Padding(
-          padding: EdgeInsets.only(right: Spacing.lg),
-          child: TaytayIcon(icon: TaytayIcons.bell, semanticLabel: 'Bell'),
-        ),
-      ],
     );
   }
 }

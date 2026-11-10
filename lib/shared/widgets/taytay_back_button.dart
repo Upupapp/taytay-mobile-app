@@ -84,20 +84,8 @@ class TaytayBackButton extends StatelessWidget {
               width: A11y.backButtonVisual,
               height: A11y.backButtonVisual,
               child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: fill,
-                  shape: BoxShape.circle,
-                  boxShadow: light && !translucent
-                      ? const <BoxShadow>[
-                          BoxShadow(color: Color(0x1A0B3D91), spreadRadius: 1),
-                          BoxShadow(
-                            color: Color(0x1A062358),
-                            blurRadius: 10,
-                            offset: Offset(0, 3),
-                          ),
-                        ]
-                      : null,
-                ),
+                // No shadow: the redesign draws none, on any surface.
+                decoration: BoxDecoration(color: fill, shape: BoxShape.circle),
                 child: Center(
                   child: TaytayIcon(
                     icon: TaytayIcons.arrowLeft,

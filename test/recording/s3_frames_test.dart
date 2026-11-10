@@ -13,8 +13,9 @@ import 'package:taytay_resident/features/mock_data/data/mock/resident_record_moc
 import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
-import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+
+import '../support/unverified_gate_specimen.dart';
 
 /// Stills of `03-01` through `03-09` at 390×844 @3×.
 ///
@@ -105,7 +106,9 @@ void main() {
     final String created = formatManilaStamp(
       MockResidentRecordRepository.sampleAccountCreatedAt,
     );
-    final String idType = idTypeLabel(MockResidentRecordRepository.sampleIdType);
+    final String idType = idTypeLabel(
+      MockResidentRecordRepository.sampleIdType,
+    );
     final frames = <(String, Widget)>[
       (
         '03-01',

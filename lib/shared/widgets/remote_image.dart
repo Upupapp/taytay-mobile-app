@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
 
 /// A picture the LGU published, decoded at the size it will actually be drawn.
 ///
@@ -54,8 +55,8 @@ class RemoteImage extends StatelessWidget {
     this.fit = BoxFit.cover,
     this.semanticLabel,
     this.maxDecodeWidth = feedDecodeCeiling,
-    this.placeholderIcon = Icons.image_outlined,
-    this.errorIcon = Icons.image_not_supported_outlined,
+    this.placeholderIcon = TaytayIcons.image,
+    this.errorIcon = TaytayIcons.circleSlash,
     this.showProgress = false,
     super.key,
   });

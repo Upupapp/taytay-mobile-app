@@ -156,6 +156,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final Widget list = RefreshIndicator(
           onRefresh: _load,
           child: ListView(
+            // No per-item repaint / semantics wrappers: they hit-test only their
+            // own box, so the strip GlassOverlap raises over the header would not
+            // take a tap.
+            addRepaintBoundaries: false,
+            addSemanticIndexes: false,
             padding: EdgeInsets.zero,
             children: <Widget>[
               header,

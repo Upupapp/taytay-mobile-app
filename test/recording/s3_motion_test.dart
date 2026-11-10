@@ -17,6 +17,8 @@ import 'package:taytay_resident/features/verification/presentation/profile_wizar
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 
+import '../support/unverified_gate_specimen.dart';
+
 /// Motion clips at 390×844 @3×. Animations stay on. No environment banner.
 ///
 /// `flutter test --tags recording --run-skipped test/recording/s3_motion_test.dart`
@@ -101,7 +103,12 @@ Future<void> _shot(WidgetTester tester, Directory out, int frame) async {
 /// Eight frames a second, which is the encode rate.
 const Duration _step = Duration(milliseconds: 125);
 
-Future<int> _hold(WidgetTester tester, Directory out, int frame, int count) async {
+Future<int> _hold(
+  WidgetTester tester,
+  Directory out,
+  int frame,
+  int count,
+) async {
   for (var i = 0; i < count; i++) {
     await tester.pump(_step);
     await _shot(tester, out, frame);
@@ -132,10 +139,7 @@ class _SceneReelState extends State<_SceneReel> {
       duration: MotionTokens.emphasised,
       switchInCurve: MotionTokens.enterEase,
       switchOutCurve: MotionTokens.exitEase,
-      child: KeyedSubtree(
-        key: ValueKey<Widget>(_child),
-        child: _child,
-      ),
+      child: KeyedSubtree(key: ValueKey<Widget>(_child), child: _child),
     );
   }
 }
@@ -155,8 +159,7 @@ class _GateReelState extends State<_GateReel>
   );
   VerifiedOnlyAction action = VerifiedOnlyAction.message;
 
-  void showDigitalId() =>
-      setState(() => action = VerifiedOnlyAction.digitalId);
+  void showDigitalId() => setState(() => action = VerifiedOnlyAction.digitalId);
 
   @override
   void dispose() {
@@ -173,10 +176,7 @@ class _GateReelState extends State<_GateReel>
         return Stack(
           children: <Widget>[
             const GateBackdrop(),
-            ModalBarrier(
-              color: GateScrim.at(t),
-              dismissible: false,
-            ),
+            ModalBarrier(color: GateScrim.at(t), dismissible: false),
             Align(
               alignment: Alignment.bottomCenter,
               child: FractionalTranslation(
@@ -204,7 +204,9 @@ void main() {
     out.createSync(recursive: true);
 
     const record = MockResidentRecordRepository.sampleRecord;
-    final String idType = idTypeLabel(MockResidentRecordRepository.sampleIdType);
+    final String idType = idTypeLabel(
+      MockResidentRecordRepository.sampleIdType,
+    );
     await _mount(
       tester,
       _SceneReel(
@@ -275,10 +277,7 @@ void main() {
       certified: true,
     );
 
-    await _mount(
-      tester,
-      _SceneReel(initial: page(ProfileWizardStep.overview)),
-    );
+    await _mount(tester, _SceneReel(initial: page(ProfileWizardStep.overview)));
     final reel = tester.state<_SceneReelState>(find.byType(_SceneReel));
     var frame = await _hold(tester, out, 0, 6);
     for (final step in <ProfileWizardStep>[

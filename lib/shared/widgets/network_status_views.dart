@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import '../../app/app_dependencies.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_glyphs.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
 import '../../core/motion/motion_tokens.dart';
 import '../../core/time/manila_time.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_banner.dart';
 import 'taytay_glyph.dart';
+import 'taytay_icon.dart';
 
 /// The strip that appears when Taytay LGU cannot be reached.
 ///
@@ -215,8 +217,10 @@ class StaleContentNotice extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: Spacing.md),
       child: Row(
         children: <Widget>[
-          Icon(
-            Icons.history_outlined,
+          TaytayIcon(
+            icon: TaytayIcons.clock,
+            semanticLabel: '',
+            excludeSemantics: true,
             size: IconSizes.sm,
             color: theme.colorScheme.onSurfaceVariant,
           ),

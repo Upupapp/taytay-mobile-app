@@ -524,6 +524,11 @@ class _HomePage extends StatelessWidget {
     final VoidCallback? onBell = canvas.onBell;
     return GlassBackground(
       child: ListView(
+        // No per-item repaint / semantics wrappers: they hit-test only their
+        // own box, so the strip GlassOverlap raises over the header would not
+        // take a tap.
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
         key: const Key('account-home-scroll'),
         padding: EdgeInsets.only(
           bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
@@ -1543,8 +1548,14 @@ class _AboutBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Every credit here is a bundled photograph's, from the asset manifest:
+    // the API sends no image credit (design/PROGRESS "API fields needed"), so
+    // a photo it serves is not listed. A list with nothing in it is not drawn.
     final List<PhotoCredit> welcome = credits
         .where((PhotoCredit credit) => credit.welcome)
+        .toList(growable: false);
+    final List<PhotoCredit> banners = credits
+        .where((PhotoCredit credit) => credit.officeBanner)
         .toList(growable: false);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -1597,17 +1608,19 @@ class _AboutBody extends StatelessWidget {
             ],
           ),
         ],
-        const SizedBox(height: Spacing.section),
-        SettingsList(
-          children: <Widget>[
-            SettingsRow(
-              title: 'Office banner photos',
-              detail: PhotoCredits.officeBannerSummary,
-              icon: TaytayIcons.images,
-              onTap: onBanners,
-            ),
-          ],
-        ),
+        if (banners.isNotEmpty) ...<Widget>[
+          const SizedBox(height: Spacing.section),
+          SettingsList(
+            children: <Widget>[
+              SettingsRow(
+                title: 'Office banner photos',
+                detail: PhotoCredits.bannerSummaryOf(banners),
+                icon: TaytayIcons.images,
+                onTap: onBanners,
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: Spacing.xl),
         const SettingsSectionTitle('About'),
         const SettingsList(

@@ -17,6 +17,7 @@ import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/status_line.dart';
@@ -390,68 +391,13 @@ class _ChipsRow extends StatelessWidget {
           children: <Widget>[
             for (var i = 0; i < labels.length; i++) ...<Widget>[
               if (i > 0) const SizedBox(width: Spacing.sm),
-              _CategoryChip(
+              SoftChoiceChip(
                 label: labels[i],
                 selected: labels[i] == selected,
                 onTap: onChip == null ? null : () => onChip(labels[i]),
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.label,
-    required this.selected,
-    this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color fill = selected ? BrandColors.blue : BrandColors.chipFill;
-    final Color ink = selected ? BrandColors.white : BrandColors.text;
-    return Semantics(
-      button: onTap != null,
-      selected: selected,
-      label: label,
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onTap,
-        customBorder: const StadiumBorder(),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-          child: Center(
-            widthFactor: 1,
-            child: DecoratedBox(
-              decoration: ShapeDecoration(
-                color: fill,
-                shape: const StadiumBorder(),
-              ),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(
-                  minHeight: ComponentSizes.chipHeight,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: Spacing.section,
-                    vertical: Spacing.sm,
-                  ),
-                  child: Text(
-                    label,
-                    style: AppTypography.chip.copyWith(color: ink),
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -958,6 +904,11 @@ class _DetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      // No per-item repaint / semantics wrappers: they hit-test only their
+      // own box, so the strip GlassOverlap raises over the header would not
+      // take a tap.
+      addRepaintBoundaries: false,
+      addSemanticIndexes: false,
       padding: const EdgeInsets.only(bottom: Spacing.xl),
       children: <Widget>[
         _Hero(office: office, loadHero: loadHero, onBack: onBack),

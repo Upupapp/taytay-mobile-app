@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../core/design/brand_gradients.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
+import '../../core/design/typography.dart';
+import 'icon_tile.dart';
 
 /// What kind of situation a [StatusView] is reporting.
 enum StatusKind {
@@ -57,14 +61,16 @@ class StatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    final (IconData defaultIcon, Color iconColor) = switch (kind) {
-      StatusKind.empty => (Icons.inbox_outlined, scheme.onSurfaceVariant),
-      StatusKind.success => (Icons.check_circle_outline, scheme.primary),
-      StatusKind.error => (Icons.error_outline, scheme.error),
+    // Redesign Phase 4: the state panel's look (CSS `.es`) — a large gradient
+    // tile with a Lucide glyph, the title in ink, the sentence in muted.
+    final (IconData defaultIcon, TileTone tone) = switch (kind) {
+      StatusKind.empty => (TaytayIcons.inbox, TileTone.blue),
+      StatusKind.success => (TaytayIcons.circleCheck, TileTone.green),
+      StatusKind.error => (TaytayIcons.circleAlert, TileTone.red),
     };
+    final String? message = this.message;
+    final Widget? primaryAction = this.primaryAction;
+    final Widget? secondaryAction = this.secondaryAction;
 
     return Semantics(
       container: true,
@@ -83,34 +89,37 @@ class StatusView extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 illustration ??
-                    Icon(
-                      icon ?? defaultIcon,
-                      size: IconSizes.xxl,
-                      color: iconColor,
+                    IconTile.lucide(
+                      icon: icon ?? defaultIcon,
+                      tone: tone,
+                      tileSize: IconTileSize.large,
                     ),
                 const SizedBox(height: Spacing.lg),
                 Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.titleMedium,
+                  style: AppTypography.sectionTitle.copyWith(
+                    fontWeight: AppTypography.strong,
+                    color: BrandColors.ink,
+                  ),
                 ),
                 if (message != null) ...<Widget>[
                   const SizedBox(height: Spacing.sm),
                   Text(
-                    message!,
+                    message,
                     textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: scheme.onSurfaceVariant,
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.muted,
                     ),
                   ),
                 ],
                 if (primaryAction != null) ...<Widget>[
                   const SizedBox(height: Spacing.xl),
-                  primaryAction!,
+                  primaryAction,
                 ],
                 if (secondaryAction != null) ...<Widget>[
                   const SizedBox(height: Spacing.sm),
-                  secondaryAction!,
+                  secondaryAction,
                 ],
               ],
             ),

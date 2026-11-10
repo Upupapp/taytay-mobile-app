@@ -15,10 +15,10 @@ import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
-import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 
-export 'auth_stage.dart' show signInFormSheetKey;
+/// The white form page. Tests look for this to prove the copy sits on it.
+const Key signInFormSheetKey = Key('sign-in-form-sheet');
 
 /// How the sign-in sheet is painted.
 ///

@@ -38,7 +38,6 @@ import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 import 'package:taytay_resident/features/verification/domain/resident_record.dart';
 import 'package:taytay_resident/features/verification/presentation/kyc_claim_screen.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
-import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
@@ -50,6 +49,7 @@ import 'package:taytay_resident/shared/widgets/upload_slot.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
 import '../support/layout_matrix.dart';
+import '../support/unverified_gate_specimen.dart';
 
 /// Redesign P3e: document requests, requirements, household, verification,
 /// notifications and the notice screens at 360 / 375 / 430 dp and 100% /

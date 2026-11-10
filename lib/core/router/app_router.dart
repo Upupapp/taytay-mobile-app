@@ -51,8 +51,11 @@ import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
-import '../../shared/widgets/taytay_back_button.dart';
+import '../../shared/widgets/blue_header.dart';
+import '../../shared/widgets/error_state.dart';
+import '../../shared/widgets/taytay_glyph.dart';
 import '../design/design_tokens.dart';
+import '../design/taytay_glyphs.dart';
 import '../session/consent_gate_controller.dart';
 import '../session/session_controller.dart';
 import '../startup/launch_controller.dart';
@@ -635,38 +638,31 @@ class _RouteNotFoundScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // The notice pattern: the blue header with back, then the state panel on
+    // the screen background.
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Page not found'),
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(
-                Icons.explore_off_outlined,
-                size: 48,
-                color: theme.colorScheme.onSurfaceVariant,
+      backgroundColor: BrandColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const BlueHeader(title: 'Page not found', showBack: true),
+          Expanded(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(Spacing.xl),
+                child: StatePanel(
+                  art: const IllustrationArt(TaytayIllustration.noResults),
+                  title: 'That link does not lead anywhere in this app.',
+                  action: StateActionButton(
+                    label: 'Go to home',
+                    primary: true,
+                    onPressed: () => context.goNamed(AppRoute.home.routeName),
+                  ),
+                ),
               ),
-              const SizedBox(height: Spacing.lg),
-              Text(
-                'That link does not lead anywhere in this app.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyLarge,
-              ),
-              const SizedBox(height: Spacing.xl),
-              FilledButton(
-                onPressed: () => context.goNamed(AppRoute.home.routeName),
-                child: const Text('Go to home'),
-              ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

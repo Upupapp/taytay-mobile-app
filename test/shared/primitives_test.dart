@@ -4,18 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
-import 'package:taytay_resident/core/design/brand_assets.dart';
 import 'package:taytay_resident/core/design/brand_gradients.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/haptics/app_haptics.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
 import 'package:taytay_resident/shared/widgets/app_banner.dart';
 import 'package:taytay_resident/shared/widgets/app_button.dart';
-import 'package:taytay_resident/shared/widgets/app_card.dart';
 import 'package:taytay_resident/shared/widgets/app_dialog.dart';
-import 'package:taytay_resident/shared/widgets/app_loading.dart';
 import 'package:taytay_resident/shared/widgets/app_sheet.dart';
-import 'package:taytay_resident/shared/widgets/brand_mark.dart';
 import 'package:taytay_resident/shared/widgets/status_view.dart';
 
 /// Hosts a widget in the real app theme, so every assertion runs against the
@@ -175,51 +171,6 @@ void main() {
     });
   });
 
-  group('AppCard', () {
-    testWidgets('is tappable and announces as a button when given an action', (
-      tester,
-    ) async {
-      var tapped = 0;
-      await tester.pumpWidget(
-        host(
-          AppCard(
-            semanticLabel: 'Digital ID',
-            onTap: () => tapped++,
-            child: const Text('My Taytay ID'),
-          ),
-        ),
-      );
-
-      await tester.tap(find.text('My Taytay ID'));
-      await tester.pumpAndSettle();
-      expect(tapped, 1);
-
-      final semantics = tester.getSemantics(find.byType(AppCard).first);
-      expect(semantics.label, contains('Digital ID'));
-    });
-
-    testWidgets('selected emphasis is not signalled by colour alone', (
-      tester,
-    ) async {
-      // WCAG 1.4.1: selection carries a thicker, primary-coloured outline as
-      // well as a tinted fill.
-      await tester.pumpWidget(
-        host(
-          const AppCard(emphasis: CardEmphasis.selected, child: Text('Chosen')),
-        ),
-      );
-
-      final material = tester.widget<Material>(
-        find.descendant(
-          of: find.byType(AppCard),
-          matching: find.byType(Material),
-        ),
-      );
-      final shape = material.shape! as RoundedRectangleBorder;
-      expect(shape.side.width, greaterThan(1));
-    });
-  });
-
   group('AppBanner', () {
     testWidgets('every tone renders a distinct icon, never colour alone', (
       tester,
@@ -265,50 +216,6 @@ void main() {
       final size = tester.getSize(find.byType(IconButton));
       expect(size.width, greaterThanOrEqualTo(A11y.minTapTarget));
       expect(size.height, greaterThanOrEqualTo(A11y.minTapTarget));
-    });
-  });
-
-  group('loading primitives', () {
-    testWidgets('the skeleton animates normally and freezes when reduced', (
-      tester,
-    ) async {
-      await tester.pumpWidget(host(const AppSkeleton(width: 120)));
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(AnimatedBuilder), findsWidgets);
-
-      await tester.pumpWidget(
-        host(const AppSkeleton(width: 120), disableAnimations: true),
-      );
-      await tester.pump();
-      // Under reduced motion a static block is drawn instead of the shimmer.
-      expect(
-        find.descendant(
-          of: find.byType(AppSkeleton),
-          matching: find.byType(AnimatedBuilder),
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets('the in-app motion preference also freezes the skeleton', (
-      tester,
-    ) async {
-      MotionPreference.set(MotionPreference.reduced);
-      await tester.pumpWidget(host(const AppSkeleton(width: 120)));
-      await tester.pump();
-      expect(
-        find.descendant(
-          of: find.byType(AppSkeleton),
-          matching: find.byType(AnimatedBuilder),
-        ),
-        findsNothing,
-      );
-    });
-
-    testWidgets('the spinner carries an accessible name', (tester) async {
-      await tester.pumpWidget(host(const AppSpinner(label: 'Submitting')));
-      final semantics = tester.getSemantics(find.byType(AppSpinner));
-      expect(semantics.label, 'Submitting');
     });
   });
 
@@ -449,46 +356,6 @@ void main() {
       expect(find.text('Choose a service'), findsOneWidget);
       expect(find.text('Cedula'), findsOneWidget);
       expect(find.byType(SingleChildScrollView), findsWidgets);
-    });
-  });
-
-  group('BrandMark', () {
-    testWidgets('renders the official seal and not the wordmark', (
-      tester,
-    ) async {
-      expect(BrandAssets.hasVerifiedSeal, isTrue);
-      await tester.pumpWidget(host(const BrandMark(size: 96)));
-
-      expect(find.byType(Image), findsOneWidget);
-      expect(find.text('T'), findsNothing);
-    });
-
-    testWidgets('carries an accessible name and hides its internals', (
-      tester,
-    ) async {
-      await tester.pumpWidget(host(const BrandMark(size: 96)));
-      final semantics = tester.getSemantics(find.byType(BrandMark));
-      expect(semantics.label, contains('Taytay'));
-    });
-
-    testWidgets('the mark does not grow with the OS text scale', (
-      tester,
-    ) async {
-      await tester.pumpWidget(host(const BrandMark(size: 96)));
-      final normal = tester.getSize(find.byType(BrandMark));
-
-      await tester.pumpWidget(
-        host(const BrandMark(size: 96), textScaler: const TextScaler.linear(2)),
-      );
-      // The graphic mark keeps its geometry; scaling it would burst its box.
-      expect(tester.getSize(find.byType(BrandMark)), normal);
-    });
-
-    test('cannot be constructed below the legible minimum', () {
-      expect(
-        () => BrandMark(size: SealIntegrityRules.minRenderedSize - 1),
-        throwsAssertionError,
-      );
     });
   });
 

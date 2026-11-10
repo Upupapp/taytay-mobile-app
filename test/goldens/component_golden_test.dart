@@ -8,13 +8,12 @@ import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/design/typography.dart';
 import 'package:taytay_resident/core/mock/mock_behavior.dart';
 import 'package:taytay_resident/features/gallery/presentation/component_gallery_screen.dart';
+import 'package:taytay_resident/shared/widgets/pills.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
-import 'package:taytay_resident/shared/widgets/taytay_headers.dart';
 import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 import 'package:taytay_resident/shared/widgets/taytay_rows.dart';
 import 'package:taytay_resident/shared/widgets/taytay_states.dart';
-import 'package:taytay_resident/shared/widgets/taytay_text_field.dart';
 
 /// Phone frame the programme compares against: 390×844 logical pixels at 3x.
 const Size _frame = Size(390, 844);
@@ -109,8 +108,8 @@ void main() {
       const Wrap(
         spacing: 8,
         children: <Widget>[
-          StatusChip(label: 'Advisory', tone: StatusTone.amber),
-          StatusChip(label: 'Open', tone: StatusTone.green),
+          StatusPill(label: 'Advisory', tone: PillTone.gold),
+          StatusPill(label: 'Open', tone: PillTone.green),
           SampleTag(),
         ],
       ),
@@ -323,41 +322,6 @@ void main() {
     );
   });
 
-  testWidgets('text fields', (tester) async {
-    final focused = TextEditingController(text: 'juana.delacruz@example.com');
-    final invalid = TextEditingController(text: 'juana.delacruz@example');
-    addTearDown(focused.dispose);
-    addTearDown(invalid.dispose);
-    await _paintPixels(
-      tester,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const TaytayTextField(
-            label: 'Email or mobile number',
-            hint: 'name@example.com',
-          ),
-          const SizedBox(height: 8),
-          TaytayTextField(
-            label: 'Email or mobile number',
-            controller: focused,
-            state: TaytayFieldState.focused,
-          ),
-          const SizedBox(height: 8),
-          TaytayTextField(
-            label: 'Email address',
-            controller: invalid,
-            state: TaytayFieldState.error,
-            message: 'Enter a valid email, e.g. name@example.com',
-          ),
-        ],
-      ),
-      const Size(960, 960),
-      'components/evidence_fields.png',
-      background: Colors.white,
-    );
-  });
-
   testWidgets('back button on navy', (tester) async {
     await _paintPixels(
       tester,
@@ -365,70 +329,6 @@ void main() {
       const Size(144, 144),
       'components/evidence_back.png',
       background: BrandColors.taytayBlueDark,
-    );
-  });
-
-  testWidgets('card, list row and chips', (tester) async {
-    await _paintPixels(
-      tester,
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          const Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: <Widget>[
-              StatusChip(label: 'Pending review', tone: StatusTone.amber),
-              StatusChip(label: 'Verified', tone: StatusTone.green),
-              StatusChip(label: 'Needs correction', tone: StatusTone.red),
-              SampleTag(),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SectionCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Business Permits and Licensing Office',
-                  style: AppTypography.cardTitle.copyWith(
-                    color: BrandColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Business · Ground Floor, Municipal Hall',
-                  style: AppTypography.bodyCompact.copyWith(
-                    color: BrandColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          const SectionCard(
-            padding: EdgeInsets.symmetric(horizontal: 16),
-            child: ListRow(
-              title: 'Municipal Treasurer\'s Office',
-              subtitle: 'Taxes & payments · 2nd Floor, Municipal Hall',
-              icon: TaytayIcons.landmark,
-              iconLabel: 'Office',
-            ),
-          ),
-        ],
-      ),
-      const Size(1020, 780),
-      'components/evidence_card_row_chips.png',
-      background: BrandColors.surface,
-    );
-  });
-
-  testWidgets('woven header', (tester) async {
-    await _paintPixels(
-      tester,
-      const WovenHeader(showBack: true),
-      const Size(1170, 204),
-      'components/evidence_woven.png',
     );
   });
 

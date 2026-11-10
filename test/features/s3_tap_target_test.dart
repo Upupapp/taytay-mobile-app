@@ -15,6 +15,8 @@ import 'package:taytay_resident/features/verification/presentation/unverified_ga
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 
+import '../support/unverified_gate_specimen.dart';
+
 void _noop() {}
 
 void _onTab(int index) {}
@@ -142,7 +144,7 @@ void main() {
       'lib/features/home',
       'lib/features/shell',
       'lib/features/notifications',
-      'lib/shared/widgets/municipal_header.dart',
+      'lib/shared/widgets/blue_header.dart',
     ];
     for (final root in roots) {
       final entities = File(root).existsSync()

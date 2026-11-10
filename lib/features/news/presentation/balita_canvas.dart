@@ -15,6 +15,7 @@ import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
+import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../../../shared/widgets/taytay_glyph.dart';
@@ -115,6 +116,11 @@ class BalitaCanvas extends StatelessWidget {
     final bool all = selectedChip == BalitaChip.all.label;
     return GlassBackground(
       child: ListView(
+        // No per-item repaint / semantics wrappers: they hit-test only their
+        // own box, so the strip GlassOverlap raises over the header would not
+        // take a tap.
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
         controller: scrollController,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: Spacing.xl),
@@ -225,69 +231,14 @@ class _Chips extends StatelessWidget {
           children: <Widget>[
             for (var i = 0; i < chips.length; i++) ...<Widget>[
               if (i > 0) const SizedBox(width: Spacing.sm),
-              _Chip(
-                chip: chips[i],
-                on: chips[i].label == selected,
+              HeaderChoiceChip(
+                key: Key('balita-chip-${chips[i].label}'),
+                label: chips[i].label,
+                selected: chips[i].label == selected,
                 onTap: onChip == null ? null : () => onChip?.call(chips[i]),
               ),
             ],
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.chip, required this.on, this.onTap});
-
-  final BalitaChip chip;
-  final bool on;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: on,
-      label: chip.label,
-      excludeSemantics: true,
-      child: GestureDetector(
-        key: Key('balita-chip-${chip.label}'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-          child: Center(
-            widthFactor: 1,
-            child: Container(
-              constraints: const BoxConstraints(
-                minHeight: ComponentSizes.chipHeight,
-              ),
-              padding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: Spacing.xs,
-              ),
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: on ? BrandColors.white : BrandColors.transparent,
-                borderRadius: BorderRadius.circular(Radii.pill),
-                border: Border.all(
-                  color: on
-                      ? BrandColors.white
-                      : BrandColors.white.withValues(alpha: 0.4),
-                  width: FocusRing.borderWidth,
-                ),
-              ),
-              child: Text(
-                chip.label,
-                maxLines: 1,
-                style: AppTypography.chip.copyWith(
-                  color: on ? BrandColors.blue : BrandColors.white,
-                ),
-              ),
-            ),
-          ),
         ),
       ),
     );
@@ -723,6 +674,11 @@ class _ArticlePage extends StatelessWidget {
     return ColoredBox(
       color: BrandColors.white,
       child: ListView(
+        // No per-item repaint / semantics wrappers: they hit-test only their
+        // own box, so the strip GlassOverlap raises over the header would not
+        // take a tap.
+        addRepaintBoundaries: false,
+        addSemanticIndexes: false,
         padding: const EdgeInsets.only(bottom: Spacing.xl),
         children: <Widget>[
           header,

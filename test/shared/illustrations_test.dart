@@ -3,12 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/assets/asset_manifest.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
-import 'package:taytay_resident/shared/illustrations/feature_banner.dart';
-import 'package:taytay_resident/shared/illustrations/feature_icons.dart';
 import 'package:taytay_resident/shared/illustrations/illustration.dart';
-import 'package:taytay_resident/shared/illustrations/placeholders.dart';
 import 'package:taytay_resident/shared/illustrations/state_illustrations.dart';
-import 'package:taytay_resident/shared/illustrations/taytay_scenes.dart';
 
 Widget host(
   Widget child, {
@@ -31,15 +27,9 @@ Widget host(
 
 /// Every non-decorative illustration in the app, for the label rules.
 Map<String, Widget> allScenes() => <String, Widget>{
-  'services': TaytayScenes.services(),
-  'digitalId': TaytayScenes.digitalId(),
-  'privacy': TaytayScenes.privacy(),
   'empty': StateIllustrations.empty(),
   'error': StateIllustrations.error(),
   'success': StateIllustrations.success(),
-  'eventPoster': ImagePlaceholders.eventPoster(width: 120),
-  'newsfeed': ImagePlaceholders.newsfeed(width: 200),
-  'squarePlaceholder': ImagePlaceholders.square(),
 };
 
 /// Declared `Semantics` labels inside a subtree.
@@ -139,7 +129,12 @@ void main() {
     testWidgets('decorative scenery is hidden from assistive technology', (
       tester,
     ) async {
-      final backdrop = TaytayScenes.horizonBackdrop();
+      final backdrop = Illustration(
+        decorative: true,
+        semanticLabel: '',
+        size: const Size(200, 80),
+        painterBuilder: (_) => const _BlankPainter(),
+      );
       await tester.pumpWidget(host(backdrop));
       await tester.pumpAndSettle();
 
@@ -180,7 +175,9 @@ void main() {
         const Size(1, 1),
       ]) {
         await tester.pumpWidget(
-          host(SizedBox.fromSize(size: size, child: TaytayScenes.services())),
+          host(
+            SizedBox.fromSize(size: size, child: StateIllustrations.error()),
+          ),
         );
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull, reason: '$size');
@@ -188,7 +185,7 @@ void main() {
     });
 
     testWidgets('scenes are wrapped in a RepaintBoundary', (tester) async {
-      final scene = TaytayScenes.privacy();
+      final scene = StateIllustrations.empty();
       await tester.pumpWidget(host(scene));
       expect(
         find.descendant(
@@ -257,182 +254,6 @@ void main() {
       await tester.pumpAndSettle();
     });
   });
-
-  group('placeholders', () {
-    testWidgets('reserve their aspect ratio so content does not reflow', (
-      tester,
-    ) async {
-      await tester.pumpWidget(host(ImagePlaceholders.newsfeed(width: 320)));
-      await tester.pumpAndSettle();
-
-      final size = tester.getSize(find.byType(AspectRatio));
-      expect(
-        size.width / size.height,
-        closeTo(ImagePlaceholders.newsfeedAspect, 0.01),
-      );
-    });
-
-    testWidgets('the event poster is portrait, matching a printed notice', (
-      tester,
-    ) async {
-      expect(ImagePlaceholders.eventPosterAspect, lessThan(1));
-      await tester.pumpWidget(host(ImagePlaceholders.eventPoster(width: 150)));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-    });
-  });
-
-  group('feature icons', () {
-    test('cover every authoritative backend service category', () {
-      // Codes come from Modules\ServiceCatalog\Domain\ServiceCategory.
-      const backendCategories = <String>[
-        'dokumento',
-        'buwis',
-        'kalusugan',
-        'trabaho',
-        'ids',
-        'national',
-      ];
-      for (final code in backendCategories) {
-        expect(
-          ServiceCategoryIcon.fromCode(code),
-          isNotNull,
-          reason: 'no icon for category "$code"',
-        );
-      }
-      expect(
-        ServiceCategoryIcon.values.map((v) => v.categoryCode),
-        unorderedEquals(backendCategories),
-      );
-    });
-
-    test('an unknown category resolves to null rather than throwing', () {
-      // The backend may add a category without a version bump.
-      expect(ServiceCategoryIcon.fromCode('brand_new_category'), isNull);
-      expect(ServiceCategoryIcon.fromCode(null), isNull);
-    });
-
-    test('every category has a distinct icon, and no copy of its own', () {
-      final icons = ServiceCategoryIcon.values.map((v) => v.icon).toSet();
-      expect(icons, hasLength(ServiceCategoryIcon.values.length));
-
-      // The `label` assertion that used to sit here was deleted with the field
-      // on 2026-08-29. It asserted that six English strings were non-empty,
-      // which was true and worthless: nothing rendered them, and their being
-      // stranded on an unmounted widget is why `services_screen.dart` showed
-      // residents the backend's wire codes instead. The names now live in
-      // `serviceCategoryLabel`, where they can be translated.
-      //
-      // Every wire code still has to reach an icon, which is what this enum is
-      // now for.
-      for (final value in ServiceCategoryIcon.values) {
-        expect(ServiceCategoryIcon.fromCode(value.categoryCode), value);
-      }
-    });
-
-    testWidgets('an unknown code falls back to a neutral mark', (tester) async {
-      await tester.pumpWidget(host(FeatureIcon.categoryCode('nope')));
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(find.byIcon(Icons.apps_outlined), findsOneWidget);
-    });
-
-    testWidgets('an unlabelled icon is hidden from assistive technology', (
-      tester,
-    ) async {
-      // Correct when adjacent text already names the thing.
-      const icon = FeatureIcon(icon: Icons.badge_outlined);
-      await tester.pumpWidget(host(icon));
-      // No declared label anywhere in the subtree, so nothing is announced.
-      expect(declaredLabels(tester, find.byWidget(icon)), isEmpty);
-    });
-
-    testWidgets('a labelled category icon announces its category', (
-      tester,
-    ) async {
-      // The caller supplies the accessible name now, because the caller is the
-      // one with a BuildContext and can therefore translate it.
-      final icon = FeatureIcon.category(
-        ServiceCategoryIcon.kalusugan,
-        semanticLabel: 'Health',
-      );
-      await tester.pumpWidget(host(icon));
-      expect(declaredLabels(tester, find.byWidget(icon)), contains('Health'));
-    });
-  });
-
-  group('feature banner', () {
-    testWidgets('renders its copy on the gradient foreground', (tester) async {
-      await tester.pumpWidget(
-        host(
-          const SizedBox(
-            width: 340,
-            child: FeatureBanner(
-              title: 'Verify your account',
-              message: 'Unlock your digital ID.',
-            ),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Verify your account'), findsOneWidget);
-      expect(find.text('Unlock your digital ID.'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    });
-
-    testWidgets('the decorative motif is hidden from assistive technology', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        host(
-          const SizedBox(
-            width: 340,
-            child: FeatureBanner(title: 'Verify your account'),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(
-        find.descendant(
-          of: find.byType(FeatureBanner),
-          matching: find.byType(ExcludeSemantics),
-        ),
-        findsWidgets,
-      );
-    });
-
-    testWidgets('every motif paints without error', (tester) async {
-      for (final motif in BannerMotif.values) {
-        await tester.pumpWidget(
-          host(
-            SizedBox(
-              width: 340,
-              child: FeatureBanner(title: 'Taytay', motif: motif),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
-        expect(tester.takeException(), isNull, reason: motif.name);
-      }
-    });
-
-    testWidgets('is tappable when given an action', (tester) async {
-      var taps = 0;
-      await tester.pumpWidget(
-        host(
-          SizedBox(
-            width: 340,
-            child: FeatureBanner(title: 'Verify', onTap: () => taps++),
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Verify'));
-      expect(taps, 1);
-    });
-  });
 }
 
 class _NullPainter extends CustomPainter {
@@ -441,4 +262,15 @@ class _NullPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(CustomPainter oldDelegate) => false;
+}
+
+/// Paints nothing: the decorative contract is about semantics, not pixels.
+class _BlankPainter extends CustomPainter {
+  const _BlankPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {}
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

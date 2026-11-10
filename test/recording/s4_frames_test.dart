@@ -17,7 +17,7 @@ import 'package:taytay_resident/features/home/presentation/hotlines_screen.dart'
 import 'package:taytay_resident/features/notifications/presentation/notification_centre.dart';
 import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
-import 'package:taytay_resident/shared/widgets/municipal_header.dart';
+import 'package:taytay_resident/shared/widgets/blue_header.dart';
 
 /// Stills of `04-01` through `04-08` at 390×844 @3×.
 ///
@@ -271,9 +271,10 @@ void main() {
         _Phone(
           child: Column(
             children: <Widget>[
-              const MunicipalHeader(
+              const BlueHeader(
                 title: 'Notifications',
                 subtitle: 'Bayan ng Taytay · Rizal',
+                showBack: true,
                 onBack: _noop,
               ),
               Expanded(

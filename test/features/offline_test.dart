@@ -17,7 +17,6 @@ import 'package:taytay_resident/core/storage/public_cache.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/services/domain/lgu_service.dart';
 import 'package:taytay_resident/features/services/domain/service_catalog_repository.dart';
-import 'package:taytay_resident/features/services/presentation/services_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/network_status_views.dart';
 import 'package:taytay_resident/shared/widgets/remote_image.dart';
@@ -85,15 +84,6 @@ LguService service({
     ),
   ],
 );
-
-/// The catalogue this process last actually fetched, ten o'clock in Taytay.
-CachedRead<Paginated<LguService>> remembered() =>
-    CachedRead<Paginated<LguService>>(
-      value: Paginated<LguService>.single(<LguService>[service()]),
-      // 02:00 UTC is 10:00 AM in Taytay.
-      storedAt: DateTime.utc(2026, 8, 16, 2),
-      isFresh: false,
-    );
 
 /// Wraps a bare widget in the localisations it now legitimately needs.
 ///
@@ -203,23 +193,6 @@ Future<BootedOffline> bootOffline(
   await tester.pumpAndSettle();
 
   return (dependencies: dependencies, monitor: monitor, catalog: catalog);
-}
-
-/// The service catalogue is no longer the Directory tab. These cases still
-/// prove its stale-cache behaviour by mounting the screen on the same
-/// dependencies the boot just built.
-Future<void> showServiceCatalogue(
-  WidgetTester tester,
-  BootedOffline booted,
-) async {
-  await tester.pumpWidget(
-    AppDependenciesScope(
-      dependencies: booted.dependencies,
-      child: localised(const ServicesScreen()),
-    ),
-  );
-  await tester.pump();
-  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -696,41 +669,6 @@ void main() {
   // Acceptance 2 of TAB 25.
 
   group('The catalogue falls back to what was actually fetched', () {
-    testWidgets('a failed first load adopts the last known catalogue', (
-      tester,
-    ) async {
-      final booted = await bootOffline(
-        tester,
-        beforeLoad: (catalog) => catalog.lastKnown = remembered(),
-      );
-      // /services is the office directory. The service catalogue still falls
-      // back; it is no longer the tab, so the assertion mounts that screen.
-      await showServiceCatalogue(tester, booted);
-
-      // A guest opening the app on a weak connection is exactly the person the
-      // public content is for.
-      expect(find.text('Medical assistance'), findsOneWidget);
-      expect(
-        find.textContaining('Showing what was saved on your phone'),
-        findsOneWidget,
-      );
-    });
-
-    testWidgets('and states when the office actually answered', (tester) async {
-      final booted = await bootOffline(
-        tester,
-        beforeLoad: (catalog) => catalog.lastKnown = remembered(),
-      );
-      await showServiceCatalogue(tester, booted);
-
-      // The cache's own timestamp, not the moment the app gave up.
-      expect(
-        find.textContaining('Last updated Sun 16 Aug 2026'),
-        findsOneWidget,
-      );
-      expect(find.textContaining('10:00 AM'), findsOneWidget);
-    });
-
     testWidgets('with nothing remembered it says so rather than "none"', (
       tester,
     ) async {

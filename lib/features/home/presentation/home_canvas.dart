@@ -228,6 +228,11 @@ class _HomeCanvasState extends State<HomeCanvas> {
         child: RefreshIndicator(
           onRefresh: widget.onRefresh ?? () async {},
           child: ListView(
+            // No per-item repaint / semantics wrappers: they hit-test only their
+            // own box, so the strip GlassOverlap raises over the header would not
+            // take a tap.
+            addRepaintBoundaries: false,
+            addSemanticIndexes: false,
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: Spacing.xl),
             children: <Widget>[

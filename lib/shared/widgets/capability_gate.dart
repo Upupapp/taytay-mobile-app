@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/app_dependencies.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/intent/resident_intent.dart';
 import '../../core/l10n/app_locales.dart';
 import '../../core/router/app_routes.dart';
@@ -113,10 +114,10 @@ class CapabilityLockedView extends StatelessWidget {
       title: capabilityLabel(context, capability),
       kind: StatusKind.empty,
       icon: switch (verdict) {
-        CapabilityNeedsSignIn() => Icons.login_outlined,
-        CapabilityNeedsVerification() => Icons.verified_user_outlined,
-        CapabilityNotYetAvailable() => Icons.construction_outlined,
-        _ => Icons.lock_outline,
+        CapabilityNeedsSignIn() => TaytayIcons.logIn,
+        CapabilityNeedsVerification() => TaytayIcons.badgeCheck,
+        CapabilityNotYetAvailable() => TaytayIcons.hourglass,
+        _ => TaytayIcons.lock,
       },
       message: capabilityExplanation(context, verdict),
       primaryAction: recovery == null

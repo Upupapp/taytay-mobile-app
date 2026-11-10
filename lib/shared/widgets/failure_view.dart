@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/config/app_environment.dart';
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/result/result.dart';
 import 'error_state.dart';
 
@@ -92,20 +93,20 @@ class FailureView extends StatelessWidget {
   }
 
   static IconData _iconFor(AppFailure failure) => switch (failure) {
-    NetworkFailure() || TimeoutFailure() => Icons.wifi_off_outlined,
-    UnauthenticatedFailure() => Icons.lock_outline,
-    ForbiddenFailure() => Icons.no_accounts_outlined,
-    NotFoundFailure() => Icons.search_off_outlined,
-    ValidationFailure() => Icons.edit_note_outlined,
+    NetworkFailure() || TimeoutFailure() => TaytayIcons.wifiOff,
+    UnauthenticatedFailure() => TaytayIcons.lock,
+    ForbiddenFailure() => TaytayIcons.circleSlash,
+    NotFoundFailure() => TaytayIcons.search,
+    ValidationFailure() => TaytayIcons.fileText,
     CodeExchangeFailure(:final exchangeKind) =>
       exchangeKind == CodeExchangeKind.locked
-          ? Icons.hourglass_top_outlined
-          : Icons.edit_note_outlined,
-    ConflictFailure() => Icons.sync_problem_outlined,
-    RateLimitedFailure() => Icons.hourglass_top_outlined,
-    UnacceptableUploadFailure() => Icons.photo_size_select_large_outlined,
+          ? TaytayIcons.hourglass
+          : TaytayIcons.fileText,
+    ConflictFailure() => TaytayIcons.refreshCw,
+    RateLimitedFailure() => TaytayIcons.hourglass,
+    UnacceptableUploadFailure() => TaytayIcons.image,
     ServerFailure() ||
     ContractFailure() ||
-    UnexpectedFailure() => Icons.error_outline,
+    UnexpectedFailure() => TaytayIcons.circleAlert,
   };
 }

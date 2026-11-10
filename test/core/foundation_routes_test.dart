@@ -13,7 +13,6 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
-import 'package:taytay_resident/shared/widgets/taytay_headers.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
 const SessionState _guest = GuestSession();
@@ -48,12 +47,6 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
   AppRoute.programs,
   AppRoute.profile,
 };
-
-/// Screens whose header is still [WovenHeader]. Redesign P3a: the welcome
-/// is the Main.dc.html photo zone now, and sign-in and the password reset
-/// screens use the [WaveHeader] of the form pattern. P3e: sign-in help is a
-/// [WaveHeader] page too, so no routed screen draws the woven header.
-const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{};
 
 /// Screens whose header is the redesign's [WaveHeader] (form / step pattern).
 const Set<AppRoute> _waveHeaderRoutes = <AppRoute>{
@@ -269,13 +262,6 @@ void main() {
           : _openLocation(route);
       expect(_currentPath(tester), landed, reason: route.name);
       _expectBackButtons(route);
-      if (_wovenHeaderRoutes.contains(route)) {
-        expect(
-          find.byType(WovenHeader),
-          findsOneWidget,
-          reason: route.routeName,
-        );
-      }
       if (_waveHeaderRoutes.contains(route)) {
         expect(
           find.byType(WaveHeader),

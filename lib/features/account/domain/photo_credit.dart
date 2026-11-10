@@ -170,6 +170,9 @@ abstract final class PhotoCredits {
       .toList(growable: false);
 
   /// The about screen's sentence. The design counts the office banners.
-  static String get officeBannerSummary =>
-      '${officeBanners.length} photos · Wikimedia Commons';
+  static String get officeBannerSummary => bannerSummaryOf(officeBanners);
+
+  /// The same sentence for the banners a screen was given.
+  static String bannerSummaryOf(List<PhotoCredit> banners) =>
+      '${banners.length} photos · Wikimedia Commons';
 }

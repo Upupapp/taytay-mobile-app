@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
 import '../../core/forms/field_error.dart';
 import 'app_banner.dart';
+import 'taytay_icon.dart';
 
 /// Lists everything wrong on the current step, above the fields.
 ///
@@ -181,8 +183,10 @@ class WhyWeAsk extends StatelessWidget {
         tilePadding: EdgeInsets.zero,
         childrenPadding: const EdgeInsets.only(bottom: Spacing.md),
         expandedCrossAxisAlignment: CrossAxisAlignment.start,
-        leading: Icon(
-          Icons.help_outline,
+        leading: TaytayIcon(
+          icon: TaytayIcons.info,
+          semanticLabel: '',
+          excludeSemantics: true,
           size: IconSizes.sm,
           color: theme.colorScheme.primary,
         ),
@@ -262,8 +266,10 @@ class UploadGuidance extends StatelessWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Icon(
-                    Icons.check,
+                  TaytayIcon(
+                    icon: TaytayIcons.check,
+                    semanticLabel: '',
+                    excludeSemantics: true,
                     size: IconSizes.sm,
                     color: theme.colorScheme.primary,
                   ),

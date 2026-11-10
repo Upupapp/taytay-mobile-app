@@ -15,7 +15,6 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/onboarding/presentation/welcome_scene.dart';
-import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 AppConfig config() => AppConfig.from(
   rawEnvironment: 'dev',
@@ -375,26 +374,6 @@ void main() {
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
-
-    testWidgets('the travelling light runs unless motion is reduced', (
-      tester,
-    ) async {
-      WelcomeMotion.enabled = true;
-      await boot(tester);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pump();
-      expect(find.text('Skip'), findsOneWidget);
-      expect(find.byKey(TravellingLight.mark), findsOneWidget);
-
-      WelcomeMotion.enabled = false;
-      MotionPreference.set(MotionPreference.reduced);
-      await tester.pump();
-      expect(find.byKey(TravellingLight.mark), findsNothing);
-      // Redesign P3a: the gold thread and its travelling light are gone from
-      // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
-      // Phase 4 deletes this test with gold_thread_shell.dart.
-    }, skip: true);
 
     testWidgets('get started opens sign-in', (tester) async {
       final dependencies = await boot(tester);

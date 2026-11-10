@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
+import '../../core/design/typography.dart';
+import 'taytay_icon.dart';
 
 /// The meaning a banner carries.
 ///
@@ -55,91 +58,102 @@ class AppBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    // Container/on-container pairs come from the ColorScheme so they stay
-    // contrast-correct in dark mode. Only `warning` has no M3 role, so it uses
-    // a brand token whose pairing is asserted in brand_test.dart.
+    // Redesign Phase 4: drawn as the soft note (CSS `.note`, the same look as
+    // `SoftNote`): a tinted fill, no border, no shadow, a distinct Lucide icon
+    // per tone so the tone never rests on colour alone.
     final (Color background, Color foreground, IconData icon) = switch (tone) {
       BannerTone.info => (
-        scheme.secondaryContainer,
-        scheme.onSecondaryContainer,
-        Icons.info_outline,
+        BrandColors.blue50,
+        BrandColors.text,
+        TaytayIcons.info,
       ),
       BannerTone.success => (
-        scheme.tertiaryContainer,
-        scheme.onTertiaryContainer,
-        Icons.check_circle_outline,
+        BrandColors.green50,
+        BrandColors.green,
+        TaytayIcons.circleCheck,
       ),
       BannerTone.warning => (
-        const Color(0xFFFFF3D6),
-        const Color(0xFF6B4400),
-        Icons.warning_amber_outlined,
+        BrandColors.gold50,
+        BrandColors.goldInk,
+        TaytayIcons.triangleAlert,
       ),
       BannerTone.error => (
-        scheme.errorContainer,
-        scheme.onErrorContainer,
-        Icons.error_outline,
+        BrandColors.red50,
+        BrandColors.redInk,
+        TaytayIcons.circleAlert,
       ),
     };
+    final String? title = this.title;
+    final Widget? action = this.action;
+    final VoidCallback? onDismiss = this.onDismiss;
+    final TextStyle style = AppTypography.listDetail.copyWith(
+      color: foreground,
+      height: 1.45,
+    );
 
     return Semantics(
       container: true,
       liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.all(Spacing.md),
+      child: DecoratedBox(
         decoration: BoxDecoration(
           color: background,
-          borderRadius: BorderRadius.circular(Radii.md),
-          // An outline as well as a fill, so the banner has an edge in
-          // high-contrast mode where fills are flattened.
-          border: Border.all(color: foreground.withValues(alpha: 0.24)),
+          borderRadius: BorderRadius.circular(Radii.note),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(icon, size: IconSizes.md, color: foreground),
-            const SizedBox(width: Spacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  if (title != null) ...<Widget>[
-                    Text(
-                      title!,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        color: foreground,
-                      ),
-                    ),
-                    const SizedBox(height: Spacing.xxs),
-                  ],
-                  Text(
-                    message,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: foreground,
-                    ),
-                  ),
-                  if (action != null) ...<Widget>[
-                    const SizedBox(height: Spacing.sm),
-                    action!,
-                  ],
-                ],
-              ),
-            ),
-            if (onDismiss != null)
-              IconButton(
-                onPressed: onDismiss,
-                icon: const Icon(Icons.close),
-                iconSize: IconSizes.sm,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            Spacing.section,
+            Spacing.md,
+            onDismiss == null ? Spacing.section : Spacing.xxs,
+            Spacing.md,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              TaytayIcon(
+                icon: icon,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
                 color: foreground,
-                tooltip: 'Dismiss',
-                constraints: const BoxConstraints(
-                  minWidth: A11y.minTapTarget,
-                  minHeight: A11y.minTapTarget,
+              ),
+              const SizedBox(width: Spacing.sm + Spacing.xxs),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (title != null) ...<Widget>[
+                      Text(
+                        title,
+                        style: style.copyWith(fontWeight: AppTypography.strong),
+                      ),
+                      const SizedBox(height: Spacing.xxs),
+                    ],
+                    if (message.isNotEmpty) Text(message, style: style),
+                    if (action != null) ...<Widget>[
+                      const SizedBox(height: Spacing.sm),
+                      action,
+                    ],
+                  ],
                 ),
               ),
-          ],
+              if (onDismiss != null)
+                IconButton(
+                  onPressed: onDismiss,
+                  icon: const TaytayIcon(
+                    icon: TaytayIcons.close,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: IconSizes.sm,
+                  ),
+                  color: foreground,
+                  tooltip: 'Dismiss',
+                  constraints: const BoxConstraints(
+                    minWidth: A11y.minTapTarget,
+                    minHeight: A11y.minTapTarget,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

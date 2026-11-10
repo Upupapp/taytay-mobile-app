@@ -9,35 +9,6 @@ import 'error_state.dart';
 import 'taytay_glyph.dart';
 import 'taytay_icon.dart';
 
-/// A white card. Drawn as the redesign's `SoftCard` look: radius 20, no
-/// border, no shadow. New code uses `SoftCard` (surface_cards.dart).
-class SectionCard extends StatelessWidget {
-  const SectionCard({
-    required this.child,
-    this.padding = const EdgeInsets.all(Spacing.lg),
-    super.key,
-  });
-
-  final Widget child;
-  final EdgeInsetsGeometry padding;
-
-  @override
-  Widget build(BuildContext context) {
-    // The old 1 px stroke is gone, but its 1 px inset stays: screens laid
-    // out against this card keep their positions until they are redesigned.
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: BrandColors.surfaceCard,
-        borderRadius: BorderRadius.circular(Radii.card),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(1),
-        child: Padding(padding: padding, child: child),
-      ),
-    );
-  }
-}
-
 /// A loading block. Shimmer is decorative and disappears under reduced motion.
 class SkeletonBlock extends StatefulWidget {
   const SkeletonBlock({
