@@ -5,14 +5,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
-import '../../../shared/widgets/app_banner.dart';
-import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/feed_row.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/pills.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/event_repository.dart';
 import 'events_controller.dart';
 
@@ -31,6 +38,10 @@ import 'events_controller.dart';
 /// **Registering arrives in TAB 22.** This screen shows the registration state
 /// the server reports and offers no register button — a control that cannot
 /// complete is worse than an absent one.
+///
+/// Drawn as the Balita list (`Balita.dc.html`): the glass page, the blue
+/// header with the back control and the scope chips, the events as rows in a
+/// glass card.
 class EventsScreen extends StatefulWidget {
   const EventsScreen({super.key});
 
@@ -80,36 +91,55 @@ class _EventsScreenState extends State<EventsScreen> {
             )
             is AccessAllowed;
 
+    final Widget header = BlueHeader(
+      overlap: true,
+      showBack: true,
+      title: 'Events',
+      subtitle: 'Bayan ng Taytay · Rizal',
+      bottom: controller == null
+          ? null
+          : _ScopeSelector(
+              scope: controller.scope,
+              showRegistered: canSeeRegistered,
+              onChanged: controller.changeScope,
+            ),
+    );
+
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Events'),
-      ),
-      body: SafeArea(
-        child: controller == null
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-                children: <Widget>[
-                  _ScopeSelector(
-                    scope: controller.scope,
-                    showRegistered: canSeeRegistered,
-                    onChanged: controller.changeScope,
-                  ),
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: controller.refresh,
-                      child: _EventList(controller: controller),
-                    ),
-                  ),
-                ],
+      backgroundColor: BrandColors.background,
+      body: GlassBackground(
+        child: RefreshIndicator(
+          onRefresh: controller?.refresh ?? () async {},
+          child: ListView(
+            // No per-item repaint / semantics wrappers: they hit-test only
+            // their own box, so the strip GlassOverlap raises over the
+            // header would not take a tap.
+            addRepaintBoundaries: false,
+            addSemanticIndexes: false,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.only(
+              bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+            ),
+            children: <Widget>[
+              header,
+              GlassOverlap(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                  child: controller == null
+                      ? const _EventsSkeleton()
+                      : _EventList(controller: controller),
+                ),
               ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-/// Upcoming, Registered (signed in only) and Past.
+/// Upcoming, Registered (signed in only) and Past, as the header chips
+/// (Balita `.chip.bar` / `.chip.onbar`).
 class _ScopeSelector extends StatelessWidget {
   const _ScopeSelector({
     required this.scope,
@@ -123,29 +153,21 @@ class _ScopeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(Spacing.lg, Spacing.md, Spacing.lg, 0),
-      child: SegmentedButton<EventScope>(
-        segments: <ButtonSegment<EventScope>>[
-          const ButtonSegment<EventScope>(
-            value: EventScope.upcoming,
-            label: Text('Upcoming'),
-            icon: Icon(Icons.event_outlined),
-          ),
-          if (showRegistered)
-            const ButtonSegment<EventScope>(
-              value: EventScope.registered,
-              label: Text('Registered'),
-              icon: Icon(Icons.how_to_reg_outlined),
-            ),
-          const ButtonSegment<EventScope>(
-            value: EventScope.past,
-            label: Text('Past'),
-            icon: Icon(Icons.history_outlined),
-          ),
+    Widget chip(String label, EventScope value) => HeaderChoiceChip(
+      label: label,
+      selected: scope == value,
+      onTap: () => onChanged(value),
+    );
+    return Semantics(
+      container: true,
+      label: 'Show events',
+      child: Wrap(
+        spacing: Spacing.sm,
+        children: <Widget>[
+          chip('Upcoming', EventScope.upcoming),
+          if (showRegistered) chip('Registered', EventScope.registered),
+          chip('Past', EventScope.past),
         ],
-        selected: <EventScope>{scope},
-        onSelectionChanged: (selection) => onChanged(selection.first),
       ),
     );
   }
@@ -165,61 +187,53 @@ class _EventList extends StatelessWidget {
     if (controller.failure != null) {
       // Distinct from an empty list. "Taytay LGU has scheduled nothing" and "we
       // could not reach Taytay LGU" are different statements.
-      return ListView(
-        children: <Widget>[
-          StatusView(
-            title: 'Events are not available right now',
-            kind: StatusKind.error,
-            icon: Icons.wifi_off_outlined,
-            message:
-                'We could not reach Taytay LGU. Check your connection and try '
-                'again. Event notices are also posted at the municipal hall and '
-                'barangay halls.',
-            primaryAction: TextButton(
-              onPressed: controller.refresh,
-              child: const Text('Try again'),
-            ),
-          ),
-        ],
+      return ErrorState(
+        title: 'Events are not available right now',
+        message:
+            'We could not reach Taytay LGU. Check your connection and try '
+            'again. Event notices are also posted at the municipal hall and '
+            'barangay halls.',
+        onRetry: controller.refresh,
+        offline: true,
+        boxed: true,
       );
     }
 
     if (controller.isEmptyAndHealthy) {
-      return ListView(
-        children: <Widget>[
-          StatusView(
-            title: switch (controller.scope) {
-              EventScope.upcoming => 'Nothing scheduled right now',
-              EventScope.registered => 'You have not registered for anything',
-              EventScope.past => 'No past events to show',
-            },
-            kind: StatusKind.empty,
-            icon: Icons.event_busy_outlined,
-            message: switch (controller.scope) {
-              EventScope.upcoming =>
-                'New Taytay LGU events will appear here when they are '
-                    'announced.',
-              EventScope.registered =>
-                'Events you register for will appear here.',
-              EventScope.past => 'Events that have finished will appear here.',
-            },
-          ),
-        ],
+      return EmptyState(
+        title: switch (controller.scope) {
+          EventScope.upcoming => 'Nothing scheduled right now',
+          EventScope.registered => 'You have not registered for anything',
+          EventScope.past => 'No past events to show',
+        },
+        message: switch (controller.scope) {
+          EventScope.upcoming =>
+            'New Taytay LGU events will appear here when they are '
+                'announced.',
+          EventScope.registered => 'Events you register for will appear here.',
+          EventScope.past => 'Events that have finished will appear here.',
+        },
+        boxed: true,
       );
     }
 
     final events = controller.items;
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(Spacing.lg),
-      itemCount: events.length + 1,
-      itemBuilder: (context, index) {
-        if (index == events.length) return _Footer(controller: controller);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: Spacing.md),
-          child: EventCard(event: events[index]),
-        );
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        GlassCard(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              for (var i = 0; i < events.length; i++)
+                EventCard(event: events[i], divider: i > 0),
+            ],
+          ),
+        ),
+        _Footer(controller: controller),
+      ],
     );
   }
 }
@@ -231,36 +245,48 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (controller.pageFailure != null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.lg),
-        child: AppBanner(
-          tone: BannerTone.warning,
-          title: 'Could not load more',
-          message: 'What you have already seen is still here.',
-          action: TextButton(
-            onPressed: controller.retryPage,
-            child: const Text('Try again'),
-          ),
+        padding: const EdgeInsets.only(top: Spacing.lg),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const SoftNote(
+              tone: NoteTone.warning,
+              title: 'Could not load more. ',
+              message: 'What you have already seen is still here.',
+            ),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton(
+                onPressed: controller.retryPage,
+                child: const Text('Try again'),
+              ),
+            ),
+          ],
         ),
       );
     }
 
     if (controller.isLoadingMore) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.xl),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.only(top: Spacing.lg),
+        child: LoadingSkeleton(
+          layout: SkeletonLayout.feed,
+          count: 1,
+          semanticLabel: 'Loading more events',
+        ),
       );
     }
 
     if (controller.hasMore) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-        child: TextButton(
-          onPressed: controller.loadMore,
-          child: const Text('Load more'),
+        padding: const EdgeInsets.only(top: Spacing.md),
+        child: Center(
+          child: TextButton(
+            onPressed: controller.loadMore,
+            child: const Text('Load more'),
+          ),
         ),
       );
     }
@@ -270,85 +296,135 @@ class _Footer extends StatelessWidget {
       child: Text(
         'That is everything Taytay LGU has listed here.',
         textAlign: TextAlign.center,
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
       ),
     );
   }
 }
 
-/// One event in the list.
+/// One event in the list (Balita `.row`): the category, the registration the
+/// resident holds, the title, when and where, the registration summary, and
+/// the cover on the right when the office uploaded one.
 ///
-/// Public so Home can render the same card rather than a second, subtly
+/// Public so Home can render the same row rather than a second, subtly
 /// different one.
 class EventCard extends StatelessWidget {
-  const EventCard({required this.event, super.key});
+  const EventCard({required this.event, this.divider = false, super.key});
 
   final LguEvent event;
 
+  /// The hairline above the row, for every row after the first in a card.
+  final bool divider;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final String? category = event.category;
+    final DateTime? startsAt = event.startsAt;
+    final EventVenue? venue = event.venue;
 
-    return AppCard(
-      onTap: () => context.goNamed(
-        AppRoute.eventDetail.routeName,
-        pathParameters: <String, String>{'eventId': event.id},
-      ),
-      child: Column(
+    final Widget row = Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.section),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          EventCover(event: event, gapBelow: Spacing.md),
-
-          if (event.isRegistered) ...<Widget>[
-            Row(
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(
-                  Icons.how_to_reg_outlined,
-                  size: IconSizes.sm,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: Spacing.xs),
-                // Never colour alone — and `Expanded`, because these labels are
-                // sentences ("You are on the waitlist") that overflow a narrow
-                // card at a large text scale otherwise.
-                Expanded(
-                  child: Text(
-                    registrationStateLabel(event.registrationState?.known),
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.primary,
+                if (category != null && category.isNotEmpty) ...<Widget>[
+                  Text(
+                    category.toUpperCase(),
+                    style: AppTypography.category.copyWith(
+                      color: BrandColors.blue,
                     ),
                   ),
+                  const SizedBox(height: Spacing.xs),
+                ],
+
+                if (event.isRegistered) ...<Widget>[
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      const TaytayIcon(
+                        icon: TaytayIcons.badgeCheck,
+                        semanticLabel: '',
+                        excludeSemantics: true,
+                        size: IconSizes.sm,
+                        color: BrandColors.green,
+                      ),
+                      const SizedBox(width: Spacing.xs),
+                      // Never colour alone — and `Expanded`, because these
+                      // labels are sentences ("You are on the waitlist") that
+                      // overflow a narrow row at a large text scale otherwise.
+                      Expanded(
+                        child: Text(
+                          registrationStateLabel(
+                            event.registrationState?.known,
+                          ),
+                          style: AppTypography.small.copyWith(
+                            fontWeight: AppTypography.strong,
+                            color: BrandColors.green,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                ],
+
+                Text(
+                  event.title,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
                 ),
+
+                if (startsAt != null) ...<Widget>[
+                  const SizedBox(height: Spacing.xs),
+                  // The whole point of the Manila formatter: the time is stated
+                  // with the clock it belongs to, so a phone set to another
+                  // timezone cannot mislead somebody into arriving on the
+                  // wrong day.
+                  _IconLine(
+                    icon: TaytayIcons.clock,
+                    text: ManilaTime.formatRange(startsAt, event.endsAt),
+                  ),
+                ],
+
+                if (venue != null) ...<Widget>[
+                  const SizedBox(height: Spacing.xxs),
+                  _IconLine(icon: TaytayIcons.mapPin, text: venue.name),
+                ],
+
+                if (!event.isRegistered) ...<Widget>[
+                  const SizedBox(height: Spacing.sm),
+                  _RegistrationSummary(event: event),
+                ],
               ],
             ),
-            const SizedBox(height: Spacing.sm),
-          ],
-
-          Text(event.title, style: theme.textTheme.titleMedium),
-
-          if (event.startsAt != null) ...<Widget>[
-            const SizedBox(height: Spacing.xs),
-            // The whole point of the Manila formatter: the time is stated with
-            // the clock it belongs to, so a phone set to another timezone
-            // cannot mislead somebody into arriving on the wrong day.
-            _IconLine(
-              icon: Icons.schedule_outlined,
-              text: ManilaTime.formatRange(event.startsAt!, event.endsAt),
-            ),
-          ],
-
-          if (event.venue != null) ...<Widget>[
-            const SizedBox(height: Spacing.xxs),
-            _IconLine(icon: Icons.place_outlined, text: event.venue!.name),
-          ],
-
-          if (!event.isRegistered) ...<Widget>[
-            const SizedBox(height: Spacing.sm),
-            _RegistrationSummary(event: event),
-          ],
+          ),
+          EventCover(
+            event: event,
+            height: FeedRow.thumbnailSize,
+            width: FeedRow.thumbnailSize,
+            gapStart: Spacing.md,
+          ),
         ],
+      ),
+    );
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        border: divider
+            ? const Border(top: BorderSide(color: BrandColors.divider))
+            : null,
+      ),
+      child: InkWell(
+        onTap: () => context.goNamed(
+          AppRoute.eventDetail.routeName,
+          pathParameters: <String, String>{'eventId': event.id},
+        ),
+        child: row,
       ),
     );
   }
@@ -362,7 +438,6 @@ class _RegistrationSummary extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final state = event.registrationState?.known;
     final remaining = event.capacity.remaining;
 
@@ -382,11 +457,9 @@ class _RegistrationSummary extends StatelessWidget {
     ];
     if (parts.isEmpty) return const SizedBox.shrink();
 
-    return Text(
-      parts.join(' · '),
-      style: theme.textTheme.labelMedium?.copyWith(
-        color: theme.colorScheme.onSurfaceVariant,
-      ),
+    return StatusPill(
+      label: parts.join(' · '),
+      tone: event.isCalledOff ? PillTone.red : PillTone.blue,
     );
   }
 }
@@ -399,22 +472,24 @@ class _IconLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Icon(
-          icon,
-          size: IconSizes.sm,
-          color: theme.colorScheme.onSurfaceVariant,
+        Padding(
+          padding: const EdgeInsets.only(top: Spacing.xxs),
+          child: TaytayIcon(
+            icon: icon,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm - Spacing.xxs,
+            color: BrandColors.muted,
+          ),
         ),
-        const SizedBox(width: Spacing.xs),
+        const SizedBox(width: Spacing.xs + Spacing.xxs),
         Expanded(
           child: Text(
             text,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
+            style: AppTypography.listDetail.copyWith(color: BrandColors.text),
           ),
         ),
       ],
@@ -440,16 +515,31 @@ class EventCover extends StatelessWidget {
   const EventCover({
     required this.event,
     this.height,
+    this.width,
     this.gapBelow,
+    this.gapStart,
+    this.radius = Radii.md,
     this.load,
     super.key,
   });
 
   final LguEvent event;
+
+  /// Null draws 16:9 at the given width. [double.infinity] fills the parent
+  /// (the detail page's hero).
   final double? height;
+
+  /// Null takes the parent's width.
+  final double? width;
 
   /// Space under a drawn cover. None when there is no cover to draw.
   final double? gapBelow;
+
+  /// Space before a drawn cover in a row. None when there is no cover.
+  final double? gapStart;
+
+  /// Corner radius; 0 for the full-bleed hero.
+  final double radius;
 
   /// Reads the cover by event id. Defaults to `MediaBytesApi.eventCover`, and
   /// to nothing in a mock build, which has no API to ask.
@@ -467,14 +557,19 @@ class EventCover extends StatelessWidget {
         (dependencies.config.usesMockData
             ? null
             : dependencies.mediaBytes.eventCover);
-    final ColorScheme scheme = Theme.of(context).colorScheme;
     // Shown while the bytes are on their way, and if they never come. It says
     // nothing to a screen reader: the title, date and venue carry every fact.
-    final Widget placeholder = ExcludeSemantics(
+    const Widget placeholder = ExcludeSemantics(
       child: ColoredBox(
-        color: scheme.surfaceContainerHighest,
+        color: BrandColors.blue50,
         child: Center(
-          child: Icon(Icons.event_outlined, color: scheme.onSurfaceVariant),
+          child: TaytayIcon(
+            icon: TaytayIcons.calendar,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.md,
+            color: BrandColors.blue,
+          ),
         ),
       ),
     );
@@ -490,64 +585,52 @@ class EventCover extends StatelessWidget {
                 placeholder: placeholder,
                 semanticLabel: event.coverAltText,
               );
-        final Widget cover = ClipRRect(
-          borderRadius: BorderRadius.circular(Radii.md),
-          child: height == null
-              ? AspectRatio(aspectRatio: 16 / 9, child: image)
-              : SizedBox(height: height, width: double.infinity, child: image),
-        );
-        final double? gap = gapBelow;
-        return gap == null
-            ? cover
-            : Padding(
-                padding: EdgeInsets.only(bottom: gap),
-                child: cover,
+        final double? height = this.height;
+        final Widget sized = height == null
+            ? SizedBox(
+                width: width,
+                child: AspectRatio(aspectRatio: 16 / 9, child: image),
+              )
+            : SizedBox(
+                height: height,
+                width: width ?? double.infinity,
+                child: image,
               );
+        Widget cover = radius == 0
+            ? sized
+            : ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: sized,
+              );
+        final double? gap = gapBelow;
+        if (gap != null) {
+          cover = Padding(
+            padding: EdgeInsets.only(bottom: gap),
+            child: cover,
+          );
+        }
+        final double? start = gapStart;
+        if (start != null) {
+          cover = Padding(
+            padding: EdgeInsetsDirectional.only(start: start),
+            child: cover,
+          );
+        }
+        return cover;
       },
     );
   }
 }
 
-/// Placeholder cards while the first page loads.
+/// Placeholder rows while the first page loads.
 class _EventsSkeleton extends StatelessWidget {
   const _EventsSkeleton();
 
   @override
   Widget build(BuildContext context) {
-    final block = Theme.of(context).colorScheme.surfaceContainerHighest;
-
-    return Semantics(
-      liveRegion: true,
-      label: 'Loading events',
-      child: ExcludeSemantics(
-        child: ListView.builder(
-          padding: const EdgeInsets.all(Spacing.lg),
-          itemCount: 3,
-          itemBuilder: (context, index) => Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.md),
-            child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: block,
-                        borderRadius: BorderRadius.circular(Radii.md),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: Spacing.md),
-                  Container(width: 200, height: 12, color: block),
-                  const SizedBox(height: Spacing.sm),
-                  Container(width: 140, height: 12, color: block),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return const LoadingSkeleton(
+      layout: SkeletonLayout.feed,
+      semanticLabel: 'Loading events',
     );
   }
 }

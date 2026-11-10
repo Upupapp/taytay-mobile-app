@@ -5,18 +5,22 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/forms/field_error.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
-import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/consent_check_card.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/success_screen.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/event_repository.dart';
 import 'event_registration_controller.dart';
 
@@ -35,6 +39,10 @@ import 'event_registration_controller.dart';
 ///
 /// **No tickets, no payment, no seat map.** The Master Command rules them out,
 /// and there is nothing in this flow that could grow into one.
+///
+/// Drawn as the form / step pattern (`RegDetails.dc.html`): the wave header
+/// with the step and its bar, the white page, filled fields, the actions in
+/// the footer. A held place is the success pattern (`RegDone.dc.html`).
 class EventRegistrationScreen extends StatefulWidget {
   const EventRegistrationScreen({required this.eventId, super.key});
 
@@ -104,25 +112,19 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
     final controller = _controller;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Register'),
-      ),
-      body: SafeArea(
-        child: switch ((_idIsValid, controller)) {
-          (false, _) => _Unavailable(
-            message: DeepLinkRejection.invalidIdentifier.residentMessage,
-          ),
-          (_, null) => const AppLoadingView(),
-          (_, final EventRegistrationController active) => _Body(
-            controller: active,
-            errorFocus: _errorFocus,
-            onContinue: _continue,
-            eventId: widget.eventId,
-          ),
-        },
-      ),
+      backgroundColor: BrandColors.white,
+      body: switch ((_idIsValid, controller)) {
+        (false, _) => _Unavailable(
+          message: DeepLinkRejection.invalidIdentifier.residentMessage,
+        ),
+        (_, null) => const _Waiting(label: 'Opening the registration form…'),
+        (_, final EventRegistrationController active) => _Body(
+          controller: active,
+          errorFocus: _errorFocus,
+          onContinue: _continue,
+          eventId: widget.eventId,
+        ),
+      },
     );
   }
 }
@@ -143,7 +145,7 @@ class _Body extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (controller.isLoadingForm) {
-      return const AppLoadingView(message: 'Opening the registration form…');
+      return const _Waiting(label: 'Opening the registration form…');
     }
 
     final form = controller.form;
@@ -159,7 +161,7 @@ class _Body extends StatelessWidget {
     if (block != null) return _Blocked(block: block, eventId: eventId);
 
     if (controller.step == RegistrationStep.submitting) {
-      return const AppLoadingView(message: 'Registering you…');
+      return const _Waiting(label: 'Registering you…');
     }
     if (controller.step == RegistrationStep.outcome) {
       return _Outcome(controller: controller, eventId: eventId);
@@ -170,6 +172,37 @@ class _Body extends StatelessWidget {
       form: form,
       errorFocus: errorFocus,
       onContinue: onContinue,
+    );
+  }
+}
+
+/// A page of the flow that is not a step: the wave header titled Register,
+/// and the state on the white page below it.
+class _StatePage extends StatelessWidget {
+  const _StatePage({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AuthFormPage(title: 'Register', child: child);
+  }
+}
+
+/// Busy, with the loading skeleton and the sentence a screen reader hears.
+class _Waiting extends StatelessWidget {
+  const _Waiting({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return _StatePage(
+      child: LoadingSkeleton(
+        layout: SkeletonLayout.detail,
+        count: 1,
+        semanticLabel: label,
+      ),
     );
   }
 }
@@ -220,20 +253,13 @@ class _Blocked extends StatelessWidget {
       ),
     };
 
-    return StatusView(
-      title: title,
-      kind: StatusKind.empty,
-      icon: switch (block) {
-        RegistrationBlock.alreadyRegistered => Icons.how_to_reg_outlined,
-        RegistrationBlock.needsVerification => Icons.verified_user_outlined,
-        RegistrationBlock.unsupportedForm => Icons.construction_outlined,
-        RegistrationBlock.notOpen => Icons.event_busy_outlined,
-      },
-      message: message,
-      primaryAction: AppButton(
-        label: action,
-        fullWidth: false,
-        onPressed: () => route == AppRoute.eventDetail
+    return _StatePage(
+      child: EmptyState(
+        title: title,
+        message: message,
+        actionLabel: action,
+        primaryAction: true,
+        onAction: () => route == AppRoute.eventDetail
             ? context.goNamed(
                 route.routeName,
                 pathParameters: <String, String>{'eventId': eventId},
@@ -259,94 +285,59 @@ class _Wizard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final position = controller.progressPosition;
     final total = controller.progressSteps.length;
     final isLast = controller.step == controller.progressSteps.last;
+    final bool stepped = position != null && total > 1;
 
-    return Column(
-      children: <Widget>[
-        if (position != null && total > 1)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              Spacing.lg,
-              Spacing.md,
-              Spacing.lg,
-              0,
+    return AuthFormPage(
+      title: controller.step.title,
+      subtitle: 'Event registration',
+      stepLabel: stepped ? 'Step $position of $total' : null,
+      progress: stepped ? position / total : null,
+      progressSemanticLabel: stepped ? 'Step $position of $total' : null,
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          AppButton(
+            label: isLast ? 'Register' : 'Continue',
+            loading: controller.busy,
+            hapticIntent: isLast
+                ? HapticIntent.confirm
+                : HapticIntent.selection,
+            onPressed: isLast
+                ? (controller.canSubmit ? controller.submit : null)
+                : onContinue,
+          ),
+          if (controller.canGoBack) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            AppButton(
+              label: 'Back',
+              variant: AppButtonVariant.text,
+              onPressed: controller.busy ? null : controller.back,
             ),
-            child: Semantics(
-              label: 'Step $position of $total',
-              excludeSemantics: true,
-              child: Text(
-                'Step $position of $total',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
+          ],
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          FormErrorSummary(errors: controller.errors, focusNode: errorFocus),
+          switch (controller.step) {
+            RegistrationStep.confirm => _ConfirmStep(form: form),
+            RegistrationStep.questions => _QuestionsStep(
+              controller: controller,
+              form: form,
             ),
-          ),
-
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(Spacing.lg),
-            children: <Widget>[
-              FormErrorSummary(
-                errors: controller.errors,
-                focusNode: errorFocus,
-              ),
-
-              Semantics(
-                header: true,
-                child: Text(
-                  controller.step.title,
-                  style: theme.textTheme.headlineSmall,
-                ),
-              ),
-              const SizedBox(height: Spacing.lg),
-
-              switch (controller.step) {
-                RegistrationStep.confirm => _ConfirmStep(form: form),
-                RegistrationStep.questions => _QuestionsStep(
-                  controller: controller,
-                  form: form,
-                ),
-                RegistrationStep.consent => _ConsentStep(
-                  controller: controller,
-                  form: form,
-                ),
-                _ => const SizedBox.shrink(),
-              },
-            ],
-          ),
-        ),
-
-        Padding(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              AppButton(
-                label: isLast ? 'Register' : 'Continue',
-                loading: controller.busy,
-                hapticIntent: isLast
-                    ? HapticIntent.confirm
-                    : HapticIntent.selection,
-                onPressed: isLast
-                    ? (controller.canSubmit ? controller.submit : null)
-                    : onContinue,
-              ),
-              if (controller.canGoBack) ...<Widget>[
-                const SizedBox(height: Spacing.sm),
-                AppButton(
-                  label: 'Back',
-                  variant: AppButtonVariant.text,
-                  onPressed: controller.busy ? null : controller.back,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ],
+            RegistrationStep.consent => _ConsentStep(
+              controller: controller,
+              form: form,
+            ),
+            _ => const SizedBox.shrink(),
+          },
+        ],
+      ),
     );
   }
 }
@@ -359,25 +350,34 @@ class _ConfirmStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final String? notice = form.notice;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        AppCard(
+        SoftCard(
+          filled: true,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Text(
                 'You are registering for',
-                style: theme.textTheme.labelMedium,
+                style: AppTypography.small.copyWith(
+                  fontWeight: AppTypography.medium,
+                  color: BrandColors.muted,
+                ),
               ),
               const SizedBox(height: Spacing.xxs),
-              Text(form.eventTitle, style: theme.textTheme.titleMedium),
+              Text(
+                form.eventTitle,
+                style: AppTypography.sectionTitle.copyWith(
+                  color: BrandColors.ink,
+                ),
+              ),
             ],
           ),
         ),
-        const SizedBox(height: Spacing.lg),
+        const SizedBox(height: Spacing.formGap),
 
         // No name, no address, no birth date. The office already holds the
         // resident's record and the registration is filed against the account —
@@ -386,26 +386,30 @@ class _ConfirmStep extends StatelessWidget {
         Text(
           'This registration will be filed against the account you are signed '
           'in with.',
-          style: theme.textTheme.bodyMedium,
+          style: _body,
         ),
 
-        if (form.notice != null) ...<Widget>[
-          const SizedBox(height: Spacing.lg),
-          AppBanner(
-            tone: BannerTone.info,
-            title: 'From the office',
-            message: form.notice!,
+        if (notice != null) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          // The heading is its own line so the office's sentence stays
+          // exactly as it sent it.
+          Text(
+            'From the office',
+            style: AppTypography.small.copyWith(
+              fontWeight: AppTypography.medium,
+              color: BrandColors.muted,
+            ),
           ),
+          const SizedBox(height: Spacing.xs),
+          SoftNote(message: notice),
         ],
 
-        const SizedBox(height: Spacing.lg),
+        const SizedBox(height: Spacing.formGap),
         // Said before they commit, not after.
         Text(
           'Taytay LGU decides whether a place is available. You will see the '
           'answer on the next screen.',
-          style: theme.textTheme.bodySmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          style: _muted,
         ),
       ],
     );
@@ -422,11 +426,11 @@ class _QuestionsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (final field in form.fields)
           Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.xl),
+            padding: const EdgeInsets.only(bottom: Spacing.formGap),
             child: _Field(
               field: field,
               controller: controller,
@@ -451,11 +455,11 @@ class _Field extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final answer = controller.answers[field.key];
+    final String? error = this.error;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         FieldLabel(
           label: field.prompt,
@@ -522,6 +526,7 @@ class _Field extends StatelessWidget {
                 ),
             ],
           ),
+          // The theme's filled field (RegDetails `.field`).
           ServerFieldKind.number => TextField(
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textInputAction: TextInputAction.next,
@@ -532,7 +537,6 @@ class _Field extends StatelessWidget {
               field.key,
               value.isEmpty ? null : (num.tryParse(value) ?? value),
             ),
-            decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
           // Everything textual, including a date this build renders as text
           // rather than guessing a picker format the office did not specify.
@@ -548,17 +552,14 @@ class _Field extends StatelessWidget {
               text: answer is String ? answer : '',
             ),
             onChanged: (value) => controller.answer(field.key, value),
-            decoration: const InputDecoration(border: OutlineInputBorder()),
           ),
         },
 
         if (error != null) ...<Widget>[
           const SizedBox(height: Spacing.xs),
           Text(
-            error!,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.error,
-            ),
+            error,
+            style: AppTypography.fieldHelp.copyWith(color: BrandColors.danger),
           ),
         ],
       ],
@@ -574,41 +575,35 @@ class _ConsentStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         for (final consent in form.consents)
           Padding(
-            padding: const EdgeInsets.only(bottom: Spacing.lg),
+            padding: const EdgeInsets.only(bottom: Spacing.formGap),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                CheckboxListTile(
+                ConsentCheckCard(
                   value: controller.consents.contains(consent.key),
-                  contentPadding: EdgeInsets.zero,
-                  controlAffinity: ListTileControlAffinity.leading,
-                  onChanged: (checked) => controller.toggleConsent(
-                    consent.key,
-                    given: checked ?? false,
-                  ),
-                  title: Text(
-                    consent.isRequired
-                        ? consent.label
-                        : '${consent.label} (optional)',
-                  ),
+                  onChanged: (checked) =>
+                      controller.toggleConsent(consent.key, given: checked),
+                  label: consent.isRequired
+                      ? consent.label
+                      : '${consent.label} (optional)',
                   // The office's own sentence, never a paraphrase.
-                  subtitle: Text(consent.statement),
+                  description: consent.statement,
                 ),
-                if (_errorFor(controller.errors, 'consent_${consent.key}') !=
-                    null)
+                if (_errorFor(controller.errors, 'consent_${consent.key}')
+                    case final String message) ...<Widget>[
+                  const SizedBox(height: Spacing.xs),
                   Text(
-                    _errorFor(controller.errors, 'consent_${consent.key}')!,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.error,
+                    message,
+                    style: AppTypography.fieldHelp.copyWith(
+                      color: BrandColors.danger,
                     ),
                   ),
+                ],
               ],
             ),
           ),
@@ -627,64 +622,77 @@ class _Outcome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final attempt = controller.attempt;
-    if (attempt == null) return const AppLoadingView();
+    if (attempt == null) return const _Waiting(label: 'Registering you…');
 
     final reference = attempt.registration?.reference;
     final position = attempt.registration?.waitlistPosition;
+    final String? instructions = attempt.registration?.instructions;
+    final String? requestId = attempt.requestId;
 
-    return StatusView(
-      title: switch (attempt.outcome) {
-        RegistrationOutcome.registered => 'You are registered',
-        RegistrationOutcome.waitlisted => 'You are on the waitlist',
-        RegistrationOutcome.full => 'This event is full',
-        RegistrationOutcome.closed => 'Registration has closed',
-        RegistrationOutcome.refused => 'Taytay LGU could not register you',
-        // A send whose answer was lost may have registered the resident, so
-        // its heading never says they are not registered (D-188, D-191).
-        RegistrationOutcome.couldNotSend =>
-          controller.isUnconfirmed
-              ? 'Registration not confirmed'
-              : 'Not registered',
-      },
-      kind: switch (attempt.outcome) {
-        RegistrationOutcome.registered ||
-        RegistrationOutcome.waitlisted => StatusKind.success,
-        RegistrationOutcome.couldNotSend => StatusKind.error,
-        // Full, closed and refused are states, not faults. Nothing the resident
-        // did was wrong, and an error icon would say otherwise.
-        _ => StatusKind.empty,
-      },
-      icon: switch (attempt.outcome) {
-        RegistrationOutcome.full ||
-        RegistrationOutcome.closed => Icons.event_busy_outlined,
-        _ => null,
-      },
-      message: <String?>[
-        attempt.residentMessage,
-        if (reference != null) 'Reference: $reference',
-        // Only when the office publishes it — a position is a statement about
-        // other people as much as about this resident.
-        if (position != null) 'You are number $position on the waitlist.',
-        if (attempt.registration?.instructions != null)
-          attempt.registration!.instructions!,
-        if (attempt.requestId != null)
-          'If you contact the office, quote ${attempt.requestId}.',
-      ].whereType<String>().join('\n\n'),
-      primaryAction: AppButton(
-        label: 'Back to the event',
-        fullWidth: false,
-        onPressed: () => context.goNamed(
-          AppRoute.eventDetail.routeName,
-          pathParameters: <String, String>{'eventId': eventId},
+    final String title = switch (attempt.outcome) {
+      RegistrationOutcome.registered => 'You are registered',
+      RegistrationOutcome.waitlisted => 'You are on the waitlist',
+      RegistrationOutcome.full => 'This event is full',
+      RegistrationOutcome.closed => 'Registration has closed',
+      RegistrationOutcome.refused => 'Taytay LGU could not register you',
+      // A send whose answer was lost may have registered the resident, so
+      // its heading never says they are not registered (D-188, D-191).
+      RegistrationOutcome.couldNotSend =>
+        controller.isUnconfirmed
+            ? 'Registration not confirmed'
+            : 'Not registered',
+    };
+    final String message = <String?>[
+      attempt.residentMessage,
+      if (reference != null) 'Reference: $reference',
+      // Only when the office publishes it — a position is a statement about
+      // other people as much as about this resident.
+      if (position != null) 'You are number $position on the waitlist.',
+      instructions,
+      if (requestId != null) 'If you contact the office, quote $requestId.',
+    ].whereType<String>().join('\n\n');
+
+    void backToEvent() => context.goNamed(
+      AppRoute.eventDetail.routeName,
+      pathParameters: <String, String>{'eventId': eventId},
+    );
+
+    return switch (attempt.outcome) {
+      // A held place is the success pattern (RegDone).
+      RegistrationOutcome.registered ||
+      RegistrationOutcome.waitlisted => SuccessScreen(
+        mark: SuccessMarkStyle.medal,
+        title: title,
+        message: message,
+        primaryLabel: 'Back to the event',
+        onPrimary: backToEvent,
+        showBack: true,
+      ),
+      RegistrationOutcome.couldNotSend => _StatePage(
+        child: ErrorState(
+          title: title,
+          message: message,
+          onRetry: controller.busy ? null : controller.retry,
+          details: <Widget>[
+            TextButton(
+              onPressed: backToEvent,
+              child: const Text('Back to the event'),
+            ),
+          ],
         ),
       ),
-      secondaryAction: attempt.outcome == RegistrationOutcome.couldNotSend
-          ? TextButton(
-              onPressed: controller.busy ? null : controller.retry,
-              child: const Text('Try again'),
-            )
-          : null,
-    );
+      // Full, closed and refused are states, not faults. Nothing the resident
+      // did was wrong, and an error mark would say otherwise.
+      _ => _StatePage(
+        child: EmptyState(
+          title: title,
+          message: message,
+          actionLabel: 'Back to the event',
+          primaryAction: true,
+          onAction: backToEvent,
+        ),
+      ),
+    };
   }
 }
 
@@ -695,15 +703,13 @@ class _Unavailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusView(
-      title: 'You cannot register here yet',
-      kind: StatusKind.empty,
-      icon: Icons.event_busy_outlined,
-      message: message,
-      primaryAction: AppButton(
-        label: 'See all events',
-        fullWidth: false,
-        onPressed: () => context.goNamed(AppRoute.events.routeName),
+    return _StatePage(
+      child: EmptyState(
+        title: 'You cannot register here yet',
+        message: message,
+        actionLabel: 'See all events',
+        primaryAction: true,
+        onAction: () => context.goNamed(AppRoute.events.routeName),
       ),
     );
   }
@@ -715,3 +721,11 @@ String? _errorFor(List<FieldError> errors, String field) {
   }
   return null;
 }
+
+final TextStyle _body = AppTypography.bodyStyle.copyWith(
+  color: BrandColors.text,
+);
+
+final TextStyle _muted = AppTypography.listDetail.copyWith(
+  color: BrandColors.muted,
+);

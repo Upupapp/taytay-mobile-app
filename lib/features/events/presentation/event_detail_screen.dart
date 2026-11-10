@@ -3,7 +3,11 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/send_key.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
+import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/links/external_link_service.dart';
@@ -12,14 +16,17 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/sharing/share_service.dart';
 import '../../../core/time/manila_time.dart';
-import '../../../shared/widgets/app_banner.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_card.dart';
-import '../../../shared/widgets/app_loading.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/event_repository.dart';
 import '../domain/event_send_failure.dart';
 import 'events_screen.dart'
@@ -217,34 +224,52 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   Widget build(BuildContext context) {
     final event = _event;
 
+    if (event != null) {
+      return Scaffold(
+        backgroundColor: BrandColors.white,
+        body: _Detail(
+          event: event,
+          onDirections: _openDirections,
+          onShare: () => _share(event),
+          onCancelRegistration: _cancelRegistration,
+          cancelling: _cancelling,
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Event'),
-      ),
-      body: SafeArea(
-        child: switch ((_idIsValid, _loading, event)) {
-          (false, _, _) => _NotAvailable(
-            message: DeepLinkRejection.invalidIdentifier.residentMessage,
+      backgroundColor: BrandColors.background,
+      body: ListView(
+        padding: EdgeInsets.only(
+          bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+        ),
+        children: <Widget>[
+          const BlueHeader(title: 'Event', showBack: true),
+          Padding(
+            padding: const EdgeInsets.all(Spacing.lg),
+            child: switch ((_idIsValid, _loading)) {
+              (false, _) => _NotAvailable(
+                message: DeepLinkRejection.invalidIdentifier.residentMessage,
+              ),
+              (_, true) => const LoadingSkeleton(
+                layout: SkeletonLayout.detail,
+                count: 1,
+                semanticLabel: 'Opening event…',
+              ),
+              _ => _NotAvailable(
+                message: DeepLinkRejection.unknownTarget.residentMessage,
+              ),
+            },
           ),
-          (_, true, null) => const AppLoadingView(message: 'Opening event…'),
-          (_, _, null) => _NotAvailable(
-            message: DeepLinkRejection.unknownTarget.residentMessage,
-          ),
-          (_, _, final LguEvent loaded) => _Detail(
-            event: loaded,
-            onDirections: _openDirections,
-            onShare: () => _share(loaded),
-            onCancelRegistration: _cancelRegistration,
-            cancelling: _cancelling,
-          ),
-        },
+        ],
       ),
     );
   }
 }
 
+/// The detail pattern (`Office.dc.html`): the cover as the hero photo with
+/// the white sheet over it, or the blue header when the office uploaded no
+/// cover; then the title, the pill actions and the facts.
 class _Detail extends StatelessWidget {
   const _Detail({
     required this.event,
@@ -262,193 +287,211 @@ class _Detail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final venue = event.venue;
+    final registration = event.myRegistration;
+    final String? category = event.category;
+    final DateTime? startsAt = event.startsAt;
+    final String? organiser = event.organiser;
+    final String? contact = event.contact;
+    final String? rules = event.registrationRules;
+    final String? bring = event.whatToBring;
+    final bool hasCover = (event.coverImageUrl ?? '').isNotEmpty;
+
+    final Widget sheet = DetailSheet(
+      children: <Widget>[
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const IconTile.glyph(
+              glyph: TaytayGlyph.users,
+              tone: TileTone.sky,
+              tileSize: IconTileSize.large,
+            ),
+            const SizedBox(width: Spacing.section),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  if (category != null && category.isNotEmpty) ...<Widget>[
+                    Text(
+                      category,
+                      style: AppTypography.small.copyWith(
+                        fontWeight: AppTypography.strong,
+                        color: BrandColors.green,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.xxs),
+                  ],
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      event.title,
+                      style: AppTypography.pageTitle.copyWith(
+                        color: BrandColors.ink,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        // Before anything else on the page: a called-off event still shows
+        // its date and venue, and somebody skimming those would go.
+        if (event.isCalledOff) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          const _Notice(
+            tone: _NoticeTone.warning,
+            title: calledOffLabel,
+            message:
+                'Taytay LGU has called this event off. It will not take '
+                'place as listed. Ask the office if you have questions.',
+          ),
+        ],
+
+        const SizedBox(height: Spacing.formGap),
+        PillButtonRow(
+          padding: EdgeInsets.zero,
+          wrap: true,
+          actions: <PillAction>[
+            // Offered only when the server supplied a link this app is
+            // willing to open. See `ExternalLink.isSafe`.
+            if (venue != null && venue.hasSafeDirections)
+              PillAction(
+                label: 'Open directions',
+                glyph: TaytayGlyph.pin,
+                primary: true,
+                onPressed: () => onDirections(venue),
+              ),
+            PillAction(
+              label: 'Share this event',
+              glyph: TaytayGlyph.send,
+              onPressed: onShare,
+            ),
+          ],
+        ),
+
+        if (registration != null) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          MyRegistrationCard(
+            registration: registration,
+            cancelling: cancelling,
+            onCancel: () => onCancelRegistration(registration),
+          ),
+        ] else if (event.isRegistered) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          _Notice(
+            tone: _NoticeTone.success,
+            title: registrationStateLabel(event.registrationState?.known),
+            message:
+                'Taytay LGU has your registration for this event. Bring a '
+                'valid ID.',
+          ),
+        ],
+
+        // ── When and where ────────────────────────────────────────────────
+        const SizedBox(height: Spacing.formGap),
+        const Divider(height: 1, thickness: 1, color: BrandColors.divider),
+        if (startsAt != null)
+          DetailFactRow(
+            icon: TaytayIcons.clock,
+            label: 'When',
+            // Stated with the clock it belongs to. A phone set to another
+            // timezone cannot make somebody arrive on the wrong day.
+            value: ManilaTime.formatRange(startsAt, event.endsAt),
+          ),
+        if (venue != null)
+          DetailFactRow(
+            icon: TaytayIcons.mapPin,
+            label: 'Where',
+            value: <String>[venue.name, ?venue.address].join('\n'),
+          ),
+        if (organiser != null)
+          DetailFactRow(
+            icon: TaytayIcons.landmark,
+            label: 'Organised by',
+            value: organiser,
+          ),
+        if (contact != null)
+          DetailFactRow(
+            icon: TaytayIcons.phone,
+            label: 'Questions',
+            value: contact,
+          ),
+
+        const SizedBox(height: Spacing.formGap),
+        Text(event.description, style: _body),
+
+        if (rules != null) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          _Section(title: 'Who can join', body: rules),
+        ],
+
+        if (openToWords(event) case final String openTo) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          _Section(title: 'Who can register', body: openTo),
+        ],
+
+        if (event.capacity.isStated) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          _Capacity(capacity: event.capacity),
+        ],
+
+        if (bring != null) ...<Widget>[
+          const SizedBox(height: Spacing.formGap),
+          _Section(title: 'What to bring', body: bring),
+        ],
+
+        const SizedBox(height: Spacing.xl),
+
+        // Offered only when the server says registration is open and the
+        // resident does not already hold a place. Capacity is never judged
+        // here — the server decides on submission, and a resident who reaches
+        // the last place a second late reads that on the outcome screen
+        // rather than being pre-emptively refused.
+        if (_canOfferRegistration(event)) ...<Widget>[
+          AppButton(
+            label: 'Register for this event',
+            onPressed: () => context.goNamed(
+              AppRoute.eventRegistration.routeName,
+              pathParameters: <String, String>{'eventId': event.id},
+            ),
+          ),
+          const SizedBox(height: Spacing.sm),
+          Text(
+            'Taytay LGU decides whether a place is available.',
+            textAlign: TextAlign.center,
+            style: _muted,
+          ),
+        ] else if (registration == null)
+          // Says plainly what this screen does and does not do, so a
+          // resident does not leave believing they have a place.
+          Text(
+            registrationStateLabel(event.registrationState?.known),
+            style: _muted,
+          ),
+      ],
+    );
 
     return ListView(
-      padding: EdgeInsets.zero,
+      // No per-item wrappers: they would refuse taps on the raised sheet.
+      addRepaintBoundaries: false,
+      addSemanticIndexes: false,
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: EdgeInsets.only(
+        bottom: Spacing.xl + MediaQuery.paddingOf(context).bottom,
+      ),
       children: <Widget>[
-        EventCover(event: event, height: 200),
-
-        Padding(
-          padding: const EdgeInsets.all(Spacing.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (event.category != null) ...<Widget>[
-                Text(
-                  event.category!,
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(height: Spacing.xs),
-              ],
-
-              Semantics(
-                header: true,
-                child: Text(event.title, style: theme.textTheme.headlineSmall),
-              ),
-
-              // Before anything else on the page: a called-off event still
-              // shows its date and venue, and somebody skimming those would go.
-              if (event.isCalledOff) ...<Widget>[
-                const SizedBox(height: Spacing.md),
-                const AppBanner(
-                  tone: BannerTone.warning,
-                  title: calledOffLabel,
-                  message:
-                      'Taytay LGU has called this event off. It will not take '
-                      'place as listed. Ask the office if you have questions.',
-                ),
-              ],
-
-              if (event.myRegistration != null) ...<Widget>[
-                const SizedBox(height: Spacing.md),
-                MyRegistrationCard(
-                  registration: event.myRegistration!,
-                  cancelling: cancelling,
-                  onCancel: () => onCancelRegistration(event.myRegistration!),
-                ),
-              ] else if (event.isRegistered) ...<Widget>[
-                const SizedBox(height: Spacing.md),
-                AppBanner(
-                  tone: BannerTone.success,
-                  title: registrationStateLabel(event.registrationState?.known),
-                  message:
-                      'Taytay LGU has your registration for this event. Bring a '
-                      'valid ID.',
-                ),
-              ],
-
-              const SizedBox(height: Spacing.lg),
-
-              // ── When and where ──────────────────────────────────────────
-              AppCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    if (event.startsAt != null)
-                      _Fact(
-                        icon: Icons.schedule_outlined,
-                        label: 'When',
-                        // Stated with the clock it belongs to. A phone set to
-                        // another timezone cannot make somebody arrive on the
-                        // wrong day.
-                        value: ManilaTime.formatRange(
-                          event.startsAt!,
-                          event.endsAt,
-                        ),
-                      ),
-                    if (venue != null)
-                      _Fact(
-                        icon: Icons.place_outlined,
-                        label: 'Where',
-                        value: <String>[
-                          venue.name,
-                          if (venue.address != null) venue.address!,
-                        ].join('\n'),
-                      ),
-                    if (event.organiser != null)
-                      _Fact(
-                        icon: Icons.account_balance_outlined,
-                        label: 'Organised by',
-                        value: event.organiser!,
-                      ),
-                    if (event.contact != null)
-                      _Fact(
-                        icon: Icons.call_outlined,
-                        label: 'Questions',
-                        value: event.contact!,
-                      ),
-
-                    // Offered only when the server supplied a link this app is
-                    // willing to open. See `ExternalLink.isSafe`.
-                    if (venue != null && venue.hasSafeDirections) ...<Widget>[
-                      const SizedBox(height: Spacing.sm),
-                      OutlinedButton.icon(
-                        onPressed: () => onDirections(venue),
-                        icon: const Icon(
-                          Icons.directions_outlined,
-                          size: IconSizes.sm,
-                        ),
-                        label: const Text('Open directions'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: Spacing.lg),
-              Text(event.description, style: theme.textTheme.bodyLarge),
-
-              if (event.registrationRules != null) ...<Widget>[
-                const SizedBox(height: Spacing.lg),
-                _Section(title: 'Who can join', body: event.registrationRules!),
-              ],
-
-              if (openToWords(event) case final String openTo) ...<Widget>[
-                const SizedBox(height: Spacing.lg),
-                _Section(title: 'Who can register', body: openTo),
-              ],
-
-              if (event.capacity.isStated) ...<Widget>[
-                const SizedBox(height: Spacing.lg),
-                _Capacity(capacity: event.capacity),
-              ],
-
-              if (event.whatToBring != null) ...<Widget>[
-                const SizedBox(height: Spacing.lg),
-                _Section(title: 'What to bring', body: event.whatToBring!),
-              ],
-
-              const SizedBox(height: Spacing.xl),
-
-              // Offered only when the server says registration is open and the
-              // resident does not already hold a place. Capacity is never
-              // judged here — the server decides on submission, and a resident
-              // who reaches the last place a second late reads that on the
-              // outcome screen rather than being pre-emptively refused.
-              if (_canOfferRegistration(event)) ...<Widget>[
-                AppButton(
-                  label: 'Register for this event',
-                  onPressed: () => context.goNamed(
-                    AppRoute.eventRegistration.routeName,
-                    pathParameters: <String, String>{'eventId': event.id},
-                  ),
-                ),
-                const SizedBox(height: Spacing.sm),
-                Text(
-                  'Taytay LGU decides whether a place is available.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: Spacing.md),
-              ],
-
-              OutlinedButton.icon(
-                onPressed: onShare.call,
-                icon: const Icon(Icons.share_outlined, size: IconSizes.sm),
-                label: const Text('Share this event'),
-              ),
-
-              if (!_canOfferRegistration(event) &&
-                  event.myRegistration == null) ...<Widget>[
-                const SizedBox(height: Spacing.md),
-                // Says plainly what this screen does and does not do, so a
-                // resident does not leave believing they have a place.
-                Text(
-                  registrationStateLabel(event.registrationState?.known),
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ],
+        if (hasCover) ...<Widget>[
+          DetailHero(
+            photo: EventCover(event: event, height: double.infinity, radius: 0),
           ),
-        ),
+          GlassOverlap(amount: Radii.sheetLarge, child: sheet),
+        ] else ...<Widget>[
+          const BlueHeader(title: 'Event', showBack: true),
+          sheet,
+        ],
       ],
     );
   }
@@ -490,21 +533,27 @@ class MyRegistrationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final attendance = registration.attendance?.known;
+    final String? reference = registration.reference;
+    final int? position = registration.waitlistPosition;
+    final String? instructions = registration.instructions;
+    final Future<void> Function()? cancel = onCancel;
 
-    return AppCard(
+    return SoftCard(
+      filled: true,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
           Row(
             children: <Widget>[
-              Icon(
-                registration.isCancelled
-                    ? Icons.event_busy_outlined
-                    : Icons.how_to_reg_outlined,
+              TaytayIcon(
+                icon: registration.isCancelled
+                    ? TaytayIcons.calendarX
+                    : TaytayIcons.badgeCheck,
+                semanticLabel: '',
+                excludeSemantics: true,
                 size: IconSizes.md,
-                color: theme.colorScheme.primary,
+                color: BrandColors.blue,
               ),
               const SizedBox(width: Spacing.sm),
               Expanded(
@@ -512,62 +561,59 @@ class MyRegistrationCard extends StatelessWidget {
                   header: true,
                   child: Text(
                     registrationStateLabel(registration.state.known),
-                    style: theme.textTheme.titleSmall,
+                    style: AppTypography.sectionTitle.copyWith(
+                      color: BrandColors.ink,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: Spacing.md),
 
-          if (registration.reference != null)
-            _Fact(
-              icon: Icons.confirmation_number_outlined,
+          if (reference != null)
+            DetailFactRow(
+              icon: TaytayIcons.fileText,
               label: 'Reference',
-              value: registration.reference!,
+              value: reference,
+              divider: false,
             ),
 
           // Only when the office publishes it. A queue position is a statement
           // about other people as much as about this resident, and an estimate
           // would be the app inventing one.
-          if (registration.isWaitlisted &&
-              registration.waitlistPosition != null)
-            _Fact(
-              icon: Icons.format_list_numbered_outlined,
+          if (registration.isWaitlisted && position != null)
+            DetailFactRow(
+              icon: TaytayIcons.users,
               label: 'Waitlist position',
-              value: '${registration.waitlistPosition}',
+              value: '$position',
+              divider: false,
             ),
 
-          if (registration.instructions != null) ...<Widget>[
-            const SizedBox(height: Spacing.xs),
-            Text(registration.instructions!, style: theme.textTheme.bodyMedium),
+          if (instructions != null) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            Text(instructions, style: _body),
           ],
 
           // Recorded after the event, and only when the office exposes it.
           // `notRecorded` says so rather than implying absence.
           if (attendance != null) ...<Widget>[
             const SizedBox(height: Spacing.md),
-            Text(
-              switch (attendance) {
-                AttendanceResult.attended =>
-                  'Taytay LGU recorded you as having attended.',
-                AttendanceResult.absent =>
-                  'Taytay LGU did not record you as attending. If that is '
-                      'wrong, contact the office.',
-                AttendanceResult.notRecorded =>
-                  'Attendance for this event has not been recorded yet.',
-              },
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            Text(switch (attendance) {
+              AttendanceResult.attended =>
+                'Taytay LGU recorded you as having attended.',
+              AttendanceResult.absent =>
+                'Taytay LGU did not record you as attending. If that is '
+                    'wrong, contact the office.',
+              AttendanceResult.notRecorded =>
+                'Attendance for this event has not been recorded yet.',
+            }, style: _muted),
           ],
 
           // Only when the server says this place can still be given up. The
           // control is quiet — a text button, not a red one — because giving up
           // a place is an ordinary thing to do, and the weight belongs on the
           // confirmation, not on the row.
-          if (registration.isCancellable && onCancel != null) ...<Widget>[
+          if (registration.isCancellable && cancel != null) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             Align(
               alignment: Alignment.centerLeft,
@@ -577,7 +623,7 @@ class MyRegistrationCard extends StatelessWidget {
                 fullWidth: false,
                 loading: cancelling,
                 hapticIntent: HapticIntent.selection,
-                onPressed: cancelling ? null : () => onCancel!(),
+                onPressed: cancelling ? null : cancel,
               ),
             ),
           ],
@@ -607,8 +653,8 @@ class _Capacity extends StatelessWidget {
     };
     if (line == null) return const SizedBox.shrink();
 
-    return AppBanner(
-      tone: capacity.isFull ? BannerTone.warning : BannerTone.info,
+    return _Notice(
+      tone: capacity.isFull ? _NoticeTone.warning : _NoticeTone.info,
       title: 'Places',
       message: capacity.isFull
           ? '$line. The office can tell you whether a waitlist is open.'
@@ -646,53 +692,95 @@ class _Section extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Semantics(
           header: true,
-          child: Text(title, style: theme.textTheme.titleMedium),
+          child: Text(
+            title,
+            style: AppTypography.sectionTitle.copyWith(color: BrandColors.ink),
+          ),
         ),
         const SizedBox(height: Spacing.xs),
-        Text(body, style: theme.textTheme.bodyMedium),
+        Text(body, style: _body),
       ],
     );
   }
 }
 
-class _Fact extends StatelessWidget {
-  const _Fact({required this.icon, required this.label, required this.value});
+enum _NoticeTone { info, success, warning }
 
-  final IconData icon;
-  final String label;
-  final String value;
+/// A soft notice (CSS `.soft .note`) whose title is its own line, so the
+/// state it names reads on its own.
+class _Notice extends StatelessWidget {
+  const _Notice({
+    required this.tone,
+    required this.title,
+    required this.message,
+  });
+
+  final _NoticeTone tone;
+  final String title;
+  final String message;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: Spacing.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Icon(icon, size: IconSizes.md, color: theme.colorScheme.primary),
-          const SizedBox(width: Spacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  label,
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                Text(value, style: theme.textTheme.bodyMedium),
-              ],
+    final (Color fill, Color ink, IconData icon) = switch (tone) {
+      _NoticeTone.info => (
+        BrandColors.blue50,
+        BrandColors.blue,
+        TaytayIcons.info,
+      ),
+      _NoticeTone.success => (
+        BrandColors.green50,
+        BrandColors.green,
+        TaytayIcons.circleCheck,
+      ),
+      _NoticeTone.warning => (
+        BrandColors.gold50,
+        BrandColors.goldInk,
+        TaytayIcons.triangleAlert,
+      ),
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(Radii.note),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.section),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            TaytayIcon(
+              icon: icon,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm,
+              color: ink,
             ),
-          ),
-        ],
+            const SizedBox(width: Spacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    title,
+                    style: AppTypography.listTitle.copyWith(color: ink),
+                  ),
+                  const SizedBox(height: Spacing.xxs),
+                  Text(
+                    message,
+                    style: AppTypography.listDetail.copyWith(
+                      color: BrandColors.text,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -705,15 +793,22 @@ class _NotAvailable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StatusView(
+    return EmptyState(
       title: 'This event is not available',
-      kind: StatusKind.empty,
-      icon: Icons.link_off_outlined,
       message: message,
-      primaryAction: FilledButton(
-        onPressed: () => context.goNamed(AppRoute.events.routeName),
-        child: const Text('See all events'),
-      ),
+      actionLabel: 'See all events',
+      onAction: () => context.goNamed(AppRoute.events.routeName),
+      primaryAction: true,
+      boxed: true,
     );
   }
 }
+
+final TextStyle _body = AppTypography.bodyStyle.copyWith(
+  color: BrandColors.text,
+  height: 1.55,
+);
+
+final TextStyle _muted = AppTypography.listDetail.copyWith(
+  color: BrandColors.muted,
+);

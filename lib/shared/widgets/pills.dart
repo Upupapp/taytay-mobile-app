@@ -103,3 +103,66 @@ class StatusPill extends StatelessWidget {
     );
   }
 }
+
+/// A filter chip on the blue header (Balita.dc `.chip.bar` / `.chip.onbar`):
+/// white with blue text when in force, a white outline otherwise. 36 px tall
+/// in a 48 dp target, announced as a selectable button.
+class HeaderChoiceChip extends StatelessWidget {
+  const HeaderChoiceChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+    super.key,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: onTap != null,
+      selected: selected,
+      label: label,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+          child: Center(
+            widthFactor: 1,
+            child: Container(
+              constraints: const BoxConstraints(
+                minHeight: ComponentSizes.chipHeight,
+              ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.section,
+                vertical: Spacing.xs,
+              ),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: selected ? BrandColors.white : BrandColors.transparent,
+                borderRadius: BorderRadius.circular(Radii.pill),
+                border: Border.all(
+                  color: selected
+                      ? BrandColors.white
+                      : BrandColors.white.withValues(alpha: 0.4),
+                  width: FocusRing.borderWidth,
+                ),
+              ),
+              child: Text(
+                label,
+                style: AppTypography.chip.copyWith(
+                  color: selected ? BrandColors.blue : BrandColors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

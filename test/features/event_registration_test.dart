@@ -18,6 +18,7 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/event_registration_controller.dart';
+import 'package:taytay_resident/shared/widgets/consent_check_card.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -974,5 +975,58 @@ void main() {
 
       expect(currentLocation(tester), '/events/e-1/register');
     });
+  });
+
+  // Redesign P3d: the form pattern (RegDetails) and the success pattern
+  // (RegDone) at 360 / 375 / 430 dp, 100% and 200%.
+  group('the registration screen at every width and text scale', () {
+    for (final double width in <double>[360, 375, 430]) {
+      for (final double scale in <double>[1, 2]) {
+        testWidgets('confirm and success lay out at $width dp, × $scale', (
+          tester,
+        ) async {
+          await bootRegistration(
+            tester,
+            registrationForm: form(notice: 'Doors open at 8 AM.'),
+            size: Size(width, 800),
+            textScaler: TextScaler.linear(scale),
+          );
+          expect(tester.takeException(), isNull);
+          expect(find.text('Confirm your registration'), findsOneWidget);
+
+          await tester.tap(registerButton);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.text('You are registered'), findsOneWidget);
+        });
+
+        testWidgets('questions and consent lay out at $width dp, × $scale', (
+          tester,
+        ) async {
+          await bootRegistration(
+            tester,
+            registrationForm: form(
+              fields: <ServerField>[textField()],
+              consents: <ServerConsent>[healthConsent],
+            ),
+            size: Size(width, 800),
+            textScaler: TextScaler.linear(scale),
+          );
+          final Finder next = find.widgetWithText(FilledButton, 'Continue');
+          await tester.tap(next);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(TextField), findsOneWidget);
+
+          await tester.enterText(find.byType(TextField), '2');
+          await tester.pump();
+          await tester.tap(next);
+          await tester.pumpAndSettle();
+          expect(tester.takeException(), isNull);
+          expect(find.byType(ConsentCheckCard), findsOneWidget);
+          expect(find.textContaining(healthConsent.statement), findsOneWidget);
+        });
+      }
+    }
   });
 }

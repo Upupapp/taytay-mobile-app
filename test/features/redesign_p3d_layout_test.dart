@@ -346,6 +346,43 @@ void main() {
     });
   });
 
+  group('events parts', () {
+    testWidgets('header chips lay out on blue and say their state', (
+      WidgetTester tester,
+    ) async {
+      Widget chips() => ColoredBox(
+        color: BrandColors.blue,
+        child: Wrap(
+          children: <Widget>[
+            HeaderChoiceChip(label: 'Upcoming', selected: true, onTap: () {}),
+            HeaderChoiceChip(
+              label: 'Registered',
+              selected: false,
+              onTap: () {},
+            ),
+            HeaderChoiceChip(label: 'Past', selected: false, onTap: () {}),
+          ],
+        ),
+      );
+      await expectCleanLayouts(tester, chips);
+      await tester.pumpWidget(layoutHost(chips()));
+      final Finder upcoming = find.widgetWithText(HeaderChoiceChip, 'Upcoming');
+      expect(
+        tester.getSize(upcoming).height,
+        greaterThanOrEqualTo(A11y.minTapTarget),
+      );
+      expect(
+        tester.getSemantics(upcoming),
+        isSemantics(
+          label: 'Upcoming',
+          isButton: true,
+          isSelected: true,
+          hasTapAction: true,
+        ),
+      );
+    });
+  });
+
   group('programme redirects', () {
     Future<void> pumpRedirect(
       WidgetTester tester,
@@ -444,6 +481,9 @@ const List<String> _restyled = <String>[
   'lib/shared/widgets/detail_page.dart',
   'lib/shared/widgets/pills.dart',
   'lib/features/programs/presentation/programs_screen.dart',
+  'lib/features/events/presentation/events_screen.dart',
+  'lib/features/events/presentation/event_detail_screen.dart',
+  'lib/features/events/presentation/event_registration_screen.dart',
   'lib/features/programs/presentation/program_detail_screen.dart',
   'lib/features/services/presentation/assistance_requests_screen.dart',
   'lib/features/services/presentation/assistance_case_screen.dart',

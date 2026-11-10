@@ -354,6 +354,24 @@ class SharedWidgetsGallerySection extends StatelessWidget {
             ],
           ),
         ),
+        const _Heading('HeaderChoiceChip'),
+        ColoredBox(
+          color: BrandColors.blue,
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.lg),
+            child: Wrap(
+              spacing: Spacing.sm,
+              children: <Widget>[
+                HeaderChoiceChip(
+                  label: 'In force',
+                  selected: true,
+                  onTap: () {},
+                ),
+                HeaderChoiceChip(label: 'Other', selected: false, onTap: () {}),
+              ],
+            ),
+          ),
+        ),
         const _Heading('SuccessScreen'),
         SizedBox(
           height: 720,

@@ -9,6 +9,7 @@ import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/links/external_link_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
@@ -24,6 +25,7 @@ import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_send_failure.dart';
 import 'package:taytay_resident/features/events/presentation/events_controller.dart';
 import 'package:taytay_resident/features/events/presentation/events_screen.dart';
+import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -1318,13 +1320,75 @@ void main() {
       expect(
         find.descendant(
           of: find.byType(EventCover),
-          matching: find.byIcon(Icons.event_outlined),
+          // Redesign: the placeholder is the Lucide calendar on a soft tile.
+          matching: find.byWidgetPredicate(
+            (Widget widget) =>
+                widget is TaytayIcon && widget.icon == TaytayIcons.calendar,
+          ),
         ),
         findsOneWidget,
       );
       expect(find.text('Medical mission'), findsWidgets);
       expect(tester.takeException(), isNull);
     });
+  });
+
+  // Redesign P3d: the Balita list and the Office detail at 360 / 375 / 430 dp,
+  // 100% and 200%.
+  group('events at every width and text scale', () {
+    for (final double width in <double>[360, 375, 430]) {
+      for (final double scale in <double>[1, 2]) {
+        testWidgets('the list lays out at $width dp, text × $scale', (
+          tester,
+        ) async {
+          await bootEvents(
+            tester,
+            level: AccessLevel.verified,
+            pages: <EventScope, dynamic>{
+              EventScope.upcoming: pageOf(<LguEvent>[
+                event(
+                  category: 'Health',
+                  capacity: const EventCapacity(capacity: 50, remaining: 4),
+                  registrationState: registration(EventRegistrationState.open),
+                ),
+                event(
+                  id: 'e-2',
+                  title: 'A synthetic event with a title long enough to wrap',
+                  registrationState: registration(
+                    EventRegistrationState.waitlisted,
+                  ),
+                ),
+              ]),
+            },
+            size: Size(width, 800),
+            textScaler: TextScaler.linear(scale),
+          );
+          expect(tester.takeException(), isNull);
+          expect(find.text('Upcoming'), findsOneWidget);
+        });
+
+        testWidgets('the detail lays out at $width dp, text × $scale', (
+          tester,
+        ) async {
+          await bootEvents(
+            tester,
+            detail: event(
+              category: 'Health',
+              organiser: 'Taytay Health Office',
+              contact: '(02) 8000 0000',
+              registrationRules: 'Open to all Taytay residents.',
+              whatToBring: 'Bring a valid ID.',
+              capacity: const EventCapacity(capacity: 50, remaining: 0),
+            ),
+            location: '/events/e-1',
+            size: Size(width, 800),
+            textScaler: TextScaler.linear(scale),
+          );
+          expect(tester.takeException(), isNull);
+          expect(find.text('Medical mission'), findsOneWidget);
+        });
+      }
+    }
   });
 
   group('a way in from Home — D-192', () {
