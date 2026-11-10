@@ -66,7 +66,22 @@ class SoftChoiceChip extends StatelessWidget {
 }
 
 /// The colour family of a [StatusPill].
-enum PillTone { blue, green, gold, red, neutral }
+enum PillTone {
+  /// In progress, or information.
+  blue,
+
+  /// Done, held, approved.
+  green,
+
+  /// Waiting on somebody.
+  gold,
+
+  /// Stopped or called off.
+  red,
+
+  /// No particular state.
+  neutral,
+}
 
 /// A status in words on a soft pill (CSS `.pill`): the label is the status,
 /// the colour only repeats it.

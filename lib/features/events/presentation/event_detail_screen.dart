@@ -709,7 +709,17 @@ class _Section extends StatelessWidget {
   }
 }
 
-enum _NoticeTone { info, success, warning }
+/// The colour of a [_Notice]. Visual only: the title says the state.
+enum _NoticeTone {
+  /// Places and other facts.
+  info,
+
+  /// The resident holds a place.
+  success,
+
+  /// Called off, or no places left.
+  warning,
+}
 
 /// A soft notice (CSS `.soft .note`) whose title is its own line, so the
 /// state it names reads on its own.
