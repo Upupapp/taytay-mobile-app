@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/pills.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 
 /// One notification row, already turned into resident-facing copy.
@@ -34,10 +39,12 @@ class NoticeSection {
   final List<NoticeRow> rows;
 }
 
-/// The notification centre from `04-08`: filters, unread dots, mark all read.
+/// The notification centre, drawn as the Directory list pattern: the All /
+/// Unread chips (`.chipsrow`) with Mark all read, then each section as a
+/// heading over one soft list. Rows deep-link through [NoticeRow.onTap].
 ///
-/// [showIllustration] is the design's SAMPLE note. The live screen leaves it
-/// off. Rows deep-link through [NoticeRow.onTap].
+/// [showIllustration] used to draw the design's SAMPLE caption; the redesign
+/// draws no sample text, so it is kept only for callers that still pass it.
 class NotificationCentre extends StatefulWidget {
   const NotificationCentre({
     required this.sections,
@@ -69,87 +76,66 @@ class _NotificationCentreState extends State<NotificationCentre> {
         if (_rows(section).isNotEmpty)
           NoticeSection(heading: section.heading, rows: _rows(section)),
     ];
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Flexible(
-              child: Wrap(
-                spacing: 7,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: <Widget>[
-                  _Chip(
-                    label: 'All',
-                    selected: !_unreadOnly,
-                    onTap: () => setState(() => _unreadOnly = false),
-                  ),
-                  _Chip(
-                    label: 'Unread · $_unread',
-                    selected: _unreadOnly,
-                    onTap: () => setState(() => _unreadOnly = true),
-                  ),
-                ],
-              ),
-            ),
-            if (_unread > 0)
-              SizedBox(
-                height: 44,
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  alignment: Alignment.centerRight,
+    // Its own ink layer: the centre may be drawn on a page with no Material.
+    return Material(
+      type: MaterialType.transparency,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.lg,
+          Spacing.section,
+          Spacing.lg,
+          Spacing.xl,
+        ),
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Wrap(
+                  spacing: Spacing.sm,
+                  runSpacing: Spacing.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: <Widget>[
-                    const SizedBox(
-                      height: 44,
-                      child: Center(
-                        child: Text('Mark all read', style: _mark),
-                      ),
+                    SoftChoiceChip(
+                      label: 'All',
+                      selected: !_unreadOnly,
+                      onTap: () => setState(() => _unreadOnly = false),
                     ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: -2,
-                      height: 48,
-                      child: Semantics(
-                        button: true,
-                        label: 'Mark all read',
-                        child: GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: widget.onMarkAllRead,
-                        ),
-                      ),
+                    SoftChoiceChip(
+                      label: 'Unread · $_unread',
+                      selected: _unreadOnly,
+                      onTap: () => setState(() => _unreadOnly = true),
                     ),
                   ],
                 ),
               ),
-          ],
-        ),
-        for (var i = 0; i < visible.length; i++) ...<Widget>[
-          Padding(
-            // First heading collapses with the filter row to 6. Later
-            // headings collapse the card's 12 dp margin with 16.
-            padding: EdgeInsets.only(top: i == 0 ? 6 : 16, bottom: 8),
-            child: Text(visible[i].heading, style: _heading),
-          ),
-          _Card(rows: visible[i].rows),
-        ],
-        if (widget.showIllustration) ...<Widget>[
-          const SizedBox(height: 12),
-          const Text.rich(
-            TextSpan(
-              children: <InlineSpan>[
-                TextSpan(text: 'SAMPLE', style: _sample),
-                TextSpan(
-                  text: '  dates and read states for illustration',
-                  style: _note,
+              if (_unread > 0)
+                Flexible(
+                  child: AuthLink(
+                    'Mark all read',
+                    alignment: Alignment.centerRight,
+                    onPressed: widget.onMarkAllRead,
+                  ),
                 ),
-              ],
-            ),
-            textAlign: TextAlign.center,
+            ],
           ),
+          for (var i = 0; i < visible.length; i++) ...<Widget>[
+            SizedBox(height: i == 0 ? Spacing.section : Spacing.formGap),
+            SettingsSectionTitle(visible[i].heading),
+            SoftCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  for (var r = 0; r < visible[i].rows.length; r++) ...<Widget>[
+                    if (r > 0) const SettingsDivider(),
+                    _Row(row: visible[i].rows[r]),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ],
-      ],
+      ),
     );
   }
 
@@ -160,228 +146,100 @@ class _NotificationCentreState extends State<NotificationCentre> {
       : section.rows;
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    // The face is 36 dp. The detector is 48 dp and paints outside the slot.
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.centerLeft,
-      children: <Widget>[
-        Container(
-          height: 36,
-          constraints: const BoxConstraints(minWidth: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: selected ? BrandColors.taytayBlue : Colors.white,
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(
-              color: selected ? BrandColors.taytayBlue : const Color(0xFFE1E6F0),
-            ),
-          ),
-          child: Center(
-            widthFactor: 1,
-            child: Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Plus Jakarta Sans',
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: selected ? Colors.white : const Color(0xFF33405C),
-                decoration: TextDecoration.none,
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          left: 0,
-          right: 0,
-          top: -6,
-          height: 48,
-          child: Semantics(
-            button: true,
-            selected: selected,
-            label: label,
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: onTap,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _Card extends StatelessWidget {
-  const _Card({required this.rows});
-
-  final List<NoticeRow> rows;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: BrandColors.cardLine),
-      ),
-      child: Column(
-        children: <Widget>[
-          for (var i = 0; i < rows.length; i++)
-            _Row(row: rows[i], border: i < rows.length - 1),
-        ],
-      ),
-    );
-  }
-}
-
+/// A notification (Directory `.li`): the category's tile, the category label
+/// (10.5 / 800, upper case), the title, when it was sent, and a blue dot
+/// while unread. The dot is also said in words.
 class _Row extends StatelessWidget {
-  const _Row({required this.row, required this.border});
+  const _Row({required this.row});
 
   final NoticeRow row;
-  final bool border;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: row.onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          border: border
-              ? const Border(bottom: BorderSide(color: Color(0xFFEEF1F6)))
-              : null,
+    final VoidCallback? onTap = row.onTap;
+    final Widget content = ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: ComponentSizes.listRow),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.lg,
+          vertical: Spacing.section,
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Container(
-              width: 44,
-              height: 44,
+              width: ComponentSizes.avatar - Spacing.xs,
+              height: ComponentSizes.avatar - Spacing.xs,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: row.tile,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(Radii.md),
               ),
-              child: Center(
-                child: TaytayIcon(
-                  icon: row.icon,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 20,
-                  color: row.tone,
-                ),
+              child: TaytayIcon(
+                icon: row.icon,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: row.tone,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: Spacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text(
                     row.eyebrow,
-                    style: TextStyle(
-                      fontFamily: 'Plus Jakarta Sans',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: row.tone,
-                      decoration: TextDecoration.none,
-                    ),
+                    style: AppTypography.category.copyWith(color: row.tone),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: Spacing.xxs),
                   Text(
                     row.title,
-                    style: _title,
-                    textHeightBehavior: const TextHeightBehavior(
-                      applyHeightToFirstAscent: false,
-                      applyHeightToLastDescent: false,
+                    style: AppTypography.listTitle.copyWith(
+                      color: BrandColors.ink,
+                      fontWeight: row.unread
+                          ? AppTypography.strong
+                          : AppTypography.medium,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(row.when, style: _when),
+                  if (row.when.isNotEmpty) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    Text(
+                      row.when,
+                      style: AppTypography.small.copyWith(
+                        color: BrandColors.muted,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
             if (row.unread)
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(top: 6),
-                decoration: const BoxDecoration(
-                  color: BrandColors.taytayBlue,
-                  shape: BoxShape.circle,
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: Spacing.sm,
+                  top: Spacing.xs,
+                ),
+                child: Semantics(
+                  label: 'Unread',
+                  child: Container(
+                    width: Spacing.sm,
+                    height: Spacing.sm,
+                    decoration: const BoxDecoration(
+                      color: BrandColors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
               ),
           ],
         ),
       ),
     );
+    if (onTap == null) return content;
+    return InkWell(onTap: onTap, child: content);
   }
 }
-
-const TextStyle _mark = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 13,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.taytayBlue,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _heading = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 15,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _title = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 14,
-  height: 1.23,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _when = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _sample = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  letterSpacing: 0.6,
-  // Blended toward the page so the illustration caption does not form its
-  // own dark run. The design export antialiases this line above the threshold.
-  color: Color(0xFFB08A4A),
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _note = TextStyle(
-  fontFamily: 'Plus Jakarta Sans',
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  color: Color(0xFF6E7890),
-  decoration: TextDecoration.none,
-);
 
 /// Icons the centre uses. Exposed so a capture can match `04-08`.
 abstract final class NoticeIcons {

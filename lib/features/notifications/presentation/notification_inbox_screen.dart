@@ -3,19 +3,23 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/app_banner.dart';
+import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
-import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
-import '../../../shared/widgets/status_view.dart';
-import '../../../shared/widgets/taytay_back_button.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/notification_repository.dart';
 import 'notification_centre.dart';
 import 'notification_inbox_controller.dart';
@@ -99,12 +103,14 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
     final controller = _controller;
 
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.background,
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          MunicipalHeader(
+          BlueHeader(
             title: 'Notifications',
             subtitle: 'Bayan ng Taytay · Rizal',
+            showBack: true,
             onBack: () {
               if (context.canPop()) {
                 context.pop();
@@ -117,12 +123,26 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
             child: CapabilityGate(
               capability: ResidentCapability.readNotifications,
               child: controller == null
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const _Loading()
                   : _Inbox(controller: controller, onOpen: _open),
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _Loading extends StatelessWidget {
+  const _Loading();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(Spacing.lg),
+      children: const <Widget>[
+        LoadingSkeleton(count: 5, semanticLabel: 'Loading notifications'),
+      ],
     );
   }
 }
@@ -135,24 +155,21 @@ class _Inbox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (controller.isLoadingFirstPage) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (controller.isLoadingFirstPage) return const _Loading();
 
     if (controller.failure != null) {
       return ListView(
+        padding: const EdgeInsets.all(Spacing.lg),
         children: <Widget>[
-          StatusView(
+          EmptyState(
             title: 'Notifications are not available yet',
-            kind: StatusKind.empty,
-            icon: Icons.notifications_off_outlined,
             message:
                 'Taytay LGU has not switched on notifications in this app yet. '
                 'Your requests and events still update inside the app.',
-            primaryAction: TextButton(
-              onPressed: controller.refresh,
-              child: const Text('Check again'),
-            ),
+            illustration: TaytayIllustration.offline,
+            actionLabel: 'Check again',
+            onAction: controller.refresh,
+            boxed: true,
           ),
         ],
       );
@@ -160,14 +177,14 @@ class _Inbox extends StatelessWidget {
 
     if (controller.isEmptyAndHealthy) {
       return ListView(
+        padding: const EdgeInsets.all(Spacing.lg),
         children: const <Widget>[
-          StatusView(
+          EmptyState(
             title: 'Nothing yet',
-            kind: StatusKind.empty,
-            icon: Icons.notifications_none_outlined,
             message:
                 'Updates about your requests, documents and events will appear '
                 'here.',
+            boxed: true,
           ),
         ],
       );
@@ -181,9 +198,10 @@ class _Inbox extends StatelessWidget {
           NoticeRow(
             eyebrow: _eyebrow(context, item),
             title: item.title,
-            when: item.sentAt == null
-                ? ''
-                : ManilaTime.formatDateTime(item.sentAt!),
+            when: switch (item.sentAt) {
+              final DateTime sent => ManilaTime.formatDateTime(sent),
+              null => '',
+            },
             unread: item.isUnread,
             tone: _tone(item),
             tile: _tile(item),
@@ -202,6 +220,7 @@ class _Inbox extends StatelessWidget {
     }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Expanded(
           child: NotificationCentre(
@@ -225,21 +244,23 @@ String _eyebrow(BuildContext context, ResidentNotification item) {
   return notificationCategoryLabel(context, category).toUpperCase();
 }
 
+/// The category's ink. Its icon and its label carry the same meaning in
+/// words, so colour is never the only signal.
 Color _tone(ResidentNotification item) {
   return switch (item.category?.known) {
-    NotificationCategory.publicAdvisory => BrandColors.danger,
-    NotificationCategory.accountSecurity => BrandColors.warning,
-    NotificationCategory.verificationUpdate => BrandColors.warning,
-    _ => BrandColors.taytayBlue,
+    NotificationCategory.publicAdvisory => BrandColors.redInk,
+    NotificationCategory.accountSecurity => BrandColors.goldInk,
+    NotificationCategory.verificationUpdate => BrandColors.goldInk,
+    _ => BrandColors.blue,
   };
 }
 
 Color _tile(ResidentNotification item) {
   return switch (item.category?.known) {
-    NotificationCategory.publicAdvisory => const Color(0xFFFDECEC),
-    NotificationCategory.accountSecurity => const Color(0xFFFFF4D6),
-    NotificationCategory.verificationUpdate => const Color(0xFFFFF4D6),
-    _ => BrandColors.surfaceMuted,
+    NotificationCategory.publicAdvisory => BrandColors.red50,
+    NotificationCategory.accountSecurity => BrandColors.gold50,
+    NotificationCategory.verificationUpdate => BrandColors.gold50,
+    _ => BrandColors.blue50,
   };
 }
 
@@ -261,34 +282,41 @@ class _Footer extends StatelessWidget {
   Widget build(BuildContext context) {
     if (controller.pageFailure != null) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.lg),
-        child: AppBanner(
-          tone: BannerTone.warning,
-          title: 'Could not load more',
-          message: 'What you have already seen is still here.',
-          action: TextButton(
-            onPressed: controller.loadMore,
-            child: const Text('Try again'),
-          ),
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.lg,
+          Spacing.sm,
+          Spacing.lg,
+          Spacing.lg,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const SoftNote(
+              tone: NoteTone.warning,
+              heading: 'Could not load more',
+              message: 'What you have already seen is still here.',
+            ),
+            AuthLink('Try again', onPressed: controller.loadMore),
+          ],
         ),
       );
     }
     if (controller.isLoadingMore) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: Spacing.xl),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.symmetric(
+          horizontal: Spacing.lg,
+          vertical: Spacing.md,
+        ),
+        child: LoadingSkeleton(count: 1, semanticLabel: 'Loading older'),
       );
     }
     if (controller.hasMore) {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-        child: TextButton(
-          onPressed: controller.loadMore,
-          child: const Text('Load older'),
-        ),
+        padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+        child: AuthLink('Load older', onPressed: controller.loadMore),
       );
     }
-    return const SizedBox(height: Spacing.xl);
+    return const SizedBox(height: Spacing.sm);
   }
 }
 
@@ -365,80 +393,102 @@ class _NotificationPreferencesScreenState
     final preferences = _preferences;
 
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        leading: const TaytayBackButton(),
-        title: const Text('Notification settings'),
-      ),
-      body: SafeArea(
-        child: CapabilityGate(
-          capability: ResidentCapability.readNotifications,
-          child: switch ((_loading, preferences)) {
-            (true, _) => const Center(child: CircularProgressIndicator()),
-            (_, null) => StatusView(
-              title: 'Notification settings are not available yet',
-              kind: StatusKind.empty,
-              icon: Icons.notifications_off_outlined,
-              message: 'Taytay LGU has not switched these on in this app yet.',
-              primaryAction: TextButton(
-                onPressed: _load,
-                child: const Text('Check again'),
-              ),
-            ),
-            (_, final NotificationPreferences loaded) => ListView(
-              padding: const EdgeInsets.all(Spacing.lg),
-              children: <Widget>[
-                if (_saveFailure case final AppFailure failure) ...<Widget>[
-                  // The whole set is sent each time, so setting it again is
-                  // safe. After a timeout the office may already have the
-                  // change, and "unchanged" would be a guess.
-                  failure.outcomeUnknown
-                      ? const AppBanner(
-                          tone: BannerTone.error,
-                          title: 'Your change may not have been saved',
+      backgroundColor: BrandColors.background,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const BlueHeader(title: 'Notification settings', showBack: true),
+          Expanded(
+            child: CapabilityGate(
+              capability: ResidentCapability.readNotifications,
+              child: ListView(
+                padding: EdgeInsets.fromLTRB(
+                  Spacing.lg,
+                  Spacing.lg,
+                  Spacing.lg,
+                  Spacing.xl + MediaQuery.paddingOf(context).bottom,
+                ),
+                children: switch ((_loading, preferences)) {
+                  (true, _) => const <Widget>[
+                    LoadingSkeleton(
+                      count: 4,
+                      semanticLabel: 'Loading notification settings',
+                    ),
+                  ],
+                  (_, null) => <Widget>[
+                    EmptyState(
+                      title: 'Notification settings are not available yet',
+                      message:
+                          'Taytay LGU has not switched these on in this app '
+                          'yet.',
+                      illustration: TaytayIllustration.offline,
+                      actionLabel: 'Check again',
+                      onAction: _load,
+                      boxed: true,
+                    ),
+                  ],
+                  (_, final NotificationPreferences loaded) => <Widget>[
+                    if (_saveFailure case final AppFailure failure) ...<Widget>[
+                      // The whole set is sent each time, so setting it again
+                      // is safe. After a timeout the office may already have
+                      // the change, and "unchanged" would be a guess.
+                      if (failure.outcomeUnknown)
+                        const SoftNote(
+                          tone: NoteTone.error,
+                          heading: 'Your change may not have been saved',
                           message:
                               'We could not confirm it. The switch shows your '
                               'setting before the change. Setting it again is '
                               'safe.',
                         )
-                      : const AppBanner(
-                          tone: BannerTone.error,
-                          title: 'That change was not saved',
+                      else
+                        const SoftNote(
+                          tone: NoteTone.error,
+                          heading: 'That change was not saved',
                           message:
                               'Your setting is unchanged. Check your '
                               'connection and try again.',
                         ),
-                  const SizedBox(height: Spacing.lg),
-                ],
+                      const SizedBox(height: Spacing.lg),
+                    ],
 
-                Text(
-                  'Choose what Taytay LGU tells you about.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                const SizedBox(height: Spacing.md),
+                    Text(
+                      'Choose what Taytay LGU tells you about.',
+                      style: AppTypography.bodyStyle.copyWith(
+                        color: BrandColors.text,
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.md),
 
-                for (final category in NotificationPreferences.switchable)
-                  SwitchListTile(
-                    value: loaded.isEnabled(category),
-                    onChanged: (on) => _set(category, on: on),
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(notificationCategoryLabel(context, category)),
-                  ),
+                    SettingsList(
+                      children: <Widget>[
+                        for (final category
+                            in NotificationPreferences.switchable)
+                          SettingsSwitchRow(
+                            title: notificationCategoryLabel(context, category),
+                            icon: TaytayIcons.bell,
+                            value: loaded.isEnabled(category),
+                            onChanged: (on) => _set(category, on: on),
+                          ),
+                      ],
+                    ),
 
-                const SizedBox(height: Spacing.lg),
-                const AppBanner(
-                  tone: BannerTone.info,
-                  title: 'Always sent',
-                  message:
-                      'Public advisories and messages about your account and '
-                      'security are always sent. They are how Taytay LGU '
-                      'reaches you in an emergency, or tells you if somebody '
-                      'signs in as you.',
-                ),
-              ],
+                    const SizedBox(height: Spacing.lg),
+                    const SoftNote(
+                      live: false,
+                      heading: 'Always sent',
+                      message:
+                          'Public advisories and messages about your account '
+                          'and security are always sent. They are how Taytay '
+                          'LGU reaches you in an emergency, or tells you if '
+                          'somebody signs in as you.',
+                    ),
+                  ],
+                },
+              ),
             ),
-          },
-        ),
+          ),
+        ],
       ),
     );
   }

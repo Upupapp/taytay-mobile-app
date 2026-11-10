@@ -26,6 +26,8 @@ import 'package:taytay_resident/features/issuance/presentation/issuance_request_
 import 'package:taytay_resident/features/issuance/presentation/issuance_type_screen.dart';
 import 'package:taytay_resident/features/issuance/presentation/my_issuance_requests_screen.dart';
 import 'package:taytay_resident/features/mock_data/data/mock/resident_record_mock.dart';
+import 'package:taytay_resident/features/notifications/presentation/notification_centre.dart';
+import 'package:taytay_resident/features/notifications/presentation/notification_inbox_screen.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
 import 'package:taytay_resident/features/verification/domain/resident_record.dart';
@@ -334,6 +336,58 @@ void main() {
     });
   });
 
+  group('notifications', () {
+    testWidgets('the inbox and the settings lay out', (tester) async {
+      final AppDependencies dependencies = await _dependencies(
+        AccessLevel.verified,
+      );
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const NotificationInboxScreen(),
+      );
+      expect(find.byType(BlueHeader), findsOneWidget);
+      await _expectCleanScreen(
+        tester,
+        dependencies,
+        () => const NotificationPreferencesScreen(),
+      );
+      expect(find.text('Always sent'), findsOneWidget);
+    });
+
+    testWidgets('the centre lays out with long rows and a long title', (
+      tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => NotificationCentre(
+          sections: <NoticeSection>[
+            NoticeSection(
+              heading: 'Today',
+              rows: <NoticeRow>[
+                for (var i = 0; i < 3; i++)
+                  NoticeRow(
+                    eyebrow: 'ASSISTANCE UPDATES',
+                    title:
+                        'A long notification title that wraps over two or '
+                        'three lines at 200% text',
+                    when: '11 Nov 2026, 9:05 AM PHT',
+                    unread: i.isEven,
+                    tone: BrandColors.blue,
+                    tile: BrandColors.blue50,
+                    icon: NoticeIcons.message,
+                    onTap: () {},
+                  ),
+              ],
+            ),
+          ],
+          onMarkAllRead: () {},
+        ),
+        scrollable: false,
+      );
+    });
+  });
+
   group('requirements', () {
     testWidgets('the checklist lays out', (tester) async {
       final AppDependencies dependencies = await _dependencies(
@@ -393,6 +447,8 @@ void _noop() {}
 
 const List<String> _restyled = <String>[
   'lib/shared/widgets/header_search_field.dart',
+  'lib/features/notifications/presentation/notification_centre.dart',
+  'lib/features/notifications/presentation/notification_inbox_screen.dart',
   'lib/shared/widgets/upload_slot.dart',
   'lib/features/issuance/presentation/issuance_widgets.dart',
   'lib/features/issuance/presentation/issuance_catalogue_screen.dart',
