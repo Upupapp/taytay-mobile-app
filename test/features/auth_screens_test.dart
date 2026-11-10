@@ -21,7 +21,6 @@ import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
-import 'package:taytay_resident/shared/widgets/taytay_thread.dart';
 
 import 'auth_session_test.dart' show FakeAuthRepository, FakeLocalAuthenticator;
 
@@ -197,27 +196,6 @@ void main() {
         );
       }
 
-      // The stitch is the shared shell, clipped above the sheet. It is not a
-      // child of the sign-in stack, and it must not paint the field.
-      final stackElement = tester.element(
-        find.byKey(const Key('sign-in-stack')),
-      );
-      final layers = <Element>[];
-      stackElement.visitChildren(layers.add);
-      bool subtree(Element element, bool Function(Element node) match) {
-        if (match(element)) return true;
-        var found = false;
-        element.visitChildren((child) {
-          found = found || subtree(child, match);
-        });
-        return found;
-      }
-
-      final threadAt = layers.indexWhere(
-        (layer) => subtree(layer, (node) => node.widget is SignInThreadOverlay),
-      );
-      expect(threadAt, -1);
-      expect(find.byType(SignInThreadOverlay), findsOneWidget);
 
       RenderObject? ancestor = tester.renderObject(sheet).parent;
       RenderRepaintBoundary? boundary;

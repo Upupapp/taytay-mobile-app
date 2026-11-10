@@ -51,9 +51,7 @@ import '../../features/verification/presentation/kyc_claim_screen.dart';
 import '../../features/verification/presentation/profile_wizard_page.dart';
 import '../../features/verification/presentation/profile_wizard_screen.dart';
 import '../../features/verification/presentation/verification_screen.dart';
-import '../../shared/widgets/gold_thread_shell.dart';
 import '../../shared/widgets/taytay_back_button.dart';
-import '../../shared/widgets/taytay_thread.dart';
 import '../design/design_tokens.dart';
 import '../session/consent_gate_controller.dart';
 import '../session/session_controller.dart';
@@ -150,70 +148,60 @@ GoRouter buildAppRouter({
         name: AppRoute.splash.routeName,
         builder: (context, state) => const SplashScreen(),
       ),
-      // Welcome, sign-in, and sign-up share one field and one thread clock.
-      // The shell stays mounted while those routes change, so the glowing
-      // tip does not restart.
-      ShellRoute(
-        builder: (context, state, child) => GoldThreadShell(child: child),
-        routes: <RouteBase>[
-          GoRoute(
-            path: AppRoute.onboarding.path,
-            name: AppRoute.onboarding.routeName,
-            builder: (context, state) => const OnboardingScreen(),
-          ),
-          GoRoute(
-            path: AppRoute.signIn.path,
-            name: AppRoute.signIn.routeName,
-            builder: (context, state) {
-              final extra = state.extra;
-              return SignInScreen(
-                returnTo:
-                    state.uri.queryParameters[AppRoute.redirectQueryParam],
-                threadCycle: extra is WelcomeThreadArrival ? extra.cycle : 0,
-              );
-            },
-          ),
-          GoRoute(
-            path: AppRoute.register.path,
-            name: AppRoute.register.routeName,
-            builder: (context, state) => const AccountWizardScreen(),
-          ),
-          GoRoute(
-            path: AppRoute.forgotPassword.path,
-            name: AppRoute.forgotPassword.routeName,
-            builder: (context, state) => const ForgotPasswordScreen(),
-          ),
-          GoRoute(
-            path: AppRoute.resetCode.path,
-            name: AppRoute.resetCode.routeName,
-            builder: (context, state) => ResetCodeScreen(
-              draft: state.extra is PasswordResetDraft
-                  ? state.extra as PasswordResetDraft
-                  : null,
-            ),
-          ),
-          GoRoute(
-            path: AppRoute.setPassword.path,
-            name: AppRoute.setPassword.routeName,
-            builder: (context, state) => SetPasswordScreen(
-              draft: state.extra is PasswordResetDraft
-                  ? state.extra as PasswordResetDraft
-                  : null,
-            ),
-          ),
-          GoRoute(
-            path: AppRoute.tooMany.path,
-            name: AppRoute.tooMany.routeName,
-            builder: (context, state) => TooManyAttemptsScreen(
-              hold: state.extra is CodeHold ? state.extra as CodeHold : null,
-            ),
-          ),
-          GoRoute(
-            path: AppRoute.passwordUpdated.path,
-            name: AppRoute.passwordUpdated.routeName,
-            builder: (context, state) => const PasswordUpdatedScreen(),
-          ),
-        ],
+      // Welcome, sign-in, sign-up and the password reset screens. They used
+      // to share a ShellRoute that painted one gold thread under all of them;
+      // the redesign has no thread, so each route stands on its own.
+      GoRoute(
+        path: AppRoute.onboarding.path,
+        name: AppRoute.onboarding.routeName,
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.signIn.path,
+        name: AppRoute.signIn.routeName,
+        builder: (context, state) => SignInScreen(
+          returnTo: state.uri.queryParameters[AppRoute.redirectQueryParam],
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.register.path,
+        name: AppRoute.register.routeName,
+        builder: (context, state) => const AccountWizardScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.forgotPassword.path,
+        name: AppRoute.forgotPassword.routeName,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoute.resetCode.path,
+        name: AppRoute.resetCode.routeName,
+        builder: (context, state) => ResetCodeScreen(
+          draft: state.extra is PasswordResetDraft
+              ? state.extra as PasswordResetDraft
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.setPassword.path,
+        name: AppRoute.setPassword.routeName,
+        builder: (context, state) => SetPasswordScreen(
+          draft: state.extra is PasswordResetDraft
+              ? state.extra as PasswordResetDraft
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.tooMany.path,
+        name: AppRoute.tooMany.routeName,
+        builder: (context, state) => TooManyAttemptsScreen(
+          hold: state.extra is CodeHold ? state.extra as CodeHold : null,
+        ),
+      ),
+      GoRoute(
+        path: AppRoute.passwordUpdated.path,
+        name: AppRoute.passwordUpdated.routeName,
+        builder: (context, state) => const PasswordUpdatedScreen(),
       ),
       GoRoute(
         path: AppRoute.updateRequired.path,

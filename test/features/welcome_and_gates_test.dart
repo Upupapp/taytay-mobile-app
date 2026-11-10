@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/brand_gradients.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/motion/motion_tokens.dart';
@@ -185,7 +186,10 @@ void main() {
       await settle(tester);
 
       expect(dependencies.launch.state, LaunchState.firstLaunch);
-      expect(find.text('MUNICIPAL SERVICES IN ONE PLACE'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Serbisyong bayan, nasa isang app.'),
+        findsOneWidget,
+      );
       expect(find.text('Skip'), findsOneWidget);
     });
 
@@ -277,7 +281,7 @@ void main() {
           matching: find.byType(SizedBox),
         ),
       );
-      expect(pill.height, A11y.backButtonVisual);
+      expect(pill.height, WelcomeShapes.skipHeight);
 
       final centre = tester.getCenter(find.byKey(welcomeSkipTargetKey));
       await tester.tapAt(centre + const Offset(0, -23));
@@ -322,7 +326,7 @@ void main() {
 
       // Walk to the last scene.
       for (var i = 0; i < 2; i++) {
-        await tester.tap(find.text('Next'));
+        await tester.tap(find.byKey(welcomeNextKey));
         await tester.pumpAndSettle();
       }
 
@@ -347,7 +351,7 @@ void main() {
 
       expect(find.bySemanticsLabel('Step 1 of 3'), findsOneWidget);
 
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.byKey(welcomeNextKey));
       await tester.pumpAndSettle();
       expect(find.bySemanticsLabel('Step 2 of 3'), findsOneWidget);
     });
@@ -367,7 +371,7 @@ void main() {
       await settle(tester);
       expect(tester.takeException(), isNull);
 
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.byKey(welcomeNextKey));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });
@@ -387,41 +391,36 @@ void main() {
       MotionPreference.set(MotionPreference.reduced);
       await tester.pump();
       expect(find.byKey(TravellingLight.mark), findsNothing);
-    });
+      // Redesign P3a: the gold thread and its travelling light are gone from
+      // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+      // Phase 4 deletes this test with gold_thread_shell.dart.
+    }, skip: true);
 
-    testWidgets('get started opens sign-in and carries the light', (
-      tester,
-    ) async {
+    testWidgets('get started opens sign-in', (tester) async {
       final dependencies = await boot(tester);
       await settle(tester);
       for (var i = 0; i < 2; i++) {
-        await tester.tap(find.text('Next'));
+        await tester.tap(find.byKey(welcomeNextKey));
         await tester.pumpAndSettle();
       }
-      WelcomeMotion.enabled = true;
       await tester.tap(find.text('Get started'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpAndSettle();
       expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
-      expect(find.byKey(TravellingLight.mark), findsOneWidget);
       expect(dependencies.launch.state, LaunchState.returning);
-      // The speck stays. A 7s loop does not remove the thread.
-      await tester.pump(MotionTokens.welcomeLight);
-      await tester.pump();
-      expect(find.byKey(TravellingLight.mark), findsOneWidget);
-      expect(find.byType(SignInThreadOverlay), findsOneWidget);
-      WelcomeMotion.enabled = false;
     });
 
     testWidgets('scene transitions work under reduced motion', (tester) async {
       await boot(tester, disableAnimations: true);
       await settle(tester);
 
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.byKey(welcomeNextKey));
       await tester.pumpAndSettle();
 
       expect(tester.takeException(), isNull);
-      expect(find.text('YOUR TAYTAY ID, ON YOUR PHONE'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('Ang Taytay ID mo, nasa phone mo na.'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('the in-app reduced-motion preference also applies', (
@@ -431,7 +430,7 @@ void main() {
       await boot(tester);
       await settle(tester);
 
-      await tester.tap(find.text('Next'));
+      await tester.tap(find.byKey(welcomeNextKey));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
     });

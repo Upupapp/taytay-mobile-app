@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/typography.dart';
 import '../../../core/motion/motion_tokens.dart';
-import '../../../shared/widgets/brand_mark.dart';
+import '../../../shared/widgets/blue_header.dart';
 
 /// Cold-start screen. Restores the session, then gets out of the way.
 ///
@@ -53,22 +55,61 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // The welcome's photo zone without the photo: the header gradient, the
+    // seal and the municipality, and a short gold bar while the session
+    // restores. Nothing here is data.
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            BrandMark(size: 96, showWordmark: true),
-            SizedBox(height: Spacing.xxl),
-            SizedBox(
-              width: A11y.minTapTarget,
-              child: LinearProgressIndicator(minHeight: 3),
+      backgroundColor: BrandColors.navy,
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: BrandGradients.header.toLinearGradient(),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(Spacing.xl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  const HeaderSeal(diameter: _sealDiameter),
+                  const SizedBox(height: Spacing.lg),
+                  Text(
+                    'Bayan ng Taytay',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.hero.copyWith(
+                      color: BrandColors.white,
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.xs),
+                  Text(
+                    'Lalawigan ng Rizal',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: BrandColors.gold,
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.xxl),
+                  SizedBox(
+                    width: A11y.minTapTarget,
+                    child: LinearProgressIndicator(
+                      minHeight: 3,
+                      color: BrandColors.gold,
+                      backgroundColor: BrandColors.white.withValues(
+                        alpha: Opacities.hairline,
+                      ),
+                      borderRadius: BorderRadius.circular(Radii.pill),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 }
+
+/// The seal at splash size: the welcome's 38 px header seal, scaled up.
+const double _sealDiameter = 96;

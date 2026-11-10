@@ -4,12 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/gold_thread_shell.dart';
-import '../../../shared/widgets/taytay_thread.dart';
 import 'welcome_scene.dart';
 
 /// The welcome experience: three scenes, then into the app.
@@ -18,7 +17,8 @@ import 'welcome_scene.dart';
 ///
 /// **No onboarding trap.** Three properties, together:
 ///
-/// 1. **Skip is on every scene**, in the app bar, from the first frame.
+/// 1. **Skip is on every scene**, on the photo's top row, from the first
+///    frame.
 /// 2. **"Continue as guest" is an explicit, equal-weight action** on the last
 ///    scene — not a greyed-out link under a sign-in button. Browsing Taytay's
 ///    published services genuinely needs no account, and the welcome screens
@@ -37,9 +37,11 @@ import 'welcome_scene.dart';
 /// sign-in, after they have been told why.
 ///
 /// Get started marks the welcome done and opens Sign-in. Self-registration stays
-/// off, so Sign-in is the destination the guard already uses for that step. The
-/// speck's live cycle position is handed across as [WelcomeThreadArrival]. Skip
-/// and Continue as guest mark the welcome done and enter the app.
+/// off, so Sign-in is the destination the guard already uses for that step.
+/// Skip and Continue as guest mark the welcome done and enter the app.
+///
+/// The look is `design/mobile/screens/Main.dc.html` (Welcome): each scene is a
+/// full page ([WelcomeCanvas]) that scrolls at large text sizes.
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -47,89 +49,12 @@ class OnboardingScreen extends StatefulWidget {
   State<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
-    with TickerProviderStateMixin {
+class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pages = PageController();
-  late final AnimationController _light;
-
-  /// Page the swipe started on. The speck is measured from here so a gesture
-  /// does not throw it back to the entry.
-  int _anchor = 0;
-
-  /// Eased phase frozen at the start of a swipe. Null while the page is still.
-  double? _heldPhase;
-
-  /// Raw cycle position frozen with [_heldPhase], handed to Sign-in.
-  double _heldCycle = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _light = AnimationController(
-      vsync: this,
-      duration: MotionTokens.welcomeLight,
-    );
-    _pages.addListener(_onPageTick);
-  }
-
-  bool get _hosted => GoldThreadScope.maybeOf(context) != null;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_hosted) {
-      _light.stop();
-      GoldThreadScope.maybeOf(context)!.setWelcomePage(_page);
-      return;
-    }
-    if (!Motion.decorativeLoop(context)) {
-      _light.stop();
-    } else if (!_light.isAnimating) {
-      _light.repeat();
-    }
-  }
-
-  void _onPageTick() {
-    if (!mounted) return;
-    if (_hosted) {
-      GoldThreadScope.maybeOf(context)!.setWelcomePage(_page);
-      setState(() {});
-      return;
-    }
-    if (!Motion.decorativeLoop(context)) {
-      _heldPhase = null;
-      if (mounted) setState(() {});
-      return;
-    }
-    final current = _page;
-    final settled = (current - current.roundToDouble()).abs() <= 0.001;
-    if (settled) {
-      final landed = current.round();
-      if (_heldPhase != null) {
-        final forward = landed >= _anchor;
-        _anchor = landed;
-        _heldPhase = null;
-        // Forward lands on the next entry (t = 0). Backward lands on the
-        // previous exit, which is the end of that page's curve.
-        _light.value = forward ? 0 : 0.999;
-        if (!_light.isAnimating) _light.repeat();
-      } else {
-        _anchor = landed;
-      }
-    } else if (_heldPhase == null) {
-      _heldCycle = _light.value;
-      _heldPhase = MotionTokens.welcomeLightCurve.transform(_light.value);
-      _light.stop();
-    }
-    if (mounted) setState(() {});
-  }
 
   @override
   void dispose() {
-    _pages
-      ..removeListener(_onPageTick)
-      ..dispose();
-    _light.dispose();
+    _pages.dispose();
     super.dispose();
   }
 
@@ -138,49 +63,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return _pages.page ?? _pages.initialPage.toDouble();
   }
 
-  /// The speck on the joined stitch. Null hides it (reduced motion, or this
-  /// page is not the one currently carrying the light).
-  ///
-  /// Inside the shell the shared layer paints the speck, so this stays null.
-  double? _lightT(int page) {
-    if (_hosted) return null;
-    if (Motion.reduced(context)) return null;
-    if (!Motion.decorativeLoop(context)) return null;
-    final phase =
-        _heldPhase ?? MotionTokens.welcomeLightCurve.transform(_light.value);
-    final placement = placeSpeck(page: _page, phase: phase, anchor: _anchor);
-    if (placement.page != page) return null;
-    return placement.t;
-  }
-
-  double get _cycle => _heldPhase != null ? _heldCycle : _light.value;
-
   Duration get _turn => MotionTokens.standard;
 
   Future<void> _finish({required bool signIn}) async {
     final dependencies = AppDependencies.of(context);
     final router = GoRouter.of(context);
-    final reduced = Motion.reduced(context);
     await dependencies.launch.markWelcomeCompleted();
     if (!mounted) return;
     if (signIn) {
-      router.goNamed(
-        AppRoute.signIn.routeName,
-        extra: reduced ? null : WelcomeThreadArrival(_cycle),
-      );
+      router.goNamed(AppRoute.signIn.routeName);
       return;
     }
     router.goNamed(AppRoute.home.routeName);
   }
 
-  void _go(int direction) {
+  void _go(int direction, int count) {
     unawaited(
       AppHaptics.fire(
         HapticIntent.selection,
         suppressed: Motion.reduced(context),
       ),
     );
-    final next = (_page.round() + direction).clamp(0, 2);
+    final next = (_page.round() + direction).clamp(0, count - 1);
     if (Motion.reduced(context)) {
       // A zero-duration page animation is rejected by the scroll activity.
       // Reduced motion jumps. The gesture swipe still works.
@@ -194,47 +98,21 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   @override
   Widget build(BuildContext context) {
     final scenes = WelcomePageCopy.fromStrings(AppStrings.of(context));
-    final bool hosted = _hosted;
     return Scaffold(
-      backgroundColor: hosted ? Colors.transparent : const Color(0xFFF3F5FA),
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final scale = constraints.maxWidth / 390;
-          const canvasHeight = 844.0;
-          return SingleChildScrollView(
-            child: SizedBox(
-              width: constraints.maxWidth,
-              height: canvasHeight * scale,
-              child: FittedBox(
-                fit: BoxFit.fill,
-                child: SizedBox(
-                  width: 390,
-                  height: canvasHeight,
-                  child: AnimatedBuilder(
-                    animation: _light,
-                    builder: (context, _) {
-                      return PageView.builder(
-                        controller: _pages,
-                        itemCount: scenes.length,
-                        itemBuilder: (context, index) {
-                          return WelcomeCanvas(
-                            page: index,
-                            copy: scenes[index],
-                            lightT: _lightT(index),
-                            onSkip: () => unawaited(_finish(signIn: false)),
-                            onNext: () => _go(1),
-                            onBack: () => _go(-1),
-                            onGetStarted: () =>
-                                unawaited(_finish(signIn: true)),
-                            onGuest: () => unawaited(_finish(signIn: false)),
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+      backgroundColor: BrandColors.white,
+      body: PageView.builder(
+        controller: _pages,
+        itemCount: scenes.length,
+        itemBuilder: (context, index) {
+          return WelcomeCanvas(
+            page: index,
+            pageCount: scenes.length,
+            copy: scenes[index],
+            onSkip: () => unawaited(_finish(signIn: false)),
+            onNext: () => _go(1, scenes.length),
+            onBack: () => _go(-1, scenes.length),
+            onGetStarted: () => unawaited(_finish(signIn: true)),
+            onGuest: () => unawaited(_finish(signIn: false)),
           );
         },
       ),

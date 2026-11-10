@@ -334,19 +334,27 @@ abstract final class HeaderShapes {
 /// stretched to the header's width).
 @immutable
 class WaveLayer {
-  const WaveLayer({required this.color, required this.points});
+  const WaveLayer({
+    required this.color,
+    required this.points,
+    this.viewBox = WaveHeaderShapes.viewBox,
+  });
 
   final Color color;
 
-  /// Start y, then two cubic segments as (c1x, c1y, c2x, c2y, x, y), in the
-  /// 390 × 50 view box. The second segment's first control point is the SVG
-  /// `S` reflection, written out.
+  /// Start y, then two cubic segments as (c1x, c1y, c2x, c2y, x, y), in
+  /// [viewBox]. The second segment's first control point is the SVG `S`
+  /// reflection, written out.
   final List<double> points;
+
+  /// The SVG view box the points are written in: 390 × 50 for the wave
+  /// header, 390 × 64 for the welcome photo ([WelcomeShapes]).
+  final Size viewBox;
 
   /// The layer's filled path, scaled to [size] (`preserveAspectRatio=none`).
   Path toPath(Size size) {
-    final double sx = size.width / WaveHeaderShapes.viewBox.width;
-    final double sy = size.height / WaveHeaderShapes.viewBox.height;
+    final double sx = size.width / viewBox.width;
+    final double sy = size.height / viewBox.height;
     final Path path = Path()..moveTo(0, points[0] * sy);
     for (var i = 1; i + 5 < points.length; i += 6) {
       path.cubicTo(
@@ -438,17 +446,91 @@ abstract final class WaveHeaderShapes {
 /// Paints [WaveHeaderShapes.layers] across its whole size. Phase 2's
 /// WaveHeader puts it, 50 px tall, along the bottom of the gradient.
 class WavePainter extends CustomPainter {
-  const WavePainter();
+  const WavePainter({this.layers = WaveHeaderShapes.layers});
+
+  /// The wave to paint: the header's by default, [WelcomeShapes.layers] on
+  /// the welcome photo.
+  final List<WaveLayer> layers;
 
   @override
   void paint(Canvas canvas, Size size) {
-    for (final WaveLayer layer in WaveHeaderShapes.layers) {
+    for (final WaveLayer layer in layers) {
       canvas.drawPath(layer.toPath(size), Paint()..color = layer.color);
     }
   }
 
   @override
-  bool shouldRepaint(covariant WavePainter oldDelegate) => false;
+  bool shouldRepaint(covariant WavePainter oldDelegate) =>
+      oldDelegate.layers != layers;
+}
+
+/// The welcome scene (design `Main.dc.html`, CSS `.wel`): a photo zone over
+/// the top of the page, darkened by [tint], with a 64 px three-layer wave
+/// melting into the white panel below.
+abstract final class WelcomeShapes {
+  /// `.zone { height: 62%; min-height: 340px }`.
+  static const double zoneFraction = 0.62;
+  static const double zoneMinHeight = 340;
+
+  /// `.zone .bg { object-position: center 35% }`.
+  static const Alignment photoAlignment = Alignment(0, -0.3);
+
+  /// `.zone .tint`: 180°, navy 82% → navy 25% at 28% → blue 10% at 55% →
+  /// blue 55%. White text sits on the dark top band.
+  static const LinearGradient tint = LinearGradient(
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
+    colors: <Color>[
+      Color(0xD108124A),
+      Color(0x4008124A),
+      Color(0x1A0A2071),
+      Color(0x8C0A2071),
+    ],
+    stops: <double>[0, 0.28, 0.55, 1],
+  );
+
+  /// `.zone .wave`: a 390 × 64 SVG stretched to the zone's width.
+  static const Size viewBox = Size(390, 64);
+  static const double waveHeight = 64;
+
+  /// `.wtop` padding: 16 + safe area at the top, 20 at the sides.
+  static const EdgeInsets topRowPadding = EdgeInsets.fromLTRB(20, 16, 20, 0);
+
+  /// `.skip`: a 40 px pill of white at 14%, inside a 48 px target.
+  static const double skipHeight = 40;
+  static const Color skipFill = Color(0x24FFFFFF);
+
+  /// `.fab`: the 64 px gold Next disc.
+  static const double fab = 64;
+
+  /// `.pager i`: 8 px dots, the current one 24 px wide.
+  static const double pagerDot = 8;
+  static const double pagerDotActive = 24;
+
+  /// `.panel`: padding 4 / 28 / 24 + safe area, 14 between items, body
+  /// text at most 320 wide.
+  static const EdgeInsets panelPadding = EdgeInsets.fromLTRB(28, 4, 28, 24);
+  static const double panelGap = 14;
+  static const double bodyMaxWidth = 320;
+
+  /// Gold 90%, white 45%, white.
+  static const List<WaveLayer> layers = <WaveLayer>[
+    WaveLayer(
+      color: Color(0xE6F5DA18),
+      viewBox: viewBox,
+      points: <double>[22, 70, 0, 150, 46, 225, 24, 300, 2, 345, 4, 390, 18],
+    ),
+    WaveLayer(
+      color: Color(0x73FFFFFF),
+      viewBox: viewBox,
+      points: <double>[32, 82, 12, 158, 54, 240, 32, 322, 10, 356, 16, 390, 28],
+    ),
+    WaveLayer(
+      color: Colors.white,
+      viewBox: viewBox,
+      points: <double>[42, 95, 26, 170, 62, 262, 42, 354, 22, 366, 32, 390, 40],
+    ),
+  ];
 }
 
 /// One soft colour blob behind a glass screen (CSS `.app.glass` radial

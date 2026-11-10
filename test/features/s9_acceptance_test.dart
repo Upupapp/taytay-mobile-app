@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
@@ -35,15 +34,12 @@ void main() {
     );
     expect(headline.flagsCollection.isHeader, isTrue);
     _expectTargets(tester);
-    final Finder next = find.ancestor(
-      of: find.text('Next'),
-      matching: find.byType(InkWell),
-    );
+    final Finder next = find.byKey(welcomeNextKey);
     final Size nextSize = tester.getSize(next);
     expect(nextSize.height, greaterThanOrEqualTo(A11y.minTapTarget));
     expect(nextSize.width, greaterThanOrEqualTo(A11y.minTapTarget));
 
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.byKey(welcomeNextKey));
     await tester.pumpAndSettle();
     expect(find.byType(TaytayBackButton), findsWidgets);
     for (final element in find.byType(TaytayBackButton).evaluate()) {
@@ -69,7 +65,7 @@ void main() {
       greaterThanOrEqualTo(A11y.minTapTarget),
     );
     final RenderObject headlineBox = tester.renderObject(
-      find.text('Serbisyong bayan,'),
+      find.textContaining('Serbisyong bayan,'),
     );
     expect((headlineBox as RenderBox).size.height, greaterThan(0));
   });
@@ -128,29 +124,34 @@ void main() {
       tester.element(find.text('Skip')),
     )!;
     expect(model.clock.isAnimating, isFalse);
-  });
+    // Redesign P3a: the gold thread and its travelling light are gone from
+    // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+    // Phase 4 deletes this test with gold_thread_shell.dart.
+  }, skip: true);
 
-  testWidgets(
-    'disableAnimations keeps the thread and hides the travelling tip',
-    (tester) async {
-      WelcomeMotion.enabled = true;
-      addTearDown(() => WelcomeMotion.enabled = false);
+  testWidgets('disableAnimations keeps the thread and hides the travelling tip', (
+    tester,
+  ) async {
+    WelcomeMotion.enabled = true;
+    addTearDown(() => WelcomeMotion.enabled = false);
 
-      await boot(tester, disableAnimations: true);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+    await boot(tester, disableAnimations: true);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
 
-      expect(tester.takeException(), isNull);
-      expect(find.text('Skip'), findsOneWidget);
-      expect(find.byType(SignInThreadOverlay), findsOneWidget);
-      expect(find.byKey(TravellingLight.mark), findsNothing);
-      final GoldThreadModel model = GoldThreadScope.maybeOf(
-        tester.element(find.text('Skip')),
-      )!;
-      expect(model.clock.isAnimating, isFalse);
-    },
-  );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Skip'), findsOneWidget);
+    expect(find.byType(SignInThreadOverlay), findsOneWidget);
+    expect(find.byKey(TravellingLight.mark), findsNothing);
+    final GoldThreadModel model = GoldThreadScope.maybeOf(
+      tester.element(find.text('Skip')),
+    )!;
+    expect(model.clock.isAnimating, isFalse);
+    // Redesign P3a: the gold thread and its travelling light are gone from
+    // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+    // Phase 4 deletes this test with gold_thread_shell.dart.
+  }, skip: true);
 
   testWidgets('host frame pumps while the welcome thread advances', (
     tester,
@@ -192,7 +193,10 @@ void main() {
     if (Platform.environment['TAYTAY_S9_REPORT'] == '1') {
       _writeReports(slowest: slowest, total: total, frames: frames);
     }
-  });
+    // Redesign P3a: the gold thread and its travelling light are gone from
+    // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+    // Phase 4 deletes this test with gold_thread_shell.dart.
+  }, skip: true);
 }
 
 void _expectTargets(WidgetTester tester) {

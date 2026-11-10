@@ -163,7 +163,10 @@ void main() {
     expect(model.cycle, isNot(atSignIn));
     expect(find.byType(GoldThreadShell), findsOneWidget);
     expect(find.byKey(TravellingLight.mark), findsOneWidget);
-  });
+    // Redesign P3a: the gold thread and its travelling light are gone from
+    // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+    // Phase 4 deletes this test with gold_thread_shell.dart.
+  }, skip: true);
 
   testWidgets('reduced motion keeps the thread and hides the tip', (
     WidgetTester tester,
@@ -209,5 +212,8 @@ void main() {
       tester.element(find.text('Skip')),
     )!;
     expect(model.clock.isAnimating, isFalse);
-  });
+    // Redesign P3a: the gold thread and its travelling light are gone from
+    // welcome and sign-in (design/mobile/screens/Main.dc.html, SignIn.dc.html).
+    // Phase 4 deletes this test with gold_thread_shell.dart.
+  }, skip: true);
 }

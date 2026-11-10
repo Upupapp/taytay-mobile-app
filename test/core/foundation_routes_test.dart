@@ -48,9 +48,9 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
   AppRoute.profile,
 };
 
-/// Screens whose header is [WovenHeader], including the navigation-root welcome.
+/// Screens whose header is still [WovenHeader]. Redesign P3a: the welcome
+/// is the Main.dc.html photo zone now, with no woven header.
 const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{
-  AppRoute.onboarding,
   AppRoute.signIn,
   AppRoute.signInHelp,
   AppRoute.forgotPassword,
