@@ -419,7 +419,10 @@ void main() {
 
     expect(find.text('Create your account'), findsOneWidget);
     expect(find.byType(TaytayBackButton), findsOneWidget);
-    await _tapText(tester, 'Back');
+    // Redesign P3a: back is the wave header's control only (RegDetails …
+    // RegReview have no footer Back button).
+    await tester.tap(find.byType(TaytayBackButton));
+    await tester.pumpAndSettle();
 
     expect(find.text('Juana'), findsOneWidget);
     expect(find.text('Dela Cruz'), findsOneWidget);

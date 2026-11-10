@@ -27,6 +27,7 @@ class WaveHeader extends StatelessWidget {
     this.progressSemanticLabel,
     this.trailing,
     this.badge,
+    this.eyebrow,
     this.centered = false,
     this.includeSafeArea = true,
     super.key,
@@ -57,6 +58,10 @@ class WaveHeader extends StatelessWidget {
 
   /// Drawn above the title, e.g. `SuccessMark`.
   final Widget? badge;
+
+  /// Drawn in the title block, just above [title]: sign-in's seal and brand
+  /// line (CSS `.wtitle .brandrow`).
+  final Widget? eyebrow;
   final bool centered;
   final bool includeSafeArea;
 
@@ -105,6 +110,7 @@ class WaveHeader extends StatelessWidget {
     final String? stepLabel = this.stepLabel;
     final double? progress = this.progress;
     final Widget? badge = this.badge;
+    final Widget? eyebrow = this.eyebrow;
     final Widget? trailing = this.trailing;
     final CrossAxisAlignment cross = centered
         ? CrossAxisAlignment.center
@@ -160,7 +166,7 @@ class WaveHeader extends StatelessWidget {
             padding: const EdgeInsets.only(top: 22),
             child: Center(child: badge),
           ),
-        if (title != null || subtitle != null)
+        if (title != null || subtitle != null || eyebrow != null)
           Padding(
             padding: EdgeInsets.only(
               top: badge != null ? Spacing.md : (hasTopRow ? 20 : 0),
@@ -177,6 +183,11 @@ class WaveHeader extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: cross,
                   children: <Widget>[
+                    if (eyebrow != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: Spacing.sm),
+                        child: eyebrow,
+                      ),
                     if (title != null)
                       Semantics(
                         header: true,

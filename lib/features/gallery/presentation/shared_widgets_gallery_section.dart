@@ -13,6 +13,7 @@ import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/photo_carousel.dart';
 import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/status_line.dart';
 import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
@@ -205,6 +206,29 @@ class SharedWidgetsGallerySection extends StatelessWidget {
         ),
         const _Heading('ConsentCheckCard'),
         const _Padded(_ConsentSpecimen()),
+        const _Heading('SoftNote'),
+        const _Padded(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              SoftNote(message: 'Context to read before acting.'),
+              SizedBox(height: Spacing.sm),
+              SoftNote(
+                tone: NoteTone.warning,
+                title: 'Waiting. ',
+                message: 'Something to watch.',
+              ),
+              SizedBox(height: Spacing.sm),
+              SoftNote(
+                tone: NoteTone.error,
+                title: 'Failed. ',
+                message: 'What to fix.',
+              ),
+              SizedBox(height: Spacing.sm),
+              SoftNote(tone: NoteTone.success, message: 'Done.'),
+            ],
+          ),
+        ),
         const _Heading('EmptyState, ErrorState, OfflineNotice'),
         const _Padded(
           EmptyState(

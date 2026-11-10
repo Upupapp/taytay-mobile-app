@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,10 +10,11 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
-import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
+import 'auth_form_page.dart';
 import 'auth_stage.dart';
 import 'sign_in_controller.dart';
 
@@ -27,7 +26,9 @@ export 'auth_stage.dart' show signInFormSheetKey;
 /// `02-10` frames, with the sample values from the mockup and no debug chrome.
 enum SignInFixture { live, design, error }
 
-/// Sign-in as `02-01` draws it: email or mobile, password, and the arch.
+/// Sign-in as `SignIn.dc.html` draws it: the wave header with the seal and
+/// the welcome back, email or mobile and password on the white page, and
+/// Sign in, Create an account and Continue as guest in the footer.
 ///
 /// The live repository declines. The dev mock returns a session. The staff
 /// password route is never called. A refusal uses [SignInMessage], never the
@@ -35,13 +36,11 @@ enum SignInFixture { live, design, error }
 class SignInScreen extends StatefulWidget {
   const SignInScreen({
     this.returnTo,
-    this.threadCycle = 0,
     this.fixture = SignInFixture.live,
     super.key,
   });
 
   final String? returnTo;
-  final double threadCycle;
   final SignInFixture fixture;
 
   @override
@@ -139,105 +138,118 @@ class _SignInScreenState extends State<SignInScreen> {
     final needsEmail = controller?.message == SignInMessage.passwordNeedsEmail;
     final other = !rejected && !needsEmail ? controller?.message : null;
 
-    return AuthStage(
-      sheetTop: rejected ? 276 : 332,
-      arch: rejected ? AuthArch.hallShort : AuthArch.hall,
-      threadCycle: widget.threadCycle,
-      onBack: _back,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
-        child: Form(
-          key: _formKey,
+    // Strings are read only when a notice is shown: the design frames are
+    // pumped without the app's localisations.
+    final String? notice = switch (ended) {
+      SessionEndedReason.expired => AppStrings.of(context).signInNoticeExpired,
+      SessionEndedReason.signedOut => AppStrings.of(
+        context,
+      ).signInNoticeSignedOut,
+      _ =>
+        widget.returnTo != null
+            ? AppStrings.of(context).signInNoticeReturnTo
+            : null,
+    };
+    final bool busy = controller?.busy == true;
+    final int attemptsLeft = widget.fixture == SignInFixture.error
+        ? 2
+        : controller?.passwordAttemptsShown ?? 2;
+
+    return Form(
+      key: _formKey,
+      child: AuthFormPage(
+        pageKey: signInFormSheetKey,
+        eyebrow: const AuthBrandRow(),
+        title: 'Maligayang pagbabalik!',
+        subtitle: 'Sign in to your Taytay resident account.',
+        onBack: _back,
+        footer: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            PrimaryButton(label: 'Sign in', onPressed: busy ? null : _submit),
+            const SizedBox(height: Spacing.xs),
+            Wrap(
+              alignment: WrapAlignment.center,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: <Widget>[
+                Text(
+                  'Bago rito?',
+                  style: AppTypography.bodyStyle.copyWith(
+                    color: BrandColors.muted,
+                  ),
+                ),
+                AuthLink(
+                  'Create an account',
+                  onPressed: () => context.goNamed(AppRoute.register.routeName),
+                ),
+              ],
+            ),
+            AuthLink(
+              'Continue as guest',
+              muted: true,
+              onPressed: () => context.goNamed(AppRoute.home.routeName),
+            ),
+          ],
+        ),
+        child: AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              if (ended == SessionEndedReason.expired)
-                _Notice(text: AppStrings.of(context).signInNoticeExpired)
-              else if (ended == SessionEndedReason.signedOut)
-                _Notice(text: AppStrings.of(context).signInNoticeSignedOut)
-              else if (widget.returnTo != null)
-                _Notice(text: AppStrings.of(context).signInNoticeReturnTo),
-              AuthCopy(
-                eyebrow: 'Mag-sign in',
-                title: 'Maligayang pagbabalik!',
-                subtitle: rejected
-                    ? null
-                    : 'Sign in to your Taytay resident account.',
-              ),
+              if (notice != null) ...<Widget>[
+                SoftNote(message: notice),
+                const SizedBox(height: Spacing.formGap),
+              ],
               if (rejected) ...<Widget>[
-                const SizedBox(height: 10),
-                _CredentialBanner(
-                  attemptsLeft: widget.fixture == SignInFixture.error
-                      ? 2
-                      : controller?.passwordAttemptsShown ?? 2,
+                SoftNote(
+                  tone: NoteTone.error,
+                  title: 'Incorrect email or password. ',
+                  message:
+                      '$attemptsLeft attempts left before a 15-minute pause.',
                 ),
+                const SizedBox(height: Spacing.formGap),
               ],
               if (needsEmail) ...<Widget>[
-                const SizedBox(height: 10),
-                _CredentialBanner.message(
-                  SignInMessage.passwordNeedsEmail.text,
+                SoftNote(
+                  tone: NoteTone.error,
+                  message: SignInMessage.passwordNeedsEmail.text,
                 ),
+                const SizedBox(height: Spacing.formGap),
               ],
               if (other != null) ...<Widget>[
-                const SizedBox(height: 10),
-                Text(
-                  other.text,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    fontWeight: AppTypography.medium,
-                    height: 1.45,
-                    color: Color(0xFF7A1C16),
-                  ),
-                ),
+                SoftNote(tone: NoteTone.error, message: other.text),
+                const SizedBox(height: Spacing.formGap),
               ],
-              SizedBox(height: rejected ? 13.63 : 12),
-              _Field(
+              AuthField(
                 label: 'Email or mobile number',
                 controller: _identifier,
+                icon: TaytayIcons.mail,
                 error: _identifierError,
-                focused: widget.fixture == SignInFixture.design,
-                obscure: false,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const <String>[AutofillHints.username],
               ),
-              SizedBox(height: rejected ? 13.34 : 13.5),
-              _Field(
+              const SizedBox(height: Spacing.formGap),
+              AuthField(
                 label: 'Password',
                 controller: _password,
-                error: rejected ? 'Incorrect password' : _passwordError,
+                icon: TaytayIcons.lock,
                 obscure: _obscure,
-                previewMask: _preview,
-                bad: rejected,
-                trailing: _ShowPassword(
-                  label: _obscure ? 'Show' : 'Hide',
+                error: rejected ? 'Incorrect password' : _passwordError,
+                textInputAction: TextInputAction.done,
+                autofillHints: const <String>[AutofillHints.password],
+                trailing: ShowPasswordToggle(
+                  shown: !_obscure,
+                  showLabel: 'Show',
+                  hideLabel: 'Hide',
                   onPressed: () => setState(() => _obscure = !_obscure),
                 ),
               ),
-              SizedBox(height: rejected ? 6 : 13.5),
-              AuthTextLink(
+              const SizedBox(height: Spacing.xs),
+              AuthLink(
                 'Forgot password?',
-                align: Alignment.centerRight,
+                alignment: AlignmentDirectional.centerStart,
                 onPressed: () =>
                     context.goNamed(AppRoute.forgotPassword.routeName),
-              ),
-              const SizedBox(height: 14),
-              PrimaryButton(
-                kind: TaytayButtonKind.signIn,
-                label: 'Sign in',
-                onPressed: controller?.busy == true ? null : _submit,
-              ),
-              SizedBox(height: rejected ? 9 : 9),
-              const _OrRule(),
-              const SizedBox(height: 12),
-              SecondaryButton(
-                kind: TaytayButtonKind.signIn,
-                label: 'Create an account',
-                onPressed: () => context.goNamed(AppRoute.register.routeName),
-              ),
-              const SizedBox(height: 12),
-              AuthTextLink(
-                'Continue as guest',
-                fontSize: 12,
-                onPressed: () => context.goNamed(AppRoute.home.routeName),
               ),
             ],
           ),
@@ -265,307 +277,5 @@ abstract final class AccountIdentifier {
     final compact = input.replaceAll(' ', '');
     if (_email.hasMatch(input) || _mobile.hasMatch(compact)) return null;
     return 'Enter an email address or an 11-digit mobile number.';
-  }
-}
-
-class _CredentialBanner extends StatelessWidget {
-  const _CredentialBanner({required int this.attemptsLeft}) : message = null;
-
-  const _CredentialBanner.message(String this.message) : attemptsLeft = null;
-
-  final int? attemptsLeft;
-  final String? message;
-
-  @override
-  Widget build(BuildContext context) {
-    final String? sentence = message;
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFFFDECEC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFFF3C1BE)),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const TaytayIcon(
-              icon: TaytayIcons.circleAlert,
-              semanticLabel: 'Error',
-              size: 18,
-              color: Color(0xFFB3261E),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: sentence == null
-                  ? Text.rich(
-                      TextSpan(
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12,
-                          height: 1.45,
-                          fontWeight: AppTypography.medium,
-                          color: Color(0xFF7A1C16),
-                        ),
-                        children: <InlineSpan>[
-                          const TextSpan(
-                            text: 'Incorrect email or password.\n',
-                            style: TextStyle(fontWeight: AppTypography.black),
-                          ),
-                          TextSpan(
-                            text:
-                                '$attemptsLeft attempts left before a '
-                                '15-minute pause.',
-                          ),
-                        ],
-                      ),
-                    )
-                  : Text.rich(
-                      TextSpan(
-                        text: sentence,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 12,
-                          height: 1.45,
-                          fontWeight: AppTypography.medium,
-                          color: Color(0xFF7A1C16),
-                        ),
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Field extends StatelessWidget {
-  const _Field({
-    required this.label,
-    required this.controller,
-    required this.obscure,
-    this.error,
-    this.trailing,
-    this.focused = false,
-    this.bad = false,
-    this.previewMask = false,
-  });
-
-  final String label;
-  final TextEditingController controller;
-  final bool obscure;
-  final String? error;
-  final Widget? trailing;
-  final bool focused;
-  final bool bad;
-  final bool previewMask;
-
-  @override
-  Widget build(BuildContext context) {
-    final border = bad
-        ? BrandColors.danger
-        : focused
-        ? BrandColors.taytayBlue
-        : BrandColors.fieldBorder;
-    final fill = bad
-        ? const Color(0xFFFFF7F7)
-        : focused
-        ? Colors.white
-        : BrandColors.fieldFill;
-    final ring = bad
-        ? const Color(0x1AB3261E)
-        : focused
-        ? const Color(0x1F0B3D91)
-        : null;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          label,
-          style: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
-        ),
-        const SizedBox(height: 5),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: fill,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border, width: 1.4),
-            boxShadow: ring == null
-                ? null
-                : <BoxShadow>[BoxShadow(color: ring, spreadRadius: 3)],
-          ),
-          child: SizedBox(
-            height: 44,
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: previewMask && obscure
-                      ? const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text(
-                            '•••••••••••',
-                            style: TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 14,
-                              fontWeight: AppTypography.medium,
-                              color: BrandColors.fieldInk,
-                            ),
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: TextFormField(
-                            controller: controller,
-                            obscureText: obscure,
-                            textAlignVertical: TextAlignVertical.center,
-                            style: AppTypography.fieldValue.copyWith(
-                              color: BrandColors.fieldInk,
-                            ),
-                            decoration: bareField,
-                          ),
-                        ),
-                ),
-                ?trailing,
-              ],
-            ),
-          ),
-        ),
-        if (error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 1.3),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  error!,
-                  style: const TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    fontWeight: AppTypography.strong,
-                    color: BrandColors.danger,
-                  ),
-                ),
-                const SizedBox(height: 3.7),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _OrRule extends StatelessWidget {
-  const _OrRule();
-
-  @override
-  Widget build(BuildContext context) {
-    const style = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 11,
-      fontWeight: AppTypography.strong,
-      color: Color(0xFF6B6450),
-    );
-    return const Row(
-      children: <Widget>[
-        Expanded(child: _DashedRule()),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10),
-          child: Text('Bago rito?', style: style),
-        ),
-        Expanded(child: _DashedRule()),
-      ],
-    );
-  }
-}
-
-class _DashedRule extends StatelessWidget {
-  const _DashedRule();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 1.4,
-      child: CustomPaint(painter: _RulePainter()),
-    );
-  }
-}
-
-class _RulePainter extends CustomPainter {
-  const _RulePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE0D6B8)
-      ..strokeWidth = 1.4;
-    var x = 0.0;
-    while (x < size.width) {
-      final next = math.min(x + 4, size.width);
-      canvas.drawLine(Offset(x, 0.7), Offset(next, 0.7), paint);
-      x = next + 3;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RulePainter oldDelegate) => false;
-}
-
-class _ShowPassword extends StatelessWidget {
-  const _ShowPassword({required this.label, required this.onPressed});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 64,
-      height: 44,
-      child: OverflowBox(
-        maxHeight: 48,
-        maxWidth: 72,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF5B6680),
-            textStyle: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.strong,
-            ),
-            minimumSize: const Size(48, 48),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          onPressed: onPressed,
-          child: Text(label),
-        ),
-      ),
-    );
-  }
-}
-
-class _Notice extends StatelessWidget {
-  const _Notice({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 13,
-          fontWeight: AppTypography.body,
-          height: 1.45,
-          color: Color(0xFF4A5470),
-        ),
-      ),
-    );
   }
 }

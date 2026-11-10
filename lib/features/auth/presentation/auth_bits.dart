@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/code_exchange.dart';
 
@@ -75,6 +76,7 @@ const InputDecoration bareField = InputDecoration(
 );
 
 /// Red or amber notice. The words are this app's, never a server message.
+/// Drawn as the redesign's note ([SoftNote], CSS `.soft .note`).
 class AuthNoticeBanner extends StatelessWidget {
   const AuthNoticeBanner({
     required this.title,
@@ -89,109 +91,104 @@ class AuthNoticeBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = amber ? const Color(0xFF6B4600) : const Color(0xFF7A1C16);
-    final Color icon = amber
-        ? const Color(0xFF8A5A00)
-        : const Color(0xFFB3261E);
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(12, 9.33, 12, 10.67),
-        decoration: BoxDecoration(
-          color: amber ? const Color(0xFFFFF4D6) : const Color(0xFFFDECEC),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: amber ? const Color(0xFFF0D48A) : const Color(0xFFF3C1BE),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            TaytayIcon(
-              icon: amber ? TaytayIcons.clock : TaytayIcons.circleAlert,
-              semanticLabel: amber ? 'Waiting' : 'Error',
-              size: 18,
-              color: icon,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text.rich(
-                TextSpan(
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    height: 1.45,
-                    fontWeight: AppTypography.medium,
-                    color: ink,
-                  ),
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text: title,
-                      style: const TextStyle(fontWeight: AppTypography.black),
-                    ),
-                    TextSpan(text: detail),
-                  ],
-                ),
-              ),
-            ),
+    return SoftNote(
+      tone: amber ? NoteTone.warning : NoteTone.error,
+      title: title,
+      message: detail,
+    );
+  }
+}
+
+/// Six code cells (CSS `.otp`). [digits] is what is already typed: typed
+/// cells are blue on blue-50, the next one is white with the focus ring.
+/// [bad] draws every cell red; [dim] greys a code that no longer works.
+class SixDigitRow extends StatelessWidget {
+  const SixDigitRow({
+    required this.digits,
+    this.bad = false,
+    this.dim = false,
+    super.key,
+  });
+
+  final String digits;
+  final bool bad;
+  final bool dim;
+
+  @override
+  Widget build(BuildContext context) {
+    final String raw = digits.padRight(6);
+    final int next = digits.length;
+    return ExcludeSemantics(
+      child: Row(
+        children: <Widget>[
+          for (var i = 0; i < 6; i++) ...<Widget>[
+            if (i > 0) const SizedBox(width: Spacing.sm),
+            Expanded(child: _cell(raw[i].trim(), i, next)),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _cell(String digit, int index, int next) {
+    final bool filled = digit.isNotEmpty;
+    final bool current = !bad && !dim && index == next;
+    final Color fill = dim
+        ? BrandColors.background
+        : bad
+        ? BrandColors.errorFill
+        : current
+        ? BrandColors.white
+        : filled
+        ? BrandColors.blue50
+        : BrandColors.softFill;
+    final Color border = bad
+        ? BrandColors.red
+        : current
+        ? BrandColors.blue
+        : dim
+        ? BrandColors.line
+        : BrandColors.transparent;
+    final Color ink = dim
+        ? BrandColors.muted
+        : filled
+        ? BrandColors.blue
+        : BrandColors.ink;
+    return Container(
+      height: _otpCellHeight,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: fill,
+        borderRadius: BorderRadius.circular(Radii.field),
+        border: Border.all(color: border, width: FocusRing.borderWidth),
+      ),
+      foregroundDecoration: current
+          ? BoxDecoration(
+              borderRadius: BorderRadius.circular(Radii.field),
+              border: Border.all(
+                color: FocusRing.ring,
+                width: FocusRing.ringWidth,
+                strokeAlign: BorderSide.strokeAlignOutside,
+              ),
+            )
+          : null,
+      child: Text(
+        digit,
+        style: AppTypography.pageTitle.copyWith(
+          fontWeight: AppTypography.black,
+          color: ink,
+          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
         ),
       ),
     );
   }
 }
 
-/// Six code cells. [digits] is what is already typed.
-class SixDigitRow extends StatelessWidget {
-  const SixDigitRow({required this.digits, this.bad = false, super.key});
+/// `.otp span { height: 58px }`.
+const double _otpCellHeight = 58;
 
-  final String digits;
-  final bool bad;
-
-  @override
-  Widget build(BuildContext context) {
-    final String raw = digits.padRight(6);
-    return Row(
-      children: <Widget>[
-        for (var i = 0; i < 6; i++) ...<Widget>[
-          if (i > 0) const SizedBox(width: 8),
-          Expanded(
-            child: Container(
-              height: 54,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: bad ? const Color(0xFFFFF7F7) : BrandColors.fieldFill,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: bad
-                      ? const Color(0xFFB3261E)
-                      : BrandColors.fieldBorder,
-                  width: 1.4,
-                ),
-                boxShadow: bad
-                    ? const <BoxShadow>[
-                        BoxShadow(color: Color(0x1AB3261E), spreadRadius: 3),
-                      ]
-                    : null,
-              ),
-              child: Text(
-                raw[i].trim(),
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 22,
-                  fontWeight: AppTypography.black,
-                  color: Color(0xFF1C2540),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-/// The three published password rules, live from [password].
+/// The three published password rules, live from [password] (CSS `.rules`):
+/// a check and a short label each, green once met.
 class PasswordRules extends StatelessWidget {
   const PasswordRules({required this.password, super.key});
 
@@ -203,57 +200,64 @@ class PasswordRules extends StatelessWidget {
     final bool digit = RegExp(r'\d').hasMatch(password);
     final bool letter = RegExp('[A-Za-z]').hasMatch(password);
     return Wrap(
-      spacing: 12,
-      runSpacing: 8,
+      spacing: Spacing.lg,
+      runSpacing: Spacing.xs,
       children: <Widget>[
-        _Rule('Hindi bababa sa 8 character', met: chars),
-        _Rule('May numero', met: digit),
-        _Rule('May letra', met: letter),
+        PasswordRule('Hindi bababa sa 8 character', met: chars ? true : null),
+        PasswordRule('May numero', met: digit ? true : null),
+        PasswordRule('May letra', met: letter ? true : null),
       ],
     );
   }
 }
 
-class _Rule extends StatelessWidget {
-  const _Rule(this.label, {required this.met});
+/// One password rule (CSS `.rules li`): 12.5 / 600, a check when [met], a
+/// dot while it is not, and muted when nothing is typed yet ([met] null).
+class PasswordRule extends StatelessWidget {
+  const PasswordRule(this.label, {required this.met, super.key});
 
   final String label;
-  final bool met;
+  final bool? met;
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = met ? const Color(0xFF0F7A4D) : const Color(0xFF5B6680);
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        TaytayIcon(
-          icon: TaytayIcons.check,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: 13,
-          color: ink,
-        ),
-        const SizedBox(width: 4),
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.fade,
-            softWrap: false,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.strong,
-              color: ink,
+    final bool? met = this.met;
+    final Color ink = switch (met) {
+      true => BrandColors.green,
+      false => BrandColors.redInk,
+      null => BrandColors.muted,
+    };
+    return Semantics(
+      label: '$label, ${met == true ? 'met' : 'not met'}',
+      excludeSemantics: true,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          TaytayIcon(
+            icon: met == true ? TaytayIcons.check : TaytayIcons.circleSlash,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm - Spacing.xs,
+            color: ink,
+          ),
+          const SizedBox(width: Spacing.xs),
+          Flexible(
+            child: Text(
+              label,
+              style: AppTypography.listDetail.copyWith(
+                fontWeight: AppTypography.medium,
+                color: ink,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-/// "Ipakita" / "Itago". The painted row stays 44; the hit target is 48.
+/// Show / Hide inside a password field (CSS `.pw button`): blue 13.5 / 700
+/// on no fill, a 48 dp target.
 class ShowPasswordToggle extends StatelessWidget {
   const ShowPasswordToggle({
     required this.shown,
@@ -270,29 +274,109 @@ class ShowPasswordToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 88,
-      height: 44,
-      child: OverflowBox(
-        maxWidth: 120,
-        maxHeight: 48,
-        alignment: Alignment.centerRight,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: const Color(0xFF5B6680),
-            minimumSize: const Size(48, 48),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.strong,
-            ),
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: Spacing.xs),
+      child: TextButton(
+        style: TextButton.styleFrom(
+          foregroundColor: BrandColors.blue,
+          minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.md),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(Radii.sm),
           ),
-          onPressed: onPressed,
-          child: Text(shown ? hideLabel : showLabel),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          textStyle: AppTypography.listTitle.copyWith(
+            fontWeight: AppTypography.strong,
+          ),
+        ),
+        onPressed: onPressed,
+        child: Text(shown ? hideLabel : showLabel),
+      ),
+    );
+  }
+}
+
+/// How long a code stays good, as a blue pill with a clock.
+class CodeExpiryChip extends StatelessWidget {
+  const CodeExpiryChip({required this.label, super.key});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const ShapeDecoration(
+        color: BrandColors.blue50,
+        shape: StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md,
+          vertical: Spacing.sm - Spacing.xxs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const TaytayIcon(
+              icon: TaytayIcons.clock,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm - Spacing.xs,
+              color: BrandColors.blue,
+            ),
+            const SizedBox(width: Spacing.xs),
+            Flexible(
+              child: Text(
+                label,
+                style: AppTypography.listDetail.copyWith(
+                  fontWeight: AppTypography.strong,
+                  color: BrandColors.blue,
+                  fontFeatures: const <FontFeature>[
+                    FontFeature.tabularFigures(),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
+    );
+  }
+}
+
+/// "Resend" beside the code: blue when it works, muted with the wait while
+/// it does not ([onPressed] null).
+class CodeResendButton extends StatelessWidget {
+  const CodeResendButton({
+    required this.label,
+    required this.onPressed,
+    this.buttonKey,
+    super.key,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+
+  /// Key for the [TextButton] itself, so a test can read its state.
+  final Key? buttonKey;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      key: buttonKey,
+      style: TextButton.styleFrom(
+        foregroundColor: BrandColors.blue,
+        disabledForegroundColor: BrandColors.muted,
+        minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
+        padding: const EdgeInsets.symmetric(horizontal: Spacing.sm),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        textStyle: AppTypography.listDetail.copyWith(
+          fontWeight: AppTypography.strong,
+          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
+        ),
+      ),
+      onPressed: onPressed,
+      child: Text(label),
     );
   }
 }

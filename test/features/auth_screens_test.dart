@@ -181,9 +181,14 @@ void main() {
       expect(sheet, findsOneWidget);
       expect(tester.widget<Material>(sheet).color, Colors.white);
 
+      // Redesign P3a: the title and subtitle sit on the wave header
+      // (SignIn.dc.html); the form and its links sit on the white page.
+      expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
+      expect(
+        find.text('Sign in to your Taytay resident account.'),
+        findsOneWidget,
+      );
       const lines = <String>[
-        'Maligayang pagbabalik!',
-        'Sign in to your Taytay resident account.',
         'Forgot password?',
         'Create an account',
         'Continue as guest',
@@ -195,7 +200,6 @@ void main() {
           reason: line,
         );
       }
-
 
       RenderObject? ancestor = tester.renderObject(sheet).parent;
       RenderRepaintBoundary? boundary;

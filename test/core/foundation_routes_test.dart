@@ -14,6 +14,7 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 import 'package:taytay_resident/shared/widgets/taytay_headers.dart';
+import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
 const SessionState _guest = GuestSession();
 const SessionState _unverified = AuthenticatedSession(
@@ -49,11 +50,18 @@ const Set<AppRoute> _routesWithoutBackButton = <AppRoute>{
 };
 
 /// Screens whose header is still [WovenHeader]. Redesign P3a: the welcome
-/// is the Main.dc.html photo zone now, with no woven header.
-const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{
+/// is the Main.dc.html photo zone now, and sign-in and the password reset
+/// screens use the [WaveHeader] of the form pattern.
+const Set<AppRoute> _wovenHeaderRoutes = <AppRoute>{AppRoute.signInHelp};
+
+/// Screens whose header is the redesign's [WaveHeader] (form / step pattern).
+const Set<AppRoute> _waveHeaderRoutes = <AppRoute>{
   AppRoute.signIn,
-  AppRoute.signInHelp,
+  AppRoute.register,
   AppRoute.forgotPassword,
+  AppRoute.resetCode,
+  AppRoute.setPassword,
+  AppRoute.passwordUpdated,
 };
 
 const Map<AppRoute, Map<String, String>>
@@ -266,6 +274,13 @@ void main() {
           reason: route.routeName,
         );
       }
+      if (_waveHeaderRoutes.contains(route)) {
+        expect(
+          find.byType(WaveHeader),
+          findsOneWidget,
+          reason: route.routeName,
+        );
+      }
     }
 
     // My Account, verified: its "Request documents" row opens the catalogue,
@@ -296,7 +311,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(_currentPath(tester), AppRoute.signIn.path);
     _expectBackButtons(AppRoute.signIn);
-    expect(find.byType(WovenHeader), findsOneWidget);
+    expect(find.byType(WaveHeader), findsOneWidget);
   });
 }
 

@@ -6,17 +6,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/sign_in_field.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
-import '../../../shared/widgets/taytay_icon.dart';
-import '../../../shared/widgets/taytay_thread.dart';
 import '../domain/code_exchange.dart';
 import 'auth_bits.dart';
-import 'auth_stage.dart';
+import 'auth_form_page.dart';
 
 /// Which `02-02b` frame to paint. [sample] is the design's error state.
 enum ResetCodeFixture { live, sample }
@@ -186,47 +185,77 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bool short = MediaQuery.sizeOf(context).height < 800;
-    final Widget body = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+    final bool wrong = _sample || _view.wrong;
+    return AuthFormPage(
+      title: 'Ilagay ang 6-digit na code',
+      subtitle: 'Nagpadala kami ng code sa $_email.',
+      onBack: () => context.canPop()
+          ? context.pop()
+          : context.goNamed(AppRoute.forgotPassword.routeName),
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PrimaryButton(
+            label: _view.expired
+                ? 'Magpadala ng bagong code'
+                : 'I-verify ang code',
+            onPressed: _busy
+                ? null
+                : _view.expired
+                ? _resend
+                : _verify,
+          ),
+          const SizedBox(height: Spacing.sm),
+          Text(
+            'Valid ang code nang 10 minuto. May 5 subok ka bawat code.',
+            textAlign: TextAlign.center,
+            style: AppTypography.small.copyWith(color: BrandColors.muted),
+          ),
+          AuthLink(
+            'Bumalik sa sign in',
+            onPressed: () => context.goNamed(AppRoute.signIn.routeName),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          AuthCopy(
-            eyebrow: 'Nakalimutan ang password',
-            title: 'Ilagay ang 6-digit na code',
-            subtitle: 'Nagpadala kami ng code sa $_email.',
-          ),
-          if (_sample || _view.wrong) ...<Widget>[
-            const SizedBox(height: 12),
-            AuthNoticeBanner(
+          if (wrong) ...<Widget>[
+            SoftNote(
+              tone: NoteTone.error,
               title: 'Mali ang code. ',
-              detail: _sample
-                  ? '4 sa ${CodeExchangeRules.attempts} subok na lang ang natitira.'
+              message: _sample
+                  ? '4 sa ${CodeExchangeRules.attempts} subok na lang ang '
+                        'natitira.'
                   : _view.attemptsRemaining == null
                   ? 'May ${CodeExchangeRules.attempts} subok ka bawat code.'
-                  : '${_view.attemptsRemaining} sa ${CodeExchangeRules.attempts} subok na lang ang natitira.',
+                  : '${_view.attemptsRemaining} sa '
+                        '${CodeExchangeRules.attempts} subok na lang ang '
+                        'natitira.',
             ),
+            const SizedBox(height: Spacing.formGap),
           ] else if (_view.expired) ...<Widget>[
-            const SizedBox(height: 12),
-            AuthNoticeBanner(
+            SoftNote(
+              tone: NoteTone.warning,
               title: 'Nag-expire na ang code. ',
-              detail: _view.attemptsRemaining == null
+              message: _view.attemptsRemaining == null
                   ? 'Magpadala ng bago. May 5 subok ka ulit.'
-                  : 'Magpadala ng bago. May ${_view.attemptsRemaining} subok ka ulit.',
-              amber: true,
+                  : 'Magpadala ng bago. May ${_view.attemptsRemaining} '
+                        'subok ka ulit.',
             ),
+            const SizedBox(height: Spacing.formGap),
           ] else if (_view.unavailable) ...<Widget>[
-            const SizedBox(height: 12),
-            const AuthNoticeBanner(
+            const SoftNote(
+              tone: NoteTone.error,
               title: 'Subukan muli. ',
-              detail: CodeAttemptView.unavailableCopy,
+              message: CodeAttemptView.unavailableCopy,
             ),
+            const SizedBox(height: Spacing.formGap),
           ],
-          const SizedBox(height: 16),
           SixDigitRow(
             digits: _code.text,
-            bad: (_sample || _view.wrong) && !_view.expired,
+            bad: wrong && !_view.expired,
+            dim: _view.expired,
           ),
           if (!_sample)
             Opacity(
@@ -246,122 +275,23 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
                 ),
               ),
             ),
-          const SizedBox(height: 10.33),
-          Row(
+          const SizedBox(height: Spacing.md),
+          Wrap(
+            spacing: Spacing.sm,
+            runSpacing: Spacing.xs,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
-              Flexible(
-                child: Container(
-                  height: 32,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEAF0FB),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const TaytayIcon(
-                        icon: TaytayIcons.clock,
-                        semanticLabel: '',
-                        excludeSemantics: true,
-                        size: 14,
-                        color: BrandColors.taytayBlue,
-                      ),
-                      const SizedBox(width: 5),
-                      Flexible(
-                        child: Text(
-                          'Mag-e-expire sa $_expiryLabel',
-                          maxLines: 1,
-                          overflow: TextOverflow.fade,
-                          softWrap: false,
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 12,
-                            fontWeight: AppTypography.black,
-                            color: BrandColors.taytayBlue,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                width: 152,
-                height: 18,
-                child: OverflowBox(
-                  maxHeight: 48,
-                  maxWidth: 180,
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      minimumSize: const Size(48, 48),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: EdgeInsets.zero,
-                      foregroundColor: const Color(0xFF5B6680),
-                      disabledForegroundColor: const Color(0xFF5B6680),
-                      textStyle: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 12,
-                        fontWeight: AppTypography.strong,
-                      ),
-                    ),
-                    onPressed: _canResend ? _resend : null,
-                    child: Text(
-                      _canResend
-                          ? 'Ipadala muli'
-                          : 'Ipadala muli sa $_resendLabel',
-                    ),
-                  ),
-                ),
+              CodeExpiryChip(label: 'Mag-e-expire sa $_expiryLabel'),
+              CodeResendButton(
+                label: _canResend
+                    ? 'Ipadala muli'
+                    : 'Ipadala muli sa $_resendLabel',
+                onPressed: _canResend ? _resend : null,
               ),
             ],
           ),
-          const SizedBox(height: 13.67),
-          PrimaryButton(
-            kind: TaytayButtonKind.signIn,
-            label: _view.expired
-                ? 'Magpadala ng bagong code'
-                : 'I-verify ang code',
-            onPressed: _busy
-                ? null
-                : _view.expired
-                ? _resend
-                : _verify,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Valid ang code nang 10 minuto. May 5 subok ka bawat code.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 11,
-              fontWeight: AppTypography.body,
-              color: Color(0xFF5B6680),
-            ),
-          ),
-          const SizedBox(height: 18),
-          AuthTextLink(
-            'Bumalik sa sign in',
-            onPressed: () => context.goNamed(AppRoute.signIn.routeName),
-          ),
-          // The sheet hugs its content. Design ends at y 2119; the build was
-          // 42 device px short.
-          const SizedBox(height: 14 + 1 / 3),
         ],
       ),
-    );
-    return AuthStage(
-      sheetTop: 252,
-      wrapSheet: short,
-      arch: AuthArch.smallKey,
-      atmosphere: SignInAtmosphere.resetCode,
-      curve: ThreadCurve.reset,
-      onBack: () => context.canPop()
-          ? context.pop()
-          : context.goNamed(AppRoute.forgotPassword.routeName),
-      child: short ? SingleChildScrollView(child: body) : body,
     );
   }
 }
@@ -408,6 +338,18 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
       return AuthSample.email;
     }
     return email;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    // The design frames show the sample passwords as dots.
+    if (_sampleMismatch || _sampleExpired) {
+      _password.text = CodeExchangeRules.samplePassword;
+      _confirm.text = _sampleMismatch
+          ? CodeExchangeRules.sampleConfirm
+          : CodeExchangeRules.samplePassword;
+    }
   }
 
   @override
@@ -467,7 +409,6 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     final bool expired = _tokenExpired;
-    final bool short = MediaQuery.sizeOf(context).height < 800;
     final String password = _sampleMismatch || _sampleExpired
         ? CodeExchangeRules.samplePassword
         : _password.text;
@@ -480,191 +421,76 @@ class _SetPasswordScreenState extends State<SetPasswordScreen> {
         _matchError != null || (_sampleMismatch && password != confirm);
     final bool matched =
         !mismatch && password.isNotEmpty && password == confirm;
-    final Widget body = Padding(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 22),
+    final bool live = widget.fixture == SetPasswordFixture.live && !expired;
+    return AuthFormPage(
+      title: 'Gumawa ng bagong password',
+      subtitle: 'Para sa $_email. Gamitin ito sa susunod mong pag-sign in.',
+      onBack: () => context.canPop()
+          ? context.pop()
+          : context.goNamed(AppRoute.forgotPassword.routeName),
+      footer: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PrimaryButton(
+            label: expired ? 'Humingi ng bagong code' : 'I-save ang password',
+            onPressed: _busy ? null : _save,
+          ),
+          AuthLink(
+            'Bumalik sa sign in',
+            onPressed: () => context.goNamed(AppRoute.signIn.routeName),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          AuthCopy(
-            eyebrow: 'Bagong password',
-            title: 'Gumawa ng bagong password',
-            subtitle:
-                'Para sa $_email. Gamitin ito sa susunod mong pag-sign in.',
-          ),
           if (expired) ...<Widget>[
-            const SizedBox(height: 11),
-            const AuthNoticeBanner(
+            const SoftNote(
+              tone: NoteTone.error,
               title: 'Nag-expire na ang reset link mo. ',
-              detail:
-                  'Valid lang ito nang 15 minuto. Humingi ng bagong code para makapagpatuloy.',
+              message:
+                  'Valid lang ito nang 15 minuto. Humingi ng bagong code '
+                  'para makapagpatuloy.',
             ),
+            const SizedBox(height: Spacing.formGap),
           ],
-          SizedBox(height: expired ? 14 : 12),
-          _SecretField(
+          AuthField(
             label: 'Bagong password *',
-            bullets: _sampleMismatch || _sampleExpired ? 10 : password.length,
-            ok:
-                password.isNotEmpty &&
-                CodeExchangeRules.acceptablePassword(password),
-            shown: _showPassword,
             controller: _password,
-            live: widget.fixture == SetPasswordFixture.live && !expired,
-            onToggle: () => setState(() => _showPassword = !_showPassword),
-            onChanged: () => setState(() => _matchError = null),
+            icon: TaytayIcons.lock,
+            obscure: !_showPassword,
+            enabled: live,
+            autofillHints: const <String>[AutofillHints.newPassword],
+            onChanged: (_) => setState(() => _matchError = null),
+            trailing: ShowPasswordToggle(
+              shown: _showPassword,
+              onPressed: () => setState(() => _showPassword = !_showPassword),
+            ),
           ),
-          SizedBox(height: expired ? 5 : 5),
+          const SizedBox(height: Spacing.sm),
           PasswordRules(
             password: widget.fixture == SetPasswordFixture.live
                 ? password
                 : CodeExchangeRules.samplePassword,
           ),
-          const SizedBox(height: 12),
-          _SecretField(
+          const SizedBox(height: Spacing.formGap),
+          AuthField(
             label: 'Ulitin ang bagong password *',
-            bullets: _sampleMismatch ? 9 : confirm.length,
-            ok: matched,
-            bad: mismatch,
-            shown: _showConfirm,
             controller: _confirm,
-            live: widget.fixture == SetPasswordFixture.live && !expired,
-            onToggle: () => setState(() => _showConfirm = !_showConfirm),
-            onChanged: () => setState(() => _matchError = null),
-          ),
-          if (mismatch)
-            const Padding(
-              padding: EdgeInsets.only(top: 1),
-              child: Text(
-                'Hindi tugma ang password. Pakiulit.',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: AppTypography.strong,
-                  color: Color(0xFFB3261E),
-                ),
-              ),
-            )
-          else if (matched || _sampleExpired)
-            Padding(
-              padding: EdgeInsets.only(top: expired ? 1 : 5),
-              child: const Text(
-                'Tugma ang password',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: AppTypography.strong,
-                  color: Color(0xFF0F7A4D),
-                ),
-              ),
+            icon: TaytayIcons.lock,
+            obscure: !_showConfirm,
+            enabled: live,
+            error: mismatch ? 'Hindi tugma ang password. Pakiulit.' : null,
+            hint: matched || _sampleExpired ? 'Tugma ang password' : null,
+            autofillHints: const <String>[AutofillHints.newPassword],
+            onChanged: (_) => setState(() => _matchError = null),
+            trailing: ShowPasswordToggle(
+              shown: _showConfirm,
+              onPressed: () => setState(() => _showConfirm = !_showConfirm),
             ),
-          SizedBox(height: expired ? 19 : 19),
-          PrimaryButton(
-            kind: TaytayButtonKind.signIn,
-            label: expired ? 'Humingi ng bagong code' : 'I-save ang password',
-            onPressed: _busy ? null : _save,
           ),
-          SizedBox(height: expired ? 20 : 19.67),
-          AuthTextLink(
-            'Bumalik sa sign in',
-            onPressed: () => context.goNamed(AppRoute.signIn.routeName),
-          ),
-          // Design sheet bottoms: y 2267 (02-12) and y 2525 (02-12b).
-          // The build was 44 and 43 device px short.
-          SizedBox(height: expired ? 44 / 3 : 15),
         ],
       ),
-    );
-    return AuthStage(
-      sheetTop: 252,
-      wrapSheet: short,
-      arch: AuthArch.lock,
-      atmosphere: expired
-          ? SignInAtmosphere.setPasswordExpired
-          : SignInAtmosphere.setPassword,
-      curve: ThreadCurve.reset,
-      onBack: () => context.canPop()
-          ? context.pop()
-          : context.goNamed(AppRoute.forgotPassword.routeName),
-      child: short ? SingleChildScrollView(child: body) : body,
-    );
-  }
-}
-
-class _SecretField extends StatelessWidget {
-  const _SecretField({
-    required this.label,
-    required this.bullets,
-    required this.shown,
-    required this.controller,
-    required this.live,
-    required this.onToggle,
-    required this.onChanged,
-    this.ok = false,
-    this.bad = false,
-  });
-
-  final String label;
-  final int bullets;
-  final bool shown;
-  final TextEditingController controller;
-  final bool live;
-  final VoidCallback onToggle;
-  final VoidCallback onChanged;
-  final bool ok;
-  final bool bad;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color border = bad
-        ? const Color(0xFFB3261E)
-        : ok
-        ? const Color(0xFF0F7A4D)
-        : BrandColors.fieldBorder;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Text(
-          label,
-          style: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
-        ),
-        const SizedBox(height: 5),
-        DecoratedBox(
-          decoration: BoxDecoration(
-            color: bad ? const Color(0xFFFFF7F7) : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: border, width: 1.4),
-          ),
-          child: SizedBox(
-            height: 44,
-            child: Row(
-              children: <Widget>[
-                const SizedBox(width: 12),
-                Expanded(
-                  child: live
-                      ? TextField(
-                          controller: controller,
-                          obscureText: !shown,
-                          textAlignVertical: TextAlignVertical.center,
-                          style: AppTypography.fieldValue,
-                          decoration: bareField,
-                          onChanged: (_) => onChanged(),
-                        )
-                      : Text(
-                          '•' * bullets.clamp(0, 24),
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 14,
-                            fontWeight: AppTypography.medium,
-                            letterSpacing: 1,
-                            color: Color(0xFF1C2540),
-                          ),
-                        ),
-                ),
-                ShowPasswordToggle(shown: shown, onPressed: onToggle),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -675,74 +501,27 @@ class PasswordUpdatedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool short = MediaQuery.sizeOf(context).height < 800;
-    const Widget sheet = Padding(
-      padding: EdgeInsets.fromLTRB(18, 17.7, 18, 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          TaytayIcon(
-            icon: TaytayIcons.shieldCheck,
-            semanticLabel: 'Verified',
-            size: 20,
-            color: Color(0xFF0F7A4D),
-          ),
-          SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  'Para sa iyong seguridad',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 14,
-                    fontWeight: AppTypography.black,
-                    color: Color(0xFF062358),
-                  ),
-                ),
-                SizedBox(height: 3.3),
-                Text(
-                  'Kung hindi ikaw ang nagpalit ng password, tumawag sa '
-                  'Municipal Hall o pumunta sa MSWDO.',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 12,
-                    height: 1.5,
-                    fontWeight: AppTypography.body,
-                    color: Color(0xFF4A5470),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    return AuthStage(
-      sheetTop: 500,
-      sheetBottom: 20,
-      wrapSheet: short,
-      arch: AuthArch.shield,
-      atmosphere: SignInAtmosphere.passwordUpdated,
-      curve: ThreadCurve.submitted,
-      onBack: () => context.goNamed(AppRoute.signIn.routeName),
-      fieldCaption: const AuthCopy(
-        eyebrow: 'Tapos na',
+    void signIn() => context.goNamed(AppRoute.signIn.routeName);
+    return Scaffold(
+      backgroundColor: BrandColors.white,
+      body: SuccessScreen(
         title: 'Na-update na ang password mo',
-        subtitle:
-            'Gamitin ang bagong password sa susunod mong pag-sign in sa Taytay LGUIDS.',
-        titleSize: 28,
-        subtitleHeight: 1.53,
-        subtitleDy: 1,
-        centered: true,
+        message:
+            'Gamitin ang bagong password sa susunod mong pag-sign in sa '
+            'Taytay LGUIDS.',
+        showBack: true,
+        onBack: signIn,
+        body: const SoftNote(
+          tone: NoteTone.success,
+          live: false,
+          title: 'Para sa iyong seguridad. ',
+          message:
+              'Kung hindi ikaw ang nagpalit ng password, tumawag sa '
+              'Municipal Hall o pumunta sa MSWDO.',
+        ),
+        primaryLabel: 'Mag-sign in',
+        onPrimary: signIn,
       ),
-      footer: PrimaryButton(
-        kind: TaytayButtonKind.signIn,
-        label: 'Mag-sign in',
-        onPressed: () => context.goNamed(AppRoute.signIn.routeName),
-      ),
-      child: short ? const SingleChildScrollView(child: sheet) : sheet,
     );
   }
 }

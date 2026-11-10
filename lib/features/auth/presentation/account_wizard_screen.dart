@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/sign_in_field.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
@@ -14,11 +13,15 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
+import '../../../shared/widgets/soft_note.dart';
+import '../../../shared/widgets/success_screen.dart';
+import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
-import '../../../shared/widgets/taytay_thread.dart';
 import '../../platform/domain/app_bootstrap.dart';
+import '../../profile/domain/name_lock.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../../verification/domain/verification_id_type.dart';
 import '../../verification/domain/verification_submit_outcome.dart';
@@ -27,7 +30,7 @@ import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
-import 'auth_stage.dart';
+import 'auth_form_page.dart';
 
 /// Which `02` frame the wizard paints.
 enum AccountFixture {
@@ -45,7 +48,10 @@ enum AccountFixture {
   errors,
 }
 
-/// Registration as `02-03` through `02-09`, and the `02-11` errors.
+/// Registration as `02-03` through `02-09`, and the `02-11` errors, drawn as
+/// the redesign's step flow (`RegDetails` … `RegDone`): a wave header with
+/// the step and a gold progress bar, filled fields on a white page, and the
+/// action in the footer. The submitted step is the `RegDone` success screen.
 ///
 /// The order is the server's, not the design file's. The Node API creates the
 /// profile row empty on the first `GET /me`, and `POST /auth/email-otp/send`
@@ -243,24 +249,6 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _Step.review => 5,
       _Step.submitted => 6,
     };
-  }
-
-  String get _caption {
-    return switch (_step) {
-      _Step.personal => 'Personal info',
-      _Step.account || _Step.code => 'Your account',
-      _Step.terms => 'Terms & privacy',
-      _Step.idCard => 'Valid ID',
-      _Step.selfie => 'Selfie',
-      _Step.review => 'Review',
-      _Step.submitted => 'Submitted',
-    };
-  }
-
-  bool _fieldOk(String key, String value) {
-    if (value.trim().isEmpty) return false;
-    if (_errors.isEmpty) return true;
-    return !_errors.containsKey(key);
   }
 
   Map<String, String> _personalErrors() {
@@ -903,151 +891,141 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final submitted = _step == _Step.submitted;
-    final showFooter = _step != _Step.code;
-    final errors =
-        (_step == _Step.personal || _step == _Step.account) &&
-        (_errors.isNotEmpty || _status != null);
-    final code = _step == _Step.code;
-    return AuthStage(
-      sheetTop: submitted
-          ? 494
-          : code
-          ? 300
-          : 150,
-      sheetBottom: errors ? 34 : 20,
-      wrapSheet: !submitted,
-      arch: submitted ? AuthArch.submitted : AuthArch.none,
-      step: submitted ? null : _dot,
-      stepLabel: _caption,
-      bleed: code,
-      atmosphere: _atmosphere,
-      curve: submitted ? ThreadCurve.submitted : ThreadCurve.wizard,
+    if (_step == _Step.submitted) return _pending();
+    final (String title, String? subtitle) = _heading;
+    return AuthFormPage(
+      title: title,
+      subtitle: subtitle,
+      stepLabel: 'Step $_dot of 6',
+      progress: _dot / 6,
+      progressSemanticLabel: 'Create account progress',
       onBack: _back,
-      greeting: _first.text.trim(),
-      footer: showFooter ? _footer() : null,
-      child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(
-          code
-              ? 24
-              : submitted
-              ? 18
-              : 20,
-          switch (_step) {
-            _Step.code => 14,
-            _Step.terms || _Step.idCard || _Step.selfie => 22,
-            _Step.submitted => 16.3,
-            _ => 18,
-          },
-          code
-              ? 24
-              : submitted
-              ? 18
-              : 20,
-          submitted ? 18 : 22,
-        ),
-        child: switch (_step) {
-          _Step.personal => _personal(),
-          _Step.account => _accountBody(),
-          _Step.code => _emailCode(),
-          _Step.terms => _termsBody(),
-          _Step.idCard => _idBody(),
-          _Step.selfie => _selfieBody(),
-          _Step.review => _review(),
-          _Step.submitted => _pending(),
-        },
-      ),
+      backEnabled: !_busy,
+      footer: _footer(),
+      child: switch (_step) {
+        _Step.personal => _personal(),
+        _Step.account => _accountBody(),
+        _Step.code => _emailCode(),
+        _Step.terms => _termsBody(),
+        _Step.idCard => _idBody(),
+        _Step.selfie => _selfieBody(),
+        _Step.review => _review(),
+        _Step.submitted => const SizedBox.shrink(),
+      },
     );
   }
 
-  SignInAtmosphere get _atmosphere {
+  /// The wave header's title and supporting line for the step.
+  (String, String?) get _heading {
+    final String address = _email.text.trim().isEmpty
+        ? 'your email'
+        : _email.text.trim();
     return switch (_step) {
-      _Step.personal =>
-        widget.fixture == AccountFixture.errors
-            ? SignInAtmosphere.errors
-            : SignInAtmosphere.personal,
+      _Step.personal => (
+        'Tungkol sa iyo',
+        'Basic details only. You can complete your full Resident Profile '
+            'later.',
+      ),
       _Step.account =>
-        _status != null ? SignInAtmosphere.errors : SignInAtmosphere.personal,
+        _accountCreated
+            ? (
+                'Account created',
+                'You sign in with this email. Next we send a 6-digit code '
+                    'to it.',
+              )
+            : (
+                'Create your account',
+                'You sign in with this email and password. Next we send a '
+                    '6-digit code to the email.',
+              ),
       _Step.code =>
-        _codeExpired ? SignInAtmosphere.codeExpired : SignInAtmosphere.code,
-      _Step.terms => SignInAtmosphere.terms,
-      _Step.idCard => SignInAtmosphere.idCard,
-      _Step.selfie => SignInAtmosphere.selfie,
-      _Step.review => SignInAtmosphere.review,
-      _Step.submitted => SignInAtmosphere.submitted,
+        _codeExpired
+            ? (
+                'Nag-expire na ang code',
+                'Valid lang ang code nang 10 minuto. Magpadala ng bago sa '
+                    '$address.',
+              )
+            : (
+                'Enter the 6-digit code',
+                'We sent a code to $address. It expires in 10 minutes.',
+              ),
+      _Step.terms => ('Your data, protected', 'Terms at Privacy'),
+      _Step.idCard => (
+        'Upload a valid government ID',
+        'The LGU uses it to confirm who you are. Make sure all four corners '
+            'and your name are clear.',
+      ),
+      _Step.selfie => (
+        'Take a quick selfie',
+        'LGU staff compare it with your ID. It is not used as your profile '
+            'photo.',
+      ),
+      _Step.review => ('Check your details', null),
+      _Step.submitted => ('', null),
     };
   }
 
   Widget _footer() {
+    if (_step == _Step.code && _codeExpired) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PrimaryButton(
+            label: 'Magpadala ng bagong code',
+            onPressed: _busy ? null : _resendEmailCode,
+          ),
+          if (!_accountCreated)
+            AuthLink(
+              'Palitan ang email address',
+              onPressed: () => setState(() {
+                _codeExpired = false;
+                _step = _Step.account;
+              }),
+            ),
+        ],
+      );
+    }
+    if (_step == _Step.code) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          PrimaryButton(
+            label: 'Confirm email',
+            onPressed: _busy ? null : _continue,
+          ),
+          // Once the Firebase account exists its email is fixed, so the link
+          // that sent the resident back to retype it is not offered.
+          if (!_accountCreated)
+            AuthLink(
+              'Change email address',
+              onPressed: () => setState(() => _step = _Step.account),
+            ),
+        ],
+      );
+    }
     final primary = switch (_step) {
       _Step.review => 'Submit for verification',
-      _Step.submitted => 'Continue to app',
       _Step.account when !_accountCreated => 'Create my account',
       _ => 'Continue',
     };
-    final showBack = _step != _Step.personal && _step != _Step.submitted;
-    return Row(
-      children: <Widget>[
-        if (showBack)
-          SizedBox(
-            width: 110,
-            child: SecondaryButton(
-              kind: TaytayButtonKind.signIn,
-              label: 'Back',
-              onPressed: _back,
-            ),
-          ),
-        if (showBack) const SizedBox(width: 10),
-        Expanded(
-          child: PrimaryButton(
-            kind: TaytayButtonKind.signIn,
-            label: primary,
-            onPressed: _busy ? null : _continue,
-          ),
-        ),
-      ],
+    return PrimaryButton(label: primary, onPressed: _busy ? null : _continue);
+  }
+
+  /// The error summary: a red note that takes focus after a refused step.
+  Widget _alert(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.formGap),
+      child: SoftNote(tone: NoteTone.error, message: text, focusNode: _summary),
     );
   }
 
-  Widget _alert(String text) {
+  /// A step's own failure, said under its fields.
+  Widget _statusNote() {
+    final String? status = _status;
+    if (status == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: 6),
-      child: Semantics(
-        liveRegion: true,
-        focusable: true,
-        child: Focus(
-          focusNode: _summary,
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFDECEC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: <Widget>[
-                const TaytayIcon(
-                  icon: TaytayIcons.circleAlert,
-                  semanticLabel: 'Error',
-                  size: 16,
-                  color: Color(0xFFB3261E),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    text,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 12,
-                      fontWeight: AppTypography.strong,
-                      color: Color(0xFF7A1C16),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.only(top: Spacing.formGap),
+      child: SoftNote(tone: NoteTone.error, message: status),
     );
   }
 
@@ -1057,105 +1035,69 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   Widget _personal() {
     final count = _errors.keys.where(_personalKeys.contains).length;
     final String? status = _status;
+    final bool showAddress =
+        _errors.isEmpty && _street.text.isNotEmpty && _barangay.text.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        AuthCopy(
-          eyebrow: 'Personal information',
-          title: 'Tungkol sa iyo',
-          titleSize: 22,
-          subtitleSize: 12,
-          subtitle: count > 0 || status != null
-              ? null
-              : 'Basic details only. You can complete your full '
-                    'Resident Profile later.',
-        ),
         if (status != null)
           _alert(status)
         else if (count > 0)
           _alert(_fixCount(count)),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _box(
-                'First name',
-                _first,
-                error: _errors['first'],
-                requiredField: true,
-                ok: _fieldOk('first', _first.text),
-                padTop: count > 0 ? 12 : 14,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _box(
-                'Last name',
-                _last,
-                error: _errors['last'],
-                requiredField: true,
-                ok: _fieldOk('last', _last.text),
-                padTop: count > 0 ? 12 : 14,
-              ),
-            ),
-          ],
+        _box(
+          'First name',
+          _first,
+          icon: TaytayIcons.user,
+          error: _errors['first'],
+          requiredField: true,
+          autofillHints: const <String>[AutofillHints.givenName],
         ),
+        const SizedBox(height: Spacing.formGap),
+        _box(
+          'Last name',
+          _last,
+          icon: TaytayIcons.user,
+          error: _errors['last'],
+          requiredField: true,
+          autofillHints: const <String>[AutofillHints.familyName],
+        ),
+        const SizedBox(height: Spacing.sm),
+        Text(
+          NameCheckCopy.asPrinted,
+          style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
+        ),
+        const SizedBox(height: Spacing.formGap),
         _box(
           'Mobile number',
           _mobile,
+          icon: TaytayIcons.phone,
           error: _errors['mobile'],
           requiredField: true,
-          ok: _fieldOk('mobile', _mobile.text),
+          keyboardType: TextInputType.phone,
+          autofillHints: const <String>[AutofillHints.telephoneNumber],
         ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: _box(
-                'Barangay',
-                _barangay,
-                error: _errors['barangay'],
-                requiredField: true,
-                ok: _fieldOk('barangay', _barangay.text),
-                padTop: 12 + 4 / 3,
-                placeholder: 'Choose',
-                tapKey: const Key('barangay-picker'),
-                onTap: _busy ? null : _chooseBarangay,
-                trailing: const TaytayIcon(
-                  icon: TaytayIcons.chevronDown,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 16,
-                  color: Color(0xFF5A6480),
-                ),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _box(
-                'Street / Purok',
-                _street,
-                error: _errors['street'],
-                padTop: 12 + 4 / 3,
-              ),
-            ),
-          ],
+        const SizedBox(height: Spacing.formGap),
+        _picker(
+          'Barangay',
+          _barangay,
+          icon: TaytayIcons.mapPin,
+          error: _errors['barangay'],
+          requiredField: true,
+          placeholder: 'Choose',
+          tapKey: const Key('barangay-picker'),
+          onTap: _busy ? null : _chooseBarangay,
         ),
-        if (_errors.isEmpty &&
-            _street.text.isNotEmpty &&
-            _barangay.text.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Text(
-              'Address: ${_street.text.trim()}, Brgy. ${_barangay.text.trim()}, '
-              'Taytay, Rizal',
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 11,
-                color: Color(0xFF5B6680),
-              ),
-            ),
-          ),
+        const SizedBox(height: Spacing.formGap),
+        _box(
+          'Street / Purok',
+          _street,
+          icon: TaytayIcons.house,
+          error: _errors['street'],
+          hint: showAddress
+              ? 'Address: ${_street.text.trim()}, Brgy. '
+                    '${_barangay.text.trim()}, Taytay, Rizal'
+              : null,
+        ),
       ],
     );
   }
@@ -1165,22 +1107,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   Widget _accountBody() {
     final count = _errors.keys.where((k) => !_personalKeys.contains(k)).length;
     final String? status = _status;
+    final String password = _password.text;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        AuthCopy(
-          eyebrow: 'Your account',
-          title: _accountCreated ? 'Account created' : 'Create your account',
-          titleSize: 22,
-          subtitleSize: 12,
-          subtitle: count > 0 || status != null
-              ? null
-              : _accountCreated
-              ? 'You sign in with this email. Next we send a 6-digit code '
-                    'to it.'
-              : 'You sign in with this email and password. Next we send a '
-                    '6-digit code to the email.',
-        ),
         if (status != null)
           _alert(status)
         else if (count > 0)
@@ -1188,29 +1118,24 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         _box(
           'Email address',
           _email,
+          icon: TaytayIcons.mail,
           error: _errors['email'],
           requiredField: true,
           readOnly: _accountCreated,
-          ok: _accountCreated,
-          focused: !_accountCreated && _errors.isEmpty,
-          padTop: count > 0 || status != null ? 12 : 14,
+          keyboardType: TextInputType.emailAddress,
+          autofillHints: const <String>[AutofillHints.email],
         ),
+        const SizedBox(height: Spacing.formGap),
         _box(
           'Password',
           _password,
+          icon: TaytayIcons.lock,
           error: _errors['password'],
-          padTop: 13.33 - 4 / 3,
-          labelGap: 5,
-          boxDy: 1.35,
           requiredField: true,
-          obscure: _obscure,
-          bad: _errors.containsKey('password'),
+          obscure: _accountCreated || _obscure,
           readOnly: _accountCreated,
-          previewMask: _accountCreated
-              ? '••••••••'
-              : widget.fixture != AccountFixture.live && _obscure
-              ? '•••••••••••'
-              : null,
+          autofillHints: const <String>[AutofillHints.newPassword],
+          onChanged: (_) => setState(() {}),
           trailing: _accountCreated
               ? null
               : ShowPasswordToggle(
@@ -1221,24 +1146,24 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 ),
         ),
         if (!_accountCreated) ...<Widget>[
-          const SizedBox(height: 3),
+          const SizedBox(height: Spacing.sm),
           Wrap(
-            spacing: 10,
-            runSpacing: count > 0 ? 4 : 1.32,
+            spacing: Spacing.lg,
+            runSpacing: Spacing.xs,
             children: <Widget>[
               for (final rule in <(String, bool)>[
-                ('8+ characters', _password.text.length >= 8),
+                ('8+ characters', password.length >= 8),
                 (
                   'Aa',
-                  RegExp(r'[A-Z]').hasMatch(_password.text) &&
-                      RegExp(r'[a-z]').hasMatch(_password.text),
+                  RegExp('[A-Z]').hasMatch(password) &&
+                      RegExp('[a-z]').hasMatch(password),
                 ),
-                ('123', RegExp(r'\d').hasMatch(_password.text)),
-                ('#!@', RegExp(r'[^A-Za-z0-9]').hasMatch(_password.text)),
+                ('123', RegExp(r'\d').hasMatch(password)),
+                ('#!@', RegExp('[^A-Za-z0-9]').hasMatch(password)),
               ])
-                _Chip(
+                PasswordRule(
                   rule.$1,
-                  met: _password.text.isEmpty && _errors['password'] == null
+                  met: password.isEmpty && _errors['password'] == null
                       ? null
                       : rule.$2,
                 ),
@@ -1310,93 +1235,35 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   Widget _emailCode() {
     if (_codeExpired) return _emailCodeExpired();
-    final raw = _code.text.padRight(6);
-    final address = _email.text.trim().isEmpty
-        ? 'your email'
-        : _email.text.trim();
-    final nextEmpty = _code.text.length.clamp(0, 5);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const Center(
-          child: SizedBox(
-            width: 40,
-            height: 4,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Color(0xFFE0D6B8),
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        AuthCopy(
-          eyebrow: 'I-verify ang email',
-          title: 'Enter the 6-digit code',
-          subtitle: 'We sent a code to $address. It expires in 10 minutes.',
-        ),
-        const SizedBox(height: 20),
         Stack(
-          alignment: Alignment.center,
           children: <Widget>[
-            Row(
-              children: <Widget>[
-                for (var i = 0; i < 6; i++) ...<Widget>[
-                  if (i > 0) const SizedBox(width: 8),
-                  Expanded(
-                    child: _otp(
-                      raw[i].trim(),
-                      filled: i < _code.text.length,
-                      focused: i == nextEmpty && i >= _code.text.length,
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            SixDigitRow(digits: _code.text),
+            // The field covers the cells, so a tap anywhere on them opens
+            // the keyboard. Its own text and cursor are not drawn.
             if (widget.fixture == AccountFixture.live)
-              TextField(
-                key: const Key('email-code-field'),
-                controller: _code,
-                maxLength: 6,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(color: Colors.transparent, fontSize: 1),
-                decoration: bareField.copyWith(counterText: ''),
-                onChanged: (_) => setState(() {}),
+              Positioned.fill(
+                child: TextField(
+                  key: const Key('email-code-field'),
+                  controller: _code,
+                  maxLength: 6,
+                  keyboardType: TextInputType.number,
+                  showCursor: false,
+                  enableInteractiveSelection: false,
+                  style: AppTypography.tiny.copyWith(
+                    color: BrandColors.transparent,
+                  ),
+                  decoration: bareField.copyWith(counterText: ''),
+                  onChanged: (_) => setState(() {}),
+                ),
               ),
           ],
         ),
-        const SizedBox(height: 6.33),
+        const SizedBox(height: Spacing.md),
         _resendRow(),
-        if (_status != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _status!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: BrandColors.danger,
-                fontWeight: AppTypography.strong,
-                fontSize: 12,
-              ),
-            ),
-          ),
-        const SizedBox(height: 20.67),
-        PrimaryButton(
-          kind: TaytayButtonKind.signIn,
-          label: 'Confirm email',
-          onPressed: _busy ? null : _continue,
-        ),
-        // Once the Firebase account exists its email is fixed, so the link
-        // that sent the resident back to retype it is not offered.
-        if (!_accountCreated) ...<Widget>[
-          const SizedBox(height: 10),
-          AuthTextLink(
-            'Change email address',
-            fontSize: 12,
-            onPressed: () => setState(() => _step = _Step.account),
-          ),
-        ],
+        _statusNote(),
       ],
     );
   }
@@ -1414,133 +1281,42 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         : live
         ? 'Resend in ${CodeExchangeRules.countdown(left)}'
         : 'Resend in 0:45';
-    const TextStyle note = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 11,
-      fontWeight: AppTypography.body,
-      color: Color(0xFF5B6680),
+    final TextStyle note = AppTypography.listDetail.copyWith(
+      color: BrandColors.muted,
     );
     return Wrap(
       alignment: WrapAlignment.center,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: <Widget>[
-        const Text("Didn't get it?", style: note),
-        TextButton(
-          key: const Key('email-code-resend'),
-          style: TextButton.styleFrom(
-            foregroundColor: BrandColors.taytayBlue,
-            disabledForegroundColor: const Color(0xFF5B6680),
-            minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.black,
-            ),
-          ),
+        Text("Didn't get it?", style: note),
+        CodeResendButton(
+          buttonKey: const Key('email-code-resend'),
+          label: label,
           onPressed: ready && !_busy ? _resendEmailCode : null,
-          child: Text(label),
         ),
-        const Text('Check your spam folder too.', style: note),
+        Text('Check your spam folder too.', style: note),
       ],
     );
   }
 
   Widget _emailCodeExpired() {
-    final String address = _email.text.trim().isEmpty
-        ? AuthSample.email
-        : _email.text.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const Center(
-          child: SizedBox(
-            width: 40,
-            height: 4,
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: Color(0xFFE0D6B8),
-                borderRadius: BorderRadius.all(Radius.circular(2)),
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        AuthCopy(
-          eyebrow: 'I-verify ang email',
-          title: 'Nag-expire na ang code',
-          subtitle:
-              'Valid lang ang code nang 10 minuto. Magpadala ng bago sa $address.',
-        ),
-        const SizedBox(height: 12),
-        const AuthNoticeBanner(
-          amber: true,
+        const SoftNote(
+          tone: NoteTone.warning,
           title: 'Hindi na magagamit ang lumang code. ',
-          detail: 'Bago ang code, may 5 subok ka ulit.',
+          message: 'Bago ang code, may 5 subok ka ulit.',
         ),
-        const SizedBox(height: 16),
-        const SixDigitRow(digits: ''),
-        const SizedBox(height: 6),
-        const Text(
+        const SizedBox(height: Spacing.formGap),
+        const SixDigitRow(digits: '', dim: true),
+        const SizedBox(height: Spacing.md),
+        Text(
           'Puwede nang magpadala muli · Tingnan din ang spam folder',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            fontWeight: AppTypography.body,
-            color: Color(0xFF5B6680),
-          ),
+          style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
         ),
-        const SizedBox(height: 15.67),
-        PrimaryButton(
-          kind: TaytayButtonKind.signIn,
-          label: 'Magpadala ng bagong code',
-          onPressed: _busy ? null : _resendEmailCode,
-        ),
-        if (!_accountCreated) ...<Widget>[
-          const SizedBox(height: 26.33),
-          AuthTextLink(
-            'Palitan ang email address',
-            fontSize: 12,
-            onPressed: () => setState(() {
-              _codeExpired = false;
-              _step = _Step.account;
-            }),
-          ),
-        ],
       ],
-    );
-  }
-
-  Widget _otp(String digit, {required bool filled, required bool focused}) {
-    final border = filled
-        ? const Color(0xFF0F7A4D)
-        : focused
-        ? BrandColors.taytayBlue
-        : BrandColors.fieldBorder;
-    return Container(
-      height: 54,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: focused ? Colors.white : BrandColors.fieldFill,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: border, width: 1.4),
-        boxShadow: focused
-            ? const <BoxShadow>[
-                BoxShadow(color: Color(0x1F0B3D91), spreadRadius: 3),
-              ]
-            : null,
-      ),
-      child: Text(
-        digit,
-        style: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 22,
-          fontWeight: AppTypography.black,
-          color: BrandColors.fieldInk,
-        ),
-      ),
     );
   }
 
@@ -1548,162 +1324,60 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const AuthCopy(
-          eyebrow: 'Terms at Privacy',
-          title: 'Your data, protected',
-          titleSize: 22,
+        const _PrivacyNoticeCard(),
+        const SizedBox(height: Spacing.formGap),
+        _LegalLinks(onTerms: _openTerms, onPrivacy: _openPrivacyNotice),
+        const SizedBox(height: Spacing.formGap),
+        ConsentCheckCard(
+          value: _terms,
+          onChanged: (value) => setState(() => _terms = value),
+          label:
+              'I have read and agree to the Terms of Use and the Privacy '
+              'Notice.',
         ),
-        const SizedBox(height: 10),
-        const SizedBox(
-          height: 290,
-          child: ClipRRect(
-            borderRadius: BorderRadius.all(Radius.circular(16)),
-            child: ColoredBox(
-              color: Color(0xFFF4F1E6),
-              child: Stack(
-                children: <Widget>[
-                  Padding(
-                    // 12px in the stylesheet. The shared eyebrow above this
-                    // card paints one logical pixel short of CSS normal, so
-                    // the notice starts one pixel lower and the links stay.
-                    padding: EdgeInsets.fromLTRB(14, 13, 14, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Color(0xFFFFF4CC),
-                            borderRadius: BorderRadius.all(
-                              Radius.circular(999),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 5,
-                            ),
-                            child: Text(
-                              'DRAFT · LGU-approved Privacy Notice to be inserted',
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                height: 17.05 / 11,
-                                fontWeight: AppTypography.black,
-                                color: Color(0xFF8A5A00),
-                              ),
-                              strutStyle: StrutStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                height: 17.05 / 11,
-                                forceStrutHeight: true,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Expanded(child: _TermsNotice()),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    height: 50,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: <Color>[Color(0x00F4F1E6), Color(0xFFF4F1E6)],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+        const SizedBox(height: Spacing.sm + Spacing.xxs),
+        ConsentCheckCard(
+          value: _privacy,
+          onChanged: (value) => setState(() => _privacy = value),
+          label:
+              'I consent to Taytay LGU processing my personal data for '
+              'account verification.',
         ),
-        const SizedBox(height: 4),
-        Wrap(
-          spacing: 6,
-          children: <Widget>[
-            _LegalLink(
-              key: const Key('terms-read-full'),
-              label: 'Read full Terms ›',
-              onPressed: _openTerms,
-            ),
-            _LegalLink(
-              key: const Key('privacy-read-full'),
-              label: 'Read full Privacy Notice ›',
-              onPressed: _openPrivacyNotice,
-            ),
-          ],
-        ),
-        _check(
-          'I have read and agree to the Terms of Use and the Privacy Notice.',
-          _terms,
-          (value) => setState(() => _terms = value),
-          top: 10,
-        ),
-        _check(
-          'I consent to Taytay LGU processing my personal data for account verification.',
-          _privacy,
-          (value) => setState(() => _privacy = value),
-          top: 0,
-        ),
-        if (_status != null)
-          Text(_status!, style: const TextStyle(color: BrandColors.danger)),
+        _statusNote(),
       ],
     );
   }
 
   Widget _idBody() {
     final attached = _front != null || widget.fixture == AccountFixture.idCard;
+    final String name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const AuthCopy(
-          eyebrow: 'Valid ID',
-          title: 'Upload a valid government ID',
-          titleSize: 22,
-          subtitleSize: 12,
-          subtitle:
-              'The LGU uses it to confirm who you are. Make sure all four '
-              'corners and your name are clear.',
-        ),
-        _box(
+        _NameCheckCard(name: name),
+        const SizedBox(height: Spacing.formGap),
+        _picker(
           'Type of ID',
           _idType,
+          icon: TaytayIcons.idCard,
           requiredField: true,
-          ok: true,
-          padTop: 13.67,
           placeholder: 'Choose',
           tapKey: const Key('id-type-picker'),
           onTap: _busy ? null : _chooseIdType,
-          trailing: const TaytayIcon(
-            icon: TaytayIcons.chevronDown,
-            semanticLabel: '',
-            excludeSemantics: true,
-            size: 16,
-            color: Color(0xFF5A6480),
-          ),
         ),
-        const SizedBox(height: 12),
-        const _FieldLabel('Front of ID', requiredField: true),
-        const SizedBox(height: 2.67),
-        if (attached) ...<Widget>[
+        const SizedBox(height: Spacing.formGap),
+        const AuthFieldLabel('Front of ID', requiredField: true),
+        const SizedBox(height: Spacing.sm),
+        if (attached)
           _attached(
             name: _front?.fileName ?? 'id_front.jpg',
             onChange: _pickFront,
-          ),
-          const SizedBox(height: 1),
-        ] else
+          )
+        else
           _UploadSlot(key: const Key('id-front-pick'), onPressed: _pickFront),
-        const SizedBox(height: 12),
-        const _FieldLabel('Back of ID (optional)'),
-        const SizedBox(height: 5),
+        const SizedBox(height: Spacing.formGap),
+        const AuthFieldLabel('Back of ID (optional)'),
+        const SizedBox(height: Spacing.sm),
         if (_idBack case final CapturedDocument back)
           _attached(name: back.fileName, onChange: _pickBack)
         else
@@ -1711,144 +1385,96 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             key: const Key('id-back-pick'),
             onPressed: widget.fixture == AccountFixture.live ? _pickBack : null,
           ),
-        if (_status != null)
-          Text(_status!, style: const TextStyle(color: BrandColors.danger)),
+        _statusNote(),
       ],
     );
   }
 
+  /// A picked file (CSS `.file`): its name, "Attached", and Change. The
+  /// photo itself is not drawn back on this screen.
   Widget _attached({required String name, required VoidCallback onChange}) {
-    return CustomPaint(
-      foregroundPainter: const _DashedRoundPainter(),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: BrandColors.fieldFill,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const _SampleIdCard(),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 14.66),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 13,
-                          fontWeight: AppTypography.strong,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      const Row(
-                        children: <Widget>[
-                          TaytayIcon(
-                            icon: TaytayIcons.circleCheck,
-                            semanticLabel: '',
-                            excludeSemantics: true,
-                            size: 13,
-                            color: Color(0xFF0F7A4D),
-                          ),
-                          SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              'Attached',
-                              maxLines: 1,
-                              overflow: TextOverflow.fade,
-                              softWrap: false,
-                              style: TextStyle(
-                                fontFamily: AppTypography.fontFamily,
-                                fontSize: 11,
-                                fontWeight: AppTypography.strong,
-                                color: Color(0xFF0F7A4D),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8 / 3),
-                      _ChangeLink(onPressed: onChange),
-                    ],
+    return SoftCard(
+      filled: true,
+      padding: const EdgeInsets.fromLTRB(
+        Spacing.section,
+        Spacing.md,
+        Spacing.xs,
+        Spacing.md,
+      ),
+      child: Row(
+        children: <Widget>[
+          const _GradientIcon(icon: TaytayIcons.idCard),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  name,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: Spacing.xxs),
+                Row(
+                  children: <Widget>[
+                    const TaytayIcon(
+                      icon: TaytayIcons.circleCheck,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: IconSizes.sm - Spacing.xs,
+                      color: BrandColors.green,
+                    ),
+                    const SizedBox(width: Spacing.xs),
+                    Flexible(
+                      child: Text(
+                        'Attached',
+                        style: AppTypography.small.copyWith(
+                          fontWeight: AppTypography.strong,
+                          color: BrandColors.green,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+          AuthLink('Change', onPressed: onChange),
+        ],
       ),
     );
   }
 
   Widget _selfieBody() {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const AuthCopy(
-          eyebrow: 'Selfie',
-          title: 'Take a quick selfie',
-          titleSize: 22,
-          subtitleSize: 12,
-          centered: true,
-          subtitle:
-              'LGU staff compare it with your ID. It is not used as your '
-              'profile photo.',
+        _SelfieGuide(taken: _selfie),
+        const SizedBox(height: Spacing.formGap),
+        const _SelfieTip(TaytayIcons.sun, 'Good light, facing the camera'),
+        const SizedBox(height: Spacing.md),
+        const _SelfieTip(
+          TaytayIcons.scanFace,
+          'Whole face visible: no sunglasses, mask or cap',
         ),
-        const SizedBox(height: 16),
-        const _SelfieFrame(),
-        const SizedBox(height: 16),
-        const SizedBox(
-          width: 270,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              _SelfieRule(
-                TaytayIcons.sun,
-                'Good light, facing the camera',
-                bottom: 2 - 4 / 3,
-              ),
-              _SelfieRule(
-                TaytayIcons.scanFace,
-                'Whole face visible: no sunglasses, mask or',
-                tail: 'cap',
-                tailGap: 3,
-                bottom: 2 - 5 / 3,
-              ),
-              _SelfieRule(TaytayIcons.user, 'Only you in the photo'),
-            ],
+        const SizedBox(height: Spacing.md),
+        const _SelfieTip(TaytayIcons.user, 'Only you in the photo'),
+        const SizedBox(height: Spacing.formGap),
+        SecondaryButton(
+          label: 'Take selfie',
+          icon: const TaytayIcon(
+            icon: TaytayIcons.camera,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm,
+            color: BrandColors.blue,
           ),
+          onPressed: widget.fixture == AccountFixture.live
+              ? _takeSelfie
+              : () => setState(() => _selfie = true),
         ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: 220,
-          child: GoldButton(
-            label: 'Take selfie',
-            icon: const TaytayIcon(
-              icon: TaytayIcons.camera,
-              semanticLabel: '',
-              excludeSemantics: true,
-              size: 18,
-              color: BrandColors.taytayBlueDark,
-            ),
-            onPressed: widget.fixture == AccountFixture.live
-                ? _takeSelfie
-                : () => setState(() => _selfie = true),
-          ),
-        ),
-        if (_status != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _status!,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: BrandColors.danger),
-            ),
-          ),
+        _statusNote(),
       ],
     );
   }
@@ -1879,190 +1505,150 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   Widget _review() {
     final name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
+    final List<Widget> rows = <Widget>[
+      _row('Name', name, _Step.personal),
+      // The email is fixed with the account, so it has no Edit link.
+      _row(
+        'Email',
+        _email.text.trim(),
+        null,
+        badge: _emailVerified ? 'Verified' : null,
+      ),
+      _row('Mobile', _mobile.text.trim(), _Step.personal),
+      _row('Address', _addressLine, _Step.personal),
+      _row(
+        'Terms & Privacy Notice',
+        _consented ? 'Agreed · consent given' : 'Not yet agreed',
+        _Step.terms,
+      ),
+      _row('Valid ID', _idSummary, _Step.idCard),
+      _row('Selfie', _selfie ? 'Taken' : 'Not taken', _Step.selfie),
+    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const AuthCopy(
-          eyebrow: 'Review',
-          title: 'Check your details',
-          titleSize: 22,
-        ),
-        const SizedBox(height: 7.67),
-        _row('Name', name, _Step.personal),
-        // The email is fixed with the account, so it has no Edit link.
-        _row(
-          'Email',
-          _email.text.trim(),
-          null,
-          badge: _emailVerified ? 'Verified' : null,
-        ),
-        _row('Mobile', _mobile.text.trim(), _Step.personal),
-        _row('Address', _addressLine, _Step.personal),
-        _row(
-          'Terms & Privacy Notice',
-          _consented ? 'Agreed · consent given' : 'Not yet agreed',
-          _Step.terms,
-        ),
-        _row('Valid ID', _idSummary, _Step.idCard),
-        _row('Selfie', _selfie ? 'Taken' : 'Not taken', _Step.selfie),
-        if (_status != null)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              _status!,
-              style: const TextStyle(color: BrandColors.danger),
-            ),
+        SoftCard(
+          filled: true,
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+          child: Column(
+            children: <Widget>[
+              for (var i = 0; i < rows.length; i++) ...<Widget>[
+                if (i > 0)
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: BrandColors.divider,
+                  ),
+                rows[i],
+              ],
+            ],
           ),
+        ),
+        _statusNote(),
       ],
     );
   }
 
+  /// `RegDone`: the medal, "You're all set", and the verification status.
   Widget _pending() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            const Expanded(
-              child: Text(
-                'Account verification',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 14,
-                  fontWeight: AppTypography.black,
-                  color: BrandColors.taytayBlueDark,
+    final String first = _first.text.trim();
+    return Scaffold(
+      backgroundColor: BrandColors.white,
+      body: SuccessScreen(
+        mark: SuccessMarkStyle.medal,
+        stepLabel: 'Step 6 of 6',
+        progress: 1,
+        progressSemanticLabel: 'Create account progress',
+        showBack: true,
+        onBack: _back,
+        title: first.isEmpty ? "You're all set!" : "You're all set, $first!",
+        message:
+            'Your account is created and your details were sent to Taytay '
+            'LGU for verification.',
+        body: SoftCard(
+          filled: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Spacing.sm,
+                runSpacing: Spacing.sm,
+                children: <Widget>[
+                  Text(
+                    'Account verification',
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                  const _StatusPill('Pending review'),
+                ],
+              ),
+              const SizedBox(height: Spacing.sm),
+              Text(
+                'Taytay LGU staff check your ID and selfie at the municipal '
+                "office, in the office's own system. You'll get a "
+                'notification in this app when they decide. Meanwhile you '
+                'can browse services and news.',
+                style: AppTypography.bodyStyle.copyWith(
+                  color: BrandColors.text,
                 ),
               ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFF4D6),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: const Text(
-                'Pending review',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 11,
-                  fontWeight: AppTypography.black,
-                  color: Color(0xFF8A5A00),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6.7),
-        const Text(
-          'Taytay LGU staff check your ID and selfie at the municipal '
-          "office, in the office's own system. You'll get a notification "
-          'in this app when they decide. Meanwhile you can browse services '
-          'and news.',
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 12,
-            height: 1.53,
-            color: Color(0xFF4A5470),
+            ],
           ),
         ),
-      ],
+        primaryLabel: 'Continue to app',
+        onPrimary: _busy ? null : _continue,
+      ),
     );
   }
 
   Widget _row(String label, String value, _Step? edit, {String? badge}) {
-    return CustomPaint(
-      foregroundPainter: const _RowDashPainter(),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        decoration: const BoxDecoration(
-          border: Border(
-            bottom: BorderSide(color: Color(0x00EADFC0), width: 1.2),
-          ),
-        ),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: ComponentSizes.listRow),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
                     label,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 11,
-                      fontWeight: AppTypography.strong,
-                      color: Color(0xFF5B6680),
+                    style: AppTypography.small.copyWith(
+                      color: BrandColors.muted,
                     ),
                   ),
-                  // CSS margin-top is 2px. Flutter's line box leaves the
-                  // value ink 1.7dp lower than that margin's top, so the
-                  // margin is split around the text and the next row stays.
-                  const SizedBox(height: 0.3),
-                  Text.rich(
-                    TextSpan(
-                      text: value,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 13,
-                        fontWeight: AppTypography.strong,
-                        color: BrandColors.fieldInk,
+                  const SizedBox(height: Spacing.xxs),
+                  Wrap(
+                    spacing: Spacing.sm - Spacing.xxs,
+                    runSpacing: Spacing.xs,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        value,
+                        style: AppTypography.listTitle.copyWith(
+                          color: BrandColors.ink,
+                        ),
                       ),
-                      children: <InlineSpan>[
-                        if (badge != null)
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: Container(
-                              margin: const EdgeInsets.only(left: 4),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE6F4EC),
-                                borderRadius: BorderRadius.circular(999),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  const TaytayIcon(
-                                    icon: TaytayIcons.circleCheck,
-                                    semanticLabel: '',
-                                    excludeSemantics: true,
-                                    size: 11,
-                                    color: Color(0xFF0F7A4D),
-                                  ),
-                                  const SizedBox(width: 3),
-                                  Text(
-                                    badge,
-                                    style: const TextStyle(
-                                      fontFamily: AppTypography.fontFamily,
-                                      fontSize: 11,
-                                      fontWeight: AppTypography.black,
-                                      color: Color(0xFF0F7A4D),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                      if (badge != null) _StatusPill(badge, done: true),
+                    ],
                   ),
-                  const SizedBox(height: 1.7),
                 ],
               ),
             ),
             if (edit != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8 / 3),
-                child: _EditLink(
-                  onPressed: () => setState(() {
-                    _returnToReview = true;
-                    _status = null;
-                    _step = edit;
-                  }),
-                ),
+              AuthLink(
+                'Edit',
+                onPressed: () => setState(() {
+                  _returnToReview = true;
+                  _status = null;
+                  _step = edit;
+                }),
               ),
           ],
         ),
@@ -2070,55 +1656,730 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
-  Widget _check(
+  /// A filled field ([AuthField]) with the wizard's required mark.
+  Widget _box(
     String label,
-    bool value,
-    ValueChanged<bool> onChanged, {
-    double top = 10,
+    TextEditingController controller, {
+    IconData? icon,
+    String? error,
+    String? hint,
+    bool requiredField = false,
+    bool obscure = false,
+    bool readOnly = false,
+    Widget? trailing,
+    TextInputType? keyboardType,
+    Iterable<String>? autofillHints,
+    ValueChanged<String>? onChanged,
   }) {
-    return Padding(
-      padding: EdgeInsets.only(top: top),
-      child: InkWell(
-        onTap: () => onChanged(!value),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.only(top: 2),
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: value ? BrandColors.taytayBlue : Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: value
-                      ? null
-                      : Border.all(color: BrandColors.fieldBorder, width: 1.4),
+    return AuthField(
+      label: label,
+      requiredField: requiredField,
+      controller: controller,
+      icon: icon,
+      error: error,
+      hint: hint,
+      obscure: obscure,
+      readOnly: readOnly,
+      trailing: trailing,
+      keyboardType: keyboardType,
+      autofillHints: readOnly ? null : autofillHints,
+      onChanged: onChanged,
+    );
+  }
+
+  /// A picker drawn as a filled field: its value as text, one 48 dp button,
+  /// rather than a text field a resident could type a barangay name into.
+  Widget _picker(
+    String label,
+    TextEditingController controller, {
+    required String placeholder,
+    required Key tapKey,
+    required VoidCallback? onTap,
+    IconData? icon,
+    String? error,
+    bool requiredField = false,
+  }) {
+    final String value = controller.text;
+    final bool bad = error != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        AuthFieldLabel(label, requiredField: requiredField),
+        const SizedBox(height: Spacing.sm),
+        Semantics(
+          button: true,
+          enabled: onTap != null,
+          label: requiredField ? '$label, required' : label,
+          value: value.isEmpty ? 'Not chosen' : value,
+          // The children are excluded, so the action is given here or a
+          // screen reader could not open the list.
+          onTap: onTap,
+          excludeSemantics: true,
+          child: Material(
+            color: bad ? BrandColors.errorFill : BrandColors.softFill,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(Radii.field),
+              side: bad
+                  ? const BorderSide(
+                      color: BrandColors.red,
+                      width: FocusRing.borderWidth,
+                    )
+                  : BorderSide.none,
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: tapKey,
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: ComponentSizes.fieldHeight,
                 ),
-                child: value
-                    ? const TaytayIcon(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
+                  child: Row(
+                    children: <Widget>[
+                      if (icon != null) ...<Widget>[
+                        TaytayIcon(
+                          icon: icon,
+                          semanticLabel: '',
+                          excludeSemantics: true,
+                          size: IconSizes.sm,
+                          color: BrandColors.muted,
+                        ),
+                        const SizedBox(width: Spacing.md),
+                      ],
+                      Expanded(
+                        child: Text(
+                          value.isEmpty ? placeholder : value,
+                          style: AppTypography.fieldValue.copyWith(
+                            fontWeight: value.isEmpty
+                                ? AppTypography.body
+                                : AppTypography.medium,
+                            color: value.isEmpty
+                                ? BrandColors.muted
+                                : BrandColors.ink,
+                          ),
+                        ),
+                      ),
+                      const TaytayIcon(
+                        icon: TaytayIcons.chevronDown,
+                        semanticLabel: '',
+                        excludeSemantics: true,
+                        size: IconSizes.sm,
+                        color: BrandColors.blue,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        if (bad)
+          Padding(
+            padding: const EdgeInsets.only(top: Spacing.sm),
+            child: Text(
+              error,
+              style: AppTypography.fieldHelp.copyWith(
+                fontWeight: AppTypography.strong,
+                color: BrandColors.redInk,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// A 44 px gradient tile with a line icon (CSS `.gt`).
+class _GradientIcon extends StatelessWidget {
+  const _GradientIcon({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final BrandGradient tile = BrandGradients.tile(TileTone.blue);
+    return Container(
+      width: ComponentSizes.tile,
+      height: ComponentSizes.tile,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: tile.toLinearGradient(),
+        borderRadius: BorderRadius.circular(Radii.tile),
+      ),
+      child: TaytayIcon(
+        icon: icon,
+        semanticLabel: '',
+        excludeSemantics: true,
+        size: IconSizes.sm,
+        color: tile.onColor,
+      ),
+    );
+  }
+}
+
+/// A small status pill: gold "Pending review", or green with a check.
+class _StatusPill extends StatelessWidget {
+  const _StatusPill(this.label, {this.done = false});
+
+  final String label;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ink = done ? BrandColors.green : BrandColors.goldInk;
+    return DecoratedBox(
+      decoration: ShapeDecoration(
+        color: done ? BrandColors.green50 : BrandColors.gold50,
+        shape: const StadiumBorder(),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: Spacing.sm + Spacing.xxs,
+          vertical: Spacing.xs,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            TaytayIcon(
+              icon: done ? TaytayIcons.circleCheck : TaytayIcons.clock,
+              semanticLabel: '',
+              excludeSemantics: true,
+              size: IconSizes.sm - Spacing.xs,
+              color: ink,
+            ),
+            const SizedBox(width: Spacing.xs),
+            Flexible(
+              child: Text(
+                label,
+                style: AppTypography.pill.copyWith(color: ink),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Add a photo (CSS `.add`): a dashed white box with a round plus.
+class _UploadSlot extends StatelessWidget {
+  const _UploadSlot({this.onPressed, super.key});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color ink = onPressed == null ? BrandColors.muted : BrandColors.blue;
+    return Material(
+      color: BrandColors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(Radii.lg),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onPressed,
+        child: CustomPaint(
+          painter: const _DashedBorderPainter(),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: _uploadHeight),
+            child: Padding(
+              padding: const EdgeInsets.all(Spacing.md),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  DecoratedBox(
+                    decoration: const ShapeDecoration(
+                      color: BrandColors.blue50,
+                      shape: CircleBorder(),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(Spacing.sm),
+                      child: TaytayIcon(
+                        icon: TaytayIcons.plus,
+                        semanticLabel: '',
+                        excludeSemantics: true,
+                        size: IconSizes.sm,
+                        color: ink,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: Spacing.sm - Spacing.xxs),
+                  Text(
+                    'Add a photo · JPG or PNG',
+                    textAlign: TextAlign.center,
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: ink,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// `.add { min-height: 96px }`.
+const double _uploadHeight = 96;
+
+/// `.add { border: 2px dashed var(--line2); border-radius: 16px }`.
+class _DashedBorderPainter extends CustomPainter {
+  const _DashedBorderPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const double stroke = 2;
+    final Paint paint = Paint()
+      ..color = BrandColors.line2
+      ..strokeWidth = stroke
+      ..style = PaintingStyle.stroke;
+    final Path outline = Path()
+      ..addRRect(
+        RRect.fromRectAndRadius(
+          (Offset.zero & size).deflate(stroke / 2),
+          const Radius.circular(Radii.lg),
+        ),
+      );
+    for (final metric in outline.computeMetrics()) {
+      var distance = 0.0;
+      while (distance < metric.length) {
+        canvas.drawPath(metric.extractPath(distance, distance + 6), paint);
+        distance += 10;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) => false;
+}
+
+/// RegID `.namechk`: the name on the account, and the sentence that the ID
+/// must show it, before any photo is sent (D-195).
+class _NameCheckCard extends StatelessWidget {
+  const _NameCheckCard({required this.name});
+
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final String initials = name
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .take(2)
+        .map((part) => part.characters.first.toUpperCase())
+        .join();
+    return SoftCard(
+      filled: true,
+      padding: const EdgeInsets.all(Spacing.sm - Spacing.xxs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (name.isNotEmpty)
+            SoftCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.section,
+                vertical: Spacing.md,
+              ),
+              radius: Radii.lg,
+              child: Row(
+                children: <Widget>[
+                  ExcludeSemantics(
+                    child: Container(
+                      width: ComponentSizes.avatar,
+                      height: ComponentSizes.avatar,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: BrandColors.gold,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        initials,
+                        style: AppTypography.listTitle.copyWith(
+                          fontWeight: AppTypography.black,
+                          color: BrandColors.navy,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Name on your account',
+                          style: AppTypography.small.copyWith(
+                            fontWeight: AppTypography.medium,
+                            color: BrandColors.muted,
+                          ),
+                        ),
+                        Text(
+                          name,
+                          style: AppTypography.listTitle.copyWith(
+                            fontWeight: AppTypography.strong,
+                            color: BrandColors.ink,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.md,
+              Spacing.sm,
+              Spacing.md,
+              Spacing.sm,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Semantics(
+                  header: true,
+                  child: Text(
+                    NameCheckCopy.beforeSendingTitle,
+                    style: AppTypography.listTitle.copyWith(
+                      fontWeight: AppTypography.strong,
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: Spacing.sm - Spacing.xxs),
+                Text(
+                  NameCheckCopy.beforeSending,
+                  style: AppTypography.listDetail.copyWith(
+                    color: BrandColors.muted,
+                    height: 1.55,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// RegTerms `.pn`: the privacy notice summary. The full notice is a tap away
+/// ([_LegalLinks]); this card is marked a draft until the LGU approves it.
+class _PrivacyNoticeCard extends StatelessWidget {
+  const _PrivacyNoticeCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle point = AppTypography.listDetail.copyWith(
+      color: BrandColors.text,
+      height: 1.5,
+    );
+    final TextStyle pointTitle = AppTypography.listDetail.copyWith(
+      fontWeight: AppTypography.strong,
+      color: BrandColors.blue,
+    );
+    Widget item(String title, String body) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: pointTitle),
+          const SizedBox(height: Spacing.xxs),
+          Text(body, style: point),
+        ],
+      ),
+    );
+    const Widget divider = Divider(
+      height: 1,
+      thickness: 1,
+      color: BrandColors.divider,
+    );
+    return SoftCard(
+      filled: true,
+      radius: Radii.cardLarge,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              const _GradientIcon(icon: TaytayIcons.shieldCheck),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        'Privacy Notice',
+                        style: AppTypography.listTitle.copyWith(
+                          fontWeight: AppTypography.strong,
+                          color: BrandColors.ink,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Republic Act No. 10173 – Data Privacy Act of 2012',
+                      style: AppTypography.small.copyWith(
+                        color: BrandColors.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Spacing.section),
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: DecoratedBox(
+              decoration: const ShapeDecoration(
+                color: BrandColors.gold50,
+                shape: StadiumBorder(),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: Spacing.sm + Spacing.xxs,
+                  vertical: Spacing.xs,
+                ),
+                child: Text(
+                  'DRAFT · LGU-approved Privacy Notice to be inserted',
+                  style: AppTypography.small.copyWith(
+                    fontWeight: AppTypography.black,
+                    color: BrandColors.goldInk,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: Spacing.section),
+          Text(
+            'The Municipality of Taytay collects your name, contact details, '
+            'address, valid ID and selfie to create and verify your resident '
+            'account and to deliver municipal services you request.',
+            style: AppTypography.bodyStyle.copyWith(
+              color: BrandColors.text,
+              height: 1.55,
+            ),
+          ),
+          const SizedBox(height: Spacing.section),
+          SoftCard(
+            radius: Radii.lg,
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.lg,
+              vertical: Spacing.xs,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                item(
+                  'How we use it',
+                  'Identity and residency verification, service requests, '
+                      'and notices from the LGU.',
+                ),
+                divider,
+                item('Who can see it', 'Authorised Taytay LGU personnel only.'),
+                divider,
+                item(
+                  'Your rights',
+                  'To be informed, to access, correct, object and erase, and '
+                      'to file a complaint with the National Privacy '
+                      'Commission. Contact the LGU Data Protection Officer '
+                      'for requests.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// RegTerms `.rd`: the two full documents, one 54 px row each.
+class _LegalLinks extends StatelessWidget {
+  const _LegalLinks({required this.onTerms, required this.onPrivacy});
+
+  final VoidCallback onTerms;
+  final VoidCallback onPrivacy;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      label: 'Full documents',
+      child: Material(
+        color: BrandColors.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: <Widget>[
+            _LegalLink(
+              key: const Key('terms-read-full'),
+              icon: TaytayIcons.fileText,
+              label: 'Read full Terms',
+              onPressed: onTerms,
+            ),
+            const Divider(height: 1, thickness: 1, color: BrandColors.line),
+            _LegalLink(
+              key: const Key('privacy-read-full'),
+              icon: TaytayIcons.shield,
+              label: 'Read full Privacy Notice',
+              onPressed: onPrivacy,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LegalLink extends StatelessWidget {
+  const _LegalLink({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: ComponentSizes.fieldHeight,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.section),
+          child: Row(
+            children: <Widget>[
+              TaytayIcon(
+                icon: icon,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.blue,
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Text(
+                  label,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.blue,
+                  ),
+                ),
+              ),
+              const TaytayIcon(
+                icon: TaytayIcons.chevronRight,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.blue,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// RegSelfie `.cam`: a drawn guide, never a photograph of a person, with
+/// gold corner marks and a dashed oval that turns green once a selfie is in.
+class _SelfieGuide extends StatelessWidget {
+  const _SelfieGuide({required this.taken});
+
+  final bool taken;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      image: true,
+      label: taken
+          ? 'Selfie guide, selfie taken. Illustration, no real person.'
+          : 'Selfie guide. Illustration, no real person.',
+      excludeSemantics: true,
+      child: SizedBox(
+        height: _camHeight,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: BrandGradients.header.toLinearGradient(),
+            borderRadius: BorderRadius.circular(Radii.card),
+          ),
+          child: Stack(
+            children: <Widget>[
+              Positioned.fill(
+                child: CustomPaint(painter: _SelfieGuidePainter(taken: taken)),
+              ),
+              const Positioned(
+                left: 0,
+                right: 0,
+                bottom: -Spacing.xl,
+                child: Center(
+                  child: TaytayIcon(
+                    icon: TaytayIcons.userRound,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: _personSize,
+                    color: BrandColors.onHeaderLede,
+                  ),
+                ),
+              ),
+              if (taken)
+                const Positioned(
+                  right: Spacing.xl + Spacing.xs,
+                  top: Spacing.xl + Spacing.xs,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: BrandColors.green,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(Spacing.sm),
+                      child: TaytayIcon(
                         icon: TaytayIcons.check,
                         semanticLabel: '',
                         excludeSemantics: true,
-                        size: 14,
-                        color: Color(0xFFFCD116),
-                      )
-                    : null,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 1.3),
-                  child: Text(
-                    label,
-                    style: const TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13,
-                      height: 1.45,
-                      fontWeight: AppTypography.medium,
-                      color: BrandColors.fieldInk,
+                        size: IconSizes.sm + Spacing.xxs,
+                        color: BrandColors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: Spacing.section,
+                child: Center(
+                  child: DecoratedBox(
+                    decoration: ShapeDecoration(
+                      color: BrandColors.navy.withValues(alpha: 0.75),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Spacing.sm + Spacing.xxs,
+                        vertical: Spacing.xs,
+                      ),
+                      child: Text(
+                        'Illustration · no real person',
+                        style: AppTypography.tiny.copyWith(
+                          fontWeight: AppTypography.medium,
+                          color: BrandColors.white,
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -2129,824 +2390,105 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       ),
     );
   }
-
-  Widget _tapArea({
-    required bool picker,
-    required String label,
-    required String value,
-    required bool requiredField,
-    required VoidCallback? onTap,
-    required Key? tapKey,
-    required Widget child,
-  }) {
-    if (!picker) return child;
-    return OverflowBox(
-      alignment: Alignment.center,
-      minHeight: A11y.minTapTarget,
-      maxHeight: A11y.minTapTarget,
-      child: Semantics(
-        button: true,
-        enabled: onTap != null,
-        label: requiredField ? '$label, required' : label,
-        value: value.isEmpty ? 'Not chosen' : value,
-        // The children are excluded, so the action is given here or a
-        // screen reader could not open the list.
-        onTap: onTap,
-        excludeSemantics: true,
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            key: tapKey,
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox(height: A11y.minTapTarget, child: child),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _box(
-    String label,
-    TextEditingController controller, {
-    String? error,
-    bool requiredField = false,
-    bool ok = false,
-    bool focused = false,
-    bool obscure = false,
-    bool bad = false,
-    bool readOnly = false,
-    String? previewMask,
-    Widget? trailing,
-    double padTop = 12,
-    double labelGap = 5,
-    double boxDy = 0,
-    VoidCallback? onTap,
-    String? placeholder,
-    Key? tapKey,
-  }) {
-    // A picker draws its value as text and is one 48 dp button, rather than a
-    // text field a resident could type a barangay name into.
-    final bool picker = placeholder != null;
-    final border = bad || error != null
-        ? BrandColors.danger
-        : focused
-        ? BrandColors.taytayBlue
-        : ok
-        ? const Color(0xFF0F7A4D)
-        : BrandColors.fieldBorder;
-    return Padding(
-      padding: EdgeInsets.only(top: padTop),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text.rich(
-            TextSpan(
-              text: label,
-              style: AppTypography.label.copyWith(
-                color: BrandColors.fieldLabel,
-              ),
-              children: <InlineSpan>[
-                if (requiredField)
-                  const TextSpan(
-                    text: ' *',
-                    style: TextStyle(color: BrandColors.danger),
-                  ),
-              ],
-            ),
-          ),
-          SizedBox(height: labelGap),
-          Padding(
-            padding: EdgeInsets.only(top: boxDy),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: error != null
-                    ? const Color(0xFFFFF7F7)
-                    : focused
-                    ? Colors.white
-                    : BrandColors.fieldFill,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: border, width: 1.4),
-                boxShadow: focused
-                    ? const <BoxShadow>[
-                        BoxShadow(color: Color(0x1F0B3D91), spreadRadius: 3),
-                      ]
-                    : null,
-              ),
-              child: SizedBox(
-                height: 44,
-                child: _tapArea(
-                  picker: picker,
-                  label: label,
-                  value: controller.text,
-                  requiredField: requiredField,
-                  onTap: onTap,
-                  tapKey: tapKey,
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: picker
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  controller.text.isEmpty
-                                      ? placeholder
-                                      : controller.text,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: controller.text.isEmpty
-                                      ? AppTypography.fieldValue.copyWith(
-                                          color: const Color(0xFF5B6680),
-                                        )
-                                      : AppTypography.fieldValue,
-                                ),
-                              )
-                            : previewMask != null
-                            ? Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: Text(
-                                  previewMask,
-                                  style: AppTypography.fieldValue,
-                                ),
-                              )
-                            : Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                ),
-                                child: AuthBareField(
-                                  controller: controller,
-                                  readOnly: readOnly,
-                                  obscureText: obscure,
-                                ),
-                              ),
-                      ),
-                      ?trailing,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          if (error != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 5.3),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      const TaytayIcon(
-                        icon: TaytayIcons.circleAlert,
-                        semanticLabel: 'Error',
-                        size: 14,
-                        color: Color(0xFFB3261E),
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          error,
-                          style: const TextStyle(
-                            fontFamily: AppTypography.fontFamily,
-                            fontSize: 11.5,
-                            height: 1.2,
-                            fontWeight: AppTypography.strong,
-                            color: Color(0xFFB3261E),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 1.2),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
 }
 
-class _Chip extends StatelessWidget {
-  const _Chip(this.label, {required this.met});
+/// `.cam { height: 300px }`, and the drawn head-and-shoulders inside it.
+const double _camHeight = 300;
+const double _personSize = 200;
 
-  final String label;
+/// The oval guide and the four gold corner marks of `.cam`.
+class _SelfieGuidePainter extends CustomPainter {
+  const _SelfieGuidePainter({required this.taken});
 
-  /// Null until the resident has typed a password.
-  final bool? met;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = switch (met) {
-      true => const Color(0xFF0F7A4D),
-      false => const Color(0xFFB3261E),
-      null => const Color(0xFF5B6680),
-    };
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (met != null)
-          TaytayIcon(
-            icon: met! ? TaytayIcons.check : TaytayIcons.close,
-            semanticLabel: '',
-            excludeSemantics: true,
-            size: 12,
-            color: color,
-          ),
-        if (met != null) const SizedBox(width: 3),
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: AppTypography.fontFamily,
-            fontSize: 11,
-            fontWeight: AppTypography.strong,
-            color: color,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.label, {this.requiredField = false});
-
-  final String label;
-  final bool requiredField;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text.rich(
-      TextSpan(
-        text: label,
-        style: AppTypography.label.copyWith(color: BrandColors.fieldLabel),
-        children: <InlineSpan>[
-          if (requiredField)
-            const TextSpan(
-              text: ' *',
-              style: TextStyle(color: BrandColors.danger),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _UploadSlot extends StatelessWidget {
-  const _UploadSlot({this.onPressed, super.key});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: const CustomPaint(
-          painter: _DashedRoundPainter(),
-          child: SizedBox(
-            height: 60,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                TaytayIcon(
-                  icon: TaytayIcons.plus,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                  size: 16,
-                  color: BrandColors.taytayBlue,
-                ),
-                SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'Add a photo · JPG or PNG',
-                    maxLines: 1,
-                    overflow: TextOverflow.fade,
-                    softWrap: false,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 13,
-                      fontWeight: AppTypography.black,
-                      color: BrandColors.taytayBlue,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashedRoundPainter extends CustomPainter {
-  const _DashedRoundPainter();
+  final bool taken;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(16)),
-      );
-    final paint = Paint()
+    const double inset = Spacing.lg;
+    const double arm = 26;
+    const double stroke = 3;
+    final Paint corner = Paint()
+      ..color = BrandColors.gold
+      ..strokeWidth = stroke
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = const Color(0xFFC9A227);
+      ..strokeCap = StrokeCap.round;
+    for (final (double x, double y, double dx, double dy)
+        in <(double, double, double, double)>[
+          (inset, inset, 1, 1),
+          (size.width - inset, inset, -1, 1),
+          (inset, size.height - inset, 1, -1),
+          (size.width - inset, size.height - inset, -1, -1),
+        ]) {
+      canvas
+        ..drawLine(Offset(x, y), Offset(x + arm * dx, y), corner)
+        ..drawLine(Offset(x, y), Offset(x, y + arm * dy), corner);
+    }
+    final Rect oval = Rect.fromCenter(
+      center: Offset(size.width / 2, 34 + 106),
+      width: 164,
+      height: 212,
+    );
+    final Paint guide = Paint()
+      ..color = taken
+          ? BrandColors.green50
+          : BrandColors.white.withValues(alpha: 0.9)
+      ..strokeWidth = stroke
+      ..style = PaintingStyle.stroke;
+    if (taken) {
+      canvas.drawOval(oval, guide);
+      return;
+    }
+    final Path path = Path()..addOval(oval);
     for (final metric in path.computeMetrics()) {
       var distance = 0.0;
       while (distance < metric.length) {
-        final next = math.min(distance + 5, metric.length);
-        canvas.drawPath(metric.extractPath(distance, next), paint);
-        distance = next + 4;
+        canvas.drawPath(metric.extractPath(distance, distance + 9), guide);
+        distance += 15;
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _DashedRoundPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _SelfieGuidePainter oldDelegate) =>
+      oldDelegate.taken != taken;
 }
 
-/// A drawn stand-in for the sample ID. No photograph of a person.
-class _SampleIdCard extends StatelessWidget {
-  const _SampleIdCard();
-
-  @override
-  Widget build(BuildContext context) {
-    // Design thumbnail is 120×77 logical, sitting 5 below the previous top so
-    // its bottom stays on the red run the line bar already matches.
-    return const Padding(
-      padding: EdgeInsets.only(top: 5),
-      child: SizedBox(
-        width: 120,
-        height: 77,
-        child: ClipRRect(
-          borderRadius: BorderRadius.all(Radius.circular(8)),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[Color(0xFFDFE8F7), Color(0xFFF7F1DF)],
-              ),
-            ),
-            child: Stack(
-              children: <Widget>[
-                Positioned(
-                  left: 8,
-                  top: 16,
-                  width: 28,
-                  height: 36,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFB8C4D8),
-                      borderRadius: BorderRadius.all(Radius.circular(4)),
-                    ),
-                  ),
-                ),
-                Positioned(left: 44, top: 18, child: _IdLine(width: 60)),
-                Positioned(
-                  left: 44,
-                  top: 28,
-                  child: _IdLine(width: 48, color: Color(0xFFB8C4D8)),
-                ),
-                Positioned(
-                  left: 44,
-                  top: 38,
-                  child: _IdLine(width: 40, color: Color(0xFFB8C4D8)),
-                ),
-                Positioned(
-                  right: -2,
-                  bottom: 2 + 29 / 3 + 1,
-                  child: _SampleRibbon(),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 'Edit' on the label's top edge. The 48dp hit target hangs below the line.
-class _EditLink extends StatelessWidget {
-  const _EditLink({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 48,
-      height: 16,
-      child: OverflowBox(
-        maxWidth: 80,
-        maxHeight: 48,
-        alignment: Alignment.topRight,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: BrandColors.taytayBlue,
-            minimumSize: const Size(48, 48),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            alignment: Alignment.topRight,
-            textStyle: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.black,
-            ),
-          ),
-          onPressed: onPressed,
-          child: const Text('Edit'),
-        ),
-      ),
-    );
-  }
-}
-
-/// 'Change' under the readable line. Layout height is the line; the hit
-/// target is 48dp.
-class _ChangeLink extends StatelessWidget {
-  const _ChangeLink({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      height: 16,
-      child: OverflowBox(
-        maxWidth: 96,
-        maxHeight: 48,
-        alignment: Alignment.topLeft,
-        child: TextButton(
-          style: TextButton.styleFrom(
-            foregroundColor: BrandColors.taytayBlue,
-            minimumSize: const Size(48, 48),
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            alignment: Alignment.topLeft,
-            textStyle: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 12,
-              fontWeight: AppTypography.black,
-            ),
-          ),
-          onPressed: onPressed,
-          child: const Text('Change'),
-        ),
-      ),
-    );
-  }
-}
-
-/// Light dashed hairline along the bottom of a review row.
-class _RowDashPainter extends CustomPainter {
-  const _RowDashPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFEADFC0)
-      ..strokeWidth = 1;
-    const dash = 4.0;
-    const gap = 3.0;
-    final double y = size.height - 0.5;
-    var x = 0.0;
-    while (x < size.width) {
-      final double end = math.min(x + dash, size.width);
-      canvas.drawLine(Offset(x, y), Offset(end, y), paint);
-      x = end + gap;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _RowDashPainter oldDelegate) => false;
-}
-
-class _SampleRibbon extends StatelessWidget {
-  const _SampleRibbon();
-
-  @override
-  Widget build(BuildContext context) {
-    return Transform.rotate(
-      angle: -0.46,
-      alignment: Alignment.bottomRight,
-      child: const DecoratedBox(
-        decoration: BoxDecoration(color: Color(0xFFB3261E)),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          child: Text(
-            'SAMPLE',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 8,
-              letterSpacing: 0.6,
-              fontWeight: AppTypography.black,
-              color: Colors.white,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _IdLine extends StatelessWidget {
-  const _IdLine({required this.width, this.color = const Color(0xFF9AA6BC)});
-
-  final double width;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: width,
-      height: 5,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: const BorderRadius.all(Radius.circular(3)),
-        ),
-      ),
-    );
-  }
-}
-
-class _SelfieFrame extends StatelessWidget {
-  const _SelfieFrame();
-
-  @override
-  Widget build(BuildContext context) {
-    const radius = BorderRadius.only(
-      topLeft: Radius.circular(95),
-      topRight: Radius.circular(95),
-      bottomLeft: Radius.circular(22),
-      bottomRight: Radius.circular(22),
-    );
-    return const SizedBox(
-      width: 190,
-      height: 230,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: radius,
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[Color(0xFFDFE6F2), Color(0xFFC9D3E6)],
-          ),
-          // Same order as the auth arches: the white ring paints last.
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Color(0x33062358),
-              blurRadius: 28,
-              offset: Offset(0, 12),
-            ),
-            BoxShadow(color: Colors.white, spreadRadius: 4),
-          ],
-        ),
-        child: Stack(
-          children: <Widget>[
-            Positioned(
-              left: 62,
-              top: 52,
-              width: 66,
-              height: 80,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Color(0xFF9FB0CC),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              left: 30,
-              top: 140,
-              width: 130,
-              height: 110,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Color(0xFF9FB0CC),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(65)),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 10 - 5 / 3,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    child: Text(
-                      'Illustration · no real person',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11,
-                        fontWeight: AppTypography.black,
-                        color: BrandColors.taytayBlue,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _TermsNotice extends StatelessWidget {
-  const _TermsNotice();
-
-  static const TextStyle _style = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    height: 1.55,
-    color: Color(0xFF3A4560),
-  );
-
-  /// 12px at line-height 1.55. CSS `normal` is not this step; the notice sets 1.55.
-  static const double _step = 18.6;
-
-  static const StrutStyle _strut = StrutStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    height: 1.55,
-    forceStrutHeight: true,
-  );
-
-  // Step counts lines on the 18.6 grid, including each blank paragraph line.
-  // The design leaves an empty line before "Your rights", so that line is step 11.
-  static const List<(int, List<(String, bool)>)>
-  _lines = <(int, List<(String, bool)>)>[
-    (
-      0,
-      <(String, bool)>[('Privacy Notice (Republic Act No. 10173 – Data', true)],
-    ),
-    (1, <(String, bool)>[('Privacy Act of 2012)', true)]),
-    (
-      2,
-      <(String, bool)>[
-        ('The Municipality of Taytay collects your name,', false),
-      ],
-    ),
-    (
-      3,
-      <(String, bool)>[
-        ('contact details, address, valid ID and selfie to create', false),
-      ],
-    ),
-    (
-      4,
-      <(String, bool)>[
-        ('and verify your resident account and to deliver', false),
-      ],
-    ),
-    (5, <(String, bool)>[('municipal services you request.', false)]),
-    (6, <(String, bool)>[]),
-    (
-      7,
-      <(String, bool)>[
-        ('How we use it: ', true),
-        ('identity and residency verification,', false),
-      ],
-    ),
-    (
-      8,
-      <(String, bool)>[
-        ('service requests, and notices from the LGU. ', false),
-        ('Who', true),
-      ],
-    ),
-    (
-      9,
-      <(String, bool)>[
-        ('can see it: ', true),
-        ('authorised Taytay LGU personnel only.', false),
-      ],
-    ),
-    (10, <(String, bool)>[]),
-    (
-      11,
-      <(String, bool)>[
-        ('Your rights: ', true),
-        (
-          'to be informed, to access, correct, object and erase, and to file a complaint with the National Privacy Commission. Contact the LGU Data Protection Officer for requests.',
-          false,
-        ),
-      ],
-    ),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: <Widget>[
-        for (final (int step, List<(String, bool)> spans) in _lines)
-          if (spans.isNotEmpty)
-            Positioned(
-              top: step * _step,
-              left: 0,
-              right: 0,
-              child: Text.rich(
-                TextSpan(
-                  style: _style,
-                  children: <InlineSpan>[
-                    for (final (String text, bool strong) in spans)
-                      TextSpan(
-                        text: text,
-                        style: strong
-                            ? _style.copyWith(fontWeight: AppTypography.black)
-                            : null,
-                      ),
-                  ],
-                ),
-                strutStyle: _strut,
-                maxLines: step == 11 ? 4 : 1,
-                softWrap: step == 11,
-                overflow: TextOverflow.visible,
-              ),
-            ),
-      ],
-    );
-  }
-}
-
-class _SelfieRule extends StatelessWidget {
-  const _SelfieRule(
-    this.icon,
-    this.label, {
-    this.tail,
-    this.tailGap = 0,
-    this.bottom = 2,
-  });
+/// One RegSelfie tip (CSS `.tips li`): a green disc with its icon, and the
+/// sentence.
+class _SelfieTip extends StatelessWidget {
+  const _SelfieTip(this.icon, this.label);
 
   final IconData icon;
   final String label;
-  final String? tail;
-  final double tailGap;
-  final double bottom;
-
-  static const TextStyle _style = TextStyle(
-    fontFamily: AppTypography.fontFamily,
-    fontSize: 12,
-    height: 1.67,
-    fontWeight: AppTypography.medium,
-    color: Color(0xFF3A4560),
-  );
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(top: 2, bottom: bottom),
-      child: Row(
-        crossAxisAlignment: tail == null
-            ? CrossAxisAlignment.center
-            : CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: EdgeInsets.only(top: tail == null ? 0 : 14),
+    return Row(
+      children: <Widget>[
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            color: BrandColors.green50,
+            shape: BoxShape.circle,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(Spacing.xs + Spacing.xxs),
             child: TaytayIcon(
               icon: icon,
               semanticLabel: '',
               excludeSemantics: true,
-              size: 16,
-              color: BrandColors.taytayBlue,
+              size: IconSizes.sm - Spacing.xxs,
+              color: BrandColors.green,
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: tail == null
-                ? Text(label, style: _style)
-                : Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(label, style: _style),
-                      SizedBox(height: tailGap),
-                      Text(tail!, style: _style),
-                    ],
-                  ),
+        ),
+        const SizedBox(width: Spacing.md),
+        Expanded(
+          child: Text(
+            label,
+            style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -2984,11 +2526,9 @@ class _BarangaySheetState extends State<_BarangaySheet> {
 
   @override
   Widget build(BuildContext context) {
-    const TextStyle note = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 13,
+    final TextStyle note = AppTypography.listDetail.copyWith(
+      color: BrandColors.muted,
       height: 1.45,
-      color: Color(0xFF4A5470),
     );
     final Result<List<Barangay>>? result = _result;
     final Widget body = switch (result) {
@@ -3047,18 +2587,15 @@ class _BarangaySheetState extends State<_BarangaySheet> {
             children: <Widget>[
               Semantics(
                 header: true,
-                child: const Text(
+                child: Text(
                   'Choose your barangay',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 18,
-                    fontWeight: AppTypography.black,
-                    color: BrandColors.taytayBlueDark,
+                  style: AppTypography.pageTitle.copyWith(
+                    color: BrandColors.ink,
                   ),
                 ),
               ),
               const SizedBox(height: 2),
-              const Text('Taytay, Rizal', style: note),
+              Text('Taytay, Rizal', style: note),
               const SizedBox(height: 8),
               body,
             ],
@@ -3108,13 +2645,10 @@ class _IdTypeSheet extends StatelessWidget {
             children: <Widget>[
               Semantics(
                 header: true,
-                child: const Text(
+                child: Text(
                   'Type of ID',
-                  style: TextStyle(
-                    fontFamily: AppTypography.fontFamily,
-                    fontSize: 18,
-                    fontWeight: AppTypography.black,
-                    color: BrandColors.taytayBlueDark,
+                  style: AppTypography.pageTitle.copyWith(
+                    color: BrandColors.ink,
                   ),
                 ),
               ),
@@ -3168,7 +2702,7 @@ class _ChoiceRow extends StatelessWidget {
       child: InkWell(
         key: rowKey,
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(Radii.md),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
           child: Padding(
@@ -3178,15 +2712,11 @@ class _ChoiceRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     label,
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 15,
+                    style: AppTypography.sectionTitle.copyWith(
                       fontWeight: selected
-                          ? AppTypography.black
+                          ? AppTypography.strong
                           : AppTypography.medium,
-                      color: selected
-                          ? BrandColors.taytayBlue
-                          : BrandColors.fieldInk,
+                      color: selected ? BrandColors.blue : BrandColors.ink,
                     ),
                   ),
                 ),
@@ -3203,34 +2733,6 @@ class _ChoiceRow extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// A text link on the terms step, drawn as a 48 dp button.
-class _LegalLink extends StatelessWidget {
-  const _LegalLink({required this.label, required this.onPressed, super.key});
-
-  final String label;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      style: TextButton.styleFrom(
-        foregroundColor: BrandColors.taytayBlue,
-        minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        alignment: Alignment.centerLeft,
-        textStyle: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 12,
-          fontWeight: AppTypography.black,
-        ),
-      ),
-      onPressed: onPressed,
-      child: Text(label),
     );
   }
 }

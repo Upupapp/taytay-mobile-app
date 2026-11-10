@@ -107,6 +107,8 @@ class SuccessScreen extends StatelessWidget {
     this.stepLabel,
     this.progress,
     this.progressSemanticLabel,
+    this.showBack = false,
+    this.onBack,
     super.key,
   });
 
@@ -134,6 +136,11 @@ class SuccessScreen extends StatelessWidget {
   final double? progress;
   final String? progressSemanticLabel;
 
+  /// A back control on the header, for a result that is a route of its own
+  /// (every non-root route has one). [onBack] overrides the default pop.
+  final bool showBack;
+  final VoidCallback? onBack;
+
   @override
   Widget build(BuildContext context) {
     final Widget? body = this.body;
@@ -160,6 +167,8 @@ class SuccessScreen extends StatelessWidget {
                       stepLabel: stepLabel,
                       progress: progress,
                       progressSemanticLabel: progressSemanticLabel,
+                      showBack: showBack,
+                      onBack: onBack,
                     ),
                   ),
                   Padding(
