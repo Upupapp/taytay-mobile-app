@@ -100,9 +100,11 @@ class _AccountScreenState extends State<AccountScreen> {
           children: <Widget>[
             SettingsRow(
               icon: TaytayIcons.circleUser,
-              tone: session.accessLevel == AccessLevel.verified
-                  ? SettingsTone.green
-                  : SettingsTone.blue,
+              tone: switch (session.accessLevel) {
+                AccessLevel.verified => SettingsTone.green,
+                AccessLevel.guest ||
+                AccessLevel.unverified => SettingsTone.blue,
+              },
               title: resident?.displayName ?? 'Resident',
               detail: switch (session.accessLevel) {
                 AccessLevel.guest => 'Not signed in',

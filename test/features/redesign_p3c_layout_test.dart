@@ -676,7 +676,7 @@ void main() {
           frame: DirectoryFrame.thread,
           offices: const <Office>[],
           office: office,
-          dayLabel: 'Today',
+          dayLabel: 'Oct 12',
           bubbles: const <DirectoryThreadBubble>[
             DirectoryThreadBubble(
               fromResident: true,
@@ -698,7 +698,7 @@ void main() {
           subtitle: 'The office name in full',
           showBack: true,
           showBell: false,
-          dayLabel: 'Today',
+          dayLabel: 'Oct 12',
           bubbles: AccountSpecimen.mswdoBubbles,
           attachmentLabel: 'a-chosen-file.pdf',
           onClearAttachment: _noop,
