@@ -4,10 +4,15 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/core/api/server_value.dart';
+import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
+import 'package:taytay_resident/features/programs/presentation/program_detail_screen.dart';
+import 'package:taytay_resident/features/programs/presentation/programs_screen.dart';
 import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 import 'package:taytay_resident/features/services/presentation/release_and_referral.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
@@ -341,6 +346,82 @@ void main() {
     });
   });
 
+  group('programme redirects', () {
+    Future<void> pumpRedirect(
+      WidgetTester tester,
+      Widget stub, {
+      double width = 375,
+      double scale = 1,
+    }) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = Size(width, 800);
+      addTearDown(tester.view.reset);
+      final GoRouter router = GoRouter(
+        routes: <RouteBase>[
+          GoRoute(path: '/', builder: (context, state) => stub),
+          GoRoute(
+            path: '/programs',
+            name: AppRoute.programs.routeName,
+            builder: (context, state) => const Text('Tulong list'),
+            routes: <RouteBase>[
+              GoRoute(
+                path: ':programId',
+                name: AppRoute.programDetail.routeName,
+                builder: (context, state) =>
+                    Text('Programme ${state.pathParameters['programId']}'),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        MaterialApp.router(
+          theme: AppTheme.light(),
+          routerConfig: router,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(scale)),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+      );
+    }
+
+    for (final double width in layoutWidths) {
+      for (final double scale in layoutTextScales) {
+        testWidgets('the old pages wait with a skeleton at $width × $scale', (
+          WidgetTester tester,
+        ) async {
+          await pumpRedirect(
+            tester,
+            const ProgramsScreen(),
+            width: width,
+            scale: scale,
+          );
+          expect(find.byType(LoadingSkeleton), findsOneWidget);
+          expect(find.byType(CircularProgressIndicator), findsNothing);
+          expect(tester.takeException(), isNull);
+          await tester.pumpAndSettle();
+          expect(find.text('Tulong list'), findsOneWidget);
+
+          await pumpRedirect(
+            tester,
+            const ProgramDetailScreen(programId: 'sample-programme'),
+            width: width,
+            scale: scale,
+          );
+          expect(find.byType(LoadingSkeleton), findsOneWidget);
+          expect(tester.takeException(), isNull);
+          await tester.pumpAndSettle();
+          expect(find.text('Programme sample-programme'), findsOneWidget);
+        });
+      }
+    }
+  });
+
   test('restyled files use tokens: no raw colours, sizes or shadows', () {
     final List<String> offenders = <String>[];
     for (final String path in _restyled) {
@@ -362,6 +443,8 @@ void main() {
 const List<String> _restyled = <String>[
   'lib/shared/widgets/detail_page.dart',
   'lib/shared/widgets/pills.dart',
+  'lib/features/programs/presentation/programs_screen.dart',
+  'lib/features/programs/presentation/program_detail_screen.dart',
   'lib/features/services/presentation/assistance_requests_screen.dart',
   'lib/features/services/presentation/assistance_case_screen.dart',
   'lib/features/services/presentation/release_and_referral.dart',

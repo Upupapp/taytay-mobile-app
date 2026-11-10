@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/design/design_tokens.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 
 /// Old programme page. The route paints the Tulong service for the same slug.
 ///
@@ -33,9 +34,20 @@ class _ProgramDetailScreenState extends State<ProgramDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The redirect happens on the next frame. Until then the page shows the
+    // detail skeleton the programme page itself loads with.
     return const ColoredBox(
-      color: BrandColors.surface,
-      child: Center(child: CircularProgressIndicator()),
+      color: BrandColors.background,
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(Spacing.lg),
+          child: LoadingSkeleton(
+            layout: SkeletonLayout.detail,
+            count: 1,
+            semanticLabel: 'Opening the programme page',
+          ),
+        ),
+      ),
     );
   }
 }
