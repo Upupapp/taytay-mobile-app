@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 
 import '../../../core/config/app_version.dart';
@@ -7,6 +5,7 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -19,7 +18,6 @@ import '../../../shared/widgets/taytay_rows.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/notice_markdown.dart';
 import '../domain/photo_credit.dart';
-import 's8_space.dart';
 
 /// Which My Account frame the canvas is painting.
 enum AccountFrame {
@@ -1089,12 +1087,39 @@ class _MoreRetry extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         SoftNote(message: message, tone: NoteTone.error),
+        // A gesture detector, not a TextButton: tests (and screen readers)
+        // read the one control under [retryKey].
         Align(
           alignment: AlignmentDirectional.centerStart,
-          child: TextButton(
-            key: retryKey,
-            onPressed: onRetry,
-            child: const Text('Retry'),
+          child: Semantics(
+            button: true,
+            label: 'Retry',
+            excludeSemantics: true,
+            child: GestureDetector(
+              key: retryKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: onRetry,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: A11y.minTapTarget,
+                  minHeight: A11y.minTapTarget,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: Spacing.xs),
+                  child: Center(
+                    widthFactor: 1,
+                    child: Text(
+                      'Retry',
+                      style: AppTypography.link.copyWith(
+                        color: BrandColors.blue,
+                        decoration: TextDecoration.underline,
+                        decorationColor: BrandColors.blue,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -1923,6 +1948,9 @@ class _ReplaceMark extends StatelessWidget {
   }
 }
 
+/// `Conversation.dc.html`: the messages as a log of bubbles over the soft
+/// page, and the composer under them. A closed thread says so where the
+/// composer was; a thread whose first read failed shows neither.
 class _ThreadBody extends StatelessWidget {
   const _ThreadBody({
     required this.bubbles,
@@ -1958,501 +1986,146 @@ class _ThreadBody extends StatelessWidget {
   final String? moreMessage;
   final VoidCallback? onMoreRetry;
 
-  bool get _live =>
-      hideComposer ||
-      composer != null ||
-      onAttach != null ||
-      onNearStart != null ||
-      onUseMedia != null ||
-      closed ||
-      attachmentLabel != null ||
-      moreMessage != null;
-
   @override
   Widget build(BuildContext context) {
-    if (_live) return _liveColumn();
-    return _specimenColumn();
-  }
-
-  Widget _specimenColumn() {
-    return Column(
-      children: <Widget>[
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-              S8Space.gutter,
-              S8Space.threadInset,
-              S8Space.gutter,
-              S8Space.labelGap,
-            ),
-            children: <Widget>[
-              if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
-              if (dayLabel.isNotEmpty) const SizedBox(height: S8Space.dayGap),
-              for (final AccountBubble bubble in bubbles)
-                _Bubble(bubble: bubble),
-              if (showSampleNote) const _SampleConversation(),
-            ],
-          ),
+    final String? moreMessage = this.moreMessage;
+    final VoidCallback? onMoreRetry = this.onMoreRetry;
+    final Widget transcript = Semantics(
+      container: true,
+      label: 'Conversation',
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.lg,
+          Spacing.section,
+          Spacing.lg,
+          Spacing.sm,
         ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: BrandColors.cardLine)),
-          ),
-          child: Row(
-            children: <Widget>[
-              const TaytayIcon(
-                icon: TaytayIcons.paperclip,
-                size: 20,
-                color: BrandColors.listMeta,
-                semanticLabel: 'Attach',
-              ),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xFFF6F8FC),
-                      borderRadius: BorderRadius.all(Radius.circular(12)),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text('Write a message…', style: _hint),
-                      ),
+        children: <Widget>[
+          if (moreMessage != null && onMoreRetry != null) ...<Widget>[
+            _MoreRetry(
+              message: moreMessage,
+              onRetry: onMoreRetry,
+              retryKey: const Key('thread-load-more-retry'),
+            ),
+            const SizedBox(height: Spacing.md),
+          ],
+          if (dayLabel.isNotEmpty) ...<Widget>[
+            ConversationDayChip(dayLabel),
+            const SizedBox(height: Spacing.md),
+          ],
+          for (final AccountBubble bubble in bubbles)
+            ConversationBubble(
+              body: bubble.body,
+              meta: bubble.when,
+              mine: bubble.fromResident,
+              attachments: <Widget>[
+                for (final String mediaId in bubble.mediaIds)
+                  _MediaChip(
+                    mediaId: mediaId,
+                    mine: bubble.fromResident,
+                    onTap: onUseMedia,
+                  ),
+              ],
+            ),
+          if (showSampleNote) ...<Widget>[
+            const SizedBox(height: Spacing.xs),
+            Center(
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: Spacing.xs + Spacing.xxs,
+                children: <Widget>[
+                  const SampleTag(),
+                  Text(
+                    'conversation for illustration',
+                    style: AppTypography.small.copyWith(
+                      color: BrandColors.muted,
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(width: 10),
-              _ComposerSend(onTap: onSend),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _liveColumn() {
-    final Widget transcript = ListView(
-      padding: const EdgeInsets.fromLTRB(
-        S8Space.gutter,
-        S8Space.threadInset,
-        S8Space.gutter,
-        S8Space.labelGap,
+            ),
+          ],
+        ],
       ),
-      children: <Widget>[
-        if (moreMessage != null && onMoreRetry != null)
-          _LoadMoreRetry(
-            message: moreMessage!,
-            onRetry: onMoreRetry!,
-            retryKey: const Key('thread-load-more-retry'),
-          ),
-        if (dayLabel.isNotEmpty) Center(child: _Chip(dayLabel)),
-        if (dayLabel.isNotEmpty) const SizedBox(height: S8Space.dayGap),
-        for (final AccountBubble bubble in bubbles)
-          _Bubble(bubble: bubble, onUseMedia: onUseMedia),
-        if (showSampleNote) const _SampleConversation(),
-      ],
     );
     final VoidCallback? onNearStart = this.onNearStart;
+    final Widget log = onNearStart == null
+        ? transcript
+        : NotificationListener<ScrollNotification>(
+            onNotification: (ScrollNotification notice) {
+              final ScrollMetrics metrics = notice.metrics;
+              if (metrics.maxScrollExtent <= 0) return false;
+              if (metrics.pixels < 480) onNearStart();
+              return false;
+            },
+            child: transcript,
+          );
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        Expanded(
-          child: onNearStart == null
-              ? transcript
-              : NotificationListener<ScrollNotification>(
-                  onNotification: (ScrollNotification notice) {
-                    final ScrollMetrics metrics = notice.metrics;
-                    if (metrics.maxScrollExtent <= 0) return false;
-                    if (metrics.pixels < 480) onNearStart();
-                    return false;
-                  },
-                  child: transcript,
-                ),
-        ),
-        if (!hideComposer)
-          Container(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: BrandColors.cardLine)),
-            ),
-            child: closed ? const _ClosedLine() : _liveComposer(),
+        Expanded(child: log),
+        if (closed)
+          const _ClosedLine()
+        else if (!hideComposer)
+          ConversationComposer(
+            controller: composer,
+            onAttach: onAttach,
+            onSend: onSend,
+            sendEnabled: sendEnabled,
+            attachmentLabel: attachmentLabel,
+            onClearAttachment: onClearAttachment,
+            attachKey: const Key('account-thread-attach'),
+            sendKey: const Key('account-thread-send'),
+            fieldKey: const Key('account-thread-field'),
+            clearKey: const Key('account-thread-clear-attachment'),
           ),
       ],
     );
   }
-
-  Widget _liveComposer() {
-    final String? label = attachmentLabel;
-    final Widget row = Row(
-      children: <Widget>[
-        _AttachControl(onTap: onAttach),
-        const SizedBox(width: 10),
-        Expanded(child: _ComposerField(controller: composer)),
-        const SizedBox(width: 10),
-        _ComposerSend(onTap: onSend, enabled: sendEnabled),
-      ],
-    );
-    if (label == null) return row;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _hint,
-              ),
-            ),
-            if (onClearAttachment != null)
-              _ClearAttachment(onTap: onClearAttachment!),
-          ],
-        ),
-        const SizedBox(height: 8),
-        row,
-      ],
-    );
-  }
 }
 
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.bubble, this.onUseMedia});
-
-  final AccountBubble bubble;
-  final ValueChanged<String>? onUseMedia;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool mine = bubble.fromResident;
-    final TextStyle style = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 13,
-      height: S8Space.threadLineHeight,
-      fontWeight: FontWeight.w500,
-      letterSpacing: 0,
-      leadingDistribution: TextLeadingDistribution.even,
-      color: mine ? Colors.white : BrandColors.textPrimary,
-      decoration: TextDecoration.none,
-    );
-    final Widget words = _CssLines(
-      text: bubble.body,
-      style: style,
-      step: 13 * S8Space.threadLineHeight,
-    );
-    final Widget content = bubble.mediaIds.isEmpty
-        ? words
-        : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (bubble.body.isNotEmpty) words,
-              for (final String mediaId in bubble.mediaIds)
-                _MediaChip(mediaId: mediaId, mine: mine, onTap: onUseMedia),
-            ],
-          );
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: SizedBox(
-        width: S8Space.bubbleMaxWidth,
-        child: Column(
-          crossAxisAlignment: mine
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          children: <Widget>[
-            Container(
-              width: S8Space.bubbleMaxWidth,
-              padding: const EdgeInsets.symmetric(
-                horizontal: S8Space.bubblePadX,
-                vertical: S8Space.bubblePadY,
-              ),
-              decoration: BoxDecoration(
-                color: mine ? BrandColors.taytayBlue : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(mine ? 16 : 4),
-                  bottomRight: Radius.circular(mine ? 4 : 16),
-                ),
-                border: mine
-                    ? null
-                    : Border.all(
-                        color: BrandColors.cardLine,
-                        strokeAlign: BorderSide.strokeAlignInside,
-                      ),
-              ),
-              child: content,
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(4, 6, 4, 12),
-              child: SizedBox(
-                height: S8Space.line(11),
-                child: Text(
-                  bubble.when,
-                  style: _time,
-                  textHeightBehavior: S8Space.lineBox,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip(this.label);
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: const BoxDecoration(
-        color: Color(0xFFEEF1F6),
-        borderRadius: BorderRadius.all(Radius.circular(999)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: S8Space.dayPadX,
-          vertical: S8Space.dayPadY,
-        ),
-        child: SizedBox(
-          height: S8Space.line(11),
-          child: Text(label, style: _day, textHeightBehavior: S8Space.lineBox),
-        ),
-      ),
-    );
-  }
-}
-
+/// Where the composer was, on a thread the office closed.
 class _ClosedLine extends StatelessWidget {
   const _ClosedLine();
 
   @override
   Widget build(BuildContext context) {
-    return const SizedBox(
-      height: 44,
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text('This conversation is closed.', style: _hint),
-      ),
-    );
-  }
-}
-
-class _LoadMoreRetry extends StatelessWidget {
-  const _LoadMoreRetry({
-    required this.message,
-    required this.onRetry,
-    required this.retryKey,
-  });
-
-  final String message;
-  final VoidCallback onRetry;
-  final Key retryKey;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Column(
-        children: <Widget>[
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: BrandColors.textSecondary,
-              decoration: TextDecoration.none,
-            ),
-          ),
-          Semantics(
-            button: true,
-            label: 'Retry',
-            child: GestureDetector(
-              key: retryKey,
-              behavior: HitTestBehavior.opaque,
-              onTap: onRetry,
-              child: const SizedBox(
-                height: 48,
-                child: Center(
-                  child: Text(
-                    'Retry',
-                    style: TextStyle(
-                      fontFamily: AppTypography.fontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: BrandColors.taytayBlue,
-                      decoration: TextDecoration.none,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AttachControl extends StatelessWidget {
-  const _AttachControl({this.onTap});
-
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const Widget icon = TaytayIcon(
-      icon: TaytayIcons.paperclip,
-      size: 20,
-      color: BrandColors.listMeta,
-      semanticLabel: 'Attach',
-    );
-    final VoidCallback? onTap = this.onTap;
-    if (onTap == null) return icon;
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: OverflowBox(
-        maxWidth: 48,
-        maxHeight: 48,
-        child: Semantics(
-          button: true,
-          label: 'Attach photo or PDF',
-          child: GestureDetector(
-            key: const Key('account-thread-attach'),
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(
-                child: TaytayIcon(
-                  icon: TaytayIcons.paperclip,
-                  size: 20,
-                  color: BrandColors.listMeta,
-                  semanticLabel: '',
-                  excludeSemantics: true,
-                ),
-              ),
-            ),
-          ),
+    final double safeBottom = MediaQuery.paddingOf(context).bottom;
+    return ColoredBox(
+      color: BrandColors.white,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          Spacing.lg,
+          Spacing.md,
+          Spacing.lg,
+          Spacing.lg + Spacing.xs + safeBottom,
         ),
-      ),
-    );
-  }
-}
-
-class _ComposerField extends StatelessWidget {
-  const _ComposerField({required this.controller});
-
-  final TextEditingController? controller;
-
-  @override
-  Widget build(BuildContext context) {
-    final TextEditingController? controller = this.controller;
-    const BoxDecoration decoration = BoxDecoration(
-      color: Color(0xFFF6F8FC),
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-    );
-    if (controller == null) {
-      return const SizedBox(
-        height: 44,
-        child: DecoratedBox(
-          decoration: decoration,
-          child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Write a message…', style: _hint),
-            ),
-          ),
-        ),
-      );
-    }
-    return SizedBox(
-      height: 44,
-      child: DecoratedBox(
-        decoration: decoration,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: TextField(
-              key: const Key('account-thread-field'),
-              controller: controller,
-              style: const TextStyle(
-                fontFamily: AppTypography.fontFamily,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                height: S8Space.normal,
-                color: BrandColors.textPrimary,
-                decoration: TextDecoration.none,
-              ),
-              cursorColor: BrandColors.taytayBlue,
-              decoration: const InputDecoration(
-                isCollapsed: true,
-                isDense: true,
-                filled: false,
-                hintText: 'Write a message…',
-                hintStyle: _hint,
-                border: InputBorder.none,
-                enabledBorder: InputBorder.none,
-                focusedBorder: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ClearAttachment extends StatelessWidget {
-  const _ClearAttachment({required this.onTap});
-
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Remove attachment',
-      child: GestureDetector(
-        key: const Key('account-thread-clear-attachment'),
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: const SizedBox(
-          width: 48,
-          height: 48,
-          child: Center(
-            child: TaytayIcon(
-              icon: TaytayIcons.close,
-              size: 16,
-              color: BrandColors.listMeta,
+        child: Row(
+          children: <Widget>[
+            const TaytayIcon(
+              icon: TaytayIcons.lock,
               semanticLabel: '',
               excludeSemantics: true,
+              size: IconSizes.sm,
+              color: BrandColors.muted,
             ),
-          ),
+            const SizedBox(width: Spacing.sm),
+            Expanded(
+              child: Text(
+                'This conversation is closed.',
+                style: AppTypography.bodyStyle.copyWith(
+                  color: BrandColors.muted,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
+/// A file in a message: opened through [onTap] with its media id.
 class _MediaChip extends StatelessWidget {
   const _MediaChip({required this.mediaId, required this.mine, this.onTap});
 
@@ -2462,427 +2135,43 @@ class _MediaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color ink = mine ? Colors.white : BrandColors.textPrimary;
     final ValueChanged<String>? onTap = this.onTap;
+    final Color ink = mine ? BrandColors.white : BrandColors.blue;
     return Semantics(
       button: onTap != null,
       label: 'Attachment',
+      excludeSemantics: true,
       child: GestureDetector(
         key: Key('thread-media-$mediaId'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap == null ? null : () => onTap(mediaId),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               TaytayIcon(
-                icon: TaytayIcons.fileText,
-                size: 16,
-                color: ink,
+                icon: TaytayIcons.paperclip,
                 semanticLabel: '',
                 excludeSemantics: true,
+                size: IconSizes.sm,
+                color: ink,
               ),
-              const SizedBox(width: 8),
-              Text(
-                'Attachment',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: ink,
-                  decoration: TextDecoration.none,
+              const SizedBox(width: Spacing.sm),
+              Flexible(
+                child: Text(
+                  'Attachment',
+                  style: AppTypography.listTitle.copyWith(
+                    color: ink,
+                    decoration: TextDecoration.underline,
+                    decorationColor: ink,
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ComposerSend extends StatelessWidget {
-  const _ComposerSend({this.onTap, this.enabled = true});
-
-  final VoidCallback? onTap;
-  final bool enabled;
-
-  @override
-  Widget build(BuildContext context) {
-    // The painted disc is 44 dp, which is the composer dark run. The hit
-    // overflows to 48 without growing the row. A send in flight keeps that
-    // disc and drops the ink so the control reads as disabled.
-    final Widget button = SizedBox(
-      width: 44,
-      height: 44,
-      child: OverflowBox(
-        maxWidth: 48,
-        maxHeight: 48,
-        child: Semantics(
-          button: true,
-          enabled: enabled,
-          label: 'Send',
-          child: GestureDetector(
-            key: const Key('account-thread-send'),
-            behavior: HitTestBehavior.opaque,
-            onTap: enabled ? onTap : null,
-            child: const SizedBox(
-              width: 48,
-              height: 48,
-              child: Center(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: BrandColors.taytayBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: TaytayIcon(
-                      icon: TaytayIcons.send,
-                      size: 18,
-                      color: Colors.white,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    if (enabled) return button;
-    return Opacity(opacity: Opacities.disabled, child: button);
-  }
-}
-
-const TextStyle _meta = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-/// Thread timestamp. CSS `.tm` is 11 / 400 `#5F6880`.
-const Color _timeInk = Color(0xFF5F6880);
-
-const TextStyle _day = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w800,
-  height: S8Space.normal,
-  letterSpacing: 0,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _time = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w400,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: _timeInk,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _hint = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w500,
-  height: S8Space.normal,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.fieldHint,
-  decoration: TextDecoration.none,
-);
-
-double _spanWidth(String text, TextStyle style) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: text, style: style),
-    textDirection: TextDirection.ltr,
-    textScaler: TextScaler.noScaling,
-    textHeightBehavior: S8Space.lineBox,
-  )..layout();
-  final double width = painter.width;
-  painter.dispose();
-  return width;
-}
-
-/// `.sample` border box. Padding 7 and a 1 px border, each side.
-double _sampleChipWidth() {
-  return _spanWidth(
-        'SAMPLE',
-        AppTypography.labelStrong.copyWith(letterSpacing: 0.6),
-      ) +
-      16;
-}
-
-/// 11 px `normal` SAMPLE chip, for a `vertical-align: middle` line.
-class _NormalSample extends StatelessWidget {
-  const _NormalSample();
-
-  @override
-  Widget build(BuildContext context) {
-    return SampleTag(lineHeight: S8Space.normal, lineSlot: S8Space.line(11));
-  }
-}
-
-/// One inline line. A chip uses CSS `vertical-align: middle`.
-///
-/// Chrome centres the chip on the parent's baseline plus half the x-height.
-/// The parent's strut stays at the top of the line. The line grows downward
-/// when the chip hangs below that strut.
-class _MiddleLine extends StatelessWidget {
-  const _MiddleLine({
-    required this.text,
-    required this.style,
-    this.chip,
-    this.trailing = '',
-    this.trailingStyle,
-    this.centered = false,
-  });
-
-  final String text;
-  final TextStyle style;
-  final Widget? chip;
-  final String trailing;
-  final TextStyle? trailingStyle;
-  final bool centered;
-
-  @override
-  Widget build(BuildContext context) {
-    final double fontSize = style.fontSize ?? 16;
-    final FontWeight weight = style.fontWeight ?? FontWeight.w400;
-    final double strut = S8Space.line(fontSize);
-    final Widget? chip = this.chip;
-    final double chipHeight = chip == null ? 0 : S8Space.sampleChipHeight;
-    final double chipTop = chip == null
-        ? 0
-        : S8Space.middleTop(
-            fontSize: fontSize,
-            weight: weight,
-            boxHeight: chipHeight,
-          );
-    final double shift = math.max(0.0, -chipTop);
-    final double height = math.max(strut, chipTop + chipHeight) + shift;
-    final TextStyle trailStyle = trailingStyle ?? style;
-    final double trailSize = trailStyle.fontSize ?? fontSize;
-    final double trailHeight = S8Space.line(trailSize);
-    final double trailTop =
-        shift + S8Space.ascender(fontSize) - S8Space.ascender(trailSize);
-    final bool gap = chip != null && trailing.isNotEmpty;
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double leadWidth = text.isEmpty ? 0 : _spanWidth(text, style);
-        final double chipWidth = chip == null ? 0 : _sampleChipWidth();
-        final double spaceWidth = gap ? _spanWidth(' ', style) : 0;
-        final double trailWidth = trailing.isEmpty
-            ? 0
-            : _spanWidth(
-                trailing,
-                trailStyle.copyWith(height: trailHeight / trailSize),
-              );
-        final double used = leadWidth + chipWidth + spaceWidth + trailWidth;
-        final double dx = centered
-            ? math.max(0.0, (constraints.maxWidth - used) / 2)
-            : 0;
-        var x = dx;
-        final List<Widget> children = <Widget>[];
-        void place(double width, double top, double box, Widget child) {
-          children.add(
-            Positioned(
-              left: x,
-              top: top,
-              width: width,
-              height: box,
-              child: child,
-            ),
-          );
-          x += width;
-        }
-
-        if (text.isNotEmpty) {
-          place(
-            leadWidth,
-            shift,
-            strut,
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                text,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.clip,
-                style: style,
-                textHeightBehavior: S8Space.lineBox,
-              ),
-            ),
-          );
-        }
-        if (chip != null) {
-          place(chipWidth, shift + chipTop, chipHeight, chip);
-        }
-        if (gap) {
-          place(spaceWidth, shift, strut, const SizedBox.shrink());
-        }
-        if (trailing.isNotEmpty) {
-          place(
-            trailWidth,
-            trailTop,
-            trailHeight,
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                trailing,
-                maxLines: 1,
-                softWrap: false,
-                overflow: TextOverflow.clip,
-                style: trailStyle.copyWith(
-                  height: trailHeight / trailSize,
-                  leadingDistribution: TextLeadingDistribution.even,
-                ),
-                textHeightBehavior: S8Space.lineBox,
-              ),
-            ),
-          );
-        }
-        return SizedBox(
-          width: constraints.maxWidth,
-          height: height,
-          child: Stack(clipBehavior: Clip.none, children: children),
-        );
-      },
-    );
-  }
-}
-
-/// "SAMPLE conversation for illustration" under a thread.
-///
-/// The timestamp's margin-bottom is 12 and this line's margin-top is 6.
-/// Those collapse, and the 12 already sits in the timestamp padding. The
-/// parent face is the body 16 px. The caption sits on that baseline, and
-/// the gap is one space in that face.
-class _SampleConversation extends StatelessWidget {
-  const _SampleConversation();
-
-  @override
-  Widget build(BuildContext context) {
-    return const _MiddleLine(
-      text: '',
-      style: TextStyle(
-        fontFamily: AppTypography.fontFamily,
-        fontSize: 16,
-        fontWeight: FontWeight.w400,
-        height: S8Space.normal,
-        leadingDistribution: TextLeadingDistribution.even,
-        decoration: TextDecoration.none,
-      ),
-      chip: _NormalSample(),
-      trailing: 'conversation for illustration',
-      trailingStyle: _meta,
-      centered: true,
-    );
-  }
-}
-
-/// Paints [text] on Chrome's line step.
-///
-/// Flutter rounds a fractional strut to a whole logical pixel. The slot keeps
-/// the CSS advance, and each line is placed at that step.
-class _CssLines extends StatelessWidget {
-  const _CssLines({
-    required this.text,
-    required this.style,
-    required this.step,
-  });
-
-  final String text;
-  final TextStyle style;
-  final double step;
-  TextAlign get align => TextAlign.start;
-  int? get maxLines => null;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final double width = constraints.maxWidth;
-        final TextPainter painter = TextPainter(
-          text: TextSpan(text: text, style: style),
-          textDirection: Directionality.of(context),
-          textAlign: align,
-          textScaler: TextScaler.noScaling,
-          textHeightBehavior: S8Space.lineBox,
-          strutStyle: S8Space.strut(
-            style.fontSize ?? 14,
-            height: style.height,
-            weight: style.fontWeight,
-          ),
-          maxLines: maxLines,
-          ellipsis: maxLines == null ? null : '…',
-        )..layout(maxWidth: width);
-        final List<String> lines = <String>[];
-        var start = 0;
-        final String laid = text;
-        while (start < laid.length &&
-            (maxLines == null || lines.length < maxLines!)) {
-          final TextRange range = painter.getLineBoundary(
-            TextPosition(offset: start),
-          );
-          if (range.end <= start) {
-            break;
-          }
-          lines.add(laid.substring(range.start, range.end).trimRight());
-          start = range.end;
-          // getLineBoundary stays on the line that owns a hard break, so
-          // step past the newline before asking for the next line.
-          while (start < laid.length &&
-              (laid.codeUnitAt(start) == 10 || laid.codeUnitAt(start) == 13)) {
-            start += 1;
-          }
-        }
-        painter.dispose();
-        if (lines.isEmpty) {
-          return const SizedBox.shrink();
-        }
-        return SizedBox(
-          width: width,
-          height: step * lines.length,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: <Widget>[
-              for (var i = 0; i < lines.length; i++)
-                Positioned(
-                  top: step * i,
-                  left: 0,
-                  right: 0,
-                  height: step,
-                  child: Align(
-                    alignment: align == TextAlign.center
-                        ? Alignment.center
-                        : Alignment.centerLeft,
-                    child: Text(
-                      lines[i],
-                      maxLines: 1,
-                      softWrap: false,
-                      overflow: TextOverflow.clip,
-                      textAlign: align,
-                      style: style,
-                      textHeightBehavior: S8Space.lineBox,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

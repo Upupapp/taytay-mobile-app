@@ -389,8 +389,8 @@ abstract final class ComponentSizes {
   /// The gold "My Taytay ID" button on the My Account header (CSS `.idbtn`).
   static const double headerButton = 50;
 
-  /// Chat bubbles stop at this share of the row (CSS `.msg` max-width 80%).
-  static const double bubbleWidthFactor = 0.8;
+  /// Chat bubbles stop at this share of the row (CSS `.them` max-width 82%).
+  static const double bubbleWidthFactor = 0.82;
 
   /// Bottom navigation bar, without the safe-area inset.
   static const double navigationBar = 80;

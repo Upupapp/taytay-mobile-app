@@ -3,21 +3,24 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../../core/design/brand_gradients.dart';
+import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/ringed_input_border.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
-import '../../../shared/widgets/message_field.dart';
-import '../../../shared/widgets/municipal_header.dart';
 import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/status_line.dart';
+import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_back_button.dart';
 import '../../../shared/widgets/taytay_icon.dart';
@@ -78,6 +81,7 @@ class DirectoryCanvas extends StatelessWidget {
     this.onChip,
     this.onBell,
     this.officeMissing = false,
+    this.composeError,
     super.key,
   });
 
@@ -132,6 +136,9 @@ class DirectoryCanvas extends StatelessWidget {
   /// so, with [onRetry], instead of waiting.
   final bool officeMissing;
 
+  /// What went wrong with the last send, drawn above Send.
+  final String? composeError;
+
   @override
   Widget build(BuildContext context) {
     final Office? current = office;
@@ -184,12 +191,9 @@ class DirectoryCanvas extends StatelessWidget {
                 onApp: onApp,
                 onServiceLine: onServiceLine,
               ),
-      _ => Column(
-        children: <Widget>[
-          _messagingHeader(current),
-          Expanded(child: _messagingBody(current)),
-        ],
-      ),
+      DirectoryFrame.compose => _ComposePage(canvas: this),
+      DirectoryFrame.sent => _SentPage(canvas: this),
+      DirectoryFrame.thread => _ThreadPage(canvas: this),
     };
     return Material(
       color: frame == DirectoryFrame.detail
@@ -197,53 +201,6 @@ class DirectoryCanvas extends StatelessWidget {
           : BrandColors.background,
       child: page,
     );
-  }
-
-  Widget _messagingHeader(Office? current) {
-    return switch (frame) {
-      DirectoryFrame.compose => MunicipalHeader(
-        title: 'New message',
-        subtitle: 'Bayan ng Taytay · Rizal',
-        onBack: onBack,
-        plainSeal: true,
-      ),
-      DirectoryFrame.sent => MunicipalHeader(
-        title: 'Message sent',
-        subtitle: 'Bayan ng Taytay · Rizal',
-        onBack: onBack,
-        plainSeal: true,
-      ),
-      _ => MunicipalHeader(
-        title: current?.shortName ?? '',
-        subtitle: current?.name ?? '',
-        onBack: onBack,
-        plainSeal: true,
-      ),
-    };
-  }
-
-  Widget _messagingBody(Office? current) {
-    return switch (frame) {
-      DirectoryFrame.compose when current != null => _ComposeBody(
-        office: current,
-        onSend: onSend,
-        messageController: messageController,
-        selectedTopic: selectedTopic,
-        onTopic: onTopic,
-        onAttach: onAttach,
-        attachmentLabel: attachmentLabel,
-      ),
-      DirectoryFrame.sent => _SentBody(
-        emergencyPhone: emergencyPhone,
-        onMessages: onMessages,
-        onBack: onBack,
-      ),
-      DirectoryFrame.thread => _ThreadBody(
-        bubbles: bubbles,
-        dayLabel: dayLabel,
-      ),
-      _ => const SizedBox.shrink(),
-    };
   }
 }
 
@@ -1445,176 +1402,273 @@ class _Services extends StatelessWidget {
   }
 }
 
-class _ComposeBody extends StatelessWidget {
-  const _ComposeBody({
-    required this.office,
-    this.onSend,
-    this.messageController,
-    this.selectedTopic,
-    this.onTopic,
-    this.onAttach,
-    this.attachmentLabel,
-  });
+/// `NewMessage.dc.html`: the blue header, who the message is to, the
+/// topic, the message, an optional file, the privacy note, and Send in the
+/// footer with any problem stated just above it.
+class _ComposePage extends StatelessWidget {
+  const _ComposePage({required this.canvas});
 
-  final Office office;
-  final VoidCallback? onSend;
-  final TextEditingController? messageController;
-  final String? selectedTopic;
-  final VoidCallback? onTopic;
-  final VoidCallback? onAttach;
-  final String? attachmentLabel;
+  final DirectoryCanvas canvas;
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    final Office? office = canvas.office;
+    final String? error = canvas.composeError;
+    final double safeBottom = MediaQuery.paddingOf(context).bottom;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        // MSWDO's wrapped "To" name sits a line higher than the other drafts.
-        if (office.id == 'mswdo') const SizedBox(height: 4 / 3),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration,
-          child: Row(
-            children: <Widget>[
-              _Tile(
-                icon: office.id == 'pio'
-                    ? TaytayIcons.megaphone
-                    : _officeIcon(office.icon),
-                label: office.shortName,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        BlueHeader(
+          title: 'New message',
+          subtitle: 'Bayan ng Taytay · Rizal',
+          showBack: true,
+          onBack: canvas.onBack,
+          actions: const <Widget>[HeaderSeal()],
+        ),
+        Expanded(
+          child: office == null
+              ? const Padding(
+                  padding: EdgeInsets.all(Spacing.lg),
+                  child: LoadingSkeleton(
+                    layout: SkeletonLayout.detail,
+                    semanticLabel: 'Loading the office',
+                  ),
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    Spacing.lg,
+                    Spacing.lg,
+                    Spacing.lg,
+                    Spacing.xl,
+                  ),
                   children: <Widget>[
-                    const Text('To', style: _factLabel),
-                    Text(office.composeTo ?? office.name, style: _listTitle),
+                    _ToRow(office: office),
+                    const SizedBox(height: Spacing.formGap),
+                    const AuthFieldLabel('Topic'),
+                    const SizedBox(height: Spacing.sm),
+                    _TopicField(
+                      topic: canvas.selectedTopic ?? office.topic ?? '',
+                      chooser: office.offersTopics,
+                      onTap: canvas.onTopic,
+                    ),
+                    const SizedBox(height: Spacing.formGap),
+                    const AuthFieldLabel('Message'),
+                    const SizedBox(height: Spacing.sm),
+                    TextField(
+                      key: const Key('directory-message-field'),
+                      controller: canvas.messageController,
+                      minLines: 6,
+                      maxLines: 10,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      style: AppTypography.fieldValue.copyWith(
+                        fontWeight: AppTypography.body,
+                        color: BrandColors.ink,
+                        height: 1.5,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Write your message',
+                      ),
+                    ),
+                    const SizedBox(height: Spacing.md),
+                    _AttachButton(
+                      onAttach: canvas.onAttach,
+                      label: canvas.attachmentLabel,
+                    ),
+                    const SizedBox(height: Spacing.md),
+                    SoftNote(message: _privacyLine(office)),
                   ],
                 ),
-              ),
-            ],
-          ),
         ),
-        const _FieldLabel('Topic'),
-        _Hit(
-          hitKey: const Key('directory-topic'),
-          label: 'Topic',
-          onTap: onTopic,
-          child: _FieldBox(
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    selectedTopic ?? office.topic ?? '',
-                    style: _fieldInk,
+        if (office != null)
+          ColoredBox(
+            color: BrandColors.white,
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(
+                Spacing.lg,
+                Spacing.md,
+                Spacing.lg,
+                Spacing.lg + Spacing.xs + safeBottom,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  if (error != null) ...<Widget>[
+                    SoftNote(tone: NoteTone.error, message: error),
+                    const SizedBox(height: Spacing.md),
+                  ],
+                  FilledButton.icon(
+                    key: const Key('directory-send'),
+                    onPressed: canvas.onSend,
+                    icon: const TaytayIcon(
+                      icon: TaytayIcons.send,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: IconSizes.sm,
+                    ),
+                    label: const Text('Send message'),
                   ),
-                ),
-                // No chevron when there is nothing to choose: the field then
-                // only says what the subject will be.
-                if (office.offersTopics)
-                  const TaytayIcon(
-                    icon: TaytayIcons.chevronDown,
-                    size: 18,
-                    color: BrandColors.chevron,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
-        MessageField(
-          controller: messageController,
-          preview: office.draft ?? '',
-          fieldKey: const Key('directory-message-field'),
-        ),
-        // The paperclip sits above the cap height. 10dp keeps that ink on
-        // the design's attach line; 8dp lifts the run by more than 2dp.
-        const SizedBox(height: 10),
-        _attachBlock(),
-        // 14dp is the design gap under the attach row. The 10 above it
-        // stays, so the paperclip keeps its line and the notice does not.
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration.copyWith(color: const Color(0xFFF6F8FB)),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const TaytayIcon(
-                icon: TaytayIcons.shield,
-                size: 18,
-                color: BrandColors.listMeta,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(child: Text(office.privacy ?? '', style: _privacy)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _FilledButton(
-          hitKey: const Key('directory-send'),
-          label: 'Send message',
-          icon: TaytayIcons.send,
-          onTap: onSend,
-        ),
       ],
     );
   }
 
-  /// The specimen row when nothing is attached and the control is not live.
-  Widget _attachBlock() {
-    const Widget row = Row(
-      children: <Widget>[
-        TaytayIcon(
-          icon: TaytayIcons.paperclip,
-          size: 16,
-          color: BrandColors.taytayBlue,
-          semanticLabel: '',
-          excludeSemantics: true,
-        ),
-        SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Attach photo or PDF (optional)',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: BrandColors.taytayBlue,
-              decoration: TextDecoration.none,
+  /// The office's own privacy sentence when it published one, then the
+  /// warning every message carries.
+  static String _privacyLine(Office office) {
+    final String own = (office.privacy ?? '').trim();
+    const String warning =
+        'Don’t share passwords or one-time codes in a message.';
+    return own.isEmpty ? warning : '$own $warning';
+  }
+}
+
+/// CSS `.to`: the office tile, "To", and the office's full name.
+class _ToRow extends StatelessWidget {
+  const _ToRow({required this.office});
+
+  final Office office;
+
+  @override
+  Widget build(BuildContext context) {
+    return SoftCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: Spacing.section,
+        vertical: Spacing.md,
+      ),
+      radius: Radii.lg,
+      child: Row(
+        children: <Widget>[
+          _tileFor(office),
+          const SizedBox(width: Spacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(
+                  'To',
+                  style: AppTypography.small.copyWith(
+                    fontWeight: AppTypography.strong,
+                    color: BrandColors.muted,
+                  ),
+                ),
+                Text(
+                  office.composeTo ?? office.name,
+                  style: AppTypography.listTitle.copyWith(
+                    color: BrandColors.ink,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The subject as a filled field. It opens the office's topics when there
+/// are any to choose; otherwise it only says what the subject will be.
+class _TopicField extends StatelessWidget {
+  const _TopicField({required this.topic, required this.chooser, this.onTap});
+
+  final String topic;
+  final bool chooser;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final BorderRadius corners = BorderRadius.circular(Radii.field);
+    return Semantics(
+      button: onTap != null,
+      label: topic.isEmpty ? 'Topic' : 'Topic, $topic',
+      excludeSemantics: true,
+      child: Material(
+        color: BrandColors.softFill,
+        borderRadius: corners,
+        child: InkWell(
+          key: const Key('directory-topic'),
+          borderRadius: corners,
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: ComponentSizes.fieldHeight,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: Spacing.lg,
+                vertical: Spacing.md,
+              ),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      topic,
+                      style: AppTypography.fieldValue.copyWith(
+                        color: BrandColors.ink,
+                      ),
+                    ),
+                  ),
+                  if (chooser)
+                    const TaytayIcon(
+                      icon: TaytayIcons.chevronDown,
+                      semanticLabel: '',
+                      excludeSemantics: true,
+                      size: IconSizes.sm,
+                      color: BrandColors.chevron,
+                    ),
+                ],
+              ),
             ),
           ),
         ),
-      ],
+      ),
     );
-    if (onAttach == null && attachmentLabel == null) return row;
-    final String? label = attachmentLabel;
+  }
+}
+
+/// CSS `.attach`: a soft blue pill, then the chosen file's name.
+class _AttachButton extends StatelessWidget {
+  const _AttachButton({this.onAttach, this.label});
+
+  final VoidCallback? onAttach;
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? label = this.label;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        _Hit(
-          hitKey: const Key('directory-attach'),
-          label: 'Attach photo or PDF (optional)',
-          onTap: onAttach,
-          child: row,
+        FilledButton.tonalIcon(
+          key: const Key('directory-attach'),
+          onPressed: onAttach,
+          style: TaytayButtonStyles.compact().copyWith(
+            shape: const WidgetStatePropertyAll<OutlinedBorder>(
+              StadiumBorder(),
+            ),
+          ),
+          icon: const TaytayIcon(
+            icon: TaytayIcons.paperclip,
+            semanticLabel: '',
+            excludeSemantics: true,
+            size: IconSizes.sm,
+          ),
+          label: const Text('Attach photo or PDF (optional)'),
         ),
         if (label != null) ...<Widget>[
-          const SizedBox(height: 8),
+          const SizedBox(height: Spacing.sm),
           Text(
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: BrandColors.textSecondary,
-              decoration: TextDecoration.none,
+            style: AppTypography.listDetail.copyWith(
+              fontWeight: AppTypography.medium,
+              color: BrandColors.text,
             ),
           ),
         ],
@@ -1623,226 +1677,164 @@ class _ComposeBody extends StatelessWidget {
   }
 }
 
-class _SentBody extends StatelessWidget {
-  const _SentBody({required this.emergencyPhone, this.onMessages, this.onBack});
+/// `MessageSent.dc.html`: the success page with who it went to, what
+/// happens next, and the way to Messages and back to the Directory.
+class _SentPage extends StatelessWidget {
+  const _SentPage({required this.canvas});
 
-  final String emergencyPhone;
-  final VoidCallback? onMessages;
-  final VoidCallback? onBack;
+  final DirectoryCanvas canvas;
 
   @override
   Widget build(BuildContext context) {
-    final String phone = emergencyPhone;
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        const Padding(
-          padding: EdgeInsets.fromLTRB(10, 40, 10, 0),
-          child: Column(
-            children: <Widget>[
-              _SentMark(),
-              SizedBox(height: 16),
-              Text(
-                'Message sent',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
+    final Office? office = canvas.office;
+    final String phone = canvas.emergencyPhone;
+    return SuccessScreen(
+      title: 'Message sent',
+      message:
+          "We'll notify you, and the conversation is saved in My Account › "
+          'Messages.',
+      details: <SuccessDetail>[
+        if (office != null) SuccessDetail(label: 'To', value: office.shortName),
+      ],
+      body: phone.isEmpty
+          ? null
+          : DecoratedBox(
+              decoration: BoxDecoration(
+                color: BrandColors.red50,
+                borderRadius: BorderRadius.circular(Radii.lg),
               ),
-              SizedBox(height: 4),
-              Text.rich(
-                TextSpan(
-                  style: _sentCopy,
-                  children: <InlineSpan>[
-                    TextSpan(
-                      text:
-                          'The office usually replies within 1–2 working days ',
+              child: Padding(
+                padding: const EdgeInsets.all(Spacing.md),
+                child: Row(
+                  children: <Widget>[
+                    const IconTile.glyph(
+                      glyph: TaytayGlyph.siren,
+                      tone: TileTone.red,
+                      tileSize: IconTileSize.small,
                     ),
-                    WidgetSpan(
-                      alignment: PlaceholderAlignment.middle,
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 1),
-                        child: SampleTag(),
+                    const SizedBox(width: Spacing.md),
+                    Expanded(
+                      child: Text(
+                        "For emergencies don't wait for a reply: call the "
+                        'Sagip Taytay Command Center, $phone.',
+                        style: AppTypography.listDetail.copyWith(
+                          fontWeight: AppTypography.medium,
+                          color: BrandColors.redInk,
+                        ),
                       ),
-                    ),
-                    TextSpan(
-                      text:
-                          ". We'll notify you, and the conversation is saved in My Account › Messages.",
                     ),
                   ],
                 ),
-                textAlign: TextAlign.center,
               ),
-            ],
+            ),
+      primaryLabel: 'Go to Messages',
+      onPrimary: canvas.onMessages,
+      secondaryLabel: 'Back to Directory',
+      onSecondary: canvas.onBack,
+      showBack: true,
+      onBack: canvas.onBack,
+    );
+  }
+}
+
+/// A read-only conversation with an office (`Conversation.dc.html` without
+/// the composer): the office in the header, the day, and the bubbles.
+class _ThreadPage extends StatelessWidget {
+  const _ThreadPage({required this.canvas});
+
+  final DirectoryCanvas canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final Office? office = canvas.office;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        BlueHeader(
+          title: office?.shortName ?? '',
+          subtitle: office == null || office.name == office.shortName
+              ? null
+              : office.name,
+          showBack: true,
+          onBack: canvas.onBack,
+        ),
+        Expanded(
+          child: Semantics(
+            container: true,
+            label: 'Conversation',
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                Spacing.section,
+                Spacing.lg,
+                Spacing.xl,
+              ),
+              children: <Widget>[
+                if (canvas.dayLabel.isNotEmpty) ...<Widget>[
+                  ConversationDayChip(canvas.dayLabel),
+                  const SizedBox(height: Spacing.md),
+                ],
+                for (final DirectoryThreadBubble bubble in canvas.bubbles)
+                  ConversationBubble(
+                    body: bubble.body ?? '',
+                    meta: bubble.when,
+                    mine: bubble.fromResident,
+                    attachments: <Widget>[
+                      if (bubble.attachment case final String name)
+                        _FileLine(
+                          name: name,
+                          meta: bubble.attachmentMeta,
+                          mine: bubble.fromResident,
+                        ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 23),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: _cardDecoration,
-          child: Row(
+      ],
+    );
+  }
+}
+
+/// CSS `.file`: a file in a message, its name over its type and size.
+class _FileLine extends StatelessWidget {
+  const _FileLine({required this.name, required this.mine, this.meta});
+
+  final String name;
+  final String? meta;
+  final bool mine;
+
+  @override
+  Widget build(BuildContext context) {
+    final String? meta = this.meta;
+    final Color ink = mine ? BrandColors.white : BrandColors.ink;
+    return Row(
+      children: <Widget>[
+        const IconTile.glyph(
+          glyph: TaytayGlyph.document,
+          tone: TileTone.red,
+          tileSize: IconTileSize.small,
+        ),
+        const SizedBox(width: Spacing.md),
+        Flexible(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              const TaytayIcon(
-                icon: TaytayIcons.shield,
-                size: 18,
-                color: BrandColors.listMeta,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  "For emergencies don't wait for a reply: call the Sagip "
-                  'Taytay Command Center, $phone.',
-                  style: _privacy,
+              Text(
+                name,
+                style: AppTypography.listTitle.copyWith(
+                  fontWeight: AppTypography.strong,
+                  color: ink,
                 ),
               ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        _FilledButton(
-          hitKey: const Key('directory-go-messages'),
-          label: 'Go to Messages',
-          icon: TaytayIcons.inbox,
-          onTap: onMessages,
-        ),
-        const SizedBox(height: 10),
-        _StrokeButton(
-          hitKey: const Key('directory-back-directory'),
-          label: 'Back to Directory',
-          onTap: onBack,
-        ),
-      ],
-    );
-  }
-}
-
-class _SentMark extends StatelessWidget {
-  const _SentMark();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 88,
-      height: 88,
-      decoration: const BoxDecoration(
-        color: Color(0xFFE6F4EC),
-        shape: BoxShape.circle,
-      ),
-      child: const TaytayIcon(
-        icon: TaytayIcons.send,
-        size: 38,
-        color: BrandColors.success,
-        semanticLabel: '',
-        excludeSemantics: true,
-      ),
-    );
-  }
-}
-
-class _ThreadBody extends StatelessWidget {
-  const _ThreadBody({required this.bubbles, required this.dayLabel});
-
-  final List<DirectoryThreadBubble> bubbles;
-  final String dayLabel;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: <Widget>[
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 22.33, 16, 8),
-            children: <Widget>[
-              Center(
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFEEF1F6),
-                    borderRadius: BorderRadius.all(Radius.circular(999)),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 3,
-                    ),
-                    child: Text(
-                      dayLabel,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: BrandColors.listMeta,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
+              if (meta != null)
+                Text(
+                  meta,
+                  style: AppTypography.small.copyWith(
+                    color: mine ? BrandColors.onHeaderLede : BrandColors.muted,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              for (final DirectoryThreadBubble bubble in bubbles)
-                _Bubble(bubble: bubble),
-              const SizedBox(height: 1.67),
-              const Center(
-                child: Wrap(
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 6,
-                  children: <Widget>[
-                    SampleTag(),
-                    Text('conversation for illustration', style: _meta),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 24),
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: BrandColors.cardLine)),
-          ),
-          child: const Row(
-            children: <Widget>[
-              TaytayIcon(
-                icon: TaytayIcons.paperclip,
-                size: 20,
-                color: BrandColors.listMeta,
-                semanticLabel: 'Attach',
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: _FieldBox(child: Text('Write a message…', style: _hint)),
-              ),
-              SizedBox(width: 10),
-              _Hit(
-                hitKey: Key('directory-thread-send'),
-                label: 'Send',
-                width: 42,
-                height: 42,
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: BrandColors.taytayBlue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: SizedBox(
-                    width: 42,
-                    height: 42,
-                    child: TaytayIcon(
-                      icon: TaytayIcons.send,
-                      size: 18,
-                      color: Colors.white,
-                      semanticLabel: '',
-                      excludeSemantics: true,
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -1850,336 +1842,6 @@ class _ThreadBody extends StatelessWidget {
     );
   }
 }
-
-class _Bubble extends StatelessWidget {
-  const _Bubble({required this.bubble});
-
-  final DirectoryThreadBubble bubble;
-
-  @override
-  Widget build(BuildContext context) {
-    final bool mine = bubble.fromResident;
-    final Widget body = bubble.attachment == null
-        ? Text(
-            bubble.body ?? '',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 13,
-              height: 1.45,
-              fontWeight: FontWeight.w500,
-              color: mine ? Colors.white : BrandColors.textPrimary,
-              decoration: TextDecoration.none,
-            ),
-          )
-        : Row(
-            children: <Widget>[
-              const _Tile(
-                icon: TaytayIcons.fileText,
-                label: 'Attachment',
-                size: 36,
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(bubble.attachment!, style: _factValue),
-                    const SizedBox(height: 7.33),
-                    Text(bubble.attachmentMeta ?? '', style: _meta),
-                  ],
-                ),
-              ),
-            ],
-          );
-    return Align(
-      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 270),
-        child: Column(
-          crossAxisAlignment: mine
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          children: <Widget>[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: mine ? BrandColors.taytayBlue : Colors.white,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(mine ? 16 : 4),
-                  bottomRight: Radius.circular(mine ? 4 : 16),
-                ),
-                border: mine ? null : Border.all(color: BrandColors.cardLine),
-              ),
-              child: body,
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                4,
-                bubble.when.contains('9:06') ? 8 : 6,
-                4,
-                bubble.when.contains('Seen')
-                    ? 9
-                    : bubble.when.contains('9:06')
-                    ? 10
-                    : 12,
-              ),
-              child: Text(bubble.when, style: _meta),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Tile extends StatelessWidget {
-  const _Tile({required this.icon, required this.label, this.size = 44});
-
-  final IconData icon;
-  final String label;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: BrandColors.surfaceMuted,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TaytayIcon(
-        icon: icon,
-        size: 20,
-        color: BrandColors.taytayBlue,
-        semanticLabel: label,
-      ),
-    );
-  }
-}
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 5),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontFamily: AppTypography.fontFamily,
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: BrandColors.fieldLabel,
-          decoration: TextDecoration.none,
-        ),
-      ),
-    );
-  }
-}
-
-class _FieldBox extends StatelessWidget {
-  const _FieldBox({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 0),
-      alignment: Alignment.centerLeft,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: MessageField.border, width: 1.3),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _FilledButton extends StatelessWidget {
-  const _FilledButton({
-    required this.label,
-    this.hitKey,
-    this.icon,
-    this.onTap,
-  });
-
-  final String label;
-  final Key? hitKey;
-  final IconData? icon;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: hitKey,
-      label: label,
-      height: 48,
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: BrandColors.taytayBlue,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            if (icon != null) ...<Widget>[
-              TaytayIcon(
-                icon: icon!,
-                size: 16,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              const SizedBox(width: 8),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _button.copyWith(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StrokeButton extends StatelessWidget {
-  const _StrokeButton({required this.label, this.hitKey, this.onTap});
-
-  final String label;
-  final Key? hitKey;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: hitKey,
-      label: label,
-      height: 48,
-      onTap: onTap,
-      child: Container(
-        height: 48,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        foregroundDecoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: BrandColors.taytayBlue, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Flexible(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: _button,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Lays out [child] at its own size. A mark smaller than 48 dp keeps a 48 dp
-/// hit without growing the layout. A row or button is the hit itself.
-class _Hit extends StatelessWidget {
-  const _Hit({
-    required this.child,
-    required this.label,
-    this.hitKey,
-    this.onTap,
-    this.width,
-    this.height,
-  });
-
-  final Widget child;
-  final String label;
-  final Key? hitKey;
-  final VoidCallback? onTap;
-  final double? width;
-  final double? height;
-
-  @override
-  Widget build(BuildContext context) {
-    final double? slotW = width;
-    final double? slotH = height;
-    if (slotW == null || slotH == null) {
-      return Semantics(
-        button: onTap != null,
-        label: label,
-        child: GestureDetector(
-          key: hitKey,
-          behavior: HitTestBehavior.opaque,
-          onTap: onTap,
-          child: child,
-        ),
-      );
-    }
-    final double hitW = slotW < 48 ? 48 : slotW;
-    final double hitH = slotH < 48 ? 48 : slotH;
-    return SizedBox(
-      width: slotW,
-      height: slotH,
-      child: OverflowBox(
-        minWidth: hitW,
-        maxWidth: hitW,
-        minHeight: hitH,
-        maxHeight: hitH,
-        child: Semantics(
-          button: onTap != null,
-          label: label,
-          child: GestureDetector(
-            key: hitKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: onTap,
-            child: SizedBox(
-              width: hitW,
-              height: hitH,
-              child: Center(child: child),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-IconData _officeIcon(OfficeIcon icon) => switch (icon) {
-  OfficeIcon.handHeart => TaytayIcons.handHeart,
-  OfficeIcon.landmark => TaytayIcons.landmark,
-  OfficeIcon.fileText => TaytayIcons.fileText,
-  OfficeIcon.building2 => TaytayIcons.building2,
-  OfficeIcon.siren => TaytayIcons.siren,
-  OfficeIcon.graduationCap => TaytayIcons.graduationCap,
-  OfficeIcon.newspaper => TaytayIcons.newspaper,
-  OfficeIcon.users => TaytayIcons.users,
-  OfficeIcon.stethoscope => TaytayIcons.stethoscope,
-};
 
 IconData _factIcon(OfficeFactIcon icon) => switch (icon) {
   OfficeFactIcon.pin => TaytayIcons.mapPin,
@@ -2189,86 +1851,3 @@ IconData _factIcon(OfficeFactIcon icon) => switch (icon) {
   OfficeFactIcon.message => TaytayIcons.messageSquare,
   OfficeFactIcon.siren => TaytayIcons.siren,
 };
-
-const BoxDecoration _cardDecoration = BoxDecoration(
-  color: Colors.white,
-  borderRadius: BorderRadius.all(Radius.circular(16)),
-  border: Border.fromBorderSide(BorderSide(color: BrandColors.cardLine)),
-);
-
-const TextStyle _listTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  height: 1.2,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _meta = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _factLabel = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w700,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _factValue = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w700,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _button = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.taytayBlue,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _fieldInk = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w600,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _hint = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.muted,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _sentCopy = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  height: 1.5,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _privacy = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  height: 1.5,
-  leadingDistribution: TextLeadingDistribution.even,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);

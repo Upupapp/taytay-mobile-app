@@ -17,6 +17,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
@@ -472,7 +473,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
         ? (_file?.fileName ?? (_mediaId == null ? null : 'Attachment'))
         : null;
     return Scaffold(
-      backgroundColor: BrandColors.surface,
+      backgroundColor: BrandColors.background,
       body: Column(
         children: <Widget>[
           Expanded(
@@ -523,18 +524,15 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
               onThreadMoreRetry: _pageError == null ? null : _loadOlder,
             ),
           ),
-          if (_error != null)
+          if (_error case final String error)
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                _error!,
-                style: const TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: BrandColors.danger,
-                ),
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.lg,
+                0,
+                Spacing.lg,
+                Spacing.md,
               ),
+              child: SoftNote(tone: NoteTone.error, message: error),
             ),
         ],
       ),
@@ -557,26 +555,23 @@ class _CloseConversationAction extends StatelessWidget {
         key: const Key('account-thread-close'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: const SizedBox(
-          height: 48,
+        child: SizedBox(
+          height: A11y.minTapTarget,
           child: Row(
             children: <Widget>[
-              TaytayIcon(
+              const TaytayIcon(
                 icon: TaytayIcons.circleX,
-                size: 20,
-                color: BrandColors.danger,
+                size: IconSizes.sm,
+                color: BrandColors.redInk,
                 semanticLabel: '',
                 excludeSemantics: true,
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: Spacing.md),
               Text(
                 'Close conversation',
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: BrandColors.danger,
-                  decoration: TextDecoration.none,
+                style: AppTypography.sectionTitle.copyWith(
+                  fontWeight: AppTypography.strong,
+                  color: BrandColors.redInk,
                 ),
               ),
             ],

@@ -7,6 +7,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/api/send_key.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/taytay_icons.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
@@ -17,6 +18,7 @@ import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
+import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
@@ -323,6 +325,14 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
               for (final String topic in office.topics)
                 ListTile(
                   title: Text(topic),
+                  trailing: topic == _topic
+                      ? const TaytayIcon(
+                          icon: TaytayIcons.check,
+                          semanticLabel: 'Chosen',
+                          size: IconSizes.sm,
+                          color: BrandColors.blue,
+                        )
+                      : null,
                   onTap: () => Navigator.of(sheetContext).pop(topic),
                 ),
             ],
@@ -465,36 +475,18 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: BrandColors.background,
-      body: Column(
-        children: <Widget>[
-          Expanded(
-            child: DirectoryCanvas(
-              frame: DirectoryFrame.compose,
-              offices: const <Office>[],
-              office: _office,
-              messageController: _message,
-              selectedTopic: _topic,
-              onTopic: (_office?.offersTopics ?? false) ? _pickTopic : null,
-              onAttach: _attach,
-              attachmentLabel: _file?.fileName,
-              onBack: () => _back(context),
-              onSend: _send,
-            ),
-          ),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: Text(
-                _error!,
-                style: const TextStyle(
-                  fontFamily: 'Plus Jakarta Sans',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFFB3261E),
-                ),
-              ),
-            ),
-        ],
+      body: DirectoryCanvas(
+        frame: DirectoryFrame.compose,
+        offices: const <Office>[],
+        office: _office,
+        messageController: _message,
+        selectedTopic: _topic,
+        onTopic: (_office?.offersTopics ?? false) ? _pickTopic : null,
+        onAttach: _attach,
+        attachmentLabel: _file?.fileName,
+        composeError: _error,
+        onBack: () => _back(context),
+        onSend: _send,
       ),
     );
   }
@@ -512,6 +504,7 @@ class MessageSentScreen extends StatefulWidget {
 
 class _MessageSentScreenState extends State<MessageSentScreen> {
   String _phone = '';
+  Office? _office;
   bool _started = false;
 
   @override
@@ -525,7 +518,11 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
       mock: dependencies.config.usesMockData,
       api: dependencies.apiClient,
     ).then((Office? office) {
-      if (mounted) setState(() => _phone = office?.phone ?? '');
+      if (!mounted) return;
+      setState(() {
+        _office = office;
+        _phone = office?.phone ?? '';
+      });
     });
   }
 
@@ -536,6 +533,7 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
       body: DirectoryCanvas(
         frame: DirectoryFrame.sent,
         offices: const <Office>[],
+        office: _office,
         emergencyPhone: _phone,
         onBack: () => context.goNamed(AppRoute.services.routeName),
         onMessages: () => context.goNamed(AppRoute.messagesInbox.routeName),

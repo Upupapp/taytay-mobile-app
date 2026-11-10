@@ -27,10 +27,12 @@ import 'package:taytay_resident/features/settings/presentation/privacy_controls_
 import 'package:taytay_resident/features/settings/presentation/settings_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
+import 'package:taytay_resident/shared/widgets/conversation.dart';
 import 'package:taytay_resident/shared/widgets/icon_tile.dart';
 import 'package:taytay_resident/shared/widgets/notice_panel.dart';
 import 'package:taytay_resident/shared/widgets/pill_button_row.dart';
 import 'package:taytay_resident/shared/widgets/settings_list.dart';
+import 'package:taytay_resident/shared/widgets/success_screen.dart';
 import 'package:taytay_resident/shared/widgets/surface_cards.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
@@ -639,6 +641,163 @@ void main() {
     });
   });
 
+  group('messaging', () {
+    testWidgets('compose, sent and thread fit every phone', (tester) async {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      final Office office = catalogue.offices.singleWhere(
+        (Office office) => office.id == 'bplo',
+      );
+      for (final Widget Function() frame in <Widget Function()>[
+        () => DirectoryCanvas(
+          frame: DirectoryFrame.compose,
+          offices: const <Office>[],
+          office: office,
+          selectedTopic: 'A topic long enough to wrap at large text',
+          attachmentLabel: 'a-file-name-that-is-rather-long.pdf',
+          composeError: 'Write a message before sending.',
+          onAttach: () {},
+          onTopic: () {},
+          onSend: () {},
+        ),
+        () => const DirectoryCanvas(
+          frame: DirectoryFrame.compose,
+          offices: <Office>[],
+        ),
+        () => DirectoryCanvas(
+          frame: DirectoryFrame.sent,
+          offices: const <Office>[],
+          office: office,
+          emergencyPhone: office.phone,
+          onMessages: () {},
+          onBack: () {},
+        ),
+        () => DirectoryCanvas(
+          frame: DirectoryFrame.thread,
+          offices: const <Office>[],
+          office: office,
+          dayLabel: 'Today',
+          bubbles: const <DirectoryThreadBubble>[
+            DirectoryThreadBubble(
+              fromResident: true,
+              when: '8:42 PM',
+              body: 'A question long enough to wrap onto several lines.',
+            ),
+            DirectoryThreadBubble(
+              fromResident: false,
+              when: 'BPLO · 9:05 AM',
+              body: 'An answer.',
+              attachment: 'requirements.pdf',
+              attachmentMeta: 'PDF',
+            ),
+          ],
+        ),
+        () => const AccountCanvas(
+          frame: AccountFrame.thread,
+          title: 'Office',
+          subtitle: 'The office name in full',
+          showBack: true,
+          showBell: false,
+          dayLabel: 'Today',
+          bubbles: AccountSpecimen.mswdoBubbles,
+          attachmentLabel: 'a-chosen-file.pdf',
+          onClearAttachment: _noop,
+          onAttach: _noop,
+          onSend: _noop,
+          threadMoreMessage: 'Older messages did not load.',
+          onThreadMoreRetry: _noop,
+        ),
+        () => const AccountCanvas(
+          frame: AccountFrame.thread,
+          title: 'Office',
+          showBack: true,
+          showBell: false,
+          bubbles: AccountSpecimen.treasurerBubbles,
+          threadClosed: true,
+        ),
+      ]) {
+        await expectCleanLayouts(tester, frame, scrollable: false);
+      }
+    });
+
+    testWidgets('compose states its problem above Send, never logged', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(430, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      await tester.pumpWidget(
+        layoutHost(
+          DirectoryCanvas(
+            frame: DirectoryFrame.compose,
+            offices: const <Office>[],
+            office: catalogue.offices.first,
+            composeError: 'Write a message before sending.',
+            onSend: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('Write a message before sending.'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Write a message before sending.')).dy,
+        lessThan(tester.getTopLeft(find.byKey(const Key('directory-send'))).dy),
+      );
+      expect(find.textContaining('one-time codes'), findsOneWidget);
+      expect(find.byType(BlueHeader), findsOneWidget);
+    });
+
+    testWidgets('the sent page is the success pattern without a made-up time', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        layoutHost(
+          DirectoryCanvas(
+            frame: DirectoryFrame.sent,
+            offices: const <Office>[],
+            onMessages: () {},
+            onBack: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(SuccessScreen), findsOneWidget);
+      expect(find.text('Message sent'), findsWidgets);
+      expect(find.textContaining('working days'), findsNothing);
+      expect(find.text('SAMPLE'), findsNothing);
+    });
+
+    testWidgets('a thread is bubbles over the composer', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          const AccountCanvas(
+            frame: AccountFrame.thread,
+            title: 'Office',
+            showBack: true,
+            showBell: false,
+            bubbles: AccountSpecimen.mswdoBubbles,
+            onSend: _noop,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(
+        find.byType(ConversationBubble),
+        findsNWidgets(AccountSpecimen.mswdoBubbles.length),
+      );
+      expect(find.byType(ConversationComposer), findsOneWidget);
+      expect(
+        tester.getSize(find.byKey(const Key('account-thread-send'))),
+        const Size(A11y.minTapTarget, A11y.minTapTarget),
+      );
+    });
+  });
+
   test('restyled screens use tokens: no raw colours, sizes or shadows', () {
     final List<String> offenders = <String>[];
     for (final String path in _restyled) {
@@ -673,6 +832,11 @@ const List<String> _restyled = <String>[
   'lib/shared/widgets/settings_list.dart',
   'lib/shared/widgets/notice_panel.dart',
   'lib/shared/widgets/soft_page.dart',
+  'lib/shared/widgets/conversation.dart',
+  'lib/features/account/presentation/account_canvas.dart',
+  'lib/features/account/presentation/account_pages.dart',
+  'lib/features/directory/presentation/directory_canvas.dart',
+  'lib/features/directory/presentation/directory_screen.dart',
 ];
 
 /// The dev mock, with a session at [level] already restored.
