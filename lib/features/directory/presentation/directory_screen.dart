@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/api/send_key.dart';
+import '../../../core/design/design_tokens.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
@@ -40,6 +41,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   bool _started = false;
   final TextEditingController _search = TextEditingController();
   String _query = '';
+  String _chip = 'All';
 
   @override
   void didChangeDependencies() {
@@ -82,7 +84,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: BrandColors.background,
       body: DirectoryCanvas(
         frame: _offline
             ? DirectoryFrame.offline
@@ -94,6 +96,16 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
         query: _query,
         searchController: _search,
         onSearch: (String value) => setState(() => _query = value),
+        selectedChip: _chip,
+        onChip: (String chip) => setState(() => _chip = chip),
+        onBrowseAll: () {
+          _search.clear();
+          setState(() {
+            _query = '';
+            _chip = 'All';
+          });
+        },
+        onBell: () => context.goNamed(AppRoute.notifications.routeName),
         onOffice: (Office office) => context.pushNamed(
           AppRoute.officeDetail.routeName,
           pathParameters: <String, String>{'officeId': office.id},
@@ -118,6 +130,9 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
   Office? _office;
   bool _started = false;
 
+  /// The read answered without an office: unreachable or not listed.
+  bool _missing = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -137,7 +152,10 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     if (!mounted) return;
     // The hall is the placeholder. The page does not wait on the banner or
     // the office's Tulong list.
-    setState(() => _office = office);
+    setState(() {
+      _office = office;
+      _missing = office == null;
+    });
     if (office == null || mock) return;
     // The hero loads through MediaBytesApi on the canvas, alongside this list.
     // The hall stays in place until those bytes arrive.
@@ -218,11 +236,16 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: BrandColors.background,
       body: DirectoryCanvas(
         frame: DirectoryFrame.detail,
         offices: const <Office>[],
         office: _office,
+        officeMissing: _missing,
+        onRetry: () {
+          setState(() => _missing = false);
+          _load();
+        },
         loadHero: AppDependencies.of(context).config.usesMockData
             ? null
             : AppDependencies.of(context).mediaBytes.officeHero,
@@ -441,7 +464,7 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: BrandColors.background,
       body: Column(
         children: <Widget>[
           Expanded(
@@ -509,7 +532,7 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: BrandColors.background,
       body: DirectoryCanvas(
         frame: DirectoryFrame.sent,
         offices: const <Office>[],
@@ -629,7 +652,7 @@ class _OfficeThreadScreenState extends State<OfficeThreadScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F5FA),
+      backgroundColor: BrandColors.background,
       body: DirectoryCanvas(
         frame: DirectoryFrame.thread,
         offices: const <Office>[],

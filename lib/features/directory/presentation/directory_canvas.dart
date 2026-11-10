@@ -2,15 +2,27 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../../../core/design/brand_assets.dart';
+import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/design/ringed_input_border.dart';
+import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/icon_tile.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/municipal_header.dart';
+import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/status_line.dart';
+import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_back_button.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../../../shared/widgets/taytay_states.dart';
 import '../domain/office.dart';
 
 /// Which 05 frame the canvas is painting.
@@ -27,8 +39,12 @@ enum DirectoryFrame {
 
 /// The Directory pages, painted from the office catalogue.
 ///
-/// One widget covers the list, the nine office pages, compose, the sent
-/// confirmation and the thread. Office pages are public information (D11).
+/// The list, search and offline frames follow `Directory.dc.html`,
+/// `DirectorySearch.dc.html` and `DirectoryOffline.dc.html`: the blue header
+/// with the search field, category chips, and the offices as one soft list
+/// with gradient tiles. An office page follows `Office.dc.html`: the photo,
+/// the white sheet riding over it, pill actions and the facts. Office pages
+/// are public information (D11).
 class DirectoryCanvas extends StatelessWidget {
   const DirectoryCanvas({
     required this.frame,
@@ -58,6 +74,10 @@ class DirectoryCanvas extends StatelessWidget {
     this.attachmentLabel,
     this.loadHero,
     this.onServiceLine,
+    this.selectedChip = 'All',
+    this.onChip,
+    this.onBell,
+    this.officeMissing = false,
     super.key,
   });
 
@@ -99,56 +119,88 @@ class DirectoryCanvas extends StatelessWidget {
   /// Opens a Tulong page for a catalogue line. Directory lines have no slug.
   final ValueChanged<String>? onServiceLine;
 
-  static const Color _pageTop = Color(0xFFEAF0FB);
-  static const Color _searchBorder = Color(0xFFE1E6F0);
-  static const Color _searchInk = Color(0xFF5F6880);
-  static const Color _chipBorder = Color(0xFFE1E6F0);
-  static const Color _chipInk = Color(0xFF33405C);
-  static const Color _bodyInk = Color(0xFF33405C);
-  static const Color _rowLine = Color(0xFFEEF1F6);
-  static const Color _fieldBorder = MessageField.border;
+  /// The category chip in force. 'All' shows every category.
+  final String selectedChip;
+
+  /// Null leaves the chips as labels.
+  final ValueChanged<String>? onChip;
+
+  /// The header bell. Null draws it without an action.
+  final VoidCallback? onBell;
+
+  /// The office page's read answered without an office. The page then says
+  /// so, with [onRetry], instead of waiting.
+  final bool officeMissing;
 
   @override
   Widget build(BuildContext context) {
     final Office? current = office;
-    return ColoredBox(
-      color: BrandColors.surface,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[_pageTop, BrandColors.surface],
-            stops: <double>[0, 260 / 844],
-          ),
-        ),
-        child: Column(
-          children: <Widget>[
-            _header(current),
-            Expanded(child: _body(current)),
-          ],
-        ),
+    final Widget page = switch (frame) {
+      DirectoryFrame.list ||
+      DirectoryFrame.loading ||
+      DirectoryFrame.offline ||
+      DirectoryFrame.searchSpecimen => _ListPage(canvas: this),
+      DirectoryFrame.detail =>
+        current == null
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  BlueHeader(
+                    title: 'Directory',
+                    subtitle: 'Office details',
+                    showBack: true,
+                    onBack: onBack,
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(Spacing.lg),
+                      children: <Widget>[
+                        officeMissing
+                            ? ErrorState(
+                                title: 'This office could not be shown',
+                                message:
+                                    'Taytay LGU could not be reached, or the '
+                                    'office is no longer listed. You can try '
+                                    'again.',
+                                onRetry: onRetry,
+                                boxed: true,
+                              )
+                            : const LoadingSkeleton(
+                                layout: SkeletonLayout.detail,
+                                semanticLabel: 'Loading the office',
+                              ),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : _DetailPage(
+                office: current,
+                loadHero: loadHero,
+                onBack: onBack,
+                onCall: onCall,
+                onDirections: onDirections,
+                onMessage: onMessage,
+                onApp: onApp,
+                onServiceLine: onServiceLine,
+              ),
+      _ => Column(
+        children: <Widget>[
+          _messagingHeader(current),
+          Expanded(child: _messagingBody(current)),
+        ],
       ),
+    };
+    return Material(
+      color: frame == DirectoryFrame.detail
+          ? BrandColors.white
+          : BrandColors.background,
+      child: page,
     );
   }
 
-  Widget _header(Office? current) {
+  Widget _messagingHeader(Office? current) {
     return switch (frame) {
-      DirectoryFrame.list ||
-      DirectoryFrame.loading ||
-      DirectoryFrame.offline => const _ListHeader(),
-      DirectoryFrame.searchSpecimen => MunicipalHeader(
-        title: 'Search',
-        subtitle: 'Directory',
-        onBack: onBack,
-        plainSeal: true,
-      ),
-      DirectoryFrame.detail => MunicipalHeader(
-        title: current?.shortName ?? 'Office',
-        subtitle: 'Office details',
-        onBack: onBack,
-        plainSeal: true,
-      ),
       DirectoryFrame.compose => MunicipalHeader(
         title: 'New message',
         subtitle: 'Bayan ng Taytay · Rizal',
@@ -161,45 +213,17 @@ class DirectoryCanvas extends StatelessWidget {
         onBack: onBack,
         plainSeal: true,
       ),
-      DirectoryFrame.thread => MunicipalHeader(
-        title: current?.shortName ?? 'BPLO',
-        subtitle: current?.name ?? 'Business Permits and Licensing Office',
+      _ => MunicipalHeader(
+        title: current?.shortName ?? '',
+        subtitle: current?.name ?? '',
         onBack: onBack,
         plainSeal: true,
       ),
     };
   }
 
-  Widget _body(Office? current) {
-    final Widget child = switch (frame) {
-      DirectoryFrame.list => _ListBody(
-        offices: offices,
-        chips: chips,
-        query: query,
-        searchController: searchController,
-        onSearch: onSearch,
-        onOffice: onOffice,
-      ),
-      DirectoryFrame.searchSpecimen => _SearchSpecimen(
-        offices: offices,
-        onOffice: onOffice,
-        onBrowseAll: onBrowseAll,
-      ),
-      DirectoryFrame.loading => _LoadingBody(chips: chips),
-      DirectoryFrame.offline => _OfflineBody(
-        offices: offices,
-        onRetry: onRetry,
-        onCall: onCall,
-      ),
-      DirectoryFrame.detail when current != null => _DetailBody(
-        office: current,
-        loadHero: loadHero,
-        onCall: onCall,
-        onDirections: onDirections,
-        onMessage: onMessage,
-        onApp: onApp,
-        onServiceLine: onServiceLine,
-      ),
+  Widget _messagingBody(Office? current) {
+    return switch (frame) {
       DirectoryFrame.compose when current != null => _ComposeBody(
         office: current,
         onSend: onSend,
@@ -220,51 +244,201 @@ class DirectoryCanvas extends StatelessWidget {
       ),
       _ => const SizedBox.shrink(),
     };
-    if (frame == DirectoryFrame.thread) return child;
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (Rect rect) {
-        // CSS `.bd.fade` stays opaque until 28px from the bottom.
-        final double start = rect.height <= 28 ? 0 : 1 - (28 / rect.height);
-        return LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: const <Color>[Colors.white, Colors.white, Colors.transparent],
-          stops: <double>[0, start, 1],
-        ).createShader(rect);
-      },
-      child: child,
+  }
+}
+
+/// The glyph and tile colour for an office's icon key. An office from the
+/// API sends no icon (README "API fields needed"), so it draws the blue
+/// directory tile.
+(TaytayGlyph, TileTone) _officeTile(OfficeIcon icon) => switch (icon) {
+  OfficeIcon.handHeart => (TaytayGlyph.heart, TileTone.green),
+  OfficeIcon.landmark => (TaytayGlyph.bank, TileTone.blue),
+  OfficeIcon.fileText => (TaytayGlyph.document, TileTone.navy),
+  OfficeIcon.building2 => (TaytayGlyph.directory, TileTone.blue),
+  OfficeIcon.siren => (TaytayGlyph.siren, TileTone.red),
+  OfficeIcon.graduationCap => (TaytayGlyph.graduationCap, TileTone.sky),
+  OfficeIcon.newspaper => (TaytayGlyph.megaphone, TileTone.navy),
+  OfficeIcon.users => (TaytayGlyph.users, TileTone.gold),
+  OfficeIcon.stethoscope => (TaytayGlyph.medicalCross, TileTone.red),
+};
+
+/// The office's line without the category it may already start with (the
+/// bundled catalogue writes "Business · Ground Floor"), so the category is
+/// never said twice.
+String _placeOf(Office office, String line) {
+  final String prefix = '${office.category} · ';
+  if (office.category.isNotEmpty && line.startsWith(prefix)) {
+    return line.substring(prefix.length);
+  }
+  return line == office.category ? '' : line;
+}
+
+Widget _tileFor(Office office, {IconTileSize size = IconTileSize.medium}) {
+  final (TaytayGlyph glyph, TileTone tone) = _officeTile(office.icon);
+  return IconTile.glyph(glyph: glyph, tone: tone, tileSize: size);
+}
+
+/// The list, loading, offline and search frames: the blue header (with the
+/// search field, except offline), then the frame's body.
+class _ListPage extends StatelessWidget {
+  const _ListPage({required this.canvas});
+
+  final DirectoryCanvas canvas;
+
+  @override
+  Widget build(BuildContext context) {
+    final DirectoryCanvas c = canvas;
+    final bool search = c.frame == DirectoryFrame.searchSpecimen;
+    final bool offline = c.frame == DirectoryFrame.offline;
+    final VoidCallback? onBell = c.onBell;
+    final Widget header = BlueHeader(
+      leading: search ? null : const HeaderSeal(),
+      showBack: search,
+      onBack: c.onBack,
+      title: search ? 'Search' : 'Directory',
+      subtitle: search ? 'Directory' : 'Municipal offices',
+      actions: <Widget>[
+        if (!search)
+          HeaderIconButton(
+            key: const Key('directory-bell'),
+            icon: TaytayIcons.bell,
+            semanticLabel: 'Notifications',
+            onPressed: onBell,
+          ),
+      ],
+      bottom: offline || search
+          ? null
+          : _SearchField(
+              hint: 'Search offices or services',
+              controller: c.searchController,
+              onChanged: c.onSearch,
+            ),
+    );
+    final Widget body = switch (c.frame) {
+      DirectoryFrame.loading => _LoadingBody(chips: c.chips),
+      DirectoryFrame.offline => _OfflineBody(
+        offices: c.offices,
+        onRetry: c.onRetry,
+        onCall: c.onCall,
+      ),
+      DirectoryFrame.searchSpecimen => _SearchSpecimen(
+        offices: c.offices,
+        onOffice: c.onOffice,
+        onBrowseAll: c.onBrowseAll,
+      ),
+      _ => _ListBody(
+        offices: c.offices,
+        chips: c.chips,
+        query: c.query,
+        selectedChip: c.selectedChip,
+        onChip: c.onChip,
+        onOffice: c.onOffice,
+        onBrowseAll: c.onBrowseAll,
+      ),
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        header,
+        Expanded(child: body),
+      ],
     );
   }
 }
 
-class _ListHeader extends StatelessWidget {
-  const _ListHeader();
+/// CSS `.soft .search`: white, 16 radius, 50 tall, the search glyph, and a
+/// gold focus outline on the blue header.
+class _SearchField extends StatelessWidget {
+  const _SearchField({required this.hint, this.controller, this.onChanged});
+
+  final String hint;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[BrandColors.taytayBlueDark, BrandColors.taytayBlue],
+    const BorderRadius corners = BorderRadius.all(Radius.circular(Radii.lg));
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      textInputAction: TextInputAction.search,
+      style: AppTypography.fieldValue.copyWith(
+        fontWeight: AppTypography.body,
+        color: BrandColors.ink,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        filled: true,
+        fillColor: BrandColors.white,
+        constraints: const BoxConstraints(
+          minHeight: ComponentSizes.fieldHeight,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: Spacing.md,
+          vertical: Spacing.md,
+        ),
+        prefixIcon: const TaytayIcon(
+          icon: TaytayIcons.search,
+          semanticLabel: '',
+          excludeSemantics: true,
+          size: IconSizes.sm,
+          color: BrandColors.muted,
+        ),
+        border: const RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+        ),
+        enabledBorder: const RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+        ),
+        focusedBorder: RingedInputBorder(
+          borderSide: BorderSide.none,
+          borderRadius: corners,
+          ring: BorderSide(
+            color: BrandColors.gold.withValues(alpha: 0.7),
+            width: FocusRing.ringWidth,
+          ),
         ),
       ),
-      child: Padding(
-        padding: EdgeInsets.fromLTRB(16, 46, 16, 14),
+    );
+  }
+}
+
+/// CSS `.chipsrow`: the categories in one sideways-scrolling row. The chip
+/// in force is solid blue; the rest are the soft grey pill.
+class _ChipsRow extends StatelessWidget {
+  const _ChipsRow({required this.labels, required this.selected, this.onChip});
+
+  final List<String> labels;
+  final String selected;
+  final ValueChanged<String>? onChip;
+
+  @override
+  Widget build(BuildContext context) {
+    if (labels.isEmpty) return const SizedBox.shrink();
+    final ValueChanged<String>? onChip = this.onChip;
+    return Semantics(
+      container: true,
+      label: 'Category',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.lg,
+          Spacing.section,
+          Spacing.lg,
+          Spacing.xxs,
+        ),
         child: Row(
           children: <Widget>[
-            _HeaderSeal(),
-            SizedBox(width: 11),
-            Expanded(
-              child: MunicipalHeaderTitles(
-                title: 'Directory',
-                subtitle: 'Municipal offices',
+            for (var i = 0; i < labels.length; i++) ...<Widget>[
+              if (i > 0) const SizedBox(width: Spacing.sm),
+              _CategoryChip(
+                label: labels[i],
+                selected: labels[i] == selected,
+                onTap: onChip == null ? null : () => onChip(labels[i]),
               ),
-            ),
-            SizedBox(width: 11),
-            _Bell(),
+            ],
           ],
         ),
       ),
@@ -272,73 +446,55 @@ class _ListHeader extends StatelessWidget {
   }
 }
 
-class _HeaderSeal extends StatelessWidget {
-  const _HeaderSeal();
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 38,
-      height: 38,
-      padding: const EdgeInsets.all(2),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      child: ClipOval(
-        child: Image.asset(
-          BrandAssets.municipalSeal.assetPath,
-          fit: BoxFit.contain,
-          semanticLabel: BrandAssets.municipalSeal.semanticLabel,
-        ),
-      ),
-    );
-  }
-}
-
-class _Bell extends StatelessWidget {
-  const _Bell();
-
-  @override
-  Widget build(BuildContext context) {
-    return _Hit(
-      hitKey: const Key('directory-bell'),
-      label: 'Notifications',
-      width: 44,
-      height: 44,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          shape: BoxShape.circle,
-        ),
-        child: const Stack(
-          children: <Widget>[
-            Center(
-              child: TaytayIcon(
-                icon: TaytayIcons.bell,
-                size: 19,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
+    final Color fill = selected ? BrandColors.blue : BrandColors.chipFill;
+    final Color ink = selected ? BrandColors.white : BrandColors.text;
+    return Semantics(
+      button: onTap != null,
+      selected: selected,
+      label: label,
+      excludeSemantics: true,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+          child: Center(
+            widthFactor: 1,
+            child: DecoratedBox(
+              decoration: ShapeDecoration(
+                color: fill,
+                shape: const StadiumBorder(),
               ),
-            ),
-            Positioned(
-              top: 6,
-              right: 7,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: BrandColors.sealGold,
-                  shape: BoxShape.circle,
-                  border: Border.fromBorderSide(
-                    BorderSide(color: BrandColors.taytayBlue, width: 1.5),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: ComponentSizes.chipHeight,
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: Spacing.section,
+                    vertical: Spacing.sm,
+                  ),
+                  child: Text(
+                    label,
+                    style: AppTypography.chip.copyWith(color: ink),
                   ),
                 ),
-                child: SizedBox(width: 8, height: 8),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -350,40 +506,357 @@ class _ListBody extends StatelessWidget {
     required this.offices,
     required this.chips,
     required this.query,
-    this.searchController,
-    this.onSearch,
+    required this.selectedChip,
+    this.onChip,
     this.onOffice,
+    this.onBrowseAll,
   });
 
   final List<Office> offices;
   final List<String> chips;
   final String query;
-  final TextEditingController? searchController;
-  final ValueChanged<String>? onSearch;
+  final String selectedChip;
+  final ValueChanged<String>? onChip;
   final ValueChanged<Office>? onOffice;
+  final VoidCallback? onBrowseAll;
 
   @override
   Widget build(BuildContext context) {
+    final String chip = chips.contains(selectedChip) ? selectedChip : 'All';
     final List<Office> visible = offices
-        .where((Office office) => office.matches(query, 'All'))
+        .where((Office office) => office.matches(query, chip))
         .toList(growable: false);
+    final String trimmed = query.trim();
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.only(bottom: Spacing.xl),
       children: <Widget>[
-        _SearchBox(
-          hint: 'Search offices or services',
-          controller: searchController,
-          onChanged: onSearch,
+        _ChipsRow(labels: chips, selected: chip, onChip: onChip),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.lg,
+            Spacing.section,
+            Spacing.lg,
+            0,
+          ),
+          child: visible.isEmpty
+              ? EmptyState(
+                  title: trimmed.isEmpty
+                      ? 'No offices in this category'
+                      : 'No offices found for “$trimmed”',
+                  message: 'Try another word, or browse by category.',
+                  actionLabel: onBrowseAll == null
+                      ? null
+                      : 'Browse all offices',
+                  onAction: onBrowseAll,
+                  boxed: true,
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    _CountLine(count: visible.length),
+                    const SizedBox(height: Spacing.sm + Spacing.xxs),
+                    _OfficeList(offices: visible, onOffice: onOffice),
+                  ],
+                ),
         ),
-        const SizedBox(height: 12),
-        _Chips(labels: chips, selected: 'All'),
-        const SizedBox(height: 12),
-        _OfficeCard(offices: visible, compact: true, onOffice: onOffice),
       ],
     );
   }
 }
 
+/// CSS `.count`: "9 offices", the number in bold ink.
+class _CountLine extends StatelessWidget {
+  const _CountLine({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle style = AppTypography.listDetail.copyWith(
+      fontWeight: AppTypography.medium,
+      color: BrandColors.muted,
+    );
+    return Semantics(
+      liveRegion: true,
+      child: Text.rich(
+        TextSpan(
+          style: style,
+          children: <InlineSpan>[
+            TextSpan(
+              text: '$count',
+              style: const TextStyle(
+                fontWeight: AppTypography.black,
+                color: BrandColors.ink,
+              ),
+            ),
+            TextSpan(text: count == 1 ? ' office' : ' offices'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The offices as one soft list: gradient tile, name, category and line.
+class _OfficeList extends StatelessWidget {
+  const _OfficeList({required this.offices, this.onOffice, this.lineFor});
+
+  final List<Office> offices;
+  final ValueChanged<Office>? onOffice;
+  final String Function(Office office)? lineFor;
+
+  @override
+  Widget build(BuildContext context) {
+    final ValueChanged<Office>? onOffice = this.onOffice;
+    return SettingsList(
+      children: <Widget>[
+        for (final Office office in offices)
+          _OfficeRow(
+            office: office,
+            line: lineFor?.call(office) ?? office.listLine,
+            onTap: onOffice == null ? null : () => onOffice(office),
+          ),
+      ],
+    );
+  }
+}
+
+/// CSS `.li` on Directory: the tile, the office name, and the category in
+/// body ink before the rest of the line (`.d .k`).
+class _OfficeRow extends StatelessWidget {
+  const _OfficeRow({required this.office, required this.line, this.onTap});
+
+  final Office office;
+  final String line;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final String category = office.category;
+    final TextStyle detail = AppTypography.listDetail.copyWith(
+      color: BrandColors.muted,
+    );
+    final String rest = _placeOf(office, line);
+    return SettingsRow(
+      key: Key('directory-office-${office.id}'),
+      leading: _tileFor(office),
+      title: office.listName,
+      detail: <String>[
+        if (category.isNotEmpty) category,
+        if (rest.isNotEmpty) rest,
+      ].join(' · '),
+      detailStyle: detail,
+      semanticLabel: <String>[
+        office.listName,
+        if (category.isNotEmpty) category,
+        if (rest.isNotEmpty) rest,
+      ].join(', '),
+      onTap: onTap,
+    );
+  }
+}
+
+class _LoadingBody extends StatelessWidget {
+  const _LoadingBody({required this.chips});
+
+  final List<String> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.only(bottom: Spacing.xl),
+      children: <Widget>[
+        _ChipsRow(labels: chips, selected: 'All'),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            Spacing.lg,
+            Spacing.section,
+            Spacing.lg,
+            0,
+          ),
+          child: SoftCard(
+            child: LoadingSkeleton(
+              count: 6,
+              semanticLabel: 'Loading the directory',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// `DirectoryOffline.dc.html`: the gold offline strip, the boxed "Can't
+/// load" state with Try again, and the numbers saved on this phone.
+class _OfflineBody extends StatelessWidget {
+  const _OfflineBody({required this.offices, this.onRetry, this.onCall});
+
+  final List<Office> offices;
+  final VoidCallback? onRetry;
+  final VoidCallback? onCall;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<Office> saved =
+        offices
+            .where(
+              (Office office) => office.id == 'mdrrmo' || office.id == 'mswdo',
+            )
+            .toList()
+          ..sort((Office a, Office b) {
+            if (a.id == 'mdrrmo') return -1;
+            if (b.id == 'mdrrmo') return 1;
+            return 0;
+          });
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        Spacing.lg,
+        Spacing.section,
+        Spacing.lg,
+        Spacing.xl,
+      ),
+      children: <Widget>[
+        const _OfflineStrip(),
+        const SizedBox(height: Spacing.section),
+        EmptyState(
+          title: "Can't load the directory",
+          message:
+              'Check your mobile data or Wi-Fi, then try again. '
+              'Saved office numbers are listed below.',
+          illustration: TaytayIllustration.offline,
+          actionLabel: 'Try again',
+          actionIcon: TaytayIcons.refreshCw,
+          onAction: onRetry,
+          primaryAction: true,
+          boxed: true,
+          actionKey: const Key('directory-retry'),
+        ),
+        if (saved.isNotEmpty) ...<Widget>[
+          const SizedBox(height: Spacing.xl),
+          const SettingsSectionTitle('Saved on this phone'),
+          SettingsList(
+            children: <Widget>[
+              for (final Office office in saved)
+                _SavedRow(office: office, onCall: onCall),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// CSS `.off`: gold-tinted, "You're offline" over "Showing what was saved".
+class _OfflineStrip extends StatelessWidget {
+  const _OfflineStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BrandColors.gold50,
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.section,
+            vertical: Spacing.md,
+          ),
+          child: Row(
+            children: <Widget>[
+              const TaytayIcon(
+                icon: TaytayIcons.wifiOff,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.goldInk,
+              ),
+              const SizedBox(width: Spacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      "You're offline",
+                      style: AppTypography.listTitle.copyWith(
+                        fontWeight: AppTypography.strong,
+                        color: BrandColors.goldInk,
+                      ),
+                    ),
+                    Text(
+                      'Showing what was saved on this phone',
+                      style: AppTypography.small.copyWith(
+                        color: BrandColors.goldInk,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A saved office number with its round call button (CSS `.call`).
+class _SavedRow extends StatelessWidget {
+  const _SavedRow({required this.office, this.onCall});
+
+  final Office office;
+  final VoidCallback? onCall;
+
+  @override
+  Widget build(BuildContext context) {
+    final String title = office.savedName ?? office.listName;
+    final bool emergency = office.callIsEmergency;
+    return SettingsRow(
+      leading: _tileFor(office),
+      title: title,
+      detail: office.phone,
+      trailing: Semantics(
+        button: true,
+        label: 'Call $title',
+        excludeSemantics: true,
+        child: InkResponse(
+          key: Key('directory-saved-call-${office.id}'),
+          onTap: onCall,
+          radius: A11y.minTapTarget / 2,
+          child: SizedBox(
+            width: A11y.minTapTarget,
+            height: A11y.minTapTarget,
+            child: Center(
+              child: Container(
+                width: ComponentSizes.headerIconButton,
+                height: ComponentSizes.headerIconButton,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: emergency ? BrandColors.red : BrandColors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: const TaytayIcon(
+                  icon: TaytayIcons.phone,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: IconSizes.sm,
+                  color: BrandColors.white,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// `DirectorySearch.dc.html` as a design specimen: two searches side by side,
+/// one that finds offices and one that does not. Not routed; captures and
+/// tests paint it.
 class _SearchSpecimen extends StatefulWidget {
   const _SearchSpecimen({
     required this.offices,
@@ -435,343 +908,80 @@ class _SearchSpecimenState extends State<_SearchSpecimen> {
         .toList(growable: false);
     final String countWord = found.length == 1 ? 'result' : 'results';
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.fromLTRB(
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.lg,
+        Spacing.xl,
+      ),
       children: <Widget>[
-        _SearchBox(
+        _SpecimenSearch(
           key: const Key('directory-search-cedula'),
           controller: _cedula,
-          active: true,
         ),
         Padding(
-          padding: const EdgeInsets.fromLTRB(2, 12, 2, 12),
+          padding: const EdgeInsets.symmetric(vertical: Spacing.md),
           child: Text(
             '${found.length} $countWord for “${_cedula.text}”',
-            style: _meta,
+            style: AppTypography.small.copyWith(
+              fontWeight: AppTypography.strong,
+              color: BrandColors.muted,
+            ),
           ),
         ),
         if (found.isNotEmpty)
-          _OfficeCard(
+          _OfficeList(
             offices: found,
-            compact: false,
-            looseSubtitle: true,
             lineFor: (Office office) => office.searchLine ?? office.listLine,
             onOffice: widget.onOffice,
           ),
-        const SizedBox(height: 19.5),
-        _SearchBox(
+        const SizedBox(height: Spacing.xl),
+        _SpecimenSearch(
           key: const Key('directory-search-passport'),
           controller: _passport,
-          active: true,
-          showClear: false,
         ),
+        const SizedBox(height: Spacing.md),
         if (missed.isEmpty)
-          _EmptySearch(query: _passport.text, onBrowseAll: widget.onBrowseAll)
+          EmptyState(
+            title: 'No offices found for “${_passport.text}”',
+            message:
+                'Passports are handled by the DFA, not the municipality. '
+                'Try another word, or browse by category.',
+            actionLabel: 'Browse all offices',
+            onAction: widget.onBrowseAll,
+            actionKey: const Key('directory-browse'),
+            boxed: true,
+          )
         else
-          _OfficeCard(
-            offices: missed,
-            compact: false,
-            onOffice: widget.onOffice,
-          ),
+          _OfficeList(offices: missed, onOffice: widget.onOffice),
       ],
     );
   }
 }
 
-class _EmptySearch extends StatelessWidget {
-  const _EmptySearch({this.query = 'passport', this.onBrowseAll});
+/// The search field of the specimen, on the grey page.
+class _SpecimenSearch extends StatelessWidget {
+  const _SpecimenSearch({required this.controller, super.key});
 
-  final String query;
-  final VoidCallback? onBrowseAll;
+  final TextEditingController controller;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 27, 20, 28),
-      child: Column(
-        children: <Widget>[
-          Container(
-            width: 60,
-            height: 60,
-            decoration: const BoxDecoration(
-              color: Color(0xFFEEF1F6),
-              shape: BoxShape.circle,
-            ),
-            child: const TaytayIcon(
-              icon: TaytayIcons.search,
-              size: 24,
-              color: BrandColors.listMeta,
-              semanticLabel: '',
-              excludeSemantics: true,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'No offices found for “$query”',
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 14,
-              fontWeight: FontWeight.w800,
-              color: BrandColors.textPrimary,
-              decoration: TextDecoration.none,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Passports are handled by the DFA, not the municipality. '
-            'Try another word, or browse by category.',
-            textAlign: TextAlign.center,
-            style: _summary,
-          ),
-          const SizedBox(height: 14),
-          _StrokeButton(
-            hitKey: const Key('directory-browse'),
-            label: 'Browse all offices',
-            onTap: onBrowseAll,
-          ),
-        ],
-      ),
+    return _SearchField(
+      hint: 'Search offices or services',
+      controller: controller,
     );
   }
 }
 
-class _LoadingBody extends StatelessWidget {
-  const _LoadingBody({required this.chips});
-
-  final List<String> chips;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        const _SearchBox(hint: 'Search offices or services'),
-        const SizedBox(height: 12),
-        _Chips(labels: chips, selected: 'All', wrap: true),
-        const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-          decoration: _cardDecoration,
-          child: const Column(
-            children: <Widget>[
-              _SkeletonRow(),
-              _SkeletonRow(),
-              _SkeletonRow(),
-              _SkeletonRow(),
-              _SkeletonRow(),
-              _SkeletonRow(),
-              _SkeletonRow(last: true),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SkeletonRow extends StatelessWidget {
-  const _SkeletonRow({this.last = false});
-
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: last
-            ? null
-            : const Border(bottom: BorderSide(color: DirectoryCanvas._rowLine)),
-      ),
-      child: const Row(
-        children: <Widget>[
-          _Bone(width: 44, height: 44, radius: 12),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                _Bone(widthFactor: 0.7, height: 13),
-                SizedBox(height: 8),
-                _Bone(widthFactor: 0.45, height: 11),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Bone extends StatelessWidget {
-  const _Bone({
-    this.width,
-    this.widthFactor,
-    required this.height,
-    this.radius = 8,
-  });
-
-  final double? width;
-  final double? widthFactor;
-  final double height;
-  final double radius;
-
-  @override
-  Widget build(BuildContext context) {
-    final Widget box = Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFE6EAF2),
-        borderRadius: BorderRadius.circular(radius),
-      ),
-    );
-    if (widthFactor == null) return box;
-    return FractionallySizedBox(
-      widthFactor: widthFactor,
-      alignment: Alignment.centerLeft,
-      child: box,
-    );
-  }
-}
-
-class _OfflineBody extends StatelessWidget {
-  const _OfflineBody({required this.offices, this.onRetry, this.onCall});
-
-  final List<Office> offices;
-  final VoidCallback? onRetry;
-  final VoidCallback? onCall;
-
-  @override
-  Widget build(BuildContext context) {
-    // Fixed emergency default. MDRRMO and MSWDO are the numbers that
-    // stay on this screen when the directory cannot load. They are not
-    // read from storage and they are not the last list the phone fetched.
-    final List<Office> saved =
-        offices
-            .where(
-              (Office office) => office.id == 'mdrrmo' || office.id == 'mswdo',
-            )
-            .toList()
-          ..sort((Office a, Office b) {
-            if (a.id == 'mdrrmo') return -1;
-            if (b.id == 'mdrrmo') return 1;
-            return 0;
-          });
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-      children: <Widget>[
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F1A33),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Row(
-            children: <Widget>[
-              TaytayIcon(
-                icon: TaytayIcons.wifiOff,
-                size: 18,
-                color: Colors.white,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      "You're offline",
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                    Text(
-                      'Showing what was saved on this phone',
-                      style: TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xD9FFFFFF),
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        const Padding(
-          padding: EdgeInsets.fromLTRB(18, 26, 18, 0),
-          child: Column(
-            children: <Widget>[
-              _EmptyMark(icon: TaytayIcons.wifiOff),
-              SizedBox(height: 15.7),
-              Text(
-                "Can't load the directory",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  color: BrandColors.textPrimary,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Check your mobile data or Wi-Fi, then try again. '
-                'Saved office numbers are listed below.',
-                textAlign: TextAlign.center,
-                style: _summary,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        _FilledButton(
-          hitKey: const Key('directory-retry'),
-          label: 'Try again',
-          icon: TaytayIcons.refreshCw,
-          onTap: onRetry,
-        ),
-        const SizedBox(height: 26.3),
-        const Padding(
-          padding: EdgeInsets.only(top: 4, bottom: 8),
-          child: Text(
-            'Saved on this phone',
-            style: TextStyle(
-              fontFamily: AppTypography.fontFamily,
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-              color: BrandColors.textPrimary,
-              decoration: TextDecoration.none,
-            ),
-          ),
-        ),
-        _OfficeCard(
-          offices: saved,
-          compact: false,
-          lineFor: (Office office) => office.phone,
-          trailingCall: true,
-          onOffice: (_) => onCall?.call(),
-        ),
-      ],
-    );
-  }
-}
-
-class _DetailBody extends StatelessWidget {
-  const _DetailBody({
+/// `Office.dc.html`: the office photo with the back control and seal over
+/// it, then the white sheet: tile, names, the category line, the open line
+/// when hours are structured, pill actions, the summary and the facts.
+class _DetailPage extends StatelessWidget {
+  const _DetailPage({
     required this.office,
     this.loadHero,
+    this.onBack,
     this.onCall,
     this.onDirections,
     this.onMessage,
@@ -781,6 +991,7 @@ class _DetailBody extends StatelessWidget {
 
   final Office office;
   final MediaBytesLoader? loadHero;
+  final VoidCallback? onBack;
   final VoidCallback? onCall;
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
@@ -790,65 +1001,33 @@ class _DetailBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      padding: const EdgeInsets.only(bottom: Spacing.xl),
       children: <Widget>[
-        _Hero(office: office, loadHero: loadHero),
-        const SizedBox(height: 4.33),
-        Text(office.credit, style: _credit),
-        const SizedBox(height: 12.67),
-        Row(
-          children: <Widget>[
-            Expanded(
-              child: _FilledButton(
-                hitKey: const Key('directory-call'),
-                label: office.callLabel,
-                icon: TaytayIcons.phone,
-                danger: office.callIsEmergency,
-                onTap: onCall,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StrokeButton(
-                hitKey: const Key('directory-directions'),
-                label: 'Directions',
-                icon: TaytayIcons.send,
-                onTap: onDirections,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _StrokeButton(
-                hitKey: const Key('directory-message'),
-                label: office.messageable ? 'Message' : 'App',
-                icon: office.messageable
-                    ? TaytayIcons.messageSquare
-                    : TaytayIcons.smartphone,
-                onTap: office.messageable ? onMessage : onApp,
-              ),
-            ),
-          ],
+        _Hero(office: office, loadHero: loadHero, onBack: onBack),
+        GlassOverlap(
+          amount: Radii.sheetLarge,
+          child: _Sheet(
+            office: office,
+            onCall: onCall,
+            onDirections: onDirections,
+            onMessage: onMessage,
+            onApp: onApp,
+            onServiceLine: onServiceLine,
+          ),
         ),
-        const SizedBox(height: 11.33),
-        Text(
-          office.summary,
-          textHeightBehavior: _cssHalfLeading,
-          style: _summary.copyWith(color: DirectoryCanvas._bodyInk),
-        ),
-        const SizedBox(height: 10),
-        _FactCard(office: office),
-        const SizedBox(height: 11.67),
-        _ServiceCard(office: office, onServiceLine: onServiceLine),
       ],
     );
   }
 }
 
 class _Hero extends StatelessWidget {
-  const _Hero({required this.office, this.loadHero});
+  const _Hero({required this.office, this.loadHero, this.onBack});
 
   final Office office;
   final MediaBytesLoader? loadHero;
+  final VoidCallback? onBack;
+
+  static const double _height = 250;
 
   Widget _hall() {
     return Image.asset(
@@ -879,146 +1058,109 @@ class _Hero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x29062358),
-            blurRadius: 24,
-            offset: Offset(0, 10),
+    final double top = MediaQuery.paddingOf(context).top;
+    final String credit = office.credit;
+    return SizedBox(
+      height: _height + top,
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          Semantics(
+            image: true,
+            label: credit.isNotEmpty ? credit : office.name,
+            child: ColoredBox(color: BrandColors.navy, child: _picture()),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: SizedBox(
-          height: 196,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              _picture(),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: <Color>[
-                      Color(0x0D062358),
-                      Color(0x8C062358),
-                      Color(0xF0062358),
-                    ],
-                    stops: <double>[0.2, 0.58, 1],
-                  ),
-                ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: <Color>[
+                  BrandColors.navy.withValues(alpha: 0.55),
+                  BrandColors.navy.withValues(alpha: 0),
+                ],
+                stops: const <double>[0, 0.38],
               ),
-              Positioned(
-                right: 14,
-                top: 14,
-                child: Container(
-                  width: 76,
-                  height: 76,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                        color: Color(0x4D000000),
-                        blurRadius: 14,
-                        offset: Offset(0, 6),
-                      ),
-                      BoxShadow(color: BrandColors.sealGold, spreadRadius: 5),
-                      BoxShadow(color: Colors.white, spreadRadius: 3),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Image.asset(office.insetAsset, fit: BoxFit.cover),
-                  ),
-                ),
-              ),
-              if (office.representative)
-                const Positioned(
-                  left: 14,
-                  top: 14,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: Color(0xF0FFFFFF),
-                      borderRadius: BorderRadius.all(Radius.circular(999)),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      child: Text(
-                        'Representative photo',
-                        style: TextStyle(
-                          fontFamily: AppTypography.fontFamily,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          color: BrandColors.taytayBlueDark,
-                          decoration: TextDecoration.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              Positioned(
-                left: 16,
-                right: 16,
-                bottom: 14,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          ),
+          Positioned(
+            left: Spacing.lg,
+            right: Spacing.lg,
+            top: top + Spacing.section,
+            child: Row(
+              children: <Widget>[
+                Stack(
+                  alignment: Alignment.center,
                   children: <Widget>[
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 3,
-                      ),
+                      width: A11y.backButtonVisual,
+                      height: A11y.backButtonVisual,
                       decoration: BoxDecoration(
-                        color: BrandColors.sealGold,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          TaytayIcon(
-                            icon: office.eyebrow == 'BUSINESS'
-                                ? TaytayIcons.briefcase
-                                : _officeIcon(office.icon),
-                            size: 12,
-                            color: BrandColors.taytayBlueDark,
-                            semanticLabel: '',
-                            excludeSemantics: true,
-                          ),
-                          const SizedBox(width: 5),
-                          Text(
-                            office.eyebrow,
-                            style: const TextStyle(
-                              fontFamily: AppTypography.fontFamily,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.6,
-                              color: BrandColors.taytayBlueDark,
-                              decoration: TextDecoration.none,
-                            ),
-                          ),
-                        ],
+                        color: BrandColors.navy.withValues(alpha: 0.45),
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      office.name,
-                      style: const TextStyle(
-                        fontFamily: AppTypography.fontFamily,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        height: 1.15,
-                        letterSpacing: -0.3,
-                        color: Colors.white,
-                        decoration: TextDecoration.none,
-                      ),
-                    ),
+                    TaytayBackButton(onPressed: onBack, translucent: true),
                   ],
                 ),
+                const Spacer(),
+                const HeaderSeal(key: Key('directory-seal')),
+              ],
+            ),
+          ),
+          if (office.representative)
+            Positioned(
+              right: Spacing.section,
+              bottom: Radii.sheetLarge + Spacing.section,
+              child: _HeroTag(
+                credit.isNotEmpty
+                    ? 'Representative photo · $credit'
+                    : 'Representative photo',
               ),
-            ],
+            )
+          else if (credit.isNotEmpty)
+            Positioned(
+              right: Spacing.section,
+              left: Spacing.lg,
+              bottom: Radii.sheetLarge + Spacing.section,
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _HeroTag(credit),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// CSS `.hero .rep`: a navy pill on the photo.
+class _HeroTag extends StatelessWidget {
+  const _HeroTag(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: BrandColors.navy.withValues(alpha: 0.55),
+          borderRadius: BorderRadius.circular(Radii.pill),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.sm + Spacing.xxs,
+            vertical: Spacing.xs,
+          ),
+          child: Text(
+            text,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.tiny.copyWith(
+              fontWeight: AppTypography.medium,
+              color: BrandColors.white,
+            ),
           ),
         ),
       ),
@@ -1026,136 +1168,280 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _FactCard extends StatelessWidget {
-  const _FactCard({required this.office});
+/// CSS `.sheet`: white, 28 px top corners, 22 / 20 padding, 18 between parts.
+class _Sheet extends StatelessWidget {
+  const _Sheet({
+    required this.office,
+    this.onCall,
+    this.onDirections,
+    this.onMessage,
+    this.onApp,
+    this.onServiceLine,
+  });
 
   final Office office;
+  final VoidCallback? onCall;
+  final VoidCallback? onDirections;
+  final VoidCallback? onMessage;
+  final VoidCallback? onApp;
+  final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: _cardDecoration,
-      child: Column(
-        children: <Widget>[
-          for (var i = 0; i < office.facts.length; i++)
-            _FactRow(fact: office.facts[i], last: i == office.facts.length - 1),
-        ],
+    final String category = office.category;
+    final String place = _placeOf(office, office.listLine);
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        color: BrandColors.white,
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(Radii.sheetLarge),
+        ),
       ),
-    );
-  }
-}
-
-class _FactRow extends StatelessWidget {
-  const _FactRow({required this.fact, required this.last});
-
-  final OfficeFact fact;
-  final bool last;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        border: last
-            ? null
-            : const Border(bottom: BorderSide(color: DirectoryCanvas._rowLine)),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          _Tile(icon: _factIcon(fact.icon), label: fact.label),
-          const SizedBox(width: 12),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final bool wraps = _factValueWraps(
-                  fact.value,
-                  constraints.maxWidth,
-                );
-                return Padding(
-                  padding: EdgeInsets.only(bottom: wraps ? 0.67 : 0),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          Spacing.formGutter,
+          Spacing.xl - Spacing.xxs,
+          Spacing.formGutter,
+          0,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                _tileFor(office),
+                const SizedBox(width: Spacing.section),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text(fact.label, style: _factLabel),
-                      const SizedBox(height: 2),
-                      Wrap(
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        spacing: 6,
-                        children: <Widget>[
-                          Text(fact.value, style: _factValue),
-                          if (fact.sample) const SampleTag(),
-                        ],
+                      Semantics(
+                        header: true,
+                        child: Text(
+                          office.shortName,
+                          style: AppTypography.pageTitle.copyWith(
+                            color: BrandColors.ink,
+                          ),
+                        ),
                       ),
+                      if (office.name != office.shortName) ...<Widget>[
+                        const SizedBox(height: Spacing.xxs),
+                        Text(
+                          office.name,
+                          style: AppTypography.listDetail.copyWith(
+                            fontWeight: AppTypography.body,
+                            color: BrandColors.muted,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
-                );
-              },
+                ),
+              ],
             ),
-          ),
+            if (category.isNotEmpty || place.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.md),
+              _MetaLine(category: category, place: place),
+            ],
+            // Structured hours are an "API field needed": until the API
+            // sends them the open / closed line is not drawn.
+            StatusLine(hours: null, now: DateTime.now()),
+            const SizedBox(height: Spacing.formGap),
+            PillButtonRow(
+              padding: EdgeInsets.zero,
+              wrap: true,
+              actions: <PillAction>[
+                PillAction(
+                  buttonKey: const Key('directory-call'),
+                  label: office.callLabel,
+                  glyph: TaytayGlyph.phone,
+                  primary: true,
+                  danger: office.callIsEmergency,
+                  onPressed: onCall,
+                ),
+                PillAction(
+                  buttonKey: const Key('directory-directions'),
+                  label: 'Directions',
+                  glyph: TaytayGlyph.pin,
+                  onPressed: onDirections,
+                ),
+                PillAction(
+                  buttonKey: const Key('directory-message'),
+                  label: office.messageable ? 'Message' : 'App',
+                  glyph: office.messageable
+                      ? TaytayGlyph.chat
+                      : TaytayGlyph.phone,
+                  onPressed: office.messageable ? onMessage : onApp,
+                ),
+              ],
+            ),
+            if (office.summary.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              Text(
+                office.summary,
+                style: AppTypography.bodyStyle.copyWith(
+                  color: BrandColors.text,
+                  height: 1.55,
+                ),
+              ),
+            ],
+            if (office.facts.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              const Divider(
+                height: 1,
+                thickness: 1,
+                color: BrandColors.divider,
+              ),
+              for (final OfficeFact fact in office.facts) _FactRow(fact: fact),
+            ],
+            if (office.services.isNotEmpty) ...<Widget>[
+              const SizedBox(height: Spacing.formGap),
+              _Services(office: office, onServiceLine: onServiceLine),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// CSS `.meta`: the category in green, a dot, then the place.
+class _MetaLine extends StatelessWidget {
+  const _MetaLine({required this.category, required this.place});
+
+  final String category;
+  final String place;
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle base = AppTypography.bodyStyle.copyWith(
+      color: BrandColors.text,
+    );
+    return Text.rich(
+      TextSpan(
+        style: base,
+        children: <InlineSpan>[
+          if (category.isNotEmpty)
+            TextSpan(
+              text: category,
+              style: const TextStyle(
+                color: BrandColors.green,
+                fontWeight: AppTypography.medium,
+              ),
+            ),
+          if (category.isNotEmpty && place.isNotEmpty)
+            const TextSpan(text: '  ·  '),
+          if (place.isNotEmpty) TextSpan(text: place),
         ],
       ),
     );
   }
 }
 
-class _ServiceCard extends StatelessWidget {
-  const _ServiceCard({required this.office, this.onServiceLine});
+/// CSS `.fact`: a 36 px soft glyph square, the label over the value, and a
+/// hairline under each row.
+class _FactRow extends StatelessWidget {
+  const _FactRow({required this.fact});
+
+  final OfficeFact fact;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: BrandColors.divider)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: Spacing.section),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Container(
+              width: ComponentSizes.tileSmall,
+              height: ComponentSizes.tileSmall,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: BrandColors.background,
+                borderRadius: BorderRadius.circular(Radii.md),
+              ),
+              child: TaytayIcon(
+                icon: _factIcon(fact.icon),
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.blue,
+              ),
+            ),
+            const SizedBox(width: Spacing.section),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    fact.label,
+                    style: AppTypography.small.copyWith(
+                      fontWeight: AppTypography.medium,
+                      color: BrandColors.muted,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Wrap(
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: Spacing.xs + Spacing.xxs,
+                    children: <Widget>[
+                      Text(
+                        fact.value,
+                        style: AppTypography.bodyStyle.copyWith(
+                          color: BrandColors.ink,
+                        ),
+                      ),
+                      if (fact.sample) const SampleTag(),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The office's Tulong lines. A line with a page opens it.
+class _Services extends StatelessWidget {
+  const _Services({required this.office, this.onServiceLine});
 
   final Office office;
   final ValueChanged<String>? onServiceLine;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: _cardDecoration,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Text('Services', style: _cardTitle),
-          const SizedBox(height: 6),
-          for (final OfficeServiceLine line in office.services)
-            _serviceRow(line),
-        ],
-      ),
+    final ValueChanged<String>? open = onServiceLine;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const SettingsSectionTitle('Services'),
+        SettingsList(
+          children: <Widget>[
+            for (final OfficeServiceLine line in office.services)
+              SettingsRow(
+                title: line.label,
+                trailing: line.sample ? const SampleTag() : null,
+                showChevron: true,
+                onTap: _slugOf(line) == null || open == null
+                    ? null
+                    : () => open(_slugOf(line) ?? ''),
+              ),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _serviceRow(OfficeServiceLine line) {
+  static String? _slugOf(OfficeServiceLine line) {
     final String? slug = line.serviceSlug;
-    final Widget row = Padding(
-      padding: const EdgeInsets.fromLTRB(18, 3, 0, 3),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          const Padding(
-            padding: EdgeInsets.only(top: 7, right: 8),
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                color: DirectoryCanvas._bodyInk,
-                shape: BoxShape.circle,
-              ),
-              child: SizedBox(width: 4, height: 4),
-            ),
-          ),
-          Expanded(
-            child: Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 6,
-              children: <Widget>[
-                Text(line.label, style: _service),
-                if (line.sample) const SampleTag(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-    if (slug == null || slug.isEmpty || onServiceLine == null) return row;
-    return GestureDetector(onTap: () => onServiceLine!(slug), child: row);
+    return slug == null || slug.isEmpty ? null : slug;
   }
 }
 
@@ -1648,425 +1934,27 @@ class _Bubble extends StatelessWidget {
   }
 }
 
-class _OfficeCard extends StatelessWidget {
-  const _OfficeCard({
-    required this.offices,
-    required this.compact,
-    this.onOffice,
-    this.lineFor,
-    this.trailingCall = false,
-    this.looseSubtitle = false,
-  });
-
-  final List<Office> offices;
-  final bool compact;
-  final ValueChanged<Office>? onOffice;
-  final String Function(Office office)? lineFor;
-  final bool trailingCall;
-  final bool looseSubtitle;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      decoration: _cardDecoration,
-      child: Column(
-        children: <Widget>[
-          for (var i = 0; i < offices.length; i++)
-            _OfficeRow(
-              office: offices[i],
-              compact: compact,
-              last: i == offices.length - 1,
-              line: lineFor?.call(offices[i]) ?? offices[i].listLine,
-              trailingCall: trailingCall,
-              looseSubtitle: looseSubtitle,
-              onTap: onOffice == null ? null : () => onOffice!(offices[i]),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _OfficeRow extends StatelessWidget {
-  const _OfficeRow({
-    required this.office,
-    required this.compact,
-    required this.last,
-    required this.line,
-    required this.trailingCall,
-    this.looseSubtitle = false,
-    this.onTap,
-  });
-
-  final Office office;
-  final bool compact;
-  final bool last;
-  final String line;
-  final bool trailingCall;
-  final bool looseSubtitle;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final String title = trailingCall
-        ? (office.savedName ?? office.listName)
-        : office.listName;
-    final bool wrapped = compact && (title.length > 26 || line.length > 36);
-    return _Hit(
-      hitKey: Key('directory-office-${office.id}'),
-      label: title,
-      onTap: onTap,
-      child: Container(
-        constraints: BoxConstraints(minHeight: compact ? 52 : 0),
-        padding: EdgeInsets.fromLTRB(
-          0,
-          compact ? 6 : 12,
-          0,
-          compact ? (wrapped ? 6.5 : 6) : 12,
-        ),
-        decoration: BoxDecoration(
-          border: last
-              ? null
-              : const Border(
-                  bottom: BorderSide(color: DirectoryCanvas._rowLine),
-                ),
-        ),
-        child: Row(
-          children: <Widget>[
-            _Tile(
-              icon: _officeIcon(office.icon),
-              label: office.shortName,
-              size: compact ? 40 : 44,
-              alignY: compact ? -0.05 : 0,
-              background: office.id == 'mdrrmo' && trailingCall
-                  ? const Color(0xFFFDECEC)
-                  : BrandColors.surfaceMuted,
-              color: office.id == 'mdrrmo' && trailingCall
-                  ? BrandColors.danger
-                  : BrandColors.taytayBlue,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    title,
-                    maxLines: 2,
-                    textHeightBehavior: _cssHalfLeading,
-                    style: compact ? _compactTitle : _listTitle,
-                  ),
-                  SizedBox(height: looseSubtitle ? 3 : 2),
-                  Text(
-                    line,
-                    textHeightBehavior: looseSubtitle
-                        ? _looseLeading
-                        : _cssHalfLeading,
-                    style: compact
-                        ? _compactSub
-                        : (looseSubtitle ? _rowSubLoose : _rowSub),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            if (trailingCall)
-              _Hit(
-                hitKey: Key('directory-saved-call-${office.id}'),
-                label: 'Call $title',
-                width: 36,
-                height: 36,
-                onTap: onTap,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: office.id == 'mdrrmo'
-                        ? BrandColors.chipBlueBg
-                        : BrandColors.surfaceMuted,
-                    shape: BoxShape.circle,
-                  ),
-                  child: TaytayIcon(
-                    icon: TaytayIcons.phone,
-                    size: 16,
-                    color: office.id == 'mdrrmo'
-                        ? BrandColors.danger
-                        : BrandColors.taytayBlue,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                  ),
-                ),
-              )
-            else
-              const SizedBox(
-                width: 18,
-                height: 40,
-                child: Align(
-                  alignment: Alignment(0, 0.24),
-                  child: TaytayIcon(
-                    icon: TaytayIcons.chevronRight,
-                    size: 18,
-                    color: BrandColors.chevron,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SearchBox extends StatefulWidget {
-  const _SearchBox({
-    super.key,
-    this.controller,
-    this.hint,
-    this.onChanged,
-    this.active = false,
-    this.showClear = true,
-  });
-
-  final TextEditingController? controller;
-  final String? hint;
-  final ValueChanged<String>? onChanged;
-  final bool active;
-  final bool showClear;
-
-  @override
-  State<_SearchBox> createState() => _SearchBoxState();
-}
-
-class _SearchBoxState extends State<_SearchBox> {
-  TextEditingController? _owned;
-
-  TextEditingController get _controller => widget.controller ?? _owned!;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.controller == null) {
-      _owned = TextEditingController();
-    }
-    _controller.addListener(_changed);
-  }
-
-  @override
-  void didUpdateWidget(_SearchBox oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.controller == widget.controller) return;
-    (oldWidget.controller ?? _owned)?.removeListener(_changed);
-    if (widget.controller == null && _owned == null) {
-      _owned = TextEditingController();
-    }
-    _controller.addListener(_changed);
-  }
-
-  void _changed() {
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _controller.removeListener(_changed);
-    _owned?.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bool filled = _controller.text.isNotEmpty;
-    final bool active = widget.active || filled;
-    final TextStyle ink = TextStyle(
-      fontFamily: AppTypography.fontFamily,
-      fontSize: 14,
-      height: 1,
-      fontWeight: active ? FontWeight.w600 : FontWeight.w500,
-      color: active ? BrandColors.textPrimary : DirectoryCanvas._searchInk,
-      decoration: TextDecoration.none,
-    );
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: active
-              ? BrandColors.taytayBlue
-              : DirectoryCanvas._searchBorder,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          TaytayIcon(
-            icon: TaytayIcons.search,
-            size: 18,
-            color: active ? BrandColors.taytayBlue : DirectoryCanvas._searchInk,
-            semanticLabel: 'Search',
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Material(
-              type: MaterialType.transparency,
-              child: TextField(
-                controller: _controller,
-                onChanged: widget.onChanged,
-                maxLines: 1,
-                style: ink,
-                cursorColor: BrandColors.taytayBlue,
-                cursorWidth: 1.2,
-                decoration: InputDecoration(
-                  isCollapsed: true,
-                  isDense: true,
-                  filled: false,
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
-                  disabledBorder: InputBorder.none,
-                  hintText: widget.hint,
-                  hintStyle: ink.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: DirectoryCanvas._searchInk,
-                  ),
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-          ),
-          if (active && widget.showClear && filled)
-            const TaytayIcon(
-              icon: TaytayIcons.close,
-              size: 16,
-              color: BrandColors.listMeta,
-              semanticLabel: 'Clear search',
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Chips extends StatelessWidget {
-  const _Chips({
-    required this.labels,
-    required this.selected,
-    this.wrap = false,
-  });
-
-  final List<String> labels;
-  final String selected;
-  final bool wrap;
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Widget> chips = <Widget>[
-      for (final String label in labels)
-        _Chip(label: label, on: label == selected),
-    ];
-    if (wrap) {
-      return Wrap(spacing: 7, runSpacing: 8, children: chips);
-    }
-    return SizedBox(
-      height: 36,
-      child: ShaderMask(
-        blendMode: BlendMode.dstIn,
-        shaderCallback: (Rect rect) {
-          return const LinearGradient(
-            colors: <Color>[Colors.white, Colors.white, Colors.transparent],
-            stops: <double>[0, 0.85, 1],
-          ).createShader(rect);
-        },
-        child: ListView(
-          scrollDirection: Axis.horizontal,
-          children: <Widget>[
-            for (var i = 0; i < chips.length; i++) ...<Widget>[
-              if (i > 0) const SizedBox(width: 7),
-              chips[i],
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.on});
-
-  final String label;
-  final bool on;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: on ? BrandColors.taytayBlue : Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: on ? BrandColors.taytayBlue : DirectoryCanvas._chipBorder,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: SizedBox(
-          height: 36,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Text(
-                label,
-                style: TextStyle(
-                  fontFamily: AppTypography.fontFamily,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  height: 1,
-                  color: on ? Colors.white : DirectoryCanvas._chipInk,
-                  decoration: TextDecoration.none,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _Tile extends StatelessWidget {
-  const _Tile({
-    required this.icon,
-    required this.label,
-    this.size = 44,
-    this.background = BrandColors.surfaceMuted,
-    this.color = BrandColors.taytayBlue,
-    this.alignY = 0,
-  });
+  const _Tile({required this.icon, required this.label, this.size = 44});
 
   final IconData icon;
   final String label;
   final double size;
-  final Color background;
-  final Color color;
-  final double alignY;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: size,
       height: size,
-      alignment: Alignment(0, alignY),
+      alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: background,
+        color: BrandColors.surfaceMuted,
         borderRadius: BorderRadius.circular(12),
       ),
       child: TaytayIcon(
         icon: icon,
         size: 20,
-        color: color,
+        color: BrandColors.taytayBlue,
         semanticLabel: label,
       ),
     );
@@ -2111,7 +1999,7 @@ class _FieldBox extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: DirectoryCanvas._fieldBorder, width: 1.3),
+        border: Border.all(color: MessageField.border, width: 1.3),
       ),
       child: child,
     );
@@ -2124,14 +2012,12 @@ class _FilledButton extends StatelessWidget {
     this.hitKey,
     this.icon,
     this.onTap,
-    this.danger = false,
   });
 
   final String label;
   final Key? hitKey;
   final IconData? icon;
   final VoidCallback? onTap;
-  final bool danger;
 
   @override
   Widget build(BuildContext context) {
@@ -2144,7 +2030,7 @@ class _FilledButton extends StatelessWidget {
         height: 48,
         alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: danger ? BrandColors.danger : BrandColors.taytayBlue,
+          color: BrandColors.taytayBlue,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -2176,16 +2062,10 @@ class _FilledButton extends StatelessWidget {
 }
 
 class _StrokeButton extends StatelessWidget {
-  const _StrokeButton({
-    required this.label,
-    this.hitKey,
-    this.icon,
-    this.onTap,
-  });
+  const _StrokeButton({required this.label, this.hitKey, this.onTap});
 
   final String label;
   final Key? hitKey;
-  final IconData? icon;
   final VoidCallback? onTap;
 
   @override
@@ -2210,16 +2090,6 @@ class _StrokeButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            if (icon != null) ...<Widget>[
-              TaytayIcon(
-                icon: icon!,
-                size: 16,
-                color: BrandColors.taytayBlue,
-                semanticLabel: '',
-                excludeSemantics: true,
-              ),
-              const SizedBox(width: 8),
-            ],
             Flexible(
               child: Text(
                 label,
@@ -2230,31 +2100,6 @@ class _StrokeButton extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyMark extends StatelessWidget {
-  const _EmptyMark({required this.icon});
-
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 72,
-      height: 72,
-      decoration: const BoxDecoration(
-        color: Color(0xFFEEF1F6),
-        shape: BoxShape.circle,
-      ),
-      child: TaytayIcon(
-        icon: icon,
-        size: 28,
-        color: BrandColors.listMeta,
-        semanticLabel: '',
-        excludeSemantics: true,
       ),
     );
   }
@@ -2351,31 +2196,6 @@ const BoxDecoration _cardDecoration = BoxDecoration(
   border: Border.fromBorderSide(BorderSide(color: BrandColors.cardLine)),
 );
 
-const TextHeightBehavior _cssHalfLeading = TextHeightBehavior(
-  applyHeightToFirstAscent: true,
-  applyHeightToLastDescent: true,
-  leadingDistribution: TextLeadingDistribution.even,
-);
-
-/// Extra leading sits between lines. The first line stays put, so a
-/// single-line row does not grow.
-const TextHeightBehavior _looseLeading = TextHeightBehavior(
-  applyHeightToFirstAscent: false,
-  applyHeightToLastDescent: true,
-  leadingDistribution: TextLeadingDistribution.even,
-);
-
-bool _factValueWraps(String value, double maxWidth) {
-  final TextPainter painter = TextPainter(
-    text: TextSpan(text: value, style: _factValue),
-    textDirection: TextDirection.ltr,
-    maxLines: 4,
-  )..layout(maxWidth: maxWidth);
-  final bool wraps = painter.computeLineMetrics().length > 1;
-  painter.dispose();
-  return wraps;
-}
-
 const TextStyle _listTitle = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
@@ -2386,69 +2206,10 @@ const TextStyle _listTitle = TextStyle(
   decoration: TextDecoration.none,
 );
 
-const TextStyle _compactTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  fontWeight: FontWeight.w800,
-  height: 1.26,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _compactSub = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: 1.26,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
 const TextStyle _meta = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 12,
   fontWeight: FontWeight.w500,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _rowSub = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: 1.2,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _rowSubLoose = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 12,
-  fontWeight: FontWeight.w500,
-  height: 1.24,
-  leadingDistribution: TextLeadingDistribution.even,
-  color: BrandColors.listMeta,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _summary = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  height: 1.5,
-  leadingDistribution: TextLeadingDistribution.even,
-  fontWeight: FontWeight.w500,
-  color: BrandColors.textSecondary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _credit = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 11,
-  fontWeight: FontWeight.w600,
-  height: 1.5,
   color: BrandColors.listMeta,
   decoration: TextDecoration.none,
 );
@@ -2466,23 +2227,6 @@ const TextStyle _factValue = TextStyle(
   fontSize: 13,
   fontWeight: FontWeight.w700,
   color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _cardTitle = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 14,
-  fontWeight: FontWeight.w800,
-  color: BrandColors.textPrimary,
-  decoration: TextDecoration.none,
-);
-
-const TextStyle _service = TextStyle(
-  fontFamily: AppTypography.fontFamily,
-  fontSize: 13,
-  height: 1.55,
-  fontWeight: FontWeight.w500,
-  color: DirectoryCanvas._bodyInk,
   decoration: TextDecoration.none,
 );
 
@@ -2506,7 +2250,7 @@ const TextStyle _hint = TextStyle(
   fontFamily: AppTypography.fontFamily,
   fontSize: 14,
   fontWeight: FontWeight.w500,
-  color: DirectoryCanvas._searchInk,
+  color: BrandColors.muted,
   decoration: TextDecoration.none,
 );
 

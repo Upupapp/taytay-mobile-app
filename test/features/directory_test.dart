@@ -859,7 +859,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Office details'), findsOneWidget);
+      // Redesign P3c: the office page is Office.dc.html (photo and sheet),
+      // with no "Office details" header; the sheet names the office.
+      expect(find.text('Business Permits and Licensing Office'), findsWidgets);
       expect(find.textContaining('Business One Stop Shop'), findsOneWidget);
     });
 

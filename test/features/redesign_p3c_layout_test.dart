@@ -17,6 +17,9 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
 import 'package:taytay_resident/features/account/presentation/account_screen.dart';
 import 'package:taytay_resident/features/account/presentation/security_screen.dart';
+import 'package:taytay_resident/features/directory/data/office_catalogue.dart';
+import 'package:taytay_resident/features/directory/domain/office.dart';
+import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
 import 'package:taytay_resident/features/profile/presentation/contact_details_screen.dart';
 import 'package:taytay_resident/features/profile/presentation/privacy_screen.dart';
 import 'package:taytay_resident/features/profile/presentation/profile_screen.dart';
@@ -24,7 +27,9 @@ import 'package:taytay_resident/features/settings/presentation/privacy_controls_
 import 'package:taytay_resident/features/settings/presentation/settings_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/blue_header.dart';
+import 'package:taytay_resident/shared/widgets/icon_tile.dart';
 import 'package:taytay_resident/shared/widgets/notice_panel.dart';
+import 'package:taytay_resident/shared/widgets/pill_button_row.dart';
 import 'package:taytay_resident/shared/widgets/settings_list.dart';
 import 'package:taytay_resident/shared/widgets/surface_cards.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
@@ -441,6 +446,195 @@ void main() {
             ],
           ),
         ),
+      );
+    });
+  });
+
+  group('directory', () {
+    testWidgets('every directory frame fits every phone', (tester) async {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      final Office bplo = catalogue.offices.singleWhere(
+        (Office office) => office.id == 'bplo',
+      );
+      final Office mdrrmo = catalogue.offices.singleWhere(
+        (Office office) => office.id == 'mdrrmo',
+      );
+      for (final DirectoryCanvas Function() frame
+          in <DirectoryCanvas Function()>[
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.list,
+              offices: catalogue.offices,
+              chips: catalogue.chips,
+              onChip: (_) {},
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.list,
+              offices: catalogue.offices,
+              chips: catalogue.chips,
+              query: 'no office has this word',
+              onBrowseAll: () {},
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.loading,
+              offices: const <Office>[],
+              chips: catalogue.chips,
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.offline,
+              offices: catalogue.offices,
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.searchSpecimen,
+              offices: catalogue.offices,
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.detail,
+              offices: const <Office>[],
+              office: bplo,
+            ),
+            () => DirectoryCanvas(
+              frame: DirectoryFrame.detail,
+              offices: const <Office>[],
+              office: mdrrmo,
+            ),
+            () => const DirectoryCanvas(
+              frame: DirectoryFrame.detail,
+              offices: <Office>[],
+            ),
+            () => const DirectoryCanvas(
+              frame: DirectoryFrame.detail,
+              offices: <Office>[],
+              officeMissing: true,
+            ),
+          ]) {
+        await expectCleanLayouts(tester, frame, scrollable: false);
+      }
+    });
+
+    testWidgets('the list is soft rows with gradient tiles and live chips', (
+      tester,
+    ) async {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      String chip = 'All';
+      await tester.pumpWidget(
+        layoutHost(
+          StatefulBuilder(
+            builder: (context, setState) => DirectoryCanvas(
+              frame: DirectoryFrame.list,
+              offices: catalogue.offices,
+              chips: catalogue.chips,
+              selectedChip: chip,
+              onChip: (String next) => setState(() => chip = next),
+            ),
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(BlueHeader), findsOneWidget);
+      expect(find.byType(IconTile), findsWidgets);
+      expect(find.text('${catalogue.offices.length} offices'), findsOneWidget);
+      final String category = catalogue.chips[1];
+      await tester.tap(find.text(category).first);
+      await tester.pump();
+      expect(chip, category);
+      final int inCategory = catalogue.offices
+          .where((Office office) => office.category == category)
+          .length;
+      expect(
+        find.text('$inCategory ${inCategory == 1 ? 'office' : 'offices'}'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('no match says so and offers every office again', (
+      tester,
+    ) async {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      var browsed = 0;
+      await tester.pumpWidget(
+        layoutHost(
+          DirectoryCanvas(
+            frame: DirectoryFrame.list,
+            offices: catalogue.offices,
+            chips: catalogue.chips,
+            query: 'zzz',
+            onBrowseAll: () => browsed++,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.text('No offices found for “zzz”'), findsOneWidget);
+      await tester.tap(find.text('Browse all offices'));
+      expect(browsed, 1);
+    });
+
+    testWidgets('an office page is the photo, the sheet and the pills', (
+      tester,
+    ) async {
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      final Office office = catalogue.offices.first;
+      await tester.pumpWidget(
+        layoutHost(
+          DirectoryCanvas(
+            frame: DirectoryFrame.detail,
+            offices: const <Office>[],
+            office: office,
+            onCall: () {},
+            onDirections: () {},
+            onMessage: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.byType(GlassOverlap), findsOneWidget);
+      expect(find.byType(PillButtonRow), findsOneWidget);
+      // No structured hours from the API: no open / closed line is drawn.
+      expect(find.textContaining('Closes'), findsNothing);
+      expect(find.textContaining('Opens'), findsNothing);
+      // No Facebook link from the API: the pills offer none.
+      expect(
+        find.descendant(
+          of: find.byType(PillButtonRow),
+          matching: find.text('Facebook'),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('offline shows the saved numbers and Try again', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(430, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final ({List<String> chips, List<Office> offices}) catalogue =
+          await OfficeCatalogue.load();
+      var retried = 0;
+      await tester.pumpWidget(
+        layoutHost(
+          DirectoryCanvas(
+            frame: DirectoryFrame.offline,
+            offices: catalogue.offices,
+            onRetry: () => retried++,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.text("You're offline"), findsOneWidget);
+      expect(find.text('Saved on this phone'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('directory-retry')));
+      expect(retried, 1);
+      expect(
+        tester.getSize(find.byKey(const Key('directory-saved-call-mswdo'))),
+        const Size(A11y.minTapTarget, A11y.minTapTarget),
       );
     });
   });

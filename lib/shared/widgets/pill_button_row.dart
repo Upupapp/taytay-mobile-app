@@ -13,7 +13,9 @@ class PillAction {
     required this.onPressed,
     this.glyph,
     this.primary = false,
+    this.danger = false,
     this.semanticLabel,
+    this.buttonKey,
   });
 
   /// The visible word ("Call", "Directions").
@@ -28,6 +30,13 @@ class PillAction {
 
   /// Read instead of [label] when the word alone is ambiguous ("Call MSWDO").
   final String? semanticLabel;
+
+  /// The solid red pill, for a call to an emergency line. Wins over
+  /// [primary].
+  final bool danger;
+
+  /// Key on the pill's button, for a test or a capture to find it.
+  final Key? buttonKey;
 }
 
 /// The detail page's row of round actions (CSS `.pills` / `.pl` on Office):
@@ -39,6 +48,7 @@ class PillButtonRow extends StatelessWidget {
   const PillButtonRow({
     required this.actions,
     this.padding = const EdgeInsets.symmetric(horizontal: Spacing.formGutter),
+    this.wrap = false,
     super.key,
   });
 
@@ -48,8 +58,24 @@ class PillButtonRow extends StatelessWidget {
   /// and insets its first pill by the page gutter.
   final EdgeInsetsGeometry padding;
 
+  /// Wraps the pills onto a second line instead of scrolling sideways, so
+  /// every action is on screen without a swipe (an office page's Message).
+  final bool wrap;
+
   @override
   Widget build(BuildContext context) {
+    if (wrap) {
+      return Padding(
+        padding: padding,
+        child: Wrap(
+          spacing: Spacing.sm,
+          children: <Widget>[
+            for (final PillAction action in actions)
+              _Pill(action: action, wraps: true),
+          ],
+        ),
+      );
+    }
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: padding,
@@ -66,17 +92,25 @@ class PillButtonRow extends StatelessWidget {
 }
 
 class _Pill extends StatelessWidget {
-  const _Pill({required this.action});
+  const _Pill({required this.action, this.wraps = false});
 
   final PillAction action;
 
+  /// In a wrapping row a label longer than the line wraps inside its pill.
+  final bool wraps;
+
   @override
   Widget build(BuildContext context) {
-    final bool primary = action.primary;
-    final Color fill = primary ? BrandColors.blue : BrandColors.blue50;
+    final bool primary = action.primary || action.danger;
+    final Color fill = action.danger
+        ? BrandColors.red
+        : primary
+        ? BrandColors.blue
+        : BrandColors.blue50;
     final Color ink = primary ? BrandColors.white : BrandColors.blue;
     final TaytayGlyph? glyph = action.glyph;
     final Widget button = TextButton(
+      key: action.buttonKey,
       onPressed: action.onPressed,
       style: ButtonStyle(
         minimumSize: const WidgetStatePropertyAll<Size>(Size(0, 40)),
@@ -106,7 +140,10 @@ class _Pill extends StatelessWidget {
             GlyphIcon(glyph, size: 18, color: ink),
             const SizedBox(width: Spacing.sm),
           ],
-          Text(action.label),
+          if (wraps)
+            Flexible(child: Text(action.label))
+          else
+            Text(action.label),
         ],
       ),
     );

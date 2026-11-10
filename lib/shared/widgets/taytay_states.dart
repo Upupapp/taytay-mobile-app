@@ -121,6 +121,7 @@ class EmptyState extends StatelessWidget {
     this.boxed = false,
     this.primaryAction = false,
     this.actionIcon,
+    this.actionKey,
     super.key,
   });
 
@@ -132,6 +133,9 @@ class EmptyState extends StatelessWidget {
   final bool boxed;
   final bool primaryAction;
   final IconData? actionIcon;
+
+  /// Key on the action button, for a test or a capture to find it.
+  final Key? actionKey;
 
   @override
   Widget build(BuildContext context) {
@@ -151,6 +155,7 @@ class EmptyState extends StatelessWidget {
               onPressed: onAction,
               primary: primaryAction,
               icon: actionIcon,
+              key: actionKey,
             ),
     );
   }
