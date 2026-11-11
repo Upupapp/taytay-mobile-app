@@ -65,6 +65,10 @@ class WaveHeader extends StatelessWidget {
   final bool centered;
   final bool includeSafeArea;
 
+  /// The decorative dot field at the bottom right (CSS `.s4`), for layout
+  /// tests that check text stays clear of it.
+  static const Key dotFieldKey = Key('wave-header-dot-field');
+
   @override
   Widget build(BuildContext context) {
     final double safeTop = includeSafeArea
@@ -175,42 +179,48 @@ class WaveHeader extends StatelessWidget {
               alignment: centered
                   ? Alignment.topCenter
                   : AlignmentDirectional.topStart,
-              // CSS `.wtitle { max-width: min(300px, 82%) }`; centred titles
-              // run the full width.
-              child: SizedBox(
-                width: centered ? null : math.min(300, contentWidth * 0.82),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: cross,
-                  children: <Widget>[
-                    if (eyebrow != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: Spacing.sm),
-                        child: eyebrow,
-                      ),
-                    if (title != null)
-                      Semantics(
-                        header: true,
-                        child: Text(
-                          title,
-                          textAlign: align,
-                          style: AppTypography.hero.copyWith(
-                            color: BrandColors.white,
+              // CSS `.wtitle { max-width: min(300px, 82%) }`. A centred title
+              // keeps clear of the dot field at the bottom right, by the same
+              // inset on both sides so it stays centred (D-199).
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: centered ? WaveHeaderShapes.centeredTextInset : 0,
+                ),
+                child: SizedBox(
+                  width: centered ? null : math.min(300, contentWidth * 0.82),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: cross,
+                    children: <Widget>[
+                      if (eyebrow != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: Spacing.sm),
+                          child: eyebrow,
+                        ),
+                      if (title != null)
+                        Semantics(
+                          header: true,
+                          child: Text(
+                            title,
+                            textAlign: align,
+                            style: AppTypography.hero.copyWith(
+                              color: BrandColors.white,
+                            ),
                           ),
                         ),
-                      ),
-                    if (subtitle != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 6),
-                        child: Text(
-                          subtitle,
-                          textAlign: align,
-                          style: AppTypography.bodyStyle.copyWith(
-                            color: BrandColors.onHeaderLede,
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            subtitle,
+                            textAlign: align,
+                            style: AppTypography.bodyStyle.copyWith(
+                              color: BrandColors.onHeaderLede,
+                            ),
                           ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -261,7 +271,10 @@ class WaveHeader extends StatelessWidget {
                 bottom: WaveHeaderShapes.dotFieldBottom,
                 width: WaveHeaderShapes.dotField.width,
                 height: WaveHeaderShapes.dotField.height,
-                child: const CustomPaint(painter: _DotFieldPainter()),
+                child: const CustomPaint(
+                  key: dotFieldKey,
+                  painter: _DotFieldPainter(),
+                ),
               ),
               if (wide)
                 const Positioned(

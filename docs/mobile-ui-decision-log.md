@@ -2556,6 +2556,35 @@ to keep the statement and name where the app falls short of it.
 
 ---
 
+## D-199 — A centred wave-header title keeps clear of the header's dot field
+
+**Status: settled.** Category: design / accessibility. Recorded 2026-11-11,
+following D-198, on the owner's "do what's best" (Ella, Michaela Cailing).
+
+**Context.** `SuccessScreen` (and the blocking notice and app lock) centre
+their title and subtitle on the wave header and ran them the full width. The
+header's decorative dot field (CSS `.s4`, 46 × 30, 4 px from the right, 62 px
+above the bottom) sits where the last lines of a long subtitle end, so the
+text ran over the dots (seen in `pattern_success.png` in P5).
+
+**Chosen.** A centred title block is inset by
+`WaveHeaderShapes.centeredTextInset` on **both** sides: the dot field's right
+offset plus its width plus a 4 px gap, less the header's side padding (34 px).
+The text ends before the dots and stays centred. Start-aligned headers keep
+the design's `min(300, 82%)` width, which already clears the dots. The inset is
+a token computed from the dot field's own tokens, so moving the dots moves the
+inset with them. `WaveHeader.dotFieldKey` marks the field for tests.
+
+**Rejected.** Dropping or moving the dot field (the design draws it there);
+raising the header's bottom padding (the dots would still sit beside a tall
+subtitle at 200% text); insetting only the right side (the block would no
+longer be centred).
+
+**Why.** Text over a pattern is harder to read, most of all at the large text
+sizes the app promises to honour.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2758,5 +2787,6 @@ to keep the statement and name where the app falls short of it.
 | D-196 | The Message sent page names no emergency number. `GET /hotlines` has no field that marks the Command Center or the primary line (name and category are free text), and the messaged office's phone is not an emergency line. The note says to call an emergency hotline and its button opens the Hotlines page; `DirectoryCanvas.emergencyPhone` is gone. A stable flag is an API field needed | safety / contract | settled |
 | D-197 | Every gate, notice, confirmation and decision is a centred dialog (`AppDialog.show`, theme dialog, scrolls at 200% text); only a picker (a list of choices) is a bottom sheet. The gates, `ConfirmSheet`, the session-ended notice, the legal text (with Close), the correction notice, sending a document and the resubmit note were converted, names kept | design / accessibility | settled |
 | D-198 | `ServiceDirectoryController` and `RegistrationController` have no screen and stay, with their tests: rules they hold are missing live. Tulong sends the search as `q` (against D-59) and shows a failed refresh's old list unlabelled; the sign-up wizard takes a selfie with no biometric consent or server gate (D-32), sends no idempotency key on the verification request (D-15), ticks Terms and Privacy together, leaves the street optional and collects no birth date. Gaps recorded, not closed | privacy / testing | settled |
+| D-199 | A centred wave-header title block (success screens, notices) is inset by `WaveHeaderShapes.centeredTextInset` on both sides, derived from the dot field's tokens, so a long subtitle no longer runs over the decorative dots and the block stays centred | design / accessibility | settled |
 
-**198 decisions — 194 settled, 4 provisional.**
+**199 decisions — 195 settled, 4 provisional.**

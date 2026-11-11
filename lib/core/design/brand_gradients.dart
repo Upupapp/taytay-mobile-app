@@ -380,8 +380,16 @@ abstract final class WaveHeaderShapes {
   /// The wave's drawn height at the bottom of the header (CSS `.wave`).
   static const double waveHeight = 50;
 
+  /// `.whead` side padding.
+  static const double sidePadding = 20;
+
   /// `.whead` padding: 12 + safe area, 20 at the sides, 58 at the bottom.
-  static const EdgeInsets padding = EdgeInsets.fromLTRB(20, 12, 20, 58);
+  static const EdgeInsets padding = EdgeInsets.fromLTRB(
+    sidePadding,
+    12,
+    sidePadding,
+    58,
+  );
 
   /// `.s1`: white 7%, 200 px, top-right.
   static const HeaderCircle bubble = HeaderCircle(
@@ -408,11 +416,22 @@ abstract final class WaveHeaderShapes {
 
   /// `.s4`: a 46 × 30 field of white dots at 45%, 1.6 px, every 10 px.
   static const Color dotColor = Color(0x73FFFFFF);
-  static const Size dotField = Size(46, 30);
+  static const double dotFieldWidth = 46;
+  static const Size dotField = Size(dotFieldWidth, 30);
   static const double dotRadius = 1.6;
   static const double dotPitch = 10;
   static const double dotFieldRight = 4;
   static const double dotFieldBottom = 62;
+
+  /// Space kept between centred header text and the dot field.
+  static const double dotFieldGap = 4;
+
+  /// How far a centred title block (success screens, notices) stays in from
+  /// each side of the header's padding: far enough that its lines end before
+  /// the dot field at the bottom right, and the same on the left so the block
+  /// stays centred. A long subtitle ran over the dots without it (F1, D-199).
+  static const double centeredTextInset =
+      dotFieldRight + dotFieldWidth + dotFieldGap - sidePadding;
 
   /// `.s5`: a red dot, 10 px. Hidden below 380 px wide.
   static const double sparkDiameter = 10;

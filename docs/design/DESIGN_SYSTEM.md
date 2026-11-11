@@ -92,7 +92,8 @@ contrast tests have a dark scheme to check.
 `HeaderShapes`: white circle 220 at 7% (top-right, −70/−80), gold circle 150 at 16% (bottom-left,
 −40/−60), bottom corners `Radii.header` (28), `glassOverlap` 32. `WaveHeaderShapes`: the three
 wave layers (gold 85%, white 40%, white) painted 50 tall by `WavePainter`, plus the floating
-shapes. `WelcomeShapes`: the onboarding photo zone, wave, Skip pill and pager. `GlassTokens`:
+shapes; `centeredTextInset` (34, derived from the dot field's tokens) keeps a centred title
+clear of the dot field. `WelcomeShapes`: the onboarding photo zone, wave, Skip pill and pager. `GlassTokens`:
 `fill` (white 74% → 50%), `pinnedFill` (gold tint), `border` (white 85%, 1 px), `navFill` /
 `navBorder` (tab bar), `backdropFilter()` (blur 18, saturate 1.6), `pageColor`, `pageBlobs`.
 
@@ -270,7 +271,9 @@ registration and every form flow: gradient, floating shapes, three-layer wave, w
 Params: `title`, `subtitle`, `showBack = false`, `onBack`, `backEnabled = true`, `stepLabel`,
 `progress` (0–1), `progressSemanticLabel`, `trailing`, `badge`, `eyebrow`, `centered = false`,
 `includeSafeArea = true`. Usually reached through `AuthFormPage`; a notice uses
-`WaveHeader(centered: true, badge: IconTile.lucide(…, tileSize: IconTileSize.large))`.
+`WaveHeader(centered: true, badge: IconTile.lucide(…, tileSize: IconTileSize.large))`. A centred
+title block is inset `WaveHeaderShapes.centeredTextInset` on both sides, so a long subtitle never
+runs over the decorative dot field (`WaveHeader.dotFieldKey`) and stays centred (D-199).
 
 **`AuthFormPage`** (`form_page.dart`) — the form / step page: `WaveHeader` over a white page, the
 form scrolling under it (the header scrolls too, so 200% text never squeezes the fields), the
