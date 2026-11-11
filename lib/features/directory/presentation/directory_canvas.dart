@@ -66,7 +66,7 @@ class DirectoryCanvas extends StatelessWidget {
     this.onRetry,
     this.onBrowseAll,
     this.chips = const <String>[],
-    this.emergencyPhone = '',
+    this.onHotlines,
     this.dayLabel = '',
     this.query = '',
     this.searchController,
@@ -89,7 +89,14 @@ class DirectoryCanvas extends StatelessWidget {
   final DirectoryFrame frame;
   final List<Office> offices;
   final List<String> chips;
-  final String emergencyPhone;
+
+  /// Opens the Emergency hotlines page from the sent page's emergency note.
+  ///
+  /// The note names no number. An office's own line is not an emergency line,
+  /// and `GET /hotlines` has no field that marks the Command Center or the
+  /// primary emergency line (only a free-text name and category), so the note
+  /// sends the resident to the page that lists every published hotline.
+  final VoidCallback? onHotlines;
 
   /// The day chip on the thread. The fixture supplies it.
   final String dayLabel;
@@ -1628,8 +1635,23 @@ class _AttachButton extends StatelessWidget {
   }
 }
 
+/// The emergency note on the sent page.
+const Key messageSentEmergencyNoteKey = Key('message-sent-emergency');
+
+/// The note's button to the Emergency hotlines page.
+const Key messageSentHotlinesKey = Key('message-sent-hotlines');
+
+/// What the sent page's emergency note says. It names no number and no line:
+/// the button opens the hotlines Taytay LGU publishes.
+abstract final class MessageSentCopy {
+  static const String emergency =
+      "For emergencies don't wait for a reply: call an emergency hotline.";
+  static const String hotlinesButton = 'See emergency hotlines';
+}
+
 /// `MessageSent.dc.html`: the success page with who it went to, what
-/// happens next, and the way to Messages and back to the Directory.
+/// happens next, an emergency note that opens the hotlines, and the way to
+/// Messages and back to the Directory.
 class _SentPage extends StatelessWidget {
   const _SentPage({required this.canvas});
 
@@ -1638,7 +1660,7 @@ class _SentPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final Office? office = canvas.office;
-    final String phone = canvas.emergencyPhone;
+    final VoidCallback? onHotlines = canvas.onHotlines;
     return SuccessScreen(
       title: 'Message sent',
       message:
@@ -1647,37 +1669,64 @@ class _SentPage extends StatelessWidget {
       details: <SuccessDetail>[
         if (office != null) SuccessDetail(label: 'To', value: office.shortName),
       ],
-      body: phone.isEmpty
-          ? null
-          : DecoratedBox(
-              decoration: BoxDecoration(
-                color: BrandColors.red50,
-                borderRadius: BorderRadius.circular(Radii.lg),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(Spacing.md),
-                child: Row(
-                  children: <Widget>[
-                    const IconTile.glyph(
-                      glyph: TaytayGlyph.siren,
-                      tone: TileTone.red,
-                      tileSize: IconTileSize.small,
-                    ),
-                    const SizedBox(width: Spacing.md),
-                    Expanded(
-                      child: Text(
-                        "For emergencies don't wait for a reply: call the "
-                        'Sagip Taytay Command Center, $phone.',
-                        style: AppTypography.listDetail.copyWith(
-                          fontWeight: AppTypography.medium,
-                          color: BrandColors.redInk,
-                        ),
+      // No number: the messaged office's line is not an emergency line, and
+      // nothing in `GET /hotlines` marks which hotline is the primary one.
+      body: DecoratedBox(
+        key: messageSentEmergencyNoteKey,
+        decoration: BoxDecoration(
+          color: BrandColors.red50,
+          borderRadius: BorderRadius.circular(Radii.lg),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(Spacing.md),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const IconTile.glyph(
+                    glyph: TaytayGlyph.siren,
+                    tone: TileTone.red,
+                    tileSize: IconTileSize.small,
+                  ),
+                  const SizedBox(width: Spacing.md),
+                  Expanded(
+                    child: Text(
+                      MessageSentCopy.emergency,
+                      style: AppTypography.listDetail.copyWith(
+                        fontWeight: AppTypography.medium,
+                        color: BrandColors.redInk,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
+              if (onHotlines != null) ...<Widget>[
+                const SizedBox(height: Spacing.md),
+                FilledButton.icon(
+                  key: messageSentHotlinesKey,
+                  onPressed: onHotlines,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: BrandColors.redInk,
+                    foregroundColor: BrandColors.white,
+                  ),
+                  icon: const TaytayIcon(
+                    icon: TaytayIcons.phone,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: IconSizes.sm,
+                    color: BrandColors.white,
+                  ),
+                  label: const Text(
+                    MessageSentCopy.hotlinesButton,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
       primaryLabel: 'Go to Messages',
       onPrimary: canvas.onMessages,
       secondaryLabel: 'Back to Directory',

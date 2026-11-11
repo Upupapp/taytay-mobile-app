@@ -2401,6 +2401,49 @@ fixed.
 
 ---
 
+## D-196 — The Message sent page names no emergency number: it says to call an emergency hotline and opens the hotlines
+
+**Status: settled.** Category: safety / contract / copy. Recorded 2026-11-11,
+following D-195. The owner reviewed the redesign's open decisions and said "do
+what's best" (Ella, Michaela Cailing; see D-185).
+
+**Context.** The Message sent page said "For emergencies don't wait for a
+reply: call the Sagip Taytay Command Center, <number>", and the number was the
+*messaged office's* own phone (`office.phone`): a resident who wrote to the
+business permits office was told to ring that office as the Command Center. A
+resident in an emergency may call the wrong line. The emergency hotlines come
+from `GET /hotlines` (then `GET /home`'s `hotlines`), which the Hotlines page
+reads. A hotline carries `id`, `name`, `number`, `category` (free text, 1–40
+characters, set by staff), `sort_order`, `active` and two timestamps (vendored
+Node OpenAPI; backend `hotlines` table, migration `0010`). Nothing marks one
+line as the Command Center or the primary emergency line.
+
+**Chosen.**
+
+1. **No number on the page.** The note reads "For emergencies don't wait for a
+   reply: call an emergency hotline." (`MessageSentCopy.emergency`), followed by
+   a button, "See emergency hotlines", that opens the Hotlines page, which has
+   its own loading, empty and offline states and the `tel:` call buttons.
+   `DirectoryCanvas.emergencyPhone` is removed, so no caller can put an office's
+   line under that sentence again; the canvas takes `onHotlines`.
+2. **No line is picked by its name or category.** A display name or a
+   free-text category is staff copy, not an identifier: renaming a line would
+   silently move the emergency number. A stable flag (for example a boolean
+   `primary_emergency`, or a closed `kind`) is recorded as an API field needed;
+   with it, the page can show that one number from the same source the Hotlines
+   page reads.
+
+**Rejected.** Matching the name "Sagip Taytay Command Center" or a category
+containing "emergency"; taking the first hotline by `sort_order`; a number
+bundled in the app (it would outlive a change the LGU makes); keeping the office
+number under different words (an office line is not an emergency line).
+
+**Why.** The page is read by somebody who just asked an office for help. If
+their situation is an emergency, the one number it gives them must be right, and
+the app cannot know which number that is.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2600,5 +2643,6 @@ fixed.
 | D-193 | Event covers are uploaded through the API (backend `7522174`). `MediaBytesApi.eventCover` reads `events/{id}/cover` by the event id from the configured base; `cover_image.url` is only a sign and its host is never requested, `http` included. `EventCover` draws through `MediaBytesHost`, with the office's `alt_text` as the label (`LguEvent.coverAltText`) | privacy / contract | settled |
 | D-194 | Who may register is the event's (backend `cf30686`, migration `0044`): `LguEvent.openTo` holds `registration.open_to` and the event page says "Who can register" in this app's words; the form's flag already gated, so an unverified resident reaches the form only where the office opened the event to every account. A corrected event's notice (`event_registration_updated`, with the old and the new date, time and venue) opens the event. Not built: notes or an assistance-needs checklist on a registration (health information, RA 10173 §3(l), §13; no retention schedule) | contract / product / privacy | settled |
 | D-195 | The account's name is checked against the ID (console DL-197, backend `c5e1a7d`). `NameLock.forTier` on `GET /me`'s status: Edit profile offers "Full name" as a field for `unverified` and `rejected`, and as locked text with one sentence for `pending`, `verified` and an unknown status. A `409` on a name change re-reads the status and says why; the message is never shown. The start and needs-correction pages say before the photos that the ID must show the account's name and that it then cannot change, with a link to Edit profile | product / contract / privacy | settled |
+| D-196 | The Message sent page names no emergency number. `GET /hotlines` has no field that marks the Command Center or the primary line (name and category are free text), and the messaged office's phone is not an emergency line. The note says to call an emergency hotline and its button opens the Hotlines page; `DirectoryCanvas.emergencyPhone` is gone. A stable flag is an API field needed | safety / contract | settled |
 
-**193 decisions — 189 settled, 4 provisional.**
+**196 decisions — 192 settled, 4 provisional.**

@@ -149,7 +149,6 @@ void main() {
         await OfficeCatalogue.thread();
     Office office(String id) =>
         catalogue.offices.singleWhere((Office item) => item.id == id);
-    final String phone = office('mdrrmo').phone;
 
     Future<void> frame({
       required String name,
@@ -168,7 +167,7 @@ void main() {
             office: current,
             bubbles: thread.messages,
             dayLabel: thread.dayLabel,
-            emergencyPhone: phone,
+            onHotlines: () {},
           ),
         ),
         '${out.path}/$name.png',

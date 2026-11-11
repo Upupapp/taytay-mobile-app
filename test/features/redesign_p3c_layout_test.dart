@@ -668,7 +668,7 @@ void main() {
           frame: DirectoryFrame.sent,
           offices: const <Office>[],
           office: office,
-          emergencyPhone: office.phone,
+          onHotlines: () {},
           onMessages: () {},
           onBack: () {},
         ),

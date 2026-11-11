@@ -158,7 +158,7 @@ void main() {
           frame: DirectoryFrame.sent,
           offices: const <Office>[],
           office: _offices.first,
-          emergencyPhone: '0900-000-0000',
+          onHotlines: _noop,
           onBack: _noop,
           onMessages: _noop,
         ),

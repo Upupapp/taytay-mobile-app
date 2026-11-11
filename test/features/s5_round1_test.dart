@@ -19,6 +19,7 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/directory/data/office_catalogue.dart';
 import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
+import 'package:taytay_resident/features/home/presentation/hotlines_screen.dart';
 import 'package:taytay_resident/features/messaging/data/office_messaging_gap_repository.dart';
 import 'package:taytay_resident/features/messaging/domain/message_send_failure.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
@@ -514,11 +515,33 @@ void main() {
     expect(find.textContaining('Magandang araw'), findsNothing);
   });
 
-  testWidgets('the sent screen uses the office on the route', (tester) async {
+  testWidgets('the sent screen names the office on the route and never '
+      'offers its phone as an emergency line', (tester) async {
     await _boot(tester, location: '/offices/bplo/message/sent');
 
-    expect(find.textContaining('(02) 8284-4788'), findsOneWidget);
+    // The receipt names the messaged office.
+    expect(find.text('BPLO'), findsWidgets);
+    // Its own line is not an emergency line: no number is drawn at all, and
+    // nothing claims to be the Command Center.
+    expect(find.textContaining('(02) 8284-4788'), findsNothing);
     expect(find.textContaining('0985-488-3352'), findsNothing);
+    expect(find.textContaining('Command Center'), findsNothing);
+    expect(find.text(MessageSentCopy.emergency), findsOneWidget);
+    expect(find.byKey(messageSentHotlinesKey), findsOneWidget);
+  });
+
+  testWidgets('the emergency note opens the Emergency hotlines page', (
+    tester,
+  ) async {
+    await _boot(tester, location: '/offices/bplo/message/sent');
+
+    await tester.ensureVisible(find.byKey(messageSentHotlinesKey));
+    await tester.tap(find.byKey(messageSentHotlinesKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HotlinesScreen), findsOneWidget);
+    expect(find.text('Emergency hotlines'), findsOneWidget);
+    expect(find.text(MessageSentCopy.emergency), findsNothing);
   });
 
   testWidgets('an empty message is refused and the draft is not sent', (

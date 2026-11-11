@@ -501,7 +501,6 @@ class MessageSentScreen extends StatefulWidget {
 }
 
 class _MessageSentScreenState extends State<MessageSentScreen> {
-  String _phone = '';
   Office? _office;
   bool _started = false;
 
@@ -517,10 +516,7 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
       api: dependencies.apiClient,
     ).then((Office? office) {
       if (!mounted) return;
-      setState(() {
-        _office = office;
-        _phone = office?.phone ?? '';
-      });
+      setState(() => _office = office);
     });
   }
 
@@ -532,9 +528,9 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
         frame: DirectoryFrame.sent,
         offices: const <Office>[],
         office: _office,
-        emergencyPhone: _phone,
         onBack: () => context.goNamed(AppRoute.services.routeName),
         onMessages: () => context.goNamed(AppRoute.messagesInbox.routeName),
+        onHotlines: () => context.goNamed(AppRoute.hotlines.routeName),
       ),
     );
   }
