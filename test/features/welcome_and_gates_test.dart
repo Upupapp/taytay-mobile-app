@@ -448,7 +448,22 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.text('Continue verification'), findsWidgets);
+      // D-204: the gate cannot tell whether this resident has started, so its
+      // button claims no stage ("Continue verification" would say they had).
+      expect(
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.text('Go to verification'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(Dialog),
+          matching: find.text('Continue verification'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('dismissing a gate forgets the intent', (tester) async {

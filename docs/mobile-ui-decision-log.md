@@ -2675,7 +2675,8 @@ time a gate opens.
 **Chosen.** The gate states the one thing the app knows: "This action is for
 verified Taytay residents. Your account is not verified yet."
 (`UnverifiedGateSheet.notVerifiedYet`). No status chip, no stage. "Continue
-verification" opens the verification screen, which reads the real state from
+verification" (renamed "Go to verification" by D-204, for the same reason)
+opens the verification screen, which reads the real state from
 the server and words it (pending, needs correction, not started). The unused
 `statusLabel` parameter is gone.
 
@@ -2794,6 +2795,31 @@ screen; a tone keeps them paired); a second notice widget for emergencies.
 
 **Why.** A note that warns about an emergency should look like the app's other
 notes and say what it is in words, not only in red.
+
+---
+
+## D-204 — The verification gate's button claims no stage either
+
+**Status: settled.** Category: product / accessibility. Recorded 2026-11-12,
+following D-201, on the owner's "do what's best" (Ella, Michaela Cailing).
+
+**Context.** D-201 made the gate's sentence claim nothing beyond "not
+verified yet", but its button still read "Continue verification". That is the
+label `ResidentVerificationStage.inProgress` gives a resident part-way through
+(`verification_status_detail.dart`); a resident who never started was told to
+continue something they had not begun. The gate still knows only the access
+level (D-201).
+
+**Chosen.** The button reads "Go to verification"
+(`UnverifiedGateSheet.goToVerification`). The verification screen it opens
+reads the real stage and offers that stage's own action ("Start
+verification", "Continue verification", "Fix and resend", "Try again").
+
+**Rejected.** "Start verification" (wrong for a resident part-way through or
+refused); "Verify my account" (reads as if pressing it verifies them).
+
+**Why.** Same as D-201: the gate cannot see the stage, so neither its words
+nor its button may name one.
 
 ---
 
@@ -3004,5 +3030,6 @@ notes and say what it is in words, not only in red.
 | D-201 | The verification gate says only that the account is not verified ("Your account is not verified yet."): the session holds the access level, not the KYC stage, so the gate names none; the verification screen reads and words the real one. The default "Pending review" chip is gone | privacy / product | settled |
 | D-202 | Every dialog opens through `AppDialog.show`: hero icon, a title that is a heading naming the route, content, then `AppDialogActions` (primary, optional soft secondary, text) stacked full width. It scrolls by default; `scrollable: false` lets content scroll itself with the actions in view. `confirm` / `acknowledge` are built on it, at the theme radius 22. The gate, legal text, change password and issuance photo no longer call `showDialog`; pickers go through `AppSheet` (`showBarangayPicker`, `PickerChoiceRow`); the design guard fails on any other popup route. Focus enters the dialog and returns to the opener | design / accessibility | settled |
 | D-203 | `SoftNote` takes one `action` inside the note and a fifth tone, `emergency` (red, a siren read as "Emergency"); the Message sent emergency note is a `SoftNote` with the mock-up's bold heading | design / accessibility | settled |
+| D-204 | The verification gate's button reads "Go to verification", claiming no stage (it cannot see one, D-201); the verification screen offers the stage's own action | product / accessibility | settled |
 
-**199 decisions — 195 settled, 4 provisional.**
+**200 decisions — 196 settled, 4 provisional.**

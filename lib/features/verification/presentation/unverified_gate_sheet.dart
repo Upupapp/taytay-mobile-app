@@ -50,6 +50,13 @@ class UnverifiedGateSheet extends StatelessWidget {
   /// screen it leads to reads the real one.
   static const String notVerifiedYet = 'Your account is not verified yet.';
 
+  /// The gate's button (D-204). Neutral for the same reason as
+  /// [notVerifiedYet]: "Continue verification" is the label for a resident
+  /// part-way through (`ResidentVerificationStage.inProgress`), and the gate
+  /// cannot tell whether this resident has started. The verification screen
+  /// it opens offers the stage's own action.
+  static const String goToVerification = 'Go to verification';
+
   static VerifiedOnlyAction actionFor(ResidentIntentKind intent) =>
       switch (intent) {
         ResidentIntentKind.viewDigitalId => VerifiedOnlyAction.digitalId,
@@ -90,10 +97,7 @@ class UnverifiedGateSheet extends StatelessWidget {
           style: AppTypography.bodyStyle.copyWith(color: BrandColors.text),
         ),
         AppDialogActions(
-          primary: DialogButton(
-            label: 'Continue verification',
-            onPressed: onContinue,
-          ),
+          primary: DialogButton(label: goToVerification, onPressed: onContinue),
           text: DialogButton(label: 'Not now', onPressed: onDismiss),
         ),
       ],

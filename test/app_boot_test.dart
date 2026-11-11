@@ -225,11 +225,11 @@ void main() {
         ),
         findsOneWidget,
       );
-      // Scoped to the dialog: the home card behind it also offers this action.
+      // Scoped to the dialog: the home card behind it offers its own action.
       await tester.tap(
         find.descendant(
           of: find.byType(Dialog),
-          matching: find.text('Continue verification'),
+          matching: find.text('Go to verification'),
         ),
       );
       await tester.pumpAndSettle();
