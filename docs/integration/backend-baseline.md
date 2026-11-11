@@ -35,6 +35,11 @@ It was re-vendored from backend `c5e1a7d` the same day for the name check
 (D-195): `PATCH /me` answers `409` to a change of `name` or `birthdate` while
 `verification_status` is `pending` or `verified`, and the staff approval
 carries the confirmed name. No route this app calls was added.
+It was re-vendored from backend `39d650b` on 11 November 2026 for the ID review
+time (D-200): `GET /app/config` now always sends `verification_review_working_days`,
+`{min, max}` (integers, 1 <= min <= max <= 30) or `null`, in the new
+`VerificationReviewWorkingDays` schema. The staff name-correction route of
+`09e1cd0` came with it and is not called. No route this app calls was added.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

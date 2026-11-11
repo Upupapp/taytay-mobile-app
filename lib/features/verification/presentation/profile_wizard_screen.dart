@@ -5,6 +5,7 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../../core/startup/platform_controller.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -176,29 +177,37 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
         ),
       );
     }
-    return ProfileWizardPage(
-      step: widget.step,
-      record: record,
-      submittedAt: _submittedAt,
-      certified: _certified,
-      onCertified: (bool value) => setState(() => _certified = value),
-      onBack: () {
-        if (context.canPop()) {
-          context.pop();
-        } else {
-          context.goNamed(AppRoute.home.routeName);
-        }
-      },
-      onPersonal: () =>
-          context.goNamed(AppRoute.residentProfilePersonal.routeName),
-      onHousehold: () =>
-          context.goNamed(AppRoute.residentProfileAddress.routeName),
-      onReview: () => context.goNamed(AppRoute.residentProfileReview.routeName),
-      onEditPersonal: () =>
-          context.goNamed(AppRoute.residentProfilePersonal.routeName),
-      onEditHousehold: () =>
-          context.goNamed(AppRoute.residentProfileAddress.routeName),
-      onContinue: () => _continue(record),
+    // The review time is app config, read at startup; a later answer redraws
+    // the submitted frame's line rather than leaving the bundled one (D-200).
+    final PlatformController platform = AppDependencies.of(context).platform;
+    return ListenableBuilder(
+      listenable: platform,
+      builder: (BuildContext context, Widget? _) => ProfileWizardPage(
+        step: widget.step,
+        record: record,
+        submittedAt: _submittedAt,
+        certified: _certified,
+        onCertified: (bool value) => setState(() => _certified = value),
+        onBack: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.goNamed(AppRoute.home.routeName);
+          }
+        },
+        onPersonal: () =>
+            context.goNamed(AppRoute.residentProfilePersonal.routeName),
+        onHousehold: () =>
+            context.goNamed(AppRoute.residentProfileAddress.routeName),
+        onReview: () =>
+            context.goNamed(AppRoute.residentProfileReview.routeName),
+        onEditPersonal: () =>
+            context.goNamed(AppRoute.residentProfilePersonal.routeName),
+        onEditHousehold: () =>
+            context.goNamed(AppRoute.residentProfileAddress.routeName),
+        onContinue: () => _continue(record),
+        reviewTime: platform.bootstrap.verificationReviewTime,
+      ),
     );
   }
 }

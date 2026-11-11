@@ -4,6 +4,7 @@ import '../../../core/result/result.dart';
 import '../domain/app_bootstrap.dart';
 import '../domain/platform_repository.dart';
 import '../domain/privacy_notice.dart';
+import '../domain/verification_review_time.dart';
 
 /// Talks to `GET /api/v1/health` and `GET /api/v1/app/config`.
 ///
@@ -89,6 +90,7 @@ class PlatformApiRepository implements PlatformRepository {
       )?.toUtc(),
       privacyNotice: _notice(map['privacy_notice']),
       terms: _notice(map['terms']),
+      verificationReviewTime: _reviewTime(map),
       serverTime: DateTime.tryParse(
         map['server_time'] is String ? map['server_time'] as String : '',
       )?.toUtc(),
@@ -127,6 +129,21 @@ class PlatformApiRepository implements PlatformRepository {
       )?.toUtc(),
       bodyMarkdown: body is String ? body : '',
     );
+  }
+
+  /// `verification_review_working_days` (backend `39d650b`): `{min, max}` or
+  /// `null`. An absent key is an older server and keeps the bundled copy;
+  /// `null` is the office stating no review time. Anything else that is not a
+  /// whole-number range the server could have sent (a string, a fraction, min
+  /// above max, outside 1 to 30) counts as absent, never as a crash. Keys
+  /// beside `min` and `max` are ignored (Article 8).
+  static VerificationReviewTime _reviewTime(Map<String, dynamic> map) {
+    const String key = 'verification_review_working_days';
+    if (!map.containsKey(key)) return VerificationReviewTime.notSent;
+    final Object? raw = map[key];
+    if (raw == null) return VerificationReviewTime.notStated;
+    if (raw is! Map) return VerificationReviewTime.notSent;
+    return VerificationReviewTime.fromRange(raw['min'], raw['max']);
   }
 
   static String? _string(Object? value) =>

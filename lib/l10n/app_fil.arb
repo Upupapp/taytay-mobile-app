@@ -277,5 +277,9 @@
   "welcomePrivacyTitle": "Ikaw ang pipili\nng ibabahagi.",
   "welcomePrivacyBody": "Humihingi ang Taytay LGU ng kailangan lang ng isang serbisyo, at sinasabi kung bakit. Protektado ang iyong impormasyon sa ilalim ng Data Privacy Act of 2012.",
   "welcomePrivacyTag": "Parokya ni San Juan Bautista",
-  "welcomePrivacyCredit": "Larawan: Urbanroamer · CC BY-SA 3.0"
+  "welcomePrivacyCredit": "Larawan: Urbanroamer · CC BY-SA 3.0",
+  "verificationReviewRange": "{min}–{max} araw ng trabaho",
+  "verificationReviewDays": "{days, plural, other{{days} araw ng trabaho}}",
+  "verificationReviewSentence": "Karaniwang inaabot ito ng {duration}.",
+  "verificationReviewTimelineDetail": "Karaniwang {duration}"
 }

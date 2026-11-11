@@ -10,8 +10,10 @@ import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../platform/domain/verification_review_time.dart';
 import '../../profile/domain/name_lock.dart';
 import '../domain/field_correction_note.dart';
+import 'review_time_copy.dart';
 import 's3_chrome.dart';
 
 // The verification status pages follow the Account pattern of the redesign:
@@ -32,6 +34,7 @@ class PendingStatusPage extends StatelessWidget {
     this.submittedOn = '',
     this.residentMessage = '',
     this.categories = const <String>[],
+    this.reviewTime = VerificationReviewTime.notSent,
     super.key,
   });
 
@@ -39,6 +42,10 @@ class PendingStatusPage extends StatelessWidget {
   final String accountCreated;
   final String email;
   final String idType;
+
+  /// `verification_review_working_days` from `GET /app/config`. Not sent keeps
+  /// the bundled range; not stated drops the sentence (D-200).
+  final VerificationReviewTime reviewTime;
 
   /// `submitted_at`, already formatted. Empty leaves the progress card as drawn.
   final String submittedOn;
@@ -51,6 +58,7 @@ class PendingStatusPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String? reviewSentence = ReviewTimeCopy.sentence(reviewTime);
     return _StatusScaffold(
       title: 'Verification status',
       onBack: onBack,
@@ -66,8 +74,11 @@ class PendingStatusPage extends StatelessWidget {
               tone: StatusTone.pending,
             ),
             body: <String>[
-              'Taytay LGU staff are checking your valid ID and selfie. This '
-                  'usually takes 1–3 working days. No action needed.',
+              <String>[
+                'Taytay LGU staff are checking your valid ID and selfie.',
+                ?reviewSentence,
+                'No action needed.',
+              ].join(' '),
               if (residentMessage.isNotEmpty) residentMessage,
             ],
           ),

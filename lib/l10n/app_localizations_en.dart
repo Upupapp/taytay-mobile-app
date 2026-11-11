@@ -969,4 +969,30 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get welcomePrivacyCredit => 'Photo: Urbanroamer · CC BY-SA 3.0';
+
+  @override
+  String verificationReviewRange(int min, int max) {
+    return '$min–$max working days';
+  }
+
+  @override
+  String verificationReviewDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days working days',
+      one: '1 working day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String verificationReviewSentence(String duration) {
+    return 'This usually takes $duration.';
+  }
+
+  @override
+  String verificationReviewTimelineDetail(String duration) {
+    return 'Usually $duration';
+  }
 }

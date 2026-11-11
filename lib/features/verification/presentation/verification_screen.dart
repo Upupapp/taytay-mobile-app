@@ -10,6 +10,7 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/startup/platform_controller.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -188,6 +189,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
     final VerificationStatusDetail? status = _controller.status;
     final String idLabel = idTypeLabel(status?.idType);
     final String reviewed = _date(status?.reviewedAt);
+    final PlatformController platform = AppDependencies.of(context).platform;
     final Widget page = switch (face) {
       VerificationFace.verified => VerifiedStatusPage(
         onBack: () => _leave(context),
@@ -199,14 +201,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
             context.pushNamed(AppRoute.issuanceCatalogue.routeName),
         verifiedOn: reviewed,
       ),
-      VerificationFace.pending => PendingStatusPage(
-        onBack: () => _leave(context),
-        accountCreated: _accountCreated,
-        email: _email,
-        idType: idLabel,
-        submittedOn: _submittedOn,
-        residentMessage: _residentMessage,
-        categories: _categories,
+      // The review time is app config, read at startup; a later answer
+      // redraws the sentence rather than leaving the bundled one (D-200).
+      VerificationFace.pending => ListenableBuilder(
+        listenable: platform,
+        builder: (BuildContext context, Widget? _) => PendingStatusPage(
+          onBack: () => _leave(context),
+          accountCreated: _accountCreated,
+          email: _email,
+          idType: idLabel,
+          submittedOn: _submittedOn,
+          residentMessage: _residentMessage,
+          categories: _categories,
+          reviewTime: platform.bootstrap.verificationReviewTime,
+        ),
       ),
       VerificationFace.needsCorrection => NeedsCorrectionPage(
         onBack: () => _leave(context),

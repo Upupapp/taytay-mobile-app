@@ -27,6 +27,7 @@ import '../../../notifications/domain/notification_repository.dart';
 import '../../../platform/domain/app_bootstrap.dart';
 import '../../../platform/domain/platform_repository.dart';
 import '../../../platform/domain/privacy_notice.dart';
+import '../../../platform/domain/verification_review_time.dart';
 import '../../../profile/domain/profile_fields.dart';
 import '../../../profile/domain/resident_profile_detail.dart';
 import '../../../profile/domain/resident_profile_repository.dart';
@@ -932,6 +933,8 @@ class MockPlatformRepository implements PlatformRepository {
           version: 'placeholder',
           bodyMarkdown: 'This placeholder is not shown.',
         ),
+        // What backend migration 0046 seeds before an office edits it.
+        verificationReviewTime: ReviewTimeStated(1, 3),
       ),
     );
   }

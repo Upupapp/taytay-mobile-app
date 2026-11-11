@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import 'privacy_notice.dart';
+import 'verification_review_time.dart';
 
 /// What the server says a client needs before it knows anything else.
 ///
@@ -33,6 +34,7 @@ class AppBootstrap {
     this.updatedAt,
     this.privacyNotice = PrivacyNotice.missing,
     this.terms = TermsOfUse.missing,
+    this.verificationReviewTime = VerificationReviewTime.notSent,
   });
 
   /// What the app assumes before the server has answered, and after a failure.
@@ -94,6 +96,12 @@ class AppBootstrap {
   /// text. Once published its version is the one [termsVersion] names, and
   /// consent still records [termsVersion], which older servers send alone.
   final TermsOfUse terms;
+
+  /// `verification_review_working_days` from `GET /app/config` (backend
+  /// `39d650b`): what the verification pages say an ID review usually takes.
+  /// [VerificationReviewTime.notSent] until the server answers with a usable
+  /// value, which keeps the copy this build shipped with (D-200).
+  final VerificationReviewTime verificationReviewTime;
 
   /// How far the device clock is from the server's, when both are known.
   ///

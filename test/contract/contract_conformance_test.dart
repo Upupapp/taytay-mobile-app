@@ -2,10 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_envelope.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/backend_baseline.dart';
+import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/features/platform/data/platform_api_repository.dart';
+import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/verification_review_time.dart';
 
 /// Conformance against the **published contract**, not against this app's own
 /// beliefs about it.
@@ -477,4 +482,162 @@ void main() {
       expect(failure.retryAfter, const Duration(seconds: 45));
     });
   });
+
+  group('app config — the ID review time the console sets (D-200)', () {
+    // The forward contract: the Node export vendored from taytay-backend
+    // `39d650b`, where `verification_review_working_days` arrived.
+    final Map<String, dynamic> node =
+        jsonDecode(
+              File(
+                'docs/integration/taytay-node-openapi.json',
+              ).readAsStringSync(),
+            )
+            as Map<String, dynamic>;
+    final Map<String, dynamic> nodeSchemas =
+        (node['components'] as Map<String, dynamic>)['schemas']
+            as Map<String, dynamic>;
+    Map<String, dynamic> nodeSchema(String name) =>
+        nodeSchemas[name] as Map<String, dynamic>;
+    Map<String, dynamic> properties(Map<String, dynamic> of) =>
+        of['properties'] as Map<String, dynamic>;
+
+    Future<AppBootstrap> decodeConfig(Map<String, Object?> data) async {
+      final ApiClient client = ApiClient(
+        config: AppConfig.from(
+          rawEnvironment: 'dev',
+          rawApiBaseUrl: 'https://example.test/api/v1',
+          isReleaseBuild: false,
+        ),
+        transport: _OneAnswer(
+          json(200, <String, Object?>{
+            'data': data,
+            'meta': <String, Object?>{'request_id': 'req-1'},
+          }),
+        ),
+      );
+      final Result<AppBootstrap> result = await PlatformApiRepository(
+        apiClient: client,
+      ).loadBootstrap();
+      return (result as Ok<AppBootstrap>).value;
+    }
+
+    test('GET /app/config answers with the AppConfig envelope', () {
+      final Map<String, dynamic> get =
+          ((node['paths'] as Map<String, dynamic>)['/api/v1/app/config']
+                  as Map<String, dynamic>)['get']
+              as Map<String, dynamic>;
+      final Map<String, dynamic> ok =
+          (get['responses'] as Map<String, dynamic>)['200']
+              as Map<String, dynamic>;
+      final Map<String, dynamic> body =
+          ((ok['content'] as Map<String, dynamic>)['application/json']
+                  as Map<String, dynamic>)['schema']
+              as Map<String, dynamic>;
+      expect(body[r'$ref'], '#/components/schemas/AppConfigEnvelope');
+      final Map<String, dynamic> data =
+          properties(nodeSchema('AppConfigEnvelope'))['data']
+              as Map<String, dynamic>;
+      expect(data[r'$ref'], '#/components/schemas/AppConfig');
+    });
+
+    test('the key is always sent, as a range or null', () {
+      final Map<String, dynamic> config = nodeSchema('AppConfig');
+      expect(required(config), contains('verification_review_working_days'));
+      final Map<String, dynamic> field =
+          properties(config)['verification_review_working_days']
+              as Map<String, dynamic>;
+      final List<Map<String, dynamic>> options =
+          (field['oneOf'] as List<dynamic>).cast<Map<String, dynamic>>();
+      expect(options, hasLength(2));
+      expect(
+        options.map((Map<String, dynamic> o) => o[r'$ref']),
+        contains('#/components/schemas/VerificationReviewWorkingDays'),
+      );
+      expect(
+        options.map((Map<String, dynamic> o) => o['type']),
+        contains('null'),
+      );
+    });
+
+    test('the range is two whole numbers in the bounds the app accepts', () {
+      final Map<String, dynamic> range = nodeSchema(
+        'VerificationReviewWorkingDays',
+      );
+      expect(range['type'], 'object');
+      expect(required(range), unorderedEquals(<String>['min', 'max']));
+      expect(properties(range).keys, unorderedEquals(<String>['min', 'max']));
+      for (final String end in <String>['min', 'max']) {
+        final Map<String, dynamic> bound =
+            properties(range)[end] as Map<String, dynamic>;
+        expect(bound['type'], 'integer', reason: end);
+        expect(
+          bound['minimum'],
+          VerificationReviewTime.fewestDays,
+          reason: end,
+        );
+        expect(bound['maximum'], VerificationReviewTime.mostDays, reason: end);
+      }
+    });
+
+    test('a body shaped like the contract decodes to each case', () async {
+      final Map<String, dynamic> range = nodeSchema(
+        'VerificationReviewWorkingDays',
+      );
+      final int fewest =
+          (properties(range)['min'] as Map<String, dynamic>)['minimum'] as int;
+      final int most =
+          (properties(range)['max'] as Map<String, dynamic>)['maximum'] as int;
+
+      // Every key AppConfig requires, so the body is one the server could send.
+      Map<String, Object?> body(Object? reviewTime) => <String, Object?>{
+        for (final String key in required(nodeSchema('AppConfig')))
+          key: switch (key) {
+            'verification_review_working_days' => reviewTime,
+            'feature_flags' => <String, Object?>{},
+            'updated_at' => '2026-11-11T00:00:00.000Z',
+            'privacy_notice' || 'terms' => <String, Object?>{
+              'version': 'placeholder',
+              'updated_at': '2026-11-11T00:00:00.000Z',
+              'body_markdown': 'Placeholder.',
+            },
+            _ => null,
+          },
+      };
+
+      expect(
+        (await decodeConfig(
+          body(<String, Object?>{'min': fewest, 'max': most}),
+        )).verificationReviewTime,
+        ReviewTimeStated(fewest, most),
+      );
+      expect(
+        (await decodeConfig(
+          body(<String, Object?>{'min': fewest, 'max': fewest}),
+        )).verificationReviewTime,
+        ReviewTimeStated(fewest, fewest),
+      );
+      expect(
+        (await decodeConfig(body(null))).verificationReviewTime,
+        VerificationReviewTime.notStated,
+      );
+      // Outside what the contract allows: the app keeps its own copy.
+      expect(
+        (await decodeConfig(
+          body(<String, Object?>{'min': most, 'max': most + 1}),
+        )).verificationReviewTime,
+        VerificationReviewTime.notSent,
+      );
+    });
+  });
+}
+
+/// Answers the one request a decode test makes.
+class _OneAnswer implements ApiTransport {
+  _OneAnswer(this._response);
+
+  final ApiHttpResponse _response;
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async =>
+      Ok<ApiHttpResponse>(_response);
 }

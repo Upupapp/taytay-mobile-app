@@ -1147,5 +1147,49 @@
   "welcomePrivacyCredit": "Photo: Urbanroamer · CC BY-SA 3.0",
   "@welcomePrivacyCredit": {
     "description": "Photo credit on welcome scene 3."
+  },
+  "verificationReviewRange": "{min}–{max} working days",
+  "@verificationReviewRange": {
+    "description": "How long an ID review usually takes, as the office's range of working days from GET /app/config (verification_review_working_days, min below max). Composed into verificationReviewSentence and verificationReviewTimelineDetail. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.",
+    "placeholders": {
+      "min": {
+        "type": "int",
+        "example": "1"
+      },
+      "max": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "verificationReviewDays": "{days, plural, =1{1 working day} other{{days} working days}}",
+  "@verificationReviewDays": {
+    "description": "How long an ID review usually takes when the office's range is one number (min equals max). Singular for one day. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.",
+    "placeholders": {
+      "days": {
+        "type": "int",
+        "example": "3"
+      }
+    }
+  },
+  "verificationReviewSentence": "This usually takes {duration}.",
+  "@verificationReviewSentence": {
+    "description": "The pending verification page's sentence on the review time. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "1–3 working days"
+      }
+    }
+  },
+  "verificationReviewTimelineDetail": "Usually {duration}",
+  "@verificationReviewTimelineDetail": {
+    "description": "The supporting line under 'LGU review' on the profile wizard's submitted frame. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.",
+    "placeholders": {
+      "duration": {
+        "type": "String",
+        "example": "1–3 working days"
+      }
+    }
   }
 }

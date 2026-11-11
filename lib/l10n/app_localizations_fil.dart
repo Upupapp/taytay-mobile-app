@@ -984,4 +984,29 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get welcomePrivacyCredit => 'Larawan: Urbanroamer · CC BY-SA 3.0';
+
+  @override
+  String verificationReviewRange(int min, int max) {
+    return '$min–$max araw ng trabaho';
+  }
+
+  @override
+  String verificationReviewDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days araw ng trabaho',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String verificationReviewSentence(String duration) {
+    return 'Karaniwang inaabot ito ng $duration.';
+  }
+
+  @override
+  String verificationReviewTimelineDetail(String duration) {
+    return 'Karaniwang $duration';
+  }
 }

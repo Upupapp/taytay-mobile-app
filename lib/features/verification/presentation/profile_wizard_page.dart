@@ -11,8 +11,10 @@ import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../platform/domain/verification_review_time.dart';
 import '../domain/resident_record.dart';
 import 'manila_stamp.dart';
+import 'review_time_copy.dart';
 import 's3_chrome.dart';
 
 /// The five resident-profile frames, `03-05` through `03-09`.
@@ -37,6 +39,7 @@ class ProfileWizardPage extends StatelessWidget {
     this.certified = true,
     this.onCertified,
     this.submittedAt,
+    this.reviewTime = VerificationReviewTime.notSent,
     super.key,
   });
 
@@ -55,6 +58,11 @@ class ProfileWizardPage extends StatelessWidget {
   /// `created_at` on the current verification request. The submitted frame
   /// formats it. A missing instant stays blank.
   final DateTime? submittedAt;
+
+  /// `verification_review_working_days` from `GET /app/config`, for the
+  /// submitted frame's "LGU review" line. Not sent keeps the bundled range;
+  /// not stated drops the line (D-200).
+  final VerificationReviewTime reviewTime;
 
   @override
   Widget build(BuildContext context) {
@@ -107,6 +115,7 @@ class ProfileWizardPage extends StatelessWidget {
             onBack: onBack,
             body: _Submitted(
               submittedAt: sent == null ? '' : formatManilaStamp(sent),
+              reviewTime: reviewTime,
             ),
             primaryLabel: 'Back to profile',
             onPrimary: onContinue,
@@ -716,9 +725,10 @@ class _Certify extends StatelessWidget {
 
 /// Under the RegDone header: the status in words and the steps so far.
 class _Submitted extends StatelessWidget {
-  const _Submitted({required this.submittedAt});
+  const _Submitted({required this.submittedAt, required this.reviewTime});
 
   final String submittedAt;
+  final VerificationReviewTime reviewTime;
 
   @override
   Widget build(BuildContext context) {
@@ -739,10 +749,10 @@ class _Submitted extends StatelessWidget {
                 detail: submittedAt.isEmpty ? '—' : submittedAt,
                 tone: TimelineTone.done,
               ),
-              const TimelineStep(
+              TimelineStep(
                 icon: TaytayIcons.clock,
                 title: 'LGU review',
-                detail: 'Usually 1–3 working days',
+                detail: ReviewTimeCopy.timelineDetail(reviewTime) ?? '',
                 tone: TimelineTone.current,
               ),
               const TimelineStep(

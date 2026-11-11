@@ -491,6 +491,28 @@
         }
       }
     },
+    "/api/v1/admin/users/{id}/name-corrections": {
+      "post": {
+        "operationId": "correctUserName",
+        "summary": "Correct a verified account's name, against an ID somebody at the office has seen",
+        "description": "Admin only; correcting your own is 403. Only for a verified account: before its ID is approved, and after a rejection, the resident changes the name in the app, which refuses a change while the ID is pending or verified. id_checked must be true: the person correcting it has seen a government ID that shows the new name. previous_name is the name the screen showed, compared with the account under a lock. The earlier name is appended to an append-only history in the same transaction, and the office's event lists show the corrected name with name_source office-correction. Audited as `user.name_corrected`.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NameCorrection" } } }
+        },
+        "responses": {
+          "200": { "description": "Name corrected.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserListItemEnvelope" } } } },
+          "403": { "description": "Not an admin, or the caller's own account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "User not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is closed or not verified, its name is not previous_name, or it already has this name.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The body could not be validated, or id_checked is not true.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/api/v1/admin/users/{id}/office-role": {
       "patch": {
         "operationId": "assignUserOfficeRole",
@@ -2059,7 +2081,7 @@
       "get": {
         "operationId": "getAppConfig",
         "summary": "Public app bootstrap",
-        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, public feature flags, the privacy notice and the Terms of Use (each a placeholder until published: version 'placeholder'). Flags are not secrets.",
+        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, how many working days the app says an ID review usually takes (null: the app states none), public feature flags, the privacy notice and the Terms of Use (each a placeholder until published: version 'placeholder'). Flags are not secrets.",
         "security": [],
         "responses": {
           "200": { "description": "Bootstrap config.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigEnvelope" } } } }
@@ -2070,7 +2092,7 @@
       "patch": {
         "operationId": "patchAppConfig",
         "summary": "Update public app config",
-        "description": "Admin only. Null clears a field. A feature flag value of null deletes that key. privacy_notice and terms publish the privacy notice and the Terms of Use the same way: version and body_markdown together, and privacy_version or terms_version set to that version (a different one beside it is 422). The version is the administrator's choice and is never bumped by the API; a new version is what asks residents to accept again.",
+        "description": "Admin only. Null clears a field. A feature flag value of null deletes that key. verification_review_working_days is written whole, min and max together, each an integer with 1 <= min <= max <= 30 (anything else is 422); null clears it, and the app then states no review time. privacy_notice and terms publish the privacy notice and the Terms of Use the same way: version and body_markdown together, and privacy_version or terms_version set to that version (a different one beside it is 422). The version is the administrator's choice and is never bumped by the API; a new version is what asks residents to accept again.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigPatch" } } } },
         "responses": {
@@ -16976,6 +16998,15 @@
         "required": ["office_id"],
         "properties": { "office_id": { "type": ["string", "null"], "format": "uuid" } }
       },
+      "NameCorrection": {
+        "type": "object",
+        "required": ["name", "previous_name", "id_checked"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The name as the ID shows it." },
+          "previous_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The account's name as the screen showed it." },
+          "id_checked": { "type": "boolean", "const": true, "description": "The person correcting it has seen a government ID that shows the new name." }
+        }
+      },
       "OfficeRoleChange": {
         "type": "object",
         "additionalProperties": false,
@@ -18241,13 +18272,17 @@
       },
       "AppConfig": {
         "type": "object",
-        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "feature_flags", "privacy_notice", "terms", "updated_at"],
+        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "verification_review_working_days", "feature_flags", "privacy_notice", "terms", "updated_at"],
         "properties": {
           "contact_line": { "type": ["string", "null"] },
           "support_email": { "type": ["string", "null"] },
           "privacy_version": { "type": ["string", "null"], "description": "Kept for older clients. Publishing privacy_notice sets it to the same version." },
           "terms_version": { "type": ["string", "null"], "description": "Kept for older clients. Publishing terms sets it to the same version." },
           "minimum_app_version": { "type": ["string", "null"] },
+          "verification_review_working_days": {
+            "oneOf": [{ "$ref": "#/components/schemas/VerificationReviewWorkingDays" }, { "type": "null" }],
+            "description": "How many working days the app tells a resident an ID review usually takes. Null: the app states no review time."
+          },
           "feature_flags": { "type": "object", "additionalProperties": { "type": "string" } },
           "privacy_notice": { "$ref": "#/components/schemas/PrivacyNotice" },
           "terms": { "$ref": "#/components/schemas/TermsOfUse" },
@@ -18307,7 +18342,21 @@
           "privacy_notice": { "$ref": "#/components/schemas/PrivacyNoticeWrite" },
           "terms": { "$ref": "#/components/schemas/TermsOfUseWrite" },
           "minimum_app_version": { "type": ["string", "null"] },
+          "verification_review_working_days": {
+            "oneOf": [{ "$ref": "#/components/schemas/VerificationReviewWorkingDays" }, { "type": "null" }],
+            "description": "Written whole, min and max together. Null clears it, and the app then states no review time."
+          },
           "feature_flags": { "type": "object", "additionalProperties": { "type": ["string", "null"] } }
+        }
+      },
+      "VerificationReviewWorkingDays": {
+        "type": "object",
+        "description": "A range of working days, both ends counted. The server refuses min greater than max, a non-integer, or a value outside 1 to 30.",
+        "additionalProperties": false,
+        "required": ["min", "max"],
+        "properties": {
+          "min": { "type": "integer", "minimum": 1, "maximum": 30 },
+          "max": { "type": "integer", "minimum": 1, "maximum": 30, "description": "Not less than min." }
         }
       },
       "DeviceWrite": {
@@ -30265,9 +30314,10 @@
             "type": "string",
             "enum": [
               "id-approval",
+              "office-correction",
               "account"
             ],
-            "description": "id-approval: the name the account carried when the office approved its ID, kept as it stood then. account: the name as the resident typed it — an account not ID-verified, or verified before a name was kept at approval with none recorded."
+            "description": "id-approval: the name the account carried when the office approved its ID, kept as it stood then. office-correction: a name the office corrected since, against an ID it saw (newer than the approval). account: the name as the resident typed it — an account not ID-verified, or verified before a name was kept at approval with none recorded."
           },
           "identity_verified": {
             "type": "boolean",

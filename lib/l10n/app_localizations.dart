@@ -1765,6 +1765,30 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Photo: Urbanroamer · CC BY-SA 3.0'**
   String get welcomePrivacyCredit;
+
+  /// How long an ID review usually takes, as the office's range of working days from GET /app/config (verification_review_working_days, min below max). Composed into verificationReviewSentence and verificationReviewTimelineDetail. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'{min}–{max} working days'**
+  String verificationReviewRange(int min, int max);
+
+  /// How long an ID review usually takes when the office's range is one number (min equals max). Singular for one day. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 working day} other{{days} working days}}'**
+  String verificationReviewDays(int days);
+
+  /// The pending verification page's sentence on the review time. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'This usually takes {duration}.'**
+  String verificationReviewSentence(String duration);
+
+  /// The supporting line under 'LGU review' on the profile wizard's submitted frame. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  ///
+  /// In en, this message translates to:
+  /// **'Usually {duration}'**
+  String verificationReviewTimelineDetail(String duration);
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

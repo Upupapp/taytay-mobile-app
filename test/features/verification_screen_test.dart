@@ -15,6 +15,8 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/verification_review_time.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
@@ -503,6 +505,58 @@ void main() {
 
       expect(find.text('Pending review'), findsOneWidget);
       expect(_lines(NameCheckCopy.beforeSending), findsNothing);
+    });
+
+    testWidgets('the pending page follows the review time app config sends', (
+      tester,
+    ) async {
+      final dependencies = await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.manualReview,
+          rawState: 'pending',
+        ),
+      );
+      AppBootstrap sending(VerificationReviewTime reviewTime) => AppBootstrap(
+        service: '',
+        apiVersion: '',
+        timezone: 'Asia/Manila',
+        channel: 'citizen-mobile',
+        defaultPageSize: 25,
+        minimumVersion: '',
+        features: FeatureFlags.none,
+        support: SupportContact.none,
+        verificationReviewTime: reviewTime,
+      );
+      const String lead =
+          'Taytay LGU staff are checking your valid ID and selfie.';
+
+      // Nothing sent yet: the copy this build shipped with (D-200).
+      expect(
+        find.text(
+          '$lead This usually takes 1–3 working days. No action needed.',
+        ),
+        findsOneWidget,
+      );
+
+      dependencies.platform.replaceBootstrapForTesting(
+        sending(const ReviewTimeStated(2, 4)),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          '$lead This usually takes 2–4 working days. No action needed.',
+        ),
+        findsOneWidget,
+      );
+
+      dependencies.platform.replaceBootstrapForTesting(
+        sending(VerificationReviewTime.notStated),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('$lead No action needed.'), findsOneWidget);
+      expect(find.textContaining('working day'), findsNothing);
+      expect(find.text('Pending review'), findsOneWidget);
     });
 
     testWidgets('a verified stage raises the session without a restart', (

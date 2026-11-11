@@ -2585,6 +2585,77 @@ sizes the app promises to honour.
 
 ---
 
+## D-200 — The ID review time is the office's setting: a range, none, or the copy the app shipped with
+
+**Status: settled.** Category: contract / product / localisation. Recorded
+2026-11-11, following D-199. The owner keeps the review-time copy for now and
+wants administrators to change it from the console (Ella, Michaela Cailing;
+backend `39d650b`).
+
+**Context.** The pending page said an ID review "usually takes 1–3 working
+days" and the profile wizard's submitted frame said "Usually 1–3 working
+days", both hard-coded. No service standard is published for the review, so
+the app was stating a number nobody had set. `GET /app/config` now always
+sends `verification_review_working_days`: `{ "min", "max" }`, whole numbers
+with 1 <= min <= max <= 30, or `null` for "the app states no review time".
+Backend migration `0046` seeds `{1, 3}`.
+
+**Chosen.**
+1. **Three cases, kept apart in the model.** `VerificationReviewTime` (platform
+   domain) is `ReviewTimeStated(min, max)`, `notStated` for `null`, or
+   `notSent` when the key is absent (an older server), the config has not been
+   read, or the value is malformed. `PlatformApiRepository` parses the key
+   explicitly; a string, a fraction, min above max or a value outside 1 to 30
+   is `notSent`, never a crash, and keys beside `min` and `max` are ignored
+   (Article 8). Malformed is not "not stated": a server bug must not delete a
+   sentence the office never cleared.
+2. **Offline, it is app config like the rest.** It rides on `AppBootstrap`, so
+   `PlatformController` keeps the last value the server sent when a refresh
+   fails, and the app shows `notSent` until the first answer. No new cache:
+   app config is not in `PublicCache` and nothing is written to disk.
+3. **One formatter.** `ReviewTimeCopy` turns the setting into "1–3 working
+   days", "1 working day" or "5 working days" (one number is never "5–5"), and
+   into the page sentence ("This usually takes 1–3 working days.") and the
+   timeline line ("Usually 1–3 working days"). `notSent` reads as the bundled
+   range, `VerificationReviewTime.bundled` (1–3), so an older server shows
+   exactly today's copy. `notStated` returns nothing: the pending paragraph
+   reads "Taytay LGU staff are checking your valid ID and selfie. No action
+   needed." and the "LGU review" step has no supporting line.
+4. **Both locales, in the `.arb` files.** `verificationReviewRange`,
+   `verificationReviewDays` (an ICU plural: singular for one day in English;
+   Filipino does not inflect the noun), `verificationReviewSentence` and
+   `verificationReviewTimelineDetail`, in English and Filipino ("Karaniwang
+   inaabot ito ng 1–3 araw ng trabaho."), so the translation tests guard them.
+   The Filipino needs review by a native speaker.
+5. **The pages read the English strings.** The verification pages are literal
+   English on every device (as D-195 left them). A Filipino sentence in the
+   middle of an English paragraph would be worse than either language, so
+   `ReviewTimeCopy.pageStrings` is English. When the pages are translated they
+   pass `AppStrings.of(context)` and nothing else changes.
+6. **The screens follow the answer.** The verification screen's pending face
+   and the profile wizard listen to `PlatformController`, so a config that
+   arrives after the page opened redraws the sentence.
+
+The vendored Node export was refreshed from `39d650b`.
+
+**Not built.** Saying anything when the office has cleared the time (no
+"the office has not said how long"): the owner's instruction is to drop the
+sentence. Showing the Filipino on the verification pages before the pages
+themselves are translated.
+
+**Rejected.** Treating a malformed value as `null` (it would silently drop the
+sentence on a server bug). Hiding the sentence until the config answers (a
+resident on a slow connection would see it appear). Composing the sentence in
+each screen (two screens drift; the point of the setting is one number).
+Reading the console's text as the sentence (a server string cannot be
+translated or checked by a test, the same reason as D-194).
+
+**Why.** A review time is a promise the office makes, so the office should be
+the one to make it, change it, or withdraw it, and the app should say exactly
+that and nothing more.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2788,5 +2859,6 @@ sizes the app promises to honour.
 | D-197 | Every gate, notice, confirmation and decision is a centred dialog (`AppDialog.show`, theme dialog, scrolls at 200% text); only a picker (a list of choices) is a bottom sheet. The gates, `ConfirmSheet`, the session-ended notice, the legal text (with Close), the correction notice, sending a document and the resubmit note were converted, names kept | design / accessibility | settled |
 | D-198 | `ServiceDirectoryController` and `RegistrationController` have no screen and stay, with their tests: rules they hold are missing live. Tulong sends the search as `q` (against D-59) and shows a failed refresh's old list unlabelled; the sign-up wizard takes a selfie with no biometric consent or server gate (D-32), sends no idempotency key on the verification request (D-15), ticks Terms and Privacy together, leaves the street optional and collects no birth date. Gaps recorded, not closed | privacy / testing | settled |
 | D-199 | A centred wave-header title block (success screens, notices) is inset by `WaveHeaderShapes.centeredTextInset` on both sides, derived from the dot field's tokens, so a long subtitle no longer runs over the decorative dots and the block stays centred | design / accessibility | settled |
+| D-200 | The ID review time is the office's setting (backend `39d650b`): `verification_review_working_days` on `GET /app/config` is a range, `null` or absent. `VerificationReviewTime` keeps the three apart; malformed counts as absent. `ReviewTimeCopy` is the one formatter, in both `.arb` locales (the verification pages read the English): a range, one day singular, none drops the sentence and the timeline line, absent keeps the shipped 1–3. It rides on `AppBootstrap`, so a failed refresh keeps the last value | contract / product / localisation | settled |
 
 **199 decisions — 195 settled, 4 provisional.**
