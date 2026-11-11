@@ -10,18 +10,27 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/app_failure.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/dashed_outline.dart';
 import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
+import '../../../shared/widgets/s3_surface.dart';
 import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
+import '../../verification/domain/verification_id_type.dart';
+import '../domain/card_preparation.dart';
 import '../domain/credential_repository.dart';
 import '../domain/digital_id_face.dart';
+import 'card_preparing_copy.dart';
 
-/// The issued card, the four non-active explanations, and the not-issued card
-/// (design `DigitalID.dc.html`, the card pattern on a glass page).
+/// The issued card, the four non-active explanations, the "being prepared"
+/// page for a resident with no card (design `DigitalID.dc.html` and
+/// `IDStatus.dc.html`, the card pattern on a glass page), and the not-issued
+/// card for a status this build does not recognise.
 ///
 /// The shell paints the tab bar. The QR token is painted and then dropped: it
 /// is not a label, a key, or a diagnostic field. The card shows what the
@@ -37,6 +46,8 @@ class DigitalIdView extends StatelessWidget {
     this.onRetry,
     this.loadPhoto,
     this.loading = false,
+    this.preparation = CardPreparation.unknown,
+    this.onMessageOffice,
     super.key,
   });
 
@@ -64,6 +75,12 @@ class DigitalIdView extends StatelessWidget {
   /// for a card that is still loading.
   final bool loading;
 
+  /// The dates of the steps already taken, for a resident with no card.
+  final CardPreparation preparation;
+
+  /// Opens a message to the MSWDO. Null hides the button.
+  final VoidCallback? onMessageOffice;
+
   @override
   Widget build(BuildContext context) {
     final String? published = publishedResidentName(name);
@@ -88,7 +105,17 @@ class DigitalIdView extends StatelessWidget {
           ),
         ),
       ];
-    } else if (card == null || face == null) {
+    } else if (card == null) {
+      // No card (a 404 or a null `data`): the API sends no state for this,
+      // so it is not given one; the steps say what already happened (D-207).
+      body = <Widget>[
+        const _PreparingCard(),
+        _PreparingSteps(preparation: preparation),
+        _AboutCard(onMessageOffice: onMessageOffice),
+      ];
+    } else if (face == null) {
+      // A card in a status this build cannot read is not called "being
+      // prepared" (it exists) nor shown as working (CLAUDE.md Article 5.8).
       body = <Widget>[
         const _IdCard(),
         Text(
@@ -1070,6 +1097,188 @@ class _NoticeCopy {
     ),
   };
 }
+
+/// `.ghost`: where the card will be, drawn as a dashed outline of the same
+/// ID-1 proportions with the state in words.
+class _PreparingCard extends StatelessWidget {
+  const _PreparingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: _IdCard._maxWidth),
+        child: LayoutBuilder(
+          builder: (BuildContext context, BoxConstraints constraints) {
+            return Semantics(
+              container: true,
+              child: CustomPaint(
+                foregroundPainter: const DashedOutline(
+                  colour: BrandColors.cardPendingOutline,
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: BrandColors.white,
+                    borderRadius: BorderRadius.circular(Radii.lg),
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxWidth / _IdCard._ratio,
+                    ),
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(Spacing.lg),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const IconTile.lucide(
+                              icon: TaytayIcons.idCard,
+                              tileSize: IconTileSize.large,
+                            ),
+                            const SizedBox(height: Spacing.sm),
+                            Semantics(
+                              header: true,
+                              child: Text(
+                                CardPreparingCopy.title,
+                                textAlign: TextAlign.center,
+                                style: _cardHeading,
+                              ),
+                            ),
+                            const SizedBox(height: Spacing.xs),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 250),
+                              child: Text(
+                                CardPreparingCopy.body,
+                                textAlign: TextAlign.center,
+                                style: _note,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// "Where your card is": the five steps. The first three are dated only by
+/// what the server sent; an undated step is still drawn, without a date.
+class _PreparingSteps extends StatelessWidget {
+  const _PreparingSteps({required this.preparation});
+
+  final CardPreparation preparation;
+
+  static String _date(DateTime? instant) =>
+      instant == null ? '' : ManilaTime.formatDate(instant);
+
+  @override
+  Widget build(BuildContext context) {
+    final String idType = idTypeLabel(preparation.idType);
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(CardPreparingCopy.stepsTitle, style: _cardHeading),
+          ),
+          const SizedBox(height: Spacing.xs),
+          Timeline(
+            steps: <TimelineStep>[
+              TimelineStep(
+                icon: TaytayIcons.check,
+                title: CardPreparingCopy.accountCreated,
+                detail: _date(preparation.accountCreatedAt),
+                tone: TimelineTone.done,
+              ),
+              TimelineStep(
+                icon: TaytayIcons.check,
+                title: CardPreparingCopy.idSent,
+                detail: CardPreparingCopy.detail(<String>[
+                  _date(preparation.sentAt),
+                  idType,
+                ]),
+                tone: TimelineTone.done,
+              ),
+              TimelineStep(
+                icon: TaytayIcons.check,
+                title: CardPreparingCopy.verified,
+                detail: _date(preparation.verifiedAt),
+                tone: TimelineTone.done,
+              ),
+              const TimelineStep(
+                icon: TaytayIcons.clock,
+                title: CardPreparingCopy.issued,
+                detail: CardPreparingCopy.issuedDetail,
+                tone: TimelineTone.current,
+              ),
+              const TimelineStep(
+                icon: TaytayIcons.idCard,
+                title: CardPreparingCopy.show,
+                detail: CardPreparingCopy.showDetail,
+                tone: TimelineTone.upcoming,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "About your card", with the way to ask the MSWDO.
+class _AboutCard extends StatelessWidget {
+  const _AboutCard({this.onMessageOffice});
+
+  final VoidCallback? onMessageOffice;
+
+  @override
+  Widget build(BuildContext context) {
+    final VoidCallback? onMessageOffice = this.onMessageOffice;
+    final TextStyle fact = AppTypography.listDetail.copyWith(
+      color: BrandColors.text,
+    );
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(CardPreparingCopy.aboutTitle, style: _cardHeading),
+          ),
+          const SizedBox(height: Spacing.md),
+          Text(CardPreparingCopy.aboutWhat, style: fact),
+          const SizedBox(height: Spacing.sm),
+          Text(CardPreparingCopy.aboutStops, style: fact),
+          if (onMessageOffice != null) ...<Widget>[
+            const SizedBox(height: Spacing.md),
+            SecondaryButton(
+              label: CardPreparingCopy.message,
+              onPressed: onMessageOffice,
+              icon: const TaytayIcon(
+                icon: TaytayIcons.messageCircle,
+                semanticLabel: '',
+                excludeSemantics: true,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+final TextStyle _cardHeading = AppTypography.sectionTitle.copyWith(
+  fontWeight: AppTypography.strong,
+  color: BrandColors.ink,
+);
 
 /// Dev mock only: says the number and dates are illustrations.
 class _SampleFooter extends StatelessWidget {

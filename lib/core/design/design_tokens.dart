@@ -229,6 +229,10 @@ abstract final class BrandColors {
   /// Dashed frame around the scannable code.
   static const Color qrFrame = Color(0xFF9AA6BF);
 
+  /// Dashed outline of the ID tab's card that is not issued yet (CSS
+  /// `.ghost`, navy at 28%). Decorative: the card's title says the state.
+  static const Color cardPendingOutline = Color(0x470A2071);
+
   /// Status chip fills, re-pointed to the redesign tints.
   static const Color chipAmberBg = gold50;
   static const Color chipGreenBg = green50;

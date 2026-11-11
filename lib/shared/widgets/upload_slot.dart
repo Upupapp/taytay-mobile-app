@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/taytay_icons.dart';
 import '../../core/design/typography.dart';
+import 'dashed_outline.dart';
 import 'form_page.dart';
 import 'icon_tile.dart';
 import 'taytay_icon.dart';
@@ -44,7 +45,7 @@ class UploadSlot extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           child: CustomPaint(
-            painter: _DashedOutline(
+            painter: DashedOutline(
               colour: error ? BrandColors.red : BrandColors.line2,
             ),
             child: ConstrainedBox(
@@ -174,38 +175,4 @@ class AttachedFileCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// `.add { border: 2px dashed var(--line2); border-radius: 16px }`.
-class _DashedOutline extends CustomPainter {
-  const _DashedOutline({required this.colour});
-
-  final Color colour;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double stroke = 2;
-    final Paint paint = Paint()
-      ..color = colour
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke;
-    final Path outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(stroke / 2),
-          const Radius.circular(Radii.lg),
-        ),
-      );
-    for (final metric in outline.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        canvas.drawPath(metric.extractPath(distance, distance + 6), paint);
-        distance += 10;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedOutline oldDelegate) =>
-      oldDelegate.colour != colour;
 }

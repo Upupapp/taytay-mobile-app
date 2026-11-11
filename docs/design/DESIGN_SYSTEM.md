@@ -73,7 +73,7 @@ The redesign names. New code uses these; the theme's `ColorScheme` is derived fr
 `chipBlueBg`…) are aliases re-pointed at the values above, so code written before the redesign
 still compiles on the new palette. New code uses the names in the table. A few specialist values
 stay for the screens that need them (`cardDim*` for a suspended digital ID, `qrFrame`,
-`sampleBorder` for `SampleTag`).
+`cardPendingOutline` for the ID card that is not issued yet, `sampleBorder` for `SampleTag`).
 
 Contrast is tested, not eyeballed: `test/core/design_test.dart`, `foundation_contrast_test.dart`
 and `redesign_theme_test.dart` hold body text to 4.5:1 and large text and graphics to 3:1 on the
@@ -445,6 +445,11 @@ keeps Continue disabled until it is ticked.
 `AttachedFileCard({title*, status*, icon = TaytayIcons.fileText, actionLabel, onAction,
 actionKey})`: a chosen file with a green check and one text action. Neither draws the file
 itself (a privacy choice).
+
+**`DashedOutline`** (`dashed_outline.dart`) — the 2 px dashed rounded outline Flutter's `Border`
+cannot draw, as a `CustomPainter`: `UploadSlot`'s outline and the ID tab's card that is not
+issued yet (D-207). `DashedOutline({colour*, radius = Radii.lg})`, passed as
+`CustomPaint(painter: …)` behind the content. Seen in the gallery through `UploadSlot`.
 
 ### Rows, lists and timelines
 

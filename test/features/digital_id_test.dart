@@ -5,16 +5,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/features/credential/data/credential_api_repository.dart';
+import 'package:taytay_resident/features/credential/domain/card_preparation.dart';
 import 'package:taytay_resident/features/credential/domain/credential_repository.dart';
 import 'package:taytay_resident/features/credential/domain/digital_id_face.dart';
+import 'package:taytay_resident/features/credential/presentation/card_preparing_copy.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_canvas.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_screen.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
+import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
+import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
+
+import '../support/layout_matrix.dart';
 
 void main() {
   group('the face is the server card plus the expiry rule', () {
@@ -347,7 +357,7 @@ void main() {
     },
   );
 
-  testWidgets('a 404 from /me/digital-id shows the not-issued card', (
+  testWidgets('a 404 from /me/digital-id shows the card being prepared', (
     tester,
   ) async {
     final CredentialApiRepository repository = CredentialApiRepository(
@@ -367,14 +377,196 @@ void main() {
     );
     await tester.pump();
     await tester.pump();
-    expect(find.text('Not yet issued'), findsOneWidget);
-    expect(
-      find.text('Your digital ID will appear here once Taytay LGU issues it.'),
-      findsOneWidget,
-    );
+    expect(find.text('Not yet issued'), findsNothing);
+    expect(find.text(CardPreparingCopy.title), findsOneWidget);
+    expect(find.text(CardPreparingCopy.stepsTitle), findsOneWidget);
+    expect(find.text(CardPreparingCopy.aboutTitle), findsOneWidget);
     expect(find.text('operator text that must not be shown'), findsNothing);
     expect(find.byKey(DigitalIdView.qrKey), findsNothing);
     expect(find.text('Juan Dela Cruz'), findsNothing);
+  });
+
+  group('a card being prepared (D-207)', () {
+    final DateTime created = DateTime.utc(2026, 10, 1, 1);
+    final DateTime sent = DateTime.utc(2026, 10, 2, 1);
+    final DateTime reviewed = DateTime.utc(2026, 10, 3, 1);
+    final VerificationStatusDetail approved = VerificationStatusDetail(
+      stage: ResidentVerificationStage.verified,
+      rawState: 'approved',
+      submittedAt: sent,
+      reviewedAt: reviewed,
+      idType: 'philid',
+    );
+
+    test('dates come only from the verified request and GET /me', () {
+      final CardPreparation full = CardPreparation.from(
+        profile: ResidentProfileDetail(createdAt: created),
+        verification: approved,
+      );
+      expect(full.accountCreatedAt, created);
+      expect(full.sentAt, sent);
+      expect(full.verifiedAt, reviewed);
+      expect(full.idType, 'philid');
+
+      final CardPreparation pending = CardPreparation.from(
+        verification: VerificationStatusDetail(
+          stage: ResidentVerificationStage.pendingReview,
+          rawState: 'pending',
+          submittedAt: sent,
+          reviewedAt: reviewed,
+          idType: 'philid',
+        ),
+      );
+      expect(pending, CardPreparation.unknown);
+      expect(CardPreparation.from(), CardPreparation.unknown);
+      expect(full.toString(), isNot(contains('2026')));
+      expect(full.toString(), isNot(contains('philid')));
+    });
+
+    testWidgets('the five steps, dated in Manila time from what was sent', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        DigitalIdScreen(
+          repository: _Recording.cards(const <ResidentCredential?>[null]),
+          verificationRepository: _Status(
+            Ok<VerificationStatusDetail>(approved),
+          ),
+          profileRepository: _Profile(
+            Ok<ResidentProfileDetail>(
+              ResidentProfileDetail(createdAt: created),
+            ),
+          ),
+          sample: false,
+          now: () => _now,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      for (final String title in <String>[
+        CardPreparingCopy.accountCreated,
+        CardPreparingCopy.idSent,
+        CardPreparingCopy.verified,
+        CardPreparingCopy.issued,
+        CardPreparingCopy.show,
+      ]) {
+        expect(find.text(title), findsOneWidget, reason: title);
+      }
+      expect(find.text('01 Oct 2026'), findsOneWidget);
+      expect(find.text('02 Oct 2026 · PhilSys National ID'), findsOneWidget);
+      expect(find.text('03 Oct 2026'), findsOneWidget);
+      expect(find.text(CardPreparingCopy.message), findsOneWidget);
+      expect(find.byKey(DigitalIdView.qrKey), findsNothing);
+      expect(find.text('Juan Dela Cruz'), findsNothing);
+    });
+
+    testWidgets('failed reads draw every step without a date', (tester) async {
+      final _Status status = _Status(
+        const Err<VerificationStatusDetail>(NetworkFailure()),
+      );
+      final _Recording cards = _Recording.cards(<ResidentCredential?>[null]);
+      await _pump(
+        tester,
+        DigitalIdScreen(
+          repository: cards,
+          verificationRepository: status,
+          profileRepository: _Profile(
+            const Err<ResidentProfileDetail>(
+              ServerFailure(debugMessage: 'operator text'),
+            ),
+          ),
+          sample: false,
+          now: () => _now,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text(CardPreparingCopy.title), findsOneWidget);
+      expect(find.text(CardPreparingCopy.verified), findsOneWidget);
+      expect(find.textContaining('2026'), findsNothing);
+      expect(find.textContaining('PhilSys'), findsNothing);
+      expect(find.textContaining('operator text'), findsNothing);
+      expect(find.text('Try again'), findsNothing);
+      expect(status.reads, 1);
+    });
+
+    testWidgets('an unrecognised status keeps the not-issued card', (
+      tester,
+    ) async {
+      final _Status status = _Status(Ok<VerificationStatusDetail>(approved));
+      await _pump(
+        tester,
+        DigitalIdScreen(
+          repository: _Recording.cards(const <ResidentCredential?>[
+            ResidentCredential(id: 'card-1', state: null, rawState: 'mystery'),
+          ]),
+          verificationRepository: status,
+          sample: false,
+          now: () => _now,
+        ),
+      );
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Not yet issued'), findsOneWidget);
+      expect(find.text(CardPreparingCopy.title), findsNothing);
+      expect(status.reads, 0);
+    });
+
+    testWidgets('Message the MSWDO opens a message to the MSWDO', (
+      tester,
+    ) async {
+      final GoRouter router = GoRouter(
+        initialLocation: '/digital-id',
+        routes: <RouteBase>[
+          GoRoute(
+            path: '/digital-id',
+            builder: (BuildContext context, GoRouterState state) =>
+                DigitalIdScreen(
+                  repository: _Recording.cards(<ResidentCredential?>[null]),
+                  sample: false,
+                  now: () => _now,
+                ),
+          ),
+          GoRoute(
+            path: AppRoute.officeCompose.path,
+            name: AppRoute.officeCompose.routeName,
+            builder: (BuildContext context, GoRouterState state) =>
+                Text('compose ${state.pathParameters['officeId']}'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      // Tall enough that the whole page, button included, is on screen.
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(800, 2400);
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(
+        MaterialApp.router(theme: AppTheme.light(), routerConfig: router),
+      );
+      await tester.pump();
+      await tester.pump();
+      await tester.tap(find.text(CardPreparingCopy.message));
+      await tester.pumpAndSettle();
+      expect(find.text('compose mswdo'), findsOneWidget);
+    });
+
+    testWidgets('the page fits every phone at 100% and 200% text', (
+      tester,
+    ) async {
+      await expectCleanLayouts(
+        tester,
+        () => DigitalIdView(
+          now: _now,
+          preparation: CardPreparation.from(
+            profile: ResidentProfileDetail(createdAt: created),
+            verification: approved,
+          ),
+          onMessageOffice: () {},
+        ),
+        scrollable: false,
+      );
+    });
   });
 }
 
@@ -454,6 +646,35 @@ class _Recording implements CredentialRepository {
       NotFoundFailure(debugMessage: 'unused'),
     );
   }
+}
+
+class _Status implements VerificationRepository {
+  _Status(this.answer);
+
+  final Result<VerificationStatusDetail> answer;
+  int reads = 0;
+
+  @override
+  Future<Result<VerificationStatusDetail>> loadOwnStatusDetail() async {
+    reads += 1;
+    return answer;
+  }
+
+  // The page reads nothing else; any other call fails the test.
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Profile implements ResidentProfileRepository {
+  _Profile(this.answer);
+
+  final Result<ResidentProfileDetail> answer;
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async => answer;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _NotFoundDigitalId implements ApiTransport {

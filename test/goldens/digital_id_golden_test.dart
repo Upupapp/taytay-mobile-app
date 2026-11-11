@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:taytay_resident/core/design/app_theme.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
+import 'package:taytay_resident/features/credential/domain/card_preparation.dart';
 import 'package:taytay_resident/features/credential/domain/credential_repository.dart';
 import 'package:taytay_resident/features/credential/presentation/digital_id_canvas.dart';
 import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
@@ -69,7 +70,29 @@ void main() {
       now: DateTime(2029, 10, 23),
       sample: true,
     ),
-    _Specimen('not-issued', now: now),
+    // A status this build cannot read: the not-issued card, unchanged.
+    _Specimen(
+      'not-issued',
+      card: const ResidentCredential(
+        id: 'credential-sample-1',
+        state: null,
+        rawState: 'mystery',
+      ),
+      now: now,
+    ),
+    // No card (D-207): IDStatus.dc.html, dated from synthetic reads.
+    _Specimen(
+      'preparing',
+      now: now,
+      preparation: CardPreparation(
+        accountCreatedAt: DateTime.utc(2026, 10, 1, 1),
+        sentAt: DateTime.utc(2026, 10, 2, 1),
+        idType: 'philid',
+        verifiedAt: DateTime.utc(2026, 10, 3, 1),
+      ),
+    ),
+    // The same page when no date was sent or the reads failed.
+    _Specimen('preparing-undated', now: now),
     _Specimen(
       'long-name',
       card: _sampleCard(issued, expires, qr: qr),
@@ -142,6 +165,7 @@ class _Specimen {
     this.card,
     this.nameText,
     this.sample = false,
+    this.preparation = CardPreparation.unknown,
   });
 
   final String name;
@@ -149,6 +173,7 @@ class _Specimen {
   final String? nameText;
   final DateTime now;
   final bool sample;
+  final CardPreparation preparation;
 
   String? get residentName => nameText;
 }
@@ -198,6 +223,8 @@ Future<img.Image> _paint(WidgetTester tester, _Specimen specimen) async {
               name: specimen.residentName,
               now: specimen.now,
               sample: specimen.sample,
+              preparation: specimen.preparation,
+              onMessageOffice: () {},
             ),
           ),
         ),

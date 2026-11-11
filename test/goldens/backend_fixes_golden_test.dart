@@ -86,7 +86,8 @@ Future<img.Image> paintDigitalId(WidgetTester tester) async {
 void main() {
   setUpAll(_loadFonts);
 
-  testWidgets('the wired digital ID screen matches the not-issued card', (
+  // No card is the page being prepared since D-207.
+  testWidgets('the wired digital ID screen matches the card being prepared', (
     tester,
   ) async {
     const afterPath = 'test/goldens/compare/backend-fixes/after/digital_id.png';

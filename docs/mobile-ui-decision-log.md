@@ -2971,6 +2971,52 @@ still literal English on every device (D-200 item 5).
 
 ---
 
+## D-207 — A verified resident with no card sees where the card is, dated only by what was sent
+
+**Status: settled.** Category: product / contract / design. Recorded
+2026-11-12, citizen design pack prompt M1, on the owner's instruction (Ella,
+Michaela Cailing).
+
+**Context.** `GET /me/digital-id` answering 404 or a null `data` drew the
+not-issued card face with one sentence. The board `IDStatus.dc.html` draws
+that moment as a page: a status headline, "Where your card is" in five steps
+and "About your card" with Message the MSWDO. The API sends no card state for
+it: the wire statuses are `active`, `suspended` and `revoked`.
+
+**Chosen.**
+1. No card is "Your card is being prepared": a dashed outline of the card
+   (`DashedOutline`, `BrandColors.cardPendingOutline`), the five steps on the
+   shared `Timeline`, and About your card. `CredentialLifecycleState` is
+   unchanged and gains no wire value.
+2. Steps 1 to 3 are always done (the route admits verified residents only).
+   Their dates are those the verification screen shows: `created_at` on
+   `GET /me`, and `submitted_at`, `id_type` and `reviewed_at` on the current
+   verification request, taken only when that request is the verified one
+   (`CardPreparation.from`). A date not sent, or a failed read, leaves the
+   step without one; neither is an error page. Both reads happen once, only
+   when there is no card, before the page is drawn, never on a QR refresh.
+3. A card in a status this build does not recognise keeps the old not-issued
+   face: a card exists, so "being prepared" would be false.
+4. Message the MSWDO opens the office compose route for `mswdo`, the slug the
+   Node API gives the office that issues cards.
+5. Active, suspended, revoked, expired and failure are unchanged.
+
+**Left out of the mock-up, as claims the API does not support.** "We'll notify
+you when it's ready" (issuing a card sends no notification; backend
+`digital-id/routes.ts`), "valid for one year" and "Each code works for 2
+minutes" (backend constants the API does not send before a card exists; once
+it does, the card shows `expires_at` and the QR line its own time). The copy
+says the code works for a short time and that the card shows its expiry date.
+The photo line says "usually your verification selfie" because staff may
+choose another photo the resident sent.
+
+**Rejected.** Mapping no card to `applied` or `approved` (inventing a state);
+dating step 3 from the session (it holds no date); a new credential
+repository method for the dates (the profile and verification contracts
+already read them, and the verification screen uses the same two).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3181,5 +3227,6 @@ still literal English on every device (D-200 item 5).
 | D-204 | The verification gate's button reads "Go to verification", claiming no stage (it cannot see one, D-201); the verification screen offers the stage's own action | product / accessibility | settled |
 | D-205 | Tulong reads the whole catalogue (`readCatalogue`: cursor pages of 50, at most 10) and searches it on the phone (case and accents folded, every word, never the slug); no request carries a search term and the repository takes none (D-59; RA 10173 §11, IRR §18(c)). A failed page fails the read; a longer catalogue is shown with a note that search covers the first N. A failed refresh keeps the list under a "Couldn't refresh the list" note with the Manila time and Try again. `ServiceDirectoryController` stays for its category filter, cache fallback and telemetry | privacy / contract / product | settled |
 | D-206 | The Filipino review-time copy (D-200) was checked for consistency with the app's existing Filipino terms on 2026-11-12 ("Karaniwang", "araw ng trabaho", no plural inflection) and is unchanged; awaiting a native speaker's sign-off, with "Kadalasan"/"Karaniwang", "araw na may pasok" and "Subukan muli"/"Subukang muli" listed for them | localisation | settled (sign-off open) |
+| D-207 | No card (`GET /me/digital-id` 404 or null) is "Your card is being prepared" (`IDStatus.dc.html`): five steps, the first three dated only from `GET /me` `created_at` and the verified request's `submitted_at`, `id_type`, `reviewed_at`, undated when not sent; no new `CredentialLifecycleState` value; an unrecognised status keeps the not-issued face; Message the MSWDO opens compose for `mswdo`. Left out: a notification promise, the one-year term and the 2-minute code lifetime | product / contract / design | settled |
 
-**202 decisions — 198 settled, 4 provisional.**
+**203 decisions — 199 settled, 4 provisional.**
