@@ -25,6 +25,20 @@ import '../domain/registration_validation.dart';
 ///   always retreat, including out of an invalid step.
 /// * **Nothing is submitted twice.** One idempotency key is minted per
 ///   submission attempt and reused across retries of that attempt.
+///
+/// ## No screen runs this class, and it stays (D-198)
+///
+/// The live sign-up is `AccountWizardScreen` on `AuthRepository`. It holds the
+/// navigation rules above and the required names, mobile number, barangay and
+/// consents. It does not hold these, which exist only here and in
+/// `RegistrationValidation`, tested by `test/features/registration_test.dart`:
+/// the selfie needs a server requirement **and** explicit biometric consent
+/// (D-32); a retried submission reuses one idempotency key (D-15; the live
+/// `POST me/verification-requests` sends none); each consent is its own
+/// record (the live wizard ticks Terms and Privacy together); the street is
+/// required; and a birth date is checked against the future and the age floor
+/// of 15 (the live sign-up collects none). Until the live path holds them,
+/// this is not dead code to delete.
 class RegistrationController extends ChangeNotifier {
   RegistrationController({
     required RegistrationRepository repository,

@@ -2490,6 +2490,72 @@ the middle.
 
 ---
 
+## D-198 — The two screenless controllers stay, because rules they enforce are missing from the screens the app runs
+
+**Status: settled.** Category: privacy / testing / architecture. Recorded
+2026-11-11, following D-197, on the owner's "do what's best" (Ella, Michaela
+Cailing). It records gaps; it does not close them.
+
+**Context.** Phase 4 kept `ServiceDirectoryController` and
+`RegistrationController` (with `RegistrationValidation`) although no route
+reaches them, because their tests check non-visual rules. The question was
+whether the same rules live in the code the app runs; if so, the tests could
+move there and the dead code go.
+
+**Found.**
+
+*`ServiceDirectoryController`* (tests: `directory_test` groups "search and
+filter run on the device" and "staleness is explicit"). The live catalogue
+screens are the Directory (`DirectoryScreen`, `Office.matches`,
+`OfficeApiRepository`) and Tulong (`TulongScreen`,
+`SocialServiceApiRepository`); nothing in `lib/` reads
+`ServiceCatalogRepository` apart from the wiring.
+
+- Held live: the Directory searches on the phone and its chips are the
+  categories the API returned.
+- **Missing live:** Tulong sends the typed search to the server as `q` on
+  `GET /services` (pinned by `s7_tulong_test`), against D-59 ("a search term is
+  a disclosure"). A Tulong refresh that fails after a list was shown keeps the
+  old list with no "saved" label (`_failed` is set only when nothing was
+  loaded). Neither screen records the `loadCatalogue` telemetry event.
+
+*`RegistrationController` / `RegistrationValidation`* (tests:
+`registration_test`). The live sign-up is `AccountWizardScreen` on
+`AuthRepository`; it uses only `Barangay` / `BarangayDirectory` from the
+registration feature.
+
+- Held live: first and last name required, a `09…` mobile number, the barangay
+  required, required consents block, an invalid step does not advance, Back
+  keeps what was typed, review edits go back only, a failed code request or
+  check stays on its step, drafts and uploads do not print their contents.
+- **Missing live:** the selfie is taken with no separate biometric consent and
+  no server requirement (D-32); `POST me/verification-requests` sends no
+  idempotency key, so a retried submission is not protected (D-15); Terms and
+  Privacy are agreed with one tick; the street is optional; no birth date is
+  collected anywhere in sign-up, so the age floor of 15 and the future-date
+  check exist only in `RegistrationValidation`.
+- Moot or superseded: the SMS one-time code with no length rule (the live code
+  is the server's 6-digit email code), the shipped repository that declines
+  everything, `createAccount` not existing (D-30, superseded by the Firebase
+  sign-up), and "Nothing was submitted" on every failure (D-188).
+
+**Chosen.** Keep both controllers and their tests unchanged, say on each
+controller which rules the live screens lack, and list the gaps in
+`design/PROGRESS.md` for the owner. Deleting them would delete the only tests
+of those rules; moving the tests is impossible while the live code does not
+enforce them.
+
+**Not done here.** Closing any gap. Each is a product or contract change
+(sending no `q`, a saved-list label on Tulong, a biometric consent step, an
+idempotency key on the verification request, separate consents) and is the
+owner's to schedule.
+
+**Why.** A test that passes against code nobody runs proves nothing about the
+app, but it is still the only written statement of the rule. The honest move is
+to keep the statement and name where the app falls short of it.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2691,5 +2757,6 @@ the middle.
 | D-195 | The account's name is checked against the ID (console DL-197, backend `c5e1a7d`). `NameLock.forTier` on `GET /me`'s status: Edit profile offers "Full name" as a field for `unverified` and `rejected`, and as locked text with one sentence for `pending`, `verified` and an unknown status. A `409` on a name change re-reads the status and says why; the message is never shown. The start and needs-correction pages say before the photos that the ID must show the account's name and that it then cannot change, with a link to Edit profile | product / contract / privacy | settled |
 | D-196 | The Message sent page names no emergency number. `GET /hotlines` has no field that marks the Command Center or the primary line (name and category are free text), and the messaged office's phone is not an emergency line. The note says to call an emergency hotline and its button opens the Hotlines page; `DirectoryCanvas.emergencyPhone` is gone. A stable flag is an API field needed | safety / contract | settled |
 | D-197 | Every gate, notice, confirmation and decision is a centred dialog (`AppDialog.show`, theme dialog, scrolls at 200% text); only a picker (a list of choices) is a bottom sheet. The gates, `ConfirmSheet`, the session-ended notice, the legal text (with Close), the correction notice, sending a document and the resubmit note were converted, names kept | design / accessibility | settled |
+| D-198 | `ServiceDirectoryController` and `RegistrationController` have no screen and stay, with their tests: rules they hold are missing live. Tulong sends the search as `q` (against D-59) and shows a failed refresh's old list unlabelled; the sign-up wizard takes a selfie with no biometric consent or server gate (D-32), sends no idempotency key on the verification request (D-15), ticks Terms and Privacy together, leaves the street optional and collects no birth date. Gaps recorded, not closed | privacy / testing | settled |
 
-**197 decisions — 193 settled, 4 provisional.**
+**198 decisions — 194 settled, 4 provisional.**
