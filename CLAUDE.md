@@ -230,7 +230,8 @@ is never copied into the app.
   folders. A value two screens need becomes a token or a shared widget, with a gallery entry.
 * **A new screen picks a pattern** from the table in DESIGN_SYSTEM.md §4 and starts from its
   skeleton and reference screen. It shows API data only, in four states: loading, empty, error
-  and offline. Dialogs are centred (`AppDialog`).
+  and offline. Every gate, notice, confirmation and decision is a centred dialog (`AppDialog`);
+  only a picker (a list of choices) may be a bottom sheet (DESIGN_SYSTEM.md §8 rule 3, D-197).
 * **Material 3 is the accessibility foundation.** Light mode is what the app shows (decision D9);
   the dark theme stays built so contrast tests have a scheme to check. Body text meets WCAG 2.2
   AA 4.5:1, large text and meaningful graphics 3:1, enforced by tests over the real theme.

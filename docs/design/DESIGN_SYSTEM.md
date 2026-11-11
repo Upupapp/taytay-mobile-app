@@ -207,7 +207,8 @@ Material 3, built from the tokens: app bar (a solid blue fallback; screens use `
 (radius 20, flat), filled button (blue, 52, radius 16, 14/600), outlined and tonal buttons (soft:
 blue on `blue50`, no border), text button, chips, filled input decoration (54, `softFill`, radius
 14, focus ring, error fill), list tile, divider, navigation bar (80, labels 11), dialog (centred,
-radius 22, flat), bottom sheet (radius 28 top, drag handle, flat), snack bar, popup menu, progress indicator.
+radius 22, flat — every gate, notice, confirmation and decision), bottom sheet (radius 28 top, drag handle,
+flat — pickers only, rule 3), snack bar, popup menu, progress indicator.
 `TaytayButtonStyles.soft()`, `.gold()` and `.compact()` give the same looks to a one-off
 `FilledButton`. The root applies `AppTheme.applyAccessibilityMediaQuery`, which clamps the OS text
 scale to 0.85–2.0.
@@ -592,15 +593,22 @@ Scaffold(
 - **`AppDialog.confirm({context*, title*, message*, confirmLabel = 'Confirm', cancelLabel =
   'Cancel', destructive = false})`** → `Future<bool?>`, and **`AppDialog.acknowledge({context*,
   title*, message*, actionLabel = 'OK'})`** — Flutter's `AlertDialog`, centred, flat. A
-  destructive dialog is not dismissed by a scrim tap and fires a warning haptic. **Use these for
-  every dialog.**
+  destructive dialog is not dismissed by a scrim tap and fires a warning haptic.
+- **`AppDialog.show<T>({context*, title*, builder*, dismissible = true, useRootNavigator =
+  true})`** — a centred panel on the theme's dialog: a title announced as a heading, then the
+  content in a scroll view (200% text scrolls, a field rises above the keyboard), inset
+  `AppDialog.panelInset` (20 / 24), at most `ComponentSizes.dialogMaxWidth` (480) wide. **Every
+  gate, notice, confirmation and decision opens here** (rule 3).
+- These open centred dialogs; their names are kept for their callers: **`ConfirmSheet.show({context*,
+  title*, consequence*, confirmLabel*, detail, isDestructive = true, cancelLabel = 'Keep it as
+  it is'})`** → `Future<bool>`; **`AccessGateSheet.show(...)` / `.showForCapability(...)`**
+  explains why an action needs an account or verification (the verification gate draws
+  `UnverifiedGateSheet` in the dialog); **`SessionExpiredSheet.show(context)`**;
+  **`showLegalTextSheet({title*, markdown*, pending*})`** opens the Terms or Privacy Notice, with
+  a Close button (`legalTextCloseKey`).
 - **`AppSheet.show<T>({context*, title*, builder*, dismissible = true})`** — the modal bottom
-  sheet (radius 24 top, at most 90% high, a title). **`ConfirmSheet.show({context*, title*,
-  consequence*, confirmLabel*, detail, isDestructive = true, cancelLabel = 'Keep it as it
-  is'})`** → `Future<bool>`. **`AccessGateSheet.show(...)` / `.showForCapability(...)`** explains
-  why an action needs an account or verification. **`showLegalTextSheet({title*, markdown*,
-  pending*})`** opens the Terms or Privacy Notice. Pickers and these gates are still bottom
-  sheets (see §9).
+  sheet (radius 24 top, at most 90% high, a title), **for pickers only**: a list of choices the
+  resident picks one from.
 - **`Outcome.succeeded(context, message)` / `Outcome.problem(context, message)`** — says how
   something turned out on screen and to a screen reader. **`showTaytayToast(context, message)`**
   / `TaytayToast({message*})` — a short confirmation snack bar.
@@ -802,6 +810,13 @@ any `FlutterError` — a `RenderFlex` overflow included — naming the width and
 `layoutHost(child, {textScale = 1, scrollable = true})` is the host on its own. Run it for every
 frame of a new or restyled screen (loading, empty, error, content).
 
+A dialog is checked the same way once it is open: `expectCleanDialogLayouts(tester, build,
+{trigger, host, height = 800, widths, textScales})` pumps `build()` (`dialogOpener((context) =>
+…)` draws a page with one button that opens it; or pass a real screen and the `trigger` to tap),
+opens the dialog at every width × scale, and fails on any `FlutterError`, on a bottom sheet, and
+on a dialog surface that is not centred. `host` adds dependencies and a router where the dialog
+needs them (`test/shared/centred_dialogs_test.dart` has one).
+
 ---
 
 ## 7. Goldens
@@ -834,7 +849,15 @@ anything is a regression: fix the code, not the golden.
    never a second literal.
 2. **No shadows or glows.** Flat surfaces, separated by fill and spacing. Focus rings are not
    shadows and stay visible.
-3. **Dialogs are centred** (`AppDialog`). Pickers and access gates are still bottom sheets (§9).
+3. **Popups are centred.** Every gate panel, notice, confirmation or decision is a centred
+   dialog: `AppDialog.show`, `AppDialog.confirm` or `AppDialog.acknowledge` (or a wrapper above
+   that opens one). **Only a picker — a list of choices the resident picks one from (a barangay,
+   an ID type, a topic, where a file comes from, a date) — may be a bottom sheet** (`AppSheet.show`
+   or `showModalBottomSheet` with the theme). A sheet that explains, warns, asks to confirm, or
+   collects a decision is a dialog, whatever it holds. Today's sheets: the sign-up barangay and ID
+   type pickers, the verification ID type picker, the message topic picker, the file source
+   picker (issuance), the conversation actions menu (Messages), and the gallery's specimen. Test a
+   new dialog with `expectCleanDialogLayouts` (§6).
 4. **Real data only.** Names, messages, dates, counts and photos come from the API. Nothing from a
    mock-up's sample data reaches the app; no `SAMPLE` tag on real data. A design element whose
    field the API does not send is hidden, not faked, and the field is recorded as needed.
@@ -858,14 +881,11 @@ anything is a regression: fix the code, not the golden.
 - **Spacing and box sizes are not guarded.** About 17 `EdgeInsets` and 88 `width:` / `height:`
   literals remain in feature code (mock-up offsets and one-off boxes). Use `Spacing` and
   `ComponentSizes` in new code; the guard reads colours, font sizes, shadows and radii only.
-- **Bottom sheets.** `AppSheet`, `ConfirmSheet`, `AccessGateSheet`, `LegalTextSheet` and the
-  pickers are bottom sheets. The README's "popups are centred" was read as dialogs; whether sheets
-  should become centred dialogs is an open owner decision.
 - **Legacy names.** The old `BrandColors` aliases, the old type roles and the woven / deep / verified
   gradients are still in `lib/core/design/`, pinned by contrast tests. New code does not use them.
 - **API fields the design would need** (structured office hours, office category icon, Balita
   `featured` and Home thumbnails, unread counts on every bell, image credits, reply-time
   standard): the elements are hidden until the API sends them.
 - **The gallery does not show** `SoftPage`, `AuthFormPage` or the conversation widgets; the
-  Settings, Account and Directory screens (and their goldens) do. The theme section shows the
-  themed dialog and bottom sheet.
+  Settings, Account and Directory screens (and their goldens) do. The theme section opens the
+  panel dialog (`AppDialog.show`) and the picker sheet.

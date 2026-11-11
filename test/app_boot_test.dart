@@ -187,10 +187,10 @@ void main() {
       // TAB 06: the tile now explains the gate and holds the intent before
       // sending the resident on.
       expect(find.text('Sign in to continue'), findsOneWidget);
-      // Scoped to the sheet: the home card behind it also offers "Sign in".
+      // Scoped to the dialog: the home card behind it also offers "Sign in".
       await tester.tap(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: find.byType(Dialog),
           matching: find.text('Sign in'),
         ),
       );
@@ -220,15 +220,15 @@ void main() {
       // TAB 06: the verification gate explains, then takes them there.
       expect(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: find.byType(Dialog),
           matching: find.text('Verify your account to open your digital ID'),
         ),
         findsOneWidget,
       );
-      // Scoped to the sheet: the home card behind it also offers this action.
+      // Scoped to the dialog: the home card behind it also offers this action.
       await tester.tap(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: find.byType(Dialog),
           matching: find.text('Continue verification'),
         ),
       );

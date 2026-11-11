@@ -10,6 +10,7 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -363,11 +364,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _resubmit() async {
-    final String? typed = await AppSheet.show<String>(
-      context: context,
-      title: 'Message to Taytay LGU',
-      builder: (BuildContext _) => const _ResubmitMessageSheet(),
-    );
+    final String? typed = await showResubmitMessageDialog(context);
     if (!mounted || typed == null) return;
     final bool ok = await _controller.resubmit(typed);
     if (!mounted || !ok) return;
@@ -545,8 +542,19 @@ class _StatePage extends StatelessWidget {
   }
 }
 
-/// Optional note on resubmit. The field lives in the sheet so it is disposed
-/// with the sheet, the same way a directory message field owns its text.
+/// Asks for an optional note before a resubmission, in a centred dialog (a
+/// decision; design rule: popups are centred). Resolves to the note, possibly
+/// empty, or null when the resident closes the dialog.
+Future<String?> showResubmitMessageDialog(BuildContext context) {
+  return AppDialog.show<String>(
+    context: context,
+    title: 'Message to Taytay LGU',
+    builder: (BuildContext _) => const _ResubmitMessageSheet(),
+  );
+}
+
+/// Optional note on resubmit. The field lives in the dialog so it is disposed
+/// with the dialog, the same way a directory message field owns its text.
 class _ResubmitMessageSheet extends StatefulWidget {
   const _ResubmitMessageSheet();
 

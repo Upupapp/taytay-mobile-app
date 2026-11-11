@@ -2444,6 +2444,52 @@ the app cannot know which number that is.
 
 ---
 
+## D-197 — Every gate, notice, confirmation and decision is a centred dialog; only a picker is a bottom sheet
+
+**Status: settled.** Category: design / accessibility. Recorded 2026-11-11,
+following D-196, on the owner's "do what's best" (Ella, Michaela Cailing).
+
+**Context.** The redesign's rule is "popups are centred", while the design
+system kept a restyled bottom sheet, and Phase 4 left the gates and the
+confirmation as sheets as an open question. Fourteen places slid a panel up
+from the bottom.
+
+**Chosen.**
+
+1. **A panel that explains, warns, confirms or asks for a decision is a
+   centred dialog**, on the theme's dialog (centred, radius 22, flat).
+   `AppDialog.show` is the panel counterpart of `AppSheet`: a heading, content
+   that scrolls at 200% text, inset 20 / 24, at most 480 wide. Converted: the
+   sign-in, verification and not-yet-available gates (`AccessGateSheet`;
+   `UnverifiedGateSheet` lost its drag handle and top-only corners), the
+   confirmation (`ConfirmSheet`), the session-ended notice
+   (`SessionExpiredSheet`), the Terms and Privacy Notice text
+   (`showLegalTextSheet`, now with a Close button, since a dialog has no drag
+   to close), the correction notice for a checked profile field
+   (`CanonicalFieldSheet`), sending a requested document (requirements), and
+   the resubmit note (verification, `showResubmitMessageDialog`). The names are
+   kept, so no caller changed.
+2. **A picker may stay a bottom sheet**: a list of choices the resident picks
+   one from. Kept: the sign-up barangay and ID type pickers, the verification
+   ID type picker, the message topic picker, the issuance file source picker,
+   the conversation actions menu, and the gallery's sheet specimen.
+   `AppSheet` says "pickers only".
+3. The rule is DESIGN_SYSTEM.md §8 rule 3 and CLAUDE.md Article 6, and
+   `expectCleanDialogLayouts` (`test/support/layout_matrix.dart`) holds each
+   converted dialog at 360 / 375 / 430 dp and 200% text, centred, with no
+   sheet.
+
+**Rejected.** Full-screen routes for the gates (a gate is a pause, not a
+destination, and the resident returns to what they were reading); keeping the
+legal text as a sheet because it is long (it is a notice, and the dialog
+scrolls).
+
+**Why.** One rule a reviewer can check by looking: a choice from a list comes
+up from the bottom, everything that asks the resident to read or decide sits in
+the middle.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2644,5 +2690,6 @@ the app cannot know which number that is.
 | D-194 | Who may register is the event's (backend `cf30686`, migration `0044`): `LguEvent.openTo` holds `registration.open_to` and the event page says "Who can register" in this app's words; the form's flag already gated, so an unverified resident reaches the form only where the office opened the event to every account. A corrected event's notice (`event_registration_updated`, with the old and the new date, time and venue) opens the event. Not built: notes or an assistance-needs checklist on a registration (health information, RA 10173 §3(l), §13; no retention schedule) | contract / product / privacy | settled |
 | D-195 | The account's name is checked against the ID (console DL-197, backend `c5e1a7d`). `NameLock.forTier` on `GET /me`'s status: Edit profile offers "Full name" as a field for `unverified` and `rejected`, and as locked text with one sentence for `pending`, `verified` and an unknown status. A `409` on a name change re-reads the status and says why; the message is never shown. The start and needs-correction pages say before the photos that the ID must show the account's name and that it then cannot change, with a link to Edit profile | product / contract / privacy | settled |
 | D-196 | The Message sent page names no emergency number. `GET /hotlines` has no field that marks the Command Center or the primary line (name and category are free text), and the messaged office's phone is not an emergency line. The note says to call an emergency hotline and its button opens the Hotlines page; `DirectoryCanvas.emergencyPhone` is gone. A stable flag is an API field needed | safety / contract | settled |
+| D-197 | Every gate, notice, confirmation and decision is a centred dialog (`AppDialog.show`, theme dialog, scrolls at 200% text); only a picker (a list of choices) is a bottom sheet. The gates, `ConfirmSheet`, the session-ended notice, the legal text (with Close), the correction notice, sending a document and the resubmit note were converted, names kept | design / accessibility | settled |
 
-**196 decisions — 192 settled, 4 provisional.**
+**197 decisions — 193 settled, 4 provisional.**

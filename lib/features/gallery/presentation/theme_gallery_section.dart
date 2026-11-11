@@ -5,6 +5,8 @@ import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 
 /// The redesign's tokens and the themed Material components, for the dev
@@ -634,6 +636,9 @@ class _NavigationSpecimenState extends State<_NavigationSpecimen> {
   }
 }
 
+/// The two popups (DESIGN_SYSTEM.md §8 rule 3): a centred panel dialog for
+/// anything that explains, warns, confirms or decides (`AppDialog.show`), and
+/// a bottom sheet only for a picker — a list of choices.
 class _PopupSpecimens extends StatelessWidget {
   const _PopupSpecimens();
 
@@ -644,17 +649,21 @@ class _PopupSpecimens extends StatelessWidget {
         children: <Widget>[
           Expanded(
             child: FilledButton.tonal(
-              onPressed: () => showDialog<void>(
+              onPressed: () => AppDialog.show<void>(
                 context: context,
-                builder: (BuildContext context) => AlertDialog(
-                  title: const Text('Centred dialog'),
-                  content: const Text(
-                    'Flat, white, radius 22. The scrim is the only depth.',
-                  ),
-                  actions: <Widget>[
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('Close'),
+                title: 'Centred dialog',
+                builder: (BuildContext dialog) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text(
+                      'Flat, white, radius 22. The scrim is the only depth. '
+                      'Gates, notices, confirmations and decisions open here.',
+                    ),
+                    const SizedBox(height: Spacing.xl),
+                    AppButton(
+                      label: 'Close',
+                      onPressed: () => Navigator.of(dialog).pop(),
                     ),
                   ],
                 ),
@@ -667,15 +676,30 @@ class _PopupSpecimens extends StatelessWidget {
             child: FilledButton.tonal(
               onPressed: () => showModalBottomSheet<void>(
                 context: context,
-                builder: (BuildContext context) => const Padding(
-                  padding: EdgeInsets.fromLTRB(
+                builder: (BuildContext sheet) => Padding(
+                  padding: const EdgeInsets.fromLTRB(
                     Spacing.formGutter,
                     0,
                     Spacing.formGutter,
                     Spacing.xl,
                   ),
-                  child: Text(
-                    'Bottom sheet: white, top corners 28, no shadow.',
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      const Text(
+                        'Picker sheet: white, top corners 28, no shadow. '
+                        'Only a list of choices opens here.',
+                      ),
+                      for (final String choice in const <String>[
+                        'First choice',
+                        'Second choice',
+                      ])
+                        ListTile(
+                          title: Text(choice),
+                          onTap: () => Navigator.of(sheet).pop(),
+                        ),
+                    ],
                   ),
                 ),
               ),

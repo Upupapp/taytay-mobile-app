@@ -16,6 +16,7 @@ import 'package:taytay_resident/features/verification/presentation/manila_stamp.
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/shared/widgets/app_dialog.dart';
 
 import '../support/unverified_gate_specimen.dart';
 
@@ -177,14 +178,18 @@ class _GateReelState extends State<_GateReel>
           children: <Widget>[
             const GateBackdrop(),
             ModalBarrier(color: GateScrim.at(t), dismissible: false),
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: FractionalTranslation(
-                translation: Offset(0, 1 - t),
-                child: UnverifiedGateSheet(
-                  action: action,
-                  onContinue: _noop,
-                  onDismiss: _noop,
+            // F1: the gate is a centred dialog, so it fades in where it
+            // stays instead of sliding up from the bottom edge.
+            Center(
+              child: Padding(
+                padding: AppDialog.panelInset,
+                child: Opacity(
+                  opacity: t,
+                  child: UnverifiedGateSheet(
+                    action: action,
+                    onContinue: _noop,
+                    onDismiss: _noop,
+                  ),
                 ),
               ),
             ),

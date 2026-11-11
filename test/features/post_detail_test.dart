@@ -661,6 +661,7 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       expect(find.byType(FilterChip), findsNothing);
       expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
       expect(booted.posts.setReactionCalls, 0);
       expect(booted.posts.addCommentCalls, 0);
     });

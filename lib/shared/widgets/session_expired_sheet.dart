@@ -11,13 +11,14 @@ import '../../core/session/session_controller.dart';
 import '../../core/session/session_state.dart';
 import '../../l10n/app_localizations.dart';
 import 'app_button.dart';
-import 'app_sheet.dart';
+import 'app_dialog.dart';
 
-/// Explains an ended session and offers two ways forward.
+/// Explains an ended session and offers two ways forward, in a centred
+/// dialog (design rule: popups are centred; the name is kept for callers).
 ///
 /// ---
 ///
-/// **Why a sheet at all, when the router already moved them.** The guard is
+/// **Why a dialog at all, when the router already moved them.** The guard is
 /// correct but silent: a resident looking at their digital ID one moment and a
 /// sign-in screen the next has been given no reason, and the reason matters —
 /// it is the difference between "the app is broken" and "this is how it protects
@@ -36,13 +37,13 @@ abstract final class SessionExpiredSheet {
     final router = GoRouter.of(context);
     final reduced = Motion.reduced(context);
 
-    // Not awaited. The haptic is a platform round trip, and the sheet is the
+    // Not awaited. The haptic is a platform round trip, and the dialog is the
     // explanation a resident is waiting for — delaying the words until the
     // vibration comes back is the wrong order, and on a device with no haptic
     // support it would delay them on a call that resolves late or not at all.
     unawaited(AppHaptics.fire(HapticIntent.warning, suppressed: reduced));
 
-    await AppSheet.show<void>(
+    await AppDialog.show<void>(
       context: context,
       title: AppStrings.of(context).sessionEndedTitle,
       builder: (sheetContext) => Column(
@@ -97,10 +98,10 @@ abstract final class SessionExpiredSheet {
 /// rebuild cannot re-open it. A deliberate sign-out is excluded: the resident
 /// asked for that and does not need it explained.
 ///
-/// [navigatorKey] is the router's own navigator. The sheet is shown against it
+/// [navigatorKey] is the router's own navigator. The dialog is shown against it
 /// rather than against this widget's context, because this widget sits *above*
 /// the router's `Navigator` in order to survive route changes — and a modal
-/// sheet needs a `Navigator` below it, not above.
+/// dialog needs a `Navigator` below it, not above.
 class SessionExpiryWatcher extends StatefulWidget {
   const SessionExpiryWatcher({
     required this.session,

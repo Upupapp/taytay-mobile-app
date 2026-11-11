@@ -525,6 +525,7 @@ void main() {
       expect(find.text('Browsing as guest'), findsOneWidget);
       expect(find.text('Sign up to message offices.'), findsOneWidget);
       expect(find.byType(BottomSheet), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
       expect(find.byType(AlertDialog), findsNothing);
     });
 

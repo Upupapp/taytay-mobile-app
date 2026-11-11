@@ -562,7 +562,7 @@ void main() {
 
       await tester.tap(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: find.byType(Dialog),
           matching: find.text('Continue as guest'),
         ),
       );

@@ -9,7 +9,7 @@ import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/taytay_icon.dart';
@@ -180,7 +180,8 @@ class _FieldRow extends StatelessWidget {
   }
 }
 
-/// Explains why a canonical field cannot be edited, and what to do instead.
+/// Explains why a canonical field cannot be edited, and what to do instead,
+/// in a centred dialog (design rule: popups are centred; the name is kept).
 ///
 /// ---
 ///
@@ -210,7 +211,7 @@ abstract final class CanonicalFieldSheet {
       AccessLevel.guest || AccessLevel.verified => false,
     };
 
-    await AppSheet.show<void>(
+    await AppDialog.show<void>(
       context: context,
       title: CanonicalCorrection.title,
       builder: (sheetContext) {

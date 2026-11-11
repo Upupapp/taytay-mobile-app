@@ -4,6 +4,7 @@ import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/design/typography.dart';
 import 'package:taytay_resident/features/verification/presentation/s3_chrome.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
+import 'package:taytay_resident/shared/widgets/app_dialog.dart';
 import 'package:taytay_resident/shared/widgets/surface_cards.dart';
 
 // Redesign Phase 4: the `03-04` specimen moved here from
@@ -89,9 +90,10 @@ class _OfficeCard extends StatelessWidget {
   }
 }
 
-/// `03-04` composed the way the design is drawn: dimmed list, then the sheet.
+/// `03-04` composed the way the app shows it: dimmed list, then the gate.
 ///
-/// The sheet is anchored to the bottom, the way the design draws it.
+/// F1: the gate is a centred dialog (design rule: popups are centred), so the
+/// panel sits in the middle with the dialog's inset, not on the bottom edge.
 class UnverifiedGatePreview extends StatelessWidget {
   const UnverifiedGatePreview({super.key});
 
@@ -101,14 +103,16 @@ class UnverifiedGatePreview extends StatelessWidget {
       children: <Widget>[
         const GateBackdrop(),
         ModalBarrier(color: GateScrim.color, dismissible: false),
-        const Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: UnverifiedGateSheet(
-            action: VerifiedOnlyAction.message,
-            onContinue: _noop,
-            onDismiss: _noop,
+        const Center(
+          child: Padding(
+            padding: AppDialog.panelInset,
+            child: SingleChildScrollView(
+              child: UnverifiedGateSheet(
+                action: VerifiedOnlyAction.message,
+                onContinue: _noop,
+                onDismiss: _noop,
+              ),
+            ),
           ),
         ),
       ],

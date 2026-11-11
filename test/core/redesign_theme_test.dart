@@ -392,7 +392,16 @@ void main() {
       );
       await tester.tap(find.text('Dialog'));
       await tester.pumpAndSettle();
-      final Rect dialog = tester.getRect(find.byType(AlertDialog));
+      // F1: the gallery opens the panel dialog (AppDialog.show) on the
+      // theme's Dialog, not an AlertDialog; its surface is what is centred.
+      final Rect dialog = tester.getRect(
+        find
+            .descendant(
+              of: find.byType(Dialog),
+              matching: find.byType(Material),
+            )
+            .first,
+      );
       expect(dialog.center.dx, moreOrLessEquals(180, epsilon: 1));
       expect(dialog.center.dy, moreOrLessEquals(400, epsilon: 1));
     });

@@ -4,9 +4,12 @@ import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
 import 'app_banner.dart';
 import 'app_button.dart';
-import 'app_sheet.dart';
+import 'app_dialog.dart';
 
-/// Asks before something a resident cannot undo.
+/// Asks before something a resident cannot undo, in a centred dialog.
+///
+/// The name is kept for its callers; it has opened [AppDialog.show] since the
+/// F1 fixes (a confirmation is a decision, and decisions are centred).
 ///
 /// ---
 ///
@@ -28,11 +31,11 @@ import 'app_sheet.dart';
 /// `confirmLabel` describes the action in its own words — "Give up my place",
 /// not "OK" — so the button says what it does even when read out of context by a
 /// screen reader. Cancel comes second visually but is the safe path: dismissing
-/// the sheet by any means returns `false`.
+/// the dialog by any means returns `false`.
 abstract final class ConfirmSheet {
   /// Returns whether the resident confirmed.
   ///
-  /// A swipe-away, a back gesture and the cancel button all return `false`.
+  /// A scrim tap, a back gesture and the cancel button all return `false`.
   static Future<bool> show({
     required BuildContext context,
     required String title,
@@ -42,7 +45,7 @@ abstract final class ConfirmSheet {
     bool isDestructive = true,
     String cancelLabel = 'Keep it as it is',
   }) async {
-    final confirmed = await AppSheet.show<bool>(
+    final confirmed = await AppDialog.show<bool>(
       context: context,
       title: title,
       builder: (context) => _ConfirmBody(

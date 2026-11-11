@@ -16,7 +16,9 @@ enum VerifiedOnlyAction {
   other,
 }
 
-/// `03-04`. The same sheet for every verified-only action.
+/// `03-04`. The same panel for every verified-only action, shown in a
+/// centred dialog (`AccessGateSheet`; design rule: popups are centred). The
+/// name is kept for its callers and tests.
 ///
 /// It explains. It does not grant. The route guard is what keeps a
 /// verified-only screen from opening.
@@ -67,22 +69,18 @@ class UnverifiedGateSheet extends StatelessWidget {
     );
     return Material(
       color: BrandColors.white,
-      borderRadius: const BorderRadius.vertical(
-        top: Radius.circular(Radii.sheet),
-      ),
+      borderRadius: BorderRadius.circular(Radii.dialog),
       clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(
           Spacing.formGutter,
-          Spacing.section,
+          Spacing.xl,
           Spacing.formGutter,
           Spacing.xl,
         ),
         child: Column(
           mainAxisSize: fill ? MainAxisSize.max : MainAxisSize.min,
           children: <Widget>[
-            const _DragHandle(),
-            const SizedBox(height: Spacing.lg),
             const IconTile.lucide(
               icon: TaytayIcons.lock,
               tone: TileTone.gold,
@@ -136,23 +134,6 @@ class UnverifiedGateSheet extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _DragHandle extends StatelessWidget {
-  const _DragHandle();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: BrandColors.line2,
-          borderRadius: BorderRadius.all(Radius.circular(Radii.pill)),
-        ),
-        child: SizedBox(width: Spacing.xxxl - Spacing.sm, height: Spacing.xs),
       ),
     );
   }

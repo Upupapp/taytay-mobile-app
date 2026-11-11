@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/design/typography.dart';
 import '../../features/account/domain/notice_markdown.dart';
+import 'app_dialog.dart';
 
 /// What a sheet says when the LGU has not published the Terms of Use.
 const String termsNotPublishedYet =
@@ -14,24 +15,37 @@ const String privacyNoticeNotPublishedYet =
     'The full Privacy Notice will be available soon. Taytay LGU has not '
     'published it in the app yet.';
 
-/// Opens the full text of a Terms of Use or Privacy Notice in a sheet.
+/// Opens the full text of a Terms of Use or Privacy Notice in a centred
+/// dialog (design rule: popups are centred; the name is kept for callers).
 ///
 /// [markdown] resolves to the published text, or to null or an empty string
-/// when there is none; the sheet then shows [pending] instead.
+/// when there is none; the dialog then shows [pending] instead.
 Future<void> showLegalTextSheet(
   BuildContext context, {
   required String title,
   required Future<String?> markdown,
   required String pending,
 }) {
-  return showModalBottomSheet<void>(
+  return showDialog<void>(
     context: context,
-    isScrollControlled: true,
-    showDragHandle: true,
-    builder: (BuildContext sheet) =>
-        LegalTextSheet(title: title, markdown: markdown, pending: pending),
+    builder: (BuildContext dialog) => Dialog(
+      insetPadding: AppDialog.panelInset,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          maxWidth: ComponentSizes.dialogMaxWidth,
+        ),
+        child: LegalTextSheet(
+          title: title,
+          markdown: markdown,
+          pending: pending,
+        ),
+      ),
+    ),
   );
 }
+
+/// The Close button under the legal text.
+const Key legalTextCloseKey = Key('legal-text-close');
 
 /// The full text behind a "read" link. When nothing is published, one plain
 /// sentence says so: the resident is not shown a placeholder as if it were
@@ -74,7 +88,12 @@ class LegalTextSheet extends StatelessWidget {
           maxHeight: MediaQuery.sizeOf(context).height * 0.85,
         ),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.formGutter,
+            Spacing.formGutter,
+            Spacing.formGutter,
+            Spacing.sm,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -145,6 +164,17 @@ class LegalTextSheet extends StatelessWidget {
                       ],
                     );
                   },
+                ),
+              ),
+              const SizedBox(height: Spacing.sm),
+              // A dialog has no drag-to-close: the way out is a button a
+              // screen reader and a keyboard can reach, as well as Back.
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: TextButton(
+                  key: legalTextCloseKey,
+                  onPressed: () => Navigator.of(context).maybePop(),
+                  child: const Text('Close'),
                 ),
               ),
             ],

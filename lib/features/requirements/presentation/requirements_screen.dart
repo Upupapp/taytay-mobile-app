@@ -16,7 +16,7 @@ import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
-import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/form_page.dart';
@@ -98,13 +98,13 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
     if (controller == null) return;
 
     controller.beginUpload(requirement.code);
-    await AppSheet.show<void>(
+    await AppDialog.show<void>(
       context: context,
       title: requirement.label,
       builder: (context) =>
           _UploadSheet(controller: controller, requirement: requirement),
     );
-    // Whatever happened, the sheet is gone — release the bytes.
+    // Whatever happened, the dialog is gone — release the bytes.
     controller.endUpload();
   }
 

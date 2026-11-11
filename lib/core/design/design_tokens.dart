@@ -342,6 +342,10 @@ abstract final class ComponentSizes {
   /// Primary and soft buttons.
   static const double buttonHeight = 52;
 
+  /// The widest a centred dialog grows (`AppDialog.show`). A phone never
+  /// reaches it; a tablet keeps a readable line instead of a wall of text.
+  static const double dialogMaxWidth = 480;
+
   /// Compact button (CSS `.btn.sm`).
   static const double buttonHeightSmall = 44;
 

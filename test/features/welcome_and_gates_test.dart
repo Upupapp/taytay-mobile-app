@@ -443,7 +443,7 @@ void main() {
 
       expect(
         find.descendant(
-          of: find.byType(BottomSheet),
+          of: find.byType(Dialog),
           matching: find.text('Verify your account to open your digital ID'),
         ),
         findsOneWidget,
@@ -460,8 +460,8 @@ void main() {
 
       expect(dependencies.intents.hasPending, isFalse);
       // And they are back where they were — the Profile screen the gate was
-      // opened from — not stranded on a sheet or bounced to sign-in.
-      expect(find.byType(BottomSheet), findsNothing);
+      // opened from — not stranded on a dialog or bounced to sign-in.
+      expect(find.byType(Dialog), findsNothing);
       expect(find.byKey(const Key('profile-screen')), findsOneWidget);
       expect(find.text('Maligayang pagbabalik!'), findsNothing);
     });

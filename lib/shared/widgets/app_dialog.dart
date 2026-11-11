@@ -80,6 +80,43 @@ abstract final class AppDialog {
     );
   }
 
+  /// Space between a centred panel dialog and the screen edges. Narrower than
+  /// Material's 40 at the sides, so a 360 dp phone at 200% text keeps a usable
+  /// line length.
+  static const EdgeInsets panelInset = EdgeInsets.symmetric(
+    horizontal: Spacing.formGutter,
+    vertical: Spacing.xl,
+  );
+
+  /// Shows a centred dialog with a [title] and the content [builder] returns,
+  /// and resolves to whatever the content pops with.
+  ///
+  /// The panel counterpart of `AppSheet`: every gate, notice, confirmation and
+  /// decision opens here (design rule: popups are centred). `AppSheet` is for
+  /// pickers only — a list of choices the resident picks one from.
+  ///
+  /// The theme's dialog draws it (centred, radius 22, flat). The content
+  /// scrolls inside the dialog, so 200% text never clips it, and the dialog
+  /// rises above the keyboard when a field inside it has focus.
+  /// [dismissible] false keeps a scrim tap from closing it.
+  static Future<T?> show<T>({
+    required BuildContext context,
+    required String title,
+    required WidgetBuilder builder,
+    bool dismissible = true,
+    bool useRootNavigator = true,
+  }) {
+    return showDialog<T>(
+      context: context,
+      barrierDismissible: dismissible,
+      useRootNavigator: useRootNavigator,
+      builder: (BuildContext dialogContext) => Dialog(
+        insetPadding: panelInset,
+        child: _DialogFrame(title: title, child: builder(dialogContext)),
+      ),
+    );
+  }
+
   /// Shows a message with a single acknowledging action.
   static Future<void> acknowledge({
     required BuildContext context,
@@ -101,6 +138,59 @@ abstract final class AppDialog {
             variant: AppButtonVariant.text,
             fullWidth: false,
             onPressed: () => Navigator.of(context).pop(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The inside of an [AppDialog.show] panel: the title, announced as a
+/// heading, then the content in a scroll view that takes what height is left.
+class _DialogFrame extends StatelessWidget {
+  const _DialogFrame({required this.title, required this.child});
+
+  final String title;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final ThemeData theme = Theme.of(context);
+    return ConstrainedBox(
+      constraints: const BoxConstraints(
+        maxWidth: ComponentSizes.dialogMaxWidth,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              Spacing.xl,
+              Spacing.xl,
+              Spacing.xl,
+              Spacing.md,
+            ),
+            child: Semantics(
+              header: true,
+              child: Text(
+                title,
+                style:
+                    theme.dialogTheme.titleTextStyle ??
+                    theme.textTheme.titleLarge,
+              ),
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                Spacing.xl,
+                0,
+                Spacing.xl,
+                Spacing.xl,
+              ),
+              child: child,
+            ),
           ),
         ],
       ),

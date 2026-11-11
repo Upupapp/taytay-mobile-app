@@ -13,7 +13,7 @@ import '../../features/verification/presentation/unverified_gate_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/illustrations/state_illustrations.dart';
 import 'app_button.dart';
-import 'app_sheet.dart';
+import 'app_dialog.dart';
 
 /// What a resident chose when a gate interrupted them.
 enum GateOutcome {
@@ -28,6 +28,9 @@ enum GateOutcome {
 }
 
 /// The one place the app explains why an action needs an account or verification.
+///
+/// Every gate is a centred dialog (design rule: popups are centred). The name
+/// is kept for its callers.
 ///
 /// ---
 ///
@@ -65,7 +68,7 @@ abstract final class AccessGateSheet {
     if (verdict is CapabilityNotYetAvailable) {
       // No intent is held: there is nothing to resume, and holding one would
       // arm a resumption that could never fire.
-      await AppSheet.show<void>(
+      await AppDialog.show<void>(
         context: context,
         title: strings.gateSheetNotAvailableTitle,
         builder: (sheetContext) => _GateBody(
@@ -98,8 +101,8 @@ abstract final class AccessGateSheet {
   /// Shows the gate appropriate to [decision], remembering [intent] so the
   /// resident resumes after they pass it.
   ///
-  /// Returns what they chose. `null` means the sheet was swiped away, which is
-  /// treated exactly like [GateOutcome.dismissed].
+  /// Returns what they chose. `null` means the dialog was dismissed with a
+  /// scrim tap or back, which is treated exactly like [GateOutcome.dismissed].
   static Future<GateOutcome?> show({
     required BuildContext context,
     required AccessDecision decision,
@@ -107,14 +110,14 @@ abstract final class AccessGateSheet {
     String? targetId,
   }) async {
     // Captured before any await: a BuildContext must not be used across an
-    // async gap, and the sheet is one. Holding the controller and the router
+    // async gap, and the dialog is one. Holding the controller and the router
     // directly also means the clear below cannot silently skip because the
-    // element that opened the sheet was rebuilt while it was up.
+    // element that opened the dialog was rebuilt while it was up.
     final intents = AppDependencies.of(context).intents;
     final router = GoRouter.of(context);
 
-    // Remembering before navigating: the sheet may send the resident to another
-    // route, and the intent has to survive that.
+    // Remembering before navigating: the dialog may send the resident to
+    // another route, and the intent has to survive that.
     intents.remember(intent, targetId: targetId);
 
     final outcome = await switch (decision) {
@@ -143,7 +146,7 @@ abstract final class AccessGateSheet {
     ResidentIntentKind intent,
   ) {
     final strings = AppStrings.of(context);
-    return AppSheet.show<GateOutcome>(
+    return AppDialog.show<GateOutcome>(
       context: context,
       title: strings.gateSheetSignInTitle,
       builder: (sheetContext) => _GateBody(
@@ -181,18 +184,27 @@ abstract final class AccessGateSheet {
     GoRouter router,
     ResidentIntentKind intent,
   ) {
-    return showModalBottomSheet<GateOutcome>(
+    return showDialog<GateOutcome>(
       context: context,
       useRootNavigator: true,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (sheetContext) => UnverifiedGateSheet(
-        action: UnverifiedGateSheet.actionFor(intent),
-        onContinue: () {
-          Navigator.of(sheetContext).pop(GateOutcome.goingToVerify);
-          router.goNamed(AppRoute.verification.routeName);
-        },
-        onDismiss: () => Navigator.of(sheetContext).pop(GateOutcome.dismissed),
+      builder: (dialogContext) => Dialog(
+        insetPadding: AppDialog.panelInset,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            maxWidth: ComponentSizes.dialogMaxWidth,
+          ),
+          child: SingleChildScrollView(
+            child: UnverifiedGateSheet(
+              action: UnverifiedGateSheet.actionFor(intent),
+              onContinue: () {
+                Navigator.of(dialogContext).pop(GateOutcome.goingToVerify);
+                router.goNamed(AppRoute.verification.routeName);
+              },
+              onDismiss: () =>
+                  Navigator.of(dialogContext).pop(GateOutcome.dismissed),
+            ),
+          ),
+        ),
       ),
     );
   }

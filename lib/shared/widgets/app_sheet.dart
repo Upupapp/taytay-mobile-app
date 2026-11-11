@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 
-/// The app's modal bottom sheet.
+/// The app's modal bottom sheet, **for pickers only**: a list of choices the
+/// resident picks one from (a barangay, an ID type, a topic, where a file
+/// comes from). Every gate, notice, confirmation and decision is a centred
+/// dialog instead (`AppDialog.show`; design rule: popups are centred).
 ///
 /// Wraps `showModalBottomSheet` with the three things every call site needs and
 /// half of them forget:
