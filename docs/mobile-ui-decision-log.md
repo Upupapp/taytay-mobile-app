@@ -2925,6 +2925,52 @@ says so; one that does not say so looks exactly like a working app.
 
 ---
 
+## D-206 — The Filipino review-time copy is consistent with the app's other Filipino; a native speaker still signs it off
+
+**Status: settled** (the copy); the native speaker's sign-off is an open
+owner item. Category: localisation. Recorded 2026-11-12, following D-200, on
+the owner's "decide, research best practice, and apply it" (Ella, Michaela
+Cailing).
+
+**Filipino copy for D-200 checked for consistency with the app's existing
+Filipino terms on 2026-11-12; awaiting a native speaker's sign-off.** The
+checker is not a native speaker of record.
+
+**Checked** (`lib/l10n/app_fil.arb`, the four `verificationReview*` keys,
+against every other Filipino string in the file):
+- *Usually.* "Karaniwang …" matches the app's own use ("Karaniwang sapat na
+  ang laki ng larawan…", `uploadRefusedTooLarge`). One other string says
+  "Kadalasan" (`uploadRefusedTooLargeUnknown`); "Karaniwang" is kept, and the
+  pair is listed for the native speaker.
+- *Review.* The app says "pagsusuri" / "sinusuri" for the LGU checking an ID
+  ("Naghihintay ng pagsusuri", "sinusuri na ito"). The review-time strings do
+  not name the review, they refer back to it ("Karaniwang inaabot *ito* ng…",
+  after the paragraph that says staff are checking), so no second word for it
+  is introduced.
+- *Working days.* No other string in the app says it. "araw ng trabaho" is
+  the usual rendering in government Filipino; "Trabaho" elsewhere in the app
+  is the jobs category ("serbisyo sa trabaho"), a different sense the phrase
+  does not collide with. The colloquial "araw na may pasok" is listed for the
+  native speaker as the alternative.
+- *One day and many.* Filipino does not inflect the noun, so the ICU plural
+  has only `other`: "1 araw ng trabaho", "5 araw ng trabaho", and the range
+  "1–3 araw ng trabaho" all read naturally, as does the timeline fragment
+  "Karaniwang 1–3 araw ng trabaho". The English keeps its `=1` singular.
+- *Register.* Plain standard Filipino with "ng", like the rest of the file;
+  no Taglish.
+
+**Changed.** Nothing in the copy: no term was found inconsistent. The ARB
+descriptions still say the Filipino needs a native speaker, which stays true.
+
+**Noticed, not changed** (outside D-200): "Subukan muli" (`actionTryAgain`)
+and "Subukang muli" (`verifyActionTryAgain`, sign-in copy) both appear for "Try
+again"; the second is the standard ligature. Listed for the native speaker.
+
+**Not done.** Shipping the Filipino on the verification pages: they are
+still literal English on every device (D-200 item 5).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3134,5 +3180,6 @@ says so; one that does not say so looks exactly like a working app.
 | D-203 | `SoftNote` takes one `action` inside the note and a fifth tone, `emergency` (red, a siren read as "Emergency"); the Message sent emergency note is a `SoftNote` with the mock-up's bold heading | design / accessibility | settled |
 | D-204 | The verification gate's button reads "Go to verification", claiming no stage (it cannot see one, D-201); the verification screen offers the stage's own action | product / accessibility | settled |
 | D-205 | Tulong reads the whole catalogue (`readCatalogue`: cursor pages of 50, at most 10) and searches it on the phone (case and accents folded, every word, never the slug); no request carries a search term and the repository takes none (D-59; RA 10173 §11, IRR §18(c)). A failed page fails the read; a longer catalogue is shown with a note that search covers the first N. A failed refresh keeps the list under a "Couldn't refresh the list" note with the Manila time and Try again. `ServiceDirectoryController` stays for its category filter, cache fallback and telemetry | privacy / contract / product | settled |
+| D-206 | The Filipino review-time copy (D-200) was checked for consistency with the app's existing Filipino terms on 2026-11-12 ("Karaniwang", "araw ng trabaho", no plural inflection) and is unchanged; awaiting a native speaker's sign-off, with "Kadalasan"/"Karaniwang", "araw na may pasok" and "Subukan muli"/"Subukang muli" listed for them | localisation | settled (sign-off open) |
 
-**201 decisions — 197 settled, 4 provisional.**
+**202 decisions — 198 settled, 4 provisional.**
