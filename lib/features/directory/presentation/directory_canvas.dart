@@ -1703,24 +1703,20 @@ class _SentPage extends StatelessWidget {
               ),
               if (onHotlines != null) ...<Widget>[
                 const SizedBox(height: Spacing.md),
-                FilledButton.icon(
-                  key: messageSentHotlinesKey,
-                  onPressed: onHotlines,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: BrandColors.redInk,
-                    foregroundColor: BrandColors.white,
-                  ),
-                  icon: const TaytayIcon(
-                    icon: TaytayIcons.phone,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                    size: IconSizes.sm,
-                    color: BrandColors.white,
-                  ),
-                  label: const Text(
-                    MessageSentCopy.hotlinesButton,
-                    textAlign: TextAlign.center,
-                  ),
+                // The design system's pill (`PillButtonRow`, the danger
+                // tone): a 40 px pill in a 48 dp target, wrapping at 200%.
+                PillButtonRow(
+                  wrap: true,
+                  padding: EdgeInsets.zero,
+                  actions: <PillAction>[
+                    PillAction(
+                      label: MessageSentCopy.hotlinesButton,
+                      glyph: TaytayGlyph.phone,
+                      danger: true,
+                      buttonKey: messageSentHotlinesKey,
+                      onPressed: onHotlines,
+                    ),
+                  ],
                 ),
               ],
             ],
