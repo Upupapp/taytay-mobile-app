@@ -16,6 +16,7 @@ import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/soft_page.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import 'account_copy.dart';
 
 /// Account and preferences for a signed-in resident.
 ///
@@ -66,11 +67,9 @@ class _AccountScreenState extends State<AccountScreen> {
     // the confirmation is where the resident is told what they keep.
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Sign out of this device?',
-      message:
-          'You will need a new one-time code to sign in again. You can still '
-          'browse Taytay services, offices and announcements as a guest.',
-      confirmLabel: 'Sign out',
+      title: AccountCopy.signOutTitle,
+      message: AccountCopy.signOut,
+      confirmLabel: AccountCopy.signOutAction,
     );
     if (confirmed != true) return;
 

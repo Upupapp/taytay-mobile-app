@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/intent/resident_intent.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -18,11 +19,13 @@ import 'package:taytay_resident/features/gallery/presentation/theme_gallery_sect
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/presentation/profile_field_list.dart';
 import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
+import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/access_gate_sheet.dart';
 import 'package:taytay_resident/shared/widgets/app_button.dart';
 import 'package:taytay_resident/shared/widgets/app_dialog.dart';
+import 'package:taytay_resident/shared/widgets/app_sheet.dart';
 import 'package:taytay_resident/shared/widgets/confirm_sheet.dart';
 import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 import 'package:taytay_resident/shared/widgets/session_expired_sheet.dart';
@@ -192,7 +195,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byType(BottomSheet),
-        matching: find.byType(ListTile),
+        matching: find.byType(PickerChoiceRow),
       ),
       findsNWidgets(2),
     );
@@ -354,5 +357,130 @@ void main() {
       host: routed(deps),
       height: 900,
     );
+  });
+
+  testWidgets('the verification gate names no stage of the verification '
+      'and Not now is a button (D-201)', (tester) async {
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final AppDependencies deps = await dependencies(AccessLevel.unverified);
+    GateOutcome? outcome;
+    await tester.pumpWidget(
+      routed(deps)(
+        dialogOpener((BuildContext context) async {
+          outcome = await AccessGateSheet.show(
+            context: context,
+            decision: const AccessNeedsVerification(),
+            intent: ResidentIntentKind.messageOffice,
+          );
+        }),
+        1,
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(dialogOpenerKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(UnverifiedGateSheet), findsOneWidget);
+    // The session knows only that the account is not verified: nothing on
+    // the gate claims an ID was sent, is being reviewed or was refused.
+    for (final String claim in <String>[
+      'Pending review',
+      'pending',
+      'review',
+      'rejected',
+      'refused',
+      'submitted',
+    ]) {
+      expect(find.textContaining(claim), findsNothing, reason: claim);
+    }
+    expect(
+      find.textContaining(UnverifiedGateSheet.notVerifiedYet),
+      findsOneWidget,
+    );
+    expect(
+      tester.getSemantics(
+        find.text(UnverifiedGateSheet.titleFor(VerifiedOnlyAction.message)),
+      ),
+      isSemantics(isHeader: true, namesRoute: true),
+    );
+
+    final Finder notNow = find.widgetWithText(AppButton, 'Not now');
+    expect(notNow, findsOneWidget);
+    // A real button: the TextButton inside AppButton carries the label and
+    // the tap action (the old "Not now" was a bare InkWell).
+    expect(
+      tester.getSemantics(
+        find.descendant(of: notNow, matching: find.byType(TextButton)),
+      ),
+      isSemantics(label: 'Not now', isButton: true, hasTapAction: true),
+    );
+    expect(
+      tester.getSize(notNow).height,
+      greaterThanOrEqualTo(A11y.minTapTarget),
+    );
+    await tester.tap(notNow);
+    await tester.pumpAndSettle();
+    expect(outcome, GateOutcome.dismissed);
+    expect(find.byType(Dialog), findsNothing);
+    semantics.dispose();
+  });
+
+  testWidgets('the resubmit note has a Cancel that sends nothing', (
+    tester,
+  ) async {
+    String? note = 'not resolved';
+    await tester.pumpWidget(
+      layoutHost(
+        dialogOpener((BuildContext context) async {
+          note = await showResubmitMessageDialog(context);
+        }),
+        scrollable: false,
+      ),
+    );
+    await tester.tap(find.byKey(dialogOpenerKey));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('verification-message-field')),
+      'Not this',
+    );
+    await tester.tap(find.byKey(const Key('verification-resubmit-cancel')));
+    await tester.pumpAndSettle();
+    expect(note, isNull);
+    expect(find.byType(Dialog), findsNothing);
+  });
+
+  testWidgets('sending a document has a Cancel on its first step', (
+    tester,
+  ) async {
+    final AppDependencies deps = await dependencies(AccessLevel.verified);
+    tester.view
+      ..physicalSize = const Size(430, 900)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      routed(deps)(const RequirementsScreen(requestId: 'req-sample-1'), 1),
+    );
+    for (var i = 0; i < 5; i++) {
+      await tester.pump(const Duration(milliseconds: 50));
+    }
+    final Finder send = find.byWidgetPredicate(
+      (Widget widget) =>
+          widget is Text &&
+          (widget.data == 'Send this document' ||
+              widget.data == 'Replace this document'),
+    );
+    await tester.ensureVisible(send.first);
+    await tester.pump();
+    await tester.tap(send.first);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsOneWidget);
+
+    final Finder cancel = find.byKey(requirementsUploadCancelKey);
+    await tester.ensureVisible(cancel);
+    await tester.pumpAndSettle();
+    expect(tester.widget<AppButton>(cancel).variant, AppButtonVariant.text);
+    await tester.tap(cancel);
+    await tester.pumpAndSettle();
+    expect(find.byType(Dialog), findsNothing);
   });
 }

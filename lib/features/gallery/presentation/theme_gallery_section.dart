@@ -5,8 +5,8 @@ import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
-import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 
 /// The redesign's tokens and the themed Material components, for the dev
@@ -652,20 +652,19 @@ class _PopupSpecimens extends StatelessWidget {
               onPressed: () => AppDialog.show<void>(
                 context: context,
                 title: 'Centred dialog',
-                builder: (BuildContext dialog) => Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const Text(
-                      'Flat, white, radius 22. The scrim is the only depth. '
-                      'Gates, notices, confirmations and decisions open here.',
-                    ),
-                    const SizedBox(height: Spacing.xl),
-                    AppButton(
-                      label: 'Close',
-                      onPressed: () => Navigator.of(dialog).pop(),
-                    ),
-                  ],
+                builder: (BuildContext dialog) => const AppDialogMessage(
+                  'Flat, white, radius 22. The scrim is the only depth. '
+                  'Gates, notices, confirmations and decisions open here.',
+                ),
+                actions: (BuildContext dialog) => AppDialogActions(
+                  primary: DialogButton(
+                    label: 'The way forward',
+                    onPressed: () => Navigator.of(dialog).pop(),
+                  ),
+                  text: DialogButton(
+                    label: 'Close',
+                    onPressed: () => Navigator.of(dialog).pop(),
+                  ),
                 ),
               ),
               child: const Text('Dialog'),
@@ -674,33 +673,28 @@ class _PopupSpecimens extends StatelessWidget {
           const SizedBox(width: Spacing.sm),
           Expanded(
             child: FilledButton.tonal(
-              onPressed: () => showModalBottomSheet<void>(
+              onPressed: () => AppSheet.show<void>(
                 context: context,
-                builder: (BuildContext sheet) => Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    Spacing.formGutter,
-                    0,
-                    Spacing.formGutter,
-                    Spacing.xl,
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: <Widget>[
-                      const Text(
-                        'Picker sheet: white, top corners 28, no shadow. '
-                        'Only a list of choices opens here.',
+                title: 'Picker sheet',
+                builder: (BuildContext sheet) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text(
+                      'White, top corners 28, no shadow. Only a list of '
+                      'choices opens here.',
+                    ),
+                    for (final String choice in const <String>[
+                      'First choice',
+                      'Second choice',
+                    ])
+                      PickerChoiceRow(
+                        rowKey: Key('gallery-choice-$choice'),
+                        label: choice,
+                        selected: choice == 'First choice',
+                        onTap: () => Navigator.of(sheet).pop(),
                       ),
-                      for (final String choice in const <String>[
-                        'First choice',
-                        'Second choice',
-                      ])
-                        ListTile(
-                          title: Text(choice),
-                          onTap: () => Navigator.of(sheet).pop(),
-                        ),
-                    ],
-                  ),
+                  ],
                 ),
               ),
               child: const Text('Sheet'),

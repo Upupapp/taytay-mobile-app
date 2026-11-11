@@ -32,6 +32,7 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_detail.
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/profile/domain/verification_decision.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/shared/widgets/barangay_picker.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 class _RecordingUser implements SignedInPasswordUser {
@@ -633,10 +634,12 @@ void main() {
         mobile: '09170000000',
         email: 'juana@example.com',
       );
+      // The picker is the shared sheet now; it reads its list before drawing
+      // the rows (F-review, finding 2).
       await tester.tap(find.text('San Juan'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Dolores'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       await tester.tap(save);
       await tester.pump();
       await tester.pump();
@@ -646,6 +649,89 @@ void main() {
       expect(barangayOnly.changes.single.containsKey('name'), isFalse);
     },
   );
+
+  testWidgets('the profile barangay picker is the sign-up picker sheet, '
+      'with rows at least 48 dp (F-review, finding 2)', (tester) async {
+    tester.view.physicalSize = const Size(390, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final SemanticsHandle semantics = tester.ensureSemantics();
+    final _RecordingProfile profile = _RecordingProfile(
+      detail: const ResidentProfileDetail(
+        values: <ResidentProfileField, String>{
+          ResidentProfileField.fullName: 'Juana Dela Cruz',
+          ResidentProfileField.mobileNumber: '09170000000',
+          ResidentProfileField.emailAddress: 'juana@example.com',
+          ResidentProfileField.barangay: 'San Juan',
+        },
+        emailVerified: true,
+      ),
+    );
+    const List<Barangay> barangays = <Barangay>[
+      Barangay(id: 'brgy-san-juan', name: 'San Juan'),
+      Barangay(id: 'brgy-dolores', name: 'Dolores'),
+      Barangay(id: 'brgy-muzon', name: 'Muzon'),
+    ];
+    final AppDependencies dependencies = await _accountDependencies(
+      profile: profile,
+      barangays: barangays,
+    );
+    addTearDown(dependencies.dispose);
+    final GoRouter router = GoRouter(
+      initialLocation: '/edit',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/edit',
+          builder: (BuildContext context, GoRouterState state) =>
+              const EditProfileScreen(),
+        ),
+      ],
+    );
+    addTearDown(router.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: dependencies,
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pump();
+    await tester.pump();
+
+    await tester.tap(find.text('San Juan'));
+    await tester.pumpAndSettle();
+
+    // A picker: the shared sheet, not a hand-built dialog.
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.byType(BarangayPicker), findsOneWidget);
+    expect(find.byType(SimpleDialog), findsNothing);
+    expect(find.byType(Dialog), findsNothing);
+    expect(find.text(BarangayPicker.title), findsOneWidget);
+    for (final Barangay barangay in barangays) {
+      final Finder row = find.byKey(Key('barangay-${barangay.id}'));
+      expect(row, findsOneWidget, reason: barangay.name);
+      expect(
+        tester.getSize(row).height,
+        greaterThanOrEqualTo(A11y.minTapTarget),
+        reason: barangay.name,
+      );
+      expect(
+        tester.getSemantics(row),
+        isSemantics(
+          label: barangay.name,
+          isButton: true,
+          hasTapAction: true,
+          isSelected: barangay.id == 'brgy-san-juan' ? true : null,
+        ),
+        reason: barangay.name,
+      );
+    }
+
+    await tester.tap(find.byKey(const Key('barangay-brgy-muzon')));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsNothing);
+    expect(find.text('Muzon'), findsOneWidget);
+    semantics.dispose();
+  });
 
   testWidgets('the inbox sample line is only on when mock data is', (
     tester,

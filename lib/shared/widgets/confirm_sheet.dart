@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../core/design/design_tokens.dart';
 import '../../core/haptics/app_haptics.dart';
 import 'app_banner.dart';
-import 'app_button.dart';
 import 'app_dialog.dart';
 
 /// Asks before something a resident cannot undo, in a centred dialog.
@@ -51,9 +50,21 @@ abstract final class ConfirmSheet {
       builder: (context) => _ConfirmBody(
         consequence: consequence,
         detail: detail,
-        confirmLabel: confirmLabel,
-        cancelLabel: cancelLabel,
         isDestructive: isDestructive,
+      ),
+      actions: (dialog) => AppDialogActions(
+        primary: DialogButton(
+          label: confirmLabel,
+          destructive: isDestructive,
+          // A warning haptic, not a confirm one: this is the moment to pause,
+          // and the feedback should not feel like success.
+          hapticIntent: HapticIntent.warning,
+          onPressed: () => Navigator.of(dialog).pop(true),
+        ),
+        text: DialogButton(
+          label: cancelLabel,
+          onPressed: () => Navigator.of(dialog).pop(false),
+        ),
       ),
     );
     return confirmed ?? false;
@@ -64,20 +75,17 @@ class _ConfirmBody extends StatelessWidget {
   const _ConfirmBody({
     required this.consequence,
     required this.detail,
-    required this.confirmLabel,
-    required this.cancelLabel,
     required this.isDestructive,
   });
 
   final String consequence;
   final String? detail;
-  final String confirmLabel;
-  final String cancelLabel;
   final bool isDestructive;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final String? detail = this.detail;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -88,29 +96,10 @@ class _ConfirmBody extends StatelessWidget {
           title: 'What happens',
           message: consequence,
         ),
-
         if (detail != null) ...<Widget>[
           const SizedBox(height: Spacing.md),
-          Text(detail!, style: theme.textTheme.bodyMedium),
+          Text(detail, style: theme.textTheme.bodyMedium),
         ],
-
-        const SizedBox(height: Spacing.xl),
-        AppButton(
-          label: confirmLabel,
-          variant: isDestructive
-              ? AppButtonVariant.danger
-              : AppButtonVariant.primary,
-          // A warning haptic, not a confirm one: this is the moment to pause,
-          // and the feedback should not feel like success.
-          hapticIntent: HapticIntent.warning,
-          onPressed: () => Navigator.of(context).pop(true),
-        ),
-        const SizedBox(height: Spacing.sm),
-        AppButton(
-          label: cancelLabel,
-          variant: AppButtonVariant.text,
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
       ],
     );
   }

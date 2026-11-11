@@ -18,6 +18,10 @@ enum NoteTone {
 
   /// Something is done (green).
   success,
+
+  /// An emergency, which is not this app's to handle (red, a siren): call
+  /// a hotline rather than wait for a reply.
+  emergency,
 }
 
 /// A note inside a form or a notice page (CSS `.soft .note`): a tinted,
@@ -28,6 +32,8 @@ enum NoteTone {
 /// [heading] is a bold line of its own above [message] instead — for a note
 /// whose title is a statement in its own right ("Taytay LGU has your
 /// report"), or whose message is somebody else's words kept exactly.
+/// [action] is one control under the message, inside the note — the way to
+/// act on it, as the emergency note's "See emergency hotlines" pill is.
 /// A note is a live region by default, so a screen reader announces it when
 /// it appears. Pass [focusNode] when focus should move to it, as an error
 /// summary does after a refused submit.
@@ -37,6 +43,7 @@ class SoftNote extends StatelessWidget {
     this.title,
     this.heading,
     this.tone = NoteTone.info,
+    this.action,
     this.live = true,
     this.focusNode,
     super.key,
@@ -46,6 +53,10 @@ class SoftNote extends StatelessWidget {
   final String? title;
   final String? heading;
   final NoteTone tone;
+
+  /// A control under the message (a `PillButtonRow`, a button). It keeps its
+  /// own semantics: the note's text and the control are read separately.
+  final Widget? action;
   final bool live;
   final FocusNode? focusNode;
 
@@ -81,9 +92,16 @@ class SoftNote extends StatelessWidget {
         TaytayIcons.circleCheck,
         'Done',
       ),
+      NoteTone.emergency => (
+        BrandColors.red50,
+        BrandColors.redInk,
+        TaytayIcons.siren,
+        'Emergency',
+      ),
     };
     final String? title = this.title;
     final String? heading = this.heading;
+    final Widget? action = this.action;
     final TextStyle style = AppTypography.listDetail.copyWith(
       color: ink,
       height: 1.45,
@@ -109,35 +127,44 @@ class SoftNote extends StatelessWidget {
             ),
             const SizedBox(width: Spacing.sm + Spacing.xxs),
             Expanded(
-              child: heading != null
-                  ? Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Text(
-                          heading,
-                          style: style.copyWith(
-                            fontWeight: AppTypography.strong,
-                          ),
-                        ),
-                        const SizedBox(height: Spacing.xxs),
-                        Text(message, style: style),
-                      ],
-                    )
-                  : Text.rich(
-                      TextSpan(
-                        style: style,
-                        children: <InlineSpan>[
-                          if (title != null)
-                            TextSpan(
-                              text: title,
-                              style: const TextStyle(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  heading != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              heading,
+                              style: style.copyWith(
                                 fontWeight: AppTypography.strong,
                               ),
                             ),
-                          TextSpan(text: message),
-                        ],
-                      ),
-                    ),
+                            const SizedBox(height: Spacing.xxs),
+                            Text(message, style: style),
+                          ],
+                        )
+                      : Text.rich(
+                          TextSpan(
+                            style: style,
+                            children: <InlineSpan>[
+                              if (title != null)
+                                TextSpan(
+                                  text: title,
+                                  style: const TextStyle(
+                                    fontWeight: AppTypography.strong,
+                                  ),
+                                ),
+                              TextSpan(text: message),
+                            ],
+                          ),
+                        ),
+                  if (action != null) ...<Widget>[
+                    const SizedBox(height: Spacing.md),
+                    action,
+                  ],
+                ],
+              ),
             ),
           ],
         ),

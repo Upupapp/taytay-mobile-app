@@ -10,7 +10,6 @@ import '../../core/router/app_routes.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/session/session_state.dart';
 import '../../l10n/app_localizations.dart';
-import 'app_button.dart';
 import 'app_dialog.dart';
 
 /// Explains an ended session and offers two ways forward, in a centred
@@ -68,24 +67,23 @@ abstract final class SessionExpiredSheet {
             AppStrings.of(sheetContext).sessionEndedUnsent,
             style: Theme.of(sheetContext).textTheme.bodyMedium,
           ),
-          const SizedBox(height: Spacing.xl),
-          AppButton(
-            label: AppStrings.of(sheetContext).sessionEndedSignInAgain,
-            onPressed: () {
-              Navigator.of(sheetContext).pop();
-              router.goNamed(AppRoute.signIn.routeName);
-            },
-          ),
-          const SizedBox(height: Spacing.sm),
-          AppButton(
-            label: 'Continue as guest',
-            variant: AppButtonVariant.text,
-            onPressed: () {
-              Navigator.of(sheetContext).pop();
-              router.goNamed(AppRoute.home.routeName);
-            },
-          ),
         ],
+      ),
+      actions: (dialog) => AppDialogActions(
+        primary: DialogButton(
+          label: AppStrings.of(dialog).sessionEndedSignInAgain,
+          onPressed: () {
+            Navigator.of(dialog).pop();
+            router.goNamed(AppRoute.signIn.routeName);
+          },
+        ),
+        text: DialogButton(
+          label: 'Continue as guest',
+          onPressed: () {
+            Navigator.of(dialog).pop();
+            router.goNamed(AppRoute.home.routeName);
+          },
+        ),
       ),
     );
   }

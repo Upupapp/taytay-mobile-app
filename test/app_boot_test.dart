@@ -284,7 +284,7 @@ void main() {
       expect(find.textContaining('as a guest'), findsOneWidget);
       await tester.tap(
         find.descendant(
-          of: find.byType(AlertDialog),
+          of: find.byType(Dialog),
           matching: find.text('Sign out'),
         ),
       );

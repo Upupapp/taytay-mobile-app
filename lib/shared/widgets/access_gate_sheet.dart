@@ -12,7 +12,6 @@ import '../../core/session/resident_capability.dart';
 import '../../features/verification/presentation/unverified_gate_sheet.dart';
 import '../../l10n/app_localizations.dart';
 import '../../shared/illustrations/state_illustrations.dart';
-import 'app_button.dart';
 import 'app_dialog.dart';
 
 /// What a resident chose when a gate interrupted them.
@@ -71,16 +70,13 @@ abstract final class AccessGateSheet {
       await AppDialog.show<void>(
         context: context,
         title: strings.gateSheetNotAvailableTitle,
-        builder: (sheetContext) => _GateBody(
+        builder: (dialog) => _GateBody(
           illustration: StateIllustrations.empty(size: 96),
           message: capabilityExplanation(context, verdict),
           privacyNote: strings.gateSheetNotAvailablePrivacy,
-          primary: AppButton(
-            label: strings.gateSheetClose,
-            onPressed: () => Navigator.of(sheetContext).pop(),
-          ),
-          secondary: const SizedBox.shrink(),
         ),
+        actions: (dialog) =>
+            AppDialogActions.close(dialog, label: strings.gateSheetClose),
       );
       return GateOutcome.dismissed;
     }
@@ -149,31 +145,32 @@ abstract final class AccessGateSheet {
     return AppDialog.show<GateOutcome>(
       context: context,
       title: strings.gateSheetSignInTitle,
-      builder: (sheetContext) => _GateBody(
+      builder: (dialog) => _GateBody(
         illustration: StateIllustrations.empty(size: 96),
         message: gateSignInMessage(context, intent),
         privacyNote: strings.gateSheetSignInPrivacy,
-        primary: AppButton(
+      ),
+      // Three ways out: a resident may have no account yet, and offering only
+      // "Sign in" would strand them.
+      actions: (dialog) => AppDialogActions(
+        primary: DialogButton(
           label: strings.gateSheetSignInAction,
           icon: TaytayIcons.logIn,
           onPressed: () {
-            Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
+            Navigator.of(dialog).pop(GateOutcome.goingToAuthenticate);
             router.goNamed(AppRoute.signIn.routeName);
           },
         ),
-        secondary: AppButton(
+        secondary: DialogButton(
           label: strings.gateSheetCreateAccount,
-          variant: AppButtonVariant.secondary,
           onPressed: () {
-            Navigator.of(sheetContext).pop(GateOutcome.goingToAuthenticate);
+            Navigator.of(dialog).pop(GateOutcome.goingToAuthenticate);
             router.goNamed(AppRoute.register.routeName);
           },
         ),
-        tertiary: AppButton(
+        text: DialogButton(
           label: strings.gateSheetKeepBrowsing,
-          variant: AppButtonVariant.text,
-          onPressed: () =>
-              Navigator.of(sheetContext).pop(GateOutcome.dismissed),
+          onPressed: () => Navigator.of(dialog).pop(GateOutcome.dismissed),
         ),
       ),
     );
@@ -184,27 +181,18 @@ abstract final class AccessGateSheet {
     GoRouter router,
     ResidentIntentKind intent,
   ) {
-    return showDialog<GateOutcome>(
+    final VerifiedOnlyAction action = UnverifiedGateSheet.actionFor(intent);
+    return AppDialog.show<GateOutcome>(
       context: context,
-      useRootNavigator: true,
-      builder: (dialogContext) => Dialog(
-        insetPadding: AppDialog.panelInset,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-            maxWidth: ComponentSizes.dialogMaxWidth,
-          ),
-          child: SingleChildScrollView(
-            child: UnverifiedGateSheet(
-              action: UnverifiedGateSheet.actionFor(intent),
-              onContinue: () {
-                Navigator.of(dialogContext).pop(GateOutcome.goingToVerify);
-                router.goNamed(AppRoute.verification.routeName);
-              },
-              onDismiss: () =>
-                  Navigator.of(dialogContext).pop(GateOutcome.dismissed),
-            ),
-          ),
-        ),
+      title: UnverifiedGateSheet.titleFor(action),
+      icon: UnverifiedGateSheet.icon,
+      builder: (dialog) => UnverifiedGateSheet(
+        action: action,
+        onContinue: () {
+          Navigator.of(dialog).pop(GateOutcome.goingToVerify);
+          router.goNamed(AppRoute.verification.routeName);
+        },
+        onDismiss: () => Navigator.of(dialog).pop(GateOutcome.dismissed),
       ),
     );
   }
@@ -215,20 +203,11 @@ class _GateBody extends StatelessWidget {
     required this.illustration,
     required this.message,
     required this.privacyNote,
-    required this.primary,
-    required this.secondary,
-    this.tertiary,
   });
 
   final Widget illustration;
   final String message;
   final String privacyNote;
-  final Widget primary;
-  final Widget secondary;
-
-  /// Optional third action. Used by the sign-in gate, where a resident may
-  /// have no account yet — offering only "Sign in" would strand them.
-  final Widget? tertiary;
 
   @override
   Widget build(BuildContext context) {
@@ -247,14 +226,6 @@ class _GateBody extends StatelessWidget {
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
-        const SizedBox(height: Spacing.xl),
-        primary,
-        const SizedBox(height: Spacing.sm),
-        secondary,
-        if (tertiary != null) ...<Widget>[
-          const SizedBox(height: Spacing.sm),
-          tertiary!,
-        ],
       ],
     );
   }

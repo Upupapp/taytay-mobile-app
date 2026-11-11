@@ -475,7 +475,10 @@ class _StatusPresentation {
 
 // ─── The upload sheet ───────────────────────────────────────────────────────
 
-/// Choose → preview → send → result, in one sheet.
+/// Cancel on the upload dialog's first step.
+const Key requirementsUploadCancelKey = Key('requirements-upload-cancel');
+
+/// Choose → preview → send → result, in one dialog.
 class _UploadSheet extends StatefulWidget {
   const _UploadSheet({required this.controller, required this.requirement});
 
@@ -512,7 +515,10 @@ class _UploadSheetState extends State<_UploadSheet> {
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         switch (controller.stage) {
-          UploadStage.choosing => _ChooseStage(controller: controller),
+          UploadStage.choosing => _ChooseStage(
+            controller: controller,
+            onCancel: () => Navigator.of(context).pop(),
+          ),
           UploadStage.previewing => _PreviewStage(controller: controller),
           UploadStage.uploading => _UploadingStage(controller: controller),
           UploadStage.accepted => _AcceptedStage(
@@ -526,9 +532,12 @@ class _UploadSheetState extends State<_UploadSheet> {
 }
 
 class _ChooseStage extends StatelessWidget {
-  const _ChooseStage({required this.controller});
+  const _ChooseStage({required this.controller, required this.onCancel});
 
   final RequirementsController controller;
+
+  /// Closes the dialog with nothing chosen and nothing sent.
+  final VoidCallback onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -592,6 +601,14 @@ class _ChooseStage extends StatelessWidget {
                 'Taytay municipal hall can take the document in person, or you '
                 'can try again from a phone with a camera.',
           ),
+        // The sources above are the choices; Cancel is the way out.
+        AppDialogActions(
+          text: DialogButton(
+            key: requirementsUploadCancelKey,
+            label: 'Cancel',
+            onPressed: onCancel,
+          ),
+        ),
       ],
     );
   }
@@ -656,18 +673,16 @@ class _PreviewStage extends StatelessWidget {
           '${document.fileName} · ${document.readableSize}',
           style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted),
         ),
-        const SizedBox(height: Spacing.lg),
-
-        AppButton(
-          label: 'Send to Taytay LGU',
-          hapticIntent: HapticIntent.confirm,
-          onPressed: controller.canSend ? controller.send : null,
-        ),
-        const SizedBox(height: Spacing.sm),
-        AppButton(
-          label: 'Choose a different one',
-          variant: AppButtonVariant.text,
-          onPressed: controller.discard,
+        AppDialogActions(
+          primary: DialogButton(
+            label: 'Send to Taytay LGU',
+            hapticIntent: HapticIntent.confirm,
+            onPressed: controller.canSend ? controller.send : null,
+          ),
+          text: DialogButton(
+            label: 'Choose a different one',
+            onPressed: controller.discard,
+          ),
         ),
       ],
     );
@@ -740,11 +755,11 @@ class _UploadingStage extends StatelessWidget {
           'Keep this open until Taytay LGU confirms it has the document.',
           style: theme.textTheme.bodySmall?.copyWith(color: BrandColors.muted),
         ),
-        const SizedBox(height: Spacing.lg),
-        AppButton(
-          label: 'Stop sending',
-          variant: AppButtonVariant.text,
-          onPressed: controller.cancel,
+        AppDialogActions(
+          text: DialogButton(
+            label: 'Stop sending',
+            onPressed: controller.cancel,
+          ),
         ),
       ],
     );
@@ -787,8 +802,9 @@ class _AcceptedStage extends StatelessWidget {
           'list will change when they have.',
           style: theme.textTheme.bodyMedium,
         ),
-        const SizedBox(height: Spacing.lg),
-        AppButton(label: 'Done', onPressed: onDone),
+        AppDialogActions(
+          primary: DialogButton(label: 'Done', onPressed: onDone),
+        ),
       ],
     );
   }
@@ -844,14 +860,14 @@ class _StoppedStage extends StatelessWidget {
           ),
         ],
 
-        const SizedBox(height: Spacing.lg),
-        if (controller.document != null)
-          AppButton(label: 'Try again', onPressed: controller.retry),
-        const SizedBox(height: Spacing.sm),
-        AppButton(
-          label: 'Choose a different one',
-          variant: AppButtonVariant.text,
-          onPressed: controller.discard,
+        AppDialogActions(
+          primary: controller.document == null
+              ? null
+              : DialogButton(label: 'Try again', onPressed: controller.retry),
+          text: DialogButton(
+            label: 'Choose a different one',
+            onPressed: controller.discard,
+          ),
         ),
       ],
     );

@@ -23,6 +23,7 @@ import '../../../shared/widgets/soft_page.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../auth/domain/device_session_repository.dart';
+import 'account_copy.dart';
 
 /// Sign-in and security: the controls a resident has over their own session.
 ///
@@ -90,14 +91,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
   Future<void> _revokeOne(DeviceSessionSummary session) async {
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Sign out ${session.label}?',
-      // States the consequence, not just "are you sure". A confirmation that
-      // only asks whether somebody meant to tap tests intent, not understanding.
-      message:
-          'That device will be signed out of your Taytay LGU IDS account. '
-          'Whoever is using it will need a new one-time code sent to your '
-          'mobile number to sign in again. This device stays signed in.',
-      confirmLabel: 'Sign out that device',
+      title: AccountCopy.revokeOneTitle(session.label),
+      message: AccountCopy.revokeOne,
+      confirmLabel: AccountCopy.revokeOneAction,
     );
     if (confirmed != true || !mounted) return;
 
@@ -119,13 +115,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
   Future<void> _revokeOthers() async {
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Sign out all other devices?',
-      message:
-          'Every other phone, tablet or computer signed in to your Taytay LGU '
-          'IDS account will be signed out. This device stays signed in. Anyone '
-          'using the others will need a new one-time code sent to your mobile '
-          'number.',
-      confirmLabel: 'Sign out the others',
+      title: AccountCopy.revokeOthersTitle,
+      message: AccountCopy.revokeOthers,
+      confirmLabel: AccountCopy.revokeOthersAction,
     );
     if (confirmed != true || !mounted) return;
 
@@ -147,11 +139,9 @@ class _SecurityScreenState extends State<SecurityScreen> {
 
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Sign out of this device?',
-      message:
-          'You will need a new one-time code to sign in again. You can still '
-          'browse Taytay services, offices and announcements as a guest.',
-      confirmLabel: 'Sign out',
+      title: AccountCopy.signOutTitle,
+      message: AccountCopy.signOut,
+      confirmLabel: AccountCopy.signOutAction,
     );
     if (confirmed != true) return;
 

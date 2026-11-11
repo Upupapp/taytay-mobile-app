@@ -18,7 +18,6 @@ import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/surface_cards.dart';
-import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../domain/field_correction_note.dart';
@@ -588,11 +587,19 @@ class _ResubmitMessageSheetState extends State<_ResubmitMessageSheet> {
           controller: _field,
           fieldKey: const Key('verification-message-field'),
         ),
-        const SizedBox(height: 16),
-        PrimaryButton(
-          key: const Key('verification-resubmit-confirm'),
-          label: 'Resubmit for verification',
-          onPressed: () => Navigator.of(context).pop(_field.text),
+        // The dialog's actions, drawn here because Resubmit sends what is in
+        // the field. Cancel sends nothing (the dialog resolves to null).
+        AppDialogActions(
+          primary: DialogButton(
+            key: const Key('verification-resubmit-confirm'),
+            label: 'Resubmit for verification',
+            onPressed: () => Navigator.of(context).pop(_field.text),
+          ),
+          text: DialogButton(
+            key: const Key('verification-resubmit-cancel'),
+            label: 'Cancel',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
       ],
     );

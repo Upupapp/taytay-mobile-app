@@ -1641,11 +1641,13 @@ const Key messageSentEmergencyNoteKey = Key('message-sent-emergency');
 /// The note's button to the Emergency hotlines page.
 const Key messageSentHotlinesKey = Key('message-sent-hotlines');
 
-/// What the sent page's emergency note says. It names no number and no line:
-/// the button opens the hotlines Taytay LGU publishes.
+/// What the sent page's emergency note says: the mock-up's bold title, then
+/// the sentence. It names no number and no line (D-196): the button opens the
+/// hotlines Taytay LGU publishes.
 abstract final class MessageSentCopy {
-  static const String emergency =
-      "For emergencies don't wait for a reply: call an emergency hotline.";
+  static const String emergencyHeading =
+      "For emergencies don't wait for a reply";
+  static const String emergency = 'Call an emergency hotline.';
   static const String hotlinesButton = 'See emergency hotlines';
 }
 
@@ -1671,57 +1673,31 @@ class _SentPage extends StatelessWidget {
       ],
       // No number: the messaged office's line is not an emergency line, and
       // nothing in `GET /hotlines` marks which hotline is the primary one.
-      body: DecoratedBox(
+      body: SoftNote(
         key: messageSentEmergencyNoteKey,
-        decoration: BoxDecoration(
-          color: BrandColors.red50,
-          borderRadius: BorderRadius.circular(Radii.lg),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(Spacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  const IconTile.glyph(
-                    glyph: TaytayGlyph.siren,
-                    tone: TileTone.red,
-                    tileSize: IconTileSize.small,
-                  ),
-                  const SizedBox(width: Spacing.md),
-                  Expanded(
-                    child: Text(
-                      MessageSentCopy.emergency,
-                      style: AppTypography.listDetail.copyWith(
-                        fontWeight: AppTypography.medium,
-                        color: BrandColors.redInk,
-                      ),
-                    ),
+        tone: NoteTone.emergency,
+        heading: MessageSentCopy.emergencyHeading,
+        message: MessageSentCopy.emergency,
+        // Part of the page, not news: read in order, not announced over the
+        // page's own title.
+        live: false,
+        action: onHotlines == null
+            ? null
+            // The design system's pill (`PillButtonRow`, the danger tone): a
+            // 40 px pill in a 48 dp target, wrapping at 200%.
+            : PillButtonRow(
+                wrap: true,
+                padding: EdgeInsets.zero,
+                actions: <PillAction>[
+                  PillAction(
+                    label: MessageSentCopy.hotlinesButton,
+                    glyph: TaytayGlyph.phone,
+                    danger: true,
+                    buttonKey: messageSentHotlinesKey,
+                    onPressed: onHotlines,
                   ),
                 ],
               ),
-              if (onHotlines != null) ...<Widget>[
-                const SizedBox(height: Spacing.md),
-                // The design system's pill (`PillButtonRow`, the danger
-                // tone): a 40 px pill in a 48 dp target, wrapping at 200%.
-                PillButtonRow(
-                  wrap: true,
-                  padding: EdgeInsets.zero,
-                  actions: <PillAction>[
-                    PillAction(
-                      label: MessageSentCopy.hotlinesButton,
-                      glyph: TaytayGlyph.phone,
-                      danger: true,
-                      buttonKey: messageSentHotlinesKey,
-                      onPressed: onHotlines,
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
       ),
       primaryLabel: 'Go to Messages',
       onPrimary: canvas.onMessages,

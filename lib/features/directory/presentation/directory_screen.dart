@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../app/app_dependencies.dart';
 import '../../../core/api/send_key.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/taytay_icons.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
@@ -16,7 +15,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
-import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/app_sheet.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
@@ -313,30 +312,22 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   Future<void> _pickTopic() async {
     final Office? office = _office;
     if (office == null || office.topics.isEmpty) return;
-    final String? chosen = await showModalBottomSheet<String>(
+    final String? chosen = await AppSheet.show<String>(
       context: context,
-      builder: (BuildContext sheetContext) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              for (final String topic in office.topics)
-                ListTile(
-                  title: Text(topic),
-                  trailing: topic == _topic
-                      ? const TaytayIcon(
-                          icon: TaytayIcons.check,
-                          semanticLabel: 'Chosen',
-                          size: IconSizes.sm,
-                          color: BrandColors.blue,
-                        )
-                      : null,
-                  onTap: () => Navigator.of(sheetContext).pop(topic),
-                ),
-            ],
-          ),
-        );
-      },
+      title: 'Topic',
+      builder: (BuildContext sheetContext) => Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          for (final String topic in office.topics)
+            PickerChoiceRow(
+              rowKey: Key('topic-$topic'),
+              label: topic,
+              selected: topic == _topic,
+              onTap: () => Navigator.of(sheetContext).pop(topic),
+            ),
+        ],
+      ),
     );
     if (chosen == null || !mounted) return;
     setState(() => _topic = chosen);

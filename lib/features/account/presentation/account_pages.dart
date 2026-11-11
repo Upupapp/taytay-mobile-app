@@ -17,6 +17,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/barangay_picker.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
@@ -28,6 +29,7 @@ import '../../profile/domain/resident_profile_detail.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../domain/account_password_client.dart';
 import 'account_canvas.dart';
+import 'account_copy.dart';
 import 'change_password_form.dart';
 
 /// Office inbox. Verified. The shell keeps the tab bar.
@@ -427,10 +429,9 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
   Future<void> _close() async {
     final bool? confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Close this conversation?',
-      message:
-          'The office will see it as closed. You can start a new message afterwards.',
-      confirmLabel: 'Close conversation',
+      title: AccountCopy.closeConversationTitle,
+      message: AccountCopy.closeConversation,
+      confirmLabel: AccountCopy.closeConversationAction,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -698,20 +699,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   Future<void> _pickBarangay() async {
     if (_barangays.isEmpty) return;
-    final Barangay? picked = await showDialog<Barangay>(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          title: const Text('Barangay'),
-          children: <Widget>[
-            for (final Barangay barangay in _barangays)
-              SimpleDialogOption(
-                onPressed: () => Navigator.of(dialogContext).pop(barangay),
-                child: Text(barangay.name),
-              ),
-          ],
-        );
-      },
+    final List<Barangay> listed = _barangays;
+    // The list this screen already read, in the picker sign-up uses.
+    final Barangay? picked = await showBarangayPicker(
+      context,
+      load: () async => Ok<List<Barangay>>(listed),
+      selectedId: _barangayId,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -737,7 +730,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (problem != null) {
         await AppDialog.acknowledge(
           context: context,
-          title: 'Nothing was changed',
+          title: AccountCopy.nothingChangedTitle,
           message: problem,
         );
         return;
@@ -752,8 +745,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (changes.isEmpty) {
       await AppDialog.acknowledge(
         context: context,
-        title: 'Nothing was changed',
-        message: 'Your profile was not updated. You can try again.',
+        title: AccountCopy.nothingChangedTitle,
+        message: AccountCopy.nothingChanged,
       );
       return;
     }
@@ -772,10 +765,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (failure.outcomeUnknown) {
         await AppDialog.acknowledge(
           context: context,
-          title: 'Not confirmed yet',
-          message:
-              'We could not confirm that your profile was updated. Saving '
-              'again is safe: the same change is sent again.',
+          title: AccountCopy.notConfirmedTitle,
+          message: AccountCopy.notConfirmed,
         );
         return;
       }
@@ -789,19 +780,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (!mounted) return;
         await AppDialog.acknowledge(
           context: context,
-          title: 'Your name was not changed',
-          message: changes.length > 1
-              ? '${_nameLock.explanation} Nothing was saved. Save again to '
-                    'keep your other changes.'
-              : '${_nameLock.explanation} Nothing was saved.',
+          title: AccountCopy.nameNotChangedTitle,
+          message: AccountCopy.nameNotChanged(
+            _nameLock.explanation,
+            otherChanges: changes.length > 1,
+          ),
         );
         return;
       }
       if (!mounted) return;
       await AppDialog.acknowledge(
         context: context,
-        title: 'Nothing was changed',
-        message: 'Your profile was not updated. You can try again.',
+        title: AccountCopy.nothingChangedTitle,
+        message: AccountCopy.nothingChanged,
       );
       return;
     }
@@ -978,8 +969,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       showDataExport: false,
       onLanguage: () => AppDialog.acknowledge(
         context: context,
-        title: 'Language',
-        message: 'The app follows the language of this phone.',
+        title: AccountCopy.languageTitle,
+        message: AccountCopy.language,
       ),
       onChangePassword: () => _changePassword(context),
       onPrivacy: () => context.goNamed(AppRoute.profileNotice.routeName),
@@ -992,25 +983,21 @@ Future<void> _changePassword(BuildContext context) async {
   final AccountPasswordClient client = AppDependencies.of(
     context,
   ).accountPasswordClient;
-  await showDialog<void>(
+  await AppDialog.show<void>(
     context: context,
-    builder: (BuildContext dialogContext) {
-      return AlertDialog(
-        scrollable: true,
-        title: const Text('Change password'),
-        content: ChangePasswordForm(
-          client: client,
-          onDone: () {
-            Navigator.of(dialogContext).pop();
-            AppDialog.acknowledge(
-              context: context,
-              title: 'Password updated',
-              message: 'Use the new password the next time you sign in.',
-            );
-          },
-        ),
-      );
-    },
+    title: 'Change password',
+    builder: (BuildContext dialogContext) => ChangePasswordForm(
+      client: client,
+      onCancel: () => Navigator.of(dialogContext).pop(),
+      onDone: () {
+        Navigator.of(dialogContext).pop();
+        AppDialog.acknowledge(
+          context: context,
+          title: AccountCopy.passwordUpdatedTitle,
+          message: AccountCopy.passwordUpdated,
+        );
+      },
+    ),
   );
 }
 

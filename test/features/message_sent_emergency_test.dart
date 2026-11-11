@@ -5,6 +5,7 @@ import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/features/directory/data/office_catalogue.dart';
 import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
+import 'package:taytay_resident/shared/widgets/soft_note.dart';
 
 import '../support/layout_matrix.dart';
 
@@ -49,8 +50,22 @@ void main() {
 
     final Finder note = find.byKey(messageSentEmergencyNoteKey);
     expect(note, findsOneWidget);
+    // The design system's note (F-review, finding 7), with the mock-up's bold
+    // title on a line of its own.
+    expect(tester.widget<SoftNote>(note).tone, NoteTone.emergency);
+    expect(
+      find.descendant(
+        of: note,
+        matching: find.text(MessageSentCopy.emergencyHeading),
+      ),
+      findsOneWidget,
+    );
     expect(
       find.descendant(of: note, matching: find.text(MessageSentCopy.emergency)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: note, matching: find.byKey(messageSentHotlinesKey)),
       findsOneWidget,
     );
     final String drawn = tester

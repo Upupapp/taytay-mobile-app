@@ -346,6 +346,10 @@ abstract final class ComponentSizes {
   /// reaches it; a tablet keeps a readable line instead of a wall of text.
   static const double dialogMaxWidth = 480;
 
+  /// The block a photo stands behind while it loads in a dialog
+  /// (`SkeletonLayout.photo`).
+  static const double skeletonPhoto = 200;
+
   /// Compact button (CSS `.btn.sm`).
   static const double buttonHeightSmall = 44;
 

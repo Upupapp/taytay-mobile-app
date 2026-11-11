@@ -8,7 +8,6 @@ import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
-import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -249,25 +248,25 @@ abstract final class CanonicalFieldSheet {
                 CanonicalCorrection.duringVerification,
                 style: theme.textTheme.bodyMedium,
               ),
-              const SizedBox(height: Spacing.lg),
-              AppButton(
-                label: 'Check my verification',
-                onPressed: () {
-                  Navigator.of(sheetContext).pop();
-                  router.goNamed(AppRoute.verification.routeName);
-                },
-              ),
-            ] else ...<Widget>[
-              const SizedBox(height: Spacing.lg),
-              AppButton(
-                label: 'Close',
-                variant: AppButtonVariant.secondary,
-                onPressed: () => Navigator.of(sheetContext).pop(),
-              ),
             ],
           ],
         );
       },
+      actions: (dialog) => AppDialogActions(
+        primary: midVerification
+            ? DialogButton(
+                label: 'Check my verification',
+                onPressed: () {
+                  Navigator.of(dialog).pop();
+                  router.goNamed(AppRoute.verification.routeName);
+                },
+              )
+            : null,
+        text: DialogButton(
+          label: 'Close',
+          onPressed: () => Navigator.of(dialog).pop(),
+        ),
+      ),
     );
   }
 }

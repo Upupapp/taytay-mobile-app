@@ -83,6 +83,84 @@ void main() {
     });
   });
 
+  group('popups open through AppDialog and AppSheet (rule 3)', () {
+    // DESIGN_SYSTEM.md §8 rule 3 (D-197, D-202): every gate, notice,
+    // confirmation and decision is a centred `AppDialog`; only a picker is a
+    // sheet, through `AppSheet`. A direct `showDialog` or
+    // `showModalBottomSheet` is how a one-off frame, colour, radius or a
+    // sheet that explains something comes back. Only the two wrappers call
+    // the framework's routes.
+    final List<File> files = _dartFiles()
+        .where((File file) => !_popupWrappers.contains(_path(file)))
+        .toList();
+
+    test('the scan reads the whole app but the two wrappers', () {
+      final Set<String> paths = files.map(_path).toSet();
+      expect(files.length, greaterThan(200));
+      expect(paths, contains('lib/shared/widgets/access_gate_sheet.dart'));
+      expect(
+        paths,
+        contains('lib/features/home/presentation/home_canvas.dart'),
+      );
+      expect(paths.intersection(_popupWrappers), isEmpty);
+      for (final String wrapper in _popupWrappers) {
+        expect(
+          _popupRule.scan(File(wrapper).readAsStringSync()),
+          isNotEmpty,
+          reason: '$wrapper no longer opens the route it wraps',
+        );
+      }
+    });
+
+    test('nothing else calls showDialog, showModalBottomSheet or '
+        'showGeneralDialog', () {
+      final List<String> found = <String>[
+        for (final File file in files)
+          for (final _Finding finding in _popupRule.scan(
+            file.readAsStringSync(),
+          ))
+            '${_path(file)}:${finding.line}: ${finding.text} — '
+                '${_popupRule.advice}',
+      ];
+      expect(
+        found,
+        isEmpty,
+        reason:
+            'A popup bypasses AppDialog / AppSheet:\n${found.join('\n')}\n'
+            'See docs/design/DESIGN_SYSTEM.md §8 rule 3.',
+      );
+    });
+
+    const Map<String, String> plantedPopups = <String, String>{
+      'showDialog': 'await showDialog<void>(context: c, builder: b);',
+      'showDialog across a line break': 'return showDialog\n    <Barangay>(',
+      'showModalBottomSheet': 'showModalBottomSheet(context: c, builder: b)',
+      'showGeneralDialog': 'showGeneralDialog<void>(context: c)',
+      'showCupertinoDialog': 'showCupertinoDialog(context: c, builder: b)',
+      'showCupertinoModalPopup': 'showCupertinoModalPopup<int>(context: c)',
+    };
+    for (final MapEntry<String, String> entry in plantedPopups.entries) {
+      test('finds a planted ${entry.key}', () {
+        expect(_popupRule.scan(entry.value), hasLength(1), reason: entry.value);
+      });
+    }
+
+    test('passes the wrappers, other show* helpers and comments', () {
+      const String clean = '''
+// A comment may say showDialog(context: c) or showModalBottomSheet<T>(.
+/// So may a doc comment: `showGeneralDialog(`.
+await AppDialog.show<void>(context: c, title: t, builder: b);
+await AppSheet.show<String>(context: c, title: t, builder: b);
+await showResubmitMessageDialog(context);
+await showBarangayPicker(context, load: load);
+await showLegalTextSheet(context, title: t, markdown: m, pending: p);
+await showDatePicker(context: c, firstDate: a, lastDate: b);
+_showDialogLater();
+''';
+      expect(_popupRule.scan(clean), isEmpty);
+    });
+  });
+
   group('the scanner itself', () {
     // Each rule is proved against a planted line, so a green run above means
     // "nothing was found", not "the pattern could not find anything".
@@ -202,19 +280,42 @@ class _Finding {
   final String text;
 }
 
-/// Every Dart file in `lib/` outside the two places tokens are defined.
-List<File> _scannedFiles() {
+/// The two wrappers that may open the framework's popup routes.
+const Set<String> _popupWrappers = <String>{
+  'lib/shared/widgets/app_dialog.dart',
+  'lib/shared/widgets/app_sheet.dart',
+};
+
+/// A call to one of the framework's popup routes, generic or not, across a
+/// line break. `AppDialog.show`, `showDatePicker` (a picker the theme
+/// centres) and the app's own `show…` helpers do not match.
+const _Rule _popupRule = _Rule(
+  name: 'popup routes',
+  pattern:
+      r'\bshow(?:Dialog|ModalBottomSheet|GeneralDialog|CupertinoDialog'
+      r'|CupertinoModalPopup)\b\s*[<(]',
+  advice:
+      'open a gate, notice, confirmation or decision with AppDialog.show '
+      '(or confirm / acknowledge), and a picker with AppSheet.show',
+);
+
+/// Every Dart file in `lib/`.
+List<File> _dartFiles() {
   return Directory('lib')
       .listSync(recursive: true)
       .whereType<File>()
       .where((File file) => file.path.endsWith('.dart'))
-      .where((File file) {
-        final String path = _path(file);
-        return !path.startsWith('lib/core/design/') &&
-            !path.startsWith('lib/shared/widgets/');
-      })
       .toList()
     ..sort((File a, File b) => _path(a).compareTo(_path(b)));
+}
+
+/// Every Dart file in `lib/` outside the two places tokens are defined.
+List<File> _scannedFiles() {
+  return _dartFiles().where((File file) {
+    final String path = _path(file);
+    return !path.startsWith('lib/core/design/') &&
+        !path.startsWith('lib/shared/widgets/');
+  }).toList();
 }
 
 String _path(File file) => file.path.replaceAll(r'\', '/');

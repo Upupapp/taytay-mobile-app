@@ -103,24 +103,31 @@ class UnverifiedGatePreview extends StatelessWidget {
       children: <Widget>[
         const GateBackdrop(),
         ModalBarrier(color: GateScrim.color, dismissible: false),
-        const Center(
-          child: Padding(
-            padding: AppDialog.panelInset,
-            child: SingleChildScrollView(
-              child: UnverifiedGateSheet(
-                action: VerifiedOnlyAction.message,
-                onContinue: _noop,
-                onDismiss: _noop,
-              ),
-            ),
-          ),
-        ),
+        unverifiedGateDialog(VerifiedOnlyAction.message),
       ],
     );
   }
 }
 
 void _noop() {}
+
+/// The verification gate drawn as `AccessGateSheet` opens it — the theme's
+/// dialog, the lock tile, the title, the gate — without opening a route, for
+/// a still frame.
+Widget unverifiedGateDialog(VerifiedOnlyAction action) {
+  return Dialog(
+    insetPadding: AppDialog.panelInset,
+    child: AppDialogPanel(
+      title: UnverifiedGateSheet.titleFor(action),
+      icon: UnverifiedGateSheet.icon,
+      child: UnverifiedGateSheet(
+        action: action,
+        onContinue: _noop,
+        onDismiss: _noop,
+      ),
+    ),
+  );
+}
 
 /// Scrim over the specimen's messages page, from the theme's navy at the
 /// design's dimming.

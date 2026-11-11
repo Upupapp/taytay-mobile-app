@@ -3,17 +3,28 @@ import 'package:flutter/material.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/result/result.dart';
-import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../domain/account_password_client.dart';
 
 /// Current password, then a new one. Firebase does the change.
+///
+/// Opened in a dialog (`AppDialog.show`); its buttons are the dialog's
+/// actions, drawn here because Save follows the form's own state.
 class ChangePasswordForm extends StatefulWidget {
-  const ChangePasswordForm({required this.client, this.onDone, super.key});
+  const ChangePasswordForm({
+    required this.client,
+    this.onDone,
+    this.onCancel,
+    super.key,
+  });
 
   final AccountPasswordClient client;
   final VoidCallback? onDone;
+
+  /// Closes the form without saving; no Cancel button when null.
+  final VoidCallback? onCancel;
 
   @override
   State<ChangePasswordForm> createState() => _ChangePasswordFormState();
@@ -79,6 +90,7 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
   @override
   Widget build(BuildContext context) {
     final String? formMessage = _formMessage;
+    final VoidCallback? onCancel = widget.onCancel;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -109,10 +121,14 @@ class _ChangePasswordFormState extends State<ChangePasswordForm> {
           const SizedBox(height: Spacing.md),
           SoftNote(tone: NoteTone.error, message: formMessage),
         ],
-        const SizedBox(height: Spacing.lg),
-        AppButton(
-          label: _busy ? 'Saving' : 'Save password',
-          onPressed: _busy ? null : _submit,
+        AppDialogActions(
+          primary: DialogButton(
+            label: _busy ? 'Saving' : 'Save password',
+            onPressed: _busy ? null : _submit,
+          ),
+          text: onCancel == null
+              ? null
+              : DialogButton(label: 'Cancel', onPressed: onCancel),
         ),
       ],
     );

@@ -235,6 +235,28 @@ class SharedWidgetsGallerySection extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: Spacing.sm),
+        // A heading on its own line, and an action inside the note.
+        _Padded(
+          SoftNote(
+            tone: NoteTone.emergency,
+            heading: 'A heading of its own',
+            message: 'The sentence under it.',
+            live: false,
+            action: PillButtonRow(
+              wrap: true,
+              padding: EdgeInsets.zero,
+              actions: <PillAction>[
+                PillAction(
+                  label: 'The action',
+                  glyph: TaytayGlyph.phone,
+                  danger: true,
+                  onPressed: () {},
+                ),
+              ],
+            ),
+          ),
+        ),
         const _Heading('SettingsList, SettingsRow, SettingsSwitchRow'),
         _Padded(
           SettingsList(
@@ -313,6 +335,10 @@ class SharedWidgetsGallerySection extends StatelessWidget {
         const _Padded(LoadingSkeleton(count: 2)),
         const SizedBox(height: Spacing.md),
         const _Padded(LoadingSkeleton(layout: SkeletonLayout.feed, count: 2)),
+        const SizedBox(height: Spacing.md),
+        const _Padded(LoadingSkeleton(layout: SkeletonLayout.text, count: 3)),
+        const SizedBox(height: Spacing.md),
+        const _Padded(LoadingSkeleton(layout: SkeletonLayout.photo)),
         const _Heading('DetailHero, DetailSheet, DetailFactRow'),
         MediaQuery.removePadding(
           context: context,

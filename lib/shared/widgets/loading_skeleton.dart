@@ -16,6 +16,13 @@ enum SkeletonLayout {
 
   /// A wide photo, a title and a paragraph: a detail page.
   detail,
+
+  /// Lines of a paragraph, [LoadingSkeleton.count] of them: a notice being
+  /// read in a dialog, a short list of names in a picker.
+  text,
+
+  /// One photo-shaped block: a photo opening in a dialog.
+  photo,
 }
 
 /// The loading state of a data screen: grey blocks shaped like what will
@@ -33,7 +40,8 @@ class LoadingSkeleton extends StatelessWidget {
 
   final SkeletonLayout layout;
 
-  /// Rows or cards drawn. Ignored by [SkeletonLayout.detail].
+  /// Rows, cards or lines drawn. Ignored by [SkeletonLayout.detail] and
+  /// [SkeletonLayout.photo].
   final int count;
   final String semanticLabel;
 
@@ -63,6 +71,11 @@ class LoadingSkeleton extends StatelessWidget {
             ],
           ),
           SkeletonLayout.detail => _detail(),
+          SkeletonLayout.text => _text(count),
+          SkeletonLayout.photo => const SkeletonBlock(
+            height: ComponentSizes.skeletonPhoto,
+            radius: Radii.md,
+          ),
         },
       ),
     );
@@ -147,6 +160,24 @@ class LoadingSkeleton extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: Spacing.sm),
             child: FractionallySizedBox(
               widthFactor: width,
+              child: const SkeletonBlock(height: 12, radius: Radii.xs),
+            ),
+          ),
+      ],
+    );
+  }
+
+  static Widget _text(int lines) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        for (var i = 0; i < lines; i++)
+          Padding(
+            padding: EdgeInsets.only(top: i == 0 ? 0 : Spacing.sm),
+            child: FractionallySizedBox(
+              // The last line of a paragraph stops short, as text does.
+              widthFactor: i == lines - 1 ? 0.6 : 1,
               child: const SkeletonBlock(height: 12, radius: Radii.xs),
             ),
           ),

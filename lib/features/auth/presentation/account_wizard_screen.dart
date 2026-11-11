@@ -13,6 +13,8 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/barangay_picker.dart';
 import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
@@ -803,12 +805,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       return listed;
     }
 
-    final Barangay? picked = await showModalBottomSheet<Barangay>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      builder: (BuildContext sheet) =>
-          _BarangaySheet(load: load, selectedId: _barangayId),
+    final Barangay? picked = await showBarangayPicker(
+      context,
+      load: load,
+      selectedId: _barangayId,
     );
     if (picked == null || !mounted) return;
     setState(() {
@@ -819,10 +819,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Future<void> _chooseIdType() async {
-    final String? picked = await showModalBottomSheet<String>(
+    final String? picked = await AppSheet.show<String>(
       context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
+      title: _IdTypeSheet.title,
       builder: (BuildContext sheet) =>
           _IdTypeSheet(selectedLabel: _idType.text.trim()),
     );
@@ -2493,246 +2492,29 @@ class _SelfieTip extends StatelessWidget {
   }
 }
 
-/// Taytay's barangays, from `GET /barangays`, one 48 dp row each.
-///
-/// A modal sheet so focus stays inside it and Back closes it. Loading and a
-/// failed read are said in words, with a way to try again; nothing is picked
-/// on the resident's behalf and there is no typed fallback.
-class _BarangaySheet extends StatefulWidget {
-  const _BarangaySheet({required this.load, required this.selectedId});
-
-  final Future<Result<List<Barangay>>> Function() load;
-  final String? selectedId;
-
-  @override
-  State<_BarangaySheet> createState() => _BarangaySheetState();
-}
-
-class _BarangaySheetState extends State<_BarangaySheet> {
-  Result<List<Barangay>>? _result;
-
-  @override
-  void initState() {
-    super.initState();
-    unawaited(_fetch());
-  }
-
-  Future<void> _fetch() async {
-    setState(() => _result = null);
-    final Result<List<Barangay>> result = await widget.load();
-    if (!mounted) return;
-    setState(() => _result = result);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final TextStyle note = AppTypography.listDetail.copyWith(
-      color: BrandColors.muted,
-      height: 1.45,
-    );
-    final Result<List<Barangay>>? result = _result;
-    final Widget body = switch (result) {
-      null => Semantics(
-        liveRegion: true,
-        label: 'Loading barangays',
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      Ok<List<Barangay>>(:final value) when value.isNotEmpty => Flexible(
-        child: ListView(
-          shrinkWrap: true,
-          children: <Widget>[
-            for (final Barangay barangay in value)
-              _BarangayRow(
-                barangay: barangay,
-                selected: barangay.id == widget.selectedId,
-              ),
-          ],
-        ),
-      ),
-      _ => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Semantics(
-            liveRegion: true,
-            child: Text(
-              result is Ok<List<Barangay>>
-                  ? 'No barangays are listed yet. Please try again later.'
-                  : 'We could not load the list of barangays. Check your '
-                        'connection and try again.',
-              style: note,
-            ),
-          ),
-          const SizedBox(height: 12),
-          PrimaryButton(
-            kind: TaytayButtonKind.signIn,
-            label: 'Try again',
-            onPressed: _fetch,
-          ),
-        ],
-      ),
-    };
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  'Choose your barangay',
-                  style: AppTypography.pageTitle.copyWith(
-                    color: BrandColors.ink,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text('Taytay, Rizal', style: note),
-              const SizedBox(height: 8),
-              body,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BarangayRow extends StatelessWidget {
-  const _BarangayRow({required this.barangay, required this.selected});
-
-  final Barangay barangay;
-  final bool selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return _ChoiceRow(
-      rowKey: Key('barangay-${barangay.id}'),
-      label: barangay.name,
-      selected: selected,
-      onTap: () => Navigator.of(context).pop(barangay),
-    );
-  }
-}
-
 /// The kinds of ID `POST /me/verification-requests` accepts for `id_type`.
 /// Pops the wire value.
 class _IdTypeSheet extends StatelessWidget {
   const _IdTypeSheet({required this.selectedLabel});
 
+  static const String title = 'Type of ID';
+
   final String selectedLabel;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Semantics(
-                header: true,
-                child: Text(
-                  'Type of ID',
-                  style: AppTypography.pageTitle.copyWith(
-                    color: BrandColors.ink,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  children: <Widget>[
-                    for (final String wire in verificationIdTypes)
-                      _ChoiceRow(
-                        rowKey: Key('id-type-$wire'),
-                        label: idTypeLabel(wire),
-                        selected: idTypeLabel(wire) == selectedLabel,
-                        onTap: () => Navigator.of(context).pop(wire),
-                      ),
-                  ],
-                ),
-              ),
-            ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (final String wire in verificationIdTypes)
+          PickerChoiceRow(
+            rowKey: Key('id-type-$wire'),
+            label: idTypeLabel(wire),
+            selected: idTypeLabel(wire) == selectedLabel,
+            onTap: () => Navigator.of(context).pop(wire),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One choice in a picker sheet: a 48 dp row, announced as a button in a
-/// group where one is selected.
-class _ChoiceRow extends StatelessWidget {
-  const _ChoiceRow({
-    required this.rowKey,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final Key rowKey;
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: selected,
-      inMutuallyExclusiveGroup: true,
-      label: label,
-      onTap: onTap,
-      excludeSemantics: true,
-      child: InkWell(
-        key: rowKey,
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(Radii.md),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    label,
-                    style: AppTypography.sectionTitle.copyWith(
-                      fontWeight: selected
-                          ? AppTypography.strong
-                          : AppTypography.medium,
-                      color: selected ? BrandColors.blue : BrandColors.ink,
-                    ),
-                  ),
-                ),
-                if (selected)
-                  const TaytayIcon(
-                    icon: TaytayIcons.check,
-                    semanticLabel: '',
-                    excludeSemantics: true,
-                    size: 18,
-                    color: BrandColors.taytayBlue,
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

@@ -2656,6 +2656,147 @@ that and nothing more.
 
 ---
 
+## D-201 — The verification gate says only that the account is not verified
+
+**Status: settled.** Category: privacy / product. Recorded 2026-11-12, from
+the F-review design-conformance review (finding 9), on the owner's "do what's
+best" (Ella, Michaela Cailing).
+
+**Context.** The gate that stops an unverified resident at a verified-only
+action (`UnverifiedGateSheet`, 03-04) told every one of them "Your
+verification is Pending review", from a default label nobody passed. A
+resident who never sent an ID, and one whose ID was refused, were told it was
+being reviewed. The gate opens from `AccessGateSheet`, which has the session
+only: `ResidentSession` holds the access level the server's tier maps to
+(unverified or verified, D-06), not the tier itself, and no provider in
+`AppDependencies` holds the KYC state. Reading it would mean a request each
+time a gate opens.
+
+**Chosen.** The gate states the one thing the app knows: "This action is for
+verified Taytay residents. Your account is not verified yet."
+(`UnverifiedGateSheet.notVerifiedYet`). No status chip, no stage. "Continue
+verification" opens the verification screen, which reads the real state from
+the server and words it (pending, needs correction, not started). The unused
+`statusLabel` parameter is gone.
+
+**Rejected.** Fetching `GET /me` when the gate opens (a request and a delay
+in front of a pause that only explains); caching the tier in the session for
+this (it widens what the session holds, Article 5, for one sentence);
+keeping "Pending review" for the common case (a resident told their ID is
+being reviewed may wait for a review that is not happening).
+
+**Why.** A gate that guesses a resident's status is wrong for some of them,
+and the wrong ones are the residents with something to do.
+
+---
+
+## D-202 — Every dialog opens through `AppDialog.show`, scrolls, is announced, and draws its actions one way
+
+**Status: settled.** Category: design / accessibility. Recorded 2026-11-12,
+from the F-review design-conformance review (findings 1–6, 8 and 10),
+following D-197.
+
+**Context.** D-197 made every gate, notice, confirmation and decision a
+centred dialog, but by four routes: `AppDialog.confirm` and `.acknowledge`
+built an `AlertDialog` that did not scroll (a long message at 200% text on a
+360 dp phone was clipped without a word) and set radius 16 where the theme
+and D-197 say 22; `AppDialog.show` named no route; four dialogs called
+`showDialog` themselves with their own frames, a hard-coded colour, fixed
+320 × 160 boxes and lone spinners (the verification gate, the legal text,
+change password, an issuance photo); the profile barangay picker was a
+`SimpleDialog` with 36 dp rows. Buttons were drawn four ways, Close four
+ways, "Not now" was a bare `InkWell`, the resubmit note and the upload's first
+step had no Cancel, and nothing stopped a new `showDialog`.
+
+**Chosen.**
+
+1. **One shape.** `AppDialog.show({context, title, builder, actions, icon,
+   scrollable = true, dismissible = true, useRootNavigator = true})` draws an
+   optional hero icon (the title then centres, Material 3's dialog), the
+   title, the content and the actions, on the theme's dialog (centred, radius
+   22, flat). `confirm` and `acknowledge` are `show` with a sentence
+   (`AppDialogMessage`) and the actions filled in; they no longer set a
+   radius. `AppDialogPanel` is the same inside, public so a specimen can draw
+   a dialog without opening one.
+2. **It scrolls.** By default the title, content and actions are one scroll
+   view, so nothing clips at any width or text size. `scrollable: false` is
+   for content that scrolls itself (the Terms and Privacy Notice): the content
+   takes the height between the title and the actions, and Close stays in
+   view.
+3. **It is announced.** The title is `Semantics(container, header,
+   namesRoute)`, so a screen reader says what opened, as the bottom sheets it
+   replaced did. The gate's title and the legal text's are the dialog's own.
+4. **Actions one way.** `AppDialogActions({primary, secondary, text})` with
+   `DialogButton({label, onPressed, destructive, icon, loading,
+   hapticIntent, key})`: the primary button (danger when destructive), an
+   optional soft secondary (only the sign-in gate's "Create account"), then
+   the text button — Cancel, Close, Not now, Keep browsing — stacked, full
+   width, at least 48 dp. `AppDialogActions.close(dialogContext)` is Close.
+   The slot (`actions:`) builds them from the dialog's context; content whose
+   buttons follow its own state (change password, the upload steps, the
+   resubmit note, the gate) draws `AppDialogActions` as its last child, which
+   looks the same. Cancel was added to the resubmit note and to the upload's
+   first step; change password has Cancel; every notice's Close is the text
+   action.
+5. **The four bypasses go through it**: the verification gate (lock tile as
+   the hero icon; `UnverifiedGateSheet` is now the content, no frame of its
+   own), the legal text (`scrollable: false`, tokens for its type, a text
+   skeleton while it loads), change password, and the issuance photo (fetched
+   once, a photo skeleton while it loads, no fixed box). The loading states
+   use `LoadingSkeleton`, which gained `SkeletonLayout.text` and `.photo`.
+6. **Pickers go through `AppSheet`**: the profile picks its barangay from the
+   sign-up picker, now shared (`showBarangayPicker`, `BarangayPicker`), and
+   every picker row is `PickerChoiceRow` (48 dp, a button in a group where one
+   is selected). The sign-up ID type picker, the message topic picker and the
+   gallery's specimen open through `AppSheet.show` too.
+7. **A guard.** `test/core/design_guard_test.dart` fails when anything in
+   `lib/` but `app_dialog.dart` and `app_sheet.dart` calls `showDialog`,
+   `showModalBottomSheet`, `showGeneralDialog`, `showCupertinoDialog` or
+   `showCupertinoModalPopup`, with planted self-tests. A date picker is a
+   picker the theme centres and is not matched.
+8. **Focus** goes into the dialog when it opens, Tab stays inside it, and it
+   returns to the opener when it closes — the framework's route does this,
+   and a test holds it.
+
+**Rejected.** Pinning the actions under a scrolling content by default (two
+layouts, and the stateful contents could not share them); a list of any
+number of actions (three is the most any dialog needs, and a fourth is a
+screen); keeping `AlertDialog` for the two convenience calls (it is the shape
+that clipped).
+
+**Why.** A rule a reviewer can check by looking is only worth having if every
+dialog follows it; one widget for the frame and one for the buttons is what
+makes that cheap.
+
+---
+
+## D-203 — `SoftNote` takes an action, and an emergency has its own tone
+
+**Status: settled.** Category: design / accessibility. Recorded 2026-11-12,
+from the F-review design-conformance review (finding 7), following D-196.
+
+**Context.** The Message sent page's emergency note (D-196) was a one-off
+`DecoratedBox` with its own radius, padding and tile, and it had lost the
+mock-up's bold title ("For emergencies don't wait for a reply"). `SoftNote`,
+the design system's inline note, had a heading but no place for the pill.
+
+**Chosen.** `SoftNote` gains `action` (one control under the message, inside
+the note, keeping its own semantics) and a fifth tone, `NoteTone.emergency`
+(red fill and ink, a siren icon read as "Emergency"; the error tone would have
+read the note as "Error"). The emergency note is `SoftNote(tone: emergency,
+heading: MessageSentCopy.emergencyHeading, message: 'Call an emergency
+hotline.', live: false, action: the hotlines pill)`. It is not a live region:
+it is part of the page, read in order after the page's title. The gallery
+shows the heading and the action.
+
+**Rejected.** An icon parameter on `SoftNote` (colour and icon would drift per
+screen; a tone keeps them paired); a second notice widget for emergencies.
+
+**Why.** A note that warns about an emergency should look like the app's other
+notes and say what it is in words, not only in red.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -2860,5 +3001,8 @@ that and nothing more.
 | D-198 | `ServiceDirectoryController` and `RegistrationController` have no screen and stay, with their tests: rules they hold are missing live. Tulong sends the search as `q` (against D-59) and shows a failed refresh's old list unlabelled; the sign-up wizard takes a selfie with no biometric consent or server gate (D-32), sends no idempotency key on the verification request (D-15), ticks Terms and Privacy together, leaves the street optional and collects no birth date. Gaps recorded, not closed | privacy / testing | settled |
 | D-199 | A centred wave-header title block (success screens, notices) is inset by `WaveHeaderShapes.centeredTextInset` on both sides, derived from the dot field's tokens, so a long subtitle no longer runs over the decorative dots and the block stays centred | design / accessibility | settled |
 | D-200 | The ID review time is the office's setting (backend `39d650b`): `verification_review_working_days` on `GET /app/config` is a range, `null` or absent. `VerificationReviewTime` keeps the three apart; malformed counts as absent. `ReviewTimeCopy` is the one formatter, in both `.arb` locales (the verification pages read the English): a range, one day singular, none drops the sentence and the timeline line, absent keeps the shipped 1–3. It rides on `AppBootstrap`, so a failed refresh keeps the last value | contract / product / localisation | settled |
+| D-201 | The verification gate says only that the account is not verified ("Your account is not verified yet."): the session holds the access level, not the KYC stage, so the gate names none; the verification screen reads and words the real one. The default "Pending review" chip is gone | privacy / product | settled |
+| D-202 | Every dialog opens through `AppDialog.show`: hero icon, a title that is a heading naming the route, content, then `AppDialogActions` (primary, optional soft secondary, text) stacked full width. It scrolls by default; `scrollable: false` lets content scroll itself with the actions in view. `confirm` / `acknowledge` are built on it, at the theme radius 22. The gate, legal text, change password and issuance photo no longer call `showDialog`; pickers go through `AppSheet` (`showBarangayPicker`, `PickerChoiceRow`); the design guard fails on any other popup route. Focus enters the dialog and returns to the opener | design / accessibility | settled |
+| D-203 | `SoftNote` takes one `action` inside the note and a fifth tone, `emergency` (red, a siren read as "Emergency"); the Message sent emergency note is a `SoftNote` with the mock-up's bold heading | design / accessibility | settled |
 
 **199 decisions — 195 settled, 4 provisional.**

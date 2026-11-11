@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
+import '../../core/design/taytay_icons.dart';
+import '../../core/design/typography.dart';
+import 'taytay_icon.dart';
 
 /// The app's modal bottom sheet, **for pickers only**: a list of choices the
 /// resident picks one from (a barangay, an ID type, a topic, where a file
@@ -88,6 +91,73 @@ class _SheetFrame extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// One choice in a picker sheet: a row at least 48 dp tall, announced as a
+/// button in a group where one is selected, with a tick on the chosen one.
+class PickerChoiceRow extends StatelessWidget {
+  const PickerChoiceRow({
+    required this.rowKey,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    super.key,
+  });
+
+  /// On the tappable row itself, for a test to tap.
+  final Key rowKey;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      selected: selected,
+      inMutuallyExclusiveGroup: true,
+      label: label,
+      onTap: onTap,
+      excludeSemantics: true,
+      child: InkWell(
+        key: rowKey,
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(Radii.md),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: Spacing.sm,
+              vertical: Spacing.md,
+            ),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTypography.sectionTitle.copyWith(
+                      fontWeight: selected
+                          ? AppTypography.strong
+                          : AppTypography.medium,
+                      color: selected ? BrandColors.blue : BrandColors.ink,
+                    ),
+                  ),
+                ),
+                if (selected)
+                  const TaytayIcon(
+                    icon: TaytayIcons.check,
+                    semanticLabel: '',
+                    excludeSemantics: true,
+                    size: IconSizes.sm,
+                    color: BrandColors.taytayBlue,
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

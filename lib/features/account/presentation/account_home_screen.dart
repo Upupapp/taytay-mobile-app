@@ -16,6 +16,7 @@ import '../../profile/domain/resident_profile_detail.dart';
 import '../../profile/domain/verification_decision.dart';
 import '../domain/profile_completion.dart';
 import 'account_canvas.dart';
+import 'account_copy.dart';
 
 /// My Account.
 ///
@@ -90,11 +91,9 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
     final dependencies = AppDependencies.of(context);
     final confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Sign out of this device?',
-      message:
-          'You will need a new one-time code to sign in again. You can still '
-          'browse Taytay services, offices and announcements as a guest.',
-      confirmLabel: 'Sign out',
+      title: AccountCopy.signOutTitle,
+      message: AccountCopy.signOut,
+      confirmLabel: AccountCopy.signOutAction,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;

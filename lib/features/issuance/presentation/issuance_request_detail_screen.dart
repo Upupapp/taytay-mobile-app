@@ -29,6 +29,17 @@ import 'issuance_file_slot.dart';
 import 'issuance_send_key.dart';
 import 'issuance_widgets.dart';
 
+/// What the confirmation before cancelling a request says, in one place so a
+/// test can open it at every phone width and at 200% text (D-202).
+abstract final class IssuanceCancelCopy {
+  static const String title = 'Cancel this request?';
+  static String message(String reference) =>
+      'The office will stop working on $reference. A cancelled request '
+      'cannot be opened again; you would send a new one.';
+  static const String confirm = 'Cancel request';
+  static const String keep = 'Keep it';
+}
+
 /// One of the resident's own document requests: where it stands, what the
 /// office said, how to claim it, and the two acts the server may allow —
 /// sending more, and cancelling.
@@ -92,13 +103,10 @@ class _IssuanceRequestDetailScreenState
     if (detail == null || _cancelling) return;
     final bool? confirmed = await AppDialog.confirm(
       context: context,
-      title: 'Cancel this request?',
-      message:
-          'The office will stop working on ${detail.summary.referenceNumber}. '
-          'A cancelled request cannot be opened again; you would send a new '
-          'one.',
-      confirmLabel: 'Cancel request',
-      cancelLabel: 'Keep it',
+      title: IssuanceCancelCopy.title,
+      message: IssuanceCancelCopy.message(detail.summary.referenceNumber),
+      confirmLabel: IssuanceCancelCopy.confirm,
+      cancelLabel: IssuanceCancelCopy.keep,
       destructive: true,
     );
     if (confirmed != true || !mounted) return;
@@ -452,45 +460,56 @@ class _AttachmentLine extends StatelessWidget {
   /// Fetches the resident's own photo and shows it. The bytes belong to the
   /// dialog and go when it closes; nothing is written to the phone.
   Future<void> _show(BuildContext context, String label) {
-    return showDialog<void>(
+    return AppDialog.show<void>(
       context: context,
-      builder: (BuildContext dialogContext) => AlertDialog(
-        title: Text(label),
-        content: SizedBox(
-          width: 320,
-          child: FutureBuilder<Result<Uint8List>>(
-            future: repository.loadAttachmentImage(detail.id, attachment.id),
-            builder:
-                (BuildContext context, AsyncSnapshot<Result<Uint8List>> snap) {
-                  final Result<Uint8List>? result = snap.data;
-                  return switch (result) {
-                    null => const SizedBox(
-                      height: 160,
-                      child: Center(child: CircularProgressIndicator()),
-                    ),
-                    Ok(:final value) => Image.memory(
-                      value,
-                      fit: BoxFit.contain,
-                      semanticLabel: 'The photo you sent for $label',
-                    ),
-                    Err(:final failure) => IssuanceText(
-                      failure is NetworkFailure || failure is TimeoutFailure
-                          ? 'You are offline. Connect and try again.'
-                          : 'This file cannot be shown here. The office still '
-                                'has it.',
-                      color: BrandColors.textPrimary,
-                    ),
-                  };
-                },
-          ),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
-          ),
-        ],
+      title: label,
+      builder: (BuildContext dialog) => _AttachmentPhoto(
+        load: () => repository.loadAttachmentImage(detail.id, attachment.id),
+        label: label,
       ),
+      actions: AppDialogActions.close,
+    );
+  }
+}
+
+/// The photo inside the attachment dialog. Fetched once, when the dialog
+/// opens; a rebuild (a rotation, the keyboard) does not fetch it again.
+class _AttachmentPhoto extends StatefulWidget {
+  const _AttachmentPhoto({required this.load, required this.label});
+
+  final Future<Result<Uint8List>> Function() load;
+  final String label;
+
+  @override
+  State<_AttachmentPhoto> createState() => _AttachmentPhotoState();
+}
+
+class _AttachmentPhotoState extends State<_AttachmentPhoto> {
+  late final Future<Result<Uint8List>> _photo = widget.load();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Result<Uint8List>>(
+      future: _photo,
+      builder: (BuildContext context, AsyncSnapshot<Result<Uint8List>> snap) {
+        return switch (snap.data) {
+          null => LoadingSkeleton(
+            layout: SkeletonLayout.photo,
+            semanticLabel: 'Loading the photo you sent for ${widget.label}',
+          ),
+          Ok(:final value) => Image.memory(
+            value,
+            fit: BoxFit.contain,
+            semanticLabel: 'The photo you sent for ${widget.label}',
+          ),
+          Err(:final failure) => IssuanceText(
+            failure is NetworkFailure || failure is TimeoutFailure
+                ? 'You are offline. Connect and try again.'
+                : 'This file cannot be shown here. The office still has it.',
+            color: BrandColors.textPrimary,
+          ),
+        };
+      },
     );
   }
 }

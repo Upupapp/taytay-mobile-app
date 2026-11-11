@@ -149,7 +149,7 @@ setting multiplies up from; nothing shrinks text to fit.
 | `listRow` / `listIcon` | 64 / 40 | `countBadge` | 22 |
 | `stepDisc` | 26 | `progressBar` | 6 |
 | `headerButton` | 50 | `bubbleWidthFactor` | 0.82 |
-| `navigationBar` / `navigationIndicator` | 80 / 56 × 30 | | |
+| `navigationBar` / `navigationIndicator` | 80 / 56 × 30 | `dialogMaxWidth` / `skeletonPhoto` | 480 / 200 |
 
 `IconSizes`: `sm` 18, `md` 24, `lg` 32, `xl` 48, `xxl` 56 — the glyph, never the target.
 `A11y`: `minTapTarget` 48, `backButtonVisual` 44, `maxSupportedTextScale` 2.0,
@@ -398,10 +398,26 @@ SettingsList(children: <Widget>[
 
 **`SoftNote`** (`soft_note.dart`, in the gallery) — every inline notice inside a page: a tinted
 rounded box with a per-tone icon (colour is never the only signal), a live region by default.
-Params: `message*`, `title` (runs into the message — end it with ". "), `heading` (its own line,
-use it when a test or rule needs title and message as separate texts), `tone = NoteTone.info`
-(`info`, `warning`, `error`, `success`), `live = true`, `focusNode` (an error summary).
+Params: `message*`, `title` (runs into the message — end it with ". "), `heading` (a bold line of
+its own above the message — a note whose title is a statement, or when a test or rule needs title
+and message as separate texts), `tone = NoteTone.info` (`info`, `warning`, `error`, `success`,
+`emergency` — red with a siren, read as "Emergency": call a hotline, do not wait), `action` (one
+control under the message, inside the note, keeping its own semantics — a `PillButtonRow`, a
+button), `live = true` (pass false for a note that is part of the page rather than news),
+`focusNode` (an error summary). The gallery shows a heading with an action (D-203).
 `SoftNote(tone: NoteTone.warning, heading: 'Check your name', message: NameCheckCopy.asPrinted)`
+
+```dart
+SoftNote(
+  tone: NoteTone.emergency,
+  heading: MessageSentCopy.emergencyHeading,
+  message: MessageSentCopy.emergency,
+  live: false,
+  action: PillButtonRow(wrap: true, padding: EdgeInsets.zero, actions: <PillAction>[
+    PillAction(label: 'See emergency hotlines', glyph: TaytayGlyph.phone, danger: true, onPressed: openHotlines),
+  ]),
+)
+```
 
 **`NoticePanel`, `NoticePoint`, `DraftPill`** (`notice_panel.dart`, in the gallery) — the RegTerms
 summary: a gradient icon, title, source line, optional badge, intro and titled points.
@@ -515,7 +531,10 @@ hours yet: pass `hours: null` and it draws nothing.** Never parse free-text hour
 
 **`LoadingSkeleton`** (`loading_skeleton.dart`, in the gallery) — grey blocks shaped like what is
 coming; the shimmer stops under reduced motion. `LoadingSkeleton({layout = SkeletonLayout.list,
-count = 3, semanticLabel = 'Loading'})`, `SkeletonLayout { list, feed, cards, detail }`.
+count = 3, semanticLabel = 'Loading'})`, `SkeletonLayout { list, feed, cards, detail, text, photo }`
+(`text`: `count` lines of a paragraph — a notice or a short list loading in a dialog or a picker;
+`photo`: one `ComponentSizes.skeletonPhoto` block — a photo opening in a dialog). A dialog or a
+sheet that loads shows a skeleton too, never a lone spinner.
 `SkeletonBlock({width, height = 16, radius = Radii.md})` (`taytay_states.dart`) is one block.
 
 **`EmptyState`** (`taytay_states.dart`, in the gallery) — nothing to show, with the illustration.
@@ -593,25 +612,74 @@ Scaffold(
 
 ### Dialogs, sheets and feedback
 
+Every gate, notice, confirmation and decision is a centred dialog opened through **`AppDialog`**;
+only a picker is a bottom sheet, through **`AppSheet`** (rule 3, D-197, D-202). Nothing else in
+`lib/` calls `showDialog`, `showModalBottomSheet` or `showGeneralDialog`: the design guard fails
+the build on it.
+
+- **`AppDialog.show<T>({context*, title*, builder*, actions, icon, scrollable = true, dismissible
+  = true, useRootNavigator = true})`** → `Future<T?>` — the theme's dialog (centred, radius 22,
+  flat), inset `AppDialog.panelInset` (20 / 24), at most `ComponentSizes.dialogMaxWidth` (480)
+  wide. It draws, top to bottom: the hero `icon` if given (the title then centres), the **title —
+  a heading that names the route**, so a screen reader says what opened — the content, then the
+  actions. `actions: (dialogContext) => AppDialogActions(…)` builds the buttons from the dialog's
+  own context, so a button can pop it. **`scrollable`** (the default) puts title, content and
+  actions in one scroll view, so 200% text on a 360 dp phone scrolls and never clips;
+  `scrollable: false` is for content that scrolls itself (the legal text's list): the content
+  takes the height between the title and the actions, which stay in view. A field inside rises
+  above the keyboard. Focus moves into the dialog, Tab stays inside it, and focus returns to the
+  opener when it closes.
+- **`AppDialogActions({primary, secondary, text})`**, with **`DialogButton({label*, onPressed*,
+  destructive = false, icon, loading = false, hapticIntent = HapticIntent.selection, key})`** —
+  the one way a dialog's buttons are drawn: the primary button (danger when `destructive`), an
+  optional soft secondary for a second way forward (the sign-in gate's "Create account"), then the
+  text button — Cancel, Close, Not now, Keep browsing — stacked, full width, each at least 48 dp.
+  **`AppDialogActions.close(dialogContext, {label = 'Close', closeKey})`** is a notice's only way
+  out. Content whose buttons follow its own state (a form, a step that changes) draws
+  `AppDialogActions` as its last child instead of using the slot; it looks the same. Every dialog
+  that asks for something has a Cancel.
 - **`AppDialog.confirm({context*, title*, message*, confirmLabel = 'Confirm', cancelLabel =
-  'Cancel', destructive = false})`** → `Future<bool?>`, and **`AppDialog.acknowledge({context*,
-  title*, message*, actionLabel = 'OK'})`** — Flutter's `AlertDialog`, centred, flat. A
-  destructive dialog is not dismissed by a scrim tap and fires a warning haptic.
-- **`AppDialog.show<T>({context*, title*, builder*, dismissible = true, useRootNavigator =
-  true})`** — a centred panel on the theme's dialog: a title announced as a heading, then the
-  content in a scroll view (200% text scrolls, a field rises above the keyboard), inset
-  `AppDialog.panelInset` (20 / 24), at most `ComponentSizes.dialogMaxWidth` (480) wide. **Every
-  gate, notice, confirmation and decision opens here** (rule 3).
-- These open centred dialogs; their names are kept for their callers: **`ConfirmSheet.show({context*,
-  title*, consequence*, confirmLabel*, detail, isDestructive = true, cancelLabel = 'Keep it as
-  it is'})`** → `Future<bool>`; **`AccessGateSheet.show(...)` / `.showForCapability(...)`**
-  explains why an action needs an account or verification (the verification gate draws
-  `UnverifiedGateSheet` in the dialog); **`SessionExpiredSheet.show(context)`**;
-  **`showLegalTextSheet({title*, markdown*, pending*})`** opens the Terms or Privacy Notice, with
-  a Close button (`legalTextCloseKey`).
+  'Cancel', destructive = false})`** → `Future<bool?>` and **`AppDialog.acknowledge({context*,
+  title*, message*, actionLabel = 'OK'})`** — `show` with the message (`AppDialogMessage`) and the
+  actions filled in: confirm over Cancel, or the one text action. A destructive confirmation is
+  not dismissed by a scrim tap and fires a warning haptic.
+- **`AppDialogPanel({title*, child*, actions, icon, scrollable = true})`** — the inside of a
+  dialog, for a specimen (gallery, recording frame) that draws one inside a `Dialog` without
+  opening a route.
+
+```dart
+final bool? confirmed = await AppDialog.confirm(
+  context: context,
+  title: 'Sign out of this device?',
+  message: 'You will need a new one-time code to sign in again.',
+  confirmLabel: 'Sign out',
+);
+
+await AppDialog.show<void>(
+  context: context,
+  title: label,
+  builder: (dialog) => _AttachmentPhoto(load: load, label: label),
+  actions: (dialog) => AppDialogActions.close(dialog),
+);
+```
+
+- Wrappers that open an `AppDialog`, names kept for their callers: **`ConfirmSheet.show({context*,
+  title*, consequence*, confirmLabel*, detail, isDestructive = true, cancelLabel = 'Keep it as it
+  is'})`** → `Future<bool>`; **`AccessGateSheet.show(...)` / `.showForCapability(...)`** explains
+  why an action needs an account or verification (the verification gate is `UnverifiedGateSheet`
+  as the content, its lock tile as the hero icon, and says only that the account is not verified
+  yet, D-201); **`SessionExpiredSheet.show(context)`**; **`showLegalTextSheet({title*, markdown*,
+  pending*})`** opens the Terms or Privacy Notice, not scrolling as a frame, with Close
+  (`legalTextCloseKey`) always in view.
 - **`AppSheet.show<T>({context*, title*, builder*, dismissible = true})`** — the modal bottom
-  sheet (radius 24 top, at most 90% high, a title), **for pickers only**: a list of choices the
-  resident picks one from.
+  sheet (radius 24 top, at most 90% high, a title, the content scrolling), **for pickers only**: a
+  list of choices the resident picks one from. Each choice is a **`PickerChoiceRow({rowKey*,
+  label*, selected*, onTap*})`** (`app_sheet.dart`): at least 48 dp, a button in a group where one
+  is selected, a tick on the chosen one.
+- **`showBarangayPicker(context, {load*, selectedId})`** → `Future<Barangay?>`
+  (`barangay_picker.dart`) — the one barangay picker, for sign-up and Edit profile:
+  `BarangayPicker` in an `AppSheet`, a text skeleton while it loads, the failure in words with Try
+  again, one `PickerChoiceRow` per barangay.
 - **`Outcome.succeeded(context, message)` / `Outcome.problem(context, message)`** — says how
   something turned out on screen and to a screen reader. **`showTaytayToast(context, message)`**
   / `TaytayToast({message*})` — a short confirmation snack bar.
@@ -818,7 +886,9 @@ A dialog is checked the same way once it is open: `expectCleanDialogLayouts(test
 …)` draws a page with one button that opens it; or pass a real screen and the `trigger` to tap),
 opens the dialog at every width × scale, and fails on any `FlutterError`, on a bottom sheet, and
 on a dialog surface that is not centred. `host` adds dependencies and a router where the dialog
-needs them (`test/shared/centred_dialogs_test.dart` has one).
+needs them (`test/shared/centred_dialogs_test.dart` has one). Every caller of `AppDialog.confirm`
+and `.acknowledge` is opened with its own words in `test/shared/dialog_callers_test.dart`; a new
+caller adds its row there.
 
 ---
 
@@ -854,13 +924,17 @@ anything is a regression: fix the code, not the golden.
    shadows and stay visible.
 3. **Popups are centred.** Every gate panel, notice, confirmation or decision is a centred
    dialog: `AppDialog.show`, `AppDialog.confirm` or `AppDialog.acknowledge` (or a wrapper above
-   that opens one). **Only a picker — a list of choices the resident picks one from (a barangay,
-   an ID type, a topic, where a file comes from, a date) — may be a bottom sheet** (`AppSheet.show`
-   or `showModalBottomSheet` with the theme). A sheet that explains, warns, asks to confirm, or
-   collects a decision is a dialog, whatever it holds. Today's sheets: the sign-up barangay and ID
-   type pickers, the verification ID type picker, the message topic picker, the file source
-   picker (issuance), the conversation actions menu (Messages), and the gallery's specimen. Test a
-   new dialog with `expectCleanDialogLayouts` (§6).
+   that opens one), with its buttons in `AppDialogActions`. **Only a picker — a list of choices the
+   resident picks one from (a barangay, an ID type, a topic, where a file comes from, a date) — may
+   be a bottom sheet**, through `AppSheet.show` with `PickerChoiceRow`s. A sheet that explains,
+   warns, asks to confirm, or collects a decision is a dialog, whatever it holds. Today's sheets:
+   the barangay picker (sign-up and Edit profile, `showBarangayPicker`), the sign-up and
+   verification ID type pickers, the message topic picker, the file source picker (issuance), the
+   conversation actions menu (Messages), and the gallery's specimen. Only `app_dialog.dart` and
+   `app_sheet.dart` call `showDialog`, `showModalBottomSheet`, `showGeneralDialog`,
+   `showCupertinoDialog` or `showCupertinoModalPopup`; `test/core/design_guard_test.dart` fails on
+   any other call, naming the file and line (a date picker is a picker the theme centres, and is
+   allowed). Test a new dialog with `expectCleanDialogLayouts` (§6).
 4. **Real data only.** Names, messages, dates, counts and photos come from the API. Nothing from a
    mock-up's sample data reaches the app; no `SAMPLE` tag on real data. A design element whose
    field the API does not send is hidden, not faked, and the field is recorded as needed.
