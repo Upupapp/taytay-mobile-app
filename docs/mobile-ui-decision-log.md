@@ -2823,6 +2823,108 @@ nor its button may name one.
 
 ---
 
+## D-205 — Tulong reads the whole catalogue and searches it on the phone; a list a refresh could not replace says when it was read
+
+**Status: settled.** Category: privacy / contract / product. Recorded
+2026-11-12, closing two of the gaps D-198 recorded, on the owner's "decide,
+research best practice, and apply it" (Ella, Michaela Cailing).
+
+**Context.** D-198 found that the live Tulong tab sent what a resident typed
+to `GET /services` as `q`, against D-59, and that a refresh failing after a
+list was shown kept the old list with nothing to say it was old. The tab also
+read only the first page (20) and filtered that page on the phone as well, so
+a programme on page 2 could not be found at all. The vendored Node contract
+(`docs/integration/taytay-node-openapi.json`) gives `GET /services` `q`,
+`category`, `office`, `featured`, `limit` (1–50, default 20) and `cursor`,
+and answers with `meta.pagination { has_more, next_cursor }` and no total, so
+the whole catalogue can be read by following the cursor.
+
+**Research** (read 2026-11-12).
+- RA 10173 §11 makes processing subject to "the principles of transparency,
+  legitimate purpose and proportionality", and §11(d) requires personal
+  information to be "adequate and not excessive in relation to the purposes
+  for which they are collected and processed"
+  (<https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>). The
+  NPC's 2016 Implementing Rules, §18(c), add that personal data is processed
+  only if the purpose "could not reasonably be fulfilled by other means" (as
+  reproduced in
+  <https://ndvlaw.com/what-constitutes-the-principle-of-proportionality-under-the-implementing-rules/>;
+  privacy.gov.ph refused an automated read, so the NPC's own copy was not
+  opened). Filtering a small public list does not need the term to leave the
+  phone, so sending it fails that test.
+- The EDPB's Guidelines 4/2019 on data protection by design and by default
+  (v2.0, 20 October 2020, §3.5) make minimisation a default: only the
+  personal data necessary for each purpose is processed
+  (<https://www.edpb.europa.eu/documents/242_en>; persuasive, not binding
+  here).
+- Search terms reveal circumstances: users in a USENIX Security 2024 study
+  (Sharma et al., "I'm not convinced that they don't collect more than is
+  necessary") single out health, financial and political queries as
+  sensitive (<https://usenix.org/conference/usenixsecurity24/presentation/sharma>),
+  and the Article 29 Working Party's 2008 opinion on search engines held that
+  query logs can reveal significant information about a person. "Solo
+  parent", "dialysis" or "burial" typed into a municipal app by a signed-in
+  account is exactly that.
+
+**Chosen.**
+1. **No term leaves the phone, by construction.** `SocialServiceRepository`
+   takes no query: `listServices` lost its `query` parameter, and no request
+   in the app sends `q`. A new `readCatalogue()` reads every page at
+   `limit=50` by cursor and returns a `ServiceCatalogue` (`services`,
+   `complete`). A slug repeated across pages is shown once;
+   `hidden_from_list` is left out as before.
+2. **Search is local**, in `tulong/domain/service_search.dart`
+   (`searchServices`, `foldForSearch`): every word typed must appear, in any
+   order, in the list title, name, summary, category or office name. Case and
+   the common Latin accents are ignored ("nino" finds "Niño", a decomposed
+   tilde included). Slugs and ids are not matched (D-59). The app folded case
+   only before; the Directory's `Office.matches` still does, and can adopt
+   the same function.
+3. **A page that fails fails the read.** Part of the catalogue is never shown
+   as all of it.
+4. **A catalogue longer than the app reads is shown, and says so.** The read
+   stops at `catalogueMaxPages` (10, so 500 services; the MSWDO publishes a
+   few dozen), or when the server says there is more and sends no cursor. The
+   list then carries a note: "Taytay LGU lists more programmes than this app
+   loads. This list and the search cover the first N only." Rejected for that
+   case: falling back to `q` (the disclosure D-59 refuses; gap S-5 makes that
+   the LGU's decision, not a default to drift into), and showing nothing (a
+   resident with no list is worse off than one with a labelled partial list).
+5. **A failed refresh keeps the list and labels it** (the offline pattern,
+   DESIGN_SYSTEM.md §5): a warning `SoftNote` above the list, "Couldn't
+   refresh the list" / "Showing the list from {Manila time}. It may have
+   changed.", with a Try again pill. The shell's offline banner still shows
+   when requests are not arriving; the note also covers a server failure,
+   which the banner does not. The server's message is never shown. A first
+   load that fails still shows the offline state with the pages saved in this
+   process; the loading, empty and no-match states are unchanged.
+
+**`ServiceDirectoryController` stays.** Tulong now holds its on-device search
+and its labelled stale list. Three rules still live only there and in
+`directory_test`: a category filter built from the categories returned (Tulong
+has no filter row), falling back to the cache's own stored copy and timestamp
+when nothing was loaded in this process (Tulong's saved pages are in memory
+only, Article 5.1), and the `loadCatalogue` telemetry event. Retiring it would
+delete the only test of those rules.
+
+**Tests.** `test/features/tulong_search_test.dart` (new): the catalogue read
+follows cursors at 50 and sends only `limit` and `cursor`; a failed page fails
+the read; a missing cursor and the page ceiling each mark it incomplete; local
+search over case, accents, word order, category and office, never the slug;
+the live screen over a recording transport makes no request while typing,
+none carries the term, and a programme on page 2 is found; a failed refresh
+keeps the list under the stale note and Try again clears it; the canvas notes.
+`s7_tulong_test` "live reads call services only…" pinned `q=sample` and now
+asserts `q` is absent. `redesign_p3d_layout_test` adds the stale, partial, and
+stale + partial + no-match frames to the 360/375/430 × 100%/200% matrix.
+
+**Why.** The catalogue is public and small, so reading all of it costs a few
+kilobytes, and searching it on the phone means the LGU never learns what a
+resident was looking for. A list that may be out of date is still useful if it
+says so; one that does not say so looks exactly like a working app.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3031,5 +3133,6 @@ nor its button may name one.
 | D-202 | Every dialog opens through `AppDialog.show`: hero icon, a title that is a heading naming the route, content, then `AppDialogActions` (primary, optional soft secondary, text) stacked full width. It scrolls by default; `scrollable: false` lets content scroll itself with the actions in view. `confirm` / `acknowledge` are built on it, at the theme radius 22. The gate, legal text, change password and issuance photo no longer call `showDialog`; pickers go through `AppSheet` (`showBarangayPicker`, `PickerChoiceRow`); the design guard fails on any other popup route. Focus enters the dialog and returns to the opener | design / accessibility | settled |
 | D-203 | `SoftNote` takes one `action` inside the note and a fifth tone, `emergency` (red, a siren read as "Emergency"); the Message sent emergency note is a `SoftNote` with the mock-up's bold heading | design / accessibility | settled |
 | D-204 | The verification gate's button reads "Go to verification", claiming no stage (it cannot see one, D-201); the verification screen offers the stage's own action | product / accessibility | settled |
+| D-205 | Tulong reads the whole catalogue (`readCatalogue`: cursor pages of 50, at most 10) and searches it on the phone (case and accents folded, every word, never the slug); no request carries a search term and the repository takes none (D-59; RA 10173 §11, IRR §18(c)). A failed page fails the read; a longer catalogue is shown with a note that search covers the first N. A failed refresh keeps the list under a "Couldn't refresh the list" note with the Manila time and Try again. `ServiceDirectoryController` stays for its category filter, cache fallback and telemetry | privacy / contract / product | settled |
 
-**200 decisions — 196 settled, 4 provisional.**
+**201 decisions — 197 settled, 4 provisional.**

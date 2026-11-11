@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
-import '../../../core/api/paginated.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
+import '../domain/service_search.dart';
 import '../domain/social_service.dart';
 import '../domain/social_service_repository.dart';
 import 'tulong_canvas.dart';
@@ -15,6 +15,9 @@ import 'tulong_canvas.dart';
 ///
 /// Public. A guest, an unverified resident, and a verified resident see the
 /// same list. Nothing on this screen submits an application.
+///
+/// The search runs on the phone over the whole catalogue, and no request
+/// carries what was typed (D-59, D-205).
 class TulongScreen extends StatefulWidget {
   const TulongScreen({super.key});
 
@@ -30,6 +33,16 @@ class _TulongScreenState extends State<TulongScreen> {
   bool _failed = false;
   bool _started = false;
   String _query = '';
+
+  /// False when the catalogue is longer than the app reads (D-205).
+  bool _complete = true;
+
+  /// When the list on screen was read. Set on every successful read.
+  DateTime? _loadedAt;
+
+  /// A refresh failed while a list was on screen: the list stays, labelled
+  /// with [_loadedAt] (D-205, the offline pattern in DESIGN_SYSTEM.md §5).
+  bool _stale = false;
 
   @override
   void didChangeDependencies() {
@@ -48,36 +61,37 @@ class _TulongScreenState extends State<TulongScreen> {
   SocialServiceRepository get _repository =>
       AppDependencies.of(context).socialServiceRepository;
 
+  /// Reads the whole catalogue. The search term is not part of the read: it
+  /// filters on the phone (D-59), so typing sends nothing.
   Future<void> _load() async {
-    final Result<Paginated<SocialService>> result = await _repository
-        .listServices(query: _query);
+    final Result<ServiceCatalogue> result = await _repository.readCatalogue();
     if (!mounted) return;
     switch (result) {
-      case Ok<Paginated<SocialService>>(:final value):
+      case Ok<ServiceCatalogue>(:final value):
         setState(() {
-          _services = value.items;
+          _services = value.services;
+          _complete = value.complete;
+          _loadedAt = DateTime.now();
           _loading = false;
           _failed = false;
+          _stale = false;
         });
-      case Err<Paginated<SocialService>>():
+      case Err<ServiceCatalogue>():
         final List<SocialService> saved = await _repository.savedOnThisPhone();
         if (!mounted) return;
         setState(() {
           _saved = saved;
           _loading = false;
           _failed = _services.isEmpty;
+          _stale = _services.isNotEmpty;
         });
     }
   }
 
   void _onSearch(String value) {
     final String next = value.trim();
-    if (next == _query) {
-      setState(() {});
-      return;
-    }
+    if (next == _query) return;
     setState(() => _query = next);
-    _load();
   }
 
   void _open(SocialService service) {
@@ -91,7 +105,7 @@ class _TulongScreenState extends State<TulongScreen> {
   Widget build(BuildContext context) {
     final bool guest =
         AppDependencies.of(context).session.state is! AuthenticatedSession;
-    final List<SocialService> visible = _filter(_services, _query);
+    final List<SocialService> visible = searchServices(_services, _query);
     final TulongFrame frame = _failed
         ? TulongFrame.offline
         : _loading
@@ -112,6 +126,8 @@ class _TulongScreenState extends State<TulongScreen> {
               !_loading && !_failed && visible.isEmpty && _query.isNotEmpty
               ? 'No programmes match that search.'
               : null,
+          staleSince: _stale ? _loadedAt : null,
+          partialCatalogueCount: _complete ? null : _services.length,
           searchController: _search,
           onSearch: _onSearch,
           onOpen: _open,
@@ -125,16 +141,4 @@ class _TulongScreenState extends State<TulongScreen> {
       ),
     );
   }
-}
-
-List<SocialService> _filter(List<SocialService> services, String query) {
-  final String q = query.trim().toLowerCase();
-  if (q.isEmpty) return services;
-  return <SocialService>[
-    for (final SocialService service in services)
-      if ('${service.listTitle} ${service.name} ${service.summary}'
-          .toLowerCase()
-          .contains(q))
-        service,
-  ];
 }

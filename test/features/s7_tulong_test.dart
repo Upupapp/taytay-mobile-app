@@ -209,7 +209,8 @@ void main() {
     );
   });
 
-  test('live reads call services only and ignore presentation', () async {
+  test('live reads call services only, send no search term, and ignore '
+      'presentation', () async {
     final _Recording transport = _Recording(<ApiHttpResponse>[
       _envelope(<Object?>[
         _service(name: 'Sample Assistance', slug: 'sample-assistance'),
@@ -238,7 +239,6 @@ void main() {
     );
 
     final Paginated<SocialService> page = (await repository.listServices(
-      query: 'sample',
       limit: 80,
       cursor: 'cursor-1',
     )).valueOrNull!;
@@ -251,7 +251,8 @@ void main() {
     final ApiRequest request = transport.requests.single;
     expect(request.method, HttpMethod.get);
     expect(request.path, 'services');
-    expect(request.query['q'], 'sample');
+    // D-59, D-205: the contract accepts `q`, and the app never sends it.
+    expect(request.query.containsKey('q'), isFalse);
     expect(request.query['limit'], '50');
     expect(request.query['cursor'], 'cursor-1');
     expect(request.query.containsKey('featured'), isFalse);

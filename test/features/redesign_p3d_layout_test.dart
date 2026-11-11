@@ -42,6 +42,26 @@ void main() {
             frame: TulongFrame.list,
             emptyMessage: 'No programmes match that search.',
           ),
+          // D-205: a refresh failed and the list read earlier stays, labelled.
+          'stale list': () => TulongCanvas(
+            frame: TulongFrame.list,
+            services: _services,
+            staleSince: DateTime.utc(2026, 11, 12, 1, 30),
+            onRetry: () {},
+            onOpen: (_) {},
+          ),
+          'stale, partial catalogue, no match': () => TulongCanvas(
+            frame: TulongFrame.list,
+            staleSince: DateTime.utc(2026, 11, 12, 1, 30),
+            partialCatalogueCount: 500,
+            emptyMessage: 'No programmes match that search.',
+            onRetry: () {},
+          ),
+          'partial catalogue': () => const TulongCanvas(
+            frame: TulongFrame.list,
+            services: _services,
+            partialCatalogueCount: 500,
+          ),
           'offline with saved pages': () => TulongCanvas(
             frame: TulongFrame.offline,
             saved: _services,

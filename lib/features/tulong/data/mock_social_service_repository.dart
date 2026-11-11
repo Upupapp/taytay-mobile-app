@@ -20,19 +20,16 @@ class MockSocialServiceRepository implements SocialServiceRepository {
 
   @override
   Future<Result<Paginated<SocialService>>> listServices({
-    String? query,
     int? limit,
     String? cursor,
     bool featured = false,
     String? office,
   }) async {
     final List<SocialService> loaded = await _services();
-    final String q = query?.trim().toLowerCase() ?? '';
     final String officeSlug = office?.trim() ?? '';
     final List<SocialService> listed = <SocialService>[
       for (final SocialService service in loaded)
-        if (_matches(service, q) &&
-            (officeSlug.isEmpty || service.officeSlug == officeSlug) &&
+        if ((officeSlug.isEmpty || service.officeSlug == officeSlug) &&
             (featured ? service.featured : !service.hiddenFromList))
           service,
     ];
@@ -40,6 +37,20 @@ class MockSocialServiceRepository implements SocialServiceRepository {
     return _behavior.respond<Paginated<SocialService>>(
       Paginated<SocialService>.single(
         listed.take(size).toList(growable: false),
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ServiceCatalogue>> readCatalogue() async {
+    final List<SocialService> loaded = await _services();
+    return _behavior.respond<ServiceCatalogue>(
+      ServiceCatalogue(
+        services: <SocialService>[
+          for (final SocialService service in loaded)
+            if (!service.hiddenFromList) service,
+        ],
+        complete: true,
       ),
     );
   }
@@ -89,12 +100,5 @@ class MockSocialServiceRepository implements SocialServiceRepository {
         )
         .whereType<SocialService>()
         .toList(growable: false);
-  }
-
-  bool _matches(SocialService service, String query) {
-    if (query.isEmpty) return true;
-    final String haystack =
-        '${service.listTitle} ${service.name} ${service.summary}'.toLowerCase();
-    return haystack.contains(query);
   }
 }

@@ -9,6 +9,7 @@ import '../../../core/design/ringed_input_border.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -17,6 +18,7 @@ import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
 import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/settings_list.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
@@ -44,6 +46,8 @@ class TulongCanvas extends StatelessWidget {
     this.saved = const <SocialService>[],
     this.offlineSubtitle = 'Social services · MSWDO',
     this.emptyMessage,
+    this.staleSince,
+    this.partialCatalogueCount,
     this.onOpen,
     this.onBell,
     this.onBack,
@@ -71,6 +75,16 @@ class TulongCanvas extends StatelessWidget {
   /// The empty state's title when a search matches nothing.
   final String? emptyMessage;
 
+  /// Set when a refresh failed and the list on screen is the one read at
+  /// this time. The list stays, under a note that says so, with Try again
+  /// ([onRetry]) (D-205). Null while the list is current.
+  final DateTime? staleSince;
+
+  /// Set when the catalogue is longer than the app reads: how many
+  /// programmes were read. The list and the search cover only those, and a
+  /// note says so (D-205). Null when the whole catalogue was read.
+  final int? partialCatalogueCount;
+
   final ValueChanged<SocialService>? onOpen;
   final VoidCallback? onBell;
   final VoidCallback? onBack;
@@ -89,6 +103,25 @@ class TulongCanvas extends StatelessWidget {
 
   /// The tab's second line.
   static const String listSubtitle = 'Social services & programmes';
+
+  /// The note over a list a refresh could not replace (D-205).
+  static const String staleHeading = "Couldn't refresh the list";
+
+  /// Says when the list on screen was read, in Manila time like every LGU
+  /// timestamp in this app.
+  static String staleMessage(DateTime readAt) =>
+      'Showing the list from ${ManilaTime.formatDateTime(readAt)}. '
+      'It may have changed.';
+
+  /// Said when the catalogue is longer than the app reads (D-205). [shown] is
+  /// how many programmes were read, before any search.
+  static String incompleteMessage(int shown) =>
+      'Taytay LGU lists more programmes than this app loads. This list and '
+      'the search cover the first $shown only.';
+
+  static const Key staleNoteKey = Key('tulong-stale-note');
+  static const Key staleRetryKey = Key('tulong-stale-retry');
+  static const Key incompleteNoteKey = Key('tulong-incomplete-note');
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +210,9 @@ class _ListPage extends StatelessWidget {
       _ => _ListBody(
         services: c.services,
         emptyMessage: c.emptyMessage,
+        staleSince: c.staleSince,
+        partialCount: c.partialCatalogueCount,
+        onRetry: c.onRetry,
         onOpen: c.onOpen,
       ),
     };
@@ -245,19 +281,62 @@ class _SearchField extends StatelessWidget {
 }
 
 class _ListBody extends StatelessWidget {
-  const _ListBody({required this.services, this.emptyMessage, this.onOpen});
+  const _ListBody({
+    required this.services,
+    this.emptyMessage,
+    this.staleSince,
+    this.partialCount,
+    this.onRetry,
+    this.onOpen,
+  });
 
   final List<SocialService> services;
   final String? emptyMessage;
+  final DateTime? staleSince;
+  final int? partialCount;
+  final VoidCallback? onRetry;
   final ValueChanged<SocialService>? onOpen;
 
   @override
   Widget build(BuildContext context) {
     final String? noMatch = emptyMessage;
     final ValueChanged<SocialService>? open = onOpen;
+    final DateTime? stale = staleSince;
+    final VoidCallback? retry = onRetry;
+    final int? partial = partialCount;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        if (stale != null) ...<Widget>[
+          SoftNote(
+            key: TulongCanvas.staleNoteKey,
+            tone: NoteTone.warning,
+            heading: TulongCanvas.staleHeading,
+            message: TulongCanvas.staleMessage(stale),
+            action: retry == null
+                ? null
+                : PillButtonRow(
+                    wrap: true,
+                    padding: EdgeInsets.zero,
+                    actions: <PillAction>[
+                      PillAction(
+                        label: 'Try again',
+                        onPressed: retry,
+                        buttonKey: TulongCanvas.staleRetryKey,
+                      ),
+                    ],
+                  ),
+          ),
+          const SizedBox(height: Spacing.section),
+        ],
+        if (partial != null) ...<Widget>[
+          SoftNote(
+            key: TulongCanvas.incompleteNoteKey,
+            message: TulongCanvas.incompleteMessage(partial),
+            live: false,
+          ),
+          const SizedBox(height: Spacing.section),
+        ],
         if (services.isNotEmpty)
           SettingsList(
             glass: true,

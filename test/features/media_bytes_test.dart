@@ -1392,7 +1392,6 @@ class _HeroRepo implements SocialServiceRepository {
 
   @override
   Future<Result<Paginated<SocialService>>> listServices({
-    String? query,
     int? limit,
     String? cursor,
     bool featured = false,
@@ -1407,6 +1406,12 @@ class _HeroRepo implements SocialServiceRepository {
       hasMore: false,
     ),
   );
+
+  @override
+  Future<Result<ServiceCatalogue>> readCatalogue() async =>
+      const Ok<ServiceCatalogue>(
+        ServiceCatalogue(services: <SocialService>[_service], complete: true),
+      );
 
   @override
   Future<Result<SocialService>> loadService(String slug) async =>

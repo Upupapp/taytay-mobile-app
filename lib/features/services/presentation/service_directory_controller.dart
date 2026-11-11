@@ -35,15 +35,17 @@ import '../domain/service_catalog_repository.dart';
 ///
 /// ---
 ///
-/// **No screen runs this class, and it stays (D-198).** The routed catalogue
-/// screens are the Directory and Tulong. The Directory holds two of the rules
-/// above: it searches on the phone and offers only the categories the API
-/// returned. Tulong does not: it sends the typed search to `GET /services` as
-/// `q`, and a refresh that fails after a list was shown keeps that list with
-/// no "saved" label. Neither records the `loadCatalogue` event. Until the live
-/// screens hold these rules, this class and `test/features/directory_test.dart`
-/// are the only place they are written down and tested, so it is not dead code
-/// to delete.
+/// **No screen runs this class, and it stays (D-198, D-205).** The routed
+/// catalogue screens are the Directory and Tulong. Both now search on the
+/// phone; Tulong reads its whole catalogue, sends no search term, and labels a
+/// list a failed refresh kept with when it was read (D-205). Still held only
+/// here: a category filter built from the categories the API returned (the
+/// Directory has one; Tulong has no filter row), the fallback to the cache's
+/// own stored copy and timestamp when nothing was loaded in this process
+/// (Tulong's saved pages live in memory only), and the `loadCatalogue`
+/// event, which neither screen records. Until the live screens hold those,
+/// this class and `test/features/directory_test.dart` are the only place they
+/// are written down and tested, so it is not dead code to delete.
 class ServiceDirectoryController extends ChangeNotifier {
   ServiceDirectoryController({
     required ServiceCatalogRepository repository,

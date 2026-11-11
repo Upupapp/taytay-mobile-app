@@ -13,6 +13,9 @@ import 'social_service_codec.dart';
 /// Public reads. A signed-in resident still sends the session token. This
 /// repository does not call admin routes, `GET /programs`, or apply.
 ///
+/// The Tulong tab reads the whole list with [readCatalogue] and searches it on
+/// the phone. No request from this class carries a search term (D-59, D-205).
+///
 /// Gaps, left unset rather than filled in:
 ///
 /// * No hours on `Service`. A contact whose label contains "hour" is shown
@@ -40,15 +43,78 @@ class SocialServiceApiRepository implements SocialServiceRepository {
 
   static const String path = 'services';
 
+  /// The most pages [readCatalogue] reads: 500 services at the route's
+  /// ceiling of 50 a page. Far above what the MSWDO publishes; a catalogue
+  /// that outgrows it is shown as far as it was read, labelled (D-205).
+  static const int catalogueMaxPages = 10;
+
+  /// The route's own ceiling (`limit` 1–50).
+  static const int catalogueLimit = 50;
+
+  @override
+  Future<Result<ServiceCatalogue>> readCatalogue() async {
+    final List<SocialService> read = <SocialService>[];
+    final Set<String> slugs = <String>{};
+    String? cursor;
+    for (var page = 0; page < catalogueMaxPages; page++) {
+      final Result<ApiEnvelope<List<SocialService>>> response = await _apiClient
+          .send<List<SocialService>>(
+            method: HttpMethod.get,
+            path: path,
+            authenticated: false,
+            attachTokenIfAvailable: true,
+            // Never `q` (D-59): the term stays on the phone.
+            query: <String, String>{
+              'limit': '$catalogueLimit',
+              'cursor': ?cursor,
+            },
+            decode: _decodeList,
+          );
+      switch (response) {
+        case Err<ApiEnvelope<List<SocialService>>>(:final failure):
+          return Err<ServiceCatalogue>(failure);
+        case Ok<ApiEnvelope<List<SocialService>>>(:final value):
+          for (final SocialService service in value.data) {
+            if (service.hiddenFromList || !slugs.add(service.slug)) continue;
+            read.add(service);
+          }
+          final PageMeta? meta = value.pagination;
+          final String? next = meta?.nextCursor;
+          if (meta == null || !meta.hasMore) {
+            return Ok<ServiceCatalogue>(
+              ServiceCatalogue(services: await _joined(read), complete: true),
+            );
+          }
+          if (next == null || next.isEmpty) {
+            // More, and no way to ask for it.
+            return Ok<ServiceCatalogue>(
+              ServiceCatalogue(services: await _joined(read), complete: false),
+            );
+          }
+          cursor = next;
+      }
+    }
+    return Ok<ServiceCatalogue>(
+      ServiceCatalogue(services: await _joined(read), complete: false),
+    );
+  }
+
+  Future<List<SocialService>> _joined(List<SocialService> read) async {
+    final List<SocialService> joined = List<SocialService>.unmodifiable(
+      await _withOffices(read),
+    );
+    // The first twenty, kept in the catalogue's order, are the saved pages.
+    _remember(joined.take(20).toList().reversed.toList());
+    return joined;
+  }
+
   @override
   Future<Result<Paginated<SocialService>>> listServices({
-    String? query,
     int? limit,
     String? cursor,
     bool featured = false,
     String? office,
   }) async {
-    final String? q = query?.trim();
     final String? officeSlug = office?.trim();
     final bool scoped = officeSlug != null && officeSlug.isNotEmpty;
     final int size = (limit ?? 20).clamp(1, 50);
@@ -62,7 +128,6 @@ class SocialServiceApiRepository implements SocialServiceRepository {
           query: <String, String>{
             'limit': '$size',
             'cursor': ?(scoped ? cursor : cursor ?? _cursor),
-            'q': ?((q == null || q.isEmpty) ? null : q),
             'featured': ?(featured ? 'true' : null),
             'office': ?(scoped ? officeSlug : null),
           },
