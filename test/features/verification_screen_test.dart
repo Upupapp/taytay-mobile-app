@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
@@ -10,6 +11,7 @@ import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
@@ -20,6 +22,7 @@ import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/platform/domain/verification_review_time.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
@@ -158,6 +161,8 @@ Future<AppDependencies> bootVerification(
   PlatformRepository? platformRepository,
   AccountControlsRepository? consents,
   VerificationRepository? repository,
+  ResidentProfileRepository? profile,
+  bool viaRouter = false,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -197,7 +202,7 @@ Future<AppDependencies> bootVerification(
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
-    residentProfileRepository: base.residentProfileRepository,
+    residentProfileRepository: profile ?? base.residentProfileRepository,
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: repository ?? StubVerificationRepository(detail),
@@ -220,6 +225,15 @@ Future<AppDependencies> bootVerification(
   await tester.pump(const Duration(seconds: 2));
   await tester.pumpAndSettle();
 
+  if (viaRouter) {
+    // Straight to the screen, for a profile stub the account tab would read
+    // as well.
+    GoRouter.of(
+      tester.element(find.byType(Scaffold).first),
+    ).go(AppRoute.verification.path);
+    await tester.pumpAndSettle();
+    return dependencies;
+  }
   await tester.tap(find.text('My Account').last);
   await tester.pumpAndSettle();
   final shortcut = find.text('Verify my identity');

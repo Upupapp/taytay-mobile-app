@@ -164,6 +164,8 @@ class VerifiedStatusPage extends StatelessWidget {
     this.onMessage,
     this.onRequestDocuments,
     this.verifiedOn = '',
+    this.method = '',
+    this.replaced = '',
     this.completeness,
     super.key,
   });
@@ -179,6 +181,14 @@ class VerifiedStatusPage extends StatelessWidget {
 
   /// Date the server says the account was verified. Empty hides the date.
   final String verifiedOn;
+
+  /// How the account was verified, in words (`verification_method`, D-210).
+  /// Empty says nothing about it.
+  final String method;
+
+  /// What became of a selfie request the office closed when it verified the
+  /// account in person (`superseded`). Empty hides the line.
+  final String replaced;
 
   /// Profile completeness when the screen that owns the record has it.
   final int? completeness;
@@ -206,7 +216,11 @@ class VerifiedStatusPage extends StatelessWidget {
               label: 'Verified',
               tone: StatusTone.verified,
             ),
-            body: <String>[body],
+            body: <String>[
+              body,
+              if (method.isNotEmpty) method,
+              if (replaced.isNotEmpty) replaced,
+            ],
           ),
           const SizedBox(height: Spacing.section),
           SoftCard(

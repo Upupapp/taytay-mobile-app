@@ -126,6 +126,11 @@ enum ResidentVerificationStage {
     // ran out is a different conversation at a counter.
     VerificationAttemptState.withdrawn ||
     VerificationAttemptState.expired => ResidentVerificationStage.notStarted,
+    // Closed because the office verified the account in person. Nothing waits
+    // on this request, and it is not the verified one: the account's tier,
+    // from `GET /me`, says verified, and nothing is read from this request as
+    // if it had been approved (no dates, no ID type; D-207, D-210).
+    VerificationAttemptState.superseded => ResidentVerificationStage.notStarted,
     null => ResidentVerificationStage.manualReview,
   };
 }
@@ -397,6 +402,10 @@ class VerificationStatusDetail {
 
   /// Whether the selfie on this request was erased.
   bool get selfieErased => selfieErasedAt != null;
+
+  /// Whether the office closed this request because it verified the account
+  /// in person (`superseded`, backend `5209f75`).
+  bool get supersededInPerson => rawState == 'superseded';
 
   bool get isVerified => stage == ResidentVerificationStage.verified;
 

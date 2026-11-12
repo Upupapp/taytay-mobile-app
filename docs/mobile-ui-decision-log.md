@@ -3180,6 +3180,23 @@ no API for this, only to say the way exists.
    is kept, unverified), and the selfie slot still asks again if the resident
    changes their mind.
 
+4. *Added the same day, when backend `5209f75` landed.* Staff verify in
+   person at the counter (`POST /admin/users/{id}/in-person-verifications`,
+   not called by this app). A pending selfie request is then closed as
+   `superseded`, a new final status, and its selfie erased. The app parses it
+   as its own terminal state (`VerificationAttemptState.superseded`), never
+   the unknown-status fallback ("under review") and never an approval: the
+   card timeline (D-207) reads no dates from it. The verified page says
+   "Replaced: you were verified in person at the office, so your selfie
+   request was closed and the selfie you sent was erased." With `GET /me`
+   unread, a superseded request shows the verified face, as an approved one
+   does; the profile tier wins whenever it was read.
+5. `verification_method` on `GET /me` (`selfie`, `in-person` or null) is said
+   on the verified page: "Verified in person at the Taytay LGU office." or
+   "Verified with your valid ID and selfie."; an unknown value says nothing.
+   For an in-person verification the date is `verification_decided_at`, not
+   a request's review date.
+
 **Rejected.** Hiding the decline behind Back or the scrim; a fixed office
 address or opening hours in the app; promising a review time for the
 in-person way.
@@ -3187,7 +3204,7 @@ in-person way.
 **Why.** A government service a resident can only reach by giving up
 biometric data is a service whose consent screen is a formality.
 
-**Sources.** RA 10173 s.3(b),
+**Sources.** Backend `5209f75`; RA 10173 s.3(b),
 <https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>; NPC Circular
 2023-04 via <https://accralaw.com/?p=16522>.
 
@@ -3568,7 +3585,7 @@ office chose.
 | D-207 | No card (`GET /me/digital-id` 404 or null) is "Your card is being prepared" (`IDStatus.dc.html`): five steps, the first three dated only from `GET /me` `created_at` and the verified request's `submitted_at`, `id_type`, `reviewed_at`, undated when not sent; no new `CredentialLifecycleState` value; an unrecognised status keeps the not-issued face; Message the MSWDO opens compose for `mswdo`. Left out: a notification promise, the one-year term and the 2-minute code lifetime | product / contract / design | settled |
 | D-208 | The Terms of Use and the Privacy Notice are two unticked acts in sign-up and on the re-consent screen (`termsConsentLabel`, `privacyConsentLabel`), each `POST /me/consents` with its `kind` and version, two calls even when the versions match (backend `6c82f32`); a text counts only when the newest standing consent of its kind names the version in force, so an older combined (`unspecified`) row is asked again through the existing gate and kept as history; every withdrawal names its kind; `GET /me/consents/current` is decoded | privacy / contract | settled |
 | D-209 | No selfie before its own biometric consent (backend `44cae1b`): `BiometricConsentController` reads the text from app config and `biometric.up_to_date`; a centred dialog says what is collected and why, shows the text and version, an unticked tick, Agree, and "No, I'll verify in person"; recorded with `kind: biometric` before the camera opens (sign-up, start, retake); unpublished says selfie verification is not available yet and sign-up asks for no ID; `BIOMETRIC_CONSENT_REQUIRED` is its own failure, never the staff answer | privacy / contract / design | settled |
-| D-210 | Declining the selfie consent, or meeting an unpublished one, leads to verifying in person (owner's decision; RA 10173 s.3(b), NPC Circular 2023-04): an `InPersonVerificationNote` ("Bring a valid ID to the MSWDO … No selfie is taken.") with the office's name, address, hours and phone from `GET /offices/mswdo` only; sign-up offers "Finish for now", never a dead end | privacy / product | settled |
+| D-210 | Declining the selfie consent, or meeting an unpublished one, leads to verifying in person (owner's decision; RA 10173 s.3(b), NPC Circular 2023-04): an `InPersonVerificationNote` ("Bring a valid ID to the MSWDO … No selfie is taken.") with the office's name, address, hours and phone from `GET /offices/mswdo` only; sign-up offers "Finish for now", never a dead end. A request closed by in-person verification (`superseded`, backend `5209f75`) is its own final state, said as "Replaced: you were verified in person", never read as approved; `verification_method` on `GET /me` is said on the verified page | privacy / product | settled |
 | D-211 | The selfie consent is seen and withdrawn in Consents and account requests: when and which version; what withdrawing does (selfies erased, a waiting request needs a new selfie, a digital ID loses its photo, not backdated) said before the button; `AppDialog.confirm`; biometric history rows carry no Accept again | privacy / design | settled |
 | D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
 | D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |

@@ -257,6 +257,7 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
       verificationDecidedAt: DateTime.tryParse(
         decidedAt is String ? decidedAt : '',
       )?.toUtc(),
+      verificationMethod: VerificationMethod.parse(map['verification_method']),
     );
   }
 

@@ -37,6 +37,7 @@ class ResidentProfileDetail {
     this.closedAt,
     this.createdAt,
     this.verificationDecidedAt,
+    this.verificationMethod,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -93,6 +94,12 @@ class ResidentProfileDetail {
   /// otherwise. The instant is not personal copy and is not included in
   /// [toString].
   final DateTime? verificationDecidedAt;
+
+  /// How a verified account was verified (`verification_method` on `GET /me`,
+  /// backend `5209f75`). Null unless verified, for an account made verified
+  /// some other way, from an older server, or for a value this build does not
+  /// know. It describes; it grants nothing.
+  final VerificationMethod? verificationMethod;
 
   /// Who may change [field], preferring the office's answer.
   ///
@@ -181,4 +188,25 @@ class ContactDetailsUpdate {
   /// under RA 10173.
   @override
   String toString() => 'ContactDetailsUpdate(${touchedFields.length} fields)';
+}
+
+/// How the office verified an account (D-210).
+enum VerificationMethod {
+  /// An approved request with an ID photo and a selfie.
+  selfie('selfie'),
+
+  /// A check at the office against an ID shown at the counter. No selfie.
+  inPerson('in-person');
+
+  const VerificationMethod(this.wireValue);
+
+  final String wireValue;
+
+  /// Null for anything else, so an unknown method is never named.
+  static VerificationMethod? parse(Object? raw) {
+    for (final VerificationMethod method in values) {
+      if (method.wireValue == raw) return method;
+    }
+    return null;
+  }
 }

@@ -26,6 +26,7 @@ import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../domain/field_correction_note.dart';
 import '../domain/verification_face.dart';
 import '../domain/verification_id_type.dart';
@@ -69,6 +70,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
   String? _reason;
   String _email = '';
   String _accountCreated = '';
+
+  /// `verification_method` and `verification_decided_at` from `GET /me`.
+  VerificationMethod? _method;
+  DateTime? _decidedAt;
   bool _tierReady = false;
   String _idType = 'philid';
   CapturedDocument? _front;
@@ -121,6 +126,8 @@ class _VerificationScreenState extends State<VerificationScreen> {
         _reason = value.rejectionReason;
         _email = value.valueOf(ResidentProfileField.emailAddress) ?? '';
         _accountCreated = _stamp(value.createdAt);
+        _method = value.verificationMethod;
+        _decidedAt = value.verificationDecidedAt;
         _tierReady = true;
       });
       return;
@@ -183,6 +190,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
     // chooses the status screen. `approved` is the verified face.
     final String? request = status?.rawState;
     String? raw = (_tier != null && _tier!.isNotEmpty) ? _tier : request;
+    // A request the office closed because it verified the account in person
+    // says the account is verified, as an approved one does (D-210). The
+    // profile tier still wins when it was read.
+    if (raw == 'superseded') raw = 'verified';
     if ((raw == null || raw.isEmpty || raw == 'unverified') &&
         (request == 'pending' ||
             request == 'approved' ||
@@ -225,7 +236,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
     final face = _face;
     final VerificationStatusDetail? status = _controller.status;
     final String idLabel = idTypeLabel(status?.idType);
-    final String reviewed = _date(status?.reviewedAt);
+    // An in-person verification has no reviewed request: the date is the
+    // account's own decision date.
+    final String reviewed = _date(
+      status?.isVerified == true ? status?.reviewedAt : _decidedAt,
+    );
     final PlatformController platform = AppDependencies.of(context).platform;
     final Widget page = switch (face) {
       VerificationFace.verified => VerifiedStatusPage(
@@ -237,6 +252,12 @@ class _VerificationScreenState extends State<VerificationScreen> {
         onRequestDocuments: () =>
             context.pushNamed(AppRoute.issuanceCatalogue.routeName),
         verifiedOn: reviewed,
+        method: VerificationMethodCopy.of(_method),
+        replaced: status?.supersededInPerson == true
+            ? VerificationMethodCopy.replaced(
+                erased: status?.selfieErased == true,
+              )
+            : '',
       ),
       // The review time is app config, read at startup; a later answer
       // redraws the sentence rather than leaving the bundled one (D-200).
@@ -717,6 +738,26 @@ const Key verificationSelfieUnavailableKey = Key(
 );
 const Key verificationConsentFailedKey = Key('verification-consent-failed');
 const Key verificationRetakeSelfieKey = Key('verification-retake-selfie');
+
+/// How the account was verified, in words (D-210).
+abstract final class VerificationMethodCopy {
+  static const String inPerson = 'Verified in person at the Taytay LGU office.';
+  static const String selfie = 'Verified with your valid ID and selfie.';
+
+  static String of(VerificationMethod? method) => switch (method) {
+    VerificationMethod.inPerson => inPerson,
+    VerificationMethod.selfie => selfie,
+    null => '',
+  };
+
+  /// A selfie request closed because the office verified the account in
+  /// person (`superseded`).
+  static String replaced({required bool erased}) => erased
+      ? 'Replaced: you were verified in person at the office, so your selfie '
+            'request was closed and the selfie you sent was erased.'
+      : 'Replaced: you were verified in person at the office, so your selfie '
+            'request was closed.';
+}
 
 /// What the verification screen says about the selfie (D-209, D-212).
 abstract final class VerificationSelfieCopy {

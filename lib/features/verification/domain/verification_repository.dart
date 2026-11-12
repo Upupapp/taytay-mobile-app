@@ -41,7 +41,12 @@ enum VerificationAttemptState {
   /// again — which is why it is not folded into [rejected]: one is a decision
   /// about them and the other is a clock, and telling a resident they were
   /// refused when they were not is a different conversation at a counter.
-  expired;
+  expired,
+
+  /// Closed without a decision because the office verified the account in
+  /// person (backend `5209f75`): the selfie on it was erased. Terminal. It is
+  /// neither an approval of this request nor a refusal (D-210).
+  superseded;
 
   /// Whether the resident has something to do next.
   bool get needsResidentAction =>
@@ -55,7 +60,8 @@ enum VerificationAttemptState {
       this == VerificationAttemptState.approved ||
       this == VerificationAttemptState.rejected ||
       this == VerificationAttemptState.withdrawn ||
-      this == VerificationAttemptState.expired;
+      this == VerificationAttemptState.expired ||
+      this == VerificationAttemptState.superseded;
 
   /// The wire values `GET me/kyc` publishes, mapped.
   ///
@@ -75,6 +81,7 @@ enum VerificationAttemptState {
         'rejected' => VerificationAttemptState.rejected,
         'withdrawn' => VerificationAttemptState.withdrawn,
         'expired' => VerificationAttemptState.expired,
+        'superseded' => VerificationAttemptState.superseded,
         null => VerificationAttemptState.notStarted,
         _ => VerificationAttemptState.underReview,
       };
