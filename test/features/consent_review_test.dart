@@ -3,8 +3,17 @@ import 'package:taytay_resident/features/platform/domain/consent_review.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 
-ConsentRecord consent(String version, {DateTime? withdrawnAt}) => ConsentRecord(
+/// A consent to the text its version names (`terms-…` or `privacy-…`), or
+/// to [kind] when given.
+ConsentRecord consent(
+  String version, {
+  DateTime? withdrawnAt,
+  ConsentKind? kind,
+}) => ConsentRecord(
   key: version,
+  kind:
+      kind ??
+      (version.startsWith('terms') ? ConsentKind.terms : ConsentKind.privacy),
   label: 'Privacy notice',
   statement: 'Agreed under privacy notice $version',
   grantedAt: DateTime.utc(2026, 10, 1),
@@ -58,21 +67,78 @@ void main() {
       expect(review.versionsToRecord, <String>['privacy-3', 'terms-3']);
     });
 
-    test('one version for both texts is recorded once', () {
+    test('one version for both texts is still two acts (D-208)', () {
       final ConsentReview review = ConsentReview.compare(
         termsVersion: '2026-11',
         privacyVersion: '2026-11',
-        consents: <ConsentRecord>[consent('2026-10')],
+        consents: <ConsentRecord>[
+          consent('2026-10', kind: ConsentKind.terms),
+          consent('2026-10', kind: ConsentKind.privacy),
+        ],
       );
       expect(review.missing, hasLength(2));
-      expect(review.versionsToRecord, <String>['2026-11']);
+      expect(review.toRecord, <ConsentToRecord>[
+        (kind: ConsentKind.privacy, version: '2026-11'),
+        (kind: ConsentKind.terms, version: '2026-11'),
+      ]);
 
       final ConsentReview accepted = ConsentReview.compare(
         termsVersion: '2026-11',
         privacyVersion: '2026-11',
-        consents: <ConsentRecord>[consent('2026-11')],
+        consents: <ConsentRecord>[
+          consent('2026-11', kind: ConsentKind.terms),
+          consent('2026-11', kind: ConsentKind.privacy),
+        ],
       );
       expect(accepted.isSettled, isTrue);
+    });
+
+    test('an older combined row counts as neither text (D-208)', () {
+      final ConsentReview review = ConsentReview.compare(
+        termsVersion: '2026-11',
+        privacyVersion: '2026-11',
+        consents: <ConsentRecord>[
+          consent('2026-11', kind: ConsentKind.unspecified),
+          consent('2026-11', kind: ConsentKind.biometric),
+        ],
+      );
+      expect(review.missing, <ConsentText>{
+        ConsentText.termsOfUse,
+        ConsentText.privacyNotice,
+      });
+    });
+
+    test('a consent to one text never counts for the other', () {
+      final ConsentReview review = ConsentReview.compare(
+        termsVersion: 'v1',
+        privacyVersion: 'v1',
+        consents: <ConsentRecord>[consent('v1', kind: ConsentKind.terms)],
+      );
+      expect(review.missing, <ConsentText>{ConsentText.privacyNotice});
+    });
+
+    test('the newest standing consent of a kind decides, as the server', () {
+      final ConsentReview review = ConsentReview.compare(
+        termsVersion: 'terms-1',
+        privacyVersion: '',
+        consents: <ConsentRecord>[
+          ConsentRecord(
+            key: 'terms-1',
+            kind: ConsentKind.terms,
+            label: '',
+            statement: '',
+            grantedAt: DateTime.utc(2026, 9),
+          ),
+          ConsentRecord(
+            key: 'terms-2',
+            kind: ConsentKind.terms,
+            label: '',
+            statement: '',
+            grantedAt: DateTime.utc(2026, 10),
+          ),
+        ],
+      );
+      expect(review.missing, <ConsentText>{ConsentText.termsOfUse});
     });
 
     test('a withdrawn consent is not an agreement in force', () {

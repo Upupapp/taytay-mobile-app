@@ -70,6 +70,59 @@ class AccountControls {
       'deletion: $canRequestDeletion)';
 }
 
+/// Which text a consent was given to (`kind` on `POST /me/consents`, backend
+/// `6c82f32`).
+///
+/// The Terms of Use and the Privacy Notice are two acts, each kept with its own
+/// version and time, and the selfie's biometric consent is a third (backend
+/// `44cae1b`). [unspecified] is a row an older app recorded under one tick for
+/// both texts, or any row from before kinds existed: it never counts as any of
+/// the three (D-208).
+enum ConsentKind {
+  terms('terms'),
+  privacy('privacy'),
+  biometric('biometric'),
+  unspecified('unspecified');
+
+  const ConsentKind(this.wireValue);
+
+  /// The value on the wire.
+  final String wireValue;
+
+  /// What a row is called on the consents screen.
+  String get label => switch (this) {
+    ConsentKind.terms => 'Terms of Use',
+    ConsentKind.privacy => 'Privacy Notice',
+    ConsentKind.biometric => 'Selfie consent',
+    ConsentKind.unspecified => 'Terms and Privacy Notice (earlier agreement)',
+  };
+
+  /// The sentence a row of this kind shows, under [version] when the server
+  /// named one.
+  String statement(String? version) {
+    final String under = version ?? 'in force at the time';
+    return switch (this) {
+      ConsentKind.terms => 'Agreed to the Terms of Use, version $under',
+      ConsentKind.privacy => 'Acknowledged the Privacy Notice, version $under',
+      ConsentKind.biometric =>
+        'Agreed that Taytay LGU may use your selfie, version $under',
+      // An older app asked for both texts under one tick. The row is kept as
+      // evidence; it is not agreement to either text now (D-208).
+      ConsentKind.unspecified =>
+        'Agreed to the Terms and the Privacy Notice together, version $under',
+    };
+  }
+
+  /// An unknown or missing kind is [unspecified]: it is then asked for again,
+  /// never taken as agreement to a text it may not name.
+  static ConsentKind parse(Object? raw) {
+    for (final ConsentKind kind in values) {
+      if (kind.wireValue == raw) return kind;
+    }
+    return unspecified;
+  }
+}
+
 /// One thing the resident agreed to, and when.
 ///
 /// ---
@@ -84,6 +137,7 @@ class ConsentRecord {
     required this.key,
     required this.label,
     required this.statement,
+    this.kind = ConsentKind.unspecified,
     this.grantedAt,
     this.withdrawnAt,
     this.isWithdrawable = false,
@@ -92,6 +146,10 @@ class ConsentRecord {
 
   final String key;
   final String label;
+
+  /// The text this consent was given to. A withdrawal names it, so that
+  /// withdrawing the Terms never withdraws the selfie consent, or the reverse.
+  final ConsentKind kind;
 
   /// The full sentence the resident agreed to, as the office wrote it.
   final String statement;
@@ -118,7 +176,79 @@ class ConsentRecord {
   /// Redacted of the statement: it is long, and this type is reachable from a
   /// log line.
   @override
-  String toString() => 'ConsentRecord($key, active: $isActive)';
+  String toString() =>
+      'ConsentRecord(${kind.wireValue}, $key, active: $isActive)';
+}
+
+/// Where the account stands on one published text (`GET /me/consents/current`).
+@immutable
+class ConsentStanding {
+  const ConsentStanding({
+    this.publishedVersion,
+    this.consent,
+    this.upToDate = false,
+  });
+
+  /// Nothing published and nothing standing: what a missing block decodes to.
+  static const ConsentStanding none = ConsentStanding();
+
+  /// The version residents are asked to accept now. Null when none is
+  /// published (for the biometric text: while it is the placeholder).
+  final String? publishedVersion;
+
+  /// The newest consent of this kind still standing, whatever its version.
+  final ConsentRecord? consent;
+
+  /// The server's verdict: a version is published and the standing consent
+  /// names it. The app never works this out for itself.
+  final bool upToDate;
+
+  @override
+  String toString() =>
+      'ConsentStanding(published: ${publishedVersion != null}, '
+      'upToDate: $upToDate)';
+}
+
+/// The account's standing on every text, as the server judged it.
+@immutable
+class ConsentState {
+  const ConsentState({
+    this.terms = ConsentStanding.none,
+    this.privacy = ConsentStanding.none,
+    this.biometric = ConsentStanding.none,
+    this.unspecified = const <ConsentRecord>[],
+  });
+
+  /// The standings keyed by the kind they are for, as the server keys them.
+  factory ConsentState.byKind(
+    Map<ConsentKind, ConsentStanding> standings, {
+    List<ConsentRecord> unspecified = const <ConsentRecord>[],
+  }) => ConsentState(
+    terms: standings[ConsentKind.terms] ?? ConsentStanding.none,
+    privacy: standings[ConsentKind.privacy] ?? ConsentStanding.none,
+    biometric: standings[ConsentKind.biometric] ?? ConsentStanding.none,
+    unspecified: unspecified,
+  );
+
+  final ConsentStanding terms;
+  final ConsentStanding privacy;
+  final ConsentStanding biometric;
+
+  /// Standing rows an older app recorded without naming the text. They make
+  /// neither text up to date: those apps asked under one tick.
+  final List<ConsentRecord> unspecified;
+
+  ConsentStanding of(ConsentKind kind) => switch (kind) {
+    ConsentKind.terms => terms,
+    ConsentKind.privacy => privacy,
+    ConsentKind.biometric => biometric,
+    ConsentKind.unspecified => ConsentStanding.none,
+  };
+
+  @override
+  String toString() =>
+      'ConsentState(terms: ${terms.upToDate}, privacy: ${privacy.upToDate}, '
+      'biometric: ${biometric.upToDate})';
 }
 
 /// The resident's own account controls and consent history.
@@ -134,17 +264,29 @@ abstract interface class AccountControlsRepository {
   /// The consent history the LGU holds for this resident.
   Future<Result<List<ConsentRecord>>> listConsents();
 
-  /// Withdraws one consent.
+  /// Where the account stands on each published text, as the server judges
+  /// it (`GET /me/consents/current`).
+  Future<Result<ConsentState>> loadConsentState();
+
+  /// Withdraws the consent of [kind] given under version [key].
   ///
   /// Idempotency-keyed: withdrawing twice through a dropped connection should
-  /// record one withdrawal, not two entries in a legal history.
+  /// record one withdrawal, not two entries in a legal history. Withdrawing the
+  /// [ConsentKind.biometric] consent also erases the account's selfies, in
+  /// the same act on the server.
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
+    required ConsentKind kind,
   });
 
-  /// Accepts [version] again. The server clears `withdrawn_at`.
-  Future<Result<ConsentRecord>> acceptConsent({required String version});
+  /// Accepts [version] of the [kind] text. One call per text, even when two
+  /// texts share a version string: each is its own act. The server clears
+  /// `withdrawn_at` on a version accepted again.
+  Future<Result<ConsentRecord>> acceptConsent({
+    required String version,
+    required ConsentKind kind,
+  });
 
   /// Asks the office to correct something it holds.
   Future<Result<void>> requestDataCorrection({

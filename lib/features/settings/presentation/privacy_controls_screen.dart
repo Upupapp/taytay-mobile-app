@@ -101,6 +101,8 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       // Withdrawing twice through a dropped connection should record one
       // withdrawal, not two entries in a legal history.
       idempotencyKey: generateRequestId(),
+      // The text this row is for, and only it (D-208).
+      kind: consent.kind,
     );
     if (!mounted) return;
 
@@ -125,7 +127,10 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   Future<void> _accept(ConsentRecord consent) async {
     if (!consent.isWithdrawable || consent.key.isEmpty) return;
     final repository = AppDependencies.of(context).accountControlsRepository;
-    final result = await repository.acceptConsent(version: consent.key);
+    final result = await repository.acceptConsent(
+      version: consent.key,
+      kind: consent.kind,
+    );
     if (!mounted) return;
     result.fold(
       onOk: (_) {

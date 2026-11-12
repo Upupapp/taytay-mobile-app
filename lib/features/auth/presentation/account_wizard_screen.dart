@@ -394,7 +394,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       case _Step.terms:
         if (!_terms || !_privacy) {
           setState(
-            () => _status = 'Agree to the Terms and the Privacy Notice.',
+            () => _status = !_terms && !_privacy
+                ? 'Agree to the Terms of Use and acknowledge the Privacy '
+                      'Notice: tick each one.'
+                : !_terms
+                ? 'Agree to the Terms of Use to continue.'
+                : 'Acknowledge the Privacy Notice to continue.',
           );
           return;
         }
@@ -1330,17 +1335,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         ConsentCheckCard(
           value: _terms,
           onChanged: (value) => setState(() => _terms = value),
-          label:
-              'I have read and agree to the Terms of Use and the Privacy '
-              'Notice.',
+          label: termsConsentLabel,
         ),
         const SizedBox(height: Spacing.sm + Spacing.xxs),
         ConsentCheckCard(
           value: _privacy,
           onChanged: (value) => setState(() => _privacy = value),
-          label:
-              'I consent to Taytay LGU processing my personal data for '
-              'account verification.',
+          label: privacyConsentLabel,
         ),
         _statusNote(),
       ],

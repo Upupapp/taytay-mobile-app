@@ -18,6 +18,7 @@ import 'package:taytay_resident/features/platform/domain/platform_repository.dar
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
+import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 import 'auth_screens_test.dart' show FakeBarangayDirectory, boot, goTo, reveal;
@@ -134,11 +135,8 @@ Future<void> _toTerms(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-const String _agree =
-    'I have read and agree to the Terms of Use and the Privacy Notice.';
-const String _consent =
-    'I consent to Taytay LGU processing my personal data for account '
-    'verification.';
+const String _agree = termsConsentLabel;
+const String _consent = privacyConsentLabel;
 
 void main() {
   group('access for sign-in and registration', () {

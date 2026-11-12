@@ -160,6 +160,7 @@ final class UnauthenticatedFailure extends AppFailure {
 final class ForbiddenFailure extends AppFailure {
   const ForbiddenFailure({
     this.requiresVerification = false,
+    this.requiresBiometricConsent = false,
     super.requestId,
     super.debugMessage,
   });
@@ -167,12 +168,22 @@ final class ForbiddenFailure extends AppFailure {
   /// True for `VERIFICATION_REQUIRED`, false for plain `FORBIDDEN`.
   final bool requiresVerification;
 
-  @override
-  String get kind =>
-      requiresVerification ? 'verification_required' : 'forbidden';
+  /// True for `BIOMETRIC_CONSENT_REQUIRED`: a selfie was refused because no
+  /// consent to the published biometric text stands. Nothing was stored.
+  final bool requiresBiometricConsent;
 
   @override
-  String get residentMessage => requiresVerification
+  String get kind => requiresBiometricConsent
+      ? 'biometric_consent_required'
+      : requiresVerification
+      ? 'verification_required'
+      : 'forbidden';
+
+  @override
+  String get residentMessage => requiresBiometricConsent
+      ? 'Nothing was sent. A selfie needs your consent to the selfie text '
+            'Taytay LGU publishes now. Agree to it, or verify in person.'
+      : requiresVerification
       ? 'Verify your account first to use this service.'
       : 'This service is not available for your account right now.';
 }
@@ -513,6 +524,12 @@ AppFailure failureFromApiError({
     case ApiErrorCode.verificationRequired:
       return ForbiddenFailure(
         requiresVerification: true,
+        requestId: requestId,
+        debugMessage: message,
+      );
+    case ApiErrorCode.biometricConsentRequired:
+      return ForbiddenFailure(
+        requiresBiometricConsent: true,
         requestId: requestId,
         debugMessage: message,
       );

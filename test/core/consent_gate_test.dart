@@ -36,18 +36,40 @@ class FakeConfig implements PlatformRepository {
 
 /// `GET` and `POST /me/consents` against an in-memory list.
 class FakeConsents implements AccountControlsRepository {
-  FakeConsents({List<String> accepted = const <String>[]})
-    : held = <ConsentRecord>[for (final String v in accepted) record(v)];
+  /// [accepted] versions are held as consents of the kind their name says
+  /// (`terms-…`, `privacy-…`); any other version is held for both texts, as
+  /// two rows, the way a current app records them.
+  FakeConsents({
+    List<String> accepted = const <String>[],
+    List<String> combined = const <String>[],
+  }) : held = <ConsentRecord>[
+         for (final String v in accepted)
+           for (final ConsentKind kind in kindsOf(v)) record(v, kind: kind),
+         // Rows an older app recorded under one tick for both texts.
+         for (final String v in combined)
+           record(v, kind: ConsentKind.unspecified),
+       ];
 
-  static ConsentRecord record(String version, {DateTime? withdrawnAt}) =>
-      ConsentRecord(
-        key: version,
-        label: 'Privacy notice',
-        statement: 'Agreed under privacy notice $version',
-        grantedAt: DateTime.utc(2026, 10, 1),
-        withdrawnAt: withdrawnAt,
-        isWithdrawable: true,
-      );
+  static List<ConsentKind> kindsOf(String version) =>
+      version.startsWith('terms')
+      ? const <ConsentKind>[ConsentKind.terms]
+      : version.startsWith('privacy')
+      ? const <ConsentKind>[ConsentKind.privacy]
+      : const <ConsentKind>[ConsentKind.privacy, ConsentKind.terms];
+
+  static ConsentRecord record(
+    String version, {
+    DateTime? withdrawnAt,
+    ConsentKind? kind,
+  }) => ConsentRecord(
+    key: version,
+    kind: kind ?? kindsOf(version).first,
+    label: 'Privacy notice',
+    statement: 'Agreed under privacy notice $version',
+    grantedAt: DateTime.utc(2026, 10, 1),
+    withdrawnAt: withdrawnAt,
+    isWithdrawable: true,
+  );
 
   final List<ConsentRecord> held;
   AppFailure? listFailure;
@@ -55,6 +77,12 @@ class FakeConsents implements AccountControlsRepository {
   /// Answers for `POST /me/consents`, used one at a time before the default.
   final List<Result<ConsentRecord>> acceptAnswers = <Result<ConsentRecord>>[];
   final List<String> posted = <String>[];
+
+  /// The kind each [posted] version was sent with, in the same order.
+  final List<ConsentKind> postedKinds = <ConsentKind>[];
+
+  /// What `GET /me/consents/current` answers; unused by the gate.
+  Result<ConsentState> state = const Ok<ConsentState>(ConsentState());
   int lists = 0;
 
   /// When set, a list read takes its snapshot now and answers later.
@@ -76,10 +104,17 @@ class FakeConsents implements AccountControlsRepository {
   }
 
   @override
-  Future<Result<ConsentRecord>> acceptConsent({required String version}) async {
+  Future<Result<ConsentState>> loadConsentState() async => state;
+
+  @override
+  Future<Result<ConsentRecord>> acceptConsent({
+    required String version,
+    required ConsentKind kind,
+  }) async {
     posted.add(version);
+    postedKinds.add(kind);
     if (acceptAnswers.isNotEmpty) return acceptAnswers.removeAt(0);
-    final ConsentRecord accepted = record(version);
+    final ConsentRecord accepted = record(version, kind: kind);
     held.add(accepted);
     return Ok<ConsentRecord>(accepted);
   }
@@ -88,6 +123,7 @@ class FakeConsents implements AccountControlsRepository {
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
+    required ConsentKind kind,
   }) async => const Err<ConsentRecord>(UnexpectedFailure());
 
   @override
@@ -247,21 +283,77 @@ void main() {
       },
     );
 
-    test('agreeing records each missing version once, then opens', () async {
+    test(
+      'agreeing records each text as its own act, with its kind, then opens',
+      () async {
+        final _Rig rig = _Rig(
+          config: FakeConfig(<Result<AppBootstrap>>[
+            Ok<AppBootstrap>(versions(terms: '2026-11', privacy: '2026-11')),
+          ]),
+          consents: FakeConsents(accepted: <String>['2026-10']),
+        );
+        await rig.session.restore();
+        await rig.signIn();
+        expect(rig.gate.review?.missing, hasLength(2));
+
+        expect(await rig.gate.agree(), isTrue);
+        // One version string, two texts: two acts (D-208).
+        expect(rig.consents.posted, <String>['2026-11', '2026-11']);
+        expect(rig.consents.postedKinds, <ConsentKind>[
+          ConsentKind.privacy,
+          ConsentKind.terms,
+        ]);
+        expect(rig.gate.isRequired, isFalse);
+        expect(rig.gate.recordFailure, isNull);
+        rig.dispose();
+      },
+    );
+
+    test(
+      'an older single tick for both texts is asked for again (D-208)',
+      () async {
+        final _Rig rig = _Rig(
+          config: FakeConfig(<Result<AppBootstrap>>[
+            Ok<AppBootstrap>(versions(terms: '2026-11', privacy: '2026-11')),
+          ]),
+          consents: FakeConsents(combined: <String>['2026-11']),
+        );
+        await rig.session.restore();
+        await rig.signIn();
+        // The row names the version in force, but no text: it counts as
+        // neither, as the server's `up_to_date` says.
+        expect(rig.gate.isRequired, isTrue);
+        expect(rig.gate.review?.missing, <ConsentText>{
+          ConsentText.termsOfUse,
+          ConsentText.privacyNotice,
+        });
+        expect(await rig.gate.agree(), isTrue);
+        expect(rig.consents.postedKinds, <ConsentKind>[
+          ConsentKind.privacy,
+          ConsentKind.terms,
+        ]);
+        expect(rig.gate.isRequired, isFalse);
+        rig.dispose();
+      },
+    );
+
+    test('an answer for the other text is not a confirmation', () async {
+      final FakeConsents consents = FakeConsents();
       final _Rig rig = _Rig(
         config: FakeConfig(<Result<AppBootstrap>>[
-          Ok<AppBootstrap>(versions(terms: '2026-11', privacy: '2026-11')),
+          Ok<AppBootstrap>(versions(terms: 'terms-3', privacy: '')),
         ]),
-        consents: FakeConsents(accepted: <String>['2026-10']),
+        consents: consents,
       );
       await rig.session.restore();
       await rig.signIn();
-      expect(rig.gate.review?.missing, hasLength(2));
-
-      expect(await rig.gate.agree(), isTrue);
-      expect(rig.consents.posted, <String>['2026-11']);
-      expect(rig.gate.isRequired, isFalse);
-      expect(rig.gate.recordFailure, isNull);
+      consents.acceptAnswers.add(
+        Ok<ConsentRecord>(
+          FakeConsents.record('terms-3', kind: ConsentKind.privacy),
+        ),
+      );
+      expect(await rig.gate.agree(), isFalse);
+      expect(rig.gate.recordFailure, isA<ContractFailure>());
       rig.dispose();
     });
 

@@ -480,12 +480,20 @@ class AuthApiRepository implements AuthRepository {
     final String privacy = published.value.privacy;
     final String terms = published.value.terms;
 
-    final Result<void> privacyConsent = await _recordConsent(privacy);
+    // Two acts, each with its kind, even when the two version strings are
+    // equal: the server keeps one row per text (backend `6c82f32`, D-208). A
+    // consent sent without a kind is recorded as `unspecified` and counts as
+    // neither text.
+    final Result<void> privacyConsent = await _recordConsent(
+      privacy,
+      kind: 'privacy',
+    );
     if (privacyConsent case Err(:final failure)) return Err<void>(failure);
-    if (terms != privacy) {
-      final Result<void> termsConsent = await _recordConsent(terms);
-      if (termsConsent case Err(:final failure)) return Err<void>(failure);
-    }
+    final Result<void> termsConsent = await _recordConsent(
+      terms,
+      kind: 'terms',
+    );
+    if (termsConsent case Err(:final failure)) return Err<void>(failure);
     return const Ok<void>(null);
   }
 
@@ -524,12 +532,15 @@ class AuthApiRepository implements AuthRepository {
     return trimmed;
   }
 
-  Future<Result<void>> _recordConsent(String version) async {
+  Future<Result<void>> _recordConsent(
+    String version, {
+    required String kind,
+  }) async {
     final Result<ApiEnvelope<void>> consent = await _apiClient.send<void>(
       method: HttpMethod.post,
       path: 'me/consents',
       authenticated: true,
-      body: <String, Object?>{'version': version},
+      body: <String, Object?>{'version': version, 'kind': kind},
       decode: (Object? _) {},
     );
     return consent.map((ApiEnvelope<void> _) {});

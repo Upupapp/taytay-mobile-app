@@ -34,7 +34,8 @@ import '../../../profile/domain/resident_profile_repository.dart';
 import '../../../programs/domain/assistance_program.dart'
     hide RequirementObligation;
 import '../../../programs/domain/program_repository.dart';
-import '../../../registration/domain/registration_domain.dart';
+import '../../../registration/domain/registration_domain.dart'
+    hide ConsentKind;
 import '../../../requirements/domain/resident_requirement.dart';
 import '../../../services/domain/assistance_case.dart';
 import '../../../services/domain/assistance_history.dart';
@@ -1352,13 +1353,20 @@ class MockAccountControlsRepository implements AccountControlsRepository {
   }
 
   @override
+  Future<Result<ConsentState>> loadConsentState() {
+    return _gate.respond(const ConsentState());
+  }
+
+  @override
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
+    required ConsentKind kind,
   }) {
     return _gate.respond(
       ConsentRecord(
         key: key,
+        kind: kind,
         label: 'Privacy notice',
         statement: 'SAMPLE',
         withdrawnAt: mockNow,
@@ -1368,16 +1376,19 @@ class MockAccountControlsRepository implements AccountControlsRepository {
   }
 
   @override
-  Future<Result<ConsentRecord>> acceptConsent({required String version}) {
-    return _gate.respond(
-      ConsentRecord(
-        key: version,
-        label: 'Privacy notice',
-        statement: 'SAMPLE',
-        grantedAt: mockNow,
-        isWithdrawable: true,
-      ),
+  Future<Result<ConsentRecord>> acceptConsent({
+    required String version,
+    required ConsentKind kind,
+  }) {
+    final ConsentRecord record = ConsentRecord(
+      key: version,
+      kind: kind,
+      label: 'Privacy notice',
+      statement: 'SAMPLE',
+      grantedAt: mockNow,
+      isWithdrawable: true,
     );
+    return _gate.respond(record);
   }
 
   @override

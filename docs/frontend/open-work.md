@@ -67,7 +67,7 @@ ahead of the pin, and moving the pin needs the backend repository to be still.
 > `test/integration/backend_routes_test.dart` asserts they match the manifest — derived there, not
 > transcribed here. If the manifest changes and this line does not, the suite goes red.
 
-**C-09, current: 67 declared routes, 67 on the Node contract, 0 recorded ahead.** The one added later on 2026-11-08 is `GET events/{id}/cover`, on the Node export vendored from backend `7522174` (D-193). The four added before it that day are the resident events routes, on the Node export vendored from backend `580acbb` (D-191). The eight added on 2026-11-07 are the document-request (issuance) routes, on the Node export vendored from backend `2fd0566`.
+**C-09, current: 68 declared routes, 68 on the Node contract, 0 recorded ahead.** The one added on 2026-11-12 is `GET me/consents/current` (D-208), on the Node export vendored from backend `5209f75`. The one added later on 2026-11-08 is `GET events/{id}/cover`, on the Node export vendored from backend `7522174` (D-193). The four added before it that day are the resident events routes, on the Node export vendored from backend `580acbb` (D-191). The eight added on 2026-11-07 are the document-request (issuance) routes, on the Node export vendored from backend `2fd0566`.
 
 ---
 

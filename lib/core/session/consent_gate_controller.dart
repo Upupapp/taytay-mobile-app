@@ -11,7 +11,8 @@ import 'session_controller.dart';
 import 'session_state.dart';
 
 /// Asks a signed-in resident to accept a Terms of Use or Privacy Notice
-/// version published after they last agreed.
+/// version published after they last agreed, or that they only ever agreed to
+/// under the older app's single tick for both (D-208).
 ///
 /// ---
 ///
@@ -72,7 +73,7 @@ class ConsentGateController extends ChangeNotifier {
   String? _accountId;
   int _generation = 0;
   ConsentReview? _owed;
-  final List<String> _pending = <String>[];
+  final List<ConsentToRecord> _pending = <ConsentToRecord>[];
   bool _recording = false;
   AppFailure? _recordFailure;
   DateTime? _lastAnswered;
@@ -136,7 +137,8 @@ class ConsentGateController extends ChangeNotifier {
     await check();
   }
 
-  /// Records every missing version. True only when the server confirmed each.
+  /// Records every missing text, each as its own act with its kind (D-208).
+  /// True only when the server confirmed each.
   Future<bool> agree() async {
     final ConsentReview? owed = review;
     final String? accountId = _session.state.residentOrNull?.accountId;
@@ -151,17 +153,22 @@ class ConsentGateController extends ChangeNotifier {
     notifyListeners();
 
     while (_pending.isNotEmpty) {
-      final String version = _pending.first;
+      final ConsentToRecord act = _pending.first;
+      final String version = act.version;
       final Result<ConsentRecord> result = await _consents.acceptConsent(
         version: version,
+        kind: act.kind,
       );
       if (!_stillAsking(generation, accountId)) return false;
       final AppFailure? failure = switch (result) {
         Err<ConsentRecord>(:final AppFailure failure) => failure,
         // The record that came back is the server's word. One that is not
-        // this version, or is still withdrawn, is not a confirmation.
+        // this version of this text, or is still withdrawn, is not a
+        // confirmation.
         Ok<ConsentRecord>(:final ConsentRecord value)
-            when value.key.trim() != version || !value.isActive =>
+            when value.key.trim() != version ||
+                value.kind != act.kind ||
+                !value.isActive =>
           const ContractFailure(
             debugMessage: 'Consent answer did not confirm the version.',
           ),
@@ -205,7 +212,7 @@ class ConsentGateController extends ChangeNotifier {
     _owed = owed;
     _pending
       ..clear()
-      ..addAll(owed?.versionsToRecord ?? const <String>[]);
+      ..addAll(owed?.toRecord ?? const <ConsentToRecord>[]);
     _recording = false;
     _recordFailure = null;
     notifyListeners();

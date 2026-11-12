@@ -164,7 +164,8 @@ abstract interface class AuthRepository {
   );
 
   /// `GET /app/config` for `privacy_version` and `terms_version`, then
-  /// `POST /me/consents` for each (once when they match).
+  /// `POST /me/consents` for each, with its `kind` (`privacy`, then `terms`):
+  /// two acts even when the versions match (D-208).
   ///
   /// A missing version is a contract failure. Nothing is sent as `draft`.
   Future<Result<void>> recordConsents();

@@ -3017,6 +3017,62 @@ already read them, and the verification screen uses the same two).
 
 ---
 
+## D-208 — The Terms of Use and the Privacy Notice are two acts, each recorded with its kind and version
+
+**Status: settled.** Category: privacy / contract. Recorded 2026-11-12,
+follow-up 2 (G3), on the owner's "decide, research best practice, and apply
+it" (Ella, Michaela Cailing; see D-185).
+
+**Context.** Sign-up drew two ticks, but the first read "I have read and agree
+to the Terms of Use and the Privacy Notice", and both versions went to
+`POST /me/consents` with no `kind`, once when the two strings matched. The
+re-consent screen took one "I agree" for whatever had changed. Backend
+`6c82f32` names the text: `kind` is `terms`, `privacy` or `biometric`; a
+consent with no kind is recorded `unspecified` and counts as neither text,
+so `GET /me/consents/current` reports such a resident as not up to date, and
+a current app must ask again with two separate ticks. A withdrawal with no
+kind withdraws the Terms, the Privacy Notice and every older combined row of
+that version at once.
+
+**Chosen.**
+1. **Two ticks, two acts.** Sign-up and the re-consent screen each draw one
+   unticked `ConsentCheckCard` per text: "I have read and agree to the Terms
+   of Use." and "I have read the Privacy Notice and understand how Taytay LGU
+   uses my personal data." (`termsConsentLabel`, `privacyConsentLabel`).
+   Continue / I agree stays off until every owed text is ticked, and the
+   sign-up message names the tick still missing.
+2. **Each recorded with its kind and version**, Privacy Notice first, two
+   calls even when the version strings are equal (`recordConsents`,
+   `ConsentGateController.agree`, `ConsentReview.toRecord`). An answer that
+   names another kind, another version or a withdrawn row is not a
+   confirmation.
+3. **Residents with only the old combined row are asked again** through the
+   existing re-consent gate (`ConsentGateController`, reused): a text
+   is accepted when the newest standing consent *of its kind* names the
+   version in force, the rule the server's `up_to_date` states. An
+   `unspecified` row is kept in the consent history as evidence ("Terms and
+   Privacy Notice (earlier agreement)") and is never withdrawn or accepted
+   again on its own; the repository refuses both without a request.
+4. **Every withdrawal names its kind**, so withdrawing one text never takes
+   another with it.
+5. `GET /me/consents/current` is decoded (`ConsentState`, `ConsentStanding`):
+   the selfie consent (D-209) reads its verdict from it.
+
+**Rejected.** One tick for both texts (bundled consent, NPC Circular 2023-04);
+recomputing `up_to_date` from a different rule than the server's; sending no
+kind for compatibility (the server would record `unspecified` and ask again).
+
+**Why.** RA 10173 s.3(b) asks for consent that is specific and informed, and
+NPC Circular 2023-04 refuses bundling: a contract the resident accepts (the
+Terms) and a notice they acknowledge (privacy) are different acts, and the
+record must show each.
+
+**Sources.** Backend `6c82f32` (vendored Node export from `ebd7aeb`); RA 10173
+s.3(b), <https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>; NPC
+Circular 2023-04 as summarised at <https://accralaw.com/?p=16522>.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3228,5 +3284,6 @@ already read them, and the verification screen uses the same two).
 | D-205 | Tulong reads the whole catalogue (`readCatalogue`: cursor pages of 50, at most 10) and searches it on the phone (case and accents folded, every word, never the slug); no request carries a search term and the repository takes none (D-59; RA 10173 §11, IRR §18(c)). A failed page fails the read; a longer catalogue is shown with a note that search covers the first N. A failed refresh keeps the list under a "Couldn't refresh the list" note with the Manila time and Try again. `ServiceDirectoryController` stays for its category filter, cache fallback and telemetry | privacy / contract / product | settled |
 | D-206 | The Filipino review-time copy (D-200) was checked for consistency with the app's existing Filipino terms on 2026-11-12 ("Karaniwang", "araw ng trabaho", no plural inflection) and is unchanged; awaiting a native speaker's sign-off, with "Kadalasan"/"Karaniwang", "araw na may pasok" and "Subukan muli"/"Subukang muli" listed for them | localisation | settled (sign-off open) |
 | D-207 | No card (`GET /me/digital-id` 404 or null) is "Your card is being prepared" (`IDStatus.dc.html`): five steps, the first three dated only from `GET /me` `created_at` and the verified request's `submitted_at`, `id_type`, `reviewed_at`, undated when not sent; no new `CredentialLifecycleState` value; an unrecognised status keeps the not-issued face; Message the MSWDO opens compose for `mswdo`. Left out: a notification promise, the one-year term and the 2-minute code lifetime | product / contract / design | settled |
+| D-208 | The Terms of Use and the Privacy Notice are two unticked acts in sign-up and on the re-consent screen (`termsConsentLabel`, `privacyConsentLabel`), each `POST /me/consents` with its `kind` and version, two calls even when the versions match (backend `6c82f32`); a text counts only when the newest standing consent of its kind names the version in force, so an older combined (`unspecified`) row is asked again through the existing gate and kept as history; every withdrawal names its kind; `GET /me/consents/current` is decoded | privacy / contract | settled |
 
-**203 decisions — 199 settled, 4 provisional.**
+**204 decisions — 200 settled, 4 provisional.**

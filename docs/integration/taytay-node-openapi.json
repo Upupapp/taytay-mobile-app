@@ -152,8 +152,8 @@
     "/api/v1/me/consents/withdraw": {
       "post": {
         "operationId": "withdrawConsent",
-        "summary": "Withdraw a privacy consent",
-        "description": "Sets withdrawn_at. Withdrawing again returns the same row. An unknown version is 404. Accepting the version again clears the withdrawal.",
+        "summary": "Withdraw a consent",
+        "description": "Sets withdrawn_at on the consent of that kind and version. Without kind (an older app), every terms, privacy and unspecified row of that version is withdrawn, and the newest of them is returned; a biometric consent is never withdrawn without kind. kind biometric withdraws every standing biometric consent and, in the same act, erases the account's selfies: each verification request gets selfie_erased_at, the stored images are discarded (their media ids then read 404), each erasure is audited verification.selfie_erased, a pending request can no longer be approved, and no new digital ID is issued from an erased selfie. The decision records stay. Withdrawing again returns the same row. A version never accepted under that kind is 404. Accepting the version again clears the withdrawal.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -162,6 +162,18 @@
         "responses": {
           "200": { "description": "Withdrawn.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentEnvelope" } } } },
           "404": { "description": "That version was never accepted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/consents/current": {
+      "get": {
+        "operationId": "getConsentState",
+        "summary": "Where the account stands on each published text",
+        "description": "For terms and privacy: the version published now, the newest standing consent, and whether they match. Standing unspecified rows from older apps are listed apart and make neither text up to date.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "Consent state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentStateEnvelope" } } } },
+          "401": { "description": "Authentication is required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -190,7 +202,8 @@
       },
       "post": {
         "operationId": "acceptConsent",
-        "summary": "Record a privacy consent version",
+        "summary": "Record a consent to one text",
+        "description": "kind names the text: terms or privacy, recorded as separate acts, each with its own version and accepted_at. Without kind (an app built before kinds existed) the row is recorded as unspecified, which counts as neither text in GET /api/v1/me/consents/current. kind biometric is accepted only for the version published now (biometric_consent_version in GET /api/v1/app/config): 409 while none is published (the placeholder), 422 (details.version) for any other version.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -198,6 +211,8 @@
         },
         "responses": {
           "201": { "description": "Consent recorded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentEnvelope" } } } },
+          "409": { "description": "kind biometric while no biometric consent text is published.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "Validation failed, or kind biometric with a version other than the one published now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "200": { "description": "That version was already recorded, or a withdrawn version was accepted again.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConsentEnvelope" } } } }
         }
       }
@@ -245,7 +260,7 @@
       "post": {
         "operationId": "submitVerification",
         "summary": "Submit an identity verification request",
-        "description": "Registered residents only. One pending request per user. JPEG, PNG, or WebP, 5 MB each.",
+        "description": "Registered residents only. One pending request per user. JPEG, PNG, or WebP, 5 MB each. The selfie is biometric data: the account must hold a standing biometric consent to the version published now (GET /api/v1/me/consents/current, biometric.up_to_date), or the request is refused with 403 BIOMETRIC_CONSENT_REQUIRED before any image is stored. Deny by default: while the biometric text is a placeholder no selfie is accepted. An optional idempotency_key multipart field makes a retry safe (see VerificationSubmit); it travels in the body, as on every other route here, because the console's CORS policy allows four request headers. An Idempotency-Key header is ignored.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -257,7 +272,8 @@
         },
         "responses": {
           "201": { "description": "Request opened.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationEnvelope" } } } },
-          "409": { "description": "A request is already pending, or the account is already verified.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "FORBIDDEN for an account that is not registered; BIOMETRIC_CONSENT_REQUIRED when no biometric consent to the published text stands. Nothing is stored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A request is already pending, the account is already verified, or the idempotency_key was already used for a different submission.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "Validation failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
@@ -266,7 +282,7 @@
       "post": {
         "operationId": "replaceVerificationDocuments",
         "summary": "Replace images on the caller's verification request",
-        "description": "Registered residents only, while the latest request is pending or rejected. At least one of id_front, id_back, or selfie is required.",
+        "description": "Registered residents only, while the latest request is pending or rejected. At least one of id_front, id_back, or selfie is required. A selfie needs the same standing biometric consent as on the first send (403 BIOMETRIC_CONSENT_REQUIRED otherwise, nothing stored); ID images alone do not. A new selfie clears selfie_erased_at.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -285,6 +301,7 @@
         },
         "responses": {
           "200": { "description": "Images replaced.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationEnvelope" } } } },
+          "403": { "description": "BIOMETRIC_CONSENT_REQUIRED: a selfie was sent with no standing biometric consent to the published text.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "404": { "description": "No request yet.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "409": { "description": "The request is approved and can no longer be edited.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
@@ -324,7 +341,7 @@
         "summary": "List verification requests",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
-          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] } },
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "rejected", "superseded"] } },
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
           { "name": "cursor", "in": "query", "schema": { "type": "string" } }
         ],
@@ -350,7 +367,7 @@
         "responses": {
           "200": { "description": "Approved. The response includes staff-only notes.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationStaffEnvelope" } } } },
           "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "Not pending, the account gives no name, or its name or birth date is not the one confirmed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "409": { "description": "Not pending, the account gives no name, its name or birth date is not the one confirmed, or the resident withdrew the biometric consent and the selfie was erased (selfie_erased_at set; reject and ask for a new selfie).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -513,6 +530,29 @@
         }
       }
     },
+    "/api/v1/admin/users/{id}/in-person-verifications": {
+      "post": {
+        "operationId": "verifyUserInPerson",
+        "summary": "Verify a resident's account in person, against a government ID shown at the counter",
+        "description": "Needs verification.review (admin only), the key that approves a selfie request; verifying your own account is 403. For a resident who declines the biometric consent, or meets a consent text not yet published: consent under RA 10173 must be freely given, so declining the selfie leaves this way to be verified. No image is taken and nothing biometric is stored. id_last_four is the last four characters of the ID's number and nothing more (longer is 422; the database refuses it too). confirmed_name is the account's name as the screen showed it, compared under a lock; id_shows_name must be true: the reviewer has seen that the ID shows that name. corrected_name, when the ID shows another name, corrects it in the same act through the name-correction history (audit user.name_corrected). The account becomes verified exactly as an approval makes it, and GET /api/v1/me reports verification_method in-person. A pending selfie request is closed as superseded, with a staff-only note, and its selfie is erased (audit verification.superseded and verification.selfie_erased); a rejected request stays rejected and can no longer be corrected. No digital ID is issued, because a card needs a photo. idempotency_key is minted when the reviewer presses the button and kept across retries: the same key and body answers 201 with the first record and writes nothing; the same key with another body is 409. Audited as verification.in_person_verified on the account, with ids and the code only. The resident is notified (verification_decided).",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InPersonVerificationInput" } } }
+        },
+        "responses": {
+          "201": { "description": "Verified in person, or the first record for a retry.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InPersonVerificationEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not an admin, or the caller's own account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "User not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is closed, already verified, not a resident's, or gives no name; its name is not confirmed_name; or the key was used for another body.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The body could not be validated: id_shows_name is not true, id_last_four is longer than four characters, a field is unknown, or the key is missing.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/api/v1/admin/users/{id}/office-role": {
       "patch": {
         "operationId": "assignUserOfficeRole",
@@ -535,6 +575,67 @@
         }
       }
     },
+    "/api/v1/admin/digital-ids": {
+      "get": {
+        "operationId": "listDigitalIds",
+        "summary": "List every digital ID issued",
+        "description": "Needs digital-id.manage (administrators today). Every card the municipality has issued, revoked ones included, newest first by issued_at. status filters by the stored status, or by expired (active and past its date) or expiring (active and due within 30 days); active means active and not yet past its date. q (2+ characters) matches every word against the holder's account name, accents folded, or the card number; a closed account's name is neither shown (holder.name is null) nor matched. barangay_id is the holder's account barangay. meta.counts gives each status under the same q and barangay_id, never narrowed by status, for the console's lifecycle strip: active, suspended, revoked, expired and expiring_30d (a subset of active). No photo, QR or token is listed; the card itself is GET /api/v1/admin/users/{id}/digital-id. Not audited, like the other administrator lists.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["active", "suspended", "revoked", "expired", "expiring"] } },
+          { "name": "q", "in": "query", "schema": { "type": "string", "minLength": 2, "maxLength": 100 } },
+          { "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "A page of cards, and the counts of each status.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DigitalIdListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without digital-id.manage.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A query value or the cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/sectors": {
+      "get": {
+        "operationId": "listOwnSectors",
+        "summary": "The signed-in resident's own sectors",
+        "description": "Verified residents only (registered is 403). The account's own current memberships of senior-citizen, pwd and solo-parent, read from the registry record the office linked to the account when it first decided one of its applications; none before that. No other sector is selected, so none can be sent: never vawc-survivor, cicl, four-ps (means-tested), the office's own assessments, an income, or anybody else's sectors, a household member's included (mobile D-205). A bare list.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The account’s own sectors, possibly none.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/sector-applications": {
+      "get": {
+        "operationId": "listOwnSectorApplications",
+        "summary": "The signed-in resident's sector applications",
+        "description": "Verified residents only. Newest first, the latest 100, a bare list. reason is the office's reason when it returned the application, and null otherwise; who decided is not said.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The account’s applications.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorApplicationListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "post": {
+        "operationId": "applyForSector",
+        "summary": "Ask the office to record a sector",
+        "description": "Verified residents only. sector is senior-citizen, pwd or solo-parent. proof_media_ids are one to four images the resident uploaded through POST /api/v1/media (a photo of the Senior Citizen ID, PWD ID or Solo Parent ID). Nothing is recorded: a person at the office reads the proof and approves or returns it. One waiting application per sector (409), and none for a sector the office already records for the account (409). Audit sector_application.submitted.",
+        "security": [{ "firebaseIdToken": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationBody" } } } },
+        "responses": {
+          "201": { "description": "Filed and waiting.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorApplicationEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "An application for this sector is waiting, or the sector is already recorded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "Another sector, no proof, more than four, or a proof that is not an image this resident uploaded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/api/v1/office/residents": {
       "get": {
         "operationId": "listOfficeResidents",
@@ -546,6 +647,7 @@
           { "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
           { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" } },
           { "name": "age_group", "in": "query", "description": "child 0-17, youth 18-30, adult 31-59, senior 60+, in whole years on today's date in Asia/Manila.", "schema": { "type": "string", "enum": ["child", "youth", "adult", "senior"] } },
+          { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } },
           { "name": "include_inactive", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" } },
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
           { "name": "cursor", "in": "query", "schema": { "type": "string" } }
@@ -569,6 +671,27 @@
           "201": { "description": "Recorded; the record as this writer may see it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfficeResidentEnvelope" } } } },
           "403": { "description": "Without the key; an assigned-cases account (cases are not served, so its residents cannot be told apart); a barangay outside the account's own; identity or means without resident.view-sensitive.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "A field is not valid, or the barangay does not exist.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/residents/summary": {
+      "get": {
+        "operationId": "getOfficeResidentSummary",
+        "summary": "The resident registry in figures",
+        "description": "Needs resident.view, under the registry list's own scope: an assigned-cases account is 403, an own-barangay account sees its barangay only (another barangay_id is 403), and a protected sector filter needs request.view-sensitive. Active records under the filter. residents: the total now and the total as the period began, taken before anything is withheld (DL-105). registered: records created this period (to date) and in the whole previous period, each a figure that is withheld below the small-cell threshold. by_barangay, by_sector and by_age_sex are series of people that always go through suppression: a count from 1 to threshold-1 is value null with withheld small-cell, never a zero, never dropped; zero is shown; a series' total is taken before. A protected sector (vawc-survivor, cicl) is never counted for a reader without request.view-sensitive: its row is value null with withheld protected-sector. Sectors overlap. Ages are whole years on today's date (the previous total: on the day before the period began); the barangay is the one recorded now. records_to_tidy: missing-contact (a count of records, not suppressed, protected records left out for an uncleared reader) and, for beneficiary.review-duplicates only, possible-duplicates — one count across the whole registry, null before any detection pass (DL-103). Not audited: it names nobody.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" } },
+          { "name": "age_group", "in": "query", "description": "child 0-17, youth 18-30, adult 31-59, senior 60+, in whole years on today's date in Asia/Manila.", "schema": { "type": "string", "enum": ["child", "youth", "adult", "senior"] } },
+          { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } },
+          { "name": "period", "in": "query", "description": "The calendar period (Asia/Manila) that holds today, counted to date; the previous one is whole.", "schema": { "type": "string", "enum": ["month", "quarter", "year"], "default": "month" } }
+        ],
+        "responses": {
+          "200": { "description": "The figures, already suppressed for this reader.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfficeResidentSummaryEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without resident.view; an assigned-cases account; another barangay for an own-barangay account; a protected sector without request.view-sensitive.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A query value is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2050,6 +2173,7 @@
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineWrite" } } } },
         "responses": {
           "201": { "description": "Created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineEnvelope" } } } },
+          "409": { "description": "An active command-center hotline already exists.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "Validation failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
@@ -2063,7 +2187,8 @@
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlinePatch" } } } },
         "responses": {
           "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineEnvelope" } } } },
-          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The change would make a second active command-center hotline.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       },
       "delete": {
@@ -16373,6 +16498,197 @@
       }
     },
     "schemas": {
+      "OwnSector": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sector", "since", "id_number", "valid_until"],
+        "properties": {
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "since": { "type": "string", "format": "date", "description": "When the office last recorded it, Asia/Manila." },
+          "id_number": { "type": ["string", "null"], "description": "Masked, ••••1234: the office holds the last four characters only (DL-183)." },
+          "valid_until": { "type": ["string", "null"], "format": "date" }
+        }
+      },
+      "OwnSectorListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/OwnSector" } }, "meta": { "type": "object" } }
+      },
+      "OwnSectorApplication": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sector", "status", "reason", "submitted_at", "decided_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "status": { "type": "string", "enum": ["pending", "approved", "returned"] },
+          "reason": { "type": ["string", "null"], "description": "The office's reason, when it returned the application." },
+          "submitted_at": { "type": "string", "format": "date-time" },
+          "decided_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "OwnSectorApplicationEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "$ref": "#/components/schemas/OwnSectorApplication" }, "meta": { "type": "object" } }
+      },
+      "OwnSectorApplicationListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/OwnSectorApplication" } }, "meta": { "type": "object" } }
+      },
+      "SectorApplicationBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sector", "proof_media_ids"],
+        "properties": {
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "proof_media_ids": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "format": "uuid" } }
+        }
+      },
+      "OfficeResidentSectorDetail": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sector", "since", "id_number", "issued_on", "valid_until", "social_pension", "disability_type", "details_withheld"],
+        "description": "One current sector and what the office saw on its card (migration 0056). The card's number, dates, pension and disability are the identity tier's: without resident.view-sensitive they are null and details_withheld is true. A protected sector is not listed for a reader its sectors are withheld from.",
+        "properties": {
+          "sector": { "$ref": "#/components/schemas/VulnerabilitySector" },
+          "since": { "type": "string", "format": "date", "description": "The day the membership was last recorded, Asia/Manila." },
+          "id_number": { "type": ["string", "null"], "description": "Masked, ••••1234: only the last four characters are held (DL-183)." },
+          "issued_on": { "type": ["string", "null"], "format": "date" },
+          "valid_until": { "type": ["string", "null"], "format": "date" },
+          "social_pension": { "type": ["boolean", "null"], "description": "Senior citizens only." },
+          "disability_type": { "type": ["string", "null"], "description": "PWD only." },
+          "details_withheld": { "type": "boolean" }
+        }
+      },
+      "OfficeResidentSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["as_of", "period", "applied_filter", "residents", "registered", "by_barangay", "by_sector", "by_age_sex", "records_to_tidy", "disclosure"],
+        "properties": {
+          "as_of": { "type": "string", "format": "date-time" },
+          "period": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "from", "to", "previous_from", "previous_to"],
+            "properties": {
+              "kind": { "type": "string", "enum": ["month", "quarter", "year"] },
+              "from": { "type": "string", "format": "date" },
+              "to": { "type": "string", "format": "date", "description": "Today: the current period is counted to date." },
+              "previous_from": { "type": "string", "format": "date" },
+              "previous_to": { "type": "string", "format": "date" }
+            }
+          },
+          "applied_filter": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["barangay_id", "sector", "age_group", "sex"],
+            "properties": {
+              "barangay_id": { "type": ["string", "null"], "format": "uuid" },
+              "sector": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/VulnerabilitySector" }] },
+              "age_group": { "type": ["string", "null"], "enum": ["child", "youth", "adult", "senior", null] },
+              "sex": { "type": ["string", "null"], "enum": ["female", "male", null] }
+            }
+          },
+          "residents": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["current", "previous"],
+            "description": "Totals, taken before anything is withheld (DL-105): now, and as the period began.",
+            "properties": { "current": { "type": "integer", "minimum": 0 }, "previous": { "type": "integer", "minimum": 0 } }
+          },
+          "registered": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["current", "previous"],
+            "description": "Records created this period to date, and in the whole previous period.",
+            "properties": { "current": { "type": "object", "additionalProperties": false, "required": ["value", "withheld"], "properties": { "value": { "type": ["integer", "null"], "minimum": 0, "description": "Null exactly when withheld; never 0 for a withheld figure." }, "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] } } }, "previous": { "type": "object", "additionalProperties": false, "required": ["value", "withheld"], "properties": { "value": { "type": ["integer", "null"], "minimum": 0, "description": "Null exactly when withheld; never 0 for a withheld figure." }, "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] } } } }
+          },
+          "by_barangay": { "$ref": "#/components/schemas/OfficeReportSeries" },
+          "by_sector": { "$ref": "#/components/schemas/OfficeReportSeries" },
+          "by_age_sex": { "$ref": "#/components/schemas/OfficeReportSeries", "description": "Row keys are <age_group>.<sex>, as given: child, youth, adult, senior, each female then male." },
+          "records_to_tidy": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["key", "count", "basis"],
+              "properties": {
+                "key": { "type": "string", "enum": ["missing-contact", "possible-duplicates"] },
+                "count": { "type": ["integer", "null"], "minimum": 0, "description": "possible-duplicates is null before any detection pass: not the same as none." },
+                "basis": { "type": "string" },
+                "last_run_at": { "type": ["string", "null"], "format": "date-time" }
+              }
+            }
+          },
+          "disclosure": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["threshold", "provenance", "basis"],
+            "properties": { "threshold": { "type": "integer" }, "provenance": { "type": "string" }, "basis": { "type": "string" } }
+          }
+        }
+      },
+      "OfficeResidentSummaryEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "$ref": "#/components/schemas/OfficeResidentSummary" }, "meta": { "type": "object" } }
+      },
+      "DigitalIdListItem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "id_number", "status", "expired", "issued_at", "expires_at", "holder"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "id_number": { "type": "string", "description": "The municipal card number (TY-YYYY-NNNNNNNN). Not a national government identifier." },
+          "status": { "type": "string", "enum": ["active", "suspended", "revoked"], "description": "As stored." },
+          "expired": { "type": "boolean", "description": "True when the card is active and its expires_at has passed: it cannot be presented, and is renewed rather than suspended." },
+          "issued_at": { "type": "string", "format": "date-time" },
+          "expires_at": { "type": "string", "format": "date-time" },
+          "holder": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "barangay"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid", "description": "The holder's user id." },
+              "name": { "type": ["string", "null"], "description": "The account's name; null once the account is closed or when none was given." },
+              "barangay": {
+                "oneOf": [
+                  { "type": "null" },
+                  { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" } } }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "DigitalIdListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/DigitalIdListItem" } },
+          "meta": {
+            "type": "object",
+            "required": ["pagination", "counts"],
+            "properties": {
+              "pagination": { "$ref": "#/components/schemas/Pagination" },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["active", "suspended", "revoked", "expired", "expiring_30d"],
+                "properties": {
+                  "active": { "type": "integer", "minimum": 0, "description": "Active and not past its date." },
+                  "suspended": { "type": "integer", "minimum": 0 },
+                  "revoked": { "type": "integer", "minimum": 0, "description": "Every revoked card, a reissued card's predecessor included." },
+                  "expired": { "type": "integer", "minimum": 0, "description": "Active and past its date." },
+                  "expiring_30d": { "type": "integer", "minimum": 0, "description": "Active and due within 30 days; counted within active." }
+                }
+              }
+            }
+          }
+        }
+      },
       "Role": {
         "type": "string",
         "enum": ["guest", "registered", "verified", "staff", "admin"]
@@ -16396,7 +16712,7 @@
               "code": {
                 "type": "string",
                 "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked.",
-                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "NOT_FOUND", "CONFLICT", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
+                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "BIOMETRIC_CONSENT_REQUIRED", "NOT_FOUND", "CONFLICT", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
               },
               "message": { "type": "string" },
               "details": {
@@ -16487,6 +16803,7 @@
           "verification_status": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] },
           "verification_decided_at": { "type": ["string", "null"], "format": "date-time", "description": "When the current tier became verified or rejected. Null for unverified and pending." },
           "rejection_reason": { "type": ["string", "null"], "description": "Notes from the latest rejection. Null unless verification_status is rejected." },
+          "verification_method": { "type": ["string", "null"], "enum": ["selfie", "in-person", null], "description": "How a verified account was verified, whichever came last: an approved selfie request, or an in-person check at the office. Null unless verification_status is verified, and for an account made verified by a role change." },
           "role": { "type": "string", "enum": ["registered", "verified", "staff", "admin"] },
           "office_id": { "type": ["string", "null"], "format": "uuid" },
           "office_role": {
@@ -16727,18 +17044,60 @@
       },
       "PrivacyConsent": {
         "type": "object",
-        "required": ["id", "version", "accepted_at", "withdrawn_at"],
+        "required": ["id", "kind", "version", "accepted_at", "withdrawn_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
+          "kind": { "$ref": "#/components/schemas/RecordedConsentKind" },
           "version": { "type": "string" },
           "accepted_at": { "type": "string", "format": "date-time" },
           "withdrawn_at": { "type": ["string", "null"], "format": "date-time" }
         }
       },
+      "ConsentKind": {
+        "type": "string",
+        "enum": ["terms", "privacy", "biometric"],
+        "description": "The text a consent is given to, each its own act: terms (the Terms of Use, a contract the resident accepts), privacy (the privacy notice the resident acknowledges) or biometric (the consent to use a selfie to check the resident is the person on their ID; the only consent a resident may refuse and still use the app)."
+      },
+      "RecordedConsentKind": {
+        "type": "string",
+        "enum": ["terms", "privacy", "biometric", "unspecified"],
+        "description": "A ConsentKind, or unspecified: a row recorded before kinds existed, or sent by an app that names none. Those apps asked for the Terms and the privacy notice under one tick, so an unspecified row counts as neither."
+      },
       "ConsentRequest": {
         "type": "object",
         "required": ["version"],
-        "properties": { "version": { "type": "string" } }
+        "additionalProperties": false,
+        "properties": {
+          "version": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "kind": { "$ref": "#/components/schemas/ConsentKind" }
+        }
+      },
+      "ConsentStanding": {
+        "type": "object",
+        "required": ["published_version", "consent", "up_to_date"],
+        "properties": {
+          "published_version": { "type": ["string", "null"], "description": "The version residents are asked to accept now (terms_version or privacy_version in GET /api/v1/app/config); null when none is published." },
+          "consent": { "oneOf": [{ "$ref": "#/components/schemas/PrivacyConsent" }, { "type": "null" }], "description": "The newest consent of this kind still standing (not withdrawn), whatever its version." },
+          "up_to_date": { "type": "boolean", "description": "True only when a version is published and the standing consent names it." }
+        }
+      },
+      "ConsentState": {
+        "type": "object",
+        "required": ["terms", "privacy", "biometric", "unspecified"],
+        "properties": {
+          "terms": { "$ref": "#/components/schemas/ConsentStanding" },
+          "privacy": { "$ref": "#/components/schemas/ConsentStanding" },
+          "biometric": { "allOf": [{ "$ref": "#/components/schemas/ConsentStanding" }], "description": "published_version is null while the biometric text is a placeholder. up_to_date is exactly the condition under which the verification routes accept a selfie." },
+          "unspecified": { "type": "array", "items": { "$ref": "#/components/schemas/PrivacyConsent" }, "description": "Standing rows an older app recorded without naming the text. They make neither terms nor privacy up to date." }
+        }
+      },
+      "ConsentStateEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/ConsentState" },
+          "meta": { "type": "object" }
+        }
       },
       "ConsentEnvelope": {
         "type": "object",
@@ -16809,7 +17168,8 @@
           "id_type": { "type": "string", "enum": ["philid", "drivers_license", "passport", "umid", "postal", "voters", "sss", "other"] },
           "id_front": { "type": "string", "format": "binary" },
           "id_back": { "type": "string", "format": "binary" },
-          "selfie": { "type": "string", "format": "binary" }
+          "selfie": { "type": "string", "format": "binary" },
+          "idempotency_key": { "type": "string", "format": "uuid", "description": "Optional. Minted in the app when the resident presses send and held across retries. A retry under the same key with the same id_type and the same image bytes answers 201 with the request the first send opened, storing nothing; the same key with another id_type or other images is 409. A refused send claims no key. Keys are kept, not expired. Without it the send works as before, unprotected." }
         }
       },
       "VerificationCorrection": {
@@ -16828,7 +17188,7 @@
       "VerificationRequest": {
         "type": "object",
         "description": "Citizen view. Reviewer notes are not included.",
-        "required": ["id", "user_id", "id_type", "id_front_media_id", "selfie_media_id", "status", "message", "submitted_at", "can_edit", "submitted_categories", "issues", "created_at"],
+        "required": ["id", "user_id", "id_type", "id_front_media_id", "selfie_media_id", "selfie_erased_at", "status", "message", "submitted_at", "can_edit", "submitted_categories", "issues", "created_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "user_id": { "type": "string", "format": "uuid" },
@@ -16836,11 +17196,12 @@
           "id_front_media_id": { "type": "string", "format": "uuid" },
           "id_back_media_id": { "type": ["string", "null"], "format": "uuid" },
           "selfie_media_id": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+          "selfie_erased_at": { "type": ["string", "null"], "format": "date-time", "description": "When the selfie was erased because the resident withdrew the biometric consent. The media id then reads 404; a pending request cannot be approved until a new selfie is sent." },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected", "superseded"], "description": "superseded: closed without a decision because the office verified the account in person. Final." },
           "reviewer_id": { "type": ["string", "null"], "format": "uuid" },
           "message": { "type": ["string", "null"], "description": "Text the resident sent with a correction. Null until then." },
           "submitted_at": { "type": "string", "format": "date-time" },
-          "can_edit": { "type": "boolean", "description": "True while the request is pending or rejected." },
+          "can_edit": { "type": "boolean", "description": "True while the request is pending or rejected. Edits are still refused once the account is verified." },
           "submitted_categories": { "type": "array", "items": { "type": "string" } },
           "issues": { "type": "array", "items": { "$ref": "#/components/schemas/VerificationIssue" }, "description": "Citizen-facing problems. Empty unless status is rejected." },
           "created_at": { "type": "string", "format": "date-time" },
@@ -17007,6 +17368,42 @@
           "id_checked": { "type": "boolean", "const": true, "description": "The person correcting it has seen a government ID that shows the new name." }
         }
       },
+      "InPersonVerificationInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["idempotency_key", "id_type", "id_last_four", "confirmed_name", "id_shows_name"],
+        "properties": {
+          "idempotency_key": { "type": "string", "format": "uuid", "description": "Minted when the reviewer presses the button; the same on every retry." },
+          "id_type": { "type": "string", "enum": ["philid", "drivers_license", "passport", "umid", "postal", "voters", "sss", "other"] },
+          "id_last_four": { "type": "string", "pattern": "^[A-Za-z0-9]{1,4}$", "description": "The last four characters of the ID's number, nothing more. Stored upper-cased." },
+          "confirmed_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The account's name as the screen showed it." },
+          "id_shows_name": { "type": "boolean", "const": true, "description": "The reviewer has seen that the ID shows the name (corrected_name when given)." },
+          "corrected_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The name as the ID shows it, when it differs from the account's." }
+        }
+      },
+      "InPersonVerification": {
+        "type": "object",
+        "required": ["id", "user_id", "method", "id_type", "id_last_four", "name_corrected", "superseded_request_id", "verified_by", "verified_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "user_id": { "type": "string", "format": "uuid" },
+          "method": { "type": "string", "const": "in-person" },
+          "id_type": { "type": "string", "enum": ["philid", "drivers_license", "passport", "umid", "postal", "voters", "sss", "other"] },
+          "id_last_four": { "type": ["string", "null"], "description": "Null once the account is closed." },
+          "name_corrected": { "type": "boolean" },
+          "superseded_request_id": { "type": ["string", "null"], "format": "uuid", "description": "The pending selfie request this closed, if there was one." },
+          "verified_by": { "type": "string", "format": "uuid" },
+          "verified_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "InPersonVerificationEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/InPersonVerification" },
+          "meta": { "type": "object" }
+        }
+      },
       "OfficeRoleChange": {
         "type": "object",
         "additionalProperties": false,
@@ -17025,7 +17422,7 @@
       "OfficeResident": {
         "type": "object",
         "description": "A resident of the office's registry, as this reader may see it. Redacted here, not by the client: without resident.view-sensitive, philsys_last_four and monthly_income_centavos are null; on a protected record (is_protected) without request.view-sensitive, the protected sectors, contact, purok and street are null, middle_name and suffix are null, and first_name is the initial only (given_name_masked). withheld names what was held back that is recorded, so a client can say so rather than show a blank that reads as not recorded.",
-        "required": ["id", "first_name", "middle_name", "last_name", "suffix", "sex", "birth_date", "civil_status", "barangay_id", "purok_or_sitio", "street_address", "mobile", "email", "sectors", "philsys_last_four", "monthly_income_centavos", "is_active", "is_protected", "given_name_masked", "withheld", "created_at", "created_by", "updated_at", "updated_by"],
+        "required": ["id", "first_name", "middle_name", "last_name", "suffix", "sex", "birth_date", "civil_status", "barangay_id", "purok_or_sitio", "street_address", "mobile", "email", "sectors", "sector_details", "philsys_last_four", "monthly_income_centavos", "is_active", "is_protected", "given_name_masked", "withheld", "created_at", "created_by", "updated_at", "updated_by"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "first_name": { "type": "string", "description": "The initial only when given_name_masked." },
@@ -17041,6 +17438,7 @@
           "mobile": { "type": ["string", "null"] },
           "email": { "type": ["string", "null"] },
           "sectors": { "type": "array", "items": { "$ref": "#/components/schemas/VulnerabilitySector" }, "description": "Current memberships the reader may see." },
+          "sector_details": { "type": "array", "items": { "$ref": "#/components/schemas/OfficeResidentSectorDetail" }, "description": "One per sector listed in sectors, in the same order." },
           "philsys_last_four": { "type": ["string", "null"], "pattern": "^[0-9]{4}$", "description": "The last four digits of a PhilSys number (RA 11055). The full number is never held." },
           "monthly_income_centavos": { "type": ["integer", "null"], "minimum": 0, "description": "Integer centavos." },
           "is_active": { "type": "boolean" },
@@ -17121,7 +17519,12 @@
         "required": ["sector", "reason"],
         "properties": {
           "sector": { "$ref": "#/components/schemas/VulnerabilitySector" },
-          "reason": { "type": "string", "minLength": 1, "maxLength": 500, "description": "What was checked. Kept in the sector's history." }
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500, "description": "What was checked. Kept in the sector's history." },
+          "id_number": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "^[A-Za-z0-9 /-]+$", "description": "The card's number as read off it. Only its last four characters, spaces, hyphens and slashes removed, are kept (DL-183). Needs resident.view-sensitive, like every detail here." },
+          "issued_on": { "type": "string", "format": "date" },
+          "valid_until": { "type": "string", "format": "date", "description": "Not before issued_on." },
+          "social_pension": { "type": "boolean", "description": "senior-citizen only (RA 9994)." },
+          "disability_type": { "type": "string", "minLength": 1, "maxLength": 80, "description": "pwd only." }
         }
       },
       "ReasonBody": {
@@ -18222,14 +18625,20 @@
           "meta": { "type": "object" }
         }
       },
+      "HotlineKind": {
+        "type": "string",
+        "enum": ["command-center", "emergency", "police", "fire", "medical", "disaster", "other"],
+        "description": "What the line is for, so a client picks a line without matching on its name. command-center: the municipality's own command or operations center, the line an emergency button calls first; at most one active hotline is it. emergency: the national Emergency 911 hotline (EO 56, s. 2018). police (PNP), fire (BFP), medical (ambulance, health office, Red Cross), disaster (MDRRMO, rescue), other (anything else, and every row that existed before kinds)."
+      },
       "Hotline": {
         "type": "object",
-        "required": ["id", "name", "number", "category", "sort_order", "active", "created_at", "updated_at"],
+        "required": ["id", "name", "number", "category", "kind", "sort_order", "active", "created_at", "updated_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "name": { "type": "string" },
           "number": { "type": "string" },
           "category": { "type": "string" },
+          "kind": { "$ref": "#/components/schemas/HotlineKind" },
           "sort_order": { "type": "integer" },
           "active": { "type": "boolean" },
           "created_at": { "type": "string", "format": "date-time" },
@@ -18243,6 +18652,7 @@
           "name": { "type": "string" },
           "number": { "type": "string" },
           "category": { "type": "string" },
+          "kind": { "allOf": [{ "$ref": "#/components/schemas/HotlineKind" }], "description": "Optional; other when left out." },
           "sort_order": { "type": "integer" },
           "active": { "type": "boolean" }
         }
@@ -18253,6 +18663,7 @@
           "name": { "type": "string" },
           "number": { "type": "string" },
           "category": { "type": "string" },
+          "kind": { "$ref": "#/components/schemas/HotlineKind" },
           "sort_order": { "type": "integer" },
           "active": { "type": "boolean" }
         }
@@ -18272,7 +18683,7 @@
       },
       "AppConfig": {
         "type": "object",
-        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "verification_review_working_days", "feature_flags", "privacy_notice", "terms", "updated_at"],
+        "required": ["contact_line", "support_email", "privacy_version", "terms_version", "minimum_app_version", "verification_review_working_days", "feature_flags", "privacy_notice", "terms", "biometric_consent_version", "biometric_consent", "updated_at"],
         "properties": {
           "contact_line": { "type": ["string", "null"] },
           "support_email": { "type": ["string", "null"] },
@@ -18286,6 +18697,8 @@
           "feature_flags": { "type": "object", "additionalProperties": { "type": "string" } },
           "privacy_notice": { "$ref": "#/components/schemas/PrivacyNotice" },
           "terms": { "$ref": "#/components/schemas/TermsOfUse" },
+          "biometric_consent_version": { "type": ["string", "null"], "description": "The biometric consent version a resident can agree to now. Null while the text is the placeholder: no consent can be given and no selfie is accepted." },
+          "biometric_consent": { "$ref": "#/components/schemas/BiometricConsentText" },
           "updated_at": { "type": "string", "format": "date-time" }
         }
       },
@@ -18307,6 +18720,25 @@
           "version": { "type": "string" },
           "updated_at": { "type": "string", "format": "date-time" },
           "body_markdown": { "type": "string" }
+        }
+      },
+      "BiometricConsentText": {
+        "type": "object",
+        "description": "The consent a resident gives before the app may send a selfie, the same shape as the Terms. Until an administrator publishes the approved text, version is 'placeholder' and the body says it is a placeholder.",
+        "required": ["version", "updated_at", "body_markdown"],
+        "properties": {
+          "version": { "type": "string" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "body_markdown": { "type": "string" }
+        }
+      },
+      "BiometricConsentWrite": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["version", "body_markdown"],
+        "properties": {
+          "version": { "type": "string", "minLength": 1, "maxLength": 32, "description": "Not 'placeholder', in any case. A new version means every resident agrees again before their next selfie; selfies already stored are kept." },
+          "body_markdown": { "type": "string", "minLength": 1, "maxLength": 20000 }
         }
       },
       "TermsOfUseWrite": {
@@ -18341,6 +18773,7 @@
           "terms_version": { "type": ["string", "null"] },
           "privacy_notice": { "$ref": "#/components/schemas/PrivacyNoticeWrite" },
           "terms": { "$ref": "#/components/schemas/TermsOfUseWrite" },
+          "biometric_consent": { "$ref": "#/components/schemas/BiometricConsentWrite" },
           "minimum_app_version": { "type": ["string", "null"] },
           "verification_review_working_days": {
             "oneOf": [{ "$ref": "#/components/schemas/VerificationReviewWorkingDays" }, { "type": "null" }],

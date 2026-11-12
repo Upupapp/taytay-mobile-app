@@ -14,8 +14,10 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
+import 'package:taytay_resident/shared/widgets/consent_check_card.dart';
 import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
+import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
 import 'package:taytay_resident/shared/widgets/wave_header.dart';
 
 import '../core/consent_gate_test.dart' show FakeConfig, FakeConsents;
@@ -161,6 +163,23 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+/// Ticks every text the screen asks for that is not ticked yet, then presses
+/// "I agree". Each text is its own act (D-208).
+Future<void> _agree(WidgetTester tester) async {
+  for (final String key in <String>[
+    'consent-tick-terms',
+    'consent-tick-privacy',
+  ]) {
+    final Finder tick = find.byKey(Key(key));
+    if (tick.evaluate().isEmpty) continue;
+    if (tester.widget<ConsentCheckCard>(tick).value) continue;
+    await tester.ensureVisible(tick);
+    await _tap(tester, tick);
+  }
+  await tester.ensureVisible(find.byKey(const Key('consent-agree')));
+  await _tap(tester, find.byKey(const Key('consent-agree')));
+}
+
 FakeConsents _acceptedBefore() =>
     FakeConsents(accepted: <String>['terms-2', 'privacy-2']);
 
@@ -214,7 +233,7 @@ void main() {
       final FakeConsents consents = _acceptedBefore();
       await _boot(tester, consents: consents);
 
-      await _tap(tester, find.byKey(const Key('consent-agree')));
+      await _agree(tester);
 
       expect(consents.posted, <String>['terms-3']);
       expect(_path(tester), AppRoute.home.path);
@@ -242,8 +261,62 @@ void main() {
       expect(find.text('The Terms of Use were updated.'), findsOneWidget);
       expect(find.text('The Privacy Notice was updated.'), findsOneWidget);
 
-      await _tap(tester, find.byKey(const Key('consent-agree')));
-      expect(consents.posted, <String>['2026-11']);
+      await _agree(tester);
+      // One version string, two texts: two acts, each with its kind.
+      expect(consents.posted, <String>['2026-11', '2026-11']);
+      expect(consents.postedKinds, <ConsentKind>[
+        ConsentKind.privacy,
+        ConsentKind.terms,
+      ]);
+    });
+
+    testWidgets('each owed text is its own unticked act (D-208)', (
+      tester,
+    ) async {
+      final FakeConsents consents = _acceptedBefore();
+      await _boot(
+        tester,
+        consents: consents,
+        current: _current(terms: 'terms-3', privacy: 'privacy-3'),
+      );
+      final Finder terms = find.byKey(const Key('consent-tick-terms'));
+      final Finder privacy = find.byKey(const Key('consent-tick-privacy'));
+      expect(tester.widget<ConsentCheckCard>(terms).value, isFalse);
+      expect(tester.widget<ConsentCheckCard>(privacy).value, isFalse);
+      expect(find.text(termsConsentLabel), findsOneWidget);
+      expect(find.text(privacyConsentLabel), findsOneWidget);
+      PrimaryButton agree() =>
+          tester.widget<PrimaryButton>(find.byKey(const Key('consent-agree')));
+      expect(agree().onPressed, isNull);
+
+      await tester.ensureVisible(terms);
+      await _tap(tester, terms);
+      // One tick is not agreement to both.
+      expect(agree().onPressed, isNull);
+      await tester.ensureVisible(privacy);
+      await _tap(tester, privacy);
+      expect(agree().onPressed, isNotNull);
+      expect(consents.posted, isEmpty);
+    });
+
+    testWidgets('a resident with only the older single tick is asked again', (
+      tester,
+    ) async {
+      final FakeConsents consents = FakeConsents(
+        combined: <String>['terms-3', 'privacy-2'],
+      );
+      await _boot(tester, consents: consents);
+      expect(_path(tester), AppRoute.consentUpdate.path);
+      expect(
+        find.text('The Terms of Use and the Privacy Notice have changed'),
+        findsOneWidget,
+      );
+      await _agree(tester);
+      expect(consents.postedKinds, <ConsentKind>[
+        ConsentKind.privacy,
+        ConsentKind.terms,
+      ]);
+      expect(_path(tester), AppRoute.home.path);
     });
 
     testWidgets('a text not written yet still opens, and says so', (
@@ -276,7 +349,7 @@ void main() {
       consents.acceptAnswers.add(const Err<ConsentRecord>(TimeoutFailure()));
       await _boot(tester, consents: consents);
 
-      await _tap(tester, find.byKey(const Key('consent-agree')));
+      await _agree(tester);
 
       expect(_path(tester), AppRoute.consentUpdate.path);
       expect(
@@ -304,7 +377,7 @@ void main() {
       );
       await _boot(tester, consents: consents);
 
-      await _tap(tester, find.byKey(const Key('consent-agree')));
+      await _agree(tester);
       expect(
         find.textContaining('Your agreement was not recorded.'),
         findsOneWidget,
@@ -312,7 +385,7 @@ void main() {
       expect(find.byKey(const Key('consent-continue')), findsOneWidget);
 
       // Agreeing again goes through.
-      await _tap(tester, find.byKey(const Key('consent-agree')));
+      await _agree(tester);
       expect(_path(tester), AppRoute.home.path);
     });
 

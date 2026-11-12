@@ -76,12 +76,26 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
         : Ok<List<ConsentRecord>>(value);
   }
 
+  /// What `GET /me/consents/current` answers.
+  Result<ConsentState> state = const Ok<ConsentState>(ConsentState());
+
+  /// The kind each withdrawal named, in order.
+  final List<ConsentKind> withdrawnKinds = <ConsentKind>[];
+
+  /// The kind each acceptance named, in order.
+  final List<ConsentKind> acceptedKinds = <ConsentKind>[];
+
+  @override
+  Future<Result<ConsentState>> loadConsentState() async => state;
+
   @override
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
+    required ConsentKind kind,
   }) async {
     withdrawn.add(key);
+    withdrawnKinds.add(kind);
     withdrawKeys.add(idempotencyKey);
     if (withdrawFails) {
       return Err<ConsentRecord>(withdrawFailure);
@@ -92,8 +106,12 @@ class ScriptedAccountControlsRepository implements AccountControlsRepository {
   }
 
   @override
-  Future<Result<ConsentRecord>> acceptConsent({required String version}) async {
+  Future<Result<ConsentRecord>> acceptConsent({
+    required String version,
+    required ConsentKind kind,
+  }) async {
     accepted.add(version);
+    acceptedKinds.add(kind);
     if (acceptFails) return const Err<ConsentRecord>(NetworkFailure());
     final ConsentRecord record = consent(key: version);
     consents = <ConsentRecord>[record];

@@ -16,6 +16,15 @@ const String privacyNoticeNotPublishedYet =
     'The full Privacy Notice will be available soon. Taytay LGU has not '
     'published it in the app yet.';
 
+/// The tick for the Terms of Use. Its own act, never shared with the Privacy
+/// Notice: each is recorded with its own kind and version (D-208).
+const String termsConsentLabel = 'I have read and agree to the Terms of Use.';
+
+/// The tick for the Privacy Notice, which a resident acknowledges.
+const String privacyConsentLabel =
+    'I have read the Privacy Notice and understand how Taytay LGU uses my '
+    'personal data.';
+
 /// Opens the full text of a Terms of Use or Privacy Notice in a centred
 /// dialog (`AppDialog.show`; design rule: popups are centred; the name is
 /// kept for callers).

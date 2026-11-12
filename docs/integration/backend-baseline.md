@@ -40,6 +40,20 @@ time (D-200): `GET /app/config` now always sends `verification_review_working_da
 `{min, max}` (integers, 1 <= min <= max <= 30) or `null`, in the new
 `VerificationReviewWorkingDays` schema. The staff name-correction route of
 `09e1cd0` came with it and is not called. No route this app calls was added.
+It was re-vendored from backend `5209f75` on 12 November 2026 for consents
+recorded by `kind` and `GET /me/consents/current` (`6c82f32`, D-208), the
+selfie's biometric consent and `selfie_erased_at` (`44cae1b`, D-209 to D-212),
+`idempotency_key` on `POST /me/verification-requests` (`0ff7682`, D-213), hotline
+`kind` (`ebd7aeb`, D-214) and in-person verification (`5209f75`: the final
+request status `superseded` and `verification_method` on `GET /me`, D-210). The
+staff and admin routes that came with it (in-person verification, the digital
+ID list, the residents summary) are not called.
+Backend B4 was spliced in from backend `98a4f19` on 12 November 2026 for the
+resident's own sectors (D-215): `GET /me/sectors`, `GET` and
+`POST /me/sector-applications`, and the `OwnSector`, `OwnSectorListEnvelope`,
+`OwnSectorApplication`, `OwnSectorApplicationEnvelope`,
+`OwnSectorApplicationListEnvelope` and `SectorApplicationBody` schemas. The
+rest of that export was not taken in that change.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

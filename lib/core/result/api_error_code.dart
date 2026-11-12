@@ -27,6 +27,11 @@ enum ApiErrorCode {
   /// when that is the reason, and only then.
   verificationRequired('VERIFICATION_REQUIRED'),
 
+  /// 403 — a selfie was sent without a standing consent to the biometric text
+  /// published now (backend `44cae1b`). Nothing was stored. Kept apart so the
+  /// app asks for the consent again rather than saying "not available".
+  biometricConsentRequired('BIOMETRIC_CONSENT_REQUIRED'),
+
   /// 404 — the resource does not exist, **or** the actor may not know it does.
   notFound('NOT_FOUND'),
 

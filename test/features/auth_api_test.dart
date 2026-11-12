@@ -444,7 +444,8 @@ void main() {
       expect(transport.requests.single.path, 'app/config');
     });
 
-    test('consent posts both published versions', () async {
+    test('consent posts both published versions, each with its kind '
+        '(D-208)', () async {
       transport.responses.add(Ok<ApiHttpResponse>(config()));
       transport.responses.add(
         Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
@@ -461,26 +462,37 @@ void main() {
       ]);
       expect(transport.requests[1].body, <String, Object?>{
         'version': '2026-03-privacy',
+        'kind': 'privacy',
       });
       expect(transport.requests[2].body, <String, Object?>{
         'version': '2026-03-terms',
+        'kind': 'terms',
       });
     });
 
-    test('one consent call when the two versions match', () async {
-      transport.responses.add(
-        Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
-      );
-      transport.responses.add(
-        Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
-      );
-      final Result<void> result = await repository.recordConsents();
-      expect(result.isOk, isTrue);
-      expect(
-        transport.requests.where((ApiRequest r) => r.path == 'me/consents'),
-        hasLength(1),
-      );
-    });
+    test(
+      'two consent calls even when the two versions match (D-208)',
+      () async {
+        transport.responses.add(
+          Ok<ApiHttpResponse>(config(terms: '2026-03-privacy')),
+        );
+        transport.responses.add(
+          Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+        );
+        transport.responses.add(
+          Ok<ApiHttpResponse>(okEnvelope(<String, Object?>{'version': 'x'})),
+        );
+        final Result<void> result = await repository.recordConsents();
+        expect(result.isOk, isTrue);
+        final List<ApiRequest> posts = transport.requests
+            .where((ApiRequest r) => r.path == 'me/consents')
+            .toList();
+        expect(posts.map((ApiRequest r) => r.body), <Object?>[
+          <String, Object?>{'version': '2026-03-privacy', 'kind': 'privacy'},
+          <String, Object?>{'version': '2026-03-privacy', 'kind': 'terms'},
+        ]);
+      },
+    );
 
     test('submit posts only the verification request, opened on 201', () async {
       transport.responses.add(Ok<ApiHttpResponse>(created()));

@@ -9,6 +9,7 @@ import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/consent_gate_controller.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
@@ -27,8 +28,13 @@ import '../domain/privacy_notice.dart';
 /// registration uses. A text the LGU has not written yet still opens, and the
 /// sheet says so instead of showing a placeholder as if it were the text.
 ///
+/// **Each text is its own act** (D-208). An owed text has its own unticked
+/// `ConsentCheckCard`, and "I agree" stays off until every one is ticked. A
+/// resident whose only agreement is the older app's single tick for both
+/// texts is asked here again, because the server counts that row as neither.
+///
 /// **Two ways on, and a third only when the server failed.** "I agree" records
-/// the missing versions; "Sign out" returns to guest browsing. When recording
+/// each missing text with its kind; "Sign out" returns to guest browsing. When recording
 /// fails the screen says so plainly — never that it was recorded — and offers
 /// to continue without it, because a request that cannot get through must not
 /// keep a resident out of their own account.
@@ -67,7 +73,7 @@ class ConsentUpdateScreen extends StatelessWidget {
   }
 }
 
-class _ConsentUpdateBody extends StatelessWidget {
+class _ConsentUpdateBody extends StatefulWidget {
   const _ConsentUpdateBody({
     required this.review,
     required this.recording,
@@ -84,8 +90,24 @@ class _ConsentUpdateBody extends StatelessWidget {
   final VoidCallback onContinue;
   final VoidCallback onSignOut;
 
+  @override
+  State<_ConsentUpdateBody> createState() => _ConsentUpdateBodyState();
+}
+
+class _ConsentUpdateBodyState extends State<_ConsentUpdateBody> {
+  /// The ticks, unticked to start: a consent is something the resident does.
+  bool _termsTicked = false;
+  bool _privacyTicked = false;
+
+  ConsentReview get review => widget.review;
+  bool get recording => widget.recording;
+  AppFailure? get failure => widget.failure;
+
   bool get _terms => review.missing.contains(ConsentText.termsOfUse);
   bool get _privacy => review.missing.contains(ConsentText.privacyNotice);
+
+  bool get _allTicked =>
+      (!_terms || _termsTicked) && (!_privacy || _privacyTicked);
 
   String get _title => switch ((_terms, _privacy)) {
     (true, true) => 'The Terms of Use and the Privacy Notice have changed',
@@ -119,20 +141,20 @@ class _ConsentUpdateBody extends StatelessWidget {
           PrimaryButton(
             key: const Key('consent-agree'),
             label: recording ? 'Recording your agreement…' : 'I agree',
-            onPressed: recording ? null : onAgree,
+            onPressed: recording || !_allTicked ? null : widget.onAgree,
           ),
           if (failed != null && !recording) ...<Widget>[
             const SizedBox(height: Spacing.sm),
             SecondaryButton(
               key: const Key('consent-continue'),
               label: 'Continue for now',
-              onPressed: onContinue,
+              onPressed: widget.onContinue,
             ),
           ],
           const SizedBox(height: Spacing.xs),
           TextButton(
             key: const Key('consent-sign-out'),
-            onPressed: recording ? null : onSignOut,
+            onPressed: recording ? null : widget.onSignOut,
             style: TextButton.styleFrom(
               foregroundColor: BrandColors.muted,
               minimumSize: const Size(A11y.minTapTarget, A11y.minTapTarget),
@@ -180,8 +202,8 @@ class _ConsentUpdateBody extends StatelessWidget {
                 const SizedBox(height: Spacing.sm),
                 Text(
                   'Please read what changed. To keep using your account, '
-                  'agree to the updated text. If you do not agree, you can '
-                  'sign out and keep using the app as a guest.',
+                  'tick each text below to agree to it. If you do not agree, '
+                  'you can sign out and keep using the app as a guest.',
                   style: AppTypography.bodyStyle.copyWith(
                     color: BrandColors.text,
                   ),
@@ -205,6 +227,28 @@ class _ConsentUpdateBody extends StatelessWidget {
               onPressed: () => _read(context, ConsentText.privacyNotice),
             ),
             const SizedBox(height: Spacing.sm),
+          ],
+          if (_terms) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            ConsentCheckCard(
+              key: const Key('consent-tick-terms'),
+              value: _termsTicked,
+              onChanged: recording
+                  ? null
+                  : (bool value) => setState(() => _termsTicked = value),
+              label: termsConsentLabel,
+            ),
+          ],
+          if (_privacy) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            ConsentCheckCard(
+              key: const Key('consent-tick-privacy'),
+              value: _privacyTicked,
+              onChanged: recording
+                  ? null
+                  : (bool value) => setState(() => _privacyTicked = value),
+              label: privacyConsentLabel,
+            ),
           ],
           if (failed != null) ...<Widget>[
             const SizedBox(height: Spacing.sm),

@@ -28,6 +28,7 @@ class PrivacyApiRepository implements AccountControlsRepository {
 
   static const String consentsPath = 'me/consents';
   static const String withdrawPath = 'me/consents/withdraw';
+  static const String currentPath = 'me/consents/current';
 
   @override
   Future<Result<AccountControls>> loadControls() async {
@@ -55,22 +56,48 @@ class PrivacyApiRepository implements AccountControlsRepository {
     return response.map((envelope) => envelope.data);
   }
 
-  /// `POST me/consents/withdraw`. The body is `{version}`.
+  /// `GET me/consents/current`: the server's verdict on each text.
+  ///
+  /// `up_to_date` is read, never recomputed here: whether a consent stands
+  /// for the version published now is the server's to say (D-208).
+  @override
+  Future<Result<ConsentState>> loadConsentState() async {
+    final response = await _apiClient.send<ConsentState>(
+      method: HttpMethod.get,
+      path: currentPath,
+      authenticated: true,
+      decode: _decodeState,
+    );
+    return response.map((envelope) => envelope.data);
+  }
+
+  /// `POST me/consents/withdraw`. The body is `{version, kind}`.
   ///
   /// Withdrawing again returns the same row. An unknown version is 404.
-  /// `POST me/consents` with that version again clears `withdrawn_at`.
+  /// `POST me/consents` with that version again clears `withdrawn_at`. The
+  /// kind is always sent: without it the server withdraws the Terms, the
+  /// Privacy Notice and every older combined row of that version at once.
   @override
   Future<Result<ConsentRecord>> withdrawConsent({
     required String key,
     required String idempotencyKey,
+    required ConsentKind kind,
   }) async {
+    // An older combined row is history: the write body names one of the three
+    // texts, and a withdrawal with no kind would take the Terms and the
+    // Privacy Notice with it.
+    if (kind == ConsentKind.unspecified) {
+      return const Err<ConsentRecord>(
+        ValidationFailure(debugMessage: 'A withdrawal names its text.'),
+      );
+    }
     final Result<ApiEnvelope<ConsentRecord?>> response = await _apiClient
         .send<ConsentRecord?>(
           method: HttpMethod.post,
           path: withdrawPath,
           authenticated: true,
           idempotencyKey: idempotencyKey,
-          body: <String, Object?>{'version': key},
+          body: <String, Object?>{'version': key, 'kind': kind.wireValue},
           decode: _decodeConsent,
         );
     return switch (response) {
@@ -119,18 +146,29 @@ class PrivacyApiRepository implements AccountControlsRepository {
     return response.map((_) {});
   }
 
-  /// `POST me/consents`. Records the notice version the resident accepted.
+  /// `POST me/consents`. Records the version of the [kind] text the resident
+  /// accepted, as its own act.
   ///
   /// Accepting a version that was withdrawn clears `withdrawn_at`. The
   /// returned row is the record after that, including a null withdrawal.
+  /// [ConsentKind.unspecified] is never sent: it is what an app that names no
+  /// text records, and this one always names it.
   @override
-  Future<Result<ConsentRecord>> acceptConsent({required String version}) async {
+  Future<Result<ConsentRecord>> acceptConsent({
+    required String version,
+    required ConsentKind kind,
+  }) async {
+    if (kind == ConsentKind.unspecified) {
+      return const Err<ConsentRecord>(
+        ValidationFailure(debugMessage: 'A consent names its text.'),
+      );
+    }
     final Result<ApiEnvelope<ConsentRecord?>> response = await _apiClient
         .send<ConsentRecord?>(
           method: HttpMethod.post,
           path: consentsPath,
           authenticated: true,
-          body: <String, Object?>{'version': version},
+          body: <String, Object?>{'version': version, 'kind': kind.wireValue},
           decode: _decodeConsent,
         );
     return switch (response) {
@@ -157,13 +195,13 @@ class PrivacyApiRepository implements AccountControlsRepository {
     );
     final Object? id = entry['id'];
     if (version == null && id is! String) return null;
+    final ConsentKind kind = ConsentKind.parse(entry['kind']);
 
     return ConsentRecord(
       key: version ?? '',
-      label: 'Privacy notice',
-      statement: version == null
-          ? 'Agreed under the privacy notice in force at the time'
-          : 'Agreed under privacy notice $version',
+      kind: kind,
+      label: kind.label,
+      statement: kind.statement(version),
       grantedAt: DateTime.tryParse(
         (entry['granted_at'] ?? entry['accepted_at']) is String
             ? (entry['granted_at'] ?? entry['accepted_at']) as String
@@ -174,7 +212,39 @@ class PrivacyApiRepository implements AccountControlsRepository {
       withdrawnAt: DateTime.tryParse(
         entry['withdrawn_at'] is String ? entry['withdrawn_at'] as String : '',
       )?.toUtc(),
-      isWithdrawable: version != null,
+      // A row an older app recorded for both texts at once is kept as
+      // evidence, never withdrawn or accepted again on its own (D-208).
+      isWithdrawable: version != null && kind != ConsentKind.unspecified,
+    );
+  }
+
+  static ConsentState _decodeState(Object? data) {
+    final map = data is Map<String, dynamic> ? data : const <String, dynamic>{};
+    final Object? older = map['unspecified'];
+    return ConsentState.byKind(
+      <ConsentKind, ConsentStanding>{
+        for (final ConsentKind kind in ConsentKind.values)
+          if (kind != ConsentKind.unspecified)
+            kind: _standing(map[kind.wireValue]),
+      },
+      unspecified: older is List<dynamic>
+          ? older
+                .map(_decodeConsent)
+                .whereType<ConsentRecord>()
+                .toList(growable: false)
+          : const <ConsentRecord>[],
+    );
+  }
+
+  /// One text's standing. Anything but a real `true` is not up to date: a
+  /// missing verdict asks again rather than assuming agreement.
+  static ConsentStanding _standing(Object? raw) {
+    if (raw is! Map<String, dynamic>) return ConsentStanding.none;
+    final ConsentRecord? consent = _decodeConsent(raw['consent']);
+    return ConsentStanding(
+      publishedVersion: _version(raw['published_version']),
+      consent: consent != null && consent.isActive ? consent : null,
+      upToDate: raw['up_to_date'] == true,
     );
   }
 

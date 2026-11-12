@@ -18,6 +18,7 @@ import 'package:taytay_resident/features/auth/presentation/forgot_password_scree
 import 'package:taytay_resident/features/auth/presentation/reset_flow_screens.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/auth/presentation/too_many_attempts_screen.dart';
+import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 
 import '../features/auth_screens_test.dart' show boot;
 import '../features/auth_session_test.dart' show FakeAuthRepository;
@@ -390,12 +391,8 @@ void main() {
       await hold(8);
       await tapText('Confirm email');
 
-      await tapText(
-        'I have read and agree to the Terms of Use and the Privacy Notice.',
-      );
-      await tapText(
-        'I consent to Taytay LGU processing my personal data for account verification.',
-      );
+      await tapText(termsConsentLabel);
+      await tapText(privacyConsentLabel);
       await tapText('Continue');
 
       await tester.tap(find.byKey(const Key('id-front-pick')));

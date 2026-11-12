@@ -80,12 +80,14 @@ void main() {
     final _Recording transport = _Recording(<ApiHttpResponse>[
       _json(200, <String, Object?>{
         'id': 'consent-1',
+        'kind': 'privacy',
         'version': 'notice-2026-01',
         'accepted_at': '2026-01-02T00:00:00.000Z',
         'withdrawn_at': '2026-06-01T00:00:00.000Z',
       }),
       _json(200, <String, Object?>{
         'id': 'consent-1',
+        'kind': 'privacy',
         'version': 'notice-2026-01',
         'accepted_at': '2026-01-02T00:00:00.000Z',
         'withdrawn_at': null,
@@ -98,32 +100,146 @@ void main() {
     final Result<ConsentRecord> withdrawn = await repository.withdrawConsent(
       key: 'notice-2026-01',
       idempotencyKey: 'idem-1',
+      kind: ConsentKind.privacy,
     );
     final ConsentRecord row = withdrawn.valueOrNull!;
     expect(row.key, 'notice-2026-01');
     expect(row.isActive, isFalse);
     expect(row.withdrawnAt, DateTime.utc(2026, 6, 1));
     expect(row.isWithdrawable, isTrue);
-    expect(row.toString(), 'ConsentRecord(notice-2026-01, active: false)');
+    expect(row.kind, ConsentKind.privacy);
+    expect(
+      row.toString(),
+      'ConsentRecord(privacy, notice-2026-01, active: false)',
+    );
     expect(row.toString(), isNot(contains('Agreed')));
 
     final ApiRequest withdraw = transport.requests.single;
     expect(withdraw.method, HttpMethod.post);
     expect(withdraw.path, 'me/consents/withdraw');
-    expect(withdraw.body, <String, Object?>{'version': 'notice-2026-01'});
+    // The kind is always named: without it the server withdraws both texts.
+    expect(withdraw.body, <String, Object?>{
+      'version': 'notice-2026-01',
+      'kind': 'privacy',
+    });
     expect(withdraw.headers['Authorization'], 'Bearer sample-token');
     expect(withdraw.headers['Idempotency-Key'], 'idem-1');
     expect(withdraw.headers.containsKey('X-Role'), isFalse);
 
     final Result<ConsentRecord> accepted = await repository.acceptConsent(
       version: 'notice-2026-01',
+      kind: ConsentKind.privacy,
     );
     expect(accepted.valueOrNull!.isActive, isTrue);
     expect(accepted.valueOrNull!.withdrawnAt, isNull);
     expect(transport.requests.last.path, 'me/consents');
     expect(transport.requests.last.body, <String, Object?>{
       'version': 'notice-2026-01',
+      'kind': 'privacy',
     });
+  });
+
+  test('an older combined row is history: never withdrawn or accepted alone '
+      '(D-208)', () async {
+    final _Recording transport = _Recording(<ApiHttpResponse>[
+      _json(200, <Object?>[
+        <String, Object?>{
+          'id': 'consent-old',
+          'kind': 'unspecified',
+          'version': '2026-10',
+          'accepted_at': '2026-10-02T00:00:00.000Z',
+          'withdrawn_at': null,
+        },
+        <String, Object?>{
+          'id': 'consent-none',
+          'version': '2026-09',
+          'accepted_at': '2026-09-02T00:00:00.000Z',
+          'withdrawn_at': null,
+        },
+      ]),
+    ]);
+    final PrivacyApiRepository repository = PrivacyApiRepository(
+      apiClient: _client(transport),
+    );
+    final List<ConsentRecord> rows =
+        (await repository.listConsents()).valueOrNull!;
+    expect(rows.map((ConsentRecord r) => r.kind), <ConsentKind>[
+      ConsentKind.unspecified,
+      ConsentKind.unspecified,
+    ]);
+    expect(rows.every((ConsentRecord r) => !r.isWithdrawable), isTrue);
+    expect(rows.first.label, contains('earlier agreement'));
+
+    expect(
+      (await repository.withdrawConsent(
+        key: '2026-10',
+        idempotencyKey: 'idem-3',
+        kind: ConsentKind.unspecified,
+      )).failureOrNull,
+      isA<ValidationFailure>(),
+    );
+    expect(
+      (await repository.acceptConsent(
+        version: '2026-10',
+        kind: ConsentKind.unspecified,
+      )).failureOrNull,
+      isA<ValidationFailure>(),
+    );
+    // Neither refusal reached the network.
+    expect(transport.requests, hasLength(1));
+  });
+
+  test('GET me/consents/current is read as the server judged it', () async {
+    final _Recording transport = _Recording(<ApiHttpResponse>[
+      _json(200, <String, Object?>{
+        'terms': <String, Object?>{
+          'published_version': 'terms-3',
+          'consent': <String, Object?>{
+            'id': 'c-t',
+            'kind': 'terms',
+            'version': 'terms-3',
+            'accepted_at': '2026-11-01T00:00:00.000Z',
+            'withdrawn_at': null,
+          },
+          'up_to_date': true,
+        },
+        'privacy': <String, Object?>{
+          'published_version': 'privacy-3',
+          'consent': null,
+          'up_to_date': false,
+        },
+        'biometric': <String, Object?>{
+          'published_version': null,
+          'consent': null,
+          'up_to_date': false,
+        },
+        'unspecified': <Object?>[
+          <String, Object?>{
+            'id': 'c-u',
+            'kind': 'unspecified',
+            'version': 'privacy-3',
+            'accepted_at': '2026-10-01T00:00:00.000Z',
+            'withdrawn_at': null,
+          },
+        ],
+        'future_field': 'ignored',
+      }),
+    ]);
+    final PrivacyApiRepository repository = PrivacyApiRepository(
+      apiClient: _client(transport),
+    );
+    final ConsentState state =
+        (await repository.loadConsentState()).valueOrNull!;
+    expect(transport.requests.single.path, 'me/consents/current');
+    expect(transport.requests.single.method, HttpMethod.get);
+    expect(state.terms.upToDate, isTrue);
+    expect(state.terms.consent?.kind, ConsentKind.terms);
+    expect(state.privacy.upToDate, isFalse);
+    expect(state.privacy.publishedVersion, 'privacy-3');
+    expect(state.biometric.publishedVersion, isNull);
+    expect(state.unspecified.single.kind, ConsentKind.unspecified);
+    // The server's verdict stands even where a combined row names the version.
+    expect(state.of(ConsentKind.privacy).upToDate, isFalse);
   });
 
   test(
@@ -143,6 +259,7 @@ void main() {
       final Result<ConsentRecord> result = await repository.withdrawConsent(
         key: 'missing-version',
         idempotencyKey: 'idem-2',
+        kind: ConsentKind.terms,
       );
       final AppFailure failure = result.failureOrNull!;
       expect(failure, isA<NotFoundFailure>());
