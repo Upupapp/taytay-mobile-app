@@ -131,6 +131,19 @@ MunicipalHotline? activeCommandCenter(Iterable<MunicipalHotline> lines) {
   return null;
 }
 
+/// The line Home's emergency card shows: the active command center when the
+/// office marked one, otherwise the first active line in the server's order,
+/// as before `kind` existed, so the card does not disappear for an office
+/// that has not marked a line (D-214). Never chosen by a name.
+MunicipalHotline? homeEmergencyHotline(Iterable<MunicipalHotline> lines) {
+  final List<MunicipalHotline> active = <MunicipalHotline>[
+    for (final MunicipalHotline line in lines)
+      if (line.active) line,
+  ];
+  if (active.isEmpty) return null;
+  return activeCommandCenter(active) ?? active.first;
+}
+
 /// `GET /home`: banners, shortcuts, news, services, and hotlines.
 /// The rows themselves are fetched again from their own routes when a screen
 /// opens one. The hotline screen is still the later-sprint placeholder.

@@ -3357,11 +3357,16 @@ page drew the red siren for every municipal line not named "Taytay PNP".
    police, fire, medical or disaster; `other` is the blue phone. The name is
    not read. The dev mock's lines carry kinds.
 
-**Not done here.** Home's emergency card still shows the first active hotline
-in the server's order, not the command center (recorded in PROGRESS.md for
-the owner); the backend notes suggest falling back to the `emergency` line
-when no command center is marked, which the brief for this change did not
-ask for, so the no-number note stays.
+4. **Home's emergency card** (added the same day, on the orchestrator's
+   follow-up) shows the active `command-center` line when the office marked
+   one, wherever it sits in the server's order; otherwise the first active
+   line, as before `kind` existed, so the card does not disappear for an
+   office that has not marked a line (`homeEmergencyHotline`). A line named
+   like a command center but not marked is not picked.
+
+**Not done here.** The backend notes suggest falling back to the `emergency`
+line when no command center is marked; Message sent keeps D-196's no-number
+note instead, as this change's brief asked.
 
 **Why.** A renamed line must not silently change what the app says it is for,
 and the one number on a page an anxious resident reads must be the one the
@@ -3589,6 +3594,6 @@ office chose.
 | D-211 | The selfie consent is seen and withdrawn in Consents and account requests: when and which version; what withdrawing does (selfies erased, a waiting request needs a new selfie, a digital ID loses its photo, not backdated) said before the button; `AppDialog.confirm`; biometric history rows carry no Accept again | privacy / design | settled |
 | D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
 | D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |
-| D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other` | safety / contract | settled |
+| D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other`; Home's emergency card shows the command center when marked, else the first active line | safety / contract | settled |
 
 **210 decisions — 206 settled, 4 provisional.**

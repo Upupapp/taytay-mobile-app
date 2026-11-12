@@ -113,23 +113,27 @@ class _HomeScreenState extends State<HomeScreen> {
     AppDependencies dependencies,
   ) async {
     final List<MunicipalHotline> rows = home.fold(
-      onOk: (HomeFeed feed) =>
-          feed.hotlines.where((MunicipalHotline row) => row.active).toList(),
+      onOk: (HomeFeed feed) => feed.hotlines,
       onErr: (_) => const <MunicipalHotline>[],
     );
-    if (rows.isNotEmpty) {
-      final MunicipalHotline first = rows.first;
+    // The command center by `kind` when the office marked one, else the first
+    // active line as before (D-214).
+    final MunicipalHotline? line = homeEmergencyHotline(rows);
+    if (line != null) {
       return HomeHotline(
-        id: first.id,
-        name: first.name,
-        number: first.number,
-        category: first.category,
-        kind: first.kind,
+        id: line.id,
+        name: line.name,
+        number: line.number,
+        category: line.category,
+        kind: line.kind,
       );
     }
     if (!dependencies.config.usesMockData) return null;
     final feed = await HomeCatalogue.mockFeed();
     if (feed.hotlines.isEmpty) return null;
+    for (final HomeHotline mock in feed.hotlines) {
+      if (mock.kind == HotlineKind.commandCenter) return mock;
+    }
     return feed.hotlines.first;
   }
 

@@ -418,6 +418,13 @@ SoftNote(
   ]),
 )
 ```
+A line is named only when the office marked it by `kind`: with an active `command-center` hotline
+the message is "Call {name}: {number}." and a primary danger "Call {name}" pill comes first, the
+hotlines pill still beside it; with none, while loading or after a failed read, the note above
+stands. The Hotlines page draws the red siren tile for every `kind` but `other`, and Home's
+emergency card shows the command center when one is marked, else the first active line. Nothing is
+picked by a name (D-196, D-214). Inside a `SoftNote`, a `PillAction` takes no `semanticLabel`: its
+`Semantics` would merge into the note's node; the pill's words are what is read.
 
 **`NoticePanel`, `NoticePoint`, `DraftPill`** (`notice_panel.dart`, in the gallery) — the RegTerms
 summary: a gradient icon, title, source line, optional badge, intro and titled points.
@@ -439,6 +446,16 @@ NoticePanel(
 ticked, it turns soft blue. Params: `value*`, `onChanged*`, `label*`, `description`. The screen
 keeps Continue disabled until it is ticked.
 `ConsentCheckCard(value: _agreed, onChanged: (v) => setState(() => _agreed = v), label: terms.label)`
+One card per act, never one tick for two texts: the Terms of Use and the Privacy Notice are two
+unticked cards, `termsConsentLabel` and `privacyConsentLabel` (`legal_text_sheet.dart`), in
+sign-up and on the consent update screen alike (D-208).
+
+**`InPersonVerificationNote`** (`biometric_consent_dialog.dart`) — the way to be verified without
+a selfie, wherever a selfie is unavailable or declined: a calm info `SoftNote`, "Verify in person.
+Bring a valid ID to the MSWDO …", with the office's name, address, hours and phone from the
+directory (`GET /offices/mswdo`) and never written into the app; unread, it names the MSWDO alone
+(D-210). `InPersonVerificationNote({office})`, key `inPersonVerificationNoteKey`.
+`InPersonVerificationNote(office: consent.inPersonOffice)`
 
 **`UploadSlot`, `AttachedFileCard`** (`upload_slot.dart`, in the gallery) — RegID's file slots.
 `UploadSlot({label*, onPressed*, error = false})`: a dashed empty slot, one button.
@@ -675,7 +692,19 @@ await AppDialog.show<void>(
   as the content, its lock tile as the hero icon, and says only that the account is not verified
   yet, D-201); **`SessionExpiredSheet.show(context)`**; **`showLegalTextSheet({title*, markdown*,
   pending*})`** opens the Terms or Privacy Notice, not scrolling as a frame, with Close
-  (`legalTextCloseKey`) always in view.
+  (`legalTextCloseKey`) always in view. **`NoticeTextColumn({markdown*})`** draws the same lines
+  in the page's own flow, for a text read where it is agreed to (the selfie consent).
+- **`ensureBiometricConsent(context, controller)`** → `Future<BiometricConsentChoice>`
+  (`biometric_consent_dialog.dart`) — the selfie's consent, its own act, before any camera opens
+  (D-209). Given already: `agreed`, no dialog. Owed: an `AppDialog.show` with
+  **`BiometricConsentPanel`** — what is collected and why (`SoftNote`), the published text and its
+  version (`NoticeTextColumn`), that agreeing is a choice, an unticked `ConsentCheckCard`, then
+  `AppDialogActions`: "Agree and continue" (off until ticked; `agreed` only once the server recorded
+  it) and the text button "No, I'll verify in person" (`declined`, which records nothing and leads
+  to `InPersonVerificationNote`). Unpublished or unread: `dismissed`, and the screen's own note says
+  why. The words are `BiometricConsentCopy`; the state is `BiometricConsentController`
+  (`core/session`, one per screen). Keys `biometricConsentTickKey`, `biometricConsentAgreeKey`,
+  `biometricConsentDeclineKey`.
 - **`AppSheet.show<T>({context*, title*, builder*, dismissible = true})`** — the modal bottom
   sheet (radius 24 top, at most 90% high, a title, the content scrolling), **for pickers only**: a
   list of choices the resident picks one from. Each choice is a **`PickerChoiceRow({rowKey*,
@@ -835,8 +864,15 @@ Scaffold(
 )
 ```
 
-A consent update is `AuthFormPage(showBack: false)` with `NoticePanel` and `ConsentCheckCard`,
-and the ways on in the footer.
+A consent update is `AuthFormPage(showBack: false)` with `NoticePanel` and one unticked
+`ConsentCheckCard` per owed text, and the ways on in the footer (D-208).
+
+A consent that can be withdrawn says what withdrawing does before the button: a warning
+`SoftNote` ("What withdrawing does"), then a danger `AppButton`, then `AppDialog.confirm(destructive:
+true)` with the same words. A consent with a text is given again only where the text is shown
+(the selfie consent: `ensureBiometricConsent`), never by a bare "Accept again" (D-211). A request
+whose selfie was erased says so in a warning `SoftNote` with the way to send a new one, and the
+page stops saying "No action needed" (D-212).
 
 **Card** — `DigitalIdView(now:, card:, name:, loading:, failure:, onRetry:)` on the glass tab.
 The card is capped at 420 wide and grows with its text; it draws "Not yet issued" only after the
@@ -970,4 +1006,6 @@ anything is a regression: fix the code, not the golden.
   standard): the elements are hidden until the API sends them.
 - **The gallery does not show** `SoftPage`, `AuthFormPage` or the conversation widgets; the
   Settings, Account and Directory screens (and their goldens) do. The theme section opens the
-  panel dialog (`AppDialog.show`) and the picker sheet.
+  panel dialog (`AppDialog.show`) and the picker sheet. Nor does it show the selfie consent dialog
+  (`BiometricConsentPanel`) or `InPersonVerificationNote` (D-209, D-210): adding them would move
+  the gallery goldens; their layout matrices are in `test/features/biometric_consent_test.dart`.

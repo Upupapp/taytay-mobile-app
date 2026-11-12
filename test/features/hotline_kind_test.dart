@@ -145,6 +145,35 @@ void main() {
     });
   });
 
+  group("Home's emergency card picks the command center by kind", () {
+    test('the active command center, wherever it sits in the order', () {
+      final MunicipalHotline? line = homeEmergencyHotline(<MunicipalHotline>[
+        row('a', name: 'Synthetic first line'),
+        row('b', kind: HotlineKind.commandCenter, active: false),
+        row('c', name: 'Synthetic ops', kind: HotlineKind.commandCenter),
+      ]);
+      expect(line?.id, 'c');
+    });
+
+    test('none marked: the first active line, as before', () {
+      final MunicipalHotline? line = homeEmergencyHotline(<MunicipalHotline>[
+        row('a', active: false),
+        row('b', name: 'Synthetic first active'),
+        // Named like one, but not marked: never picked by its name.
+        row('c', name: 'Sagip Taytay Command Center'),
+      ]);
+      expect(line?.id, 'b');
+    });
+
+    test('no active line: no card', () {
+      expect(
+        homeEmergencyHotline(<MunicipalHotline>[row('a', active: false)]),
+        isNull,
+      );
+      expect(homeEmergencyHotline(const <MunicipalHotline>[]), isNull);
+    });
+  });
+
   group('the Hotlines page draws the red siren from kind', () {
     HomeHotline line(String id, String name, HotlineKind kind) => HomeHotline(
       id: id,
