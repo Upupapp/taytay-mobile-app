@@ -48,6 +48,43 @@ class HomeQuickLink {
   String toString() => 'HomeQuickLink($id)';
 }
 
+/// What a hotline is for (`kind`, backend `ebd7aeb`).
+///
+/// A closed set the office picks from, so a client chooses a line by what it
+/// is for rather than by its name or its free-text category, which are staff
+/// copy (D-196, D-214). At most one *active* line is the
+/// [commandCenter]; the database refuses a second.
+enum HotlineKind {
+  /// The municipality's own command or operations center: the line an
+  /// emergency note offers first.
+  commandCenter('command-center'),
+
+  /// A general emergency line, such as 911 (EO 56 s.2018).
+  emergency('emergency'),
+  police('police'),
+  fire('fire'),
+  medical('medical'),
+  disaster('disaster'),
+
+  /// Anything else, and what an unknown or missing kind reads as: a line is
+  /// never promoted to an emergency line by a value this build does not know.
+  other('other');
+
+  const HotlineKind(this.wireValue);
+
+  final String wireValue;
+
+  /// Whether the line is for an emergency of some kind. [other] is not.
+  bool get isEmergency => this != HotlineKind.other;
+
+  static HotlineKind parse(Object? raw) {
+    for (final HotlineKind kind in values) {
+      if (kind.wireValue == raw) return kind;
+    }
+    return HotlineKind.other;
+  }
+}
+
 /// A published municipal hotline. The number is a public office line.
 @immutable
 class MunicipalHotline {
@@ -58,6 +95,7 @@ class MunicipalHotline {
     required this.category,
     required this.sortOrder,
     required this.active,
+    this.kind = HotlineKind.other,
     this.createdAt,
     this.updatedAt,
   });
@@ -66,13 +104,31 @@ class MunicipalHotline {
   final String name;
   final String number;
   final String category;
+
+  /// What the line is for. Chosen by the office; never guessed from [name].
+  final HotlineKind kind;
   final int sortOrder;
   final bool active;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
   @override
-  String toString() => 'MunicipalHotline($id, $category)';
+  String toString() => 'MunicipalHotline($id, ${kind.wireValue})';
+}
+
+/// The active line the office marked as the command center, if any.
+///
+/// Picked by `kind` alone (D-214): never by a name, a category or the sort
+/// order, which are staff copy. The database allows one active
+/// `command-center`; should two ever arrive, the first in the server's order
+/// is taken. A line with no number is not one a resident can call.
+MunicipalHotline? activeCommandCenter(Iterable<MunicipalHotline> lines) {
+  for (final MunicipalHotline line in lines) {
+    if (!line.active || line.kind != HotlineKind.commandCenter) continue;
+    if (line.number.trim().isEmpty || line.name.trim().isEmpty) continue;
+    return line;
+  }
+  return null;
 }
 
 /// `GET /home`: banners, shortcuts, news, services, and hotlines.

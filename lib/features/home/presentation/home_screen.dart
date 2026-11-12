@@ -124,6 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         name: first.name,
         number: first.number,
         category: first.category,
+        kind: first.kind,
       );
     }
     if (!dependencies.config.usesMockData) return null;

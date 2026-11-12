@@ -10,12 +10,15 @@ import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/links/external_link_service.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/outcome_feedback.dart';
+import '../../citizen_api/domain/citizen_contract.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
 import '../../profile/domain/resident_profile_detail.dart';
@@ -495,6 +498,10 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
   Office? _office;
   bool _started = false;
 
+  /// The active command-center hotline, once the hotlines answered.
+  EmergencyLine? _commandCenter;
+  bool _hotlinesLoading = true;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -509,6 +516,45 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
       if (!mounted) return;
       setState(() => _office = office);
     });
+    unawaited(_loadCommandCenter(dependencies));
+  }
+
+  /// The line the office marked `command-center` (D-214): `GET /hotlines`,
+  /// then `GET /home`'s `hotlines`, as the Hotlines page reads them. Only an
+  /// active line of that kind counts; the database allows one. A failed or
+  /// empty read keeps the note that names no number.
+  Future<void> _loadCommandCenter(AppDependencies dependencies) async {
+    final Result<List<MunicipalHotline>> listed = await dependencies.citizenApi
+        .listHotlines();
+    List<MunicipalHotline> rows = listed.fold(
+      onOk: (List<MunicipalHotline> value) => value,
+      onErr: (_) => const <MunicipalHotline>[],
+    );
+    if (rows.isEmpty) {
+      final Result<HomeFeed> home = await dependencies.citizenApi.loadHome();
+      rows = home.fold(
+        onOk: (HomeFeed feed) => feed.hotlines,
+        onErr: (_) => const <MunicipalHotline>[],
+      );
+    }
+    final MunicipalHotline? found = activeCommandCenter(rows);
+    if (!mounted) return;
+    setState(() {
+      _commandCenter = found == null
+          ? null
+          : (name: found.name.trim(), number: found.number.trim());
+      _hotlinesLoading = false;
+    });
+  }
+
+  Future<void> _call(String number) async {
+    final LinkOutcome outcome = await AppDependencies.of(
+      context,
+    ).externalLinks.dial(number);
+    if (!mounted) return;
+    if (outcome == LinkOutcome.unavailable) {
+      Outcome.problem(context, 'This phone has no app that can place a call.');
+    }
   }
 
   @override
@@ -522,6 +568,12 @@ class _MessageSentScreenState extends State<MessageSentScreen> {
         onBack: () => context.goNamed(AppRoute.services.routeName),
         onMessages: () => context.goNamed(AppRoute.messagesInbox.routeName),
         onHotlines: () => context.goNamed(AppRoute.hotlines.routeName),
+        commandCenter: _commandCenter,
+        commandCenterLoading: _hotlinesLoading,
+        onCallCommandCenter: switch (_commandCenter) {
+          final EmergencyLine line => () => unawaited(_call(line.number)),
+          null => null,
+        },
       ),
     );
   }

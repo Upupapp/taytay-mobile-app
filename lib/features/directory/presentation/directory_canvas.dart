@@ -83,6 +83,9 @@ class DirectoryCanvas extends StatelessWidget {
     this.onBell,
     this.officeMissing = false,
     this.composeError,
+    this.commandCenter,
+    this.commandCenterLoading = false,
+    this.onCallCommandCenter,
     super.key,
   });
 
@@ -92,11 +95,22 @@ class DirectoryCanvas extends StatelessWidget {
 
   /// Opens the Emergency hotlines page from the sent page's emergency note.
   ///
-  /// The note names no number. An office's own line is not an emergency line,
-  /// and `GET /hotlines` has no field that marks the Command Center or the
-  /// primary emergency line (only a free-text name and category), so the note
-  /// sends the resident to the page that lists every published hotline.
+  /// The messaged office's own line is never offered: it is not an emergency
+  /// line. The button stays whether or not a command center is named.
   final VoidCallback? onHotlines;
+
+  /// The active hotline whose `kind` is `command-center` (backend `ebd7aeb`),
+  /// for the sent page's emergency note: its name and number, and a call
+  /// button. Null keeps the note that names no number (D-196): none is
+  /// marked, the hotlines are still loading, or they could not be read
+  /// (D-214). Never chosen by a name or a category.
+  final EmergencyLine? commandCenter;
+
+  /// The hotlines the note reads are still loading.
+  final bool commandCenterLoading;
+
+  /// Calls [commandCenter].
+  final VoidCallback? onCallCommandCenter;
 
   /// The day chip on the thread. The fixture supplies it.
   final String dayLabel;
@@ -1641,14 +1655,32 @@ const Key messageSentEmergencyNoteKey = Key('message-sent-emergency');
 /// The note's button to the Emergency hotlines page.
 const Key messageSentHotlinesKey = Key('message-sent-hotlines');
 
+/// The note's call button for the command center.
+const Key messageSentCallKey = Key('message-sent-call');
+
+/// One hotline the emergency note may name: the office marked it as the
+/// command center (`kind`), and it is active.
+typedef EmergencyLine = ({String name, String number});
+
 /// What the sent page's emergency note says: the mock-up's bold title, then
-/// the sentence. It names no number and no line (D-196): the button opens the
-/// hotlines Taytay LGU publishes.
+/// the sentence. With no command center marked it names no number and no line
+/// (D-196); with one, its name and number (D-214). The hotlines button stays
+/// either way.
 abstract final class MessageSentCopy {
   static const String emergencyHeading =
       "For emergencies don't wait for a reply";
   static const String emergency = 'Call an emergency hotline.';
   static const String hotlinesButton = 'See emergency hotlines';
+
+  /// The sentence when the office marked a command center.
+  static String callLine(EmergencyLine line) =>
+      'Call ${line.name}: ${line.number}.';
+
+  /// The call button's words.
+  static String callButton(EmergencyLine line) => 'Call ${line.name}';
+
+  /// Announced while the hotlines load.
+  static const String loading = 'Loading the emergency hotline';
 }
 
 /// `MessageSent.dc.html`: the success page with who it went to, what
@@ -1663,6 +1695,32 @@ class _SentPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final Office? office = canvas.office;
     final VoidCallback? onHotlines = canvas.onHotlines;
+    final EmergencyLine? line = canvas.commandCenter;
+    final VoidCallback? onCall = canvas.onCallCommandCenter;
+    final List<PillAction> actions = <PillAction>[
+      if (line != null && onCall != null)
+        PillAction(
+          label: MessageSentCopy.callButton(line),
+          glyph: TaytayGlyph.phone,
+          primary: true,
+          danger: true,
+          buttonKey: messageSentCallKey,
+          onPressed: onCall,
+        ),
+      if (onHotlines != null)
+        PillAction(
+          label: MessageSentCopy.hotlinesButton,
+          glyph: TaytayGlyph.phone,
+          danger: true,
+          buttonKey: messageSentHotlinesKey,
+          onPressed: onHotlines,
+        ),
+    ];
+    final Widget? pills = actions.isEmpty
+        ? null
+        // The design system's pill (`PillButtonRow`, the danger tone): a
+        // 40 px pill in a 48 dp target, wrapping at 200%.
+        : PillButtonRow(wrap: true, padding: EdgeInsets.zero, actions: actions);
     return SuccessScreen(
       title: 'Message sent',
       message:
@@ -1671,33 +1729,34 @@ class _SentPage extends StatelessWidget {
       details: <SuccessDetail>[
         if (office != null) SuccessDetail(label: 'To', value: office.shortName),
       ],
-      // No number: the messaged office's line is not an emergency line, and
-      // nothing in `GET /hotlines` marks which hotline is the primary one.
+      // Never the messaged office's line: it is not an emergency line. A
+      // number only when the office marked a command center (D-214).
       body: SoftNote(
         key: messageSentEmergencyNoteKey,
         tone: NoteTone.emergency,
         heading: MessageSentCopy.emergencyHeading,
-        message: MessageSentCopy.emergency,
+        message: line == null
+            ? MessageSentCopy.emergency
+            : MessageSentCopy.callLine(line),
         // Part of the page, not news: read in order, not announced over the
         // page's own title.
         live: false,
-        action: onHotlines == null
-            ? null
-            // The design system's pill (`PillButtonRow`, the danger tone): a
-            // 40 px pill in a 48 dp target, wrapping at 200%.
-            : PillButtonRow(
-                wrap: true,
-                padding: EdgeInsets.zero,
-                actions: <PillAction>[
-                  PillAction(
-                    label: MessageSentCopy.hotlinesButton,
-                    glyph: TaytayGlyph.phone,
-                    danger: true,
-                    buttonKey: messageSentHotlinesKey,
-                    onPressed: onHotlines,
+        action: canvas.commandCenterLoading
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const LoadingSkeleton(
+                    layout: SkeletonLayout.text,
+                    count: 1,
+                    semanticLabel: MessageSentCopy.loading,
                   ),
+                  if (pills != null) ...<Widget>[
+                    const SizedBox(height: Spacing.sm),
+                    pills,
+                  ],
                 ],
-              ),
+              )
+            : pills,
       ),
       primaryLabel: 'Go to Messages',
       onPrimary: canvas.onMessages,

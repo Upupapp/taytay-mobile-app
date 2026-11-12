@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 
+import '../../citizen_api/domain/citizen_contract.dart';
+
 /// One slide of the Home hero. Municipal copy, not a resident record.
 @immutable
 class HomeSlide {
@@ -65,12 +67,17 @@ class HomeHotline {
     required this.name,
     required this.number,
     required this.category,
+    this.kind = HotlineKind.other,
   });
 
   final String id;
   final String name;
   final String number;
   final String category;
+
+  /// What the line is for (`kind`). The Hotlines page draws an emergency
+  /// tile from it, never from the name (D-214).
+  final HotlineKind kind;
 
   bool get isBarangay => category.toLowerCase().contains('barangay');
 

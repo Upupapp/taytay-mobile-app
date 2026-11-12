@@ -24,13 +24,27 @@ void main() {
     );
   }
 
-  Widget sent(Office office, {VoidCallback? onHotlines}) => DirectoryCanvas(
+  Widget sent(
+    Office office, {
+    VoidCallback? onHotlines,
+    EmergencyLine? commandCenter,
+    bool loading = false,
+    VoidCallback? onCall,
+  }) => DirectoryCanvas(
     frame: DirectoryFrame.sent,
     offices: const <Office>[],
     office: office,
     onMessages: () {},
     onBack: () {},
     onHotlines: onHotlines,
+    commandCenter: commandCenter,
+    commandCenterLoading: loading,
+    onCallCommandCenter: onCall,
+  );
+
+  const EmergencyLine line = (
+    name: 'Synthetic Command Center',
+    number: '0900-000-0000',
   );
 
   testWidgets('the note names no number, not even the office that has one', (
@@ -122,6 +136,110 @@ void main() {
     expect(find.text(MessageSentCopy.emergency), findsOneWidget);
     expect(find.byKey(messageSentHotlinesKey), findsNothing);
     expect(find.textContaining(office.phone), findsNothing);
+  });
+
+  group('a hotline marked command-center (D-214)', () {
+    testWidgets('its name and number are in the note, with a call button', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(390, 1100)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final Office office = await bplo();
+      int called = 0;
+      int opened = 0;
+      await tester.pumpWidget(
+        layoutHost(
+          sent(
+            office,
+            onHotlines: () => opened++,
+            commandCenter: line,
+            onCall: () => called++,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+
+      final Finder note = find.byKey(messageSentEmergencyNoteKey);
+      expect(
+        find.descendant(
+          of: note,
+          matching: find.text(MessageSentCopy.callLine(line)),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(MessageSentCopy.emergency), findsNothing);
+      // Never the messaged office's own line.
+      expect(find.textContaining(office.phone), findsNothing);
+      expect(tester.widget<SoftNote>(note).tone, NoteTone.emergency);
+      // The hotlines button stays beside the call.
+      expect(find.byKey(messageSentHotlinesKey), findsOneWidget);
+
+      final Finder call = find.byKey(messageSentCallKey);
+      expect(call, findsOneWidget);
+      // Its own button, read by its words; the number is in the sentence
+      // just above it.
+      final SemanticsNode node = tester.getSemantics(call);
+      expect(node.label, MessageSentCopy.callButton(line));
+      expect(node.getSemanticsData().hasAction(SemanticsAction.tap), isTrue);
+      expect(tester.getSize(call).height, greaterThanOrEqualTo(48));
+      await tester.ensureVisible(call);
+      await tester.tap(call);
+      expect(called, 1);
+      expect(opened, 0);
+    });
+
+    testWidgets('while the hotlines load, the note waits and names none', (
+      tester,
+    ) async {
+      final Office office = await bplo();
+      await tester.pumpWidget(
+        layoutHost(
+          sent(office, onHotlines: () {}, loading: true),
+          scrollable: false,
+        ),
+      );
+      await tester.pump();
+      expect(find.text(MessageSentCopy.emergency), findsOneWidget);
+      expect(find.byKey(messageSentCallKey), findsNothing);
+      expect(find.bySemanticsLabel(MessageSentCopy.loading), findsOneWidget);
+      expect(find.byKey(messageSentHotlinesKey), findsOneWidget);
+    });
+
+    testWidgets('none marked, or a failed read: the note names no number', (
+      tester,
+    ) async {
+      final Office office = await bplo();
+      await tester.pumpWidget(
+        layoutHost(sent(office, onHotlines: () {}), scrollable: false),
+      );
+      await tester.pump();
+      expect(find.text(MessageSentCopy.emergency), findsOneWidget);
+      expect(find.byKey(messageSentCallKey), findsNothing);
+      expect(find.byKey(messageSentHotlinesKey), findsOneWidget);
+    });
+
+    testWidgets('every frame fits every phone at 200% text', (tester) async {
+      final Office office = await bplo();
+      for (final Widget Function() build in <Widget Function()>[
+        () => sent(office, onHotlines: () {}, loading: true),
+        () =>
+            sent(office, onHotlines: () {}, commandCenter: line, onCall: () {}),
+        () => sent(
+          office,
+          onHotlines: () {},
+          commandCenter: (
+            name: 'A synthetic command and operations center with a long name',
+            number: '0900-000-0000 · 0900-000-0001',
+          ),
+          onCall: () {},
+        ),
+      ]) {
+        await expectCleanLayouts(tester, build, scrollable: false, height: 900);
+      }
+    });
   });
 
   testWidgets('the note and its button fit every phone at 200% text', (

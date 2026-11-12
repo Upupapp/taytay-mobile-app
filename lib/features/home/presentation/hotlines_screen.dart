@@ -68,6 +68,7 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
             name: row.name,
             number: row.number,
             category: row.category,
+            kind: row.kind,
           ),
     ];
     List<HomeHotline> resolved = mapped;
@@ -260,7 +261,11 @@ class _Line extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool emergency = !line.isBarangay && line.name != 'Taytay PNP';
+    // The red siren is the line's `kind`, set by the office: emergency,
+    // command center, police, fire, medical or disaster. Never its name, and
+    // never its free-text category: renaming a line must not change what it
+    // is said to be for (D-196, D-214).
+    final bool emergency = line.kind.isEmergency;
     return DecoratedBox(
       decoration: BoxDecoration(
         border: divider

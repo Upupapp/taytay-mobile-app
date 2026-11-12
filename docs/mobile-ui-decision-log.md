@@ -3314,6 +3314,47 @@ review queue.
 
 ---
 
+## D-214 — A hotline's kind picks the Message sent line and the Hotlines siren, never its name
+
+**Status: settled.** Category: safety / contract. Recorded 2026-11-12,
+follow-up 2 (G5), following D-196.
+
+**Context.** Backend `ebd7aeb` gives every hotline a `kind`:
+`command-center`, `emergency`, `police`, `fire`, `medical`, `disaster` or
+`other` (default; the backfill made only a number exactly 911 `emergency`),
+and allows at most one active `command-center`. D-196 recorded such a field
+as needed before the Message sent page could name a number. The Hotlines
+page drew the red siren for every municipal line not named "Taytay PNP".
+
+**Chosen.**
+1. `HotlineKind` (citizen API domain) parses `kind`; an unknown or missing
+   value is `other`, never promoted to an emergency line.
+2. **Message sent:** the page reads the hotlines as the Hotlines page does
+   (`GET /hotlines`, then `GET /home`) and takes the active `command-center`
+   line (`activeCommandCenter`, by kind alone). With one, the emergency
+   `SoftNote` reads "Call {name}: {number}." with a call pill ("Call {name}")
+   beside "See emergency hotlines". With
+   none, or a failed read, D-196's note stays word for word. While loading,
+   the note shows that sentence with a one-line skeleton, then settles.
+3. **Hotlines page:** the red siren tile is `kind` emergency, command-center,
+   police, fire, medical or disaster; `other` is the blue phone. The name is
+   not read. The dev mock's lines carry kinds.
+
+**Not done here.** Home's emergency card still shows the first active hotline
+in the server's order, not the command center (recorded in PROGRESS.md for
+the owner); the backend notes suggest falling back to the `emergency` line
+when no command center is marked, which the brief for this change did not
+ask for, so the no-number note stays.
+
+**Why.** A renamed line must not silently change what the app says it is for,
+and the one number on a page an anxious resident reads must be the one the
+office chose.
+
+**Sources.** Backend `ebd7aeb`; EO 56 s.2018 (911),
+<https://lawphil.net/executive/execord/eo2018/eo_56_2018.html>.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3531,5 +3572,6 @@ review queue.
 | D-211 | The selfie consent is seen and withdrawn in Consents and account requests: when and which version; what withdrawing does (selfies erased, a waiting request needs a new selfie, a digital ID loses its photo, not backdated) said before the button; `AppDialog.confirm`; biometric history rows carry no Accept again | privacy / design | settled |
 | D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
 | D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |
+| D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other` | safety / contract | settled |
 
-**209 decisions — 205 settled, 4 provisional.**
+**210 decisions — 206 settled, 4 provisional.**

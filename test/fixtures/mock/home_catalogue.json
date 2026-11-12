@@ -18,31 +18,36 @@
       "id": "sagip",
       "name": "Sagip Taytay Command Center",
       "number": "0985-488-3352",
-      "category": "municipal"
+      "category": "municipal",
+      "kind": "command-center"
     },
     {
       "id": "tmdrrmo",
       "name": "TMDRRMO",
       "number": "0952-619-9511 · 0970-884-3791",
-      "category": "municipal"
+      "category": "municipal",
+      "kind": "disaster"
     },
     {
       "id": "pnp",
       "name": "Taytay PNP",
       "number": "0998-598-5730 · 0917-163-3556",
-      "category": "municipal"
+      "category": "municipal",
+      "kind": "police"
     },
     {
       "id": "bfp",
       "name": "Taytay BFP",
       "number": "0917-148-9964",
-      "category": "municipal"
+      "category": "municipal",
+      "kind": "fire"
     },
     {
       "id": "national",
       "name": "National Emergency Hotline",
       "number": "911",
-      "category": "municipal"
+      "category": "municipal",
+      "kind": "emergency"
     },
     {
       "id": "dolores",

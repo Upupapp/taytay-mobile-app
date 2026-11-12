@@ -183,6 +183,7 @@ abstract final class HomeCatalogue {
                 name: _s(row['name']),
                 number: _s(row['number']),
                 category: _s(row['category']),
+                kind: HotlineKind.parse(row['kind']),
               ),
         ]
         .where((HomeHotline line) => line.number.isNotEmpty)

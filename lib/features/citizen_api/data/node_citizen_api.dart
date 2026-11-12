@@ -119,6 +119,7 @@ class NodeCitizenApi {
       name: name,
       number: number,
       category: _string(map['category']) ?? '',
+      kind: HotlineKind.parse(map['kind']),
       sortOrder: map['sort_order'] is int ? map['sort_order'] as int : 0,
       active: map['active'] != false,
       createdAt: DateTime.tryParse(
