@@ -48,6 +48,13 @@ selfie's biometric consent and `selfie_erased_at` (`44cae1b`, D-209 to D-212),
 request status `superseded` and `verification_method` on `GET /me`, D-210). The
 staff and admin routes that came with it (in-person verification, the digital
 ID list, the residents summary) are not called.
+It was re-vendored from backend `98a4f19` the same day for the resident's own
+sectors (D-215): `GET /me/sectors`, `GET` and `POST /me/sector-applications`
+(`7132698`) with the `OwnSector`, `OwnSectorApplication` and
+`SectorApplicationBody` schemas and their envelopes, and
+`sector_application_decided` on `Notification.type` (`d7ecd39`). The staff and
+admin routes that came with it (registry imports, sector-application review,
+the counter card photo) are not called.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

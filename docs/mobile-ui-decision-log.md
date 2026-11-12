@@ -3377,6 +3377,91 @@ office chose.
 
 ---
 
+## D-215 — A resident sees their own non-sensitive sectors
+
+**Status: settled.** Category: privacy / contract / product. Recorded
+2026-11-12, citizen design pack prompt M2, on the owner's instruction (Ella,
+Michaela Cailing). The pack named this D-205; that number and D-208 to D-214
+were taken or reserved by other work, so it is D-215.
+
+**Context.** D-13 keeps sensitive sector and means-test data off the phone:
+the server does not send it and the app has no field for it. The pack's
+Sectors and benefits page (`Sectors.dc.html`) and Apply for a sector
+(`SectorApply`, `SectorProof`, `SectorSent`) need the resident's own sectors
+on the phone. Backend B4 serves them: `GET /me/sectors`,
+`GET /me/sector-applications` and `POST /me/sector-applications`, verified
+accounts only.
+
+**Chosen. This narrows D-13; it does not reverse it.**
+1. The app may receive the signed-in resident's **own** sectors, and only
+   senior citizen, person with disability and solo parent: the three the API
+   sends (backend `SELF_SECTORS`). The server never sends `vawc-survivor`,
+   `cicl`, 4Ps or any other office-recorded sector, indigency, income or
+   another household member's sectors, and the app has no value for any of
+   them: `ResidentSector` has three, and `SectorCodec` drops any other row.
+   The page says that other sectors are recorded by the MSWDO in person and
+   are not shown.
+2. An ID number is its last four characters (the console's DL-183). The API
+   sends it masked (`••••1234`); the decoder keeps the four and cuts anything
+   longer. Nothing is cached: both reads happen when the page opens and when
+   Apply closes (Article 5.1). The list stays empty until a reviewer links
+   the account to its registry record, which happens on the first approval,
+   so the page says that whenever nothing is recorded, beside any
+   application being checked.
+3. `/sectors` and `/sectors/apply` are `AccessRequirement.verified`, pushed
+   from a "Sectors and benefits" row on My Account. The sector tapped travels
+   as router `extra`, never in the URL.
+4. Applying is three steps on one route: choose (radio cards), the photo
+   (`UploadSlot`, the picker sheet, `AttachedFileCard`) with a
+   `ConsentCheckCard` the resident ticks to say "This ID is mine", then
+   `SuccessScreen`. The tick is a declaration, not a consent: no consent text
+   for sector proof has been supplied, the application has no consent field,
+   and nothing about it is sent or kept. The photo comes from the camera or the gallery only, is
+   checked on the phone against the app's one fallback rule
+   (`UploadPolicy.fallback`, as for the avatar: `/media` publishes none), and
+   goes to `POST /media` as `sector-proof.*`, never the phone's file name. The
+   server's own rule (JPEG, PNG or WebP, 5 MB) refuses the rest, and the send
+   says so. Its id goes to
+   `POST /me/sector-applications` as `{sector, proof_media_ids}`. A retry
+   reuses the uploaded id.
+5. The page offers a sector that is neither on the record nor being checked,
+   because the server refuses both with `409`. A returned application shows
+   the office's reason and is offered again. A recorded ID past its
+   `valid_until` says "ID expired" on its row and decides nothing.
+6. A failed send says whether anything reached the office. An unconfirmed one
+   asks the resident to look at the page before sending again: B4 takes no
+   idempotency key, so a second send is refused as a conflict rather than
+   filed twice.
+7. The result's next steps say a notice arrives in the app when the office
+   decides: `sector_application_decided`, in-app and never pushed. A
+   return's reason is read from the application, never from the notice. The
+   notice opens nothing yet: its `subject_id` is the application, and the
+   one place that shows applications, `/sectors`, takes no id, so the deep
+   link would refuse it.
+
+**Left out of the mock-ups, as fields the API does not take or claims it
+does not support.** The solo-parent reason and number of children, and the ID
+number with its issue and expiry dates on the proof step (staff read them off
+the photo when they approve, B5); greying out senior citizen by birth date
+(the office decides who qualifies); "We'll remind you before your ID needs
+renewing" (nothing sends a reminder);
+"included in programmes"; "Added by MSWDO from the DSWD 4Ps list" (no source
+is sent, and 4Ps is not sent at all); and "Only MSWDO staff see this photo"
+(any staff account can read an upload).
+
+**Rejected.** Fetching every sector and hiding the sensitive ones (D-13's
+option 2); a second, wider allow-list "for later"; an ID number field that
+would ask a resident to type a government number the server then throws away.
+
+**Sources.** D-13; citizen pack `prompts/1-MOBILE.md` M2 and
+`prompts/3-BACKEND.md` B4; backend `src/modules/sector-applications/`
+(`me-routes.ts`) and `openapi/openapi.json` (`OwnSector`,
+`OwnSectorApplication`, `SectorApplicationBody`) at backend `7132698`, vendored
+into `docs/integration/taytay-node-openapi.json` from backend `98a4f19`;
+console DL-183.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3595,5 +3680,6 @@ office chose.
 | D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
 | D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |
 | D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other`; Home's emergency card shows the command center when marked, else the first active line | safety / contract | settled |
+| D-215 | The resident's own senior citizen, PWD and solo parent sectors reach the app (`GET /me/sectors`, narrowing D-13); nothing else does, and the app has no value for any other sector. ID numbers are the last four. `/sectors` and `/sectors/apply` are verified-only; applying sends `{sector, proof_media_ids}` after `POST /media`, offers only a sector neither held nor being checked, and collects no ID number, dates or reasons; the tick is a declaration, not a consent. Empty until the office links the account on its first approval, and the page says so. Left out: the renewal reminder, the birth-date gate, the 4Ps source line | privacy / contract / product | settled |
 
-**210 decisions — 206 settled, 4 provisional.**
+**211 decisions — 207 settled, 4 provisional.**

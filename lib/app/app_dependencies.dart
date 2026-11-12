@@ -66,6 +66,9 @@ import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
 import '../features/requirements/data/requirement_api_repository.dart';
 import '../features/requirements/domain/resident_requirement.dart';
+import '../features/sectors/data/mock_sector_repository.dart';
+import '../features/sectors/data/sector_api_repository.dart';
+import '../features/sectors/domain/sector_repository.dart';
 import '../features/services/data/assistance_api_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
@@ -123,6 +126,7 @@ class AppDependencies {
     SocialServiceRepository? socialServices,
     OfficeMessagingRepository? officeMessaging,
     IssuanceRepository? issuance,
+    SectorRepository? sectors,
     AccountPasswordClient? passwordClient,
     ConsentGateController? consentGate,
     this.clock = DateTime.now,
@@ -142,6 +146,7 @@ class AppDependencies {
            socialServices ?? SocialServiceApiRepository(apiClient: apiClient),
        issuanceRepository =
            issuance ?? IssuanceApiRepository(apiClient: apiClient),
+       sectorRepository = sectors ?? SectorApiRepository(apiClient: apiClient),
        accountPasswordClient =
            passwordClient ?? const FirebaseAccountPasswordClient(),
        citizenApi = NodeCitizenApi(apiClient: apiClient),
@@ -396,6 +401,9 @@ class AppDependencies {
       issuance: mock == null
           ? IssuanceApiRepository(apiClient: apiClient)
           : MockIssuanceRepository(mock),
+      sectors: mock == null
+          ? SectorApiRepository(apiClient: apiClient)
+          : MockSectorRepository(mock),
       passwordClient: mock == null
           ? const FirebaseAccountPasswordClient()
           : MockAccountPasswordClient(),
@@ -543,6 +551,11 @@ class AppDependencies {
   /// (`issuance-types`, `me/issuance-requests`). A dev mock build supplies
   /// synthetic offices and requests.
   final IssuanceRepository issuanceRepository;
+
+  /// The resident's own non-sensitive sectors and sector applications
+  /// (`me/sectors`, `me/sector-applications`, D-215). A dev mock build
+  /// supplies synthetic ones.
+  final SectorRepository sectorRepository;
 
   /// In-session password change. Firebase on a live build, a mock in dev.
   final AccountPasswordClient accountPasswordClient;

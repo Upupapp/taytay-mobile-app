@@ -345,6 +345,13 @@ abstract final class AccountSpecimen {
       iconColor: BrandColors.taytayBlue,
     ),
     AccountMenuRow(
+      title: 'Sectors and benefits',
+      subtitle: 'Senior citizen · PWD · solo parent',
+      icon: TaytayIcons.heart,
+      tile: BrandColors.gold50,
+      iconColor: BrandColors.goldInk,
+    ),
+    AccountMenuRow(
       title: 'Messages',
       subtitle: '1 new reply from BPLO',
       icon: TaytayIcons.messageSquare,

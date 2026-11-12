@@ -137,6 +137,9 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
     'me/notification-preferences',
     'notification_api_repository.dart',
   ),
+  BackendRoute('GET', 'me/sector-applications', 'sector_api_repository.dart'),
+  BackendRoute('POST', 'me/sector-applications', 'sector_api_repository.dart'),
+  BackendRoute('GET', 'me/sectors', 'sector_api_repository.dart'),
   BackendRoute('POST', 'me/verification-requests', 'kyc_api_repository.dart'),
   BackendRoute(
     'GET',

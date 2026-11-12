@@ -596,6 +596,258 @@
         }
       }
     },
+    "/api/v1/office/imports": {
+      "get": {
+        "operationId": "listResidentImports",
+        "summary": "Recent imports into the resident registry",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. Newest first, a cursor page. Each is the file's name, its kind, its status (open or committed), how many rows it had, who uploaded and who committed it, and on commit the counts of what was created, attached, skipped and refused.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "A page of imports.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "post": {
+        "operationId": "uploadResidentImport",
+        "summary": "Upload a list to import into the resident registry",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. One file, multipart field file: a .csv (comma or semicolon, UTF-8) or the first sheet of an .xlsx, at most 5 MB, 5,000 rows and 40 columns; the first non-empty row is the header and empty rows are not rows. Formulas are not evaluated; a date-formatted cell reads as YYYY-MM-DD. Nothing is written to the registry: the rows are held for checking under a mapping guessed from the header, which a person confirms. Audit resident_import.uploaded.",
+        "security": [{ "firebaseIdToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "format": "binary" } } } } }
+        },
+        "responses": {
+          "201": { "description": "Held for checking; data.id names it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportSummaryEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "413": { "description": "Larger than 5 MB.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No file, not a .csv or .xlsx, unreadable, empty, or over the row, column or cell limits.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/imports/{id}": {
+      "get": {
+        "operationId": "getResidentImport",
+        "summary": "Check an import, row by row",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. While open: the columns with up to three sample values each, the fields and which are required, the mapping (field to column index from 0, or null), the required fields still unmapped, and every row read under the mapping and grouped: error (cannot become a record, with each problem), duplicate (the same folded name and birth date as an earlier row of this file, duplicate_of names it), match (the registry already holds a record with that name and birth date; candidates names each, as the registry lists them for this reader) and new. Advisory: it decides nothing. Each row carries its latest resolution. Once committed: groups are empty, the rows' cells are no longer held, and outcomes says what became of each row.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "The import as it reads now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/imports/{id}/mapping": {
+      "put": {
+        "operationId": "mapResidentImport",
+        "summary": "Say which column feeds each registry field",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. The whole mapping: a field left out or null is unmapped. A column feeds one field at most. Refused (409) once any row is resolved, because a new mapping would change what was decided about it, and once committed. Audit resident_import.mapped.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportMappingBody" } } } },
+        "responses": {
+          "200": { "description": "The import read under the new mapping.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A row is already resolved, or the import is committed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A column out of range, or used twice.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/imports/{id}/rows/{row}/resolve": {
+      "post": {
+        "operationId": "resolveResidentImportRow",
+        "summary": "Resolve one row: create, same person, or skip",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. There is no merge (the console's DL-74). create: the row is a different person and becomes a new record at commit. same-person: the row is the registry record resident_id names; at commit it is attached to it, and nothing on that record is written over or deleted. skip: nothing is written. Each takes a reason, kept with the reviewer's name and time; a later resolution of the same row is appended and is the one in force. A row with errors cannot be resolved (409): it is refused at commit. Audit resident_import.row_resolved.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }, { "name": "row", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportResolveBody" } } } },
+        "responses": {
+          "200": { "description": "The import as it reads now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import or row.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A row with errors, or the import is committed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "An unknown action, no reason, same-person without resident_id (or another action with one), or a record that is not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/imports/{id}/commit": {
+      "post": {
+        "operationId": "commitResidentImport",
+        "summary": "Write the import into the registry",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. In one transaction, under the import's lock, the rows are read again against the registry as it stands: a record added since the check is a new match. Refused (409) while a required field is unmapped or any match or duplicate is unresolved. Then: a new or create row becomes a record (audit office_resident.created, its creator the person committing), a same-person row is attached to the record it names, a skip row and an error row write nothing. The rows' cells are then emptied: what was recorded is in the registry, and the rest of the file is not the office's to keep. Audit resident_import.committed.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Committed; data.result has the counts.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportSummaryEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Already committed, a required field unmapped, or rows unresolved (details.rows lists up to 50).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/sectors": {
+      "get": {
+        "operationId": "listOwnSectors",
+        "summary": "The signed-in resident's own sectors",
+        "description": "Verified residents only (registered is 403). The account's own current memberships of senior-citizen, pwd and solo-parent, read from the registry record the office linked to the account when it first decided one of its applications; none before that. No other sector is selected, so none can be sent: never vawc-survivor, cicl, four-ps (means-tested), the office's own assessments, an income, or anybody else's sectors, a household member's included (mobile D-205). A bare list.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The account’s own sectors, possibly none.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/sector-applications": {
+      "get": {
+        "operationId": "listOwnSectorApplications",
+        "summary": "The signed-in resident's sector applications",
+        "description": "Verified residents only. Newest first, the latest 100, a bare list. reason is the office's reason when it returned the application, and null otherwise; who decided is not said.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The account’s applications.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorApplicationListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "post": {
+        "operationId": "applyForSector",
+        "summary": "Ask the office to record a sector",
+        "description": "Verified residents only. sector is senior-citizen, pwd or solo-parent. proof_media_ids are one to four images the resident uploaded through POST /api/v1/media (a photo of the Senior Citizen ID, PWD ID or Solo Parent ID). Nothing is recorded: a person at the office reads the proof and approves or returns it. One waiting application per sector (409), and none for a sector the office already records for the account (409). Audit sector_application.submitted.",
+        "security": [{ "firebaseIdToken": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationBody" } } } },
+        "responses": {
+          "201": { "description": "Filed and waiting.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorApplicationEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not a verified resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "An application for this sector is waiting, or the sector is already recorded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "Another sector, no proof, more than four, or a proof that is not an image this resident uploaded.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/sector-applications": {
+      "get": {
+        "operationId": "listSectorApplications",
+        "summary": "The queue of sector applications from the app",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). status defaults to pending, oldest first so whoever has waited longest is read first; approved and returned are newest decision first. A cursor page; the cursor is the row's time and id. Each row names the applicant as their account names them, with their account barangay, and how many proofs they sent.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "status", "in": "query", "schema": { "type": "string", "enum": ["pending", "approved", "returned"], "default": "pending" } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "A page of applications.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without resident.update, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A query value or the cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/sector-applications/{id}": {
+      "get": {
+        "operationId": "getSectorApplication",
+        "summary": "Read one sector application",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). The row, the proofs by media id (each read through .../proofs/{mediaId}, after proof_warning is shown), the registry record the account is linked to if the office has linked it, and otherwise candidates: records born on the account's birth date whose surname is a word of the account's name and that no account is linked to — a suggestion, never a link. Names are as the registry lists them for this reader. details_writable says whether this reader may record the card's details.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "The application.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationDetailEnvelope" } } } },
+          "403": { "description": "Without resident.update, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such application, or outside the reader’s barangay.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/sector-applications/{id}/proofs/{mediaId}": {
+      "get": {
+        "operationId": "getSectorApplicationProof",
+        "summary": "Open one proof the resident sent",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). The image bytes, Cache-Control no-store. Only a proof of this application (404 otherwise). Each opening is audited sector_application.proof_viewed against the reader.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }, { "name": "mediaId", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "The image.", "content": { "image/jpeg": { "schema": { "type": "string", "format": "binary" } }, "image/png": { "schema": { "type": "string", "format": "binary" } }, "image/webp": { "schema": { "type": "string", "format": "binary" } } } },
+          "403": { "description": "Without resident.update, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such application or proof, or the image is no longer held.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/sector-applications/{id}/approve": {
+      "post": {
+        "operationId": "approveSectorApplication",
+        "summary": "Approve: record the sector in the registry",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). One transaction under the application's lock. If the office has not linked this account to a registry record before, resident_id names the record the account is and link_reason says why (409 without them): the link is an identity finding, made once, audited resident_account.linked, and never moved; a record already linked to another account is 409, a record not found, retired or outside scope 422. The sector is then recorded on that record through the registry's own act: reason is kept in its append-only history (audit office_resident.sector_recorded), with the card's optional id_number (last four characters kept), issued_on, valid_until, social_pension (senior-citizen only) and disability_type (pwd only), which need resident.view-sensitive (403). The application is approved (audit sector_application.approved) and the resident is told in the app (sector_application_decided, never pushed). A decided application is 409.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationApproveBody" } } } },
+        "responses": {
+          "200": { "description": "Approved.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationEnvelope" } } } },
+          "403": { "description": "Without resident.update; an assigned-cases account; card details without resident.view-sensitive.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such application, or outside the reader’s barangay.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Already decided; no record named for an unlinked account; a record named for an account already linked to another; a record already linked to another account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No reason; resident_id without link_reason or the reverse; a detail for another sector; a record not found, retired or out of scope.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/sector-applications/{id}/return": {
+      "post": {
+        "operationId": "returnSectorApplication",
+        "summary": "Return the application to the resident, with a reason",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). The reason is written for the resident, who reads it on GET /api/v1/me/sector-applications; the notice in the app (sector_application_decided, never pushed) says the application was returned and to open it. Nothing is recorded in the registry. A decided application is 409. Audit sector_application.returned.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ReasonBody" } } } },
+        "responses": {
+          "200": { "description": "Returned.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationEnvelope" } } } },
+          "403": { "description": "Without resident.update, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such application, or outside the reader’s barangay.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Already decided.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No reason.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/card-photos": {
+      "post": {
+        "operationId": "takeCardPhoto",
+        "summary": "Take a resident's photo for their digital ID at the counter",
+        "description": "Needs digital-id.manage, the key that issues the card, and no wider: the photo exists only for the card. For a resident verified in person, who sent no selfie (a card always shows a face). Multipart: file (the selfie's rules: at most 5 MB, a JPEG, PNG or WebP recognised by its bytes) and consent_confirmed=true, the staff member's confirmation that the resident agreed to this photo being taken for their card (422 without it). The account must be a verified resident's, open, and not the actor's own. Kind card-photo (migration 0060): ordinary personal information for the card, not biometric processing; it is never compared with anything, never shown to the ID review, and not erased when the biometric consent is withdrawn. Audit digital_id.card_photo_taken, with the staff actor and the resident's account; no image data is logged.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "consent_confirmed"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" },
+                  "consent_confirmed": { "type": "string", "enum": ["true"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Taken.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CardPhotoEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without digital-id.manage, or the actor’s own account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such user.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is closed or not a verified resident’s.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "413": { "description": "Larger than 5 MB.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "consent_confirmed is not true, no file, or not an image.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/api/v1/office/residents": {
       "get": {
         "operationId": "listOfficeResidents",
@@ -2501,7 +2753,7 @@
         "post": {
           "operationId": "issueDigitalId",
           "summary": "Issue a digital ID",
-          "description": "Admin. The user must be a verified resident with no current card. photo_media_id must belong to that resident. When omitted, the latest approved verification selfie is used. Audit digital_id.issued.",
+          "description": "Admin. The user must be a verified resident with no current card. photo_media_id must be that resident’s selfie from an approved, unerased ID review, or a card photo taken of them (POST /api/v1/admin/users/{id}/card-photos); any other image is 422. When omitted, the latest approved verification selfie is used, or failing one the newest card photo. Audit digital_id.issued.",
           "security": [
             {
               "firebaseIdToken": []
@@ -16458,6 +16710,256 @@
       }
     },
     "schemas": {
+      "CardPhotoEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["media_id", "kind", "created_at"],
+            "properties": {
+              "media_id": { "type": "string", "format": "uuid", "description": "Pass as photo_media_id to POST /api/v1/admin/users/{id}/digital-id." },
+              "kind": { "type": "string", "enum": ["card-photo"] },
+              "created_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          "meta": { "type": "object" }
+        }
+      },
+      "SectorApplication": {
+        "type": "object",
+        "required": ["id", "sector", "status", "submitted_at", "decided_at", "decided_by", "return_reason", "resident_id", "proof_count", "applicant"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "status": { "type": "string", "enum": ["pending", "approved", "returned"] },
+          "submitted_at": { "type": "string", "format": "date-time" },
+          "decided_at": { "type": ["string", "null"], "format": "date-time" },
+          "decided_by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+          "return_reason": { "type": ["string", "null"] },
+          "resident_id": { "type": ["string", "null"], "format": "uuid", "description": "The registry record the approval recorded the sector on." },
+          "proof_count": { "type": "integer", "minimum": 1 },
+          "applicant": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "name", "barangay"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid", "description": "The account's user id." },
+              "name": { "type": ["string", "null"] },
+              "barangay": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" } } }] }
+            }
+          }
+        }
+      },
+      "SectorApplicationDetail": {
+        "allOf": [
+          { "$ref": "#/components/schemas/SectorApplication" },
+          {
+            "type": "object",
+            "required": ["proofs", "proof_warning", "linked_resident", "candidates", "details_writable"],
+            "properties": {
+              "proofs": { "type": "array", "items": { "type": "object", "required": ["media_id"], "properties": { "media_id": { "type": "string", "format": "uuid" } } } },
+              "proof_warning": { "type": "string" },
+              "linked_resident": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["resident_id", "name", "barangay_id", "birth_date"], "properties": { "resident_id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "barangay_id": { "type": "string", "format": "uuid" }, "birth_date": { "type": "string", "format": "date" } } }] },
+              "candidates": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["resident_id", "name", "barangay_id", "birth_date"], "properties": { "resident_id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "barangay_id": { "type": "string", "format": "uuid" }, "birth_date": { "type": "string", "format": "date" } } } },
+              "details_writable": { "type": "boolean" }
+            }
+          }
+        ]
+      },
+      "SectorApplicationApproveBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason"],
+        "properties": {
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500, "description": "What was checked. Kept in the sector's history." },
+          "resident_id": { "type": "string", "format": "uuid", "description": "With link_reason, when the account is not yet linked: the registry record it is." },
+          "link_reason": { "type": "string", "minLength": 1, "maxLength": 500 },
+          "id_number": { "type": "string", "minLength": 1, "maxLength": 40, "pattern": "^[A-Za-z0-9 /-]+$", "description": "Only the last four characters are kept (DL-183)." },
+          "issued_on": { "type": "string", "format": "date" },
+          "valid_until": { "type": "string", "format": "date" },
+          "social_pension": { "type": "boolean", "description": "senior-citizen only." },
+          "disability_type": { "type": "string", "minLength": 1, "maxLength": 80, "description": "pwd only." }
+        }
+      },
+      "SectorApplicationEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/SectorApplication" }, "meta": { "type": "object" } } },
+      "SectorApplicationDetailEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/SectorApplicationDetail" }, "meta": { "type": "object" } } },
+      "SectorApplicationListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/SectorApplication" } },
+          "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
+        }
+      },
+      "OwnSector": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sector", "since", "id_number", "valid_until"],
+        "properties": {
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "since": { "type": "string", "format": "date", "description": "When the office last recorded it, Asia/Manila." },
+          "id_number": { "type": ["string", "null"], "description": "Masked, ••••1234: the office holds the last four characters only (DL-183)." },
+          "valid_until": { "type": ["string", "null"], "format": "date" }
+        }
+      },
+      "OwnSectorListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/OwnSector" } }, "meta": { "type": "object" } }
+      },
+      "OwnSectorApplication": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "sector", "status", "reason", "submitted_at", "decided_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "status": { "type": "string", "enum": ["pending", "approved", "returned"] },
+          "reason": { "type": ["string", "null"], "description": "The office's reason, when it returned the application." },
+          "submitted_at": { "type": "string", "format": "date-time" },
+          "decided_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      },
+      "OwnSectorApplicationEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "$ref": "#/components/schemas/OwnSectorApplication" }, "meta": { "type": "object" } }
+      },
+      "OwnSectorApplicationListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/OwnSectorApplication" } }, "meta": { "type": "object" } }
+      },
+      "SectorApplicationBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sector", "proof_media_ids"],
+        "properties": {
+          "sector": { "type": "string", "enum": ["senior-citizen", "pwd", "solo-parent"] },
+          "proof_media_ids": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "format": "uuid" } }
+        }
+      },
+      "ResidentImportSummary": {
+        "type": "object",
+        "required": ["id", "file_name", "kind", "status", "row_count", "created_at", "created_by", "committed_at", "committed_by", "result"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "file_name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["csv", "xlsx"] },
+          "status": { "type": "string", "enum": ["open", "committed"] },
+          "row_count": { "type": "integer", "minimum": 1 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "created_by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+          "committed_at": { "type": ["string", "null"], "format": "date-time" },
+          "committed_by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+          "result": {
+            "oneOf": [
+              { "type": "null" },
+              { "type": "object", "additionalProperties": false, "required": ["created", "attached", "skipped", "errors"], "properties": { "created": { "type": "integer" }, "attached": { "type": "integer" }, "skipped": { "type": "integer" }, "errors": { "type": "integer" } } }
+            ]
+          }
+        }
+      },
+      "ResidentImportRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row", "source_line", "values", "problems", "candidates", "duplicate_of", "resolution"],
+        "properties": {
+          "row": { "type": "integer", "minimum": 1, "description": "The row's number among the file's rows; what resolve names." },
+          "source_line": { "type": "integer", "minimum": 1, "description": "The line in the file, for the clerk to find it." },
+          "values": { "type": ["object", "null"], "additionalProperties": { "type": "string" }, "description": "Each field's text as read under the mapping." },
+          "problems": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["field", "message"], "properties": { "field": { "type": "string" }, "message": { "type": "string" } } } },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["resident_id", "name", "barangay_id", "birth_date", "is_active"],
+              "properties": {
+                "resident_id": { "type": "string", "format": "uuid" },
+                "name": { "type": "string", "description": "As the registry lists the person for this reader; a protected record's given name is an initial." },
+                "barangay_id": { "type": "string", "format": "uuid" },
+                "birth_date": { "type": "string", "format": "date" },
+                "is_active": { "type": "boolean" }
+              }
+            }
+          },
+          "duplicate_of": { "type": ["integer", "null"] },
+          "resolution": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["action", "resident_id", "reason", "by", "at"],
+                "properties": {
+                  "action": { "type": "string", "enum": ["create", "same-person", "skip"] },
+                  "resident_id": { "type": ["string", "null"], "format": "uuid" },
+                  "reason": { "type": "string" },
+                  "by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+                  "at": { "type": "string", "format": "date-time" }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "ResidentImport": {
+        "allOf": [
+          { "$ref": "#/components/schemas/ResidentImportSummary" },
+          {
+            "type": "object",
+            "required": ["columns", "fields", "mapping", "missing_fields", "counts", "groups", "outcomes"],
+            "properties": {
+              "columns": { "type": "array", "items": { "type": "object", "required": ["index", "header", "samples"], "properties": { "index": { "type": "integer" }, "header": { "type": "string" }, "samples": { "type": "array", "items": { "type": "string" } } } } },
+              "fields": { "type": "array", "items": { "type": "object", "required": ["field", "label", "required"], "properties": { "field": { "type": "string", "enum": ["last_name", "first_name", "middle_name", "suffix", "sex", "birth_date", "civil_status", "barangay", "purok_or_sitio", "street_address", "mobile", "email"] }, "label": { "type": "string" }, "required": { "type": "boolean" } } } },
+              "mapping": { "type": "object", "additionalProperties": false, "properties": { "last_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "first_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "middle_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "suffix": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "sex": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "birth_date": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "civil_status": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "barangay": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "purok_or_sitio": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "street_address": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "mobile": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "email": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 } } },
+              "missing_fields": { "type": "array", "items": { "type": "string" } },
+              "counts": { "type": "object", "additionalProperties": false, "required": ["new", "match", "duplicate", "error", "unresolved"], "properties": { "new": { "type": "integer" }, "match": { "type": "integer" }, "duplicate": { "type": "integer" }, "error": { "type": "integer" }, "unresolved": { "type": "integer" } } },
+              "groups": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["new", "match", "duplicate", "error"],
+                "properties": {
+                  "new": { "type": "array", "items": { "$ref": "#/components/schemas/ResidentImportRow" } },
+                  "match": { "type": "array", "items": { "$ref": "#/components/schemas/ResidentImportRow" } },
+                  "duplicate": { "type": "array", "items": { "$ref": "#/components/schemas/ResidentImportRow" } },
+                  "error": { "type": "array", "items": { "$ref": "#/components/schemas/ResidentImportRow" } }
+                }
+              },
+              "outcomes": { "type": "array", "items": { "type": "object", "required": ["row", "source_line", "outcome", "resident_id"], "properties": { "row": { "type": "integer" }, "source_line": { "type": "integer" }, "outcome": { "type": "string", "enum": ["created", "attached", "skipped", "error"] }, "resident_id": { "type": ["string", "null"], "format": "uuid" } } } }
+            }
+          }
+        ]
+      },
+      "ResidentImportMappingBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["mapping"],
+        "properties": { "mapping": { "type": "object", "additionalProperties": false, "properties": { "last_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "first_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "middle_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "suffix": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "sex": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "birth_date": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "civil_status": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "barangay": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "purok_or_sitio": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "street_address": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "mobile": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "email": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 } } } }
+      },
+      "ResidentImportResolveBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "reason"],
+        "properties": {
+          "action": { "type": "string", "enum": ["create", "same-person", "skip"] },
+          "resident_id": { "type": "string", "format": "uuid", "description": "With same-person only: the record this row is." },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      },
+      "ResidentImportSummaryEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/ResidentImportSummary" }, "meta": { "type": "object" } } },
+      "ResidentImportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/ResidentImport" }, "meta": { "type": "object" } } },
+      "ResidentImportListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/ResidentImportSummary" } },
+          "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
+        }
+      },
       "OfficeResidentSectorDetail": {
         "type": "object",
         "additionalProperties": false,
@@ -16756,6 +17258,7 @@
           "resident.update",
           "resident.deactivate",
           "resident.export",
+          "resident.import",
           "beneficiary.view",
           "beneficiary.review-duplicates",
           "beneficiary.export",
@@ -16813,7 +17316,7 @@
       "Permission": {
         "type": "string",
         "description": "Every key GET /me may carry: StaffCapability, then CaseworkPermission.",
-        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
+        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "resident.import", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
       },
       "OfficeRole": {
         "type": "string",
@@ -18089,7 +18592,8 @@
               "verification_decided",
               "message_received",
               "issuance_request_updated",
-              "event_registration_updated"
+              "event_registration_updated",
+              "sector_application_decided"
             ]
           },
           "title": {
@@ -18900,7 +19404,8 @@
         "properties": {
           "photo_media_id": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "The resident’s reviewed selfie or a card photo taken of them; nothing else."
           }
         }
       },

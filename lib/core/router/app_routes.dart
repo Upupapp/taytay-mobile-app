@@ -352,6 +352,15 @@ enum AppRoute {
     AccessRequirement.verified,
   ),
 
+  /// The resident's own non-sensitive sectors and their sector applications
+  /// (D-215). Verified only, like the API's `/me/sectors`. No identifier in
+  /// the path: the reads are `/me`-scoped.
+  sectors('sectors', '/sectors', AccessRequirement.verified),
+
+  /// Applying for senior citizen, PWD or solo parent. The sector tapped is
+  /// router `extra`, never part of the URL.
+  sectorApply('sector-apply', '/sectors/apply', AccessRequirement.verified),
+
   /// The resident's LGU digital ID. Verified residents only: a credential is a
   /// statement by the LGU about a person whose identity it has confirmed.
   digitalId('digital-id', '/digital-id', AccessRequirement.verified),

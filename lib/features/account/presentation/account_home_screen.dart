@@ -169,6 +169,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         iconColor: BrandColors.blue,
         onTap: () => context.goNamed(AppRoute.profileEdit.routeName),
       ),
+      // `/sectors` is a top-level route, pushed like documents and household
+      // so back returns here (D-215).
+      AccountMenuRow(
+        title: 'Sectors and benefits',
+        subtitle: 'Senior citizen · PWD · solo parent',
+        icon: TaytayIcons.heart,
+        tile: BrandColors.gold50,
+        iconColor: BrandColors.goldInk,
+        onTap: () => context.pushNamed(AppRoute.sectors.routeName),
+      ),
       AccountMenuRow(
         title: 'Messages',
         subtitle: _messagesLine,

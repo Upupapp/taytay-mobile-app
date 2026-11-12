@@ -39,6 +39,9 @@ import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/requirements/presentation/requirements_screen.dart';
+import '../../features/sectors/domain/resident_sector.dart';
+import '../../features/sectors/presentation/sector_apply_screen.dart';
+import '../../features/sectors/presentation/sectors_screen.dart';
 import '../../features/services/presentation/assistance_case_screen.dart';
 import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
@@ -619,6 +622,24 @@ GoRouter buildAppRouter({
             path: 'correction',
             name: AppRoute.householdCorrection.routeName,
             builder: (context, state) => const HouseholdCorrectionScreen(),
+          ),
+        ],
+      ),
+      // Sectors and benefits, pushed from My Account so back returns there.
+      GoRoute(
+        path: AppRoute.sectors.path,
+        name: AppRoute.sectors.routeName,
+        builder: (context, state) => const SectorsScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: 'apply',
+            name: AppRoute.sectorApply.routeName,
+            builder: (context, state) => SectorApplyScreen(
+              initial: switch (state.extra) {
+                final ResidentSector sector => sector,
+                _ => null,
+              },
+            ),
           ),
         ],
       ),
