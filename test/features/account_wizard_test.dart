@@ -13,14 +13,19 @@ import 'package:taytay_resident/features/auth/domain/account_application.dart';
 import 'package:taytay_resident/features/auth/domain/auth_repository.dart';
 import 'package:taytay_resident/features/auth/domain/code_exchange.dart';
 import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
+import 'package:taytay_resident/features/auth/presentation/account_wizard_screen.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
-import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/features/registration/domain/registration_domain.dart'
+    hide ConsentKind;
+import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/features/verification/domain/verification_id_type.dart';
+import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
 import 'package:taytay_resident/shared/widgets/legal_text_sheet.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
+import '../support/biometric_fakes.dart';
 import 'auth_screens_test.dart' show FakeBarangayDirectory, boot, goTo, reveal;
 import 'auth_session_test.dart' show FakeAuthRepository;
 
@@ -449,6 +454,9 @@ void main() {
       tester,
       auth: auth,
       documentPicker: _Picker(),
+      // The selfie consent published and already given (D-209).
+      platform: BiometricPlatform(),
+      accountControls: BiometricConsents(),
     );
     await goTo(tester, 'register');
     await _createAccount(tester);
@@ -788,5 +796,139 @@ void main() {
     expect(find.text("Driver's license"), findsOneWidget);
     expect(find.text('PhilSys National ID'), findsNothing);
     semantics.dispose();
+  });
+  group('the selfie consent in sign-up (D-209, D-210)', () {
+    /// Personal details through terms, leaving the wizard on the ID step.
+    Future<void> toIdStep(WidgetTester tester) async {
+      await goTo(tester, 'register');
+      await _createAccount(tester);
+      await tester.enterText(
+        find.byKey(const Key('email-code-field')),
+        '482190',
+      );
+      await tester.tap(find.text('Confirm email'));
+      await tester.pumpAndSettle();
+      await _tapText(tester, _agree);
+      await _tapText(tester, _consent);
+      await _tapText(tester, 'Continue');
+    }
+
+    /// The ID photo, then on to the selfie step.
+    Future<void> toSelfieStep(WidgetTester tester) async {
+      await toIdStep(tester);
+      await tester.tap(find.byKey(const Key('id-front-pick')));
+      await tester.pumpAndSettle();
+      await _tapText(tester, 'Continue');
+    }
+
+    testWidgets('owed: the consent is asked before the camera opens', (
+      tester,
+    ) async {
+      final FakeAuthRepository auth = FakeAuthRepository();
+      final BiometricConsents consents = BiometricConsents(
+        start: BiometricStart.owed,
+      );
+      await boot(
+        tester,
+        auth: auth,
+        documentPicker: _Picker(),
+        platform: BiometricPlatform(),
+        accountControls: consents,
+      );
+      await toSelfieStep(tester);
+
+      await _tapText(tester, 'Take selfie');
+      expect(find.text(BiometricConsentCopy.dialogTitle), findsOneWidget);
+      expect(find.text(sampleBiometricBody.split('\n').last), findsOneWidget);
+      await reveal(tester, find.byKey(biometricConsentTickKey));
+      await tester.tap(find.byKey(biometricConsentTickKey));
+      await tester.pumpAndSettle();
+      await reveal(tester, find.byKey(biometricConsentAgreeKey));
+      await tester.tap(find.byKey(biometricConsentAgreeKey));
+      await tester.pumpAndSettle();
+
+      expect(consents.accepted.single.kind, ConsentKind.biometric);
+      await _tapText(tester, 'Continue');
+      expect(find.text('Check your details'), findsOneWidget);
+    });
+
+    testWidgets('declined: the in-person way, and Finish for now goes home', (
+      tester,
+    ) async {
+      final FakeAuthRepository auth = FakeAuthRepository();
+      final BiometricConsents consents = BiometricConsents(
+        start: BiometricStart.owed,
+      );
+      await boot(
+        tester,
+        auth: auth,
+        documentPicker: _Picker(),
+        platform: BiometricPlatform(),
+        accountControls: consents,
+      );
+      await toSelfieStep(tester);
+      await _tapText(tester, 'Take selfie');
+      await reveal(tester, find.byKey(biometricConsentDeclineKey));
+      await tester.tap(find.byKey(biometricConsentDeclineKey));
+      await tester.pumpAndSettle();
+
+      expect(consents.accepted, isEmpty);
+      expect(find.text(BiometricConsentCopy.declinedHeading), findsOneWidget);
+      expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+      expect(find.byKey(wizardFinishForNowKey), findsOneWidget);
+
+      await reveal(tester, find.byKey(wizardFinishForNowKey));
+      await tester.tap(find.byKey(wizardFinishForNowKey));
+      await tester.pumpAndSettle();
+      expect(auth.calls, isNot(contains('submitProfile')));
+      expect(find.text('Take a quick selfie'), findsNothing);
+    });
+
+    testWidgets('unpublished: no ID is asked for, in person is offered', (
+      tester,
+    ) async {
+      final FakeAuthRepository auth = FakeAuthRepository();
+      await boot(
+        tester,
+        auth: auth,
+        documentPicker: _Picker(),
+        platform: BiometricPlatform(published: false),
+        accountControls: BiometricConsents(start: BiometricStart.unpublished),
+      );
+      await toIdStep(tester);
+
+      expect(find.byKey(wizardSelfieUnavailableKey), findsOneWidget);
+      expect(
+        find.text(BiometricConsentCopy.unavailableHeading),
+        findsOneWidget,
+      );
+      expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+      expect(find.byKey(const Key('id-front-pick')), findsNothing);
+      await reveal(tester, find.byKey(wizardFinishForNowKey));
+      await tester.tap(find.byKey(wizardFinishForNowKey));
+      await tester.pumpAndSettle();
+      expect(auth.calls, isNot(contains('submitProfile')));
+    });
+
+    testWidgets('the unpublished ID step fits every phone at 200% text', (
+      tester,
+    ) async {
+      for (final double width in <double>[360, 375, 430]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await boot(
+          tester,
+          auth: FakeAuthRepository(),
+          documentPicker: _Picker(),
+          platform: BiometricPlatform(published: false),
+          accountControls: BiometricConsents(start: BiometricStart.unpublished),
+          textScaler: const TextScaler.linear(2),
+        );
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpAndSettle();
+        await toIdStep(tester);
+        expect(tester.takeException(), isNull, reason: '$width');
+        expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+      }
+    });
   });
 }

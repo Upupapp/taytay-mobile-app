@@ -116,6 +116,28 @@ class LegalTextSheet extends StatelessWidget {
   }
 }
 
+/// A published text drawn in the page's own flow, for a text read where it
+/// is agreed to (the selfie's consent, D-209) rather than behind a link. The
+/// same lines as [LegalTextSheet], in a column, so an enclosing dialog or
+/// page does the scrolling.
+class NoticeTextColumn extends StatelessWidget {
+  const NoticeTextColumn({required this.markdown, super.key});
+
+  final String markdown;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<NoticeLine> lines = parseNoticeMarkdown(markdown.trim());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        for (var i = 0; i < lines.length; i++)
+          _Line(line: lines[i], first: i == 0),
+      ],
+    );
+  }
+}
+
 class _Line extends StatelessWidget {
   const _Line({required this.line, required this.first});
 

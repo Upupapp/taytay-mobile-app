@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,13 +12,17 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/session/biometric_consent_controller.dart';
 import '../../../core/startup/platform_controller.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/biometric_consent_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/message_field.dart';
 import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/pill_button_row.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -52,6 +58,12 @@ class VerificationScreen extends StatefulWidget {
 
 class _VerificationScreenState extends State<VerificationScreen> {
   late final VerificationController _controller;
+
+  /// The selfie's consent (D-209). No selfie is offered until it stands.
+  late final BiometricConsentController _biometric;
+
+  /// The resident chose "No, I'll verify in person" (D-210).
+  bool _declined = false;
   bool _started = false;
   String? _tier;
   String? _reason;
@@ -76,8 +88,22 @@ class _VerificationScreenState extends State<VerificationScreen> {
       repository: dependencies.verificationRepository,
       session: dependencies.session,
     )..addListener(_onChanged);
+    _biometric = BiometricConsentController(
+      platform: dependencies.platformRepository,
+      consents: dependencies.accountControlsRepository,
+      inPersonOffice: () =>
+          dependencies.citizenApi.loadOffice(inPersonOfficeSlug),
+    )..addListener(_onBiometric);
     _controller.refresh();
     _loadTier();
+    unawaited(_biometric.load());
+  }
+
+  void _onBiometric() {
+    if (_biometric.status is BiometricConsentUnavailable) {
+      unawaited(_biometric.loadInPersonOffice());
+    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadTier() async {
@@ -111,6 +137,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
     _controller
       ..removeListener(_onChanged)
       ..dispose();
+    _biometric
+      ..removeListener(_onBiometric)
+      ..dispose();
     super.dispose();
   }
 
@@ -120,7 +149,16 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
   bool get _startReady => _front != null && _selfie != null;
 
-  bool get _selfieKept => (_controller.status?.selfieMediaId ?? '').isNotEmpty;
+  bool get _selfieKept =>
+      (_controller.status?.selfieMediaId ?? '').isNotEmpty && !_selfieErased;
+
+  /// The request's selfie was erased after a withdrawal (`selfie_erased_at`).
+  bool get _selfieErased => _controller.status?.selfieErased ?? false;
+
+  /// Whether a selfie slot may open: the consent stands, or can be asked for.
+  bool get _selfieOffered =>
+      _biometric.status is BiometricConsentGiven ||
+      _biometric.status is BiometricConsentOwed;
 
   String get _submittedOn {
     final DateTime? at = _controller.status?.submittedAt;
@@ -213,6 +251,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
           residentMessage: _residentMessage,
           categories: _categories,
           reviewTime: platform.bootstrap.verificationReviewTime,
+          selfieNotice: _selfieErased ? _erasedNotice(pending: true) : null,
         ),
       ),
       VerificationFace.needsCorrection => NeedsCorrectionPage(
@@ -237,11 +276,20 @@ class _VerificationScreenState extends State<VerificationScreen> {
         selfieValue: _slotLabel(
           file: _selfie,
           sent: _selfieSent,
-          empty: _selfieKept ? 'Previous selfie kept' : 'Take a selfie',
+          empty: _selfieKept
+              ? 'Previous selfie kept'
+              : _selfieErased
+              ? VerificationSelfieCopy.erasedSlot
+              : 'Take a selfie',
         ),
+        selfieNotice: _selfieErased && _selfie == null
+            ? _erasedNotice(pending: false)
+            : _consentNotice(),
         onFront: _mayEdit ? () => _pick(VerificationPhotoSlot.front) : null,
         onBackPhoto: _mayEdit ? () => _pick(VerificationPhotoSlot.back) : null,
-        onRetake: _mayEdit ? () => _pick(VerificationPhotoSlot.selfie) : null,
+        onRetake: _mayEdit && _selfieOffered
+            ? () => _pick(VerificationPhotoSlot.selfie)
+            : null,
         onResubmit: _mayEdit && !_controller.submitting ? _resubmit : null,
         onCheckName: _checkName,
       ),
@@ -257,6 +305,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
                 children: <Widget>[
                   NameCheckNote(onCheckName: _checkName),
                   const SizedBox(height: Spacing.section),
+                  if (_consentNotice() case final Widget notice) ...<Widget>[
+                    notice,
+                    const SizedBox(height: Spacing.section),
+                  ],
                   _startPhotos(),
                 ],
               )
@@ -304,6 +356,23 @@ class _VerificationScreenState extends State<VerificationScreen> {
   }
 
   Future<void> _pick(VerificationPhotoSlot slot) async {
+    if (slot == VerificationPhotoSlot.selfie) {
+      // The consent first, as its own act, before the camera opens: a selfie
+      // the server would refuse is never taken (D-209).
+      final BiometricConsentChoice choice = await ensureBiometricConsent(
+        context,
+        _biometric,
+      );
+      if (!mounted) return;
+      if (choice == BiometricConsentChoice.declined) {
+        setState(() => _declined = true);
+        unawaited(_biometric.loadInPersonOffice());
+        return;
+      }
+      if (choice != BiometricConsentChoice.agreed) return;
+      if (_declined) setState(() => _declined = false);
+    }
+    if (!mounted) return;
     final DocumentPicker picker = AppDependencies.of(context).documentPicker;
     final DocumentSource preferred = slot == VerificationPhotoSlot.selfie
         ? DocumentSource.camera
@@ -316,7 +385,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
       UploadPolicy.fallback,
     );
     if (picked == null || !mounted) return;
-    final bool replacing = _face == VerificationFace.needsCorrection;
+    // A pending request whose selfie was erased takes its new one on the
+    // request itself, as a rejected one does.
+    final bool replacing =
+        _face == VerificationFace.needsCorrection ||
+        (_face == VerificationFace.pending && _selfieErased);
     final VerificationImagePart part = VerificationImagePart(
       bytes: picked.bytes,
       fileName: picked.fileName,
@@ -328,7 +401,11 @@ class _VerificationScreenState extends State<VerificationScreen> {
         back: slot == VerificationPhotoSlot.back ? part : null,
         selfie: slot == VerificationPhotoSlot.selfie ? part : null,
       );
-      if (!mounted || !ok) return;
+      if (!mounted) return;
+      if (!ok) {
+        _afterRefusal();
+        return;
+      }
     }
     setState(() {
       switch (slot) {
@@ -414,12 +491,123 @@ class _VerificationScreenState extends State<VerificationScreen> {
         mimeType: selfie.mimeType,
       ),
     );
-    if (!mounted || !ok) return;
+    if (!mounted) return;
+    if (!ok) {
+      _afterRefusal();
+      return;
+    }
     setState(() {
       _front = null;
       _back = null;
       _selfie = null;
     });
+  }
+
+  /// A selfie the server refused for want of consent: what this screen knew
+  /// about the consent is stale, so it is read again (D-209).
+  void _afterRefusal() {
+    final AppFailure? failure = _controller.failure;
+    if (failure is ForbiddenFailure && failure.requiresBiometricConsent) {
+      unawaited(_biometric.refusedForConsent());
+    }
+  }
+
+  /// Why a selfie cannot be taken now, and the in-person way; null when the
+  /// consent stands or can be asked for and was not declined.
+  Widget? _consentNotice() {
+    final BiometricConsentStatus status = _biometric.status;
+    return switch (status) {
+      BiometricConsentChecking() => const LoadingSkeleton(
+        layout: SkeletonLayout.text,
+        count: 1,
+        semanticLabel: VerificationSelfieCopy.checking,
+      ),
+      BiometricConsentFailed() => SoftNote(
+        key: verificationConsentFailedKey,
+        tone: NoteTone.error,
+        heading: BiometricConsentCopy.failedHeading,
+        message: BiometricConsentCopy.failed,
+        action: PillButtonRow(
+          wrap: true,
+          padding: EdgeInsets.zero,
+          actions: <PillAction>[
+            PillAction(
+              label: 'Try again',
+              primary: true,
+              onPressed: () => unawaited(_biometric.load()),
+            ),
+          ],
+        ),
+      ),
+      BiometricConsentUnavailable() => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const SoftNote(
+            key: verificationSelfieUnavailableKey,
+            tone: NoteTone.warning,
+            heading: BiometricConsentCopy.unavailableHeading,
+            message: BiometricConsentCopy.unavailable,
+          ),
+          const SizedBox(height: Spacing.md),
+          InPersonVerificationNote(office: _biometric.inPersonOffice),
+        ],
+      ),
+      BiometricConsentOwed() || BiometricConsentGiven() =>
+        _declined
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const SoftNote(
+                    heading: BiometricConsentCopy.declinedHeading,
+                    message: BiometricConsentCopy.declined,
+                  ),
+                  const SizedBox(height: Spacing.md),
+                  InPersonVerificationNote(office: _biometric.inPersonOffice),
+                ],
+              )
+            : null,
+    };
+  }
+
+  /// The selfie was erased because the resident withdrew the consent. On a
+  /// pending request staff cannot approve until a new one is sent (D-212).
+  Widget _erasedNotice({required bool pending}) {
+    final DateTime? at = _controller.status?.selfieErasedAt;
+    final String on = at == null ? '' : ' on ${formatManilaDate(at)}';
+    final bool canRetake = _mayEdit && _selfieOffered;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        SoftNote(
+          key: verificationSelfieErasedKey,
+          tone: NoteTone.warning,
+          heading: VerificationSelfieCopy.erasedHeading,
+          message: pending
+              ? VerificationSelfieCopy.erasedPending(on)
+              : VerificationSelfieCopy.erasedRejected(on),
+          action: canRetake && pending
+              ? PillButtonRow(
+                  wrap: true,
+                  padding: EdgeInsets.zero,
+                  actions: <PillAction>[
+                    PillAction(
+                      label: VerificationSelfieCopy.retake,
+                      primary: true,
+                      buttonKey: verificationRetakeSelfieKey,
+                      onPressed: _controller.submitting
+                          ? null
+                          : () => _pick(VerificationPhotoSlot.selfie),
+                    ),
+                  ],
+                )
+              : null,
+        ),
+        if (_consentNotice() case final Widget notice) ...<Widget>[
+          const SizedBox(height: Spacing.md),
+          notice,
+        ],
+      ],
+    );
   }
 
   Widget _startPhotos() {
@@ -485,7 +673,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
               empty: 'Take a selfie',
             ),
             dashed: true,
-            onTap: () => _pick(VerificationPhotoSlot.selfie),
+            onTap: _selfieOffered
+                ? () => _pick(VerificationPhotoSlot.selfie)
+                : null,
             leading: const TaytayIcon(
               icon: TaytayIcons.plus,
               semanticLabel: '',
@@ -515,6 +705,35 @@ class _VerificationScreenState extends State<VerificationScreen> {
 }
 
 enum VerificationPhotoSlot { front, back, selfie }
+
+/// The slug of the office that verifies in person (D-210). Its name, address
+/// and hours come from `GET /offices/{slug}`, never from the app.
+const String inPersonOfficeSlug = 'mswdo';
+
+/// The selfie notes on the verification screen.
+const Key verificationSelfieErasedKey = Key('verification-selfie-erased');
+const Key verificationSelfieUnavailableKey = Key(
+  'verification-selfie-unavailable',
+);
+const Key verificationConsentFailedKey = Key('verification-consent-failed');
+const Key verificationRetakeSelfieKey = Key('verification-retake-selfie');
+
+/// What the verification screen says about the selfie (D-209, D-212).
+abstract final class VerificationSelfieCopy {
+  static const String checking = 'Checking the selfie consent';
+  static const String erasedHeading = 'Your selfie was erased';
+  static const String erasedSlot = 'Selfie erased: take a new one';
+  static const String retake = 'Take a new selfie';
+
+  static String erasedPending(String on) =>
+      'You withdrew your selfie consent$on, so the selfie you sent was '
+      'erased. Staff cannot approve this request until you send a new '
+      'selfie, or you can verify in person instead.';
+
+  static String erasedRejected(String on) =>
+      'You withdrew your selfie consent$on, so the selfie you sent was '
+      'erased. Send a new one with your ID, or verify in person instead.';
+}
 
 /// The status page while it has nothing to show yet, or could not read the
 /// status: the same header over the soft page, with the state in the body.

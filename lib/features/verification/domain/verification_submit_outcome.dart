@@ -21,6 +21,10 @@ VerificationSubmitOutcome verificationSubmitOutcome(AppFailure? failure) {
   return switch (failure) {
     null => VerificationSubmitOutcome.opened,
     ConflictFailure() => VerificationSubmitOutcome.pendingReview,
+    // A selfie refused for want of consent is not a staff account: nothing
+    // was stored, and the resident is asked again (D-209).
+    ForbiddenFailure(requiresBiometricConsent: true) =>
+      VerificationSubmitOutcome.failed,
     ForbiddenFailure() => VerificationSubmitOutcome.continueVerified,
     _ => VerificationSubmitOutcome.failed,
   };

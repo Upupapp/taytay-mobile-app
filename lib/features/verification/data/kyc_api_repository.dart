@@ -188,6 +188,9 @@ class KycApiRepository implements VerificationRepository {
       idFrontMediaId: _text(map['id_front_media_id']),
       idBackMediaId: _text(map['id_back_media_id']),
       selfieMediaId: _text(map['selfie_media_id']),
+      selfieErasedAt: map['selfie_erased_at'] is String
+          ? DateTime.tryParse(map['selfie_erased_at'] as String)?.toUtc()
+          : null,
     );
   }
 

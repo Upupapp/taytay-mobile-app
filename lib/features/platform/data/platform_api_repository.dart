@@ -91,6 +91,12 @@ class PlatformApiRepository implements PlatformRepository {
       privacyNotice: _notice(map['privacy_notice']),
       terms: _notice(map['terms']),
       verificationReviewTime: _reviewTime(map),
+      // Null while the text is the placeholder: no consent can be given and
+      // no selfie is taken. An older server sends neither key, which reads
+      // the same way (deny by default, D-32, D-209).
+      biometricConsentVersion:
+          _string(map['biometric_consent_version'])?.trim() ?? '',
+      biometricConsent: _notice(map['biometric_consent']),
       serverTime: DateTime.tryParse(
         map['server_time'] is String ? map['server_time'] as String : '',
       )?.toUtc(),

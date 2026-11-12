@@ -13,11 +13,14 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/session/biometric_consent_controller.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
+import '../../../shared/widgets/biometric_consent_dialog.dart';
 import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/legal_text_sheet.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
@@ -33,6 +36,16 @@ import '../domain/auth_repository.dart';
 import '../domain/code_exchange.dart';
 import '../domain/sign_in_challenge.dart';
 import 'auth_bits.dart';
+
+/// The office that verifies in person (D-210); its details are the
+/// directory's (`GET /offices/{slug}`).
+const String wizardInPersonOfficeSlug = 'mswdo';
+
+/// Ends the wizard when no selfie can be sent: the account is kept.
+const String wizardFinishForNow = 'Finish for now';
+const Key wizardFinishForNowKey = Key('wizard-finish-for-now');
+const Key wizardSelfieUnavailableKey = Key('wizard-selfie-unavailable');
+const Key wizardConsentFailedKey = Key('wizard-consent-failed');
 
 /// Which `02` frame the wizard paints.
 enum AccountFixture {
@@ -151,6 +164,45 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// that completes returns there.
   bool _returnToReview = false;
 
+  /// The selfie's consent, read once the terms are agreed (D-209). Null in a
+  /// design frame and before that step.
+  BiometricConsentController? _biometric;
+
+  /// The resident chose "No, I'll verify in person" (D-210).
+  bool _declinedSelfie = false;
+
+  /// Starts reading the selfie's consent, once, for a live sign-up.
+  void _ensureBiometric() {
+    if (widget.fixture != AccountFixture.live || _biometric != null) return;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final BiometricConsentController controller = BiometricConsentController(
+      platform: dependencies.platformRepository,
+      consents: dependencies.accountControlsRepository,
+      inPersonOffice: () =>
+          dependencies.citizenApi.loadOffice(wizardInPersonOfficeSlug),
+    )..addListener(_onBiometric);
+    _biometric = controller;
+    unawaited(controller.load());
+  }
+
+  void _onBiometric() {
+    final BiometricConsentController? controller = _biometric;
+    if (controller == null) return;
+    if (controller.status is BiometricConsentUnavailable) {
+      unawaited(controller.loadInPersonOffice());
+    }
+    if (mounted) setState(() {});
+  }
+
+  /// No selfie can be sent: the text is not published, or the resident chose
+  /// to verify in person. The wizard then ends here, with the account kept
+  /// and the in-person way said (D-210).
+  bool get _selfieWayClosed {
+    final BiometricConsentController? controller = _biometric;
+    if (controller == null) return false;
+    return controller.status is BiometricConsentUnavailable || _declinedSelfie;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -228,6 +280,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   @override
   void dispose() {
+    _biometric
+      ?..removeListener(_onBiometric)
+      ..dispose();
     _clock?.cancel();
     _first.dispose();
     _last.dispose();
@@ -431,12 +486,17 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           // word rather than this screen's.
           unawaited(dependencies.consentGate.check());
         }
+        _ensureBiometric();
         setState(() {
           _busy = false;
           _status = null;
           _step = _after(_Step.idCard);
         });
       case _Step.idCard:
+        if (_selfieWayClosed) {
+          _finishForNow();
+          return;
+        }
         if (_front == null && widget.fixture == AccountFixture.live) {
           setState(() => _status = 'Add a photo of the front of your ID.');
           return;
@@ -446,6 +506,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           _step = _after(_Step.selfie);
         });
       case _Step.selfie:
+        if (_selfieWayClosed) {
+          _finishForNow();
+          return;
+        }
         if (_selfieShot == null && widget.fixture == AccountFixture.live) {
           setState(() => _status = 'Take a selfie to continue.');
           return;
@@ -706,6 +770,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
     if (!mounted) return;
     if (profile case Err<void>(:final failure)) {
+      if (failure is ForbiddenFailure && failure.requiresBiometricConsent) {
+        // The consent no longer stands (a new text, or a withdrawal on
+        // another device): read it again; the selfie step asks.
+        unawaited(_biometric?.refusedForConsent());
+      }
       switch (verificationSubmitOutcome(failure)) {
         case VerificationSubmitOutcome.pendingReview:
           setState(() => _busy = false);
@@ -755,7 +824,35 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     });
   }
 
+  /// Leaves the wizard with the account as it is: signed in, not verified.
+  /// Nothing about the ID is sent, and verification waits in the account.
+  void _finishForNow() {
+    _front = null;
+    _idBack = null;
+    _selfieShot = null;
+    context.goNamed(AppRoute.home.routeName);
+  }
+
   Future<void> _takeSelfie() async {
+    final BiometricConsentController? consent = _biometric;
+    if (consent == null) {
+      _ensureBiometric();
+      return;
+    }
+    // The consent first, as its own act, before the camera opens: a selfie
+    // the server would refuse is never taken (D-209).
+    final BiometricConsentChoice choice = await ensureBiometricConsent(
+      context,
+      consent,
+    );
+    if (!mounted) return;
+    if (choice == BiometricConsentChoice.declined) {
+      setState(() => _declinedSelfie = true);
+      unawaited(consent.loadInPersonOffice());
+      return;
+    }
+    if (choice != BiometricConsentChoice.agreed) return;
+    if (_declinedSelfie) setState(() => _declinedSelfie = false);
     final picker = AppDependencies.of(context).documentPicker;
     final CapturedDocument? picked = await picker.pick(
       DocumentSource.camera,
@@ -1005,6 +1102,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
               onPressed: () => setState(() => _step = _Step.account),
             ),
         ],
+      );
+    }
+    if ((_step == _Step.idCard || _step == _Step.selfie) && _selfieWayClosed) {
+      return PrimaryButton(
+        key: wizardFinishForNowKey,
+        label: wizardFinishForNow,
+        onPressed: _busy ? null : _finishForNow,
       );
     }
     final primary = switch (_step) {
@@ -1348,12 +1452,77 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     );
   }
 
+  /// Where the selfie's consent stands, said on the ID and selfie steps
+  /// before any photo is taken: nothing while it can be asked for, otherwise
+  /// why no selfie can be sent and the in-person way (D-209, D-210).
+  Widget _consentNotes() {
+    final BiometricConsentController? controller = _biometric;
+    if (controller == null) return const SizedBox.shrink();
+    final BiometricConsentStatus status = controller.status;
+    final List<Widget> notes = switch (status) {
+      BiometricConsentChecking() => const <Widget>[
+        LoadingSkeleton(
+          layout: SkeletonLayout.text,
+          count: 1,
+          semanticLabel: 'Checking the selfie consent',
+        ),
+      ],
+      BiometricConsentFailed() => <Widget>[
+        SoftNote(
+          key: wizardConsentFailedKey,
+          tone: NoteTone.error,
+          heading: BiometricConsentCopy.failedHeading,
+          message: BiometricConsentCopy.failed,
+          action: AuthLink(
+            'Try again',
+            onPressed: () => unawaited(controller.load()),
+          ),
+        ),
+      ],
+      BiometricConsentUnavailable() => <Widget>[
+        const SoftNote(
+          key: wizardSelfieUnavailableKey,
+          tone: NoteTone.warning,
+          heading: BiometricConsentCopy.unavailableHeading,
+          message: BiometricConsentCopy.unavailable,
+        ),
+        const SizedBox(height: Spacing.md),
+        InPersonVerificationNote(office: controller.inPersonOffice),
+      ],
+      BiometricConsentOwed() || BiometricConsentGiven() =>
+        _declinedSelfie
+            ? <Widget>[
+                const SoftNote(
+                  heading: BiometricConsentCopy.declinedHeading,
+                  message: BiometricConsentCopy.declined,
+                ),
+                const SizedBox(height: Spacing.md),
+                InPersonVerificationNote(office: controller.inPersonOffice),
+              ]
+            : const <Widget>[],
+    };
+    if (notes.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: Spacing.formGap),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: notes,
+      ),
+    );
+  }
+
   Widget _idBody() {
     final attached = _front != null || widget.fixture == AccountFixture.idCard;
     final String name = '${_first.text.trim()} ${_last.text.trim()}'.trim();
+    if (_biometric?.status is BiometricConsentUnavailable) {
+      // No selfie can be sent, so no ID is asked for either: the request
+      // needs both, and an ID uploaded for nothing is data held for nothing.
+      return _consentNotes();
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        _consentNotes(),
         _NameCheckCard(name: name),
         const SizedBox(height: Spacing.formGap),
         _picker(
@@ -1447,9 +1616,15 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   }
 
   Widget _selfieBody() {
+    final BiometricConsentStatus? consent = _biometric?.status;
+    final bool canAsk =
+        consent == null ||
+        consent is BiometricConsentOwed ||
+        consent is BiometricConsentGiven;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
+        _consentNotes(),
         _SelfieGuide(taken: _selfie),
         const SizedBox(height: Spacing.formGap),
         const _SelfieTip(TaytayIcons.sun, 'Good light, facing the camera'),
@@ -1470,9 +1645,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             size: IconSizes.sm,
             color: BrandColors.blue,
           ),
-          onPressed: widget.fixture == AccountFixture.live
+          onPressed: widget.fixture != AccountFixture.live
+              ? () => setState(() => _selfie = true)
+              : canAsk && !_busy
               ? _takeSelfie
-              : () => setState(() => _selfie = true),
+              : null,
         ),
         _statusNote(),
       ],

@@ -35,10 +35,16 @@ class PendingStatusPage extends StatelessWidget {
     this.residentMessage = '',
     this.categories = const <String>[],
     this.reviewTime = VerificationReviewTime.notSent,
+    this.selfieNotice,
     super.key,
   });
 
   final VoidCallback? onBack;
+
+  /// What happened to the selfie, when the resident has something to do
+  /// about it: it was erased after a withdrawal (D-212). Drawn under the
+  /// status card, and "No action needed" is then not said.
+  final Widget? selfieNotice;
   final String accountCreated;
   final String email;
   final String idType;
@@ -77,11 +83,15 @@ class PendingStatusPage extends StatelessWidget {
               <String>[
                 'Taytay LGU staff are checking your valid ID and selfie.',
                 ?reviewSentence,
-                'No action needed.',
+                if (selfieNotice == null) 'No action needed.',
               ].join(' '),
               if (residentMessage.isNotEmpty) residentMessage,
             ],
           ),
+          if (selfieNotice case final Widget notice) ...<Widget>[
+            const SizedBox(height: Spacing.section),
+            notice,
+          ],
           const SizedBox(height: Spacing.section),
           SoftCard(
             child: Column(
@@ -272,11 +282,16 @@ class NeedsCorrectionPage extends StatelessWidget {
     this.onRetake,
     this.onCheckName,
     this.notice = '',
+    this.selfieNotice,
     super.key,
   });
 
   final VoidCallback? onBack;
   final VoidCallback? onResubmit;
+
+  /// What stands in the way of a selfie, or what happened to the last one
+  /// (D-209, D-210): drawn above the photos.
+  final Widget? selfieNotice;
   final String reason;
   final List<FieldCorrectionNote> notes;
   final String idType;
@@ -373,6 +388,10 @@ class NeedsCorrectionPage extends StatelessWidget {
           const SizedBox(height: Spacing.section),
           NameCheckNote(onCheckName: onCheckName),
           const SizedBox(height: Spacing.section),
+          if (selfieNotice case final Widget notice) ...<Widget>[
+            notice,
+            const SizedBox(height: Spacing.section),
+          ],
           SoftCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

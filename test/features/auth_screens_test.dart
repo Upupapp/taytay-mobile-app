@@ -21,6 +21,7 @@ import 'package:taytay_resident/features/auth/domain/sign_in_challenge.dart';
 import 'package:taytay_resident/features/auth/presentation/sign_in_screen.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 
 import 'auth_session_test.dart' show FakeAuthRepository, FakeLocalAuthenticator;
 
@@ -71,6 +72,7 @@ Future<AppDependencies> boot(
   DocumentPicker? documentPicker,
   BarangayDirectory? barangays,
   PlatformRepository? platform,
+  AccountControlsRepository? accountControls,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -114,7 +116,8 @@ Future<AppDependencies> boot(
     documentPicker: documentPicker ?? base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,
-    accountControlsRepository: base.accountControlsRepository,
+    accountControlsRepository:
+        accountControls ?? base.accountControlsRepository,
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     barangayDirectory: barangays ?? FakeBarangayDirectory(),

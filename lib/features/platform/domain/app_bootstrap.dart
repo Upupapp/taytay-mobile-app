@@ -35,6 +35,8 @@ class AppBootstrap {
     this.privacyNotice = PrivacyNotice.missing,
     this.terms = TermsOfUse.missing,
     this.verificationReviewTime = VerificationReviewTime.notSent,
+    this.biometricConsentVersion = '',
+    this.biometricConsent = BiometricConsentText.missing,
   });
 
   /// What the app assumes before the server has answered, and after a failure.
@@ -91,6 +93,17 @@ class AppBootstrap {
 
   /// `privacy_notice` from `GET /app/config`. Missing means the bundled draft.
   final PrivacyNotice privacyNotice;
+
+  /// `biometric_consent_version` from `GET /app/config` (backend `44cae1b`):
+  /// the version of the selfie's consent a resident can agree to now. Empty
+  /// while the office has not published the text (the server sends `null`
+  /// for the placeholder) — and then the server takes no selfie from anybody
+  /// (D-209).
+  final String biometricConsentVersion;
+
+  /// `biometric_consent` from `GET /app/config`: the consent text a resident
+  /// reads before a selfie, shaped like the Terms.
+  final BiometricConsentText biometricConsent;
 
   /// `terms` from `GET /app/config` (backend `77da0b2`): the Terms of Use
   /// text. Once published its version is the one [termsVersion] names, and

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/app_dependencies.dart';
@@ -6,14 +8,18 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
+import '../../../core/session/biometric_consent_controller.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/app_dialog.dart';
+import '../../../shared/widgets/biometric_consent_dialog.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
+import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/soft_page.dart';
@@ -42,6 +48,9 @@ class PrivacyControlsScreen extends StatefulWidget {
 }
 
 class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
+  /// The selfie's consent, read from the server (D-209). Created with the
+  /// first dependencies.
+  BiometricConsentController? _biometric;
   bool _loading = true;
   AccountControls _controls = AccountControls.none;
   List<ConsentRecord>? _consents;
@@ -51,7 +60,142 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_biometric == null) {
+      final AppDependencies dependencies = AppDependencies.of(context);
+      _biometric = BiometricConsentController(
+        platform: dependencies.platformRepository,
+        consents: dependencies.accountControlsRepository,
+      )..addListener(_onBiometric);
+      unawaited(_biometric?.load());
+    }
     if (_loading) _load();
+  }
+
+  void _onBiometric() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _biometric
+      ?..removeListener(_onBiometric)
+      ..dispose();
+    super.dispose();
+  }
+
+  /// Withdraws the selfie consent after a confirmation that says what it
+  /// does. The effects are also said on the page, before the button (D-211).
+  Future<void> _withdrawBiometric(BiometricConsentController controller) async {
+    final bool? confirmed = await AppDialog.confirm(
+      context: context,
+      title: BiometricConsentCopy.withdrawTitle,
+      message: BiometricConsentCopy.withdrawEffects,
+      confirmLabel: BiometricConsentCopy.withdrawConfirm,
+      cancelLabel: BiometricConsentCopy.withdrawCancel,
+      destructive: true,
+    );
+    if (confirmed != true || !mounted) return;
+    final bool done = await controller.withdraw();
+    if (!mounted) return;
+    final AppFailure? failure = controller.recordFailure;
+    setState(() {
+      _notice = done
+          ? 'Taytay LGU has recorded your withdrawal, and your selfies were '
+                'erased.'
+          : (failure?.outcomeUnknown ?? false)
+          ? 'We could not confirm that your withdrawal was recorded. Trying '
+                'again is safe: it is recorded only once.'
+          : 'That withdrawal was not recorded. Nothing has changed, and you '
+                'can try again.';
+    });
+    if (done) unawaited(_load());
+  }
+
+  /// The selfie consent, where it stands, and the way to withdraw it.
+  Widget _biometricSection(TextStyle body) {
+    final BiometricConsentController? controller = _biometric;
+    if (controller == null) return const SizedBox.shrink();
+    final BiometricConsentStatus status = controller.status;
+    return switch (status) {
+      BiometricConsentChecking() => const LoadingSkeleton(
+        layout: SkeletonLayout.text,
+        count: 2,
+        semanticLabel: 'Checking the selfie consent',
+      ),
+      BiometricConsentFailed() => SoftNote(
+        key: privacyBiometricFailedKey,
+        tone: NoteTone.error,
+        heading: BiometricConsentCopy.failedHeading,
+        message:
+            'Where your selfie consent stands could not be read. Check your '
+            'connection and try again.',
+        action: PillButtonRow(
+          wrap: true,
+          padding: EdgeInsets.zero,
+          actions: <PillAction>[
+            PillAction(
+              label: 'Try again',
+              primary: true,
+              onPressed: () => unawaited(controller.load()),
+            ),
+          ],
+        ),
+      ),
+      BiometricConsentUnavailable() => Text(
+        'Taytay LGU has not published a selfie consent yet, so the app takes '
+        'no selfie and holds no consent for one.',
+        key: privacyBiometricUnavailableKey,
+        style: body,
+      ),
+      BiometricConsentOwed() => Text(
+        'You have not agreed to the selfie consent. The app asks before it '
+        'takes any selfie, and you can verify in person instead.',
+        key: privacyBiometricOwedKey,
+        style: body,
+      ),
+      BiometricConsentGiven(
+        :final String version,
+        :final DateTime? acceptedAt,
+      ) =>
+        SoftCard(
+          key: privacyBiometricGivenKey,
+          filled: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Text(
+                acceptedAt == null
+                    ? 'You agreed that Taytay LGU may take and use your '
+                          'selfie (version $version).'
+                    : 'You agreed on ${ManilaTime.formatDate(acceptedAt)} '
+                          'that Taytay LGU may take and use your selfie '
+                          '(version $version).',
+                style: body,
+              ),
+              const SizedBox(height: Spacing.md),
+              // What withdrawing does, before the button (NPC Circular
+              // 2023-04: consequences explained).
+              const SoftNote(
+                key: privacyBiometricEffectsKey,
+                tone: NoteTone.warning,
+                heading: 'What withdrawing does',
+                message: BiometricConsentCopy.withdrawEffects,
+                live: false,
+              ),
+              const SizedBox(height: Spacing.md),
+              AppButton(
+                key: privacyBiometricWithdrawKey,
+                label: BiometricConsentCopy.withdrawButton,
+                variant: AppButtonVariant.danger,
+                loading: controller.isRecording,
+                onPressed: controller.isRecording
+                    ? null
+                    : () => _withdrawBiometric(controller),
+              ),
+            ],
+          ),
+        ),
+    };
   }
 
   Future<void> _load() async {
@@ -215,6 +359,10 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
           const SizedBox(height: Spacing.lg),
         ],
 
+        const SettingsSectionTitle('Selfie consent'),
+        _biometricSection(body),
+        const SizedBox(height: Spacing.xl),
+
         const SettingsSectionTitle('What you agreed to'),
 
         if (_consentsFailure != null)
@@ -294,6 +442,13 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   }
 }
 
+const Key privacyBiometricGivenKey = Key('privacy-biometric-given');
+const Key privacyBiometricOwedKey = Key('privacy-biometric-owed');
+const Key privacyBiometricUnavailableKey = Key('privacy-biometric-unavailable');
+const Key privacyBiometricFailedKey = Key('privacy-biometric-failed');
+const Key privacyBiometricEffectsKey = Key('privacy-biometric-effects');
+const Key privacyBiometricWithdrawKey = Key('privacy-biometric-withdraw');
+
 class _ConsentCard extends StatelessWidget {
   const _ConsentCard({
     required this.consent,
@@ -361,8 +516,12 @@ class _ConsentCard extends StatelessWidget {
           ],
 
           // A withdrawn consent keeps its row: the record is the point, and
-          // removing it would erase the evidence it exists to provide.
-          if (consent.isActive &&
+          // removing it would erase the evidence it exists to provide. The
+          // selfie consent is withdrawn from its own section, where what that
+          // does is said first, and given again only before a selfie, with
+          // its text (D-209, D-211).
+          if (consent.kind != ConsentKind.biometric &&
+              consent.isActive &&
               canWithdraw &&
               consent.isWithdrawable &&
               consent.key.isNotEmpty) ...[
@@ -372,7 +531,8 @@ class _ConsentCard extends StatelessWidget {
               variant: AppButtonVariant.text,
               onPressed: onWithdraw,
             ),
-          ] else if (!consent.isActive &&
+          ] else if (consent.kind != ConsentKind.biometric &&
+              !consent.isActive &&
               consent.isWithdrawable &&
               consent.key.isNotEmpty) ...[
             const SizedBox(height: Spacing.md),

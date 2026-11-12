@@ -319,6 +319,7 @@ class VerificationStatusDetail {
     this.idFrontMediaId,
     this.idBackMediaId,
     this.selfieMediaId,
+    this.selfieErasedAt,
   });
 
   /// Nothing known yet — the initial state before a load completes.
@@ -387,6 +388,15 @@ class VerificationStatusDetail {
   final String? idFrontMediaId;
   final String? idBackMediaId;
   final String? selfieMediaId;
+
+  /// When the selfie was erased because the resident withdrew the biometric
+  /// consent (`selfie_erased_at`, backend `44cae1b`). Set, the image is gone:
+  /// a pending request cannot be approved until a new selfie is sent, and the
+  /// screen says so (D-212). Null when nothing was erased.
+  final DateTime? selfieErasedAt;
+
+  /// Whether the selfie on this request was erased.
+  bool get selfieErased => selfieErasedAt != null;
 
   bool get isVerified => stage == ResidentVerificationStage.verified;
 

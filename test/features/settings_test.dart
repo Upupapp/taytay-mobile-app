@@ -13,7 +13,13 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
+import 'package:taytay_resident/features/settings/presentation/privacy_controls_screen.dart';
+import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
+
+import '../support/biometric_fakes.dart';
+import '../support/layout_matrix.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -155,6 +161,7 @@ Future<BootedSettings> bootSettings(
   AccountControls? controls,
   List<ConsentRecord>? consents,
   AccountControlsRepository? repositoryOverride,
+  PlatformRepository? platformRepository,
   String location = '/settings',
   Size size = const Size(400, 4000),
   TextScaler textScaler = TextScaler.noScaling,
@@ -204,7 +211,7 @@ Future<BootedSettings> bootSettings(
     telemetry: base.telemetry,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
-    platformRepository: base.platformRepository,
+    platformRepository: platformRepository ?? base.platformRepository,
     serviceCatalogRepository: base.serviceCatalogRepository,
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
@@ -676,6 +683,137 @@ void main() {
       );
 
       expect(find.textContaining('has not switched on'), findsOneWidget);
+    });
+  });
+
+  // ── The selfie consent (D-209) ──────────────────────────────────────────
+
+  group('Selfie consent', () {
+    Future<BiometricConsents> open(
+      WidgetTester tester, {
+      BiometricStart start = BiometricStart.given,
+      TextScaler textScaler = TextScaler.noScaling,
+      Size size = const Size(400, 4000),
+    }) async {
+      final BiometricConsents consents = BiometricConsents(start: start);
+      await bootSettings(
+        tester,
+        repositoryOverride: consents,
+        platformRepository: BiometricPlatform(
+          published: start != BiometricStart.unpublished,
+        ),
+        location: '/settings/privacy',
+        textScaler: textScaler,
+        size: size,
+      );
+      return consents;
+    }
+
+    testWidgets('a consent in force says what withdrawing does, first', (
+      tester,
+    ) async {
+      await open(tester);
+      expect(find.byKey(privacyBiometricGivenKey), findsOneWidget);
+      expect(find.textContaining('You agreed on 02 Nov 2026'), findsOneWidget);
+      final Finder effects = find.byKey(privacyBiometricEffectsKey);
+      final Finder button = find.byKey(privacyBiometricWithdrawKey);
+      expect(effects, findsOneWidget);
+      expect(
+        find.descendant(
+          of: effects,
+          matching: find.text(BiometricConsentCopy.withdrawEffects),
+        ),
+        findsOneWidget,
+      );
+      // The effects stand above the button, so they are read before it.
+      expect(
+        tester.getTopLeft(effects).dy,
+        lessThan(tester.getTopLeft(button).dy),
+      );
+      for (final String effect in <String>[
+        'erases every selfie',
+        'needs a new selfie',
+        'loses its photo',
+      ]) {
+        expect(
+          BiometricConsentCopy.withdrawEffects,
+          contains(effect),
+          reason: effect,
+        );
+      }
+    });
+
+    testWidgets('withdrawing is confirmed in a dialog, then recorded', (
+      tester,
+    ) async {
+      final BiometricConsents consents = await open(tester);
+      await tester.tap(find.byKey(privacyBiometricWithdrawKey));
+      await tester.pumpAndSettle();
+      expect(find.text(BiometricConsentCopy.withdrawTitle), findsOneWidget);
+      expect(find.byType(Dialog), findsOneWidget);
+      expect(consents.withdrawn, isEmpty);
+
+      await tester.tap(find.text(BiometricConsentCopy.withdrawConfirm));
+      await tester.pumpAndSettle();
+      expect(consents.withdrawn.single.kind, ConsentKind.biometric);
+      expect(consents.withdrawn.single.version, sampleBiometricVersion);
+      expect(find.textContaining('selfies were erased'), findsOneWidget);
+      // Read again: nothing stands now.
+      expect(find.byKey(privacyBiometricOwedKey), findsOneWidget);
+      expect(find.byKey(privacyBiometricWithdrawKey), findsNothing);
+    });
+
+    testWidgets('keeping it withdraws nothing', (tester) async {
+      final BiometricConsents consents = await open(tester);
+      await tester.tap(find.byKey(privacyBiometricWithdrawKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(BiometricConsentCopy.withdrawCancel));
+      await tester.pumpAndSettle();
+      expect(consents.withdrawn, isEmpty);
+      expect(find.byKey(privacyBiometricGivenKey), findsOneWidget);
+    });
+
+    testWidgets('a failed withdrawal says nothing changed', (tester) async {
+      final BiometricConsents consents = BiometricConsents()
+        ..withdrawFailure = const NetworkFailure();
+      await bootSettings(
+        tester,
+        repositoryOverride: consents,
+        platformRepository: BiometricPlatform(),
+        location: '/settings/privacy',
+      );
+      await tester.tap(find.byKey(privacyBiometricWithdrawKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(BiometricConsentCopy.withdrawConfirm));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('was not recorded'), findsOneWidget);
+      expect(find.byKey(privacyBiometricGivenKey), findsOneWidget);
+    });
+
+    testWidgets('not agreed, or not published: said, with no button', (
+      tester,
+    ) async {
+      await open(tester, start: BiometricStart.owed);
+      expect(find.byKey(privacyBiometricOwedKey), findsOneWidget);
+      expect(find.byKey(privacyBiometricWithdrawKey), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await open(tester, start: BiometricStart.unpublished);
+      expect(find.byKey(privacyBiometricUnavailableKey), findsOneWidget);
+      expect(find.byKey(privacyBiometricWithdrawKey), findsNothing);
+    });
+
+    testWidgets('the section fits 360/375/430 dp at 200% text', (tester) async {
+      for (final double width in layoutWidths) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await open(
+          tester,
+          textScaler: const TextScaler.linear(2),
+          size: Size(width, 6000),
+        );
+        expect(tester.takeException(), isNull, reason: '$width');
+        expect(find.byKey(privacyBiometricWithdrawKey), findsOneWidget);
+      }
     });
   });
 

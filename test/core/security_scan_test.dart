@@ -130,7 +130,23 @@ void main() {
       for (final file in dartFiles('lib')) {
         final path = file.path.replaceAll(r'\', '/');
         if (!path.contains('/data/') && !path.contains('core/api/')) continue;
-        final source = stripComments(file.readAsStringSync());
+        var source = stripComments(file.readAsStringSync());
+        // The selfie's consent is the server's own "biometric" (backend
+        // `44cae1b`, D-209): `GET /app/config` names its text and version
+        // `biometric_consent` and `biometric_consent_version`, read into
+        // `AppBootstrap.biometricConsent` and `.biometricConsentVersion`. It is
+        // a consent the server asks for, not a local unlock result, and only
+        // those four names in the file that reads app config are set aside.
+        if (path.endsWith(
+          'lib/features/platform/data/platform_api_repository.dart',
+        )) {
+          source = source.replaceAll(
+            RegExp(
+              r'\bbiometric_consent(_version)?\b|\bbiometricConsent(Version)?\b',
+            ),
+            '',
+          );
+        }
         for (final token in <String>[
           'LocalUnlockOutcome',
           'biometric',

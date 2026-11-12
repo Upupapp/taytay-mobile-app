@@ -47,3 +47,8 @@ typedef PrivacyNotice = PublishedText;
 /// Unpublished says the text is not out yet; there is no bundled draft, so
 /// nothing stands in for it.
 typedef TermsOfUse = PublishedText;
+
+/// `biometric_consent` on `GET /app/config` (backend `44cae1b`): the consent a
+/// resident gives before the app may send a selfie. Unpublished means no
+/// selfie can be taken; there is no bundled draft (D-209).
+typedef BiometricConsentText = PublishedText;

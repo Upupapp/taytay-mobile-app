@@ -15,9 +15,12 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/citizen_api/domain/citizen_contract.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
+import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/platform/domain/verification_review_time.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
+import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/field_correction_note.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
@@ -27,8 +30,15 @@ import 'package:taytay_resident/features/verification/domain/verification_reposi
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 import 'package:taytay_resident/features/verification/domain/verification_submit_outcome.dart';
 import 'package:taytay_resident/features/verification/presentation/manila_stamp.dart';
+import 'package:taytay_resident/features/verification/presentation/s3_chrome.dart';
+import 'package:taytay_resident/features/verification/presentation/verification_screen.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
+import 'package:taytay_resident/shared/widgets/soft_note.dart';
 import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
+
+import '../support/biometric_fakes.dart';
+import '../support/layout_matrix.dart';
 
 /// Serves a fixed status so a test can assert what a resident sees.
 class StubVerificationRepository implements VerificationRepository {
@@ -145,6 +155,9 @@ Future<AppDependencies> bootVerification(
   required VerificationStatusDetail detail,
   AccessLevel level = AccessLevel.unverified,
   DocumentPicker? picker,
+  PlatformRepository? platformRepository,
+  AccountControlsRepository? consents,
+  VerificationRepository? repository,
 }) async {
   tester.view.physicalSize = const Size(400, 900);
   tester.view.devicePixelRatio = 1;
@@ -177,7 +190,9 @@ Future<AppDependencies> bootVerification(
     telemetry: base.telemetry,
     authRepository: base.authRepository,
     deviceSessionRepository: base.deviceSessionRepository,
-    platformRepository: base.platformRepository,
+    // The selfie consent published and given unless a test says otherwise:
+    // a selfie is offered only then (D-209).
+    platformRepository: platformRepository ?? BiometricPlatform(),
     serviceCatalogRepository: base.serviceCatalogRepository,
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
@@ -185,13 +200,13 @@ Future<AppDependencies> bootVerification(
     residentProfileRepository: base.residentProfileRepository,
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
-    verificationRepository: StubVerificationRepository(detail),
+    verificationRepository: repository ?? StubVerificationRepository(detail),
     serviceRequestRepository: base.serviceRequestRepository,
     requirementRepository: base.requirementRepository,
     documentPicker: picker ?? base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,
-    accountControlsRepository: base.accountControlsRepository,
+    accountControlsRepository: consents ?? BiometricConsents(),
     notificationRepository: base.notificationRepository,
     registrationRepository: base.registrationRepository,
     barangayDirectory: base.barangayDirectory,
@@ -585,6 +600,279 @@ void main() {
     expect(note.toString(), isNot(contains('Sample')));
   });
 
+  group('the selfie consent on the verification screen (D-209, D-210)', () {
+    const VerificationStatusDetail notStarted = VerificationStatusDetail(
+      stage: ResidentVerificationStage.notStarted,
+      rawState: '',
+    );
+
+    /// Presses the selfie slot as the resident does. The slot can sit under
+    /// the page's fixed footer, so its own handler is called; a slot the
+    /// screen switched off has none.
+    Future<void> tapSelfie(WidgetTester tester) async {
+      final Finder slot = find.byKey(const Key('verification-selfie'));
+      await tester.ensureVisible(slot);
+      await tester.pumpAndSettle();
+      tester.widget<S3Field>(slot).onTap?.call();
+      await tester.pumpAndSettle();
+    }
+
+    PrimaryButton start(WidgetTester tester) => tester.widget<PrimaryButton>(
+      find.widgetWithText(PrimaryButton, 'Start verification'),
+    );
+
+    testWidgets('owed: the consent opens before the camera, then the photo', (
+      tester,
+    ) async {
+      final BiometricConsents consents = BiometricConsents(
+        start: BiometricStart.owed,
+      );
+      await bootVerification(
+        tester,
+        detail: notStarted,
+        picker: _ReadyPicker(),
+        consents: consents,
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('verification-id-front')),
+      );
+      await tester.tap(find.byKey(const Key('verification-id-front')));
+      await tester.pumpAndSettle();
+
+      await tapSelfie(tester);
+      expect(find.text(BiometricConsentCopy.dialogTitle), findsOneWidget);
+      expect(start(tester).onPressed, isNull);
+      await tester.ensureVisible(find.byKey(biometricConsentTickKey));
+      await tester.tap(find.byKey(biometricConsentTickKey));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(biometricConsentAgreeKey));
+      await tester.tap(find.byKey(biometricConsentAgreeKey));
+      await tester.pumpAndSettle();
+
+      expect(consents.accepted.single.kind, ConsentKind.biometric);
+      expect(find.text(BiometricConsentCopy.dialogTitle), findsNothing);
+      expect(start(tester).onPressed, isNotNull);
+    });
+
+    testWidgets('declined: no photo, and the in-person way is said', (
+      tester,
+    ) async {
+      final BiometricConsents consents = BiometricConsents(
+        start: BiometricStart.owed,
+      );
+      await bootVerification(
+        tester,
+        detail: notStarted,
+        picker: _ReadyPicker(),
+        consents: consents,
+      );
+      await tapSelfie(tester);
+      await tester.ensureVisible(find.byKey(biometricConsentDeclineKey));
+      await tester.tap(find.byKey(biometricConsentDeclineKey));
+      await tester.pumpAndSettle();
+
+      expect(consents.accepted, isEmpty);
+      expect(find.text('Take a selfie'), findsOneWidget);
+      expect(find.text(BiometricConsentCopy.declinedHeading), findsOneWidget);
+      expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+      expect(
+        find.textContaining('Bring a valid ID to the MSWDO'),
+        findsOneWidget,
+      );
+      // The resident may change their mind: the slot still asks.
+      await tapSelfie(tester);
+      expect(find.text(BiometricConsentCopy.dialogTitle), findsOneWidget);
+    });
+
+    testWidgets('unpublished: no selfie is offered, and in person is', (
+      tester,
+    ) async {
+      final BiometricConsents consents = BiometricConsents(
+        start: BiometricStart.unpublished,
+      );
+      await bootVerification(
+        tester,
+        detail: notStarted,
+        picker: _ReadyPicker(),
+        platformRepository: BiometricPlatform(published: false),
+        consents: consents,
+      );
+      expect(find.byKey(verificationSelfieUnavailableKey), findsOneWidget);
+      expect(
+        find.text(BiometricConsentCopy.unavailableHeading),
+        findsOneWidget,
+      );
+      expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+
+      await tapSelfie(tester);
+      expect(find.text(BiometricConsentCopy.dialogTitle), findsNothing);
+      expect(find.text('Take a selfie'), findsOneWidget);
+      expect(start(tester).onPressed, isNull);
+      expect(consents.accepted, isEmpty);
+    });
+
+    testWidgets('a failed read offers Try again, and no selfie meanwhile', (
+      tester,
+    ) async {
+      final BiometricConsents consents = BiometricConsents()
+        ..stateFailure = const NetworkFailure();
+      await bootVerification(
+        tester,
+        detail: notStarted,
+        picker: _ReadyPicker(),
+        consents: consents,
+      );
+      expect(find.byKey(verificationConsentFailedKey), findsOneWidget);
+      await tapSelfie(tester);
+      expect(find.text('Take a selfie'), findsOneWidget);
+
+      await tester.ensureVisible(find.text('Try again'));
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.byKey(verificationConsentFailedKey), findsNothing);
+      await tapSelfie(tester);
+      expect(find.text('Photo added'), findsWidgets);
+    });
+
+    testWidgets('a selfie refused for consent reads the consent again', (
+      tester,
+    ) async {
+      final BiometricConsents consents = BiometricConsents();
+      final _RefusingStub repository = _RefusingStub(notStarted);
+      await bootVerification(
+        tester,
+        detail: notStarted,
+        picker: _ReadyPicker(),
+        consents: consents,
+        repository: repository,
+      );
+      await tester.ensureVisible(
+        find.byKey(const Key('verification-id-front')),
+      );
+      await tester.tap(find.byKey(const Key('verification-id-front')));
+      await tester.pumpAndSettle();
+      await tapSelfie(tester);
+      final int reads = consents.stateReads;
+      await tester.ensureVisible(find.text('Start verification'));
+      await tester.tap(find.text('Start verification'));
+      await tester.pumpAndSettle();
+      expect(repository.startCalls, 1);
+      expect(consents.stateReads, greaterThan(reads));
+      expect(find.textContaining('Nothing was sent'), findsOneWidget);
+    });
+
+    testWidgets('pending with an erased selfie says so and takes a new one', (
+      tester,
+    ) async {
+      final DateTime erased = DateTime.utc(2026, 11, 10, 2);
+      final dependencies = await bootVerification(
+        tester,
+        detail: VerificationStatusDetail(
+          stage: ResidentVerificationStage.pendingReview,
+          rawState: 'pending',
+          canEdit: true,
+          selfieMediaId: 'media-sample',
+          selfieErasedAt: erased,
+        ),
+        picker: _ReadyPicker(),
+      );
+      final repository =
+          dependencies.verificationRepository as StubVerificationRepository;
+
+      expect(find.byKey(verificationSelfieErasedKey), findsOneWidget);
+      expect(
+        find.textContaining('Staff cannot approve this request'),
+        findsOneWidget,
+      );
+      expect(find.textContaining(formatManilaDate(erased)), findsOneWidget);
+      expect(find.textContaining('No action needed'), findsNothing);
+
+      await tester.ensureVisible(find.byKey(verificationRetakeSelfieKey));
+      await tester.tap(find.byKey(verificationRetakeSelfieKey));
+      await tester.pumpAndSettle();
+      expect(repository.replaceCalls, 1);
+    });
+
+    testWidgets('a pending request with its selfie still says no action', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: const VerificationStatusDetail(
+          stage: ResidentVerificationStage.pendingReview,
+          rawState: 'pending',
+          canEdit: true,
+          selfieMediaId: 'media-sample',
+        ),
+      );
+      expect(find.byKey(verificationSelfieErasedKey), findsNothing);
+      expect(find.textContaining('No action needed'), findsOneWidget);
+    });
+
+    testWidgets('a rejected request with an erased selfie asks for a new one', (
+      tester,
+    ) async {
+      await bootVerification(
+        tester,
+        detail: VerificationStatusDetail(
+          stage: ResidentVerificationStage.unsuccessful,
+          rawState: 'rejected',
+          canEdit: true,
+          selfieMediaId: 'media-sample',
+          selfieErasedAt: DateTime.utc(2026, 11, 10),
+        ),
+      );
+      expect(find.byKey(verificationSelfieErasedKey), findsOneWidget);
+      expect(find.text(VerificationSelfieCopy.erasedSlot), findsOneWidget);
+      expect(find.text('Previous selfie kept'), findsNothing);
+    });
+
+    testWidgets('each page with its selfie note fits every phone at 200%', (
+      tester,
+    ) async {
+      final Widget notes = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          const SoftNote(
+            tone: NoteTone.warning,
+            heading: BiometricConsentCopy.unavailableHeading,
+            message: BiometricConsentCopy.unavailable,
+          ),
+          const InPersonVerificationNote(
+            office: MunicipalOffice(
+              id: 'o',
+              name: 'Synthetic Social Welfare Office',
+              slug: 'mswdo',
+              description: '',
+              head: '',
+              hours: 'Mon–Fri, sample hours',
+              phone: '0900-000-0002',
+              email: '',
+              address: 'Sample Street, Sample Barangay, Taytay',
+              category: 'social',
+            ),
+          ),
+          SoftNote(
+            tone: NoteTone.warning,
+            heading: VerificationSelfieCopy.erasedHeading,
+            message: VerificationSelfieCopy.erasedPending(' on 10 Nov 2026'),
+          ),
+        ],
+      );
+      for (final Widget Function() build in <Widget Function()>[
+        () => UnverifiedStatusPage(onStart: () {}, below: notes),
+        () => PendingStatusPage(selfieNotice: notes),
+        () => NeedsCorrectionPage(
+          selfieNotice: notes,
+          selfieKept: false,
+          selfieValue: VerificationSelfieCopy.erasedSlot,
+        ),
+      ]) {
+        await expectCleanLayouts(tester, build, scrollable: false, height: 900);
+      }
+    });
+  });
+
   test('locale files still carry the older stage copy', () {
     expect(AppLocales.english.languageCode, 'en');
   });
@@ -593,3 +881,22 @@ void main() {
 /// The name-check statement. The redesign draws it as one plain [Text]
 /// (it was split line by line by the retired S3Lines).
 Finder _lines(String text) => find.text(text);
+
+/// Refuses the start for want of the selfie consent, as the server does.
+class _RefusingStub extends StubVerificationRepository {
+  _RefusingStub(super.detail);
+
+  @override
+  Future<Result<VerificationStatus>> submitVerification({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+    String? idempotencyKey,
+  }) async {
+    startCalls++;
+    return const Err<VerificationStatus>(
+      ForbiddenFailure(requiresBiometricConsent: true),
+    );
+  }
+}

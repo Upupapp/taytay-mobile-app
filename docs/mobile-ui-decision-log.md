@@ -3073,6 +3073,205 @@ Circular 2023-04 as summarised at <https://accralaw.com/?p=16522>.
 
 ---
 
+## D-209 — No selfie is taken before its own biometric consent, given in a dialog before the camera opens
+
+**Status: settled.** Category: privacy / contract / design. Recorded
+2026-11-12, follow-up 2 (G1), on the owner's "decide, research best practice,
+and apply it" (Ella, Michaela Cailing). It closes the D-32 / D-198 gap "the
+selfie is taken with no separate biometric consent".
+
+**Context.** Backend `44cae1b` publishes the selfie's consent text like the
+Terms (`biometric_consent` and `biometric_consent_version` on
+`GET /app/config`; the version is null while the text is the placeholder, and
+the text is not seeded). `POST /me/verification-requests`, and a selfie on
+`/current/documents`, answer 403 `BIOMETRIC_CONSENT_REQUIRED` (a new code)
+unless `GET /me/consents/current` `biometric.up_to_date`; nothing is stored.
+Withdrawing (`POST /me/consents/withdraw {kind: "biometric"}`) erases the
+account's selfies in the same act: each request gets `selfie_erased_at`, a
+pending one cannot be approved until a new selfie is sent, and a digital ID
+whose photo was that selfie keeps its status but loses its photo.
+
+**Chosen.**
+1. **One controller decides nothing.** `BiometricConsentController`
+   (`core/session`, one per screen, nothing kept past it) reads the text from
+   app config and the verdict from `GET /me/consents/current`: checking,
+   unavailable (no published version), owed, given, failed. Until both reads
+   answer, and when either fails, no selfie is offered (deny by default,
+   D-32); a failed read says so with Try again.
+2. **The consent is its own act, in a centred dialog, before the camera
+   opens** (`ensureBiometricConsent`, `shared/widgets/biometric_consent_dialog.dart`;
+   a decision, DESIGN_SYSTEM.md §8 rule 3). It shows what is collected and
+   why ("A selfie: a photo of your face … compare it with the photo on your
+   ID … the photo on your Taytay digital ID … counts as biometric data"),
+   the published text with its version, that agreeing is a choice with the
+   in-person way open (D-210) and how to withdraw, an **unticked**
+   `ConsentCheckCard`, "Agree and continue" (off until ticked), and "No, I'll
+   verify in person". It resolves *agreed* only when the server returned a
+   standing biometric row of the version shown; a failure keeps it open and
+   says no selfie was taken. Already given: no dialog.
+3. **Where it applies:** the sign-up selfie step, the verification screen's
+   start, the rejected request's retake, and the new retake on a pending
+   request whose selfie was erased. A 403 `BIOMETRIC_CONSENT_REQUIRED`
+   (`ForbiddenFailure.requiresBiometricConsent`, "Nothing was sent…") reads
+   the consent again; it is a failure, never the staff-account answer a plain
+   403 means to sign-up.
+4. **Unpublished:** the sign-up ID step and the verification screen say
+   "Selfie verification is not available yet" and offer the in-person way;
+   sign-up asks for no ID (the request needs both), and "Finish for now"
+   keeps the account and goes home. The selfie slot does nothing.
+5. Seeing and withdrawing it, and an erased selfie, are D-211 and D-212.
+6. The dev mock publishes no text, as a backend whose office has not written
+   one (`44cae1b` seeds none): a dev build shows the in-person way.
+7. `GET /me/consents/current` is a declared route (`backend_routes.dart`). The
+   security scan that keeps "biometric" out of the data layer (a local unlock
+   is never sent) sets aside only the two app-config keys of this consent and
+   their two `AppBootstrap` fields, in the one file that reads app config.
+
+**Rejected.** A tick inside the Terms step (bundling); taking the selfie and
+asking afterwards; a toggle in settings that grants the consent without the
+text; letting the camera open while the text is unpublished.
+
+**Why.** The selfie is the most sensitive thing the app collects. RA 10173
+s.13(a) asks for consent specific to the purpose before processing sensitive
+information (treating the selfie as sensitive is the conservative reading:
+s.3(l) does not name biometrics); NPC Circular 2023-04 asks for granular
+consent, withdrawal as easy as giving it, and the consequences of withdrawal
+explained; the NPC's 2025 order against Tools for Humanity found biometric
+consent induced by incentives not freely given. GOV.UK One Login's notice
+words the same thing plainly — a photo of the face used "to measure the
+unique patterns of your face … is called facial biometric data" — which is
+the register the dialog uses.
+
+**Sources.** Backend `44cae1b`; RA 10173,
+<https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>; NPC Circular
+2023-04 via <https://accralaw.com/?p=16522>; NPC v. Tools for Humanity,
+<https://bitpinas.com/feature/npc-world-issue/>; GOV.UK One Login privacy
+notice, <https://www.gov.uk/government/publications/govuk-one-login-privacy-notice>
+(read 2026-11-12, search summary).
+
+---
+
+## D-210 — A resident who declines the selfie, or meets no published consent, can verify in person
+
+**Status: settled.** Category: privacy / product. Recorded 2026-11-12,
+follow-up 2 (G1). The owner's decision, made on Ella's standing "decide,
+best practice" (Michaela Cailing) and relayed by the coordinator: refusing
+biometrics must not cost the service.
+
+**Context.** Backend `44cae1b` left open "whether residents who decline can
+verify in person". Consent that cannot be refused without losing the service
+is not freely given (RA 10173 s.3(b); NPC Circular 2023-04). Staff's
+in-person verification endpoint is being built on the backend; the app needs
+no API for this, only to say the way exists.
+
+**Chosen.**
+1. Wherever a selfie is unavailable or declined — the sign-up ID and selfie
+   steps, the verification screen's start, retake and erased-selfie notes —
+   an `InPersonVerificationNote` (`SoftNote`, calm, info tone) reads "Verify
+   in person. Bring a valid ID to the MSWDO. Staff check it and verify your
+   account. No selfie is taken."
+2. The office's name, address, hours and phone come from the directory
+   (`GET /offices/mswdo`, read once, only when the note shows); while unread
+   or absent the note names the MSWDO alone. Nothing about the office is
+   written into the app.
+3. Declining is a clear button in the consent dialog, "No, I'll verify in
+   person". It records nothing, shows "No selfie was taken … and that is
+   fine", and never dead-ends: sign-up offers "Finish for now" (the account
+   is kept, unverified), and the selfie slot still asks again if the resident
+   changes their mind.
+
+**Rejected.** Hiding the decline behind Back or the scrim; a fixed office
+address or opening hours in the app; promising a review time for the
+in-person way.
+
+**Why.** A government service a resident can only reach by giving up
+biometric data is a service whose consent screen is a formality.
+
+**Sources.** RA 10173 s.3(b),
+<https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>; NPC Circular
+2023-04 via <https://accralaw.com/?p=16522>.
+
+---
+
+## D-211 — The selfie consent is seen and withdrawn in the app, and what withdrawing erases is said before the button
+
+**Status: settled.** Category: privacy / design. Recorded 2026-11-12,
+follow-up 2 (G1), following D-209, on the owner's "decide, research best
+practice, and apply it" (Ella, Michaela Cailing).
+
+**Context.** `POST /me/consents/withdraw {kind: "biometric", version}`
+withdraws every standing biometric consent and erases the account's selfies
+in the same act (backend `44cae1b`): each request gets `selfie_erased_at`, a
+pending request cannot be approved until a new selfie is sent, and a digital
+ID whose photo was that selfie keeps its status but its photo reads 404. NPC
+Circular 2023-04 asks that withdrawal be as easy as giving consent and that
+its consequences be explained.
+
+**Chosen.**
+1. Consents and account requests opens with a "Selfie consent" section read
+   from `GET /me/consents/current`: given (when, and which version), not
+   given ("The app asks before it takes any selfie, and you can verify in
+   person instead"), not published, or a failed read with Try again.
+2. Given: before the button a warning `SoftNote`, "What withdrawing does":
+   every selfie sent is erased in the same moment; a request still waiting
+   for review then needs a new selfie before staff can approve it; a Taytay
+   digital ID loses its photo; what was already done stays (not backdated).
+3. "Withdraw the selfie consent" (danger) opens `AppDialog.confirm`
+   (destructive, the same words, "Withdraw and erase my selfies" / "Keep my
+   consent"). Done: "Taytay LGU has recorded your withdrawal, and your
+   selfies were erased", and the section is read again. A failure says
+   nothing changed, or that it could not be confirmed and trying again is
+   safe.
+4. History rows of the biometric kind carry no buttons: the consent is given
+   again only before a selfie, with its text (D-209), never by a bare
+   "Accept again".
+
+**Rejected.** A switch (a switch that grants consent without the text is not
+informed consent); saying the effects only inside the confirmation (read
+after the decision to press).
+
+**Why.** A resident should be able to change their mind as easily as they
+agreed, knowing beforehand that it erases the photo on their card.
+
+**Sources.** Backend `44cae1b`; NPC Circular 2023-04 via
+<https://accralaw.com/?p=16522>; RA 10173 s.16(e),
+<https://lawphil.net/statutes/repacts/ra2012/ra_10173_2012.html>.
+
+---
+
+## D-212 — An erased selfie is said on the verification screen, with the way to send a new one
+
+**Status: settled.** Category: product / privacy. Recorded 2026-11-12,
+follow-up 2 (G1), following D-211.
+
+**Context.** After a withdrawal every verification request carries
+`selfie_erased_at` (backend `44cae1b`), and the office cannot approve a
+pending one until a new selfie is sent. The pending page said "No action
+needed", and a rejected request's selfie row said "Previous selfie kept".
+
+**Chosen.**
+1. Pending with `selfie_erased_at`: under the status card a warning
+   `SoftNote`, "Your selfie was erased": "You withdrew your selfie consent on
+   {Manila date}, so the selfie you sent was erased. Staff cannot approve
+   this request until you send a new selfie, or you can verify in person
+   instead." with "Take a new selfie" while the request can be edited; the
+   status card no longer says "No action needed". The new selfie goes through
+   the consent (D-209) and replaces the image on the request
+   (`/current/documents`), which clears `selfie_erased_at` on the server.
+2. Rejected with `selfie_erased_at`: the same note above the photos, and the
+   selfie row reads "Selfie erased: take a new one" instead of "Previous
+   selfie kept".
+3. `VerificationStatusDetail.selfieErasedAt` is additive; the digital ID's
+   timeline (D-207) reads the same type unchanged.
+
+**Why.** A resident waiting for a review that cannot happen is the failure
+D-201 and D-204 set out to stop.
+
+**Sources.** Backend `44cae1b` (`selfie_erased_at` on every verification
+JSON).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3285,5 +3484,9 @@ Circular 2023-04 as summarised at <https://accralaw.com/?p=16522>.
 | D-206 | The Filipino review-time copy (D-200) was checked for consistency with the app's existing Filipino terms on 2026-11-12 ("Karaniwang", "araw ng trabaho", no plural inflection) and is unchanged; awaiting a native speaker's sign-off, with "Kadalasan"/"Karaniwang", "araw na may pasok" and "Subukan muli"/"Subukang muli" listed for them | localisation | settled (sign-off open) |
 | D-207 | No card (`GET /me/digital-id` 404 or null) is "Your card is being prepared" (`IDStatus.dc.html`): five steps, the first three dated only from `GET /me` `created_at` and the verified request's `submitted_at`, `id_type`, `reviewed_at`, undated when not sent; no new `CredentialLifecycleState` value; an unrecognised status keeps the not-issued face; Message the MSWDO opens compose for `mswdo`. Left out: a notification promise, the one-year term and the 2-minute code lifetime | product / contract / design | settled |
 | D-208 | The Terms of Use and the Privacy Notice are two unticked acts in sign-up and on the re-consent screen (`termsConsentLabel`, `privacyConsentLabel`), each `POST /me/consents` with its `kind` and version, two calls even when the versions match (backend `6c82f32`); a text counts only when the newest standing consent of its kind names the version in force, so an older combined (`unspecified`) row is asked again through the existing gate and kept as history; every withdrawal names its kind; `GET /me/consents/current` is decoded | privacy / contract | settled |
+| D-209 | No selfie before its own biometric consent (backend `44cae1b`): `BiometricConsentController` reads the text from app config and `biometric.up_to_date`; a centred dialog says what is collected and why, shows the text and version, an unticked tick, Agree, and "No, I'll verify in person"; recorded with `kind: biometric` before the camera opens (sign-up, start, retake); unpublished says selfie verification is not available yet and sign-up asks for no ID; `BIOMETRIC_CONSENT_REQUIRED` is its own failure, never the staff answer | privacy / contract / design | settled |
+| D-210 | Declining the selfie consent, or meeting an unpublished one, leads to verifying in person (owner's decision; RA 10173 s.3(b), NPC Circular 2023-04): an `InPersonVerificationNote` ("Bring a valid ID to the MSWDO … No selfie is taken.") with the office's name, address, hours and phone from `GET /offices/mswdo` only; sign-up offers "Finish for now", never a dead end | privacy / product | settled |
+| D-211 | The selfie consent is seen and withdrawn in Consents and account requests: when and which version; what withdrawing does (selfies erased, a waiting request needs a new selfie, a digital ID loses its photo, not backdated) said before the button; `AppDialog.confirm`; biometric history rows carry no Accept again | privacy / design | settled |
+| D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
 
-**204 decisions — 200 settled, 4 provisional.**
+**208 decisions — 204 settled, 4 provisional.**

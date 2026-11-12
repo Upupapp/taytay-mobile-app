@@ -5,6 +5,7 @@ import 'package:taytay_resident/features/account/presentation/account_copy.dart'
 import 'package:taytay_resident/features/issuance/presentation/issuance_request_detail_screen.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
 import 'package:taytay_resident/shared/widgets/app_dialog.dart';
+import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
 
 import '../support/layout_matrix.dart';
 
@@ -97,6 +98,14 @@ void main() {
           cancel: IssuanceCancelCopy.keep,
           destructive: true,
         ),
+        (
+          where: 'Consents: withdraw the selfie consent (D-209)',
+          title: BiometricConsentCopy.withdrawTitle,
+          message: BiometricConsentCopy.withdrawEffects,
+          confirm: BiometricConsentCopy.withdrawConfirm,
+          cancel: BiometricConsentCopy.withdrawCancel,
+          destructive: true,
+        ),
       ];
 
   /// Each caller of [AppDialog.acknowledge]: where it is, title, message.
@@ -147,10 +156,10 @@ void main() {
         ),
       ];
 
-  test('fourteen places open these dialogs, and each is listed here', () {
-    // Seven confirmations; seven acknowledgements, one of which (an invalid
+  test('fifteen places open these dialogs, and each is listed here', () {
+    // Eight confirmations; seven acknowledgements, one of which (an invalid
     // name) has two messages.
-    expect(confirms.length + acknowledges.length - 1, 14);
+    expect(confirms.length + acknowledges.length - 1, 15);
   });
 
   for (final c in confirms) {

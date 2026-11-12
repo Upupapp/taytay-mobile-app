@@ -34,8 +34,7 @@ import '../../../profile/domain/resident_profile_repository.dart';
 import '../../../programs/domain/assistance_program.dart'
     hide RequirementObligation;
 import '../../../programs/domain/program_repository.dart';
-import '../../../registration/domain/registration_domain.dart'
-    hide ConsentKind;
+import '../../../registration/domain/registration_domain.dart' hide ConsentKind;
 import '../../../requirements/domain/resident_requirement.dart';
 import '../../../services/domain/assistance_case.dart';
 import '../../../services/domain/assistance_history.dart';
@@ -1352,6 +1351,9 @@ class MockAccountControlsRepository implements AccountControlsRepository {
     ]);
   }
 
+  /// Nothing is published, as on a backend whose office has not yet written
+  /// the selfie consent (`44cae1b` seeds none): a dev build shows the
+  /// in-person way (D-210).
   @override
   Future<Result<ConsentState>> loadConsentState() {
     return _gate.respond(const ConsentState());
