@@ -196,7 +196,7 @@ class _TooManyAttemptsScreenState extends State<TooManyAttemptsScreen> {
             ),
           const SizedBox(height: Spacing.xs),
           AuthLink(
-            'Bumalik sa Sign in',
+            'Bumalik sa sign in',
             onPressed: () => context.goNamed(AppRoute.signIn.routeName),
           ),
         ],

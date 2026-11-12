@@ -283,7 +283,7 @@ class CodeAttemptView {
   static const String holdTitle = 'Masyadong maraming subok.';
 
   static const String unavailableCopy =
-      'Hindi available ang serbisyo ngayon. Subukan muli.';
+      'Hindi available ang serbisyo ngayon. Subukang muli.';
 
   static DateTime? _waitUntil(DateTime now, Duration? wait) {
     if (wait == null) return null;

@@ -1977,6 +1977,7 @@ send: it stays up while the resident sends something new.
 through right now. Anything you have typed is still here." In Filipino: "Hindi
 makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo." The Filipino
 was shortened, not rewritten, and still needs review by a native speaker.
+D-217 reviewed it (not a native speaker) and made "Nandiyan" "Nandito".
 
 **Rejected.** A banner that keeps "nothing has been sent" while every failure
 in the run never left the phone, and says "something you sent may not have
@@ -2107,8 +2108,9 @@ that keeps its idempotency key.
    namin makumpirma na nasa Taytay LGU na ang {what}. Nandito pa sa telepono mo
    ang lahat ng na-type mo." and "Ligtas itong ipadala muli: hindi ito
    maisusumite nang dalawang beses." The Filipino needs review by a native
-   speaker. No screen shows the notice today; event registration has its own
-   outcome screen.
+   speaker; D-217 reviewed it (not a native speaker) and made "makumpirma na
+   nasa" "makumpirma kung nasa". No screen shows the notice today; event
+   registration has its own outcome screen.
 8. The one model addition is `LguEvent.isCalledOff`, true for status
    `cancelled`. The server keeps a called-off event in Upcoming until its date
    passes. Without it, the row would read "Registration closed" and look like
@@ -2176,7 +2178,8 @@ for events only.
    office about registering". The events screens are not localised, so the
    label is English like the other registration labels and no Filipino string
    ships. When they are localised, the proposed Filipino is "Hindi kailangang
-   magparehistro", which needs review by a native speaker.
+   magparehistro", which needs review by a native speaker. D-217 found it
+   correct (not a native review).
 3. **A cover loads only from the API's own origin.** `EventCover` is the one
    place a cover link becomes a picture, on the list and on the page. It draws
    one only when `AppConfig.isOnApiOrigin` holds: the scheme, host and port of
@@ -2626,7 +2629,8 @@ Backend migration `0046` seeds `{1, 3}`.
    Filipino does not inflect the noun), `verificationReviewSentence` and
    `verificationReviewTimelineDetail`, in English and Filipino ("Karaniwang
    inaabot ito ng 1–3 araw ng trabaho."), so the translation tests guard them.
-   The Filipino needs review by a native speaker.
+   The Filipino needs review by a native speaker; D-217 reviewed it (not a
+   native speaker) and left it unchanged.
 5. **The pages read the English strings.** The verification pages are literal
    English on every device (as D-195 left them). A Filipino sentence in the
    middle of an English paragraph would be worse than either language, so
@@ -2928,9 +2932,10 @@ says so; one that does not say so looks exactly like a working app.
 ## D-206 — The Filipino review-time copy is consistent with the app's other Filipino; a native speaker still signs it off
 
 **Status: settled** (the copy); the native speaker's sign-off is an open
-owner item. Category: localisation. Recorded 2026-11-12, following D-200, on
-the owner's "decide, research best practice, and apply it" (Ella, Michaela
-Cailing).
+owner item, now carried by D-217's whole-file review, which settled two of
+the three pairs listed below and kept "araw ng trabaho". Category:
+localisation. Recorded 2026-11-12, following D-200, on the owner's "decide,
+research best practice, and apply it" (Ella, Michaela Cailing).
 
 **Filipino copy for D-200 checked for consistency with the app's existing
 Filipino terms on 2026-11-12; awaiting a native speaker's sign-off.** The
@@ -2941,7 +2946,7 @@ against every other Filipino string in the file):
 - *Usually.* "Karaniwang …" matches the app's own use ("Karaniwang sapat na
   ang laki ng larawan…", `uploadRefusedTooLarge`). One other string says
   "Kadalasan" (`uploadRefusedTooLargeUnknown`); "Karaniwang" is kept, and the
-  pair is listed for the native speaker.
+  pair is listed for the native speaker. D-217 made both say "Karaniwang".
 - *Review.* The app says "pagsusuri" / "sinusuri" for the LGU checking an ID
   ("Naghihintay ng pagsusuri", "sinusuri na ito"). The review-time strings do
   not name the review, they refer back to it ("Karaniwang inaabot *ito* ng…",
@@ -2965,6 +2970,7 @@ descriptions still say the Filipino needs a native speaker, which stays true.
 **Noticed, not changed** (outside D-200): "Subukan muli" (`actionTryAgain`)
 and "Subukang muli" (`verifyActionTryAgain`, sign-in copy) both appear for "Try
 again"; the second is the standard ligature. Listed for the native speaker.
+D-217 made every "Try again" in the ARB files say "Subukang muli".
 
 **Not done.** Shipping the Filipino on the verification pages: they are
 still literal English on every device (D-200 item 5).
@@ -3504,6 +3510,118 @@ in-app and never pushed); `lib/core/router/deep_link.dart`.
 
 ---
 
+## D-217 — The Filipino copy says one thing one way; a native speaker still reads it
+
+**Status: settled** (the copy); a native speaker's reading is an open owner
+item. Category: localisation. Recorded 2026-11-12, on the owner's "decide by
+best practice" (Ella, Michaela Cailing), relayed by the orchestrator.
+
+**Reviewed for grammar and consistency by Claude (not a native speaker); a
+native Filipino speaker from the MSWDO should still read the copy during
+UAT.** Nothing here claims a native review.
+
+**Context.** D-189, D-191, D-192, D-200 and D-206 left Filipino sentences "for
+a native speaker", and none is available. The best practice without one is a
+careful review of every Filipino string against its English, fixing clear
+errors and making the file use one word for one idea, while saying plainly what
+kind of review it was.
+
+**Scope.** All 282 keys of `lib/l10n/app_fil.arb` against `app_en.arb`, and
+the Filipino written inline in Dart (the sign-in code, reset and
+too-many-attempts screens, the account wizard's code step, Home's greeting and
+the "Bayan ng Taytay" subtitles). The specimen chat lines in
+`AccountSpecimen` are a resident's and an office's own words, not the app's
+voice, and were left as written.
+
+**Kept, because the file already does it one way.** The resident is "ikaw" (ka,
+mo, iyong) with no "po", in every string; it stays so. "Maaari" in the ARB and
+"Puwede" on the sign-in screens both stay: both are plain and correct.
+Taglish stays where residents say it ("account", "app", "verification",
+"i-verify", "na-type", "i-save"). "araw ng trabaho" stays over "araw na may
+pasok" (D-206). "Suffix (Jr., III)" stays, as Philippine forms print it, and
+the test's allow-list now points here.
+
+**Changed in `app_fil.arb`** (25 strings):
+- *Try again* (5): `actionTryAgain`, `failureNetwork`, `failureRateLimited`
+  "subukan muli" and `failureTimeout`, `failureUnexpected` "Pakisubukan muli"
+  become "Subukang muli" / "Pakisubukang muli", the linked form eight other
+  strings already use (D-206 noticed the pair).
+- *Attempts* (2): `failureRateLimited`, `signInTooManyAttempts` "pagsubok"
+  becomes "subok", the word the sign-in screens count with ("4 sa 5 subok"),
+  and "pagsubok" also reads as a hardship.
+- *Office* (3): `gateSignInMessageOffice`, `gateVerifyMessageOffice`,
+  `intentResumedMessageOffice` "mga opisina" becomes "mga tanggapan", the word
+  every other string uses for an office.
+- *Verification* (4): `verifyStageNotStartedBody`, `verifyStageInProgressBody`
+  "pagpapatunay" becomes "pag-verify"; `verifyStageVerifiedLabel` "Napatunayan
+  na" becomes "Verified na" and `verifyStageUnsuccessfulLabel` "Hindi
+  napatunayan" becomes "Hindi na-verify". Ten strings and Home's "Verified
+  ka na" already say verify.
+- *Typed* (2): `networkUnreachableMessage` "Nandiyan pa" becomes "Nandito pa",
+  as in `unsentMessage` and the English "still here"; `sessionEndedUnsent`
+  "naisulat mo" becomes "na-type mo", the word the two other "anything you
+  typed" strings use.
+- *Mobile number* (1): `capabilityExplainNeedsSignIn` "mobile number" becomes
+  "numero ng cellphone", the field's own label.
+- *Photo small enough* (2): `uploadRefusedTooLarge` "sapat na ang laki" can be
+  read as "big enough"; it and `uploadRefusedTooLargeUnknown` ("Kadalasan
+  ay … kinuha") now say the same sentence, "Karaniwang sapat na maliit ang
+  larawang kinunan sa app na ito."
+- *Meaning* (5): `failureTimeout` "Matagal bago sumagot" lost "too"; it is
+  "Masyadong natagalan bago sumagot". `unsentMessage` "makumpirma na nasa … na"
+  becomes "makumpirma kung nasa … na" (confirm *whether*). `staleContentMessage`
+  "naitago" also reads as "hidden"; it is "na-save". `gateActionSeeAvailable`
+  "Tingnan ang available" was clipped; it is "Tingnan kung ano ang available".
+  `reportHarassmentLabel` "May tinutukoy na tao" said "refers to someone"; it is
+  "Pinupuntirya ang isang tao" (targeting).
+- *Calque* (1): `profileSectionLguExplanation` "sinuri … laban sa" ("against" as
+  in opposing) becomes "sinuri … gamit ang".
+- *Hyphen* (1): `updateRequiredBody` "Pakiupdate" becomes "Paki-update", the
+  hyphen a Filipino affix takes before an English root, as in "na-type".
+- *Same English, same Filipino* (1): `welcomeServicesBody` "anumang hiling mo"
+  becomes "anumang inaplayan mo", as `gateSignInTrailer` says "track anything
+  you apply for".
+
+(`failureRateLimited` and `failureTimeout` each fall under two headings.)
+
+**Changed inline** (4): `CodeAttemptView.unavailableCopy` and the reset
+screen's "Subukan muli." become "Subukang muli."; the account wizard's "Bago
+ang code, may 5 subok ka ulit." (which can read "before the code") becomes "Sa
+bagong code, may 5 subok ka ulit."; the too-many-attempts link "Bumalik sa Sign
+in" is "Bumalik sa sign in", as on the reset screens.
+
+**For the native speaker first** (the calls this review was least sure of):
+"Pinupuntirya ang isang tao", "Verified na" / "Hindi na-verify", "Masyadong
+maraming subok", "Karaniwang sapat na maliit ang larawang kinunan sa app na
+ito", "Tingnan kung ano ang available", "Sinuri ng Taytay LGU ang mga ito gamit
+ang iyong mga dokumento", and two left unchanged: "Mali ang papel ko sa
+sambahayan" (`householdFixRoleLabel`; "papel" is also "paper" in this app) and
+"Magkaroon ng iyong Taytay digital ID" (`capabilityHoldDigitalId`).
+
+**Consent screens: not localised, on purpose for now.** The D-208 to D-212
+consents (sign-up's two ticks, the re-consent screen, the selfie consent
+dialog, the in-person route, withdrawal, the erased selfie) and the D-213 and
+D-214 copy live on the registration wizard, the re-consent screen, the
+verification screens, Consents and account requests, and Message sent. Every
+one of those screens is literal English on every device (D-195, D-200 item 5,
+`docs/taytay-accessibility-and-localization.md` "Screen-specific copy is still
+English literals"), so a Filipino-reading resident meets them inside an English
+screen, not as English islands in a Filipino one. Translating the consents
+alone would put a Filipino paragraph inside an English screen, which D-200
+item 5 rejected. NPC Circular 2023-04 asks for consent in clear and plain
+language the data subject understands, so translating those screens whole,
+through the existing `AppStrings` path, is an open owner item. A consent text
+the office publishes through the API (the selfie consent's, D-209) is shown in
+the language the office wrote it in.
+
+**Not done.** A native speaker's reading; the screen-specific English
+literals.
+
+**Sources.** `lib/l10n/app_en.arb`, `lib/l10n/app_fil.arb`; KWF *Ortograpiyang
+Pambansa* (hyphen between an affix and an unassimilated loanword); D-206.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3724,5 +3842,6 @@ in-app and never pushed); `lib/core/router/deep_link.dart`.
 | D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other`; Home's emergency card shows the command center when marked, else the first active line | safety / contract | settled |
 | D-215 | The resident's own senior citizen, PWD and solo parent sectors reach the app (`GET /me/sectors`, narrowing D-13); nothing else does, and the app has no value for any other sector. ID numbers are the last four. `/sectors` and `/sectors/apply` are verified-only; applying sends `{sector, proof_media_ids}` after `POST /media`, offers only a sector neither held nor being checked, and collects no ID number, dates or reasons; the tick is a declaration, not a consent. Empty until the office links the account on its first approval, and the page says so. Left out: the renewal reminder, the birth-date gate, the 4Ps source line | privacy / contract / product | settled |
 | D-216 | `sector_application_decided` opens Sectors and benefits: the deep-link target `sector_applications` → `/sectors`, with the notice's `subject_id` kept off that target because the route takes none. Unknown targets, and an id on a route that takes none, are still refused; an unknown kind opens nothing. Replaces D-215's "opens nothing yet" | product / authorization | settled |
+| D-217 | The Filipino copy was reviewed for grammar and consistency by Claude, not a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT. 25 ARB strings and 4 inline strings changed: "Subukang muli" for every "Try again", "subok" for attempts, "tanggapan" for office, "pag-verify" / "Verified na" for verification, "na-type" for typed, "numero ng cellphone", "Paki-update", and five meaning fixes. The consent screens (D-208 to D-214) stay English with the English screens they sit on; translating those screens whole is an open owner item (NPC Circular 2023-04) | localisation | settled |
 
-**212 decisions — 208 settled, 4 provisional.**
+**213 decisions — 209 settled, 4 provisional.**

@@ -27,7 +27,7 @@ class AppStringsFil extends AppStrings {
   String get navProfile => 'Aking Account';
 
   @override
-  String get actionTryAgain => 'Subukan muli';
+  String get actionTryAgain => 'Subukang muli';
 
   @override
   String get actionRefresh => 'I-refresh';
@@ -52,14 +52,14 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get networkUnreachableMessage =>
-      'Hindi makakonekta ang app ngayon. Nandiyan pa ang lahat ng na-type mo.';
+      'Hindi makakonekta ang app ngayon. Nandito pa ang lahat ng na-type mo.';
 
   @override
   String get unsentTitle => 'Hindi pa kumpirmado';
 
   @override
   String unsentMessage(String what) {
-    return 'Hindi namin makumpirma na nasa Taytay LGU na ang $what. Nandito pa sa telepono mo ang lahat ng na-type mo.';
+    return 'Hindi namin makumpirma kung nasa Taytay LGU na ang $what. Nandito pa sa telepono mo ang lahat ng na-type mo.';
   }
 
   @override
@@ -68,16 +68,16 @@ class AppStringsFil extends AppStrings {
 
   @override
   String staleContentMessage(String timestamp) {
-    return 'Ipinapakita ang naitago noong $timestamp. Maaaring nagbago na ito.';
+    return 'Ipinapakita ang na-save noong $timestamp. Maaaring nagbago na ito.';
   }
 
   @override
   String get failureNetwork =>
-      'Hindi maabot ng app ang Taytay LGU. Pakisuri ang iyong koneksyon at subukan muli.';
+      'Hindi maabot ng app ang Taytay LGU. Pakisuri ang iyong koneksyon at subukang muli.';
 
   @override
   String get failureTimeout =>
-      'Matagal bago sumagot ang Taytay LGU. Pakisubukan muli.';
+      'Masyadong natagalan bago sumagot ang Taytay LGU. Pakisubukang muli.';
 
   @override
   String get failureUnauthenticated =>
@@ -106,7 +106,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get failureRateLimited =>
-      'Masyadong maraming pagsubok. Maghintay saglit at subukan muli.';
+      'Masyadong maraming subok. Maghintay saglit at subukang muli.';
 
   @override
   String get failureServer =>
@@ -117,7 +117,7 @@ class AppStringsFil extends AppStrings {
       'Hindi naintindihan ng bersyong ito ng app ang sagot ng Taytay LGU.';
 
   @override
-  String get failureUnexpected => 'May nangyaring mali. Pakisubukan muli.';
+  String get failureUnexpected => 'May nangyaring mali. Pakisubukang muli.';
 
   @override
   String get a11yLoading => 'Naglo-load';
@@ -148,7 +148,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get updateRequiredBody =>
-      'Hindi na suportado ang bersyong ito ng Taytay LGU app. Pakiupdate ito mula sa iyong app store, pagkatapos ay buksan itong muli.';
+      'Hindi na suportado ang bersyong ito ng Taytay LGU app. Paki-update ito mula sa iyong app store, pagkatapos ay buksan itong muli.';
 
   @override
   String get maintenanceTitle => 'May maintenance ang sistema ng LGU';
@@ -170,7 +170,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get signInTooManyAttempts =>
-      'Masyadong maraming pagsubok. Maghintay muna nang kaunti bago subukang muli.';
+      'Masyadong maraming subok. Maghintay muna nang kaunti bago subukang muli.';
 
   @override
   String get signInOffline =>
@@ -189,7 +189,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String uploadRefusedTooLarge(int actual, int limit) {
-    return 'Ang file na iyon ay $actual MB. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Karaniwang sapat na ang laki ng larawang kinunan sa app na ito.';
+    return 'Ang file na iyon ay $actual MB. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Karaniwang sapat na maliit ang larawang kinunan sa app na ito.';
   }
 
   @override
@@ -272,7 +272,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get sessionEndedUnsent =>
-      'Nasa tanggapan na ang anumang naipadala mo na. Ang anumang naisulat mo ngunit hindi pa naipapadala ay hindi itinatago sa teleponong ito — kakailanganin mong ilagay itong muli.';
+      'Nasa tanggapan na ang anumang naipadala mo na. Ang anumang na-type mo ngunit hindi pa naipapadala ay hindi itinatago sa teleponong ito — kakailanganin mong ilagay itong muli.';
 
   @override
   String get sessionEndedSignInAgain => 'Mag-sign in muli';
@@ -301,7 +301,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get profileSectionLguExplanation =>
-      'Sinuri ng Taytay LGU ang mga ito laban sa iyong mga dokumento. Ito ang batayan ng mga benepisyong nararapat sa iyo, kaya ang LGU lamang ang makakapagbago nito.';
+      'Sinuri ng Taytay LGU ang mga ito gamit ang iyong mga dokumento. Ito ang batayan ng mga benepisyong nararapat sa iyo, kaya ang LGU lamang ang makakapagbago nito.';
 
   @override
   String get profileFieldMobileNumber => 'Numero ng cellphone';
@@ -368,14 +368,14 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get verifyStageNotStartedBody =>
-      'Hindi mo pa sinisimulan ang pagpapatunay ng iyong pagkakakilanlan.';
+      'Hindi mo pa sinisimulan ang pag-verify ng iyong pagkakakilanlan.';
 
   @override
   String get verifyStageInProgressLabel => 'Isinasagawa';
 
   @override
   String get verifyStageInProgressBody =>
-      'Sinimulan mo na ang pagpapatunay ngunit hindi mo pa ito naipapadala.';
+      'Sinimulan mo na ang pag-verify ngunit hindi mo pa ito naipapadala.';
 
   @override
   String get verifyStagePendingLabel => 'Naghihintay ng pagsusuri';
@@ -392,14 +392,14 @@ class AppStringsFil extends AppStrings {
       'May kailangang itama bago matapos ng Taytay LGU ang pagsusuri.';
 
   @override
-  String get verifyStageVerifiedLabel => 'Napatunayan na';
+  String get verifyStageVerifiedLabel => 'Verified na';
 
   @override
   String get verifyStageVerifiedBody =>
       'Kinumpirma na ng Taytay LGU ang iyong pagkakakilanlan.';
 
   @override
-  String get verifyStageUnsuccessfulLabel => 'Hindi napatunayan';
+  String get verifyStageUnsuccessfulLabel => 'Hindi na-verify';
 
   @override
   String get verifyStageUnsuccessfulBody =>
@@ -565,7 +565,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get gateSignInMessageOffice =>
-      'Kailangan mo ng Taytay LGU account para magmensahe sa mga opisina.';
+      'Kailangan mo ng Taytay LGU account para magmensahe sa mga tanggapan.';
 
   @override
   String get gateSignInTrailer =>
@@ -601,7 +601,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get gateVerifyMessageOffice =>
-      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka magmensahe sa mga opisina.';
+      'Kailangang kumpirmahin ng Taytay LGU kung sino ka bago ka magmensahe sa mga tanggapan.';
 
   @override
   String get gateVerifyTrailer => 'Isang beses lang ang verification.';
@@ -620,7 +620,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get capabilityExplainNeedsSignIn =>
-      'Mag-sign in gamit ang iyong mobile number para magamit ito. Bukas pa rin sa lahat ang pagtingin.';
+      'Mag-sign in gamit ang iyong numero ng cellphone para magamit ito. Bukas pa rin sa lahat ang pagtingin.';
 
   @override
   String get capabilityExplainNeedsVerification =>
@@ -646,7 +646,7 @@ class AppStringsFil extends AppStrings {
   String get gateActionVerify => 'I-verify ang aking pagkakakilanlan';
 
   @override
-  String get gateActionSeeAvailable => 'Tingnan ang available';
+  String get gateActionSeeAvailable => 'Tingnan kung ano ang available';
 
   @override
   String get gateActionContinue => 'Magpatuloy';
@@ -774,7 +774,7 @@ class AppStringsFil extends AppStrings {
       'Panlalait, pagbabanta, o mapoot na pananalita.';
 
   @override
-  String get reportHarassmentLabel => 'May tinutukoy na tao';
+  String get reportHarassmentLabel => 'Pinupuntirya ang isang tao';
 
   @override
   String get reportHarassmentBody => 'Nakatuon sa isang partikular na tao.';
@@ -862,7 +862,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String uploadRefusedTooLargeUnknown(int limit) {
-    return 'Masyadong malaki ang file na iyon. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Kadalasan ay sapat na maliit ang larawang kinuha sa app na ito.';
+    return 'Masyadong malaki ang file na iyon. Hanggang $limit MB lang ang tinatanggap ng Taytay LGU. Karaniwang sapat na maliit ang larawang kinunan sa app na ito.';
   }
 
   @override
@@ -893,7 +893,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get intentResumedMessageOffice =>
-      'Maaari ka nang magmensahe sa mga opisina.';
+      'Maaari ka nang magmensahe sa mga tanggapan.';
 
   @override
   String get welcomeSkip => 'Laktawan';
@@ -925,7 +925,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get welcomeServicesBody =>
-      'Mga dokumento, buwis sa lupa, mga programa sa kalusugan, at serbisyo sa trabaho — tingnan ang inaalok ng Taytay LGU at subaybayan ang anumang hiling mo.';
+      'Mga dokumento, buwis sa lupa, mga programa sa kalusugan, at serbisyo sa trabaho — tingnan ang inaalok ng Taytay LGU at subaybayan ang anumang inaplayan mo.';
 
   @override
   String get welcomeServicesChipDocuments => 'Mga dokumento';

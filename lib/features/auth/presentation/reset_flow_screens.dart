@@ -247,7 +247,7 @@ class _ResetCodeScreenState extends State<ResetCodeScreen> {
           ] else if (_view.unavailable) ...<Widget>[
             const SoftNote(
               tone: NoteTone.error,
-              title: 'Subukan muli. ',
+              title: 'Subukang muli. ',
               message: CodeAttemptView.unavailableCopy,
             ),
             const SizedBox(height: Spacing.formGap),

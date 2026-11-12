@@ -130,10 +130,13 @@ void main() {
         'fieldEmail': '"Email address" is used untranslated in Filipino UI.',
         'profileFieldEmailAddress': 'As fieldEmail.',
         // NOT a settled decision. Recorded honestly rather than dressed up:
-        // nobody who speaks Filipino has looked at this one, and "Suffix" may
-        // well want a Filipino gloss. It is here to hold the ratchet, not
-        // because the question was answered.
-        'fieldSuffix': 'UNREVIEWED — needs a native speaker, not a guess.',
+        // D-217 kept "Suffix" because Philippine forms print the word
+        // untranslated, but that review was not a native speaker's, and
+        // "Suffix" may still want a Filipino gloss. It is here to hold the
+        // ratchet, not because the question was answered.
+        'fieldSuffix':
+            'Kept in D-217 (not a native review); a native speaker from the '
+            'MSWDO reads it during UAT.',
         // The welcome headlines are already Filipino on the English screen.
         // 01-01..01-03 draw one bilingual composition, and both locales keep
         // those three lines. The English eyebrows, bodies, and controls are

@@ -182,25 +182,25 @@ abstract class AppStrings {
   /// **'Not reaching Taytay LGU'**
   String get networkUnreachableTitle;
 
-  /// Offline banner body. Says only what the app knows about the connection and never what happened to a send: the failures that raise the banner include timeouts and connections that dropped after the request left the phone, which the office may already hold. Each send says for itself whether it went (D-188, D-189). The Filipino text needs review by a native speaker.
+  /// Offline banner body. Says only what the app knows about the connection and never what happened to a send: the failures that raise the banner include timeouts and connections that dropped after the request left the phone, which the office may already hold. Each send says for itself whether it went (D-188, D-189). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'The app cannot get through right now. Anything you have typed is still here.'**
   String get networkUnreachableMessage;
 
-  /// Heading for work the resident finished that the office has not confirmed it has. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it. Not 'not sent' either: a send that timed out may have reached the office (D-188, D-191). The Filipino text needs review by a native speaker.
+  /// Heading for work the resident finished that the office has not confirmed it has. Never translate this as 'saved': a resident who reads 'saved' believes the office has it and stops chasing it. Not 'not sent' either: a send that timed out may have reached the office (D-188, D-191). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'Not confirmed yet'**
   String get unsentTitle;
 
-  /// Body for work whose send failed. True whether the send never left the phone or its answer was lost, so it never says nothing was filed (D-188, D-191). The Filipino text needs review by a native speaker.
+  /// Body for work whose send failed. True whether the send never left the phone or its answer was lost, so it never says nothing was filed (D-188, D-191). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'We could not confirm that Taytay LGU has {what}. Everything you typed is still on this phone.'**
   String unsentMessage(String what);
 
-  /// Added after unsentMessage only when the send keeps its idempotency key for the retry, the one case where a second send cannot file twice (D-191). The Filipino text needs review by a native speaker.
+  /// Added after unsentMessage only when the send keeps its idempotency key for the retry, the one case where a second send cannot file twice (D-191). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'Sending it again is safe: it will not be filed twice.'**
@@ -1766,25 +1766,25 @@ abstract class AppStrings {
   /// **'Photo: Urbanroamer · CC BY-SA 3.0'**
   String get welcomePrivacyCredit;
 
-  /// How long an ID review usually takes, as the office's range of working days from GET /app/config (verification_review_working_days, min below max). Composed into verificationReviewSentence and verificationReviewTimelineDetail. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  /// How long an ID review usually takes, as the office's range of working days from GET /app/config (verification_review_working_days, min below max). Composed into verificationReviewSentence and verificationReviewTimelineDetail. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'{min}–{max} working days'**
   String verificationReviewRange(int min, int max);
 
-  /// How long an ID review usually takes when the office's range is one number (min equals max). Singular for one day. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  /// How long an ID review usually takes when the office's range is one number (min equals max). Singular for one day. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'{days, plural, =1{1 working day} other{{days} working days}}'**
   String verificationReviewDays(int days);
 
-  /// The pending verification page's sentence on the review time. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  /// The pending verification page's sentence on the review time. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'This usually takes {duration}.'**
   String verificationReviewSentence(String duration);
 
-  /// The supporting line under 'LGU review' on the profile wizard's submitted frame. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text needs review by a native speaker.
+  /// The supporting line under 'LGU review' on the profile wizard's submitted frame. {duration} is verificationReviewRange or verificationReviewDays. Not shown at all when the office states no review time. Today the verification pages are literal English on every device, so the app reads the English text there and keeps a paragraph in one language (D-200). The Filipino text was reviewed for grammar and consistency in D-217, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'Usually {duration}'**

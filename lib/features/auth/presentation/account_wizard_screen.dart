@@ -1431,7 +1431,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         const SoftNote(
           tone: NoteTone.warning,
           title: 'Hindi na magagamit ang lumang code. ',
-          message: 'Bago ang code, may 5 subok ka ulit.',
+          message: 'Sa bagong code, may 5 subok ka ulit.',
         ),
         const SizedBox(height: Spacing.formGap),
         const SixDigitRow(digits: '', dim: true),
