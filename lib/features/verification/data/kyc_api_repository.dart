@@ -375,8 +375,13 @@ class KycApiRepository implements VerificationRepository {
           path: 'me/verification-requests',
           authenticated: true,
           requiredStatus: 201,
-          idempotencyKey: idempotencyKey,
-          body: <String, Object?>{'id_type': idType.trim()},
+          // In the multipart body, where this route reads it (backend
+          // `0ff7682`). The API ignores an `Idempotency-Key` header, so none
+          // is sent (D-213).
+          body: <String, Object?>{
+            'id_type': idType.trim(),
+            'idempotency_key': ?_bodyKey(idempotencyKey),
+          },
           files: <MultipartFile>[
             _part('id_front', front),
             if (backPart != null) _part('id_back', backPart),
@@ -437,6 +442,11 @@ class KycApiRepository implements VerificationRepository {
     return response.map(
       (ApiEnvelope<VerificationStatusDetail> envelope) => envelope.data,
     );
+  }
+
+  static String? _bodyKey(String? key) {
+    final String trimmed = key?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static MultipartFile _part(String field, VerificationImagePart part) {

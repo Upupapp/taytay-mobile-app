@@ -373,22 +373,25 @@ void main() {
       barangay: 'San Juan',
     );
 
-    AccountApplication ready({String idType = 'PhilSys National ID'}) =>
-        AccountApplication(
-          email: bare.email,
-          password: bare.password,
-          mobile: bare.mobile,
-          givenName: bare.givenName,
-          familyName: bare.familyName,
-          barangay: bare.barangay,
-          idTypeLabel: idType,
-          idFrontBytes: Uint8List.fromList(<int>[1, 2]),
-          idFrontName: 'id_front.jpg',
-          idFrontMime: 'image/jpeg',
-          selfieBytes: Uint8List.fromList(<int>[3]),
-          selfieName: 'selfie.jpg',
-          selfieMime: 'image/jpeg',
-        );
+    AccountApplication ready({
+      String idType = 'PhilSys National ID',
+      String? idempotencyKey,
+    }) => AccountApplication(
+      email: bare.email,
+      password: bare.password,
+      mobile: bare.mobile,
+      givenName: bare.givenName,
+      familyName: bare.familyName,
+      barangay: bare.barangay,
+      idTypeLabel: idType,
+      idFrontBytes: Uint8List.fromList(<int>[1, 2]),
+      idFrontName: 'id_front.jpg',
+      idFrontMime: 'image/jpeg',
+      selfieBytes: Uint8List.fromList(<int>[3]),
+      selfieName: 'selfie.jpg',
+      selfieMime: 'image/jpeg',
+      idempotencyKey: idempotencyKey,
+    );
 
     ApiHttpResponse config({
       String? privacy = '2026-03-privacy',
@@ -491,6 +494,24 @@ void main() {
           <String, Object?>{'version': '2026-03-privacy', 'kind': 'privacy'},
           <String, Object?>{'version': '2026-03-privacy', 'kind': 'terms'},
         ]);
+      },
+    );
+
+    test(
+      'the idempotency key goes in the body, never a header (D-213)',
+      () async {
+        transport.responses.add(Ok<ApiHttpResponse>(created()));
+        const String key = '0f8fad5b-d9cb-469f-a165-70867728950e';
+        final Result<void> result = await repository.submitProfile(
+          ready(idempotencyKey: key),
+        );
+        expect(result.isOk, isTrue);
+        final ApiRequest request = transport.requests.single;
+        expect(request.body, <String, Object?>{
+          'id_type': 'philid',
+          'idempotency_key': key,
+        });
+        expect(request.headers.containsKey('Idempotency-Key'), isFalse);
       },
     );
 

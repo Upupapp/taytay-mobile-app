@@ -26,6 +26,7 @@ class AccountApplication {
     this.selfieBytes,
     this.selfieName,
     this.selfieMime,
+    this.idempotencyKey,
   });
 
   /// The screen says the privacy notice is still a draft.
@@ -61,6 +62,11 @@ class AccountApplication {
   final Uint8List? selfieBytes;
   final String? selfieName;
   final String? selfieMime;
+
+  /// The send's idempotency key (a UUID v4), minted when the resident first
+  /// presses Submit and the same on every retry of that send, so a retry
+  /// cannot open a second request (D-213). Null sends none.
+  final String? idempotencyKey;
 
   @override
   String toString() => 'AccountApplication(redacted)';

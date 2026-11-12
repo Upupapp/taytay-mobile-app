@@ -931,4 +931,63 @@ void main() {
       }
     });
   });
+
+  group('a retried sign-up submission opens one request (D-213)', () {
+    testWidgets('the same key on a retry, a new one for a new selfie', (
+      tester,
+    ) async {
+      final FakeAuthRepository auth = FakeAuthRepository();
+      auth.submitOutcomes.addAll(<Result<void>>[
+        const Err<void>(TimeoutFailure()),
+        const Err<void>(TimeoutFailure()),
+      ]);
+      await boot(
+        tester,
+        auth: auth,
+        documentPicker: _Picker(),
+        platform: BiometricPlatform(),
+        accountControls: BiometricConsents(),
+      );
+      await goTo(tester, 'register');
+      await _createAccount(tester);
+      await tester.enterText(
+        find.byKey(const Key('email-code-field')),
+        '482190',
+      );
+      await tester.tap(find.text('Confirm email'));
+      await tester.pumpAndSettle();
+      await _tapText(tester, _agree);
+      await _tapText(tester, _consent);
+      await _tapText(tester, 'Continue');
+      await tester.tap(find.byKey(const Key('id-front-pick')));
+      await tester.pumpAndSettle();
+      await _tapText(tester, 'Continue');
+      await _tapText(tester, 'Take selfie');
+      await _tapText(tester, 'Continue');
+
+      await _tapText(tester, 'Submit for verification');
+      await _tapText(tester, 'Submit for verification');
+      expect(auth.submittedKeys, hasLength(2));
+      final String? first = auth.submittedKeys.first;
+      expect(first, isNotNull);
+      expect(
+        RegExp(
+          r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        ).hasMatch(first ?? ''),
+        isTrue,
+        reason: 'a UUID v4, as the API requires',
+      );
+      expect(auth.submittedKeys.last, first);
+
+      // A new selfie is new content: a new key.
+      await tester.tap(find.byType(TaytayBackButton).first);
+      await tester.pumpAndSettle();
+      await _tapText(tester, 'Take selfie');
+      await _tapText(tester, 'Continue');
+      await _tapText(tester, 'Submit for verification');
+      expect(auth.submittedKeys, hasLength(3));
+      expect(auth.submittedKeys.last, isNot(first));
+      expect(find.text('Pending review'), findsOneWidget);
+    });
+  });
 }

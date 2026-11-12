@@ -403,7 +403,12 @@ class AuthApiRepository implements AuthRepository {
       path: 'me/verification-requests',
       authenticated: true,
       requiredStatus: 201,
-      body: <String, Object?>{'id_type': _idTypeWire(application.idTypeLabel)},
+      // The key goes in the multipart body: this API reads no
+      // `Idempotency-Key` header (backend `0ff7682`, D-213).
+      body: <String, Object?>{
+        'id_type': _idTypeWire(application.idTypeLabel),
+        'idempotency_key': ?_key(application.idempotencyKey),
+      },
       files: <MultipartFile>[
         MultipartFile(
           field: 'id_front',
@@ -544,6 +549,11 @@ class AuthApiRepository implements AuthRepository {
       decode: (Object? _) {},
     );
     return consent.map((ApiEnvelope<void> _) {});
+  }
+
+  static String? _key(String? key) {
+    final String trimmed = key?.trim() ?? '';
+    return trimmed.isEmpty ? null : trimmed;
   }
 
   static bool _uploadMissing(Uint8List? bytes, String? name, String? mime) {

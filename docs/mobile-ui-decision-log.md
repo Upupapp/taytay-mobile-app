@@ -3272,6 +3272,48 @@ JSON).
 
 ---
 
+## D-213 — Opening a verification request carries one idempotency key per attempt, in the body
+
+**Status: settled.** Category: contract / reliability. Recorded 2026-11-12,
+follow-up 2 (G2). It closes the D-15 / D-198 gap "`POST me/verification-requests`
+sends no idempotency key".
+
+**Context.** Backend `0ff7682`: an optional multipart field
+`idempotency_key` (UUID v4) on `POST /me/verification-requests`. The same key
+with the same `id_type` and image bytes answers 201 with the first request;
+the same key with other content is 409; a malformed key is 422; refused sends
+claim no key. The API reads no `Idempotency-Key` header. The verification
+screen minted a non-UUID request id and sent it as that header; sign-up sent
+nothing.
+
+**Chosen.**
+1. The key goes in the multipart body (`KycApiRepository.submitVerification`,
+   `AuthApiRepository.submitProfile` via `AccountApplication.idempotencyKey`);
+   no header is sent for this route.
+2. One key per attempt through `SendKey.takeFor` (the issuance and messages
+   mechanism): minted on the first press, the same on every retry while the
+   ID type and the photos are the same, a new one as soon as any changes. The
+   photos compare by identity: a retry sends the very same bytes, a photo
+   taken again is a new attempt even if its bytes match. An `Ok` or a 409
+   lets the key go; a timeout keeps it.
+3. Tests: same key on retries (UUID v4), rebuilt parts of the same bytes keep
+   it, a new photo / type / back photo mints a new one, 409 and success let it
+   go, and both repositories put it in the body and not a header.
+
+**Rejected.** A key per press (a retry after a lost answer would open a
+second request); one key per screen (a changed photo would be refused 409);
+hashing the image bytes on the phone (identity already tells a retake from a
+retry, at no cost).
+
+**Why.** A dropped connection after the upload is the commonest failure on a
+phone; without the key, the retry opens a second request in the office's
+review queue.
+
+**Sources.** Backend `0ff7682`; IETF draft-ietf-httpapi-idempotency-key-header-08,
+<https://datatracker.ietf.org/doc/draft-ietf-httpapi-idempotency-key-header/>.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3488,5 +3530,6 @@ JSON).
 | D-210 | Declining the selfie consent, or meeting an unpublished one, leads to verifying in person (owner's decision; RA 10173 s.3(b), NPC Circular 2023-04): an `InPersonVerificationNote` ("Bring a valid ID to the MSWDO … No selfie is taken.") with the office's name, address, hours and phone from `GET /offices/mswdo` only; sign-up offers "Finish for now", never a dead end | privacy / product | settled |
 | D-211 | The selfie consent is seen and withdrawn in Consents and account requests: when and which version; what withdrawing does (selfies erased, a waiting request needs a new selfie, a digital ID loses its photo, not backdated) said before the button; `AppDialog.confirm`; biometric history rows carry no Accept again | privacy / design | settled |
 | D-212 | `selfie_erased_at` is said on the verification screen: pending — the selfie was erased, staff cannot approve until a new one is sent, Take a new selfie, no "No action needed"; rejected — "Selfie erased: take a new one" | product / privacy | settled |
+| D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |
 
-**208 decisions — 204 settled, 4 provisional.**
+**209 decisions — 205 settled, 4 provisional.**

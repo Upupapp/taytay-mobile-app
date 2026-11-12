@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/api/request_context.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/result/result.dart';
@@ -80,6 +81,11 @@ class VerificationController extends ChangeNotifier {
   bool _submitting = false;
   String? _correctionKey;
   String? _submissionKey;
+
+  /// The key for opening a request (`POST me/verification-requests`): one
+  /// per attempt, the same on every retry of that attempt, and a new one as
+  /// soon as the type or any photo changes (D-213).
+  final SendKey _startKey = SendKey();
 
   /// Corrections the resident has typed, keyed by the category the office
   /// flagged. Nothing can be entered for a category that was not flagged.
@@ -361,7 +367,13 @@ class VerificationController extends ChangeNotifier {
   }) async {
     if (!canStart || _submitting) return false;
 
-    _submissionKey ??= generateRequestId();
+    // The content the key was minted for. The bytes compare by identity: a
+    // photo picked again is a new object and a new attempt; a retry sends
+    // the very same bytes and keeps the key, so a send whose answer was lost
+    // is answered with the first request rather than opening a second.
+    final String key = _startKey.takeFor(
+      startContent(idType: idType, front: front, back: back, selfie: selfie),
+    );
     _submitting = true;
     _failure = null;
     notifyListeners();
@@ -372,13 +384,13 @@ class VerificationController extends ChangeNotifier {
           front: front,
           back: back,
           selfie: selfie,
-          idempotencyKey: _submissionKey,
+          idempotencyKey: key,
         );
     _submitting = false;
+    _startKey.settle(outcome);
 
     return outcome.fold(
       onOk: (_) {
-        _submissionKey = null;
         notifyListeners();
         unawaited(refresh());
         return true;
@@ -386,7 +398,6 @@ class VerificationController extends ChangeNotifier {
       onErr: (AppFailure failure) {
         // A request already exists. Re-read it instead of starting another.
         if (failure is ConflictFailure) {
-          _submissionKey = null;
           notifyListeners();
           unawaited(refresh());
           return true;
@@ -397,6 +408,20 @@ class VerificationController extends ChangeNotifier {
       },
     );
   }
+
+  /// What a start attempt sends, for [SendKey.takeFor]: the type and the
+  /// photos' bytes, compared by identity.
+  static Object startContent({
+    required String idType,
+    required VerificationImagePart front,
+    VerificationImagePart? back,
+    required VerificationImagePart selfie,
+  }) => (
+    idType.trim(),
+    _Same(front.bytes),
+    _Same(back?.bytes),
+    _Same(selfie.bytes),
+  );
 
   /// Replaces one or more images on the current request.
   Future<bool> replaceImage({
@@ -497,4 +522,20 @@ class VerificationController extends ChangeNotifier {
       },
     );
   }
+}
+
+/// Equal only to the same object: a photo picked again is new content even
+/// when its bytes match, and a retry sends the very same bytes.
+@immutable
+final class _Same {
+  const _Same(this.value);
+
+  final Object? value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _Same && identical(other.value, value);
+
+  @override
+  int get hashCode => identityHashCode(value);
 }

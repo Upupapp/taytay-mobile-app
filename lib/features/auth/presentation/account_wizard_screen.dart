@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/api/send_key.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
@@ -170,6 +171,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   /// The resident chose "No, I'll verify in person" (D-210).
   bool _declinedSelfie = false;
+
+  /// The verification request's idempotency key (D-213): minted on the first
+  /// Submit, the same on every retry of it, and new once the ID type or a
+  /// photo changes, because the server refuses a key reused for other
+  /// content.
+  final SendKey _submitKey = SendKey();
 
   /// Starts reading the selfie's consent, once, for a live sign-up.
   void _ensureBiometric() {
@@ -745,6 +752,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     final CapturedDocument? front = _front;
     final CapturedDocument? back = _idBack;
     final CapturedDocument? selfie = _selfieShot;
+    // The photos compare by identity: one picked again is a new object, and
+    // a retry sends the very same ones.
+    final String key = _submitKey.takeFor((
+      _idType.text.trim(),
+      _SameObject(front?.bytes),
+      _SameObject(back?.bytes),
+      _SameObject(selfie?.bytes),
+    ));
     final application = AccountApplication(
       email: _email.text.trim(),
       password: _password.text,
@@ -764,10 +779,12 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       selfieBytes: selfie?.bytes,
       selfieName: selfie?.fileName,
       selfieMime: selfie?.mimeType,
+      idempotencyKey: key,
     );
     final profile = await dependencies.authRepository.submitProfile(
       application,
     );
+    _submitKey.settle(profile);
     if (!mounted) return;
     if (profile case Err<void>(:final failure)) {
       if (failure is ForbiddenFailure && failure.requiresBiometricConsent) {
@@ -2695,4 +2712,20 @@ class _IdTypeSheet extends StatelessWidget {
       ],
     );
   }
+}
+
+/// Equal only to the same object, for the submit key's content: a photo
+/// picked again is a new attempt even when its bytes match.
+@immutable
+final class _SameObject {
+  const _SameObject(this.value);
+
+  final Object? value;
+
+  @override
+  bool operator ==(Object other) =>
+      other is _SameObject && identical(other.value, value);
+
+  @override
+  int get hashCode => identityHashCode(value);
 }

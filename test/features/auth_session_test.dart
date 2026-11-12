@@ -228,8 +228,16 @@ class FakeAuthRepository implements AuthRepository {
   Future<Result<void>> submitProfile(AccountApplication application) async {
     calls.add('submitProfile');
     submittedProfile = application;
+    submittedKeys.add(application.idempotencyKey);
+    if (submitOutcomes.isNotEmpty) return submitOutcomes.removeAt(0);
     return const Ok<void>(null);
   }
+
+  /// Answers for `submitProfile`, used one at a time before the default.
+  final List<Result<void>> submitOutcomes = <Result<void>>[];
+
+  /// The idempotency key each `submitProfile` carried, in order.
+  final List<String?> submittedKeys = <String?>[];
 
   @override
   Future<Result<SavedProfile>> saveRegistrationProfile(

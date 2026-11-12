@@ -30,15 +30,15 @@ import '../domain/registration_validation.dart';
 ///
 /// The live sign-up is `AccountWizardScreen` on `AuthRepository`. It holds the
 /// navigation rules above and the required names, mobile number, barangay and
-/// consents. It does not hold these, which exist only here and in
-/// `RegistrationValidation`, tested by `test/features/registration_test.dart`:
-/// the selfie needs a server requirement **and** explicit biometric consent
-/// (D-32); a retried submission reuses one idempotency key (D-15; the live
-/// `POST me/verification-requests` sends none); each consent is its own
-/// record (the live wizard ticks Terms and Privacy together); the street is
-/// required; and a birth date is checked against the future and the age floor
-/// of 15 (the live sign-up collects none). Until the live path holds them,
-/// this is not dead code to delete.
+/// consents. Since 2026-11-12 it also holds three rules that used to live
+/// only here: each consent is its own record (D-208), the selfie needs its own
+/// biometric consent, which the server requires (D-209), and a retried
+/// submission reuses one idempotency key (D-213). It still does not hold
+/// these, which exist only here and in `RegistrationValidation`, tested by
+/// `test/features/registration_test.dart`: the street is required, and a birth
+/// date is checked against the future and the age floor of 15 (the live
+/// sign-up collects none). Until the live path holds them, this is not dead
+/// code to delete.
 class RegistrationController extends ChangeNotifier {
   RegistrationController({
     required RegistrationRepository repository,

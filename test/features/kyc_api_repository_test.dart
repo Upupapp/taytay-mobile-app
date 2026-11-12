@@ -296,12 +296,32 @@ void main() {
       final ApiRequest request = transport.requests.single;
       expect(request.method, HttpMethod.post);
       expect(request.path, 'me/verification-requests');
-      expect(request.body, <String, Object?>{'id_type': 'philid'});
+      // The key rides in the multipart body, where this route reads it; the
+      // API reads no `Idempotency-Key` header (backend `0ff7682`, D-213).
+      expect(request.body, <String, Object?>{
+        'id_type': 'philid',
+        'idempotency_key': 'start-1',
+      });
+      expect(request.headers.containsKey('Idempotency-Key'), isFalse);
       expect(request.files.map((MultipartFile file) => file.field), <String>[
         'id_front',
         'selfie',
       ]);
       expect(request.headers.containsKey('X-Role'), isFalse);
+    });
+
+    test('a start with no key sends none (older callers)', () async {
+      transport.responses.add(
+        _envelope(201, <String, Object?>{'status': 'pending'}),
+      );
+      await repository.submitVerification(
+        idType: 'philid',
+        front: photo,
+        selfie: photo,
+      );
+      expect(transport.requests.single.body, <String, Object?>{
+        'id_type': 'philid',
+      });
     });
 
     test('re-upload posts only the images that changed', () async {
