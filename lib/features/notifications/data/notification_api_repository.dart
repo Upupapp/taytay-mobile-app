@@ -295,6 +295,7 @@ class NotificationApiRepository
     final String? targetId = subjectId is String && subjectId.isNotEmpty
         ? subjectId
         : null;
+    final String? place = _placeTarget(derivedType);
 
     return ResidentNotification(
       id: id,
@@ -313,13 +314,28 @@ class NotificationApiRepository
       ),
       // Routing only. Anything else the server adds is dropped here rather
       // than carried into a target map that a screen might one day read.
+      // A place takes no id, and `DeepLink` refuses one on it, so the
+      // record's id stays off a place's target.
       target: <String, String>{
         'type': ?derivedType,
-        'id': ?targetId,
-        DeepLink.targetKey: ?_deepLinkTarget(derivedType, targetId),
+        if (place == null) 'id': ?targetId,
+        DeepLink.targetKey: ?(place ?? _deepLinkTarget(derivedType, targetId)),
       },
     );
   }
+
+  /// The `DeepLink` target of a notification type that opens a *place*
+  /// rather than one record.
+  ///
+  /// `sector_application_decided` names the application in `subject_id`, but
+  /// the one page that shows applications, Sectors and benefits (`/sectors`),
+  /// lists them all and takes no id. The notice opens it, and the page reads
+  /// the decision and any reason from `GET /me/sector-applications`, never
+  /// from the notice (D-216).
+  static String? _placeTarget(String? type) => switch (type) {
+    'sector_application_decided' => 'sector_applications',
+    _ => null,
+  };
 
   /// The `DeepLink` target a notification type opens, when this build knows
   /// one and the payload names the record.

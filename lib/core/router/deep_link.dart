@@ -178,6 +178,9 @@ abstract final class DeepLink {
     // Document requests: the resident's list, and one request.
     'issuance_requests': AppRoute.issuanceRequests,
     'issuance_request': AppRoute.issuanceRequestDetail,
+    // The resident's own sectors and sector applications (D-216). A place, so
+    // it takes no id: the payload that names it carries none.
+    'sector_applications': AppRoute.sectors,
     // Programs and services directory.
     'service': AppRoute.serviceDetail,
     'programs': AppRoute.programs,

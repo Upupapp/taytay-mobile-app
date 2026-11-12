@@ -3437,7 +3437,7 @@ accounts only.
    return's reason is read from the application, never from the notice. The
    notice opens nothing yet: its `subject_id` is the application, and the
    one place that shows applications, `/sectors`, takes no id, so the deep
-   link would refuse it.
+   link would refuse it. *Replaced by D-216: the notice opens `/sectors`.*
 
 **Left out of the mock-ups, as fields the API does not take or claims it
 does not support.** The solo-parent reason and number of children, and the ID
@@ -3459,6 +3459,48 @@ would ask a resident to type a government number the server then throws away.
 `OwnSectorApplication`, `SectorApplicationBody`) at backend `7132698`, vendored
 into `docs/integration/taytay-node-openapi.json` from backend `98a4f19`;
 console DL-183.
+
+---
+
+## D-216 — The sector notice opens Sectors and benefits, and carries no id there
+
+**Status: settled.** Category: product / authorization. Recorded 2026-11-12,
+on the owner's instruction (Ella, Michaela Cailing), relayed by the citizen
+pack's orchestrator. Replaces point 7's last sentence of D-215.
+
+**Context.** `sector_application_decided` reaches the inbox when the office
+approves or returns a sector application, in the app and never pushed. Its
+`subject_id` is the application. D-215 left the row opening nothing, because
+the only page that shows applications, Sectors and benefits (`/sectors`), takes
+no id, and `DeepLink.resolve` refuses an id on a route that takes none
+(`wrongArity`).
+
+**Options**
+
+1. Leave the row opening nothing.
+2. A new `/sectors/:applicationId` route for one application.
+3. **Open `/sectors` as a place: a new deep-link target with no id, and the
+   notice's id kept off the target.**
+
+**Chosen: 3.** `DeepLink` gains the target `sector_applications` →
+`AppRoute.sectors`. `NotificationApiRepository` maps the notice kind to it and
+leaves `id` out of that target only (`_placeTarget`); every other kind keeps
+its `id`. The rules stand: a target outside the allow-list is refused, and an
+id on a route that takes none is refused, so a payload naming
+`sector_applications` with an id still opens nothing. A kind this build does
+not know still opens nothing. The page reads the decision, and a returned
+application's reason, from `GET /me/sector-applications`, never from the
+notice. The route admits verified residents only, and the guard re-checks it
+on the way in.
+
+**Rejected.** Option 2: a page for one application would repeat a row the
+list already shows in full, and would put an application id in a URL for
+nothing. Relaxing `wrongArity` so a place ignores an id: that rule exists
+because an id on a place means the sender meant somewhere else.
+
+**Sources.** D-215; backend `98a4f19` `openapi/openapi.json` (`Notification.type`
+includes `sector_application_decided`; the review routes say the notice is
+in-app and never pushed); `lib/core/router/deep_link.dart`.
 
 ---
 
@@ -3681,5 +3723,6 @@ console DL-183.
 | D-213 | `POST /me/verification-requests` carries `idempotency_key` (UUID v4) in the multipart body, no header (backend `0ff7682`), one per attempt through `SendKey.takeFor`: the same on every retry, new when the ID type or any photo changes (photos compare by identity), let go on success or 409 | contract / reliability | settled |
 | D-214 | Hotline `kind` (backend `ebd7aeb`) picks lines, never the name: Message sent names the active `command-center` line with a call pill beside "See emergency hotlines", and keeps D-196's no-number note when none is marked, while loading or after a failed read; the Hotlines page draws the red siren for every kind but `other`; Home's emergency card shows the command center when marked, else the first active line | safety / contract | settled |
 | D-215 | The resident's own senior citizen, PWD and solo parent sectors reach the app (`GET /me/sectors`, narrowing D-13); nothing else does, and the app has no value for any other sector. ID numbers are the last four. `/sectors` and `/sectors/apply` are verified-only; applying sends `{sector, proof_media_ids}` after `POST /media`, offers only a sector neither held nor being checked, and collects no ID number, dates or reasons; the tick is a declaration, not a consent. Empty until the office links the account on its first approval, and the page says so. Left out: the renewal reminder, the birth-date gate, the 4Ps source line | privacy / contract / product | settled |
+| D-216 | `sector_application_decided` opens Sectors and benefits: the deep-link target `sector_applications` → `/sectors`, with the notice's `subject_id` kept off that target because the route takes none. Unknown targets, and an id on a route that takes none, are still refused; an unknown kind opens nothing. Replaces D-215's "opens nothing yet" | product / authorization | settled |
 
-**211 decisions — 207 settled, 4 provisional.**
+**212 decisions — 208 settled, 4 provisional.**
