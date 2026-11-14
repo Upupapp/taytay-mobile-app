@@ -3719,11 +3719,15 @@ unchanged.
 **Never.** A hint is not a write, a queue or a retry of one, and is never taken
 as proof that anything was saved (DL-87, DL-118). No polling on mobile. No FCM.
 
-**Not done.** `GET changes` is not in `backendRoutes`: it is not an envelope
-call and the vendored OpenAPI does not have it yet. Add it with the next
-re-vendoring of the Node export. Whether the server's topics match these names
-is the backend's `src/modules/live/topics.ts`; a topic that never arrives only
-means its screens re-read on reconnect and on return.
+**Declared.** `GET changes` is in `backendRoutes` (caller `api_client.dart`),
+against the Node export re-vendored from backend `52c82cb`, where it is
+`streamChanges` (2026-11-15). `backend_routes_test.dart` now sees
+`openStream` requests as well as `send` calls, so the declaration is held to
+the code like every other route.
+
+**Not done.** Whether the server's topics match these names is the backend's
+`src/modules/live/topics.ts`; a topic that never arrives only means its
+screens re-read on reconnect and on return.
 
 **Sources.** DL-222 (console decision log, the cross-repository entry); W3C,
 *Understanding SC 2.2.2: Pause, Stop, Hide*,

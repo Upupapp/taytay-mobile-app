@@ -2124,6 +2124,22 @@
         }
       }
     },
+    "/api/v1/changes": {
+      "get": {
+        "operationId": "streamChanges",
+        "summary": "Live change hints (Server-Sent Events)",
+        "description": "A `text/event-stream` that says which kinds of data changed, so a screen can re-read itself through its ordinary endpoint (DL-222). It never carries an id, a count or personal data; what the account may see is decided by the endpoint it re-reads. Open to `registered`, `verified`, `staff` and `admin`; closed and switched-off accounts are refused like everywhere else. Send only `Authorization`, `X-Request-Id`, `X-Client-Channel` and `Accept: text/event-stream`; never a token in the URL. There is no replay, so no `Last-Event-ID`.\n\nThe stream opens with `retry: 5000` and the comment `: connected`, then five kinds of message:\n\n- `event: ready`, once, first: `data: {\"topics\": [...]}`, every topic this connection can ever receive.\n- `event: change`: `data: {\"topics\": [...]}`, the topics that changed in the last ~300 ms that this connection may hear. Re-read what shows them.\n- `: ping`, a comment every 25 s so proxies keep the connection open.\n- `event: resync` (`data: {}`): changes may have been missed (the server's database listener reconnected). Re-read everything on screen.\n- `event: expired` (`data: {}`), just before the server closes the stream: at the token's expiry or after 15 minutes, whichever is sooner; when the account's role, office or status changed; or when the account opens a sixth stream (at most five per account; the oldest is closed). Reconnect at once with a fresh token.\n\nTopics. Public, sent to every account: `news`, `events`, `home`, `hotlines`, `services`, `offices`, `app-config`. Owned, sent to the account the changed row belongs to: `account`, `notifications` (these two to the owner only, staff included), `verification`, `threads`, `digital-ids`, `sector-applications`, `issuance-requests`, `event-registrations`, `households`, `consents`. Staff, and the owned topics above for other people's rows, sent to a staff account only if it holds a key that reads them (an administrator holds them all): `assistance-requests`, `cases`, `residents`, `families`, `beneficiaries`, `programs`, `referrals`, `visits`, `releases`, `work`, `users`, `audit`, `governance`, `saved-views`, `imports`. A client ignores a topic it does not know.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": {
+            "description": "The stream. Headers: `Content-Type: text/event-stream; charset=utf-8`, `Cache-Control: no-cache, no-transform`, `X-Accel-Buffering: no`.",
+            "content": { "text/event-stream": { "schema": { "type": "string" } } }
+          },
+          "401": { "description": "No token, a token that could not be verified, or a switched-off account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is closed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
     "/api/v1/notifications/read": {
       "post": {
         "operationId": "markAllNotificationsRead",
@@ -2175,7 +2191,7 @@
       "get": {
         "operationId": "getMediaContent",
         "summary": "Media image bytes",
-        "description": "The owner, staff, admins, and a resident reading their own avatar, verification images, digital-ID photo, or thread attachment. Another resident receives 404.",
+        "description": "Admins read any object. Staff read a resident's ID images and selfie only with verification.review; the photo on a digital ID with digital-id.manage, or with digital-id.verify while the card is active; a selfie a card can be issued on with digital-id.manage; a counter card photo with digital-id.manage or digital-id.verify; a message attachment with office-inbox.manage in a thread of their own office; a sector-application proof with resident.update. Any other object staff read as before. A resident reads what they uploaded, their own avatar, verification images and digital-ID photo, and attachments on their own threads. A refused read is 404, the same as a missing object.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -2197,7 +2213,7 @@
       "get": {
         "operationId": "getMedia",
         "summary": "Media metadata",
-        "description": "The owner, staff, and admins can read metadata. Another resident receives 404.",
+        "description": "The same rule as GET /api/v1/media/{id}/content. A refused read is 404.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }

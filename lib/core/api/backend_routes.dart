@@ -19,7 +19,8 @@
 /// So the routes are declared here, and two guards read them:
 ///
 ///  * `test/integration/backend_routes_test.dart` — every `ApiClient.send` call
-///    in `lib/` appears below, and every row below is actually called. It runs
+///    in `lib/`, and the change stream `ApiClient.openChangeStream` opens,
+///    appears below, and every row below is actually called. It runs
 ///    in `flutter test` and catches *us* drifting.
 ///  * `tool/check_backend_routes.sh` — every row below exists in the backend at
 ///    the pinned baseline. It needs the backend clone and catches *the contract*
@@ -68,6 +69,7 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
     'auth_api_repository.dart',
   ),
   BackendRoute('GET', 'barangays', 'barangay_api_repository.dart'),
+  BackendRoute('GET', 'changes', 'api_client.dart'),
   BackendRoute('GET', 'events', 'event_api_repository.dart'),
   BackendRoute('GET', 'events/{}', 'event_api_repository.dart'),
   BackendRoute('GET', 'events/{}/cover', 'media_bytes_api.dart'),

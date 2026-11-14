@@ -55,6 +55,12 @@ sectors (D-215): `GET /me/sectors`, `GET` and `POST /me/sector-applications`
 `sector_application_decided` on `Notification.type` (`d7ecd39`). The staff and
 admin routes that came with it (registry imports, sector-application review,
 the counter card photo) are not called.
+It was re-vendored from backend `52c82cb` on 15 November 2026 for the change
+stream (D-218, DL-222): `GET /changes` (`streamChanges`, `17a604c`), a
+`text/event-stream` of topic hints, opened by `ApiClient.openChangeStream`.
+`86234bd` came with it and reworded who may read `GET /media/{id}` and
+`GET /media/{id}/content`; a resident still reads their own uploads, and no
+route or schema this app calls changed.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 

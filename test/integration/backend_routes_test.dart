@@ -14,8 +14,8 @@ import 'package:taytay_resident/core/api/backend_routes.dart';
 /// fact about the code, and a test that exercised the repositories would prove
 /// only that the ones it happened to call were declared.
 void main() {
-  /// Every `ApiClient.send` call in `lib/`, as `METHOD path` with parameters
-  /// normalised to `{}`.
+  /// Every `ApiClient.send` call in `lib/`, and every `openStream` request (the
+  /// change stream, D-218), as `METHOD path` with parameters normalised to `{}`.
   ///
   /// Path segments are interpolated (`'$path/$id/read'`) and the leading part is
   /// usually a `static const String path` on the repository, so each file's own
@@ -30,7 +30,9 @@ void main() {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
 
       final String source = entity.readAsStringSync();
-      if (!source.contains('.send<')) continue;
+      if (!source.contains('.send<') && !source.contains('.openStream(')) {
+        continue;
+      }
 
       final Map<String, String> constants = <String, String>{};
       for (final RegExpMatch m in RegExp(
@@ -39,7 +41,12 @@ void main() {
         constants[m.group(1)!] = m.group(2)!;
       }
 
-      for (final RegExpMatch call in RegExp(r'\.send\s*<').allMatches(source)) {
+      // The stream is not an envelope call, so it goes through the transport
+      // rather than `send`; a scan that saw only `send` would report the
+      // declared `GET changes` as called by nobody.
+      for (final RegExpMatch call in RegExp(
+        r'\.(?:send\s*<|openStream\s*(?=\())',
+      ).allMatches(source)) {
         final int open = source.indexOf('(', call.end);
         if (open < 0) continue;
 
