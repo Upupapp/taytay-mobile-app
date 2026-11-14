@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../shared/widgets/blue_header.dart';
@@ -33,7 +37,8 @@ class NewsPostScreen extends StatefulWidget {
   State<NewsPostScreen> createState() => _NewsPostScreenState();
 }
 
-class _NewsPostScreenState extends State<NewsPostScreen> {
+class _NewsPostScreenState extends State<NewsPostScreen>
+    with LiveRefresh<NewsPostScreen> {
   PostDetailController? _controller;
 
   bool get _idIsValid => DeepLink.isValidIdentifier(widget.postId);
@@ -50,6 +55,10 @@ class _NewsPostScreenState extends State<NewsPostScreen> {
           )
           ..addListener(_onChanged)
           ..load();
+    // An edit to the article shows without a pull (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.news,
+    }, () => unawaited(_controller?.refreshQuietly()));
   }
 
   void _onChanged() {

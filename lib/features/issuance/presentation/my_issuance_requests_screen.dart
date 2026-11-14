@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +9,8 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -32,7 +36,12 @@ class MyIssuanceRequestsScreen extends StatefulWidget {
       _MyIssuanceRequestsScreenState();
 }
 
-class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen> {
+class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen>
+    with LiveRefresh<MyIssuanceRequestsScreen> {
+  /// Pages read since the last full load. A quiet re-read refreshes the first
+  /// and keeps the rest.
+  int _pages = 0;
+
   bool _started = false;
   bool _loading = true;
   bool _loadingMore = false;
@@ -47,6 +56,44 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The office moving a request along shows here without a pull (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.issuanceRequests,
+    }, () => unawaited(_loadQuietly()));
+  }
+
+  /// Re-reads the first page for a change (D-218): no loading state, the
+  /// requests paged in below it stay, and a failure keeps the list as it is
+  /// and says nothing.
+  Future<void> _loadQuietly() async {
+    if (_loading || _loadingMore) return;
+    final Result<Paginated<IssuanceRequestSummary>> result =
+        await AppDependencies.of(context).issuanceRepository.listOwn();
+    if (!mounted || _loading || _loadingMore) return;
+    if (result case Ok(:final value)) {
+      setState(() {
+        if (_pages <= 1) {
+          _items
+            ..clear()
+            ..addAll(value.items);
+          _next = value.hasMore ? value.nextCursor : null;
+          _pages = 1;
+        } else {
+          final Set<String> seen = <String>{
+            for (final IssuanceRequestSummary item in value.items) item.id,
+          };
+          final List<IssuanceRequestSummary> rest = <IssuanceRequestSummary>[
+            for (final IssuanceRequestSummary item in _items)
+              if (seen.add(item.id)) item,
+          ];
+          _items
+            ..clear()
+            ..addAll(value.items)
+            ..addAll(rest);
+        }
+        _failure = null;
+      });
+    }
   }
 
   Future<void> _load() async {
@@ -66,6 +113,7 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen> {
             ..clear()
             ..addAll(value.items);
           _next = value.hasMore ? value.nextCursor : null;
+          _pages = 1;
         case Err(:final failure):
           _failure = failure;
       }
@@ -90,6 +138,7 @@ class _MyIssuanceRequestsScreenState extends State<MyIssuanceRequestsScreen> {
         case Ok(:final value):
           _items.addAll(value.items);
           _next = value.hasMore ? value.nextCursor : null;
+          _pages++;
         case Err(:final failure):
           _moreFailure = failure;
       }

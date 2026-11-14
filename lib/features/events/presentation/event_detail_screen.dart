@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +13,8 @@ import '../../../core/design/typography.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/links/external_link_service.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
@@ -60,8 +64,10 @@ class EventDetailScreen extends StatefulWidget {
   State<EventDetailScreen> createState() => _EventDetailScreenState();
 }
 
-class _EventDetailScreenState extends State<EventDetailScreen> {
+class _EventDetailScreenState extends State<EventDetailScreen>
+    with LiveRefresh<EventDetailScreen> {
   bool _loading = true;
+  bool _listening = false;
   AppFailure? _failure;
   LguEvent? _event;
   bool _cancelling = false;
@@ -77,10 +83,36 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_event == null && _failure == null && _idIsValid) _load();
+    if (!_listening && _idIsValid) {
+      _listening = true;
+      // A change of date, venue or capacity, or the resident's own place
+      // changing, shows here without a pull (D-218).
+      listenLive(AppDependencies.of(context).live, const <String>{
+        LiveTopics.events,
+        LiveTopics.eventRegistrations,
+      }, () => unawaited(_load(quiet: true)));
+    }
   }
 
-  Future<void> _load() async {
+  /// Reads the event.
+  ///
+  /// [quiet] is a re-read for a change (D-218): no loading state, nothing
+  /// read while the resident is giving up a place, and a failure keeps the
+  /// event on screen and says nothing.
+  Future<void> _load({bool quiet = false}) async {
     final repository = AppDependencies.of(context).eventRepository;
+    if (quiet) {
+      if (_loading || _cancelling) return;
+      final result = await repository.loadEvent(widget.eventId);
+      if (!mounted || _loading || _cancelling) return;
+      if (result case Ok(:final value)) {
+        setState(() {
+          _event = value.isResidentVisible ? value : null;
+          _failure = value.isResidentVisible ? null : const NotFoundFailure();
+        });
+      }
+      return;
+    }
     setState(() => _loading = true);
 
     final result = await repository.loadEvent(widget.eventId);

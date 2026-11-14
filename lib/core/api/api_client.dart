@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import '../config/app_config.dart';
@@ -7,6 +8,7 @@ import '../storage/public_cache.dart';
 import 'api_envelope.dart';
 import 'api_transport.dart';
 import 'auth_coordinator.dart';
+import 'change_stream.dart';
 import 'image_payload.dart';
 import 'page_policy.dart';
 import 'request_context.dart';
@@ -274,6 +276,132 @@ class ApiClient {
         _requiredStatusMissed(httpResponse, requiredStatus) ??
             ApiEnvelopeDecoder.decode<T>(httpResponse, decode),
     };
+  }
+
+  /// The path of the server's change stream (DL-222, D-218).
+  static const String changeStreamPath = 'changes';
+
+  /// The longest error body read from a refused stream before giving up.
+  static const int _refusalBodyLimit = 64 * 1024;
+
+  /// Opens the server's change stream, `GET changes` (D-218).
+  ///
+  /// Sent with the same headers as every other request, from
+  /// [RequestContext]: the bearer in `Authorization`, the client channel, and
+  /// a correlation id. The token never goes in the URL. `Accept:
+  /// text/event-stream` is the only addition; it is CORS-safelisted, and
+  /// nothing else outside the API's allow-list is sent.
+  ///
+  /// A `401` refreshes the token once and opens again, exactly as [send]
+  /// does, through the same [AuthCoordinator]. A second `401` ends the
+  /// session the same way.
+  ///
+  /// It does not report to the network monitor: a proxy that refuses long
+  /// streams is not Taytay LGU being unreachable, and the offline banner must
+  /// keep meaning what it says.
+  Future<ChangeStreamOpening> openChangeStream() async {
+    // A separate capability, not a subtype of ApiTransport, so the check is
+    // made on an Object for the promotion to hold.
+    final Object transport = _transport;
+    if (transport is! StreamingApiTransport) {
+      return const ChangeStreamNotOffered();
+    }
+    final String? token = await _accessTokenProvider?.call();
+    if (token == null || token.isEmpty) {
+      return const ChangeStreamFailed(
+        UnauthenticatedFailure(
+          debugMessage: 'Change stream attempted with no access token.',
+        ),
+      );
+    }
+
+    ChangeStreamOpening opening = await _openStreamOnce(transport, token);
+    if (opening case ChangeStreamFailed(
+      :final AppFailure failure,
+    ) when failure.requiresReauthentication) {
+      final AuthCoordinator? coordinator = _authCoordinator;
+      if (coordinator == null) {
+        await _onUnauthenticated?.call();
+        return opening;
+      }
+      final AuthRecovery recovery = await coordinator.handleUnauthenticated();
+      if (recovery == AuthRecovery.failed) return opening;
+      final String? refreshed = await _accessTokenProvider?.call();
+      if (refreshed == null || refreshed.isEmpty) return opening;
+      opening = await _openStreamOnce(transport, refreshed);
+      if (opening case ChangeStreamFailed(
+        :final AppFailure failure,
+      ) when failure.requiresReauthentication) {
+        await _onUnauthenticated?.call();
+      }
+    }
+    return opening;
+  }
+
+  Future<ChangeStreamOpening> _openStreamOnce(
+    StreamingApiTransport transport,
+    String token,
+  ) async {
+    final RequestContext context = RequestContext(
+      requestId: generateRequestId(),
+      bearerToken: token,
+    );
+    final Result<ApiStreamResponse> result = await transport.openStream(
+      ApiRequest(
+        method: HttpMethod.get,
+        path: changeStreamPath,
+        headers: context.headers(accept: 'text/event-stream'),
+        timeout: _config.requestTimeout,
+      ),
+    );
+    switch (result) {
+      case Err<ApiStreamResponse>(:final AppFailure failure):
+        return ChangeStreamFailed(failure);
+      case Ok<ApiStreamResponse>(value: final ApiStreamResponse response):
+        final String type = (response.headers['content-type'] ?? '')
+            .toLowerCase();
+        if (response.isSuccess && type.startsWith('text/event-stream')) {
+          return ChangeStreamOpen(response.text);
+        }
+        // An older API (404, 501), or a 2xx that is not a stream. Neither
+        // will become a stream by asking again.
+        if (response.isSuccess ||
+            response.statusCode == 404 ||
+            response.statusCode == 501) {
+          unawaited(response.text.listen(null).cancel());
+          return const ChangeStreamNotOffered();
+        }
+        final String body = await _readRefusal(response.text);
+        final AppFailure failure =
+            ApiEnvelopeDecoder.decode<Object?>(
+              ApiHttpResponse(
+                statusCode: response.statusCode,
+                body: body,
+                headers: response.headers,
+              ),
+              (Object? data) => data,
+            ).failureOrNull ??
+            const ContractFailure(
+              debugMessage: 'A refused change stream decoded as success.',
+            );
+        return ChangeStreamFailed(failure);
+    }
+  }
+
+  /// The body of a refused stream: an error envelope, read whole but bounded
+  /// in size and time, because a stream is not obliged to end.
+  Future<String> _readRefusal(Stream<String> text) async {
+    final StringBuffer body = StringBuffer();
+    try {
+      await for (final String chunk in text.timeout(_config.requestTimeout)) {
+        body.write(chunk);
+        if (body.length > _refusalBodyLimit) break;
+      }
+    } on Object {
+      // A refusal that could not be read whole is still a refusal; the
+      // status decides what it was.
+    }
+    return body.toString();
   }
 
   /// A public image route. 404 is an empty picture, not a failure the

@@ -3622,6 +3622,122 @@ Pambansa* (hyphen between an affix and an unassimilated loanword); D-206.
 
 ---
 
+## D-218 — Screens update themselves from change hints; no polling, no push
+
+**Status: settled.** Category: product / contract / accessibility. Recorded
+2026-11-15, on the owner's request that screens update by themselves when the
+data changes (Ella, Michaela Cailing), decided by researched best practice and
+relayed by the orchestrator. The cross-repository entry is the console's
+**DL-222**; the server contract is `GET /api/v1/changes` in the backend.
+
+**Context.** Residents saw the office's decisions (a verification approved, a
+reply, a card issued, a request moved along) only after pulling to refresh or
+reopening a screen. Re-reading on a timer would cost residents battery and
+mobile data whether or not anything changed, and the API runs on a small shared
+server. FCM push has no credentials and is the owner's decision to make.
+
+**Decision.** The server pushes hints that name **topics only** (no ids, no
+counts, no personal data); screens re-read through their normal, authorised
+endpoints, quietly.
+
+1. **One stream, foreground only.** `LiveUpdates` (`lib/core/live/`) opens
+   `GET changes` (`ApiClient.openChangeStream`) only while the app is
+   `resumed` and somebody is signed in, and closes it on `inactive`, `hidden`,
+   `paused`, `detached` and sign-out. The one `AppLifecycleListener` in
+   `TaytayResidentApp` feeds it. Nothing is received in the background.
+2. **The request is an ordinary one.** The bearer in `Authorization`, the
+   client channel and a correlation id from `RequestContext`, plus `Accept:
+   text/event-stream`; never a token in the URL, no `Cache-Control`, no
+   `Last-Event-ID`. A `401` refreshes the token once and opens again through
+   the same `AuthCoordinator` as every other call. The stream does not feed
+   the offline banner: a proxy that refuses long streams is not the office
+   being unreachable.
+3. **Transport.** `StreamingApiTransport.openStream` is a capability beside
+   `ApiTransport`, not a method on it: a connect timeout, no body timeout, no
+   retry, and cancelling the subscription aborts the request. A transport
+   without it (every test fake) means "not offered". The suite also turns the
+   app's own stream off (`LiveUpdates.enabledByDefault = false` in
+   `test/flutter_test_config.dart`, beside `WelcomeMotion.enabled`), since
+   flutter_test answers a real transport with `400`; a test about live updates
+   builds its own `LiveUpdates`.
+4. **Reconnect.** Backoff with jitter from 1 s to 30 s (a quarter either way),
+   never shorter than the server's `retry:`; at once after `expired` if the
+   stream had reached `ready`, else backoff, so an immediate `expired` cannot
+   loop. A stream silent for 60 s (two missed 25 s pings) is presumed dead and
+   reopened. A refusal asking again cannot change (`401` already handled,
+   `403`, `400`) waits for the next sign-in or return to the foreground.
+5. **`404` or `501` turns live updates off for the process, with no polling.**
+   Screens then re-read only on return to the foreground.
+6. **What a screen hears.** `listen(topics, onChange)` returns a handle to
+   cancel. It runs on a matching `change`, on every reconnect after the first
+   `ready`, on every `resync`, and on return to the foreground (once the new
+   stream is `ready`, or after 3 s, whichever is first, so one re-read covers
+   both). Each listener is throttled to one call per 2 s, the first at once and
+   one more at the end of the window; no timer is held unless a call is owed.
+   The parser keeps only `topics`; an unknown topic is ignored.
+7. **Only a visible screen re-reads.** The `LiveRefresh` mixin defers a hint
+   for a ticker-disabled screen (a tab kept alive behind another, a page under
+   a pushed route) until it is shown again.
+8. **Quiet re-reads.** Keep what is on screen, show no loading state, and on
+   failure keep the old data with no message. Paged lists re-read every page
+   already loaded and replace the list only when all arrive
+   (`EventsController`, `NewsFeedController`, `NotificationInboxController`
+   `refreshQuietly`); setState lists refresh the first page and keep what was
+   paged in below it (threads, document requests). Nothing typed, picked or
+   open is reset: the message draft and chosen file, verification corrections
+   and photos, the event registration form once the resident has begun (it is
+   re-read only before), a comment or reaction in flight, the scroll position,
+   the news chip. Nothing is re-read while the resident's own send is on its
+   way. A thread is marked read on a quiet re-read only when a message it had
+   not shown arrived, so marking it read cannot feed the stream back to it.
+9. **The `account` topic refreshes the tier the session holds.**
+   `AppDependencies.build` re-reads `GET /me` and applies its tier through
+   `SessionController.applyVerificationTier`, so verification-gated routes
+   re-evaluate at once.
+
+**Screens and topics.** Verification (`verification`, `account`);
+Notifications (`notifications`); Messages and a thread (`threads`); Digital ID
+(`digital-ids`, `account`); Sectors (`sector-applications`, `account`); My
+document requests and a request (`issuance-requests`); Events, an event and
+event registration (`events`, `event-registrations`); News and an article
+(`news`); Home (`home`, `news`, `events`, `notifications`, `hotlines`). The
+assistance list and case are **not** wired: on the Node contract their
+repository answers `BackendGap.absentOnNodeContract` without a request, so
+there is no endpoint to re-read and no topic to hear; the resident's own
+requests that do read an endpoint are the document requests above.
+
+**Accessibility.** WCAG 2.2 SC 2.2.2 (Pause, Stop, Hide) asks for a way to
+pause content that *auto-updates* when it starts automatically and is
+presented with other content. Its Understanding document describes content
+updated on a preset interval; these updates are event-driven, happening only
+when the office changes the resident's data, so no pause control is added.
+Automatic updates are not announced through semantics live regions: a screen
+reader interrupted each time a list re-reads would be the harm SC 2.2.2 is
+about. Copy that already announces itself (an error, a sent message) is
+unchanged.
+
+**Never.** A hint is not a write, a queue or a retry of one, and is never taken
+as proof that anything was saved (DL-87, DL-118). No polling on mobile. No FCM.
+
+**Not done.** `GET changes` is not in `backendRoutes`: it is not an envelope
+call and the vendored OpenAPI does not have it yet. Add it with the next
+re-vendoring of the Node export. Whether the server's topics match these names
+is the backend's `src/modules/live/topics.ts`; a topic that never arrives only
+means its screens re-read on reconnect and on return.
+
+**Sources.** DL-222 (console decision log, the cross-repository entry); W3C,
+*Understanding SC 2.2.2: Pause, Stop, Hide*,
+<https://www.w3.org/WAI/WCAG22/Understanding/pause-stop-hide>; TanStack Query,
+*Window Focus Refetching*,
+<https://tanstack.com/query/v5/docs/framework/angular/guides/window-focus-refetching>;
+Apollo Client, *Refetching* (event-based),
+<https://www.apollographql.com/docs/react/data/event-based-refetching>;
+node-postgres, *Client* (`LISTEN`/`NOTIFY` notifications),
+<https://node-postgres.com/apis/client>; WHATWG HTML, *Server-sent events*
+(event-stream interpretation).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3843,5 +3959,6 @@ Pambansa* (hyphen between an affix and an unassimilated loanword); D-206.
 | D-215 | The resident's own senior citizen, PWD and solo parent sectors reach the app (`GET /me/sectors`, narrowing D-13); nothing else does, and the app has no value for any other sector. ID numbers are the last four. `/sectors` and `/sectors/apply` are verified-only; applying sends `{sector, proof_media_ids}` after `POST /media`, offers only a sector neither held nor being checked, and collects no ID number, dates or reasons; the tick is a declaration, not a consent. Empty until the office links the account on its first approval, and the page says so. Left out: the renewal reminder, the birth-date gate, the 4Ps source line | privacy / contract / product | settled |
 | D-216 | `sector_application_decided` opens Sectors and benefits: the deep-link target `sector_applications` → `/sectors`, with the notice's `subject_id` kept off that target because the route takes none. Unknown targets, and an id on a route that takes none, are still refused; an unknown kind opens nothing. Replaces D-215's "opens nothing yet" | product / authorization | settled |
 | D-217 | The Filipino copy was reviewed for grammar and consistency by Claude, not a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT. 25 ARB strings and 4 inline strings changed: "Subukang muli" for every "Try again", "subok" for attempts, "tanggapan" for office, "pag-verify" / "Verified na" for verification, "na-type" for typed, "numero ng cellphone", "Paki-update", and five meaning fixes. The consent screens (D-208 to D-214) stay English with the English screens they sit on; translating those screens whole is an open owner item (NPC Circular 2023-04) | localisation | settled |
+| D-218 | Screens update themselves from change hints (DL-222): `LiveUpdates` holds `GET changes` open only while the app is resumed and signed in, with the bearer in a header; backoff with jitter 1–30 s, at once after `expired`; a `404`/`501` turns it off with no polling; reconnects, `resync` and returning re-read every listening screen; each re-read is quiet (old data kept, no loading, failure silent), throttled to one per 2 s, deferred while the screen is hidden, and never resets a draft, form, sheet or scroll; `account` re-reads the session's tier. No pause control and no live-region announcements: the updates are event-driven, not timed (WCAG 2.2 SC 2.2.2) | product / contract / accessibility | settled |
 
-**213 decisions — 209 settled, 4 provisional.**
+**214 decisions — 210 settled, 4 provisional.**

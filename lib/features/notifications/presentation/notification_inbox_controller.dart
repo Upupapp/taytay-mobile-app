@@ -101,6 +101,12 @@ class NotificationInboxController extends ChangeNotifier {
   AppFailure? _failure;
   AppFailure? _pageFailure;
 
+  /// Bumped by every read or mark that changes the list, so a quiet re-read
+  /// that started before it is dropped rather than applied over newer state.
+  int _generation = 0;
+  bool _quietInFlight = false;
+  bool _disposed = false;
+
   List<ResidentNotification> get items =>
       List<ResidentNotification>.unmodifiable(_items);
 
@@ -133,6 +139,7 @@ class NotificationInboxController extends ChangeNotifier {
   }
 
   Future<void> refresh() async {
+    _generation++;
     _items.clear();
     _page = 0;
     _cursor = null;
@@ -154,12 +161,69 @@ class NotificationInboxController extends ChangeNotifier {
     await _fetch(isFirstPage: false);
   }
 
+  /// Re-reads what is loaded, with no loading state (D-218).
+  ///
+  /// The pages already read are read again from the top, following the
+  /// server's cursors, and replace the list only when all of them arrive. A
+  /// failure keeps what is on screen and says nothing. Skipped while another
+  /// read is running.
+  Future<void> refreshQuietly() async {
+    if (_quietInFlight || _loadingFirstPage || _loadingMore) return;
+    final int generation = _generation;
+    final int pages = _page < 1 ? 1 : _page;
+    final List<ResidentNotification> fresh = <ResidentNotification>[];
+    var read = 0;
+    String? cursor;
+    var hasMore = true;
+    _quietInFlight = true;
+    try {
+      while (read < pages && hasMore) {
+        final result = await _repository.listOwn(
+          page: read + 1,
+          cursor: cursor,
+        );
+        if (_disposed || generation != _generation) return;
+        switch (result) {
+          case Ok(:final value):
+            fresh.addAll(value.items);
+            cursor = value.nextCursor;
+            hasMore =
+                value.hasMore &&
+                value.nextCursor != null &&
+                value.nextCursor!.isNotEmpty;
+            read++;
+          case Err():
+            return;
+        }
+      }
+    } finally {
+      _quietInFlight = false;
+    }
+    _items
+      ..clear()
+      ..addAll(fresh);
+    _page = read;
+    _cursor = cursor;
+    _hasMore = hasMore;
+    _failure = null;
+    _pageFailure = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<void> _fetch({required bool isFirstPage}) async {
     final next = _page + 1;
     final result = await _repository.listOwn(
       page: next,
       cursor: isFirstPage ? null : _cursor,
     );
+    if (_disposed) return;
+    _generation++;
 
     result.fold(
       onOk: (page) {
@@ -196,9 +260,11 @@ class NotificationInboxController extends ChangeNotifier {
 
     final before = _items[index];
     _items[index] = _copyRead(before, _clock());
+    _generation++;
     notifyListeners();
 
     final result = await _repository.markRead(id);
+    if (_disposed) return;
     result.fold(
       onOk: (_) {},
       // Put the unread mark back. A badge that cleared for something the server
@@ -220,9 +286,11 @@ class NotificationInboxController extends ChangeNotifier {
     for (var i = 0; i < _items.length; i++) {
       if (_items[i].isUnread) _items[i] = _copyRead(_items[i], now);
     }
+    _generation++;
     notifyListeners();
 
     final result = await _repository.markAllRead();
+    if (_disposed) return;
     result.fold(
       onOk: (_) {},
       onErr: (_) {

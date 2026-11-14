@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -5,6 +7,8 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/api/paginated.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/links/external_link_service.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -33,7 +37,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
   bool _started = false;
   bool _refreshing = false;
   int _bellCount = 0;
@@ -47,36 +51,49 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_started) return;
     _started = true;
     _load(initial: true);
+    // Banners, news, the hotline and the bell count follow the office
+    // without a pull (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.home,
+      LiveTopics.news,
+      LiveTopics.events,
+      LiveTopics.notifications,
+      LiveTopics.hotlines,
+    }, () => unawaited(_load(initial: false, quiet: true)));
   }
 
-  Future<void> _load({required bool initial}) async {
+  /// Reads everything Home shows.
+  ///
+  /// [quiet] is a re-read for a change (D-218): no refreshing state, and each
+  /// part that fails keeps what it showed rather than falling back to the
+  /// bundled slides or an empty list.
+  Future<void> _load({required bool initial, bool quiet = false}) async {
     final AppDependencies dependencies = AppDependencies.of(context);
-    if (!initial) {
+    if (quiet && _refreshing) return;
+    if (!initial && !quiet) {
       setState(() => _refreshing = true);
     }
     final SessionState session = dependencies.session.state;
     final bool guest = session is! AuthenticatedSession;
     final List<HomeSlide> bundled = await HomeCatalogue.slides();
     final Result<HomeFeed> home = await dependencies.citizenApi.loadHome();
+    if (quiet && !home.isOk) {
+      await _loadQuietParts(dependencies, guest: guest);
+      return;
+    }
     final List<HomeSlide> slides = home.fold(
       onOk: (HomeFeed feed) => HomeCatalogue.withBanners(bundled, feed.banners),
       onErr: (_) => bundled,
     );
-    final List<HomeNewsItem> news = await _newsFrom(dependencies);
+    final List<HomeNewsItem> news = quiet
+        ? await _newsQuietly(dependencies) ?? _news
+        : await _newsFrom(dependencies);
     final HomeHotline? hotline = await _hotlineFrom(home, dependencies);
-    var bell = 0;
-    if (!guest) {
-      final Result<Paginated<ResidentNotification>> page = await dependencies
-          .notificationRepository
-          .listOwn(page: 1, perPage: 20);
-      bell = page.fold(
-        onOk: (Paginated<ResidentNotification> inbox) => inbox.items
-            .where((ResidentNotification item) => item.isUnread)
-            .length,
-        onErr: (_) => 0,
-      );
-    }
+    final int bell = guest
+        ? 0
+        : await _bell(dependencies) ?? (quiet ? _bellCount : 0);
     if (!mounted) return;
+    if (quiet && _refreshing) return;
     setState(() {
       _slides = slides;
       _news = news;
@@ -85,6 +102,55 @@ class _HomeScreenState extends State<HomeScreen> {
       _refreshing = false;
     });
   }
+
+  /// With `GET home` failing, a quiet re-read still refreshes the news and
+  /// the bell, and keeps the banners and the hotline it had.
+  Future<void> _loadQuietParts(
+    AppDependencies dependencies, {
+    required bool guest,
+  }) async {
+    final List<HomeNewsItem>? news = await _newsQuietly(dependencies);
+    final int? bell = guest ? 0 : await _bell(dependencies);
+    if (!mounted || _refreshing) return;
+    if (news == null && bell == null) return;
+    setState(() {
+      if (news != null) _news = news;
+      if (bell != null) _bellCount = bell;
+    });
+  }
+
+  /// The unread count, or `null` when the inbox could not be read.
+  Future<int?> _bell(AppDependencies dependencies) async {
+    final Result<Paginated<ResidentNotification>> page = await dependencies
+        .notificationRepository
+        .listOwn(page: 1, perPage: 20);
+    return page.fold(
+      onOk: (Paginated<ResidentNotification> inbox) => inbox.items
+          .where((ResidentNotification item) => item.isUnread)
+          .length,
+      onErr: (_) => null,
+    );
+  }
+
+  /// The two newest articles, or `null` when they could not be read.
+  Future<List<HomeNewsItem>?> _newsQuietly(AppDependencies dependencies) async {
+    final Result<Paginated<Announcement>> result = await dependencies
+        .announcementRepository
+        .listAnnouncements(perPage: 2);
+    return result.fold(
+      onOk: (Paginated<Announcement> page) => <HomeNewsItem>[
+        for (final Announcement item in page.items) _newsItem(item),
+      ],
+      onErr: (_) => null,
+    );
+  }
+
+  HomeNewsItem _newsItem(Announcement item) => HomeNewsItem(
+    id: item.id,
+    eyebrow: _eyebrow(item),
+    title: item.title,
+    alert: item.advisoryLevel?.raw == 'emergency',
+  );
 
   Future<List<HomeNewsItem>> _newsFrom(AppDependencies dependencies) async {
     final Result<Paginated<Announcement>> result = await dependencies

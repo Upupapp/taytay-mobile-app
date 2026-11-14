@@ -213,6 +213,46 @@ class EventRegistrationController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _quietInFlight = false;
+  bool _disposed = false;
+
+  /// Whether the resident has not begun: still on the first step, nothing
+  /// answered or agreed to, nothing sent.
+  bool get _untouched =>
+      _step == RegistrationStep.confirm &&
+      _answers.isEmpty &&
+      _consents.isEmpty &&
+      _attempt == null &&
+      !_busy &&
+      !_loadingForm;
+
+  /// Re-reads the form with no loading state (D-218), **only before the
+  /// resident has begun**.
+  ///
+  /// Once a field is answered, a consent ticked, a step taken or a send made,
+  /// the form on screen is the one the resident is filling in, and replacing
+  /// it would move questions under their thumb. The server judges the
+  /// registration when it is sent either way. A failure keeps the form on
+  /// screen and says nothing.
+  Future<void> refreshQuietly() async {
+    if (_quietInFlight || !_untouched) return;
+    _quietInFlight = true;
+    final outcome = await _repository.loadRegistrationForm(eventId);
+    _quietInFlight = false;
+    if (_disposed || !_untouched) return;
+    if (outcome case Ok(:final value)) {
+      _form = value;
+      _formFailure = null;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   // ── Draft edits ──────────────────────────────────────────────────────────
 
   void answer(String key, Object? value) {

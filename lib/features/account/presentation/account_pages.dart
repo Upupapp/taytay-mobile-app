@@ -12,6 +12,8 @@ import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/time/manila_time.dart';
@@ -40,8 +42,13 @@ class MessagesInboxScreen extends StatefulWidget {
   State<MessagesInboxScreen> createState() => _MessagesInboxScreenState();
 }
 
-class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
+class _MessagesInboxScreenState extends State<MessagesInboxScreen>
+    with LiveRefresh<MessagesInboxScreen> {
   bool _started = false;
+
+  /// Pages read since the last full load. A quiet re-read refreshes the first
+  /// and keeps the rest.
+  int _pages = 0;
   bool _loading = true;
   bool _failed = false;
   bool _loadingMore = false;
@@ -56,13 +63,47 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // A reply from the office moves its thread up without a pull (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.threads,
+    }, () => unawaited(_load(quiet: true)));
   }
 
-  Future<void> _load() async {
+  /// Reads the first page of threads.
+  ///
+  /// [quiet] is a re-read for a change (D-218): no loading state, the threads
+  /// already paged in below the first page stay, and a failure keeps the list
+  /// as it is and says nothing.
+  Future<void> _load({bool quiet = false}) async {
+    if (quiet && (_loading || _loadingMore)) return;
     final result = await AppDependencies.of(
       context,
     ).officeMessagingRepository.listThreads();
     if (!mounted) return;
+    if (quiet) {
+      if (_loading || _loadingMore) return;
+      if (result case Ok(:final value)) {
+        setState(() {
+          final List<OfficeThread> fresh = _uniqueThreads(value.items);
+          if (_pages <= 1) {
+            _threads = fresh;
+            _remember(value);
+            _pages = 1;
+          } else {
+            final Set<String> seen = fresh
+                .map((OfficeThread thread) => thread.id)
+                .toSet();
+            _threads = <OfficeThread>[
+              ...fresh,
+              for (final OfficeThread thread in _threads)
+                if (seen.add(thread.id)) thread,
+            ];
+          }
+          _failed = false;
+        });
+      }
+      return;
+    }
     setState(() {
       _loading = false;
       _loadingMore = false;
@@ -70,6 +111,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
         case Ok(:final value):
           _threads = _uniqueThreads(value.items);
           _remember(value);
+          _pages = 1;
           _pageError = null;
           _failed = false;
         case Err():
@@ -103,6 +145,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen> {
             if (seen.add(thread.id)) thread,
         ];
         _remember(value);
+        _pages++;
         _pageError = null;
       } else if (result case Err(:final failure)) {
         _pageError = failure.residentMessage;
@@ -185,8 +228,12 @@ class AccountThreadScreen extends StatefulWidget {
   State<AccountThreadScreen> createState() => _AccountThreadScreenState();
 }
 
-class _AccountThreadScreenState extends State<AccountThreadScreen> {
+class _AccountThreadScreenState extends State<AccountThreadScreen>
+    with LiveRefresh<AccountThreadScreen> {
   bool _started = false;
+
+  /// Whether older messages were paged in above the newest page.
+  bool _pagedOlder = false;
   bool _ready = false;
   bool _failed = false;
   bool _closed = false;
@@ -219,9 +266,16 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The office's reply appears under the resident's own messages without a
+    // pull. What the resident is typing, and the file they chose, stay
+    // (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.threads,
+    }, () => unawaited(_load(quiet: true)));
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool quiet = false}) async {
+    if (quiet && (!_ready || _sending || _loadingMore)) return;
     final dependencies = AppDependencies.of(context);
     final Result<OfficeThread> thread = await dependencies
         .officeMessagingRepository
@@ -229,6 +283,10 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     final Result<Paginated<OfficeMessage>> messages = await dependencies
         .officeMessagingRepository
         .listMessages(widget.threadId);
+    if (quiet) {
+      await _applyQuiet(dependencies, thread, messages);
+      return;
+    }
     if (thread is Ok<OfficeThread>) {
       await dependencies.officeMessagingRepository.markThreadRead(
         widget.threadId,
@@ -262,6 +320,60 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
     });
   }
 
+  /// A quiet re-read for a change (D-218): the thread's header and its newest
+  /// page, merged under what is on screen. A failure changes nothing.
+  ///
+  /// The thread is marked read only when a message arrived that this screen
+  /// had not shown. Marking it read on every re-read would itself be a
+  /// change, and the stream would answer it with another re-read.
+  Future<void> _applyQuiet(
+    AppDependencies dependencies,
+    Result<OfficeThread> thread,
+    Result<Paginated<OfficeMessage>> messages,
+  ) async {
+    if (!mounted || _sending || _loadingMore) return;
+    final List<OfficeMessage>? fresh = switch (messages) {
+      Ok(:final value) => _uniqueMessages(value.items.reversed.toList()),
+      Err() => null,
+    };
+    final Set<String> shown = _messages.map((OfficeMessage m) => m.id).toSet();
+    final bool arrived =
+        fresh != null && fresh.any((OfficeMessage m) => !shown.contains(m.id));
+    if (arrived && thread is Ok<OfficeThread>) {
+      await dependencies.officeMessagingRepository.markThreadRead(
+        widget.threadId,
+      );
+    }
+    if (!mounted || _sending || _loadingMore) return;
+    setState(() {
+      if (thread case Ok(:final value)) {
+        _title = value.officeName;
+        _subtitle = value.topic.isEmpty
+            ? 'Bayan ng Taytay · Rizal'
+            : value.topic;
+        _ownerAccountId = value.ownerAccountId;
+        _closed = value.status == 'closed';
+      }
+      if (fresh != null) {
+        final Set<String> freshIds = fresh
+            .map((OfficeMessage m) => m.id)
+            .toSet();
+        _messages = <OfficeMessage>[
+          for (final OfficeMessage message in _messages)
+            if (!freshIds.contains(message.id)) message,
+          ...fresh,
+        ];
+        if (!_pagedOlder) {
+          if (messages case Ok(:final value)) _remember(value);
+        }
+      }
+      if (_failed && thread is Ok<OfficeThread> && fresh != null) {
+        _failed = false;
+        _error = null;
+      }
+    });
+  }
+
   Future<void> _loadOlder() async {
     final String? cursor = _cursor;
     if (_loadingMore || !_hasMore || cursor == null || _failed) return;
@@ -284,6 +396,7 @@ class _AccountThreadScreenState extends State<AccountThreadScreen> {
             if (seen.add(message.id)) message,
         ];
         _messages = <OfficeMessage>[...older, ..._messages];
+        _pagedOlder = true;
         _remember(value);
         _pageError = null;
       } else if (result case Err(:final failure)) {

@@ -92,6 +92,44 @@ class PostDetailController extends ChangeNotifier {
     if (_post != null && capabilities.canComment) await loadMoreComments();
   }
 
+  bool _quietInFlight = false;
+  bool _disposed = false;
+
+  /// Re-reads the post with no loading state (D-218).
+  ///
+  /// Only the post: a comment being typed, the comments already listed and a
+  /// reaction on its way are left alone, and nothing is read while a reaction
+  /// or a comment is being sent. A failure keeps the post on screen and says
+  /// nothing.
+  Future<void> refreshQuietly() async {
+    if (_quietInFlight ||
+        _loading ||
+        _reacting ||
+        _posting == CommentPostingState.sending) {
+      return;
+    }
+    _quietInFlight = true;
+    final result = await _repository.loadAnnouncement(postId);
+    _quietInFlight = false;
+    if (_disposed ||
+        _loading ||
+        _reacting ||
+        _posting == CommentPostingState.sending) {
+      return;
+    }
+    if (result case Ok(:final value)) {
+      _post = value;
+      _loadFailure = null;
+      notifyListeners();
+    }
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<void> loadMoreComments() async {
     if (_loadingComments || !_hasMoreComments) return;
     _loadingComments = true;

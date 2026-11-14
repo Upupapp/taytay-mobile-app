@@ -62,9 +62,22 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
       // connection gets the app, and a request that never answers leaves the
       // permissive defaults in place rather than a spinner or a lock-out.
       unawaited(widget.dependencies.platform.refresh());
+
+      // Live updates (D-218) follow the foreground: the change stream is open
+      // only while the app is resumed. A cold start reports no transition, so
+      // the state the app starts in is passed once here. Before the first
+      // frame the binding may not know it yet; a launched app is in front.
+      widget.dependencies.live.handleLifecycle(
+        WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed,
+      );
     }
 
     _lifecycle = AppLifecycleListener(
+      // Every transition, so the stream closes on `inactive` as well as on
+      // `paused`, and reopens (and re-reads what is on screen) on `resumed`.
+      onStateChange: widget.dependencies.config.isUsable
+          ? widget.dependencies.live.handleLifecycle
+          : null,
       // Leaving the foreground is the moment the phone might change hands.
       onHide: widget.dependencies.appLock.markBackgrounded,
       onPause: widget.dependencies.appLock.markBackgrounded,

@@ -1,8 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/session_state.dart';
@@ -27,7 +31,7 @@ class NewsScreen extends StatefulWidget {
   State<NewsScreen> createState() => _NewsScreenState();
 }
 
-class _NewsScreenState extends State<NewsScreen> {
+class _NewsScreenState extends State<NewsScreen> with LiveRefresh<NewsScreen> {
   NewsFeedController? _controller;
   final ScrollController _scroll = ScrollController();
   GoRouter? _router;
@@ -54,6 +58,11 @@ class _NewsScreenState extends State<NewsScreen> {
           ..addListener(_onChanged)
           ..refresh();
     _loadCategories();
+    // A published or pinned article shows without a pull; the scroll
+    // position and the chosen chip stay (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.news,
+    }, () => unawaited(_controller?.refreshQuietly()));
   }
 
   Future<void> _loadCategories() async {

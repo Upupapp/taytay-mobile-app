@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -10,6 +11,8 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/detail_page.dart';
@@ -54,7 +57,8 @@ class IssuanceRequestDetailScreen extends StatefulWidget {
 }
 
 class _IssuanceRequestDetailScreenState
-    extends State<IssuanceRequestDetailScreen> {
+    extends State<IssuanceRequestDetailScreen>
+    with LiveRefresh<IssuanceRequestDetailScreen> {
   bool _started = false;
   AppFailure? _failure;
   IssuanceRequestDetail? _detail;
@@ -69,6 +73,29 @@ class _IssuanceRequestDetailScreenState
     if (_started) return;
     _started = true;
     _load();
+    // The office moving this request along shows here without a pull
+    // (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.issuanceRequests,
+    }, () => unawaited(_loadQuietly()));
+  }
+
+  /// Re-reads the request for a change (D-218): no loading state, nothing
+  /// read while a cancellation is on its way, and a failure keeps the request
+  /// on screen and says nothing.
+  Future<void> _loadQuietly() async {
+    if (_cancelling || _detail == null) return;
+    final String requestId = widget.requestId;
+    final Result<IssuanceRequestDetail> result = await AppDependencies.of(
+      context,
+    ).issuanceRepository.loadOwn(requestId);
+    if (!mounted || _cancelling || requestId != widget.requestId) return;
+    if (result case Ok(:final value)) {
+      setState(() {
+        _detail = value;
+        _failure = null;
+      });
+    }
   }
 
   // A notification for another request can arrive while this one is open; the

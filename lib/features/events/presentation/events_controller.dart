@@ -31,6 +31,12 @@ class EventsController extends ChangeNotifier {
   AppFailure? _failure;
   AppFailure? _pageFailure;
 
+  /// Bumped by every read that changes the list, so a quiet re-read that
+  /// started before it is dropped rather than applied over newer data.
+  int _generation = 0;
+  bool _quietInFlight = false;
+  bool _disposed = false;
+
   EventScope get scope => _scope;
   List<LguEvent> get items => List<LguEvent>.unmodifiable(_items);
 
@@ -54,6 +60,7 @@ class EventsController extends ChangeNotifier {
 
   /// Loads the first page of the current scope, discarding anything held.
   Future<void> refresh() async {
+    _generation++;
     _items.clear();
     _page = 0;
     _hasMore = true;
@@ -79,9 +86,62 @@ class EventsController extends ChangeNotifier {
     await loadMore();
   }
 
+  /// Re-reads what is loaded, with no loading state (D-218).
+  ///
+  /// Every page the resident has scrolled through is read again, in order,
+  /// and the list is replaced only when all of them arrive: a partial re-read
+  /// would shorten the list under the resident's thumb. A failure keeps what
+  /// is on screen and says nothing. Skipped while another read is running;
+  /// the change that asked for it is covered by that read.
+  Future<void> refreshQuietly() async {
+    if (_quietInFlight || _loadingFirstPage || _loadingMore) return;
+    final int generation = _generation;
+    final EventScope scope = _scope;
+    final int pages = _page < 1 ? 1 : _page;
+    final List<LguEvent> fresh = <LguEvent>[];
+    var read = 0;
+    var hasMore = true;
+    _quietInFlight = true;
+    try {
+      while (read < pages && hasMore) {
+        final result = await _repository.listEvents(
+          scope: scope,
+          page: read + 1,
+        );
+        if (_disposed || generation != _generation) return;
+        switch (result) {
+          case Ok(:final value):
+            fresh.addAll(value.items.where((event) => event.isResidentVisible));
+            hasMore = value.hasMore;
+            read++;
+          case Err():
+            return;
+        }
+      }
+    } finally {
+      _quietInFlight = false;
+    }
+    _items
+      ..clear()
+      ..addAll(fresh);
+    _page = read;
+    _hasMore = hasMore;
+    _failure = null;
+    _pageFailure = null;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
   Future<void> _fetch({required bool isFirstPage}) async {
     final next = _page + 1;
     final result = await _repository.listEvents(scope: _scope, page: next);
+    if (_disposed) return;
+    _generation++;
 
     result.fold(
       onOk: (page) {

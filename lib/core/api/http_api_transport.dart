@@ -20,7 +20,7 @@ import 'retry_policy.dart';
 /// without a socket.
 ///
 /// It never throws: every failure path returns an `Err`.
-class HttpApiTransport implements ApiTransport {
+class HttpApiTransport implements ApiTransport, StreamingApiTransport {
   HttpApiTransport({
     required AppConfig config,
     http.Client? client,
@@ -225,6 +225,104 @@ class HttpApiTransport implements ApiTransport {
         ),
       );
     }
+  }
+
+  /// Opens a response and hands its body over as it arrives (D-218).
+  ///
+  /// The timeout covers the wait for the headers only. There is no body
+  /// timeout and no [RetryPolicy]: the change stream is meant to stay open,
+  /// and its owner reopens it with a fresh token rather than having it
+  /// replayed here.
+  @override
+  Future<Result<ApiStreamResponse>> openStream(ApiRequest request) async {
+    final Uri uri = _resolve(request);
+    final Duration timeout = request.timeout ?? _config.requestTimeout;
+    final Completer<void> abort = Completer<void>();
+    void abortOnce() {
+      if (!abort.isCompleted) abort.complete();
+    }
+
+    try {
+      final http.AbortableRequest outgoing = http.AbortableRequest(
+        request.method.wireValue,
+        uri,
+        abortTrigger: abort.future,
+      )..headers.addAll(request.headers);
+      final http.StreamedResponse response = await _client
+          .send(outgoing)
+          .timeout(timeout);
+      return Ok<ApiStreamResponse>(
+        ApiStreamResponse(
+          statusCode: response.statusCode,
+          headers: response.headers,
+          text: _textOf(response.stream, abortOnce),
+        ),
+      );
+    } on TimeoutException {
+      abortOnce();
+      return const Err<ApiStreamResponse>(
+        TimeoutFailure(debugMessage: 'Stream headers exceeded the timeout.'),
+      );
+    } on SocketException catch (error) {
+      abortOnce();
+      return Err<ApiStreamResponse>(
+        NetworkFailure(debugMessage: 'Socket error: ${error.osError?.message}'),
+      );
+    } on HandshakeException catch (error) {
+      abortOnce();
+      return Err<ApiStreamResponse>(
+        NetworkFailure(debugMessage: 'TLS handshake failed: ${error.message}'),
+      );
+    } on http.ClientException catch (error) {
+      abortOnce();
+      return Err<ApiStreamResponse>(
+        NetworkFailure(debugMessage: 'HTTP client error: ${error.message}'),
+      );
+    } on Object catch (error) {
+      abortOnce();
+      return Err<ApiStreamResponse>(
+        UnexpectedFailure(
+          debugContext: 'HttpApiTransport.openStream',
+          error: error,
+          debugMessage: 'Unhandled transport error.',
+        ),
+      );
+    }
+  }
+
+  /// [bytes] as text, where cancelling the subscription aborts the request.
+  ///
+  /// Cancelling alone leaves `dart:io` holding a socket whose response was
+  /// never read to the end; the abort closes it.
+  static Stream<String> _textOf(
+    Stream<List<int>> bytes,
+    void Function() abort,
+  ) {
+    StreamSubscription<String>? subscription;
+    late final StreamController<String> controller;
+    controller = StreamController<String>(
+      onListen: () {
+        subscription = bytes
+            .transform(const Utf8Decoder(allowMalformed: true))
+            .listen(
+              controller.add,
+              onError: (Object error, StackTrace stack) {
+                controller.addError(
+                  NetworkFailure(debugMessage: 'Stream ended: $error'),
+                  stack,
+                );
+              },
+              onDone: () => unawaited(controller.close()),
+            );
+      },
+      onPause: () => subscription?.pause(),
+      onResume: () => subscription?.resume(),
+      onCancel: () async {
+        abort();
+        await subscription?.cancel();
+      },
+    );
+    return controller.stream;
   }
 
   /// Builds the absolute URL, preserving the configured base path.

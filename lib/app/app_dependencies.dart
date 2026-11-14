@@ -13,8 +13,11 @@ import '../core/documents/platform_document_picker.dart';
 import '../core/intent/intent_controller.dart';
 import '../core/links/external_link_service.dart';
 import '../core/links/platform_external_link_service.dart';
+import '../core/live/live_message.dart';
+import '../core/live/live_updates.dart';
 import '../core/mock/mock_behavior.dart';
 import '../core/network/network_monitor.dart';
+import '../core/result/result.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/consent_gate_controller.dart';
 import '../core/session/local_authenticator.dart';
@@ -58,6 +61,7 @@ import '../features/notifications/domain/notification_repository.dart';
 import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
 import '../features/profile/data/resident_profile_api_repository.dart';
+import '../features/profile/domain/resident_profile_detail.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
 import '../features/programs/data/program_api_repository.dart';
 import '../features/programs/domain/program_repository.dart';
@@ -129,9 +133,11 @@ class AppDependencies {
     SectorRepository? sectors,
     AccountPasswordClient? passwordClient,
     ConsentGateController? consentGate,
+    LiveUpdates? live,
     this.clock = DateTime.now,
     this.onDispose,
-  }) : consentGate =
+  }) : live = live ?? LiveUpdates.disabled(),
+       consentGate =
            consentGate ??
            ConsentGateController(
              session: session,
@@ -316,9 +322,18 @@ class AppDependencies {
       session.bindPushRegistration(mocked);
     }
 
-    return AppDependencies(
+    // Live updates (D-218): the change stream, while the app is in the
+    // foreground and somebody is signed in. A dev mock build has no server to
+    // stream from, so it has none.
+    final LiveUpdates live =
+        config.usesMockData || !LiveUpdates.enabledByDefault
+        ? LiveUpdates.disabled()
+        : LiveUpdates(open: apiClient.openChangeStream, session: session);
+
+    final AppDependencies dependencies = AppDependencies(
       config: config,
       session: session,
+      live: live,
       launch: launch,
       intents: intents,
       appLock: appLock,
@@ -409,6 +424,36 @@ class AppDependencies {
           : MockAccountPasswordClient(),
       onDispose: httpTransport is HttpApiTransport ? httpTransport.close : null,
     );
+
+    // The tier the session holds comes from `GET /me`. When the office
+    // changes the account (approves a verification, changes the role), the
+    // session takes the new tier at once, and every verification-gated route
+    // re-evaluates without a restart. The subscription lives as long as
+    // [live] does.
+    live.listen(<String>{LiveTopics.account}, () {
+      unawaited(
+        _refreshAccountTier(session, dependencies.residentProfileRepository),
+      );
+    });
+
+    return dependencies;
+  }
+
+  /// Applies the tier `GET /me` reports to the session.
+  ///
+  /// Quiet: a failed read changes nothing. The tier is only ever the server's
+  /// word, and [SessionController.applyVerificationTier] fails closed on one it
+  /// does not recognise.
+  static Future<void> _refreshAccountTier(
+    SessionController session,
+    ResidentProfileRepository profiles,
+  ) async {
+    if (session.state is! AuthenticatedSession) return;
+    final Result<ResidentProfileDetail> me = await profiles.loadOwnDetail();
+    if (me case Ok(:final ResidentProfileDetail value)) {
+      final String? tier = value.verificationTier;
+      if (tier != null && tier.isNotEmpty) session.applyVerificationTier(tier);
+    }
   }
 
   /// What the server said at startup: minimum supported version, feature flags,
@@ -440,6 +485,10 @@ class AppDependencies {
 
   final AppConfig config;
   final SessionController session;
+
+  /// Screens update themselves when the office changes their data (D-218).
+  /// Disabled unless [AppDependencies.build] made a live one.
+  final LiveUpdates live;
 
   /// First-launch state. Presentation only — it grants nothing.
   final LaunchController launch;
@@ -573,6 +622,7 @@ class AppDependencies {
   final void Function()? onDispose;
 
   void dispose() {
+    live.dispose();
     mockBehavior?.dispose();
     appLock.dispose();
     consentGate.dispose();

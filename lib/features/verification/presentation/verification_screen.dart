@@ -9,6 +9,8 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/documents/document_capture.dart';
 import '../../../core/documents/upload_policy.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -57,7 +59,8 @@ class VerificationScreen extends StatefulWidget {
   State<VerificationScreen> createState() => _VerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
+class _VerificationScreenState extends State<VerificationScreen>
+    with LiveRefresh<VerificationScreen> {
   late final VerificationController _controller;
 
   /// The selfie's consent (D-209). No selfie is offered until it stands.
@@ -102,6 +105,17 @@ class _VerificationScreenState extends State<VerificationScreen> {
     _controller.refresh();
     _loadTier();
     unawaited(_biometric.load());
+    // The office reviewing the request changes both the request and the
+    // account's tier. Photos picked but not yet sent and corrections typed
+    // are this screen's own state and stay as they are (D-218).
+    listenLive(
+      dependencies.live,
+      const <String>{LiveTopics.verification, LiveTopics.account},
+      () {
+        unawaited(_controller.refreshQuietly());
+        unawaited(_loadTier());
+      },
+    );
   }
 
   void _onBiometric() {

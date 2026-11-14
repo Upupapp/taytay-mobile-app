@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/config/app_environment.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../profile/domain/resident_profile_detail.dart';
@@ -65,7 +67,7 @@ class DigitalIdScreen extends StatefulWidget {
 }
 
 class _DigitalIdScreenState extends State<DigitalIdScreen>
-    with WidgetsBindingObserver {
+    with WidgetsBindingObserver, LiveRefresh<DigitalIdScreen> {
   bool _started = false;
   CredentialRepository? _repository;
   VerificationRepository? _verification;
@@ -116,6 +118,12 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     _started = true;
     if (_repository == null) return;
     unawaited(_load());
+    // Issuing, suspending or replacing a card, and a change to the account
+    // behind it, show here without a pull (D-218).
+    listenLive(dependencies?.live, const <String>{
+      LiveTopics.digitalIds,
+      LiveTopics.account,
+    }, () => unawaited(_load(quiet: true)));
   }
 
   @override
@@ -147,9 +155,16 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
         AppEnvironment.dev;
   }
 
-  Future<void> _load() async {
+  /// Reads the card and the name on it.
+  ///
+  /// [quiet] is a re-read for a change (D-218): no loading state, and a read
+  /// that fails keeps the card on screen and says nothing. With no card yet,
+  /// the preparation dates are read again too, since the change may be the
+  /// office moving the card along.
+  Future<void> _load({bool quiet = false}) async {
     final CredentialRepository? repository = _repository;
     if (repository == null) return;
+    if (quiet && !_loaded) return;
     final int generation = ++_generation;
     final Future<Result<ResidentCredential?>> cardFuture = repository
         .loadOwnCredential();
@@ -157,6 +172,10 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
     final Result<ResidentCredential?> cardResult = await cardFuture;
     final Result<String?> nameResult = await nameFuture;
     if (!mounted || generation != _generation) return;
+    if (quiet) {
+      await _applyQuiet(generation, cardResult, nameResult);
+      return;
+    }
     if (cardResult case Ok(value: null) when !_preparationRead) {
       // Before the page is shown, so the dates do not arrive after it.
       final CardPreparation preparation = await _readPreparation();
@@ -182,6 +201,27 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
   /// The dates the verification screen shows, from the same two reads. A
   /// failed read is a step without a date, never an error page: the card's
   /// own answer has already come back.
+  Future<void> _applyQuiet(
+    int generation,
+    Result<ResidentCredential?> cardResult,
+    Result<String?> nameResult,
+  ) async {
+    if (cardResult case Ok(value: null)) {
+      final CardPreparation preparation = await _readPreparation();
+      if (!mounted || generation != _generation) return;
+      _preparation = preparation;
+      _preparationRead = true;
+    }
+    setState(() {
+      if (cardResult case Ok(:final value)) {
+        _failure = null;
+        _card = value;
+      }
+      if (nameResult case Ok(:final value)) _name = value;
+    });
+    _scheduleQrRefresh();
+  }
+
   Future<CardPreparation> _readPreparation() async {
     final VerificationRepository? verification = _verification;
     final ResidentProfileRepository? profile = _profile;

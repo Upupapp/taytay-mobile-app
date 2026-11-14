@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,6 +8,8 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
@@ -49,7 +52,8 @@ class EventsScreen extends StatefulWidget {
   State<EventsScreen> createState() => _EventsScreenState();
 }
 
-class _EventsScreenState extends State<EventsScreen> {
+class _EventsScreenState extends State<EventsScreen>
+    with LiveRefresh<EventsScreen> {
   EventsController? _controller;
 
   @override
@@ -63,6 +67,12 @@ class _EventsScreenState extends State<EventsScreen> {
           )
           ..addListener(_onChanged)
           ..refresh();
+    // A new event, a change of date, or a place given up shows here without
+    // a pull (D-218).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.events,
+      LiveTopics.eventRegistrations,
+    }, () => unawaited(_controller?.refreshQuietly()));
   }
 
   void _onChanged() {

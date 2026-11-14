@@ -141,3 +141,47 @@ class MultipartFile {
 abstract interface class ApiTransport {
   Future<Result<ApiHttpResponse>> send(ApiRequest request);
 }
+
+/// A response whose body is handed over as it arrives (D-218).
+///
+/// The change stream (`GET changes`) never ends on its own, so it cannot be
+/// read whole the way [ApiHttpResponse] is.
+@immutable
+class ApiStreamResponse {
+  const ApiStreamResponse({
+    required this.statusCode,
+    required this.text,
+    this.headers = const <String, String>{},
+  });
+
+  final int statusCode;
+
+  /// The body as UTF-8 text, chunk by chunk, in the order it arrived.
+  ///
+  /// Single-subscription. Cancelling the subscription closes the connection,
+  /// so a caller that does not want the body still listens and cancels.
+  final Stream<String> text;
+
+  /// Lower-cased response headers.
+  final Map<String, String> headers;
+
+  bool get isSuccess => statusCode >= 200 && statusCode < 300;
+
+  @override
+  String toString() => 'ApiStreamResponse($statusCode)';
+}
+
+/// A transport that can hold a response open (D-218).
+///
+/// Separate from [ApiTransport] rather than a second method on it: a test fake
+/// that only answers requests does not implement it, and the client then
+/// reports the change stream as not offered. Live updates stay off in every
+/// test that did not ask for them, and no fake has to pretend to stream.
+abstract interface class StreamingApiTransport {
+  /// Opens [request] and answers once the response headers arrive.
+  ///
+  /// [ApiRequest.timeout] bounds only the wait for those headers. The body has
+  /// no timeout and is never retried: a stream is reopened by its owner, with
+  /// a fresh token, rather than replayed here.
+  Future<Result<ApiStreamResponse>> openStream(ApiRequest request);
+}

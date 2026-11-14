@@ -7,6 +7,8 @@ import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../core/session/resident_capability.dart';
@@ -45,7 +47,8 @@ class NotificationInboxScreen extends StatefulWidget {
       _NotificationInboxScreenState();
 }
 
-class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
+class _NotificationInboxScreenState extends State<NotificationInboxScreen>
+    with LiveRefresh<NotificationInboxScreen> {
   NotificationInboxController? _controller;
 
   @override
@@ -61,6 +64,10 @@ class _NotificationInboxScreenState extends State<NotificationInboxScreen> {
           )
           ..addListener(_onChanged)
           ..refresh();
+    // A message the office sends arrives in the list without a pull (D-218).
+    listenLive(dependencies.live, const <String>{
+      LiveTopics.notifications,
+    }, () => _controller?.refreshQuietly());
   }
 
   void _onChanged() {

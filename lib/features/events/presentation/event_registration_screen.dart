@@ -8,6 +8,8 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/forms/field_error.dart';
 import '../../../core/haptics/app_haptics.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/motion/motion_tokens.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
@@ -53,7 +55,8 @@ class EventRegistrationScreen extends StatefulWidget {
       _EventRegistrationScreenState();
 }
 
-class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
+class _EventRegistrationScreenState extends State<EventRegistrationScreen>
+    with LiveRefresh<EventRegistrationScreen> {
   EventRegistrationController? _controller;
   final FocusNode _errorFocus = FocusNode();
   bool _celebrated = false;
@@ -74,6 +77,12 @@ class _EventRegistrationScreenState extends State<EventRegistrationScreen> {
           )
           ..addListener(_onChanged)
           ..initialise();
+    // Only until the resident begins: the form they are filling in is never
+    // replaced under them (D-218).
+    listenLive(dependencies.live, const <String>{
+      LiveTopics.events,
+      LiveTopics.eventRegistrations,
+    }, () => unawaited(_controller?.refreshQuietly()));
   }
 
   void _onChanged() {

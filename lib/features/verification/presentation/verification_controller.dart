@@ -200,6 +200,36 @@ class VerificationController extends ChangeNotifier {
     notifyListeners();
   }
 
+  bool _quietInFlight = false;
+
+  /// Re-reads the status with no loading state (D-218).
+  ///
+  /// For a change the office made while the resident is looking: the status
+  /// is replaced when it arrives, and the session takes the server's tier as
+  /// [refresh] would. Nothing typed is touched — corrections and the chosen
+  /// fields are this class's own state, not the server's. A failure keeps
+  /// what is on screen and says nothing. Skipped while a load, a send or an
+  /// attachment is running: the screen reads again when that ends.
+  Future<void> refreshQuietly() async {
+    if (_quietInFlight || _loading || _submitting || _attaching != null) {
+      return;
+    }
+    _quietInFlight = true;
+    final Result<VerificationStatusDetail> outcome = await _repository
+        .loadOwnStatusDetail();
+    _quietInFlight = false;
+    if (_disposed || _loading || _submitting) return;
+    if (outcome case Ok(:final VerificationStatusDetail value)) {
+      // A load failure that left nothing on screen is answered now. A failure
+      // from a send stays: it is the resident's to read.
+      if (_status == null) _failure = null;
+      _status = value;
+      _syncSessionTier(value);
+      unawaited(_loadDocuments());
+      _notify();
+    }
+  }
+
   /// Pushes the server's verdict into the one place that owns access level.
   ///
   /// Only ever called with what the server sent. The app never promotes a
