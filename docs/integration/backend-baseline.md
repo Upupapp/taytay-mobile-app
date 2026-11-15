@@ -61,6 +61,11 @@ stream (D-218, DL-222): `GET /changes` (`streamChanges`, `17a604c`), a
 `86234bd` came with it and reworded who may read `GET /media/{id}` and
 `GET /media/{id}/content`; a resident still reads their own uploads, and no
 route or schema this app calls changed.
+It was re-vendored again from backend `ff7eac7` the same day.
+- `NewsItem`, the Balita article in `GET /news`, `GET /news/{id}` and `GET /home`, no longer
+  carries `author_id`, the author's staff account id (data minimisation). This app never read it.
+- No route changed.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -74,8 +79,8 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `52c82cb0259a59c6b790b4b25b17228e87776d87` (`52c82cb`) |
-| **sha256** | `870faf457ee84ab4794b7a977d62cab018209d44ff34dd0959f00f361212c5fc` |
+| **Backend commit** | `ff7eac7253918bc5a175741fd5d704a74d34a97a` (`ff7eac7`) |
+| **sha256** | `71baf8fa16a01ced67a04559e15e0cf1af9b5bf09b0849daef710287aa968902` |
 | **Vendored on** | 15 November 2026 (app commit `07d1c28`) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change

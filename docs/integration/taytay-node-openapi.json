@@ -18536,7 +18536,8 @@
       },
       "NewsItem": {
         "type": "object",
-        "required": ["id", "title", "body", "office_id", "office_slug", "status", "author_id", "pinned", "share_url", "created_at", "updated_at"],
+        "description": "One shape for every reader, guests, residents and staff alike. It does not carry the author's account id: the audit trail records who did each act.",
+        "required": ["id", "title", "body", "office_id", "office_slug", "status", "pinned", "share_url", "created_at", "updated_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "title": { "type": "string" },
@@ -18548,7 +18549,6 @@
           "office_slug": { "type": "string" },
           "status": { "type": "string", "enum": ["draft", "published"] },
           "published_at": { "type": ["string", "null"], "format": "date-time" },
-          "author_id": { "type": "string", "format": "uuid" },
           "pinned": { "type": "boolean" },
           "pinned_at": { "type": ["string", "null"], "format": "date-time" },
           "share_url": { "type": "string" },
