@@ -232,12 +232,7 @@ void main() {
     frame = await _until(tester, out, frame, _mswdo);
     frame = await _hold(tester, out, frame, 30);
     await tester.tap(_mswdo);
-    frame = await _until(
-      tester,
-      out,
-      frame,
-      find.text('Write a message…'),
-    );
+    frame = await _until(tester, out, frame, find.text('Write a message…'));
     frame = await _hold(tester, out, frame, 30);
     await tester.tap(_back);
     frame = await _until(tester, out, frame, _mswdo);

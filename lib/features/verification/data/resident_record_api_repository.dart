@@ -154,7 +154,9 @@ class ResidentRecordApiRepository implements ResidentRecordRepository {
       return Ok<Map<String, dynamic>?>(value.data);
     }
     final failure = response.failureOrNull!;
-    if (failure is NotFoundFailure) return const Ok<Map<String, dynamic>?>(null);
+    if (failure is NotFoundFailure) {
+      return const Ok<Map<String, dynamic>?>(null);
+    }
     return Err<Map<String, dynamic>?>(failure);
   }
 
@@ -170,15 +172,19 @@ class ResidentRecordApiRepository implements ResidentRecordRepository {
     final list = parts.toList(growable: false);
     final given = list.isNotEmpty ? list.first : '';
     final family = list.length > 1 ? list.last : '';
-    final middle = list.length > 2 ? list.sublist(1, list.length - 1).join(' ') : '';
+    final middle = list.length > 2
+        ? list.sublist(1, list.length - 1).join(' ')
+        : '';
     final street = _string(profile['street']);
     final purok = _string(profile['purok']);
     final barangayName = _string(household?['barangay_name']);
     final personal = given.isNotEmpty && family.isNotEmpty;
     final householdStarted = street.isNotEmpty || barangayName.isNotEmpty;
-    final filled = <bool>[personal, householdStarted, _string(profile['mobile']).isNotEmpty]
-        .where((bool bit) => bit)
-        .length;
+    final filled = <bool>[
+      personal,
+      householdStarted,
+      _string(profile['mobile']).isNotEmpty,
+    ].where((bool bit) => bit).length;
     return ResidentRecord(
       givenName: given,
       middleName: middle,
@@ -212,8 +218,7 @@ class ResidentRecordApiRepository implements ResidentRecordRepository {
     return '${members.length}';
   }
 
-  static String _string(Object? value) =>
-      value is String ? value.trim() : '';
+  static String _string(Object? value) => value is String ? value.trim() : '';
 
   static String _addressLine(HouseholdDraft draft) {
     final street = <String>[

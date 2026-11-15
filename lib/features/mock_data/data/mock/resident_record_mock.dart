@@ -58,7 +58,8 @@ class MockResidentRecordRepository implements ResidentRecordRepository {
       ),
       FieldCorrectionNote(
         label: 'Address',
-        note: 'Barangay doesn\'t match the ID. Choose the barangay printed on it.',
+        note:
+            'Barangay doesn\'t match the ID. Choose the barangay printed on it.',
       ),
     ],
     completeness: 60,
@@ -93,7 +94,8 @@ class MockResidentRecordRepository implements ResidentRecordRepository {
       rejectionReason: _record.rejectionReason,
       fieldNotes: _record.fieldNotes,
       completeness: _record.completeness,
-      personalComplete: draft.givenName.isNotEmpty && draft.familyName.isNotEmpty,
+      personalComplete:
+          draft.givenName.isNotEmpty && draft.familyName.isNotEmpty,
       householdStarted: _record.householdStarted,
     );
     return _gate.respond(_record);
@@ -124,7 +126,8 @@ class MockResidentRecordRepository implements ResidentRecordRepository {
       fieldNotes: _record.fieldNotes,
       completeness: _record.completeness,
       personalComplete: _record.personalComplete,
-      householdStarted: draft.street.isNotEmpty || draft.barangayName.isNotEmpty,
+      householdStarted:
+          draft.street.isNotEmpty || draft.barangayName.isNotEmpty,
     );
     return _gate.respond(_record);
   }

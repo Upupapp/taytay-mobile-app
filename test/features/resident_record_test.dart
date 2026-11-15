@@ -34,9 +34,10 @@ ApiHttpResponse _json(int status, Object body) => ApiHttpResponse(
 ApiHttpResponse _ok(Object? data) =>
     _json(200, <String, dynamic>{'data': data});
 
-ApiHttpResponse _error(int status, String code) => _json(status, <String, dynamic>{
-  'error': <String, dynamic>{'code': code, 'request_id': 'req-s3'},
-});
+ApiHttpResponse _error(int status, String code) =>
+    _json(status, <String, dynamic>{
+      'error': <String, dynamic>{'code': code, 'request_id': 'req-s3'},
+    });
 
 class _Scripted implements ApiTransport {
   _Scripted(this.script);
@@ -290,7 +291,8 @@ class _FixedRecordRepository implements ResidentRecordRepository {
   );
 
   @override
-  Future<Result<ResidentRecord>> load() async => const Ok<ResidentRecord>(_record);
+  Future<Result<ResidentRecord>> load() async =>
+      const Ok<ResidentRecord>(_record);
 
   @override
   Future<Result<ResidentRecord>> saveHousehold(HouseholdDraft draft) async =>

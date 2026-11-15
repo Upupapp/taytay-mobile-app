@@ -230,10 +230,7 @@ void main() {
 
     test('the application id is the municipality\'s own namespace', () {
       final gradle = File('android/app/build.gradle.kts').readAsStringSync();
-      expect(
-        gradle,
-        contains('applicationId = "ph.gov.taytay.app"'),
-      );
+      expect(gradle, contains('applicationId = "ph.gov.taytay.app"'));
     });
   });
 

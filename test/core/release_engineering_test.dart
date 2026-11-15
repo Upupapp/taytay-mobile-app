@@ -200,9 +200,7 @@ void main() {
       expect(project, isNot(contains('PROVISIONING_PROFILE')));
       expect(
         project,
-        contains(
-          'PRODUCT_BUNDLE_IDENTIFIER = ph.gov.taytay.app;',
-        ),
+        contains('PRODUCT_BUNDLE_IDENTIFIER = ph.gov.taytay.app;'),
       );
       expect(project, contains('SWIFT_OPTIMIZATION_LEVEL = "-O"'));
       expect(project, contains('DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym"'));

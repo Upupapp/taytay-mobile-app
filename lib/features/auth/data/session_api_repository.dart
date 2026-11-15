@@ -54,5 +54,4 @@ class SessionApiRepository implements DeviceSessionRepository {
       'revokeAllOtherSessions',
     );
   }
-
 }

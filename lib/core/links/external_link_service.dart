@@ -83,8 +83,8 @@ class UnavailableExternalLinkService implements ExternalLinkService {
       ExternalLink.isSafe(url) ? LinkOutcome.unavailable : LinkOutcome.refused;
 
   @override
-  Future<LinkOutcome> dial(String number) async => ExternalLink.dialUri(number) ==
-          null
+  Future<LinkOutcome> dial(String number) async =>
+      ExternalLink.dialUri(number) == null
       ? LinkOutcome.refused
       : LinkOutcome.unavailable;
 }

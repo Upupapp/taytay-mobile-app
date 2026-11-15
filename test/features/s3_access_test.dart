@@ -28,18 +28,21 @@ List<AppRoute> get _matrixRoutes => AppRoute.values
 void main() {
   test('the matrix names every verification, household and ID route', () {
     final paths = _matrixRoutes.map((AppRoute route) => route.path).toSet();
-    expect(paths, containsAll(<String>[
-      '/verification',
-      '/verification/start',
-      '/verification/profile',
-      '/verification/profile/personal',
-      '/verification/profile/address',
-      '/verification/profile/review',
-      '/verification/profile/submitted',
-      '/household',
-      '/household/correction',
-      '/digital-id',
-    ]));
+    expect(
+      paths,
+      containsAll(<String>[
+        '/verification',
+        '/verification/start',
+        '/verification/profile',
+        '/verification/profile/personal',
+        '/verification/profile/address',
+        '/verification/profile/review',
+        '/verification/profile/submitted',
+        '/household',
+        '/household/correction',
+        '/digital-id',
+      ]),
+    );
     expect(paths.length, greaterThanOrEqualTo(10));
   });
 
@@ -94,10 +97,7 @@ void main() {
     }
 
     test('an unknown tier is unverified, so the ID stays denied', () {
-      expect(
-        AccessLevel.fromVerificationTier('gold'),
-        AccessLevel.unverified,
-      );
+      expect(AccessLevel.fromVerificationTier('gold'), AccessLevel.unverified);
       const unknown = AuthenticatedSession(
         ResidentSession(accountId: 'a', accessLevel: AccessLevel.unverified),
       );
@@ -106,10 +106,7 @@ void main() {
         AppRoute.verification.path,
       );
       expect(
-        resolveRedirect(
-          session: unknown,
-          location: AppRoute.household.path,
-        ),
+        resolveRedirect(session: unknown, location: AppRoute.household.path),
         AppRoute.verification.path,
       );
     });

@@ -197,11 +197,7 @@ void main() {
       chip: 'Advisory',
       stories: <Announcement>[rpt, smile, weather],
     );
-    await frame(
-      name: '06-04',
-      kind: BalitaFrame.emptyCategory,
-      chip: 'Events',
-    );
+    await frame(name: '06-04', kind: BalitaFrame.emptyCategory, chip: 'Events');
     await frame(name: '06-05', kind: BalitaFrame.loading);
     await frame(name: '06-06', kind: BalitaFrame.article, article: rpt);
     await frame(name: '06-07', kind: BalitaFrame.article, article: boss);

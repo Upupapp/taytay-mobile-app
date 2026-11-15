@@ -69,9 +69,7 @@ void main() {
     final String source = File(
       'lib/features/home/data/home_catalogue.dart',
     ).readAsStringSync();
-    final int start = source.indexOf(
-      'static Future<List<HomeSlide>> slides()',
-    );
+    final int start = source.indexOf('static Future<List<HomeSlide>> slides()');
     final int end = source.indexOf('static List<HomeSlide> withBanners');
     expect(start, greaterThanOrEqualTo(0));
     expect(end, greaterThan(start));

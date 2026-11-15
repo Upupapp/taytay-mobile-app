@@ -17,7 +17,10 @@ void main() {
       expect(TypeMetrics.baseline(14), closeTo(14.333, 0.001));
       expect(TypeMetrics.baseline(11), closeTo(11, 0.001));
       expect(TypeMetrics.baseline(13), closeTo(13.333, 0.001));
-      expect(TypeMetrics.baseline(16), closeTo(TypeMetrics.ascender(16), 0.001));
+      expect(
+        TypeMetrics.baseline(16),
+        closeTo(TypeMetrics.ascender(16), 0.001),
+      );
     });
   });
 

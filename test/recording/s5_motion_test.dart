@@ -280,9 +280,7 @@ void main() {
     expect(frame, greaterThan(40));
   });
 
-  testWidgets('guest message opens sign-in, motion on', (
-    tester,
-  ) async {
+  testWidgets('guest message opens sign-in, motion on', (tester) async {
     final Directory out = Directory('/tmp/s5_motion_gate');
     if (out.existsSync()) out.deleteSync(recursive: true);
     out.createSync(recursive: true);

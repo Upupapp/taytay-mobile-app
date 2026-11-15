@@ -170,8 +170,9 @@ void main() {
     });
 
     test('every problem is reported at once, not one build at a time', () {
-      final AppConfig config = _config(baseUrl: '')
-          .withFirebase(_client(senderId: ''));
+      final AppConfig config = _config(
+        baseUrl: '',
+      ).withFirebase(_client(senderId: ''));
       expect(_messages(config), contains(AppConfig.apiBaseUrlDefineKey));
       expect(
         _messages(config),
@@ -280,8 +281,9 @@ void main() {
       expect(ignore, contains('/env/firebase.*.json'));
       expect(ignore, contains('!/env/firebase.example.json'));
 
-      final String example = File('env/firebase.example.json')
-          .readAsStringSync();
+      final String example = File(
+        'env/firebase.example.json',
+      ).readAsStringSync();
       for (final String key in FirebaseClientConfig.defineKeys) {
         expect(example, contains('"$key": ""'));
       }
