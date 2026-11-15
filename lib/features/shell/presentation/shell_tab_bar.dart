@@ -126,9 +126,9 @@ class _Disc extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: 'Balita',
+    // The centre tab below is the one "Balita" button a screen reader meets,
+    // with its selected state; the disc is the same act for a finger.
+    return ExcludeSemantics(
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
@@ -190,10 +190,14 @@ class _Tab extends StatelessWidget {
       textAlign: TextAlign.center,
       style: style,
     );
+    // The label is the tab's words, read once: the Text below is excluded,
+    // so the tap is given to the node here.
     return Semantics(
       button: true,
       selected: selected,
       label: label,
+      excludeSemantics: true,
+      onTap: onTap,
       child: GestureDetector(
         key: Key('shell-tab-${destination.name}'),
         behavior: HitTestBehavior.opaque,

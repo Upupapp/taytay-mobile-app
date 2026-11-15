@@ -1,16 +1,22 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
+import '../../../core/config/app_environment.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/links/external_link_service.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
@@ -25,6 +31,11 @@ import '../domain/home_content.dart';
 ///
 /// A dev mock uses the catalogue when both are empty. Call uses `tel:`.
 /// A phone with no dialer gets a toast and stays on this screen.
+///
+/// A read that fails is said as a failure with Try again, never as "no
+/// hotlines published": a resident looking for an emergency number must not
+/// conclude the LGU lists none because the network dropped. The office's
+/// changes show without a pull (D-218, topic `hotlines`).
 class HotlinesScreen extends StatefulWidget {
   const HotlinesScreen({super.key});
 
@@ -32,9 +43,11 @@ class HotlinesScreen extends StatefulWidget {
   State<HotlinesScreen> createState() => _HotlinesScreenState();
 }
 
-class _HotlinesScreenState extends State<HotlinesScreen> {
+class _HotlinesScreenState extends State<HotlinesScreen>
+    with LiveRefresh<HotlinesScreen> {
   bool _started = false;
   bool _loaded = false;
+  AppFailure? _failure;
   List<HomeHotline> _lines = const <HomeHotline>[];
 
   @override
@@ -43,12 +56,27 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
     if (_started) return;
     _started = true;
     _load();
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.hotlines,
+    }, () => unawaited(_load(quiet: true)));
   }
 
-  Future<void> _load() async {
+  void _retry() {
+    setState(() {
+      _loaded = false;
+      _failure = null;
+    });
+    _load();
+  }
+
+  /// Reads the lines. A [quiet] re-read (D-218) keeps what is on screen when
+  /// it fails and says nothing.
+  Future<void> _load({bool quiet = false}) async {
+    if (quiet && !_loaded) return;
     final AppDependencies dependencies = AppDependencies.of(context);
     final Result<List<MunicipalHotline>> listed = await dependencies.citizenApi
         .listHotlines();
+    AppFailure? failure = listed.failureOrNull;
     List<MunicipalHotline> rows = listed.fold(
       onOk: (List<MunicipalHotline> value) => value,
       onErr: (_) => const <MunicipalHotline>[],
@@ -59,6 +87,9 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
         onOk: (HomeFeed feed) => feed.hotlines,
         onErr: (_) => const <MunicipalHotline>[],
       );
+      // Either answer is an answer; only when neither read did is it a
+      // failure.
+      if (home case Ok()) failure = null;
     }
     final List<HomeHotline> mapped = <HomeHotline>[
       for (final MunicipalHotline row in rows)
@@ -74,10 +105,13 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
     List<HomeHotline> resolved = mapped;
     if (resolved.isEmpty && dependencies.config.usesMockData) {
       resolved = (await HomeCatalogue.mockFeed()).hotlines;
+      failure = null;
     }
     if (!mounted) return;
+    if (quiet && failure != null) return;
     setState(() {
-      _lines = resolved;
+      _lines = failure == null ? resolved : const <HomeHotline>[];
+      _failure = failure;
       _loaded = true;
     });
   }
@@ -97,6 +131,9 @@ class _HotlinesScreenState extends State<HotlinesScreen> {
     return HotlinesCanvas(
       lines: _lines,
       loading: !_loaded,
+      failure: _failure,
+      environment: AppDependencies.of(context).config.environment,
+      onRetry: _retry,
       onBack: () {
         if (context.canPop()) {
           context.pop();
@@ -116,6 +153,9 @@ class HotlinesCanvas extends StatelessWidget {
   const HotlinesCanvas({
     required this.lines,
     this.loading = false,
+    this.failure,
+    this.environment = AppEnvironment.dev,
+    this.onRetry,
     this.onBack,
     this.onCall,
     super.key,
@@ -125,6 +165,11 @@ class HotlinesCanvas extends StatelessWidget {
 
   /// True until the first read answers. The list draws a skeleton meanwhile.
   final bool loading;
+
+  /// Why no read answered, when none did. Drawn by [FailureView].
+  final AppFailure? failure;
+  final AppEnvironment environment;
+  final VoidCallback? onRetry;
   final VoidCallback? onBack;
   final Future<void> Function(String number)? onCall;
 
@@ -157,6 +202,12 @@ class HotlinesCanvas extends StatelessWidget {
               children: <Widget>[
                 if (loading)
                   const LoadingSkeleton(semanticLabel: 'Loading hotlines')
+                else if (failure case final AppFailure failure)
+                  FailureView(
+                    failure: failure,
+                    environment: environment,
+                    onRetry: onRetry,
+                  )
                 else if (lines.isEmpty)
                   const EmptyState(
                     title: 'No hotlines to show',

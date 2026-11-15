@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/ringed_input_border.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
@@ -13,6 +12,7 @@ import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/form_page.dart';
+import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
@@ -54,6 +54,7 @@ class DirectoryCanvas extends StatelessWidget {
     required this.frame,
     required this.offices,
     this.office,
+    this.officeUnavailable = false,
     this.bubbles = const <DirectoryThreadBubble>[],
     this.onOffice,
     this.onBack,
@@ -115,6 +116,10 @@ class DirectoryCanvas extends StatelessWidget {
   /// The day chip on the thread. The fixture supplies it.
   final String dayLabel;
   final Office? office;
+
+  /// The compose page's office read answered with nothing; [onRetry] reads
+  /// it again.
+  final bool officeUnavailable;
   final List<DirectoryThreadBubble> bubbles;
   final ValueChanged<Office>? onOffice;
   final VoidCallback? onBack;
@@ -287,7 +292,7 @@ class _ListPage extends StatelessWidget {
       ],
       bottom: offline || search
           ? null
-          : _SearchField(
+          : HeaderSearchField(
               hint: 'Search offices or services',
               controller: c.searchController,
               onChanged: c.onSearch,
@@ -321,65 +326,6 @@ class _ListPage extends StatelessWidget {
         header,
         Expanded(child: body),
       ],
-    );
-  }
-}
-
-/// CSS `.soft .search`: white, 16 radius, 50 tall, the search glyph, and a
-/// gold focus outline on the blue header.
-class _SearchField extends StatelessWidget {
-  const _SearchField({required this.hint, this.controller, this.onChanged});
-
-  final String hint;
-  final TextEditingController? controller;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const BorderRadius corners = BorderRadius.all(Radius.circular(Radii.lg));
-    return TextField(
-      controller: controller,
-      onChanged: onChanged,
-      textInputAction: TextInputAction.search,
-      style: AppTypography.fieldValue.copyWith(
-        fontWeight: AppTypography.body,
-        color: BrandColors.ink,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        filled: true,
-        fillColor: BrandColors.white,
-        constraints: const BoxConstraints(
-          minHeight: ComponentSizes.fieldHeight,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.md,
-        ),
-        prefixIcon: const TaytayIcon(
-          icon: TaytayIcons.search,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: IconSizes.sm,
-          color: BrandColors.muted,
-        ),
-        border: const RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-        ),
-        enabledBorder: const RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-        ),
-        focusedBorder: RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-          ring: BorderSide(
-            color: BrandColors.gold.withValues(alpha: 0.7),
-            width: FocusRing.ringWidth,
-          ),
-        ),
-      ),
     );
   }
 }
@@ -891,7 +837,7 @@ class _SpecimenSearch extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SearchField(
+    return HeaderSearchField(
       hint: 'Search offices or services',
       controller: controller,
     );
@@ -1398,7 +1344,21 @@ class _ComposePage extends StatelessWidget {
           actions: const <Widget>[HeaderSeal()],
         ),
         Expanded(
-          child: office == null
+          child: office == null && canvas.officeUnavailable
+              // The office read answered with nothing: say so, with Try
+              // again, never a skeleton that stays (DESIGN_SYSTEM.md §5).
+              ? ListView(
+                  padding: const EdgeInsets.all(Spacing.lg),
+                  children: <Widget>[
+                    ErrorState(
+                      title: 'This office did not load',
+                      message: 'Try again, or go back to the directory.',
+                      onRetry: canvas.onRetry,
+                      boxed: true,
+                    ),
+                  ],
+                )
+              : office == null
               ? const Padding(
                   padding: EdgeInsets.all(Spacing.lg),
                   child: LoadingSkeleton(

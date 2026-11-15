@@ -593,13 +593,16 @@ void main() {
       expect(find.text('Not on file'), findsWidgets);
     });
 
-    testWidgets('an unreadable record explains and offers the counter', (
+    testWidgets('an unreadable record is a failure with Try again (D-220)', (
       tester,
     ) async {
       await bootHousehold(tester);
 
-      expect(find.text('Not available in this app yet'), findsOneWidget);
-      expect(find.textContaining('municipal hall'), findsWidgets);
+      // `GET /households/current` is served: a failure is not records the
+      // LGU "has not switched on".
+      expect(find.text('Not available in this app yet'), findsNothing);
+      expect(find.textContaining('switched on'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
       // No fabricated household appears in its place.
       expect(find.text('Your family record'), findsNothing);
     });

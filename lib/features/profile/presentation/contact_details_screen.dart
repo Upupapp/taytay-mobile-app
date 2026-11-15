@@ -12,6 +12,7 @@ import '../../../core/session/resident_capability.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -88,7 +89,10 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
     final result = await dependencies.residentProfileRepository.loadOwnDetail();
     if (!mounted) return;
     setState(() {
@@ -107,6 +111,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
       );
     });
   }
+
+  /// The read failed and nothing was read: there is no record to edit.
+  bool get _unread => _detail == null && _failure != null;
 
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -172,7 +179,9 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
         context,
         FieldOwnership.accountOwned,
       ).explanation,
-      footer: _loading
+      // No Save under a form that could not be read: saving blanks over the
+      // record the read failed to show would erase what is on file.
+      footer: _loading || _unread
           ? null
           : AppButton(
               label: 'Save changes',
@@ -185,6 +194,14 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
             ? const LoadingSkeleton(
                 layout: SkeletonLayout.detail,
                 semanticLabel: 'Loading your details',
+              )
+            // A failed read is said as itself, with Try again, in place of an
+            // empty form (DESIGN_SYSTEM.md §5).
+            : _unread
+            ? FailureView(
+                failure: _failure ?? const UnexpectedFailure(),
+                environment: AppDependencies.of(context).config.environment,
+                onRetry: _load,
               )
             : Form(
                 key: _formKey,
@@ -235,13 +252,7 @@ class _ContactDetailsScreenState extends State<ContactDetailsScreen> {
                                   '${failure.residentMessage} Nothing was '
                                   'changed, and the municipal hall can '
                                   'update them for you.',
-                            )
-                    else if (_failure case final AppFailure failure)
-                      SoftNote(
-                        tone: NoteTone.error,
-                        title: 'Could not load your details. ',
-                        message: failure.residentMessage,
-                      ),
+                            ),
                   ],
                 ),
               ),

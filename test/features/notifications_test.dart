@@ -673,6 +673,41 @@ void main() {
     });
   });
 
+  group('a failed read is a failure, not a feature switched off (D-220)', () {
+    testWidgets('the inbox says the read failed and offers Try again', (
+      tester,
+    ) async {
+      final booted = await bootInbox(tester);
+
+      expect(find.text('Notifications are not available yet'), findsNothing);
+      expect(find.textContaining('switched on'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+
+      booted.notifications.items = <ResidentNotification>[notification()];
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Your application moved'), findsOneWidget);
+    });
+
+    testWidgets('the settings say the read failed and offer Try again', (
+      tester,
+    ) async {
+      final booted = await bootInbox(
+        tester,
+        location: '/notifications/settings',
+      );
+
+      expect(find.textContaining('switched these on'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('Event reminders'), findsNothing);
+
+      booted.notifications.prefs = preferences();
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Event reminders'), findsOneWidget);
+    });
+  });
+
   group('the preferences screen', () {
     testWidgets('critical categories have no switch, and it says why', (
       tester,

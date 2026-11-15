@@ -394,9 +394,11 @@ class _StoryRow extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
+          // One button reading the row's own words once (the title is in
+          // the row; a label repeating it was read twice).
           Semantics(
             button: true,
-            label: article.title,
+            container: true,
             child: Material(
               type: MaterialType.transparency,
               child: InkWell(

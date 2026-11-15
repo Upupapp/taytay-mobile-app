@@ -12,6 +12,7 @@ import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/settings_list.dart';
@@ -66,6 +67,9 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
   /// `GET /households/current` answered 404: the account is in no household.
   bool _none = false;
 
+  /// Any other failure of that read.
+  AppFailure? _failure;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -87,18 +91,22 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
       return;
     }
 
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
 
     final result = await dependencies.householdRepository.loadOwnHousehold();
     if (!mounted) return;
     setState(() {
       _loading = false;
       // A 404 is an answer, not a fault: this account has not set up or
-      // joined a household. Anything else is unreadable here, and the
-      // municipal hall is the answer. The server's own message is
-      // operator-facing and is never rendered.
+      // joined a household. Anything else is a failed read, said with Try
+      // again. The server's own message is operator-facing and is never
+      // rendered.
       _summary = result.valueOrNull;
       _none = result.failureOrNull is NotFoundFailure;
+      _failure = _none ? null : result.failureOrNull;
     });
   }
 
@@ -133,7 +141,20 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
                         semanticLabel: 'Loading your household record',
                       )
                     else if (summary == null) ...<Widget>[
-                      if (_none) const _NoHousehold() else const _Unavailable(),
+                      // `GET /households/current` is served: a failure other
+                      // than a 404 is said as itself, with Try again, never
+                      // as records the LGU has "not switched on"
+                      // (DESIGN_SYSTEM.md §5).
+                      if (_none)
+                        const _NoHousehold()
+                      else
+                        FailureView(
+                          failure: _failure ?? const UnexpectedFailure(),
+                          environment: AppDependencies.of(
+                            context,
+                          ).config.environment,
+                          onRetry: _load,
+                        ),
                     ] else ...<Widget>[
                       _HouseholdSection(summary: summary),
                       const SizedBox(height: Spacing.xl),
@@ -312,25 +333,6 @@ class _NoHousehold extends StatelessWidget {
           'Your account is not part of a household in this app, and this '
           'version of the app cannot set one up. The municipal hall keeps its '
           'own household record, and staff can go through it with you.',
-      boxed: true,
-    );
-  }
-}
-
-/// The record is not readable in this app yet.
-class _Unavailable extends StatelessWidget {
-  const _Unavailable();
-
-  @override
-  Widget build(BuildContext context) {
-    return EmptyState(
-      title: 'Not available in this app yet',
-      message:
-          'Taytay LGU has not switched on household records here. Your '
-          'household record still exists at the municipal hall, and staff can '
-          'go through it with you.',
-      actionLabel: 'Report an error',
-      onAction: () => context.goNamed(AppRoute.householdCorrection.routeName),
       boxed: true,
     );
   }

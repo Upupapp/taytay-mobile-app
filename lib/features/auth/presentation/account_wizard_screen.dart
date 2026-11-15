@@ -27,6 +27,7 @@ import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
+import '../../../shared/widgets/upload_slot.dart';
 import '../../platform/domain/app_bootstrap.dart';
 import '../../profile/domain/name_lock.dart';
 import '../../registration/domain/registration_domain.dart';
@@ -1560,15 +1561,20 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
             onChange: _pickFront,
           )
         else
-          _UploadSlot(key: const Key('id-front-pick'), onPressed: _pickFront),
+          UploadSlot(
+            key: const Key('id-front-pick'),
+            label: _addPhoto,
+            onPressed: _pickFront,
+          ),
         const SizedBox(height: Spacing.formGap),
         const AuthFieldLabel('Back of ID (optional)'),
         const SizedBox(height: Spacing.sm),
         if (_idBack case final CapturedDocument back)
           _attached(name: back.fileName, onChange: _pickBack)
         else
-          _UploadSlot(
+          UploadSlot(
             key: const Key('id-back-pick'),
+            label: _addPhoto,
             onPressed: widget.fixture == AccountFixture.live ? _pickBack : null,
           ),
         _statusNote(),
@@ -2057,100 +2063,9 @@ class _StatusPill extends StatelessWidget {
   }
 }
 
-/// Add a photo (CSS `.add`): a dashed white box with a round plus.
-class _UploadSlot extends StatelessWidget {
-  const _UploadSlot({this.onPressed, super.key});
-
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final Color ink = onPressed == null ? BrandColors.muted : BrandColors.blue;
-    return Material(
-      color: BrandColors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(Radii.lg),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onPressed,
-        child: CustomPaint(
-          painter: const _DashedBorderPainter(),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(minHeight: _uploadHeight),
-            child: Padding(
-              padding: const EdgeInsets.all(Spacing.md),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  DecoratedBox(
-                    decoration: const ShapeDecoration(
-                      color: BrandColors.blue50,
-                      shape: CircleBorder(),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(Spacing.sm),
-                      child: TaytayIcon(
-                        icon: TaytayIcons.plus,
-                        semanticLabel: '',
-                        excludeSemantics: true,
-                        size: IconSizes.sm,
-                        color: ink,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: Spacing.sm - Spacing.xxs),
-                  Text(
-                    'Add a photo · JPG or PNG',
-                    textAlign: TextAlign.center,
-                    style: AppTypography.listTitle.copyWith(
-                      fontWeight: AppTypography.strong,
-                      color: ink,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// `.add { min-height: 96px }`.
-const double _uploadHeight = 96;
-
-/// `.add { border: 2px dashed var(--line2); border-radius: 16px }`.
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const double stroke = 2;
-    final Paint paint = Paint()
-      ..color = BrandColors.line2
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke;
-    final Path outline = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          (Offset.zero & size).deflate(stroke / 2),
-          const Radius.circular(Radii.lg),
-        ),
-      );
-    for (final metric in outline.computeMetrics()) {
-      var distance = 0.0;
-      while (distance < metric.length) {
-        canvas.drawPath(metric.extractPath(distance, distance + 6), paint);
-        distance += 10;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter oldDelegate) => false;
-}
+/// The words of RegID's empty slot (CSS `.add`), drawn by the shared
+/// [UploadSlot].
+const String _addPhoto = 'Add a photo · JPG or PNG';
 
 /// RegID `.namechk`: the name on the account, and the sentence that the ID
 /// must show it, before any photo is sent (D-195).
@@ -2449,40 +2364,45 @@ class _LegalLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onPressed,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          minHeight: ComponentSizes.fieldHeight,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: Spacing.section),
-          child: Row(
-            children: <Widget>[
-              TaytayIcon(
-                icon: icon,
-                semanticLabel: '',
-                excludeSemantics: true,
-                size: IconSizes.sm,
-                color: BrandColors.blue,
-              ),
-              const SizedBox(width: Spacing.md),
-              Expanded(
-                child: Text(
-                  label,
-                  style: AppTypography.listTitle.copyWith(
-                    color: BrandColors.blue,
+    // A row that opens a text is one button reading its words.
+    return Semantics(
+      button: true,
+      container: true,
+      child: InkWell(
+        onTap: onPressed,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: ComponentSizes.fieldHeight,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.section),
+            child: Row(
+              children: <Widget>[
+                TaytayIcon(
+                  icon: icon,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: IconSizes.sm,
+                  color: BrandColors.blue,
+                ),
+                const SizedBox(width: Spacing.md),
+                Expanded(
+                  child: Text(
+                    label,
+                    style: AppTypography.listTitle.copyWith(
+                      color: BrandColors.blue,
+                    ),
                   ),
                 ),
-              ),
-              const TaytayIcon(
-                icon: TaytayIcons.chevronRight,
-                semanticLabel: '',
-                excludeSemantics: true,
-                size: IconSizes.sm,
-                color: BrandColors.blue,
-              ),
-            ],
+                const TaytayIcon(
+                  icon: TaytayIcons.chevronRight,
+                  semanticLabel: '',
+                  excludeSemantics: true,
+                  size: IconSizes.sm,
+                  color: BrandColors.blue,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -462,7 +462,7 @@ class _AttachmentLine extends StatelessWidget {
         : '';
     final String older = attachment.current ? '' : ' · replaced later';
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.only(top: Spacing.xs),
       child: Row(
         children: <Widget>[
           Expanded(
@@ -720,7 +720,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
             ),
           if (_checked && empty)
             const Padding(
-              padding: EdgeInsets.only(top: 8),
+              padding: EdgeInsets.only(top: Spacing.sm),
               child: IssuanceText(
                 'Add a note or a file first.',
                 color: BrandColors.danger,
@@ -728,7 +728,7 @@ class _IssuanceResubmitSectionState extends State<IssuanceResubmitSection> {
             ),
           if (copy != null)
             Padding(
-              padding: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.only(top: Spacing.sm),
               child: IssuanceQuote(
                 key: const Key('issuance-resubmit-failure'),
                 label: copy.title,

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/ringed_input_border.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
@@ -13,6 +12,7 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
@@ -180,7 +180,9 @@ class _ListPage extends StatelessWidget {
             ],
             bottom: offline
                 ? null
-                : _SearchField(
+                : HeaderSearchField(
+                    hint: 'Search programmes',
+                    fieldKey: const Key('tulong-search'),
                     controller: c.searchController,
                     onChanged: c.onSearch,
                   ),
@@ -216,67 +218,6 @@ class _ListPage extends StatelessWidget {
         onOpen: c.onOpen,
       ),
     };
-  }
-}
-
-/// CSS `.soft .search` on the blue header: white, 16 radius, the search
-/// glyph, and a gold focus ring.
-class _SearchField extends StatelessWidget {
-  const _SearchField({this.controller, this.onChanged});
-
-  final TextEditingController? controller;
-  final ValueChanged<String>? onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    const BorderRadius corners = BorderRadius.all(Radius.circular(Radii.lg));
-    return TextField(
-      key: const Key('tulong-search'),
-      controller: controller,
-      onChanged: onChanged,
-      onSubmitted: onChanged,
-      maxLines: 1,
-      textInputAction: TextInputAction.search,
-      style: AppTypography.fieldValue.copyWith(
-        fontWeight: AppTypography.body,
-        color: BrandColors.ink,
-      ),
-      decoration: InputDecoration(
-        hintText: 'Search programmes',
-        filled: true,
-        fillColor: BrandColors.white,
-        constraints: const BoxConstraints(
-          minHeight: ComponentSizes.fieldHeight,
-        ),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: Spacing.md,
-          vertical: Spacing.md,
-        ),
-        prefixIcon: const TaytayIcon(
-          icon: TaytayIcons.search,
-          semanticLabel: '',
-          excludeSemantics: true,
-          size: IconSizes.sm,
-          color: BrandColors.muted,
-        ),
-        border: const RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-        ),
-        enabledBorder: const RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-        ),
-        focusedBorder: RingedInputBorder(
-          borderSide: BorderSide.none,
-          borderRadius: corners,
-          ring: BorderSide(
-            color: BrandColors.gold.withValues(alpha: 0.7),
-            width: FocusRing.ringWidth,
-          ),
-        ),
-      ),
-    );
   }
 }
 

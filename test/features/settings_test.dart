@@ -17,6 +17,7 @@ import 'package:taytay_resident/features/platform/domain/platform_repository.dar
 import 'package:taytay_resident/features/settings/domain/account_controls.dart';
 import 'package:taytay_resident/features/settings/presentation/privacy_controls_screen.dart';
 import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
+import 'package:taytay_resident/shared/widgets/failure_view.dart';
 
 import '../support/biometric_fakes.dart';
 import '../support/layout_matrix.dart';
@@ -673,7 +674,7 @@ void main() {
       expect(find.text('Accept again'), findsNothing);
     });
 
-    testWidgets('an unavailable consent history does not read as an error', (
+    testWidgets('a consent history that did not load says so (D-220)', (
       tester,
     ) async {
       await bootSettings(
@@ -682,7 +683,10 @@ void main() {
         location: '/settings/privacy',
       );
 
-      expect(find.textContaining('has not switched on'), findsOneWidget);
+      // `GET me/consents` is served: a failed read is a failure with Try
+      // again, not history the LGU "has not switched on".
+      expect(find.textContaining('consent history'), findsNothing);
+      expect(find.byType(FailureView), findsOneWidget);
     });
   });
 

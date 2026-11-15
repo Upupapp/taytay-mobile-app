@@ -11,6 +11,7 @@ import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
+import 'package:taytay_resident/core/mock/mock_behavior.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
@@ -18,6 +19,8 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/mock_data/data/mock/taytay_mocks.dart';
+import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/profile/data/resident_profile_api_repository.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
@@ -84,6 +87,7 @@ Future<BootedProfile> bootProfile(
   Size size = const Size(400, 1600),
   TextScaler textScaler = TextScaler.noScaling,
   Locale locale = AppLocales.english,
+  NotificationRepository? notifications,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -148,7 +152,7 @@ Future<BootedProfile> bootProfile(
     shareService: base.shareService,
     externalLinks: base.externalLinks,
     accountControlsRepository: base.accountControlsRepository,
-    notificationRepository: base.notificationRepository,
+    notificationRepository: notifications ?? base.notificationRepository,
     registrationRepository: base.registrationRepository,
     barangayDirectory: base.barangayDirectory,
     platform: base.platform,
@@ -593,16 +597,16 @@ void main() {
       expect(find.text('Not on file'), findsWidgets);
     });
 
-    testWidgets('an unreadable record says so without blaming the resident', (
+    testWidgets('an unreadable record is a failure with Try again (D-220)', (
       tester,
     ) async {
       await bootProfile(tester, level: AccessLevel.verified);
 
-      expect(find.text('Not available in this app yet'), findsWidgets);
-      expect(
-        find.textContaining('has not switched on your record'),
-        findsOneWidget,
-      );
+      // `GET /me` is served: a failure says so in the app's own words, with
+      // Try again, and never as a record the LGU "has not switched on".
+      expect(find.text('Not available in this app yet'), findsNothing);
+      expect(find.textContaining('switched on'), findsNothing);
+      expect(find.text('Try again'), findsWidgets);
     });
 
     // One boot per test. Re-pumping a second `TaytayResidentApp` into the same
@@ -629,6 +633,14 @@ void main() {
         level: AccessLevel.verified,
         detail: fullDetail(),
         location: '/profile/settings',
+        // The switches are drawn only from a preferences read that answered
+        // (D-220).
+        notifications: MockNotificationRepository(
+          MockBehaviorController(
+            latency: Duration.zero,
+            failure: MockFailureMode.none,
+          ),
+        ),
       );
 
       expect(find.text('Push and email'), findsNothing);

@@ -35,11 +35,18 @@ import 'taytay_icon.dart';
 /// phone, when the office may already hold what was sent. It used to promise
 /// "nothing has been sent", which was true only for some of them (D-189). Each
 /// send says for itself whether it went (D-188).
+///
+/// **Placed above a screen's own header** (the tab shell), pass
+/// [belowStatusBar]: the banner then keeps clear of the status bar, and the
+/// content under it must drop the inset while it shows (the shell does).
 class OfflineBanner extends StatelessWidget {
-  const OfflineBanner({this.onRetry, super.key});
+  const OfflineBanner({this.onRetry, this.belowStatusBar = false, super.key});
 
   /// Offered when the surface underneath has something to retry.
   final VoidCallback? onRetry;
+
+  /// True where nothing above the banner keeps it clear of the status bar.
+  final bool belowStatusBar;
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +86,9 @@ class OfflineBanner extends StatelessWidget {
               : MotionTokens.fast,
           curve: MotionTokens.enterEase,
           alignment: Alignment.topCenter,
-          child: banner,
+          child: belowStatusBar
+              ? SafeArea(bottom: false, child: banner)
+              : banner,
         );
       },
     );

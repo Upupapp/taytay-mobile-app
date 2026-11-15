@@ -314,9 +314,10 @@ class S3Field extends StatelessWidget {
       padding: EdgeInsets.only(top: top),
       child: tap == null
           ? column
+          // One button reading the field's own label and value once.
           : Semantics(
               button: true,
-              label: label,
+              container: true,
               child: InkWell(
                 onTap: tap,
                 borderRadius: BorderRadius.circular(Radii.field),

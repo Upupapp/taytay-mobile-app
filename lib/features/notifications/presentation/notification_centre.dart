@@ -237,7 +237,12 @@ class _Row extends StatelessWidget {
       ),
     );
     if (onTap == null) return content;
-    return InkWell(onTap: onTap, child: content);
+    // A tappable row reads as one button (DESIGN_SYSTEM.md §8 rule 8).
+    return Semantics(
+      button: true,
+      container: true,
+      child: InkWell(onTap: onTap, child: content),
+    );
   }
 }
 

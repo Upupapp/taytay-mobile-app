@@ -578,10 +578,12 @@ for the failure kind, never the server's `message`, and the request id when ther
 
 **`OfflineBanner`, `OfflineNotice`** (`network_status_views.dart`; `OfflineNotice` is in the
 gallery) —
-`OfflineBanner({onRetry})` shows itself from the network monitor when requests are not arriving
-(never over a server refusal), and draws nothing without an `AppDependenciesScope` above it.
-The tab shell already draws one; a full-screen route puts `const OfflineBanner()` under its
-header (or `SoftPage(offlineBanner: true)`). `OfflineNotice({title*, message, onRetry,
+`OfflineBanner({onRetry, belowStatusBar = false})` shows itself from the network monitor when
+requests are not arriving (never over a server refusal), and draws nothing without an
+`AppDependenciesScope` above it. The tab shell already draws one, above the branch's header, with
+`belowStatusBar: true` so it keeps clear of the status bar while the branch drops that inset
+(D-220); a full-screen route puts `const OfflineBanner()` under its header (or
+`SoftPage(offlineBanner: true)`). `OfflineNotice({title*, message, onRetry,
 retryLabel})` is the gold strip itself.
 
 **`StaleContentNotice`, `UnsentNotice`** — `StaleContentNotice({storedAt*, isFresh = false,
@@ -896,7 +898,7 @@ Every screen that reads data draws all four. A loading screen never says "nothin
 |---|---|---|
 | Loading | The first read has not answered | `LoadingSkeleton(layout: …)` shaped like the content (never a lone spinner); a canvas usually takes `loading: true` |
 | Empty | The read answered with nothing | `EmptyState` (`noResults` illustration): the title says what is empty, the sentence what to do. A search with no match and a list that is empty are worded apart |
-| Error | The read failed | `FailureView(failure:, environment:, onRetry:)` for an `AppFailure`, or `ErrorState(onRetry:)`; **Try again** reloads. Never the server's message |
+| Error | The read failed | `FailureView(failure:, environment:, onRetry:)` for an `AppFailure`, or `ErrorState(onRetry:)`; **Try again** reloads. Never the server's message, and never "not switched on" or "none published" for a served endpoint: only a repository that answers a `BackendGap` may say a feature is not on yet (D-220). A form that could not be read shows the failure, not empty fields with Save |
 | Offline | Requests are not arriving | Saved data stays on screen with `OfflineBanner` above it (the tab shell draws it; full-screen routes add `const OfflineBanner()` or `SoftPage(offlineBanner: true)`); with no saved data, `FailureView` draws the offline `ErrorState`. `StaleContentNotice` says how old saved data is. Nothing is queued or promised |
 
 ---

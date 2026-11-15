@@ -16,6 +16,7 @@ import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/surface_cards.dart';
 import '../domain/profile_fields.dart';
@@ -121,7 +122,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: Spacing.xl),
               // The same question the read asks, from the same service, so a
               // section can never be shown that its own fetch refused.
-              if (personal) ...<Widget>[
+              // `GET me` is served: a failed read is one failure with Try
+              // again, not two lists the LGU "has not switched on"
+              // (DESIGN_SYSTEM.md §5).
+              if (personal && _failure != null) ...<Widget>[
+                FailureView(
+                  failure: _failure ?? const UnexpectedFailure(),
+                  environment: AppDependencies.of(context).config.environment,
+                  onRetry: _load,
+                ),
+                const SizedBox(height: Spacing.xl),
+              ] else if (personal) ...<Widget>[
                 ProfileFieldList(
                   ownership: FieldOwnership.accountOwned,
                   detail: _detail,

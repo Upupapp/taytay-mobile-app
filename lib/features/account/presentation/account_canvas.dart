@@ -198,6 +198,7 @@ class AccountCanvas extends StatelessWidget {
     this.onLegalName,
     this.showLegalNameNote = true,
     this.toggles = const <AccountToggle>[],
+    this.togglesPlaceholder,
     this.onLanguage,
     this.onChangePassword,
     this.changePasswordSubtitle = '',
@@ -267,6 +268,11 @@ class AccountCanvas extends StatelessWidget {
   /// name as a field with its own note instead (D-195).
   final bool showLegalNameNote;
   final List<AccountToggle> toggles;
+
+  /// Drawn under the Notifications heading in place of [toggles] while their
+  /// read has not answered or has failed, so a default is never shown as the
+  /// resident's own setting.
+  final Widget? togglesPlaceholder;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
   final String changePasswordSubtitle;
@@ -926,6 +932,7 @@ class _BackPage extends StatelessWidget {
       AccountFrame.inboxError => _InboxError(onRetry: c.onInboxRetry),
       AccountFrame.settings => _SettingsBody(
         toggles: c.toggles,
+        togglesPlaceholder: c.togglesPlaceholder,
         onLanguage: c.onLanguage,
         onChangePassword: c.onChangePassword,
         changePasswordSubtitle: c.changePasswordSubtitle,
@@ -1403,7 +1410,10 @@ class _ValueBox extends StatelessWidget {
           : InkWell(
               borderRadius: corners,
               onTap: onTap,
-              child: Semantics(button: true, child: row),
+              // The field's name with its value: the label above sits
+              // outside the button, so the value alone would not say what
+              // the button picks.
+              child: Semantics(button: true, label: field.label, child: row),
             ),
     );
   }
@@ -1446,13 +1456,27 @@ class _LegalNameNote extends StatelessWidget {
     );
     final VoidCallback? onTap = this.onTap;
     if (onTap == null) return text;
-    return InkWell(onTap: onTap, child: text);
+    // A tappable line is a button, in a 48 dp target (Article 6).
+    return Semantics(
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: text,
+          ),
+        ),
+      ),
+    );
   }
 }
 
 class _SettingsBody extends StatelessWidget {
   const _SettingsBody({
     required this.toggles,
+    this.togglesPlaceholder,
     this.onLanguage,
     this.onChangePassword,
     this.changePasswordSubtitle = '',
@@ -1463,6 +1487,7 @@ class _SettingsBody extends StatelessWidget {
   });
 
   final List<AccountToggle> toggles;
+  final Widget? togglesPlaceholder;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
   final String changePasswordSubtitle;
@@ -1481,7 +1506,11 @@ class _SettingsBody extends StatelessWidget {
         Spacing.xl,
       ),
       children: <Widget>[
-        if (toggles.isNotEmpty) ...<Widget>[
+        if (togglesPlaceholder case final Widget placeholder) ...<Widget>[
+          const SettingsSectionTitle('Notifications'),
+          placeholder,
+          const SizedBox(height: Spacing.xl),
+        ] else if (toggles.isNotEmpty) ...<Widget>[
           const SettingsSectionTitle('Notifications'),
           SettingsList(
             children: <Widget>[

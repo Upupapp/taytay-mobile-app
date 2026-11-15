@@ -16,6 +16,7 @@ import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/biometric_consent_dialog.dart';
 import '../../../shared/widgets/capability_gate.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/network_status_views.dart';
@@ -198,6 +199,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
     };
   }
 
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _consentsFailure = null;
+    });
+    _load();
+  }
+
   Future<void> _load() async {
     final repository = AppDependencies.of(context).accountControlsRepository;
 
@@ -365,13 +374,14 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
 
         const SettingsSectionTitle('What you agreed to'),
 
-        if (_consentsFailure != null)
-          const SoftNote(
-            title: 'Not available yet. ',
-            message:
-                'Taytay LGU has not switched on consent history in this app '
-                'yet. The municipal hall holds the record and can show it to '
-                'you.',
+        // `GET me/consents` is served: a failed read is said as itself, with
+        // Try again, never as history the LGU has "not switched on"
+        // (DESIGN_SYSTEM.md §5).
+        if (_consentsFailure case final AppFailure failure)
+          FailureView(
+            failure: failure,
+            environment: AppDependencies.of(context).config.environment,
+            onRetry: _retry,
           )
         else if (consents == null || consents.isEmpty)
           Text('Taytay LGU has no consents recorded for you.', style: body)

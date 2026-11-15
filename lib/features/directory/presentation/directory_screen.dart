@@ -278,6 +278,10 @@ class OfficeComposeScreen extends StatefulWidget {
 
 class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
   Office? _office;
+
+  /// The office read answered with nothing: the page says so with Try again
+  /// rather than keeping its skeleton up for ever.
+  bool _officeFailed = false;
   String? _error;
   String _topic = '';
   bool _started = false;
@@ -292,13 +296,22 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _loadOffice();
+  }
+
+  void _loadOffice() {
     final AppDependencies dependencies = AppDependencies.of(context);
+    if (_officeFailed) setState(() => _officeFailed = false);
     OfficeCatalogue.byId(
       widget.officeId,
       mock: dependencies.config.usesMockData,
       api: dependencies.apiClient,
     ).then((Office? office) {
-      if (!mounted || office == null) return;
+      if (!mounted) return;
+      if (office == null) {
+        setState(() => _officeFailed = true);
+        return;
+      }
       setState(() {
         _office = office;
         _topic = office.composeTopic;
@@ -471,6 +484,8 @@ class _OfficeComposeScreenState extends State<OfficeComposeScreen> {
         frame: DirectoryFrame.compose,
         offices: const <Office>[],
         office: _office,
+        officeUnavailable: _officeFailed,
+        onRetry: _loadOffice,
         messageController: _message,
         selectedTopic: _topic,
         onTopic: (_office?.offersTopics ?? false) ? _pickTopic : null,

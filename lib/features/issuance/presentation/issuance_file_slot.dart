@@ -33,7 +33,7 @@ Future<DocumentSource?> chooseIssuanceSource(
         children: <Widget>[
           if (offered.isEmpty)
             const Padding(
-              padding: EdgeInsets.only(bottom: 8),
+              padding: EdgeInsets.only(bottom: Spacing.sm),
               child: Text(
                 'This phone cannot pick a file. The office can take the '
                 'document in person at the Municipal Hall.',

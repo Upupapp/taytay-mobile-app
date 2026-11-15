@@ -7,9 +7,11 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../shared/widgets/blue_header.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/announcement_repository.dart';
@@ -94,6 +96,19 @@ class _NewsPostScreenState extends State<NewsPostScreen>
     }
 
     final Announcement? post = controller.post;
+    // A read that trying again could fix (the network, a timeout, the
+    // server) is a failure with Try again, not "not available"; a refusal or
+    // an id nothing answers to keeps "not available" (D-220).
+    final AppFailure? failure = controller.loadFailure;
+    if (post == null && failure != null && failure.isRetryable) {
+      return _Shell(
+        child: FailureView(
+          failure: failure,
+          environment: AppDependencies.of(context).config.environment,
+          onRetry: controller.load,
+        ),
+      );
+    }
     if (post == null) {
       return _Shell(
         child: _NotAvailable(

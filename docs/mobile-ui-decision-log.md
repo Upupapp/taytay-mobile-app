@@ -3795,6 +3795,86 @@ publishes no boundary map. The fixture recorder still names the PHP tag.
 
 ---
 
+## D-220 — A failed read is said as a failure with Try again; every screen was audited against the design system
+
+**Status: settled.** Category: accessibility / product / design. Recorded
+2026-11-15, on the owner's request to "double check the screens are doing what's
+best practice, and the UI is aligning within the system" (Ella, Michaela
+Cailing), relayed by the orchestrator.
+
+**Context.** An audit of the 61 routed screens against `DESIGN_SYSTEM.md`
+(tokens, shared widgets, the four data states, D-218, semantics and targets,
+localisation, layout) found that most deviations were one kind: copy written
+when an endpoint was not yet served on the PHP baseline, still shown on every
+failure after the Node API served it. A dropped connection on Emergency
+hotlines read "Taytay LGU has not published any hotlines here yet"; a failed
+`GET /me` read "has not switched on your record"; a failed contact-details read
+showed the form empty with Save enabled, so saving could blank what is on file.
+
+**Decision.**
+
+1. **A served endpoint's failure is a failure.** `FailureView` (the app's own
+   words for the failure kind, Try again when it could work, the request id)
+   replaces "not available yet" / "not switched on" / "none published" on
+   Emergency hotlines, Notifications and its settings, an announcement, an
+   event and its registration form, My Account, Profile, Household, Consents
+   and Account details. Only a repository that answers a
+   `BackendGap` without a request (assistance, requirements, and the others in
+   `backend_gap.dart`) may still say a feature is not on. For a link that
+   opens one record (an announcement, an event, its form), only a failure that
+   trying again could fix (the network, a timeout, the server) is said this
+   way; a refusal, a 404 or an answer the app could not read keeps "not
+   available", and a household's 404 keeps "no household yet". My Account keeps
+   saying the resident is verified, from the session, under the failure.
+2. **A form that could not be read is not offered.** Account details shows the
+   failure instead of empty fields with Save, where saving could blank what is
+   on file; the Settings switches wait for the preferences read
+   (`AccountCanvas.togglesPlaceholder`) instead of drawing a default "on" as
+   the resident's choice. Edit profile shows a skeleton until `GET /me`
+   answers and, after a failed read, keeps its form with the name locked and
+   "could not tell", as `name_check_test` holds it (D-195).
+3. **No state stays for ever.** A conversation shows a skeleton until its first
+   read and Try again after a failed one; an office's message page says the
+   office did not load (`DirectoryCanvas.officeUnavailable`) instead of keeping
+   its skeleton.
+4. **The shell's offline banner keeps clear of the status bar.** It sits above
+   each tab's own header, so it now takes the inset itself
+   (`OfflineBanner(belowStatusBar: true)`) and the tab drops it while the banner
+   shows. Events, an event and the identity claim draw their own banner, as
+   full-screen routes do.
+5. **Shared widgets where a copy existed.** Directory and Tulong draw
+   `HeaderSearchField`; registration's ID slots are `UploadSlot` with
+   `DashedOutline`. Each copy was the shared widget line for line, so no golden
+   moved.
+6. **Read once, as one button.** The tab bar's labels were read twice and the
+   Balita disc was a second "Balita" button; Balita rows and the verification
+   fields repeated their titles; event and notification rows, the terms links
+   and the value pickers were not one labelled button; "Close conversation" was
+   read twice in a fixed 48 dp box that clipped at 200% text. Each now reads
+   once, as one button, in a target of at least 48 dp.
+7. **Emergency hotlines update by themselves** (D-218, topic `hotlines`, as Home
+   already does), quietly, keeping what is shown when a re-read fails.
+
+**Left for a decision** (named, not changed): Home hides a section whose read
+failed; the Directory list, Balita, Events, Tulong, a programme and the
+Messages inbox draw every failure as "offline" (their canvases carry a flag,
+not the failure); the Privacy Notice says it "will appear when published" after
+a failed read in production; five retries keep the old frame without a loading
+state; the screens whose topics the server publishes but `LiveTopics` lacks
+(`offices`, `services`, `households`, `consents`) and the issuance catalogue are
+not live; the hero scrims of Directory, Balita and Home repeat `DetailHero`'s
+navy 55% / 45% stops, and about 25 line heights, 6 paddings and 18 gaps are
+values with no token (DESIGN_SYSTEM.md §9); screen copy stays English literals
+(D-217) until a Filipino reviewer is available.
+
+**Tests.** `test/features/screen_states_audit_test.dart` (hotlines and office
+failures with Try again and their layout matrices, the settings placeholder,
+the tab bar read once); a failed inbox, settings and event read each recover
+through Try again; the household and profile tests now hold the failure view,
+not the old copy.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4018,5 +4098,6 @@ publishes no boundary map. The fixture recorder still names the PHP tag.
 | D-217 | The Filipino copy was reviewed for grammar and consistency by Claude, not a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT. 25 ARB strings and 4 inline strings changed: "Subukang muli" for every "Try again", "subok" for attempts, "tanggapan" for office, "pag-verify" / "Verified na" for verification, "na-type" for typed, "numero ng cellphone", "Paki-update", and five meaning fixes. The consent screens (D-208 to D-214) stay English with the English screens they sit on; translating those screens whole is an open owner item (NPC Circular 2023-04) | localisation | settled |
 | D-218 | Screens update themselves from change hints (DL-222): `LiveUpdates` holds `GET changes` open only while the app is resumed and signed in, with the bearer in a header; backoff with jitter 1–30 s, at once after `expired`; a `404`/`501` turns it off with no polling; reconnects, `resync` and returning re-read every listening screen; each re-read is quiet (old data kept, no loading, failure silent), throttled to one per 2 s, deferred while the screen is hidden, and never resets a draft, form, sheet or scroll; `account` re-reads the session's tier. No pause control and no live-region announcements: the updates are event-driven, not timed (WCAG 2.2 SC 2.2.2) | product / contract / accessibility | settled |
 | D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
+| D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 
-**215 decisions — 211 settled, 4 provisional.**
+**216 decisions — 212 settled, 4 provisional.**

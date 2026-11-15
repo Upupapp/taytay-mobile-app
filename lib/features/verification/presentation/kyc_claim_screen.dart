@@ -11,6 +11,7 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../registration/domain/registration_domain.dart';
@@ -120,6 +121,7 @@ class _KycClaimScreenState extends State<KycClaimScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
+                const OfflineBanner(),
                 Text(
                   'Taytay LGU checks these details against the municipal '
                   'resident register. Enter them as they appear on your birth '

@@ -117,6 +117,9 @@ class ScriptedEventRepository implements EventRepository {
   Map<EventScope, dynamic> pages;
   LguEvent? detail;
 
+  /// When set, the detail read fails with it (D-220).
+  AppFailure? detailFailure;
+
   final List<EventScope> requestedScopes = <EventScope>[];
 
   @override
@@ -136,6 +139,8 @@ class ScriptedEventRepository implements EventRepository {
 
   @override
   Future<Result<LguEvent>> loadEvent(String id) async {
+    final AppFailure? failure = detailFailure;
+    if (failure != null) return Err<LguEvent>(failure);
     final value = detail;
     return value == null
         ? const Err<LguEvent>(NotFoundFailure())
@@ -810,6 +815,27 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('No app on this device'), findsOneWidget);
+    });
+
+    testWidgets('a detail read that failed offers Try again (D-220)', (
+      tester,
+    ) async {
+      final events = ScriptedEventRepository(detail: event())
+        ..detailFailure = const NetworkFailure();
+      await bootEvents(
+        tester,
+        repositoryOverride: events,
+        location: '/events/e-1',
+      );
+
+      // A dropped connection is not "this event is not available".
+      expect(find.text('This event is not available'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+
+      events.detailFailure = null;
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(find.text('Medical mission'), findsOneWidget);
     });
 
     testWidgets('a withdrawn event does not open from a stale link', (

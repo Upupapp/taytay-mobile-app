@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/haptics/app_haptics.dart';
 import '../../../core/motion/motion_tokens.dart';
@@ -136,29 +137,35 @@ class _BarScaffold extends StatelessWidget {
       // a banner some screens forget.
       body: Column(
         children: <Widget>[
-          const OfflineBanner(),
+          // Above the branch's own header, so it keeps clear of the status
+          // bar itself, and the branch drops the inset while it shows.
+          const OfflineBanner(belowStatusBar: true),
           Expanded(
-            child: Stack(
-              children: <Widget>[
-                Positioned.fill(
-                  child: Padding(
-                    padding: EdgeInsets.only(
-                      bottom: showBar ? ShellTabBar.barHeight + bottomInset : 0,
-                    ),
-                    child: child,
-                  ),
-                ),
-                if (showBar)
-                  Positioned(
-                    left: 0,
-                    right: 0,
-                    bottom: bottomInset,
-                    child: ShellTabBar(
-                      selectedIndex: selectedIndex,
-                      onSelected: onSelected,
+            child: _UnderBanner(
+              child: Stack(
+                children: <Widget>[
+                  Positioned.fill(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: showBar
+                            ? ShellTabBar.barHeight + bottomInset
+                            : 0,
+                      ),
+                      child: child,
                     ),
                   ),
-              ],
+                  if (showBar)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: bottomInset,
+                      child: ShellTabBar(
+                        selectedIndex: selectedIndex,
+                        onSelected: onSelected,
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
@@ -224,13 +231,46 @@ class _RailScaffold extends StatelessWidget {
           Expanded(
             child: Column(
               children: <Widget>[
-                const OfflineBanner(),
-                Expanded(child: child),
+                const OfflineBanner(belowStatusBar: true),
+                Expanded(child: _UnderBanner(child: child)),
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+/// The branch under the shell's banner. While the banner shows it has taken
+/// the status-bar inset, so the branch's header must not add it again. The
+/// [MediaQuery] is always here, so the branch keeps its state when the banner
+/// comes and goes.
+class _UnderBanner extends StatelessWidget {
+  const _UnderBanner({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppDependenciesScope? scope = context
+        .dependOnInheritedWidgetOfExactType<AppDependenciesScope>();
+    if (scope == null) return child;
+    final monitor = scope.dependencies.network;
+    return AnimatedBuilder(
+      animation: monitor,
+      builder: (BuildContext context, Widget? branch) {
+        final MediaQueryData data = MediaQuery.of(context);
+        return MediaQuery(
+          data: monitor.shouldWarn
+              ? data
+                    .removePadding(removeTop: true)
+                    .removeViewPadding(removeTop: true)
+              : data,
+          child: branch ?? const SizedBox.shrink(),
+        );
+      },
+      child: child,
     );
   }
 }

@@ -11,11 +11,13 @@ import '../../../core/haptics/app_haptics.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/router/deep_link.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/consent_check_card.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/form_support.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -158,6 +160,19 @@ class _Body extends StatelessWidget {
     }
 
     final form = controller.form;
+    // The form is read from the event itself, which is served: a read that
+    // failed says so, with Try again, rather than "not switched on"
+    // (DESIGN_SYSTEM.md §5).
+    final AppFailure? formFailure = controller.formFailure;
+    if (form == null && formFailure != null && formFailure.isRetryable) {
+      return _StatePage(
+        child: FailureView(
+          failure: formFailure,
+          environment: AppDependencies.of(context).config.environment,
+          onRetry: controller.initialise,
+        ),
+      );
+    }
     if (form == null) {
       return const _Unavailable(
         message:

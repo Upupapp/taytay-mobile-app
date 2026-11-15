@@ -20,6 +20,9 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
+import '../../../shared/widgets/failure_view.dart';
+import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
@@ -272,6 +275,15 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
     listenLive(AppDependencies.of(context).live, const <String>{
       LiveTopics.threads,
     }, () => unawaited(_load(quiet: true)));
+  }
+
+  void _retry() {
+    setState(() {
+      _ready = false;
+      _failed = false;
+      _error = null;
+    });
+    _load();
   }
 
   Future<void> _load({bool quiet = false}) async {
@@ -593,6 +605,9 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
           Expanded(
             child: AccountCanvas(
               frame: AccountFrame.thread,
+              // A skeleton until the first read answers, never a blank
+              // conversation (DESIGN_SYSTEM.md §5).
+              loading: !_ready,
               title: _title,
               subtitle: _subtitle,
               subtitleLines: _subtitle.length > 42 ? 2 : 1,
@@ -646,7 +661,24 @@ class _AccountThreadScreenState extends State<AccountThreadScreen>
                 Spacing.lg,
                 Spacing.md,
               ),
-              child: SoftNote(tone: NoteTone.error, message: error),
+              child: SoftNote(
+                tone: NoteTone.error,
+                message: error,
+                // A conversation that did not load can be read again.
+                action: _failed
+                    ? PillButtonRow(
+                        padding: EdgeInsets.zero,
+                        wrap: true,
+                        actions: <PillAction>[
+                          PillAction(
+                            label: 'Try again',
+                            primary: true,
+                            onPressed: _retry,
+                          ),
+                        ],
+                      )
+                    : null,
+              ),
             ),
         ],
       ),
@@ -662,15 +694,18 @@ class _CloseConversationAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // One label, read once; the words wrap at 200% text rather than
+    // overflowing a fixed height, and the target never drops under 48 dp.
     return Semantics(
       button: true,
       label: 'Close conversation',
+      excludeSemantics: true,
       child: GestureDetector(
         key: const Key('account-thread-close'),
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: SizedBox(
-          height: A11y.minTapTarget,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: A11y.minTapTarget),
           child: Row(
             children: <Widget>[
               const TaytayIcon(
@@ -681,11 +716,13 @@ class _CloseConversationAction extends StatelessWidget {
                 excludeSemantics: true,
               ),
               const SizedBox(width: Spacing.md),
-              Text(
-                'Close conversation',
-                style: AppTypography.sectionTitle.copyWith(
-                  fontWeight: AppTypography.strong,
-                  color: BrandColors.redInk,
+              Flexible(
+                child: Text(
+                  'Close conversation',
+                  style: AppTypography.sectionTitle.copyWith(
+                    fontWeight: AppTypography.strong,
+                    color: BrandColors.redInk,
+                  ),
                 ),
               ),
             ],
@@ -917,6 +954,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     return AccountCanvas(
       frame: AccountFrame.editProfile,
+      // A skeleton until `GET /me` answers, never a blank form.
+      loading: !_nameRead,
       title: 'Edit profile',
       initials: _initialsOf(_name.text),
       showBack: true,
@@ -978,6 +1017,11 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   bool _balita = true;
   bool _emergency = true;
 
+  /// False until the preferences read answered: the switches are not drawn
+  /// before then, so a default "on" is never shown as the resident's choice.
+  bool _preferencesRead = false;
+  AppFailure? _preferencesFailure;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -991,13 +1035,29 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       context,
     ).notificationRepository.loadPreferences();
     if (!mounted) return;
-    if (result case Ok(:final value)) {
-      setState(() {
-        _officeReplies = preferenceEnabled(value.channels, 'message_received');
-        _balita = preferenceEnabled(value.channels, 'balita');
-        _emergency = preferenceEnabled(value.channels, 'emergency');
-      });
-    }
+    setState(() {
+      _preferencesRead = true;
+      switch (result) {
+        case Ok(:final value):
+          _preferencesFailure = null;
+          _officeReplies = preferenceEnabled(
+            value.channels,
+            'message_received',
+          );
+          _balita = preferenceEnabled(value.channels, 'balita');
+          _emergency = preferenceEnabled(value.channels, 'emergency');
+        case Err(:final failure):
+          _preferencesFailure = failure;
+      }
+    });
+  }
+
+  void _retry() {
+    setState(() {
+      _preferencesRead = false;
+      _preferencesFailure = null;
+    });
+    _load();
   }
 
   Future<void> _setChannel(
@@ -1034,6 +1094,19 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
+      togglesPlaceholder: !_preferencesRead
+          ? const LoadingSkeleton(
+              layout: SkeletonLayout.text,
+              semanticLabel: 'Loading notification settings',
+            )
+          : switch (_preferencesFailure) {
+              final AppFailure failure => FailureView(
+                failure: failure,
+                environment: AppDependencies.of(context).config.environment,
+                onRetry: _retry,
+              ),
+              null => null,
+            },
       toggles: <AccountToggle>[
         AccountToggle(
           title: 'Balita & advisories',

@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
-import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
@@ -16,6 +15,7 @@ import '../../../core/time/manila_time.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/capability_gate.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
@@ -164,21 +164,13 @@ class _Inbox extends StatelessWidget {
   Widget build(BuildContext context) {
     if (controller.isLoadingFirstPage) return const _Loading();
 
-    if (controller.failure != null) {
-      return ListView(
-        padding: const EdgeInsets.all(Spacing.lg),
-        children: <Widget>[
-          EmptyState(
-            title: 'Notifications are not available yet',
-            message:
-                'Taytay LGU has not switched on notifications in this app yet. '
-                'Your requests and events still update inside the app.',
-            illustration: TaytayIllustration.offline,
-            actionLabel: 'Check again',
-            onAction: controller.refresh,
-            boxed: true,
-          ),
-        ],
+    // `GET notifications` is served: a failure is a failure, with Try again,
+    // never "not switched on" (DESIGN_SYSTEM.md §5).
+    if (controller.failure case final AppFailure failure) {
+      return FailureView(
+        failure: failure,
+        environment: AppDependencies.of(context).config.environment,
+        onRetry: controller.refresh,
       );
     }
 
@@ -350,11 +342,20 @@ class _NotificationPreferencesScreenState
 
   /// Why the last change did not save, or null.
   AppFailure? _saveFailure;
+  AppFailure? _loadFailure;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_preferences == null && _loading) _load();
+  }
+
+  void _retry() {
+    setState(() {
+      _loading = true;
+      _loadFailure = null;
+    });
+    _load();
   }
 
   Future<void> _load() async {
@@ -364,8 +365,14 @@ class _NotificationPreferencesScreenState
     setState(() {
       _loading = false;
       result.fold(
-        onOk: (preferences) => _preferences = preferences,
-        onErr: (_) => _preferences = null,
+        onOk: (preferences) {
+          _preferences = preferences;
+          _loadFailure = null;
+        },
+        onErr: (AppFailure failure) {
+          _preferences = null;
+          _loadFailure = failure;
+        },
       );
     });
   }
@@ -422,16 +429,15 @@ class _NotificationPreferencesScreenState
                       semanticLabel: 'Loading notification settings',
                     ),
                   ],
+                  // `GET me/notification-preferences` is served: a failed
+                  // read is said as one, with Try again.
                   (_, null) => <Widget>[
-                    EmptyState(
-                      title: 'Notification settings are not available yet',
-                      message:
-                          'Taytay LGU has not switched these on in this app '
-                          'yet.',
-                      illustration: TaytayIllustration.offline,
-                      actionLabel: 'Check again',
-                      onAction: _load,
-                      boxed: true,
+                    FailureView(
+                      failure: _loadFailure ?? const UnexpectedFailure(),
+                      environment: AppDependencies.of(
+                        context,
+                      ).config.environment,
+                      onRetry: _retry,
                     ),
                   ],
                   (_, final NotificationPreferences loaded) => <Widget>[

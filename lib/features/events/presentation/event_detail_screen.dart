@@ -24,8 +24,10 @@ import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/confirm_sheet.dart';
 import '../../../shared/widgets/detail_page.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
+import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/surface_cards.dart';
@@ -277,17 +279,26 @@ class _EventDetailScreenState extends State<EventDetailScreen>
         ),
         children: <Widget>[
           const BlueHeader(title: 'Event', showBack: true),
+          const OfflineBanner(),
           Padding(
             padding: const EdgeInsets.all(Spacing.lg),
-            child: switch ((_idIsValid, _loading)) {
-              (false, _) => _NotAvailable(
+            child: switch ((_idIsValid, _loading, _failure)) {
+              (false, _, _) => _NotAvailable(
                 message: DeepLinkRejection.invalidIdentifier.residentMessage,
               ),
-              (_, true) => const LoadingSkeleton(
+              (_, true, _) => const LoadingSkeleton(
                 layout: SkeletonLayout.detail,
                 count: 1,
                 semanticLabel: 'Opening event…',
               ),
+              // A read that trying again could fix says so, with Try again;
+              // a refusal or an unknown id keeps "not available" (D-220).
+              (_, _, final AppFailure failure) when failure.isRetryable =>
+                FailureView(
+                  failure: failure,
+                  environment: AppDependencies.of(context).config.environment,
+                  onRetry: _load,
+                ),
               _ => _NotAvailable(
                 message: DeepLinkRejection.unknownTarget.residentMessage,
               ),
@@ -522,6 +533,7 @@ class _Detail extends StatelessWidget {
           GlassOverlap(amount: Radii.sheetLarge, child: sheet),
         ] else ...<Widget>[
           const BlueHeader(title: 'Event', showBack: true),
+          const OfflineBanner(),
           sheet,
         ],
       ],

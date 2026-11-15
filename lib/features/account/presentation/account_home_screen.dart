@@ -36,6 +36,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   bool _started = false;
   bool _loading = false;
   bool _failed = false;
+  AppFailure? _failure;
   ResidentProfileDetail? _detail;
   String _messagesLine = 'Office replies';
   int _unread = 0;
@@ -69,9 +70,10 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         case Ok(:final value):
           _detail = value;
           _failed = false;
-        case Err():
+        case Err(:final failure):
           _detail = null;
           _failed = true;
+          _failure = failure;
       }
       if (threads case Ok(:final value) when value.items.isNotEmpty) {
         final int unread = value.items.fold<int>(
@@ -119,7 +121,10 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         );
         if (decision is! AccessAllowed) return const SizedBox.shrink();
         if (_failed) {
-          return _RecordUnavailable(onRetry: _load);
+          return _RecordUnavailable(
+            failure: _failure ?? const UnexpectedFailure(),
+            onRetry: _load,
+          );
         }
         if (_loading && _detail == null) {
           return AccountCanvas(
@@ -242,15 +247,21 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   }
 }
 
-/// Shown when `GET /me` fails. The words are the same ones the resident
-/// record uses, so a missing record is not described as the resident's fault.
+/// Shown when `GET /me` fails. `GET /me` is served, so the failure is said in
+/// the app's own words for its kind, with Try again when trying again could
+/// work, never as a record the LGU has "not switched on" (D-220).
+///
+/// The tier is the session's, not the failed read's: the page still says the
+/// resident is verified, and never asks them to verify again.
 class _RecordUnavailable extends StatelessWidget {
-  const _RecordUnavailable({required this.onRetry});
+  const _RecordUnavailable({required this.failure, required this.onRetry});
 
+  final AppFailure failure;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
+    final String? requestId = failure.requestId;
     return ColoredBox(
       color: BrandColors.background,
       child: ListView(
@@ -258,14 +269,17 @@ class _RecordUnavailable extends StatelessWidget {
         children: <Widget>[
           const SizedBox(height: Spacing.xl),
           ErrorState(
-            title: 'Not available in this app yet',
-            message:
-                'Taytay LGU has not switched on your record in this app yet. '
-                'The municipal hall can tell you what is on file.',
+            title: failure.residentMessage,
             icon: TaytayIcons.badgeCheck,
-            onRetry: onRetry,
+            offline: failure is NetworkFailure || failure is TimeoutFailure,
+            onRetry: failure.affordance == FailureAffordance.retryNow
+                ? onRetry
+                : null,
             boxed: true,
-            details: const <Widget>[Text('Verified by Taytay LGU')],
+            details: <Widget>[
+              const Text('Verified by Taytay LGU'),
+              if (requestId != null) SelectableText('Reference: $requestId'),
+            ],
           ),
         ],
       ),

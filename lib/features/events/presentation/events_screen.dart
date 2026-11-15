@@ -18,6 +18,7 @@ import '../../../shared/widgets/error_state.dart';
 import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
+import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
@@ -133,11 +134,21 @@ class _EventsScreenState extends State<EventsScreen>
             children: <Widget>[
               header,
               GlassOverlap(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: Spacing.lg),
-                  child: controller == null
-                      ? const _EventsSkeleton()
-                      : _EventList(controller: controller),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    // A full-screen route outside the tab shell draws its own
+                    // banner (DESIGN_SYSTEM.md §5); it draws nothing online.
+                    const OfflineBanner(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: Spacing.lg,
+                      ),
+                      child: controller == null
+                          ? const _EventsSkeleton()
+                          : _EventList(controller: controller),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -429,12 +440,17 @@ class EventCard extends StatelessWidget {
             ? const Border(top: BorderSide(color: BrandColors.divider))
             : null,
       ),
-      child: InkWell(
-        onTap: () => context.goNamed(
-          AppRoute.eventDetail.routeName,
-          pathParameters: <String, String>{'eventId': event.id},
+      // A tappable row reads as one button (DESIGN_SYSTEM.md §8 rule 8).
+      child: Semantics(
+        button: true,
+        container: true,
+        child: InkWell(
+          onTap: () => context.goNamed(
+            AppRoute.eventDetail.routeName,
+            pathParameters: <String, String>{'eventId': event.id},
+          ),
+          child: row,
         ),
-        child: row,
       ),
     );
   }

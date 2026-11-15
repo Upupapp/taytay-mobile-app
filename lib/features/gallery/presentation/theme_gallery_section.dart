@@ -177,7 +177,7 @@ class _HeaderSpecimen extends StatelessWidget {
                     Text(
                       'Header · 150°',
                       style: AppTypography.headerTitleLarge.copyWith(
-                        color: Colors.white,
+                        color: BrandColors.white,
                       ),
                     ),
                     const SizedBox(height: Spacing.xs),
@@ -224,7 +224,7 @@ class _WaveSpecimen extends StatelessWidget {
               ),
               child: Text(
                 'Wave header',
-                style: AppTypography.hero.copyWith(color: Colors.white),
+                style: AppTypography.hero.copyWith(color: BrandColors.white),
               ),
             ),
             const Positioned(
