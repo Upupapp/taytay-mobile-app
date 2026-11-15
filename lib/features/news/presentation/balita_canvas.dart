@@ -2,15 +2,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_environment.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/motion/motion_tokens.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -76,6 +79,8 @@ class BalitaCanvas extends StatelessWidget {
     this.onBack,
     this.onSeeAll,
     this.onRetry,
+    this.failure,
+    this.environment = AppEnvironment.prod,
     this.scrollController,
     this.loadCover,
     super.key,
@@ -93,6 +98,15 @@ class BalitaCanvas extends StatelessWidget {
   final VoidCallback? onBack;
   final VoidCallback? onSeeAll;
   final VoidCallback? onRetry;
+
+  /// Why [BalitaFrame.failed] failed. Only no connection is said as offline;
+  /// any other failure is a [FailureView] in its own words (D-221). Null
+  /// draws the offline state, as the design frames do.
+  final AppFailure? failure;
+
+  /// Decides whether a failure's diagnostics show. Production by default, so
+  /// a caller that forgets it never shows them.
+  final AppEnvironment environment;
   final ScrollController? scrollController;
 
   /// `GET /news/{id}/cover`. Null on a dev mock, where covers are assets.
@@ -173,12 +187,21 @@ class BalitaCanvas extends StatelessWidget {
   }
 
   Widget _body() {
+    final AppFailure? failure = this.failure;
     return switch (frame) {
       BalitaFrame.loading => const LoadingSkeleton(
         layout: SkeletonLayout.feed,
         count: 4,
         semanticLabel: 'Loading Balita',
       ),
+      BalitaFrame.failed
+          when failure != null && !FailureView.isOffline(failure) =>
+        FailureView(
+          failure: failure,
+          environment: environment,
+          onRetry: onRetry,
+          boxed: true,
+        ),
       BalitaFrame.failed => ErrorState(
         title: 'Announcements are not available right now',
         message:

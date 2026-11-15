@@ -691,6 +691,21 @@ void main() {
       expect(find.text('Nothing scheduled right now'), findsNothing);
     });
 
+    testWidgets('a server failure is said as one, not as no connection '
+        '(D-221)', (tester) async {
+      await bootEvents(
+        tester,
+        pages: <EventScope, dynamic>{
+          EventScope.upcoming: const ServerFailure(),
+        },
+      );
+
+      expect(find.text(const ServerFailure().residentMessage), findsOneWidget);
+      expect(find.text('Events are not available right now'), findsNothing);
+      expect(find.textContaining('Check your connection'), findsNothing);
+      expect(find.text('Try again'), findsOneWidget);
+    });
+
     testWidgets('an empty scope says so plainly', (tester) async {
       await bootEvents(
         tester,

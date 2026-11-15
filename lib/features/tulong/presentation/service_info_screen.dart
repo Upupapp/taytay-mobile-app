@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -5,6 +7,8 @@ import '../../../app/app_dependencies.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/links/external_link_service.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
@@ -12,6 +16,7 @@ import '../../../core/sharing/share_service.dart';
 import '../../../shared/widgets/access_gate_sheet.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/taytay_states.dart';
@@ -35,11 +40,15 @@ class ServiceInfoScreen extends StatefulWidget {
   State<ServiceInfoScreen> createState() => _ServiceInfoScreenState();
 }
 
-class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
+class _ServiceInfoScreenState extends State<ServiceInfoScreen>
+    with LiveRefresh<ServiceInfoScreen> {
   SocialService? _service;
   bool _missing = false;
-  bool _failed = false;
+
+  /// The read failed for a reason other than "no such programme".
+  AppFailure? _failure;
   bool _started = false;
+  bool _reading = false;
 
   @override
   void didChangeDependencies() {
@@ -47,27 +56,46 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The office's edits to this programme show without a pull (D-218,
+    // D-221).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.services,
+    }, () => unawaited(_load(quiet: true)));
   }
 
   SocialServiceRepository get _repository =>
       AppDependencies.of(context).socialServiceRepository;
 
-  Future<void> _load() async {
+  /// Shows the skeleton while trying again, so a tap is seen to do something
+  /// and cannot be repeated while the read is on its way (D-221).
+  void _retry() {
+    if (_reading) return;
+    setState(() => _failure = null);
+    unawaited(_load());
+  }
+
+  /// Reads the programme. A [quiet] re-read (D-218) only replaces a page
+  /// already on screen, and keeps it when the read fails.
+  Future<void> _load({bool quiet = false}) async {
+    if (_reading || (quiet && _service == null)) return;
+    _reading = true;
     final Result<SocialService> result = await _repository.loadService(
       widget.slug,
     );
+    _reading = false;
     if (!mounted) return;
     switch (result) {
       case Ok<SocialService>(:final value):
         setState(() {
           _service = value;
           _missing = false;
-          _failed = false;
+          _failure = null;
         });
       case Err<SocialService>(:final failure):
+        if (quiet) return;
         setState(() {
           _missing = failure is NotFoundFailure;
-          _failed = failure is! NotFoundFailure;
+          _failure = failure is NotFoundFailure ? null : failure;
         });
     }
   }
@@ -196,23 +224,30 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen> {
       );
     }
     // Loading, not found and failed share the page: the blue header with
-    // the back control, then the state on the soft background.
+    // the back control, then the state on the soft background. Only no
+    // connection is said as one; the office's side failing is said in the
+    // failure's own words (D-221).
+    final AppFailure? failure = _failure;
     final Widget state = _missing
         ? const EmptyState(
             title: 'This programme is not available',
             message: 'Go back to Tulong to see the programmes listed now.',
             boxed: true,
           )
-        : _failed
+        : failure != null && !FailureView.isOffline(failure)
+        ? FailureView(
+            failure: failure,
+            environment: AppDependencies.of(context).config.environment,
+            onRetry: _retry,
+            boxed: true,
+          )
+        : failure != null
         ? ErrorState(
             title: 'Programme pages need a connection',
             message: 'Check your connection and try again.',
             offline: true,
             boxed: true,
-            onRetry: () {
-              setState(() => _failed = false);
-              _load();
-            },
+            onRetry: _retry,
           )
         : const LoadingSkeleton(
             layout: SkeletonLayout.detail,

@@ -155,6 +155,17 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
         AppEnvironment.dev;
   }
 
+  /// Try again shows the skeleton while the read is on its way, so the tap
+  /// is seen to do something and cannot send a second read (D-221).
+  void _retry() {
+    if (!_loaded) return;
+    setState(() {
+      _loaded = false;
+      _failure = null;
+    });
+    unawaited(_load());
+  }
+
   /// Reads the card and the name on it.
   ///
   /// [quiet] is a re-read for a change (D-218): no loading state, and a read
@@ -286,7 +297,7 @@ class _DigitalIdScreenState extends State<DigitalIdScreen>
       sample: _sample(context),
       failure: _failure,
       environment: _environment(context),
-      onRetry: _failure == null ? null : () => unawaited(_load()),
+      onRetry: _failure == null ? null : _retry,
       loading: _repository != null && !_loaded,
       preparation: _preparation,
       onMessageOffice: _messageOffice,

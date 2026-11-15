@@ -7,6 +7,8 @@ import '../../../core/api/request_context.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/session/biometric_consent_controller.dart';
 import '../../../core/session/resident_capability.dart';
@@ -48,7 +50,8 @@ class PrivacyControlsScreen extends StatefulWidget {
   State<PrivacyControlsScreen> createState() => _PrivacyControlsScreenState();
 }
 
-class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
+class _PrivacyControlsScreenState extends State<PrivacyControlsScreen>
+    with LiveRefresh<PrivacyControlsScreen> {
   /// The selfie's consent, read from the server (D-209). Created with the
   /// first dependencies.
   BiometricConsentController? _biometric;
@@ -57,6 +60,11 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   List<ConsentRecord>? _consents;
   AppFailure? _consentsFailure;
   String? _notice;
+
+  /// A withdrawal or an agreement is on its way. A re-read for a change
+  /// waits for it, and one that started before it is not applied (D-218).
+  bool _acting = false;
+  int _generation = 0;
 
   @override
   void didChangeDependencies() {
@@ -68,8 +76,26 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
         consents: dependencies.accountControlsRepository,
       )..addListener(_onBiometric);
       unawaited(_biometric?.load());
+      // A consent recorded or withdrawn elsewhere (at the office, or on
+      // another phone) shows without a pull (D-218, D-221).
+      listenLive(dependencies.live, const <String>{
+        LiveTopics.consents,
+      }, () => unawaited(_reloadQuietly()));
     }
     if (_loading) _load();
+  }
+
+  /// Re-reads the consent list for a change: no loading state, and a read
+  /// that fails keeps the list and says nothing. The selfie section keeps
+  /// its own read, whose reload shows a skeleton, so it is not repeated here.
+  Future<void> _reloadQuietly() async {
+    if (_loading || _acting || _consents == null) return;
+    final int generation = _generation;
+    final Result<List<ConsentRecord>> consents = await AppDependencies.of(
+      context,
+    ).accountControlsRepository.listConsents();
+    if (!mounted || generation != _generation || _loading || _acting) return;
+    if (consents case Ok(:final value)) setState(() => _consents = value);
   }
 
   void _onBiometric() {
@@ -208,6 +234,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   }
 
   Future<void> _load() async {
+    _generation++;
     final repository = AppDependencies.of(context).accountControlsRepository;
 
     final controls = await repository.loadControls();
@@ -249,6 +276,8 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
     if (!confirmed || !mounted) return;
 
     final repository = AppDependencies.of(context).accountControlsRepository;
+    _acting = true;
+    _generation++;
     final result = await repository.withdrawConsent(
       key: consent.key,
       // Withdrawing twice through a dropped connection should record one
@@ -257,6 +286,7 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
       // The text this row is for, and only it (D-208).
       kind: consent.kind,
     );
+    _acting = false;
     if (!mounted) return;
 
     result.fold(
@@ -280,10 +310,13 @@ class _PrivacyControlsScreenState extends State<PrivacyControlsScreen> {
   Future<void> _accept(ConsentRecord consent) async {
     if (!consent.isWithdrawable || consent.key.isEmpty) return;
     final repository = AppDependencies.of(context).accountControlsRepository;
+    _acting = true;
+    _generation++;
     final result = await repository.acceptConsent(
       version: consent.key,
       kind: consent.kind,
     );
+    _acting = false;
     if (!mounted) return;
     result.fold(
       onOk: (_) {

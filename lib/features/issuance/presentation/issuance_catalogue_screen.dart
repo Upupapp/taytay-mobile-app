@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +8,8 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
@@ -38,7 +42,8 @@ class IssuanceCatalogueScreen extends StatefulWidget {
       _IssuanceCatalogueScreenState();
 }
 
-class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
+class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen>
+    with LiveRefresh<IssuanceCatalogueScreen> {
   bool _started = false;
   bool _loading = true;
   AppFailure? _failure;
@@ -51,12 +56,29 @@ class _IssuanceCatalogueScreenState extends State<IssuanceCatalogueScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The server's topic for the catalogue. It sends a catalogue edit only to
+    // the staff who keep it, so for a resident this re-reads on a reconnect,
+    // a return to the app and a change to their own requests (D-221).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.issuanceRequests,
+    }, () => unawaited(_reloadQuietly()));
   }
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  /// A re-read for a change (D-218): no loading state, the search left as
+  /// typed, and a read that fails keeps the list and says nothing.
+  Future<void> _reloadQuietly() async {
+    if (_loading || _failure != null) return;
+    final Result<List<IssuanceType>> result = await AppDependencies.of(
+      context,
+    ).issuanceRepository.listTypes();
+    if (!mounted || _loading) return;
+    if (result case Ok(:final value)) setState(() => _types = value);
   }
 
   Future<void> _load() async {

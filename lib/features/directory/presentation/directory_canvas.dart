@@ -2,15 +2,18 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_environment.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/result/result.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
@@ -65,6 +68,8 @@ class DirectoryCanvas extends StatelessWidget {
     this.onSend,
     this.onMessages,
     this.onRetry,
+    this.failure,
+    this.environment = AppEnvironment.prod,
     this.onBrowseAll,
     this.chips = const <String>[],
     this.onHotlines,
@@ -130,6 +135,16 @@ class DirectoryCanvas extends StatelessWidget {
   final VoidCallback? onSend;
   final VoidCallback? onMessages;
   final VoidCallback? onRetry;
+
+  /// Why [DirectoryFrame.offline] could not read the list. Only no
+  /// connection is said as offline; any other failure is a [FailureView] in
+  /// its own words, without the "You're offline" strip (D-221). Null draws
+  /// the offline frame, as the design does.
+  final AppFailure? failure;
+
+  /// Decides whether a failure's diagnostics show. Production by default, so
+  /// a caller that forgets it never shows them.
+  final AppEnvironment environment;
   final VoidCallback? onBrowseAll;
 
   /// The list filter. Empty shows every office.
@@ -304,6 +319,8 @@ class _ListPage extends StatelessWidget {
         offices: c.offices,
         onRetry: c.onRetry,
         onCall: c.onCall,
+        failure: c.failure,
+        environment: c.environment,
       ),
       DirectoryFrame.searchSpecimen => _SearchSpecimen(
         offices: c.offices,
@@ -559,14 +576,24 @@ class _LoadingBody extends StatelessWidget {
 /// `DirectoryOffline.dc.html`: the gold offline strip, the boxed "Can't
 /// load" state with Try again, and the numbers saved on this phone.
 class _OfflineBody extends StatelessWidget {
-  const _OfflineBody({required this.offices, this.onRetry, this.onCall});
+  const _OfflineBody({
+    required this.offices,
+    required this.environment,
+    this.onRetry,
+    this.onCall,
+    this.failure,
+  });
 
   final List<Office> offices;
   final VoidCallback? onRetry;
   final VoidCallback? onCall;
+  final AppFailure? failure;
+  final AppEnvironment environment;
 
   @override
   Widget build(BuildContext context) {
+    final AppFailure? failure = this.failure;
+    final bool offline = failure == null || FailureView.isOffline(failure);
     final List<Office> saved =
         offices
             .where(
@@ -586,21 +613,29 @@ class _OfflineBody extends StatelessWidget {
         Spacing.xl,
       ),
       children: <Widget>[
-        const _OfflineStrip(),
-        const SizedBox(height: Spacing.section),
-        EmptyState(
-          title: "Can't load the directory",
-          message:
-              'Check your mobile data or Wi-Fi, then try again. '
-              'Saved office numbers are listed below.',
-          illustration: TaytayIllustration.offline,
-          actionLabel: 'Try again',
-          actionIcon: TaytayIcons.refreshCw,
-          onAction: onRetry,
-          primaryAction: true,
-          boxed: true,
-          actionKey: const Key('directory-retry'),
-        ),
+        if (offline) ...<Widget>[
+          const _OfflineStrip(),
+          const SizedBox(height: Spacing.section),
+          EmptyState(
+            title: "Can't load the directory",
+            message:
+                'Check your mobile data or Wi-Fi, then try again. '
+                'Saved office numbers are listed below.',
+            illustration: TaytayIllustration.offline,
+            actionLabel: 'Try again',
+            actionIcon: TaytayIcons.refreshCw,
+            onAction: onRetry,
+            primaryAction: true,
+            boxed: true,
+            actionKey: const Key('directory-retry'),
+          ),
+        ] else
+          FailureView(
+            failure: failure,
+            environment: environment,
+            onRetry: onRetry,
+            boxed: true,
+          ),
         if (saved.isNotEmpty) ...<Widget>[
           const SizedBox(height: Spacing.xl),
           const SettingsSectionTitle('Saved on this phone'),

@@ -10,11 +10,13 @@ import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
+import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/feed_row.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/media_bytes_image.dart';
@@ -205,7 +207,18 @@ class _EventList extends StatelessWidget {
       return const _EventsSkeleton();
     }
 
-    if (controller.failure != null) {
+    final AppFailure? failure = controller.failure;
+    if (failure != null && !FailureView.isOffline(failure)) {
+      // The office's side failed, not the phone's connection: said in the
+      // failure's own words, never as "check your connection" (D-221).
+      return FailureView(
+        failure: failure,
+        environment: AppDependencies.of(context).config.environment,
+        onRetry: controller.refresh,
+        boxed: true,
+      );
+    }
+    if (failure != null) {
       // Distinct from an empty list. "Taytay LGU has scheduled nothing" and "we
       // could not reach Taytay LGU" are different statements.
       return ErrorState(

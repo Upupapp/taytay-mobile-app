@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +9,8 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/l10n/app_locales.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/resident_capability.dart';
@@ -59,7 +63,8 @@ class HouseholdScreen extends StatefulWidget {
   State<HouseholdScreen> createState() => _HouseholdScreenState();
 }
 
-class _HouseholdScreenState extends State<HouseholdScreen> {
+class _HouseholdScreenState extends State<HouseholdScreen>
+    with LiveRefresh<HouseholdScreen> {
   bool _started = false;
   bool _loading = false;
   HouseholdSummary? _summary;
@@ -76,9 +81,18 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // A member added, removed or changed by the household or the office
+    // shows without a pull (D-218, D-221).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.households,
+    }, () => unawaited(_load(quiet: true)));
   }
 
-  Future<void> _load() async {
+  /// [quiet] is a re-read for a change (D-218): no loading state, and only a
+  /// household read back replaces the one on screen; anything else keeps it
+  /// and says nothing.
+  Future<void> _load({bool quiet = false}) async {
+    if (quiet && (_loading || _summary == null)) return;
     final dependencies = AppDependencies.of(context);
 
     // The read is the disclosure, so the read is gated — not the widget that
@@ -88,6 +102,13 @@ class _HouseholdScreenState extends State<HouseholdScreen> {
       session: dependencies.session.state,
       capability: ResidentCapability.viewHouseholdSummary,
     )) {
+      return;
+    }
+
+    if (quiet) {
+      final result = await dependencies.householdRepository.loadOwnHousehold();
+      if (!mounted || _loading) return;
+      if (result case Ok(:final value)) setState(() => _summary = value);
       return;
     }
 

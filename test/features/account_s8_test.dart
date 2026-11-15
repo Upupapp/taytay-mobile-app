@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -33,6 +34,7 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_reposit
 import 'package:taytay_resident/features/profile/domain/verification_decision.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
 import 'package:taytay_resident/shared/widgets/barangay_picker.dart';
+import 'package:taytay_resident/shared/widgets/loading_skeleton.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
 
 class _RecordingUser implements SignedInPasswordUser {
@@ -511,6 +513,98 @@ void main() {
     expect(find.text('No messages yet'), findsNothing);
   });
 
+  testWidgets('Retry on the inbox shows the skeleton and reads once (D-221)', (
+    tester,
+  ) async {
+    final _FailingThreads threads = _FailingThreads();
+    final AppDependencies dependencies = await _accountDependencies(
+      messaging: threads,
+    );
+    addTearDown(dependencies.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: dependencies,
+        child: const MaterialApp(home: MessagesInboxScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(threads.calls, 1);
+
+    threads.gate = Completer<void>();
+    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('Retry'), warnIfMissed: false);
+    await tester.pump();
+    expect(threads.calls, 2, reason: 'a second tap sends nothing');
+    expect(find.text('Retry'), findsNothing);
+    expect(find.byType(LoadingSkeleton), findsOneWidget);
+
+    threads.gate?.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+  });
+
+  testWidgets('a server failure on the inbox is not called unreachable '
+      '(D-221)', (tester) async {
+    final _FailingThreads threads = _FailingThreads(
+      failure: const ServerFailure(),
+    );
+    final AppDependencies dependencies = await _accountDependencies(
+      messaging: threads,
+    );
+    addTearDown(dependencies.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: dependencies,
+        child: const MaterialApp(home: MessagesInboxScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text(const ServerFailure().residentMessage), findsOneWidget);
+    expect(find.textContaining('could not be reached'), findsNothing);
+    await tester.tap(find.text('Try again'));
+    await tester.pump();
+    expect(threads.calls, 2);
+  });
+
+  testWidgets('a privacy notice that failed to load says so with Try again, '
+      'never "when published" (D-221)', (tester) async {
+    final _ScriptedBootstrap platform =
+        _ScriptedBootstrap(<Result<AppBootstrap>>[
+          const Err<AppBootstrap>(ServerFailure()),
+          const Err<AppBootstrap>(NetworkFailure()),
+        ]);
+    final AppDependencies dependencies = await _accountDependencies(
+      config: AppConfig.from(
+        rawEnvironment: 'prod',
+        rawApiBaseUrl: 'https://example.test/api/v1',
+        isReleaseBuild: false,
+      ),
+      platform: platform,
+    );
+    addTearDown(dependencies.dispose);
+    await tester.pumpWidget(
+      AppDependenciesScope(
+        dependencies: dependencies,
+        child: const MaterialApp(home: PrivacyNoticeScreen()),
+      ),
+    );
+    await tester.pump();
+    expect(find.text(const ServerFailure().residentMessage), findsOneWidget);
+    expect(find.textContaining('when Taytay LGU publishes it'), findsNothing);
+    expect(find.textContaining('DRAFT'), findsNothing);
+
+    platform.gate = Completer<void>();
+    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Try again'), warnIfMissed: false);
+    await tester.pump();
+    expect(platform.reads, 2, reason: 'a second tap sends nothing');
+    expect(find.bySemanticsLabel('Loading the privacy notice'), findsOneWidget);
+    platform.gate?.complete();
+    await tester.pumpAndSettle();
+    expect(find.text(const NetworkFailure().residentMessage), findsOneWidget);
+    expect(find.textContaining('when Taytay LGU publishes it'), findsNothing);
+  });
+
   test('the design specimen still paints Display name', () {
     expect(
       AccountSpecimen.fields.map((AccountField field) => field.label),
@@ -889,7 +983,13 @@ void main() {
 }
 
 class _FailingThreads implements OfficeMessagingRepository {
+  _FailingThreads({this.failure = const NetworkFailure()});
+
+  final AppFailure failure;
   int calls = 0;
+
+  /// Holds the read open while set, to see what the screen shows meanwhile.
+  Completer<void>? gate;
 
   @override
   Future<Result<Paginated<OfficeThread>>> listThreads({
@@ -898,7 +998,9 @@ class _FailingThreads implements OfficeMessagingRepository {
     String? cursor,
   }) async {
     calls++;
-    return const Err<Paginated<OfficeThread>>(NetworkFailure());
+    final Completer<void>? waiting = gate;
+    if (waiting != null) await waiting.future;
+    return Err<Paginated<OfficeThread>>(failure);
   }
 
   @override
@@ -1065,6 +1167,29 @@ class _FixedBootstrap implements PlatformRepository {
   @override
   Future<Result<AppBootstrap>> loadBootstrap() async =>
       Ok<AppBootstrap>(bootstrap);
+}
+
+/// Answers each `loadBootstrap` from a script, in order, held open while
+/// [gate] is set.
+class _ScriptedBootstrap implements PlatformRepository {
+  _ScriptedBootstrap(this.answers);
+
+  final List<Result<AppBootstrap>> answers;
+  Completer<void>? gate;
+  int reads = 0;
+
+  @override
+  Future<Result<ServiceHealth>> checkHealth() async => const Ok<ServiceHealth>(
+    ServiceHealth(service: 'taytay', status: 'ok', apiVersion: '1'),
+  );
+
+  @override
+  Future<Result<AppBootstrap>> loadBootstrap() async {
+    reads++;
+    final Completer<void>? waiting = gate;
+    if (waiting != null) await waiting.future;
+    return answers.removeAt(0);
+  }
 }
 
 Future<AppDependencies> _accountDependencies({

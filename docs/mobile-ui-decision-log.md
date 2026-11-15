@@ -3875,6 +3875,79 @@ not the old copy.
 
 ---
 
+## D-221 — Offline means no connection; Try again shows it is working; the server's other topics are heard
+
+**Status: settled.** Category: accessibility / product / contract. Recorded
+2026-11-15, relayed by the orchestrator for Ella (Michaela Cailing): the items
+D-220 named and left, as corrections by the app's own rules rather than design
+decisions.
+
+**Context.** D-220 left four kinds of deviation. Six screens drew every failure
+as "offline": a `500` on Balita read "Check your connection", which sends a
+resident to fix their phone when the office's side failed. Five Try again
+buttons kept the failed frame while the read ran, so a tap looked like nothing
+and a second tap sent a second read. The server publishes `offices`,
+`services`, `households` and `consents` (backend `src/modules/live/topics.ts`)
+and the app heard none of them. The Privacy Notice said it "will appear when
+published" after a read that failed, in production.
+
+**Decision.**
+
+1. **Offline means requests are not arriving.** `FailureView.isOffline` is true
+   for `NetworkFailure` and `TimeoutFailure` only. Balita, Events, a programme
+   page, Tulong, the Messages inbox and the Directory keep their own offline
+   copy for those, and show `FailureView` for any other failure: the app's words
+   for the failure kind, Try again when it could work now (D-220's rule, so a
+   `429` or an unreadable answer gets no button), and the reference. The
+   Directory drops its "You're offline" strip for a server failure; its saved
+   numbers stay below. Its catch-all now names an error that is neither the
+   network nor the server `UnexpectedFailure`, never offline. The canvases take
+   `failure` and `environment`; with no failure they draw the offline frame, as
+   the design frames and goldens do. `FailureView(boxed: true)` is a card in the
+   caller's list, beside the screen's other boxed states, and does not scroll
+   itself.
+2. **Try again shows that it is working, and reads once.** Directory, Tulong,
+   the Messages inbox, the digital ID, the profile wizard, a programme page and
+   the Privacy Notice put the skeleton back while the read runs, so the button
+   is gone until it answers, and a read already on its way is not started
+   again. Tulong's Try again under its stale-list note (D-205) keeps the list
+   and turns into a disabled "Trying again…" instead.
+3. **The server's other topics are heard** (D-218's rules: a quiet re-read that
+   keeps what is shown, applies only an answer, says nothing, and never
+   refreshes a form under the resident). `LiveTopics` gains `offices`
+   (Directory, an office's page), `services` (Tulong, a programme page, an
+   office's page for its programme lines), `households` (Household and family)
+   and `consents` (Privacy controls, whose re-read waits for a withdrawal or an
+   agreement on its way and drops one that started before it). The document
+   catalogue and a document type hear `issuance-requests`, the topic the server
+   files `issuance_types` under. The forms are not wired: the office message
+   page, the household correction form and the document request form.
+4. **A failed Privacy Notice read is a failure, in every build.** "Will appear
+   here when Taytay LGU publishes it" stays only for the API's answer that no
+   notice is published (`placeholder`). A failed read shows `FailureView` with
+   Try again instead, and a non-production build no longer shows the bundled
+   draft in its place. No notice text changed.
+
+**Not done.** The server sends `issuance_types` changes with no owner under an
+owned topic, so `delivers()` gives them to staff only: a resident's catalogue
+re-reads on a reconnect, a return to the app or a change to their own requests,
+never on a catalogue edit. Hearing those is the backend's change (a public
+topic for the catalogue). The selfie consent on Privacy controls keeps its own
+read: its controller has no quiet re-read and shows a skeleton when it reloads.
+Home still hides a section whose read failed, and the other D-220 items left for
+a decision stay as they were.
+
+**Tests.** `test/features/load_failures_test.dart` (the four canvases and a
+programme page with a server failure and with no connection, their layout
+matrices; Try again on Tulong, Directory and the profile wizard shows the
+skeleton and sends one read for two taps; Directory, Tulong, a programme page,
+Household, Privacy controls and the document catalogue each re-read once,
+without a skeleton, on their topic and not on another); `account_s8_test` (the
+inbox's Retry and server failure, the Privacy Notice's failed read and Try
+again); `digital_id_test` (Try again); `events_test` (a server failure).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4099,5 +4172,6 @@ not the old copy.
 | D-218 | Screens update themselves from change hints (DL-222): `LiveUpdates` holds `GET changes` open only while the app is resumed and signed in, with the bearer in a header; backoff with jitter 1–30 s, at once after `expired`; a `404`/`501` turns it off with no polling; reconnects, `resync` and returning re-read every listening screen; each re-read is quiet (old data kept, no loading, failure silent), throttled to one per 2 s, deferred while the screen is hidden, and never resets a draft, form, sheet or scroll; `account` re-reads the session's tier. No pause control and no live-region announcements: the updates are event-driven, not timed (WCAG 2.2 SC 2.2.2) | product / contract / accessibility | settled |
 | D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
+| D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
 
-**216 decisions — 212 settled, 4 provisional.**
+**217 decisions — 213 settled, 4 provisional.**

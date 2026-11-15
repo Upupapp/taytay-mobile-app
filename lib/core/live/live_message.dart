@@ -15,12 +15,30 @@ abstract final class LiveTopics {
   static const String threads = 'threads';
   static const String digitalIds = 'digital-ids';
   static const String sectorApplications = 'sector-applications';
+
+  /// The resident's own document requests, and also the server's topic for
+  /// the document catalogue (`issuance_types`). Those catalogue rows have no
+  /// owner, so the server sends their changes only to the staff who keep the
+  /// catalogue: the catalogue screens hear this topic for the resident's own
+  /// changes, reconnects and returns, never for a catalogue edit (D-221).
   static const String issuanceRequests = 'issuance-requests';
   static const String eventRegistrations = 'event-registrations';
+
+  /// The resident's own household and its members.
+  static const String households = 'households';
+
+  /// The resident's own consent records.
+  static const String consents = 'consents';
   static const String news = 'news';
   static const String events = 'events';
   static const String home = 'home';
   static const String hotlines = 'hotlines';
+
+  /// The municipal offices (the Directory).
+  static const String offices = 'offices';
+
+  /// The social services and programmes (Tulong).
+  static const String services = 'services';
 }
 
 /// One message on the change stream, reduced to what the app may keep.

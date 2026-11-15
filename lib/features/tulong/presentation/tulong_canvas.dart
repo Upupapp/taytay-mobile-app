@@ -2,16 +2,19 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_environment.dart';
 import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/header_search_field.dart';
 import '../../../shared/widgets/icon_tile.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
@@ -52,6 +55,9 @@ class TulongCanvas extends StatelessWidget {
     this.onBell,
     this.onBack,
     this.onRetry,
+    this.retrying = false,
+    this.failure,
+    this.environment = AppEnvironment.prod,
     this.onCall,
     this.onDirections,
     this.onMessage,
@@ -89,6 +95,19 @@ class TulongCanvas extends StatelessWidget {
   final VoidCallback? onBell;
   final VoidCallback? onBack;
   final VoidCallback? onRetry;
+
+  /// A Try again under [staleSince] is on its way: the button is off and
+  /// says so, and cannot send a second read (D-221).
+  final bool retrying;
+
+  /// Why [TulongFrame.offline] could not read the list. Only no connection
+  /// is said as offline; any other failure is a [FailureView] in its own
+  /// words (D-221). Null draws the offline state, as the design frames do.
+  final AppFailure? failure;
+
+  /// Decides whether a failure's diagnostics show. Production by default, so
+  /// a caller that forgets it never shows them.
+  final AppEnvironment environment;
   final VoidCallback? onCall;
   final VoidCallback? onDirections;
   final VoidCallback? onMessage;
@@ -208,6 +227,8 @@ class _ListPage extends StatelessWidget {
         saved: c.saved,
         onRetry: c.onRetry,
         onOpen: c.onOpen,
+        failure: c.failure,
+        environment: c.environment,
       ),
       _ => _ListBody(
         services: c.services,
@@ -215,6 +236,7 @@ class _ListPage extends StatelessWidget {
         staleSince: c.staleSince,
         partialCount: c.partialCatalogueCount,
         onRetry: c.onRetry,
+        retrying: c.retrying,
         onOpen: c.onOpen,
       ),
     };
@@ -228,6 +250,7 @@ class _ListBody extends StatelessWidget {
     this.staleSince,
     this.partialCount,
     this.onRetry,
+    this.retrying = false,
     this.onOpen,
   });
 
@@ -236,6 +259,7 @@ class _ListBody extends StatelessWidget {
   final DateTime? staleSince;
   final int? partialCount;
   final VoidCallback? onRetry;
+  final bool retrying;
   final ValueChanged<SocialService>? onOpen;
 
   @override
@@ -261,8 +285,8 @@ class _ListBody extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     actions: <PillAction>[
                       PillAction(
-                        label: 'Try again',
-                        onPressed: retry,
+                        label: retrying ? 'Trying again…' : 'Try again',
+                        onPressed: retrying ? null : retry,
                         buttonKey: TulongCanvas.staleRetryKey,
                       ),
                     ],
@@ -394,28 +418,45 @@ class _ServiceTile extends StatelessWidget {
 /// The list could not be read: the offline state with Try again, then the
 /// pages this phone kept.
 class _OfflineBody extends StatelessWidget {
-  const _OfflineBody({required this.saved, this.onRetry, this.onOpen});
+  const _OfflineBody({
+    required this.saved,
+    required this.environment,
+    this.onRetry,
+    this.onOpen,
+    this.failure,
+  });
 
   final List<SocialService> saved;
   final VoidCallback? onRetry;
   final ValueChanged<SocialService>? onOpen;
+  final AppFailure? failure;
+  final AppEnvironment environment;
 
   @override
   Widget build(BuildContext context) {
     final ValueChanged<SocialService>? open = onOpen;
+    final AppFailure? failure = this.failure;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        ErrorState(
-          title: 'Programme pages need a connection',
-          message: saved.isEmpty
-              ? "We couldn't load the latest programme information."
-              : "We couldn't load the latest programme information. Pages "
-                    'you opened before are saved below.',
-          onRetry: onRetry,
-          offline: true,
-          boxed: true,
-        ),
+        if (failure != null && !FailureView.isOffline(failure))
+          FailureView(
+            failure: failure,
+            environment: environment,
+            onRetry: onRetry,
+            boxed: true,
+          )
+        else
+          ErrorState(
+            title: 'Programme pages need a connection',
+            message: saved.isEmpty
+                ? "We couldn't load the latest programme information."
+                : "We couldn't load the latest programme information. Pages "
+                      'you opened before are saved below.',
+            onRetry: onRetry,
+            offline: true,
+            boxed: true,
+          ),
         if (saved.isNotEmpty) ...<Widget>[
           const SizedBox(height: Spacing.formGap),
           const SettingsSectionTitle('Saved pages'),

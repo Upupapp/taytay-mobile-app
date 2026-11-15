@@ -196,6 +196,8 @@ class _NewsScreenState extends State<NewsScreen> with LiveRefresh<NewsScreen> {
           onBack: () => _selectChip(BalitaChip.all),
           onSeeAll: () => _selectChip(BalitaChip.all),
           onRetry: () => controller?.refresh(),
+          failure: controller?.failure,
+          environment: dependencies.config.environment,
           loadCover: dependencies.config.usesMockData
               ? null
               : dependencies.mediaBytes.newsCover,

@@ -11,6 +11,8 @@ import '../../../core/documents/upload_policy.dart';
 import '../../../core/intent/resident_intent.dart';
 import '../../../core/l10n/app_locales.dart';
 import '../../../core/links/external_link_service.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
@@ -35,12 +37,18 @@ class DirectoryScreen extends StatefulWidget {
   State<DirectoryScreen> createState() => _DirectoryScreenState();
 }
 
-class _DirectoryScreenState extends State<DirectoryScreen> {
+class _DirectoryScreenState extends State<DirectoryScreen>
+    with LiveRefresh<DirectoryScreen> {
   List<Office> _offices = const <Office>[];
   List<String> _chips = const <String>[];
   bool _loading = true;
-  bool _offline = false;
   bool _started = false;
+
+  /// Why the list could not be read. Null while it reads or has been read.
+  AppFailure? _failure;
+
+  /// A read is on its way; a second is not started beside it (D-221).
+  bool _reading = false;
   final TextEditingController _search = TextEditingController();
   String _query = '';
   String _chip = 'All';
@@ -51,6 +59,11 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The office's edits to the directory show without a pull (D-218,
+    // D-221). What was typed and the chosen chip are left alone.
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.offices,
+    }, () => unawaited(_load(quiet: true)));
   }
 
   @override
@@ -59,40 +72,71 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
     super.dispose();
   }
 
-  Future<void> _load() async {
+  /// Try again shows the skeleton while the read is on its way, so the tap
+  /// is seen to do something and cannot send a second read (D-221).
+  void _retry() {
+    if (_reading) return;
+    setState(() {
+      _loading = true;
+      _failure = null;
+    });
+    unawaited(_load());
+  }
+
+  /// Reads the office list. [quiet] is a re-read for a change (D-218): no
+  /// loading state, and a read that fails keeps the list and says nothing.
+  Future<void> _load({bool quiet = false}) async {
+    if (_reading || (quiet && (_loading || _failure != null))) return;
+    _reading = true;
     final AppDependencies dependencies = AppDependencies.of(context);
+    ({List<String> chips, List<Office> offices})? catalogue;
+    AppFailure? failure;
     try {
-      final ({List<String> chips, List<Office> offices}) catalogue =
-          await OfficeCatalogue.load(
-            mock: dependencies.config.usesMockData,
-            api: dependencies.apiClient,
-          );
-      if (!mounted) return;
+      catalogue = await OfficeCatalogue.load(
+        mock: dependencies.config.usesMockData,
+        api: dependencies.apiClient,
+      );
+    } on OfficeDirectoryException catch (error) {
+      failure = error.failure;
+    } catch (error, stackTrace) {
+      // Not the network and not the server: the app itself. Said as a
+      // failure, never as "you're offline" (D-221).
+      failure = UnexpectedFailure(
+        debugContext: 'DirectoryScreen._load',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+    _reading = false;
+    if (!mounted) return;
+    if (catalogue case final read?) {
       setState(() {
-        _offices = catalogue.offices;
-        _chips = catalogue.chips;
+        _offices = read.offices;
+        _chips = read.chips;
         _loading = false;
-        _offline = false;
+        _failure = null;
       });
-    } catch (_) {
-      if (!mounted) return;
+    } else if (!quiet) {
       setState(() {
         _loading = false;
-        _offline = true;
+        _failure = failure ?? const UnexpectedFailure();
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final AppDependencies dependencies = AppDependencies.of(context);
     return Scaffold(
       backgroundColor: BrandColors.background,
       body: DirectoryCanvas(
-        frame: _offline
+        frame: _failure != null
             ? DirectoryFrame.offline
             : _loading
             ? DirectoryFrame.loading
             : DirectoryFrame.list,
+        failure: _failure,
+        environment: dependencies.config.environment,
         offices: _offices,
         chips: _chips,
         query: _query,
@@ -112,7 +156,7 @@ class _DirectoryScreenState extends State<DirectoryScreen> {
           AppRoute.officeDetail.routeName,
           pathParameters: <String, String>{'officeId': office.id},
         ),
-        onRetry: _load,
+        onRetry: _retry,
       ),
     );
   }
@@ -128,9 +172,11 @@ class OfficeDetailScreen extends StatefulWidget {
   State<OfficeDetailScreen> createState() => _OfficeDetailScreenState();
 }
 
-class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
+class _OfficeDetailScreenState extends State<OfficeDetailScreen>
+    with LiveRefresh<OfficeDetailScreen> {
   Office? _office;
   bool _started = false;
+  bool _rereading = false;
 
   /// The read answered without an office: unreachable or not listed.
   bool _missing = false;
@@ -141,6 +187,12 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The office's edits to its page and to its programmes show without a
+    // pull (D-218, D-221).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.offices,
+      LiveTopics.services,
+    }, () => unawaited(_reloadQuietly()));
   }
 
   Future<void> _load() async {
@@ -161,24 +213,46 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     if (office == null || mock) return;
     // The hero loads through MediaBytesApi on the canvas, alongside this list.
     // The hall stays in place until those bytes arrive.
-    final List<SocialService> catalogue = await _catalogue(
-      dependencies,
-      office.id,
-    );
+    final List<SocialService> catalogue =
+        await _catalogue(dependencies, office.id) ?? const <SocialService>[];
     if (!mounted) return;
+    setState(() => _office = _withCatalogue(office, catalogue));
+  }
+
+  /// A re-read for a change to the office or its programmes (D-218, D-221):
+  /// the page is replaced only when both reads answer, so nothing on it
+  /// blinks out, and a read that fails keeps the page and says nothing.
+  Future<void> _reloadQuietly() async {
+    if (_office == null || _rereading) return;
+    _rereading = true;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final bool mock = dependencies.config.usesMockData;
+    final Office? office = await OfficeCatalogue.byId(
+      widget.officeId,
+      mock: mock,
+      api: dependencies.apiClient,
+    );
+    final List<SocialService>? catalogue = office == null || mock
+        ? const <SocialService>[]
+        : await _catalogue(dependencies, office.id);
+    _rereading = false;
+    if (!mounted || office == null || catalogue == null) return;
+    setState(() => _office = mock ? office : _withCatalogue(office, catalogue));
+  }
+
+  Office _withCatalogue(Office office, List<SocialService> catalogue) {
     final List<OfficeServiceLine> lines = office
         .linesWithCatalogue(<({String label, String slug})>[
           for (final SocialService service in catalogue)
             (label: service.name, slug: service.slug),
         ]);
-    setState(() {
-      _office = identical(lines, office.services)
-          ? office
-          : office.withServices(lines);
-    });
+    return identical(lines, office.services)
+        ? office
+        : office.withServices(lines);
   }
 
-  Future<List<SocialService>> _catalogue(
+  /// The office's programmes, or null when the read failed.
+  Future<List<SocialService>?> _catalogue(
     AppDependencies dependencies,
     String slug,
   ) async {
@@ -187,7 +261,7 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen> {
     );
     return switch (result) {
       Ok(:final value) => value.items,
-      Err() => const <SocialService>[],
+      Err() => null,
     };
   }
 

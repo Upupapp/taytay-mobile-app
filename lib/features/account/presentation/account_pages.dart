@@ -54,6 +54,9 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
   int _pages = 0;
   bool _loading = true;
   bool _failed = false;
+
+  /// Why the first page could not be read.
+  AppFailure? _failure;
   bool _loadingMore = false;
   bool _hasMore = false;
   String? _cursor;
@@ -70,6 +73,18 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
     listenLive(AppDependencies.of(context).live, const <String>{
       LiveTopics.threads,
     }, () => unawaited(_load(quiet: true)));
+  }
+
+  /// Try again shows the skeleton while the read is on its way, so the tap
+  /// is seen to do something and cannot send a second read (D-221).
+  void _retry() {
+    if (_loading) return;
+    setState(() {
+      _loading = true;
+      _failed = false;
+      _failure = null;
+    });
+    unawaited(_load());
   }
 
   /// Reads the first page of threads.
@@ -103,6 +118,7 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
             ];
           }
           _failed = false;
+          _failure = null;
         });
       }
       return;
@@ -117,12 +133,14 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
           _pages = 1;
           _pageError = null;
           _failed = false;
-        case Err():
+          _failure = null;
+        case Err(:final failure):
           _threads = const <OfficeThread>[];
           _cursor = null;
           _hasMore = false;
           _pageError = null;
           _failed = true;
+          _failure = failure;
       }
     });
   }
@@ -194,7 +212,9 @@ class _MessagesInboxScreenState extends State<MessagesInboxScreen>
       showSampleNote: AppDependencies.of(context).config.usesMockData,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
       onBell: () => context.goNamed(AppRoute.notifications.routeName),
-      onInboxRetry: _load,
+      onInboxRetry: _retry,
+      failure: _failure,
+      environment: AppDependencies.of(context).config.environment,
       onInboxNearEnd: _loadMore,
       inboxMoreMessage: _pageError,
       onInboxMoreRetry: _pageError == null ? null : _loadMore,
@@ -1189,6 +1209,11 @@ Future<void> _changePassword(BuildContext context) async {
 
 /// RA 10173 notice. The bundled draft stands in until `GET /app/config`
 /// publishes a privacy notice whose version is not `placeholder`.
+///
+/// "Will appear when published" is said only when the API answered that no
+/// notice is published. A read that failed is said as a failure with Try
+/// again, in every build: a resident must not conclude the LGU has no notice
+/// because the network dropped (D-221).
 class PrivacyNoticeScreen extends StatefulWidget {
   const PrivacyNoticeScreen({super.key});
 
@@ -1201,12 +1226,24 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
   bool _ready = false;
   String? _markdown;
   bool _draft = false;
+  AppFailure? _failure;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _load();
+  }
+
+  /// Try again shows the skeleton while the read is on its way, so the tap
+  /// is seen to do something and cannot send a second read.
+  void _retry() {
+    if (!_ready) return;
+    setState(() {
+      _ready = false;
+      _failure = null;
+    });
     _load();
   }
 
@@ -1217,15 +1254,16 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
     if (!mounted) return;
     setState(() {
       _ready = true;
-      if (result case Ok(:final value)) {
-        final notice = value.privacyNotice;
-        if (!notice.usesBundledDraft) {
-          _markdown = notice.bodyMarkdown;
-        } else if (!production) {
-          _draft = true;
-        }
-      } else if (!production) {
-        _draft = true;
+      switch (result) {
+        case Ok(:final value):
+          final notice = value.privacyNotice;
+          if (!notice.usesBundledDraft) {
+            _markdown = notice.bodyMarkdown;
+          } else if (!production) {
+            _draft = true;
+          }
+        case Err(:final failure):
+          _failure = failure;
       }
     });
   }
@@ -1251,6 +1289,9 @@ class _PrivacyNoticeScreenState extends State<PrivacyNoticeScreen> {
       showDataExport: false,
       showBundledDraft: _draft,
       noticeMarkdown: _markdown,
+      failure: _failure,
+      environment: AppDependencies.of(context).config.environment,
+      onRetry: _retry,
     );
   }
 }

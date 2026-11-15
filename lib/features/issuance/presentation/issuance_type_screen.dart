@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -6,6 +8,8 @@ import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/live/live_message.dart';
+import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
@@ -32,7 +36,8 @@ class IssuanceTypeScreen extends StatefulWidget {
   State<IssuanceTypeScreen> createState() => _IssuanceTypeScreenState();
 }
 
-class _IssuanceTypeScreenState extends State<IssuanceTypeScreen> {
+class _IssuanceTypeScreenState extends State<IssuanceTypeScreen>
+    with LiveRefresh<IssuanceTypeScreen> {
   bool _started = false;
   AppFailure? _failure;
   IssuanceType? _type;
@@ -43,6 +48,22 @@ class _IssuanceTypeScreenState extends State<IssuanceTypeScreen> {
     if (_started) return;
     _started = true;
     _load();
+    // The catalogue's topic, as on the catalogue screen (D-221).
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.issuanceRequests,
+    }, () => unawaited(_reloadQuietly()));
+  }
+
+  /// A re-read for a change (D-218): only a type read back for the id still
+  /// on screen replaces it; a failure keeps the page and says nothing.
+  Future<void> _reloadQuietly() async {
+    if (_type == null) return;
+    final String id = widget.typeId;
+    final Result<IssuanceType> result = await AppDependencies.of(
+      context,
+    ).issuanceRepository.loadType(id);
+    if (!mounted || id != widget.typeId || _type == null) return;
+    if (result case Ok(:final value)) setState(() => _type = value);
   }
 
   // The router may keep this State when only the id changes (a link from one

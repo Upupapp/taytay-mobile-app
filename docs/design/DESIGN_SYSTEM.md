@@ -571,7 +571,11 @@ retryLabel = 'Try again', offline = false, icon, boxed = false, details = []})`.
 
 **`FailureView`** (`failure_view.dart`) — the one way an `AppFailure` is shown: the app's own copy
 for the failure kind, never the server's `message`, and the request id when there is one. Draws
-`ErrorState` (offline for network and timeout failures).
+`ErrorState` (offline for network and timeout failures). `FailureView({failure*, environment*,
+onRetry, boxed = false})`: `boxed` is a white card inside the caller's list, beside the screen's
+other boxed states, and does not centre or scroll itself. `FailureView.isOffline(failure)` is the
+one test for "offline": only a network or timeout failure is said that way, so a screen keeping its
+own offline copy shows `FailureView` for every other failure (D-221).
 `FailureView(failure: failure, environment: config.environment, onRetry: _load)`
 
 **`OfflineError`** — `OfflineError(onRetry: _load)`: `ErrorState` with the offline illustration.
@@ -898,7 +902,7 @@ Every screen that reads data draws all four. A loading screen never says "nothin
 |---|---|---|
 | Loading | The first read has not answered | `LoadingSkeleton(layout: …)` shaped like the content (never a lone spinner); a canvas usually takes `loading: true` |
 | Empty | The read answered with nothing | `EmptyState` (`noResults` illustration): the title says what is empty, the sentence what to do. A search with no match and a list that is empty are worded apart |
-| Error | The read failed | `FailureView(failure:, environment:, onRetry:)` for an `AppFailure`, or `ErrorState(onRetry:)`; **Try again** reloads. Never the server's message, and never "not switched on" or "none published" for a served endpoint: only a repository that answers a `BackendGap` may say a feature is not on yet (D-220). A form that could not be read shows the failure, not empty fields with Save |
+| Error | The read failed | `FailureView(failure:, environment:, onRetry:)` for an `AppFailure`, or `ErrorState(onRetry:)`; **Try again** reloads, showing the skeleton while it runs, and a second tap sends nothing (D-221). Offline copy only when `FailureView.isOffline(failure)`. Never the server's message, and never "not switched on" or "none published" for a served endpoint: only a repository that answers a `BackendGap` may say a feature is not on yet (D-220). A form that could not be read shows the failure, not empty fields with Save |
 | Offline | Requests are not arriving | Saved data stays on screen with `OfflineBanner` above it (the tab shell draws it; full-screen routes add `const OfflineBanner()` or `SoftPage(offlineBanner: true)`); with no saved data, `FailureView` draws the offline `ErrorState`. `StaleContentNotice` says how old saved data is. Nothing is queued or promised |
 
 ---

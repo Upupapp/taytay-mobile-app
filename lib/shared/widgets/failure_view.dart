@@ -24,12 +24,26 @@ class FailureView extends StatelessWidget {
     required this.failure,
     required this.environment,
     this.onRetry,
+    this.boxed = false,
     super.key,
   });
 
   final AppFailure failure;
   final AppEnvironment environment;
   final VoidCallback? onRetry;
+
+  /// A white card inside the caller's list, beside the screen's other boxed
+  /// states, rather than a state that fills the page. A boxed failure neither
+  /// centres nor scrolls itself: the list it sits in does.
+  final bool boxed;
+
+  /// Whether [failure] means requests are not arriving: no connection, or no
+  /// answer in time. Only these may be said as "offline" (D-221). A server
+  /// error, a refusal or an answer the app could not read is a failure of the
+  /// office's side, and telling a resident to check their phone for it sends
+  /// them to fix the wrong thing.
+  static bool isOffline(AppFailure failure) =>
+      failure is NetworkFailure || failure is TimeoutFailure;
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +64,8 @@ class FailureView extends StatelessWidget {
         onRetry != null && failure.affordance == FailureAffordance.retryNow;
     final Widget state = ErrorState(
       title: failure.residentMessage,
-      offline: failure is NetworkFailure || failure is TimeoutFailure,
+      offline: isOffline(failure),
+      boxed: boxed,
       icon: _iconFor(failure),
       // Offered only when trying again could work *now*. A `429` is retryable
       // and a button beside it is a lie: the server has said when to come back,
@@ -74,6 +89,7 @@ class FailureView extends StatelessWidget {
           ),
       ],
     );
+    if (boxed) return state;
 
     // A full-surface state: centred when it fits, scrolling rather than
     // clipping when it does not (200% text on a short screen).

@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
+import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
@@ -108,6 +109,15 @@ typedef BootedOffline = ({
   OfflineCatalogRepository catalog,
 });
 
+/// Every request fails before it leaves the phone.
+class _NoConnection implements ApiTransport {
+  const _NoConnection();
+
+  @override
+  Future<Result<ApiHttpResponse>> send(ApiRequest request) async =>
+      const Err<ApiHttpResponse>(NetworkFailure());
+}
+
 Future<BootedOffline> bootOffline(
   WidgetTester tester, {
   AccessLevel level = AccessLevel.guest,
@@ -115,6 +125,7 @@ Future<BootedOffline> bootOffline(
   void Function(OfflineCatalogRepository catalog)? beforeLoad,
   String location = '/services',
   Size size = const Size(400, 900),
+  ApiTransport? transport,
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -143,6 +154,7 @@ Future<BootedOffline> bootOffline(
 
   final base = AppDependencies.build(
     config: config(),
+    transport: transport,
     secrets: secrets,
     sessionStore: sessionStore,
     networkMonitor: monitor,
@@ -347,7 +359,9 @@ void main() {
     testWidgets('a failed load says so instead of showing an empty list', (
       tester,
     ) async {
-      await bootOffline(tester);
+      // Without a transport flutter_test answers the directory's read itself,
+      // and an answer is not "offline" (D-221). This one cannot connect.
+      await bootOffline(tester, transport: const _NoConnection());
 
       final rendered = tester
           .widgetList<Text>(find.byType(Text))

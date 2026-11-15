@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -357,6 +358,34 @@ void main() {
     },
   );
 
+  testWidgets('Try again shows the skeleton and reads the card once (D-221)', (
+    tester,
+  ) async {
+    final _FailsFirst repository = _FailsFirst();
+    await _pump(
+      tester,
+      DigitalIdScreen(repository: repository, sample: false, now: () => _now),
+    );
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(const ServerFailure().residentMessage), findsOneWidget);
+    expect(repository.cardLoads, 1);
+
+    repository.gate = Completer<void>();
+    await tester.tap(find.text('Try again'));
+    await tester.tap(find.text('Try again'), warnIfMissed: false);
+    await tester.pump();
+    expect(repository.cardLoads, 2, reason: 'a second tap sends nothing');
+    expect(find.text('Try again'), findsNothing);
+    expect(find.bySemanticsLabel('Loading your digital ID'), findsOneWidget);
+
+    repository.gate?.complete();
+    await tester.pump();
+    await tester.pump();
+    expect(find.text(const ServerFailure().residentMessage), findsNothing);
+    expect(find.bySemanticsLabel('Loading your digital ID'), findsNothing);
+  });
+
   testWidgets('a 404 from /me/digital-id shows the card being prepared', (
     tester,
   ) async {
@@ -646,6 +675,32 @@ class _Recording implements CredentialRepository {
       NotFoundFailure(debugMessage: 'unused'),
     );
   }
+}
+
+/// The first card read fails on the server's side; later ones answer with no
+/// card, held open while [gate] is set.
+class _FailsFirst implements CredentialRepository {
+  int cardLoads = 0;
+  Completer<void>? gate;
+
+  @override
+  Future<Result<ResidentCredential?>> loadOwnCredential() async {
+    cardLoads += 1;
+    if (cardLoads == 1) {
+      return const Err<ResidentCredential?>(ServerFailure());
+    }
+    final Completer<void>? waiting = gate;
+    if (waiting != null) await waiting.future;
+    return const Ok<ResidentCredential?>(null);
+  }
+
+  @override
+  Future<Result<String?>> loadResidentName() async =>
+      const Ok<String?>('Juan Dela Cruz');
+
+  @override
+  Future<Result<PresentationArtifact>> requestPresentationArtifact() async =>
+      const Err<PresentationArtifact>(NotFoundFailure(debugMessage: 'unused'));
 }
 
 class _Status implements VerificationRepository {

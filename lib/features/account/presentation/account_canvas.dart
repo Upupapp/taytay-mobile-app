@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config/app_environment.dart';
 import '../../../core/config/app_version.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../core/result/result.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/conversation.dart';
 import '../../../shared/widgets/error_state.dart';
+import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/notice_panel.dart';
@@ -229,6 +232,9 @@ class AccountCanvas extends StatelessWidget {
     this.onThreadMoreRetry,
     this.credits = PhotoCredits.all,
     this.loading = false,
+    this.failure,
+    this.environment = AppEnvironment.prod,
+    this.onRetry,
     super.key,
   });
 
@@ -322,6 +328,20 @@ class AccountCanvas extends StatelessWidget {
   /// The first read has not answered: the header stays and the body is a
   /// skeleton.
   final bool loading;
+
+  /// Why the page's read failed: the inbox ([AccountFrame.inboxError]) or
+  /// the privacy notice. Only no connection is said as offline; any other
+  /// failure is a [FailureView] in its own words (D-221). On the inbox, null
+  /// draws the offline state, as the design frames do.
+  final AppFailure? failure;
+
+  /// Decides whether a failure's diagnostics show. Production by default, so
+  /// a caller that forgets it never shows them.
+  final AppEnvironment environment;
+
+  /// Try again for a privacy notice whose read failed. The inbox's is
+  /// [onInboxRetry].
+  final VoidCallback? onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -929,7 +949,11 @@ class _BackPage extends StatelessWidget {
       AccountFrame.inboxEmpty => _EmptyInbox(
         onMessageOffice: c.onMessageOffice,
       ),
-      AccountFrame.inboxError => _InboxError(onRetry: c.onInboxRetry),
+      AccountFrame.inboxError => _InboxError(
+        onRetry: c.onInboxRetry,
+        failure: c.failure,
+        environment: c.environment,
+      ),
       AccountFrame.settings => _SettingsBody(
         toggles: c.toggles,
         togglesPlaceholder: c.togglesPlaceholder,
@@ -1178,23 +1202,34 @@ class _EmptyInbox extends StatelessWidget {
 }
 
 class _InboxError extends StatelessWidget {
-  const _InboxError({this.onRetry});
+  const _InboxError({required this.environment, this.onRetry, this.failure});
 
   final VoidCallback? onRetry;
+  final AppFailure? failure;
+  final AppEnvironment environment;
 
   @override
   Widget build(BuildContext context) {
+    final AppFailure? failure = this.failure;
     return ListView(
       padding: const EdgeInsets.all(Spacing.lg),
       children: <Widget>[
-        ErrorState(
-          title: 'Messages did not load',
-          message: 'Taytay LGU could not be reached. You can try again.',
-          onRetry: onRetry,
-          retryLabel: 'Retry',
-          offline: true,
-          boxed: true,
-        ),
+        if (failure != null && !FailureView.isOffline(failure))
+          FailureView(
+            failure: failure,
+            environment: environment,
+            onRetry: onRetry,
+            boxed: true,
+          )
+        else
+          ErrorState(
+            title: 'Messages did not load',
+            message: 'Taytay LGU could not be reached. You can try again.',
+            onRetry: onRetry,
+            retryLabel: 'Retry',
+            offline: true,
+            boxed: true,
+          ),
       ],
     );
   }
@@ -1699,6 +1734,7 @@ class _CreditRow extends StatelessWidget {
 /// RegTerms: the wave header over the white page and the notice summary.
 /// A published notice replaces the bundled draft, which only a
 /// non-production build shows; production without one says it is coming.
+/// A read that failed says so, in every build.
 class _PrivacyPage extends StatelessWidget {
   const _PrivacyPage({required this.canvas});
 
@@ -1707,11 +1743,21 @@ class _PrivacyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final String? markdown = canvas.noticeMarkdown;
+    final AppFailure? failure = canvas.failure;
     final Widget body;
     if (canvas.loading) {
       body = const LoadingSkeleton(
         layout: SkeletonLayout.detail,
         semanticLabel: 'Loading the privacy notice',
+      );
+    } else if (failure != null) {
+      // The read failed: said as a failure with Try again, never as "will
+      // appear when published", which is the API's answer and not this one
+      // (D-221).
+      body = FailureView(
+        failure: failure,
+        environment: canvas.environment,
+        onRetry: canvas.onRetry,
       );
     } else if (markdown != null) {
       body = _PublishedNotice(markdown: markdown);

@@ -53,6 +53,14 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
   ResidentRecordRepository? _repository() =>
       AppDependencies.of(context).residentRecordRepository;
 
+  /// Try again shows the skeleton while the read is on its way, so the tap
+  /// is seen to do something and cannot send a second read (D-221).
+  void _retry() {
+    if (_failureMessage == null) return;
+    setState(() => _failureMessage = null);
+    _load();
+  }
+
   Future<void> _load() async {
     final ResidentRecordRepository? repository = _repository();
     if (repository == null) {
@@ -167,7 +175,7 @@ class _ProfileWizardScreenState extends State<ProfileWizardScreen> {
                   else
                     ErrorState(
                       title: '$message',
-                      onRetry: widget.preview == null ? _load : null,
+                      onRetry: widget.preview == null ? _retry : null,
                       boxed: true,
                     ),
                 ],
