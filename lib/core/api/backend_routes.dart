@@ -22,9 +22,11 @@
 ///    in `lib/`, and the change stream `ApiClient.openChangeStream` opens,
 ///    appears below, and every row below is actually called. It runs
 ///    in `flutter test` and catches *us* drifting.
-///  * `tool/check_backend_routes.sh` — every row below exists in the backend at
-///    the pinned baseline. It needs the backend clone and catches *the contract*
-///    drifting.
+///  * `tool/check_backend_routes.sh` — every row below is published, at its
+///    verb, by the vendored Node contract
+///    (`docs/integration/taytay-node-openapi.json`, pinned by commit and sha256
+///    in `backend_baseline.dart`, D-219). It needs no backend clone and catches
+///    *the contract* drifting.
 ///
 /// Path parameters are written `{}` rather than named. What varies is which
 /// segment is dynamic, never what it is called here, and a name in this file
@@ -212,19 +214,17 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   ),
 ];
 
-/// Routes this app calls that do **not** exist at the pinned baseline.
+/// Routes this app calls that the vendored Node contract does **not** publish.
 ///
 /// **This is a ratchet, not an allowance.** `tool/check_backend_routes.sh` fails
-/// if a route is missing from the baseline and absent from this list — so a
-/// third one cannot arrive quietly — and it fails *equally* if this list names a
-/// route that the baseline turns out to have, so the list cannot outlive the
+/// if a route is missing from the contract and absent from this list — so one
+/// cannot arrive quietly — and it fails *equally* if this list names a route
+/// that the contract turns out to publish, so the list cannot outlive the
 /// problem it records. A permanently red guard is one people learn to skip; a
-/// list that can only shrink is one that closes.
+/// list that can only shrink is one that closes. An entry closes by
+/// re-vendoring the contract from a backend commit that publishes the route
+/// (D-219), not by editing this list.
 ///
-/// Both entries are finding **C-09** in `docs/frontend/open-work.md`. They close
-/// by moving the baseline forward to a tag that includes them, which is blocked
-/// on the backend repository being still long enough to tag — not by editing
-/// this list.
-/// Empty. The live contract is the vendored Node OpenAPI, not the PHP pin.
-/// The four historical C-09 paths are no longer called.
+/// Empty. The four historical C-09 paths, ahead of the old PHP pin, are no
+/// longer called.
 const List<String> routesAheadOfBaseline = <String>[];

@@ -1,153 +1,149 @@
 #!/usr/bin/env bash
 #
-# TAB 00 staleness guard, network half.
+# Is the vendored Node contract the backend's own, byte for byte?
 #
-# Reads the backend's own domain-boundary-map.md at the pinned baseline tag,
-# extracts its module status table, and compares it with the table committed in
-# docs/integration/backend-baseline.md. Fails on any difference.
+# check_backend_routes.sh checks every route this app declares against
+# docs/integration/taytay-node-openapi.json. That answer is worth only as much
+# as the file is what the backend publishes. This script answers that, in two
+# halves, from the record in lib/core/api/backend_baseline.dart (D-219):
 #
-# The other half, test/integration/backend_baseline_test.dart, runs in
-# `flutter test` and catches this repository drifting from its own document.
-# This one catches the backend moving underneath it. When it goes red, a human
-# re-runs TAB 00 — it is not a check to silence.
+#  1. The file's sha256 must equal `nodeContractSha256`. An edit to the vendored
+#     copy that nobody declared — a hand fix, a merge resolution, an editor
+#     re-indenting a megabyte of JSON — fails here, on every machine, with no
+#     backend clone.
+#  2. When the backend clone has `nodeContractCommit`, `openapi/openapi.json` at
+#     that commit must be the vendored file, byte for byte. This is what makes
+#     the recorded commit a fact rather than a label.
 #
-# Source of the backend copy, in order:
-#   TAYTAY_BACKEND=/path/to/clone   an explicit clone
-#   ../taytay-backend               the conventional sibling checkout
-#   otherwise                       raw.githubusercontent.com at the tag
+# Until 2026-11-15 this compared the backend's module boundary map at the PHP
+# tag api-baseline-2026-08 with the table in docs/integration/backend-baseline.md.
+# The backend has been Node since 2026-10-20, its Laravel tree survives only at
+# the tag laravel-archive, and api-baseline-2026-08 is not in it, so the script
+# could only exit 2. A guard that cannot run is worse than none: whoever reads
+# certify.sh believes it checks something.
 #
-# A local clone is not merely preferred, it is the only path that can work here,
-# and the sibling default exists because of finding C-10. The baseline is a LOCAL
-# annotated tag: this programme's boundary forbids pushing, so GitHub has never
-# heard of it and the network path can only ever 404. It is kept for the day this
-# repository is used somewhere the tag has been published — and it now says why
-# it failed rather than only that it did.
+# No network, ever. A recorded commit may never have been pushed, and a fetch
+# would make the answer depend on whatever the remote holds today.
+#
+# Exit codes, as certify.sh reads them:
+#   0  both halves ran and agree
+#   1  a half ran and disagrees
+#   2  the check could not run (an unreadable record, a missing file, no sha256
+#      tool, TAYTAY_BACKEND naming something that is not a checkout)
+#   3  the hash agrees, but the backend half could not run (no clone, or the
+#      clone lacks the commit): the copy's origin is NOT PROVEN
 
 set -euo pipefail
+export LC_ALL=C
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASELINE_DOC="$REPO_ROOT/docs/integration/backend-baseline.md"
-MAP_PATH="docs/architecture/domain-boundary-map.md"
+CONSTANTS="$REPO_ROOT/lib/core/api/backend_baseline.dart"
+SPEC_REL="docs/integration/taytay-node-openapi.json"
+SPEC="$REPO_ROOT/$SPEC_REL"
+UPSTREAM_PATH="openapi/openapi.json"
 
-TAG="$(sed -n "s/^const String backendBaselineTag = '\(.*\)';$/\1/p" \
-  "$REPO_ROOT/lib/core/api/backend_baseline.dart")"
-COMMIT="$(sed -n "s/^const String backendBaselineCommit = '\(.*\)';$/\1/p" \
-  "$REPO_ROOT/lib/core/api/backend_baseline.dart")"
+# `dart format` wraps a long constant onto a second line, and a Windows checkout
+# carries carriage returns, so both are squeezed out before matching.
+dart_const() {
+  tr '\r\n' '  ' < "$CONSTANTS" \
+    | grep -oE "const String $1 = *'[^']*';" \
+    | sed -E "s/.*'([^']*)';$/\1/" || true
+}
 
-if [ -z "$TAG" ]; then
-  echo "FAIL: could not read backendBaselineTag from lib/core/api/backend_baseline.dart" >&2
+COMMIT="$(dart_const nodeContractCommit)"
+RECORDED="$(dart_const nodeContractSha256)"
+
+if ! [[ "$COMMIT" =~ ^[0-9a-f]{7,40}$ ]] || ! [[ "$RECORDED" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "FAIL: could not read nodeContractCommit and nodeContractSha256 from" >&2
+  echo "      lib/core/api/backend_baseline.dart (read '$COMMIT' and '$RECORDED')." >&2
   exit 2
 fi
 
-echo "Baseline: $TAG ($COMMIT)"
-
-# An explicit clone wins; otherwise the conventional sibling, if it is one.
-BACKEND_CLONE="${TAYTAY_BACKEND:-}"
-if [ -z "$BACKEND_CLONE" ]; then
-  SIBLING="$(cd "$REPO_ROOT/.." && pwd)/taytay-backend"
-  [ -d "$SIBLING/.git" ] && BACKEND_CLONE="$SIBLING"
+if [ ! -f "$SPEC" ]; then
+  echo "FAIL: $SPEC_REL is missing." >&2
+  exit 2
 fi
 
-fetch_map() {
-  if [ -n "$BACKEND_CLONE" ]; then
-    local TAYTAY_BACKEND="$BACKEND_CLONE"
-    # Distinguish "that is not a checkout" from "that checkout lacks the tag".
-    # C-10 was a guard whose message described the wrong problem, so this one
-    # says which of the two happened.
-    if [ ! -d "$TAYTAY_BACKEND/.git" ]; then
-      echo "FAIL: $TAYTAY_BACKEND is not a git checkout." >&2
-      echo "      Point TAYTAY_BACKEND at a clone of taytay-backend." >&2
-      exit 2
-    fi
-    git -C "$TAYTAY_BACKEND" rev-parse "$TAG^{commit}" >/dev/null 2>&1 || {
-      echo "FAIL: tag $TAG not found in $TAYTAY_BACKEND." >&2
-      echo "      The baseline must be an existing annotated tag, never a branch." >&2
-      exit 2
-    }
-    local at
-    at="$(git -C "$TAYTAY_BACKEND" rev-parse --short "$TAG^{commit}")"
-    if [ "$at" != "$COMMIT" ]; then
-      echo "FAIL: $TAG points at $at; this repository is pinned to $COMMIT." >&2
-      echo "      A moved tag is a moved baseline. Re-run TAB 00." >&2
-      exit 1
-    fi
-    git -C "$TAYTAY_BACKEND" show "$TAG:$MAP_PATH"
+# Read from stdin so the output is the bare hash on every platform.
+if command -v sha256sum >/dev/null 2>&1; then
+  sha256_of() { sha256sum | cut -d' ' -f1; }
+elif command -v shasum >/dev/null 2>&1; then
+  sha256_of() { shasum -a 256 | cut -d' ' -f1; }
+else
+  echo "FAIL: neither sha256sum nor shasum is installed, so nothing can be compared." >&2
+  exit 2
+fi
+
+echo "Record: backend $COMMIT $UPSTREAM_PATH, sha256 $RECORDED"
+
+# ── Half 1: the file is the one recorded ──────────────────────────────────────
+ACTUAL="$(sha256_of < "$SPEC")"
+if [ "$ACTUAL" != "$RECORDED" ]; then
+  echo >&2
+  echo "FAIL: $SPEC_REL has changed and the record has not." >&2
+  echo "      recorded sha256  $RECORDED" >&2
+  echo "      file sha256      $ACTUAL" >&2
+  if [ "$(tr -d '\r' < "$SPEC" | sha256_of)" = "$RECORDED" ]; then
+    echo >&2
+    echo "      Only the line endings differ: a checkout converted the file to CRLF." >&2
+    echo "      .gitattributes marks it -text; restore it with" >&2
+    echo "      git checkout -- $SPEC_REL" >&2
   else
-    curl -fsSL "https://raw.githubusercontent.com/Upupapp/taytay-backend/$TAG/$MAP_PATH" || {
-      echo "FAIL: could not fetch $MAP_PATH at $TAG, and no local clone was found." >&2
-      echo "      Expected one at $(cd "$REPO_ROOT/.." && pwd)/taytay-backend, or set" >&2
-      echo "      TAYTAY_BACKEND=/path/to/taytay-backend." >&2
-      echo >&2
-      echo "      A 404 here is the normal answer, not a broken guard: $TAG is a local" >&2
-      echo "      annotated tag and this programme never pushes, so no host serves it" >&2
-      echo "      (finding C-10)." >&2
-      exit 2
-    }
+    echo >&2
+    echo "      The vendored contract is a copy, never an edit. Re-vendor it from the" >&2
+    echo "      backend's $UPSTREAM_PATH and record the commit and sha256 in" >&2
+    echo "      backend_baseline.dart and docs/integration/backend-baseline.md (D-219)." >&2
   fi
-}
-
-# Module name -> built status, from the backend's own table. Its rows look like
-#   | `Identity` | owns … | does not own … | **implemented** (TAB 05) |
-# so the module is the first cell and the status is the last. Parenthesised TAB
-# references are dropped: which backend TAB built a module is not this app's
-# business and changes without the status changing.
-extract_backend() {
-  awk -F'|' '
-    /^\| *`[A-Za-z]+` *\|/ {
-      name = $2; status = $NF == "" ? $(NF-1) : $NF
-      gsub(/[` *]/, "", name)
-      gsub(/\(.*\)/, "", status); gsub(/[*`]/, "", status)
-      gsub(/^ +| +$/, "", status)
-      # Two axes out of one cell. The backend writes the flag inline —
-      # "implemented, feature-flagged off" — and a guard that compared the
-      # sentence whole would go red on wording and blind on meaning. Built and
-      # enabled are separate questions and TAB 06 depends on both.
-      enabled = "yes"
-      if (status ~ /feature-flagged off/) { enabled = "no" }
-      sub(/,.*$/, "", status); gsub(/^ +| +$/, "", status)
-      if (status == "planned") { enabled = "-" }
-      if (name != "" && status != "") print name "=" status "/" enabled
-    }
-  ' | sort
-}
-
-# The same mapping out of our committed two-axis table, which is
-#   | Module | Built | Enabled | Publishes api/v1 routes |
-extract_committed() {
-  awk -F'|' '
-    /^\| *\**`[A-Za-z]+`\** *\| *\**(implemented|planned)/ {
-      name = $2; status = $3; enabled = $4
-      gsub(/[` *]/, "", name)
-      gsub(/\(.*\)/, "", status); gsub(/[*`]/, "", status)
-      gsub(/^ +| +$/, "", status)
-      gsub(/[*`]/, "", enabled); gsub(/^ +| +$/, "", enabled)
-      if (enabled ~ /^yes/) { enabled = "yes" }
-      else if (enabled ~ /^no/) { enabled = "no" }
-      else { enabled = "-" }
-      if (name != "" && status != "") print name "=" status "/" enabled
-    }
-  ' "$BASELINE_DOC" | sort
-}
-
-BACKEND="$(fetch_map | extract_backend)"
-COMMITTED="$(extract_committed)"
-
-if [ -z "$BACKEND" ] || [ -z "$COMMITTED" ]; then
-  echo "FAIL: a table parsed to nothing — backend rows: $(printf '%s' "$BACKEND" | grep -c . || true), committed rows: $(printf '%s' "$COMMITTED" | grep -c . || true)" >&2
-  echo "      A guard that parses nothing passes everything. Fix the parser, do not skip the check." >&2
-  exit 2
+  exit 1
 fi
 
-if diff <(printf '%s\n' "$BACKEND") <(printf '%s\n' "$COMMITTED") >/tmp/baseline.diff 2>&1; then
-  echo "OK: $(printf '%s\n' "$COMMITTED" | grep -c .) modules agree with the backend at $TAG."
-  exit 0
+# ── Half 2: the record is the backend's ───────────────────────────────────────
+#
+# An explicit TAYTAY_BACKEND that is not a checkout is a misconfiguration and is
+# said so; a missing conventional sibling is an honest skip.
+if [ -n "${TAYTAY_BACKEND:-}" ]; then
+  BACKEND="$TAYTAY_BACKEND"
+  if ! git -C "$BACKEND" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "FAIL: TAYTAY_BACKEND=$BACKEND is not a git checkout." >&2
+    echo "      Point it at a clone of taytay-backend, or unset it." >&2
+    exit 2
+  fi
+else
+  BACKEND="$(cd "$REPO_ROOT/.." && pwd)/taytay-backend"
+  if ! git -C "$BACKEND" rev-parse --git-dir >/dev/null 2>&1; then
+    echo "SKIP: the sha256 matches the record, but there is no backend clone at"
+    echo "      $BACKEND (set TAYTAY_BACKEND), so whether the file is backend"
+    echo "      $COMMIT's $UPSTREAM_PATH is NOT PROVEN."
+    exit 3
+  fi
 fi
 
-echo "FAIL: the backend's module status at $TAG differs from the committed baseline." >&2
-echo "      < backend at $TAG   > docs/integration/backend-baseline.md" >&2
-echo >&2
-cat /tmp/baseline.diff >&2
-echo >&2
-echo "      This is TAB 00 asking to be re-run. Do not edit the committed table to" >&2
-echo "      match without re-deriving what changed and what it unblocks." >&2
-exit 1
+if ! FULL="$(git -C "$BACKEND" rev-parse --verify --quiet "$COMMIT^{commit}")"; then
+  echo "SKIP: the sha256 matches the record, but $BACKEND does not have commit"
+  echo "      $COMMIT, so the file's origin is NOT PROVEN. Fetch it there yourself;"
+  echo "      this script never touches the network."
+  exit 3
+fi
+
+if ! git -C "$BACKEND" cat-file -e "$FULL:$UPSTREAM_PATH" 2>/dev/null; then
+  echo "FAIL: backend $COMMIT has no $UPSTREAM_PATH, so it cannot be where the" >&2
+  echo "      vendored contract came from. The recorded commit is wrong." >&2
+  exit 1
+fi
+
+UPSTREAM="$(git -C "$BACKEND" show "$FULL:$UPSTREAM_PATH" | sha256_of)"
+if [ "$UPSTREAM" != "$ACTUAL" ]; then
+  echo >&2
+  echo "FAIL: $SPEC_REL is not backend $COMMIT's $UPSTREAM_PATH." >&2
+  echo "      backend sha256   $UPSTREAM" >&2
+  echo "      vendored sha256  $ACTUAL" >&2
+  echo "      First differences (< backend  > vendored):" >&2
+  diff <(git -C "$BACKEND" show "$FULL:$UPSTREAM_PATH") "$SPEC" | head -12 | cut -c1-160 >&2 || true
+  echo >&2
+  echo "      The file and its record were changed together, but not from that" >&2
+  echo "      commit. Re-vendor from the commit you record, byte for byte (D-219)." >&2
+  exit 1
+fi
+
+echo "OK: the vendored Node contract is backend $COMMIT's $UPSTREAM_PATH, byte for byte (sha256 ${ACTUAL:0:12}...)."
+exit 0

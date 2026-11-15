@@ -1,0 +1,6 @@
+# The vendored Node contract is a byte-for-byte copy of the backend's
+# openapi/openapi.json, pinned by its sha256 in lib/core/api/backend_baseline.dart
+# and checked by tool/check_backend_baseline.sh (D-219). With core.autocrlf on, a
+# Windows checkout would rewrite it with CRLF and break that pin, so git never
+# converts its line endings.
+docs/integration/taytay-node-openapi.json -text

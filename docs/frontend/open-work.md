@@ -119,7 +119,7 @@ list can only shrink, and it cannot outlive the finding.
 
 ## C-10 — the baseline guard's network path is dead in a no-push programme
 
-**Severity P3. Found by TAB 00, step 1.**
+**Severity P3. Found by TAB 00, step 1.** *Superseded 2026-11-15 (D-219): neither backend guard reads the PHP tag or the network any more; see `docs/integration/backend-baseline.md`, "The guard".*
 
 `tool/check_backend_baseline.sh` fetches the backend's boundary map from
 `raw.githubusercontent.com` at the pinned tag unless `TAYTAY_BACKEND` names a local clone. Run

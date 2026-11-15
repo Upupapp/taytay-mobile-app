@@ -64,8 +64,28 @@ route or schema this app calls changed.
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
-The tables below stay. They are the historical contract the staleness check still pins
-(tag, commit, and date). They are not the forward authority.
+### The Node contract pin (D-219)
+
+The vendored file is held to the commit it was copied from. The record lives in
+`lib/core/api/backend_baseline.dart` (`nodeContractCommit`, `nodeContractSha256`), and
+`test/integration/backend_baseline_test.dart` fails if this table stops naming both.
+
+| | |
+| --- | --- |
+| **Vendored file** | `docs/integration/taytay-node-openapi.json` |
+| **Copied from** | backend `openapi/openapi.json` |
+| **Backend commit** | `52c82cb0259a59c6b790b4b25b17228e87776d87` (`52c82cb`) |
+| **sha256** | `870faf457ee84ab4794b7a977d62cab018209d44ff34dd0959f00f361212c5fc` |
+| **Vendored on** | 15 November 2026 (app commit `07d1c28`) |
+
+To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
+the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two
+scripts in [The guard](#the-guard). `.gitattributes` marks the file `-text`, so a Windows
+checkout with `core.autocrlf` never rewrites its line endings and breaks the hash.
+
+The tables below stay as the historical PHP contract (tag, commit, and date). No guard reads
+that tag any more: the backend has been Node since 20 October 2026 and the tag is not in it
+(D-219). They are not the forward authority.
 
 | | |
 | --- | --- |
@@ -248,8 +268,9 @@ one free-text message. **The client is not blocked on it** — `message` is rend
 
 ### How to know it landed
 
-`tool/check_backend_routes.sh` and the fixture recorder both run against the pinned tag, so
-move the pin and re-record. On the client side
+The fixture recorder runs against the pinned tag, so move the pin and re-record.
+(`tool/check_backend_routes.sh` ran against that tag too until 15 November 2026; it now reads
+the vendored Node contract, D-219.) On the client side
 `test/features/verification_dead_sections_test.dart` turns red the moment the client starts
 decoding either list, which is the prompt to localise `VerificationItemCategory` — it is
 currently excused from translation only because no resident can read it.
@@ -375,17 +396,38 @@ rather than out of a document, because a document is what went stale.
 
 ## The guard
 
-Two halves, because one of them needs a network and one of them must run everywhere.
+Three parts since 15 November 2026 (D-219). None of them uses the network. `tool/certify.sh`
+runs both scripts, and names the backend clone it uses.
 
-1. **`test/integration/backend_baseline_test.dart`** — runs in `flutter test`, no network.
+1. **`test/integration/backend_baseline_test.dart`** — runs in `flutter test`.
    Asserts that `PlannedModule`, `BackendGap` and `UnwiredRepository` agree with the tables
-   in *this file*. Editing one without the other goes red.
-2. **`tool/check_backend_baseline.sh`** — runs in CI and nightly. Reads the backend's
-   `docs/architecture/domain-boundary-map.md` at the pinned tag, extracts the module status
-   table, and fails if it differs from the table committed here. When the backend advances
-   the baseline tag, this goes red and a human re-runs TAB 00.
+   in *this file*, and that this file names the Node contract's commit and sha256. Editing one
+   without the other goes red.
+2. **`tool/check_backend_baseline.sh`** — is the vendored contract the backend's own? It fails
+   if `docs/integration/taytay-node-openapi.json` no longer has the recorded sha256 (an edit
+   nobody declared), on any machine. When the backend clone (`TAYTAY_BACKEND`, or the sibling
+   `../taytay-backend`) has the recorded commit, it also fails unless
+   `git show <commit>:openapi/openapi.json` is the vendored file byte for byte. With no clone, or
+   a clone without that commit, it exits 3: the hash agrees and the origin is NOT PROVEN.
+3. **`tool/check_backend_routes.sh`** — does the contract publish every route this app calls?
+   It reads each `BackendRoute(verb, path, …)` in `lib/core/api/backend_routes.dart` and fails
+   unless the vendored spec publishes that path under `/api/v1` at that verb, with the spec's
+   `{param}` names flattened to `{}`. `routesAheadOfBaseline` is its ratchet: it fails on a
+   missing route the list does not name, and on a named route the spec does publish. It walks
+   the JSON rather than matching lines (the spec's indentation is not uniform), and refuses to
+   run when the walk disagrees with the file's own count of path keys and `operationId`s.
 
-Both have been proven to fail before being trusted; see the TAB 00 completion report.
+Both scripts were proven against planted regressions on 15 November 2026: an undeclared edit
+to the vendored file, the same edit with its sha256 re-recorded by hand, a CRLF checkout, a
+recorded commit the clone lacks or that has no spec, no clone; a declared route the spec does
+not publish, a wrong verb, a spec that stops publishing a called path, a stale entry in
+`routesAheadOfBaseline`, an operation without an `operationId`, unbalanced JSON.
+
+Until that date the second script compared the backend's
+`docs/architecture/domain-boundary-map.md` at the tag `api-baseline-2026-08` with the module
+table committed here, and the third read `Routes/api_v1.php` at the same tag. The Node backend
+has neither the tag nor those files (its Laravel tree survives only at `laravel-archive`), so
+both could only exit 2. The module table is now checked only against the enums, by part 1.
 
 **Do not re-derive module status by grepping route files.** Routes tell you what is exposed,
 not what is supported; a module can publish a route it considers internal. The committed
@@ -395,4 +437,5 @@ question.
 
 **Do not baseline against `main`.** A moving baseline makes the guard oscillate, and a guard
 that cries wolf gets disabled, which returns this repository to the condition this document
-exists to end.
+exists to end. The Node pin is a commit for the same reason: vendor from a commit and record
+it, never from a branch name.

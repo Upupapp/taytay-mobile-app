@@ -3742,6 +3742,59 @@ node-postgres, *Client* (`LISTEN`/`NOTIFY` notifications),
 
 ---
 
+## D-219 — The backend guards check the vendored Node contract, pinned by commit and sha256
+
+**Status: settled.** Category: contract / tooling. Recorded 2026-11-15, relayed
+by the orchestrator for Ella (Michaela Cailing).
+
+**Context.** `tool/check_backend_routes.sh` and `tool/check_backend_baseline.sh`
+both exited 2: they looked for the PHP-era tag `api-baseline-2026-08`
+(`Routes/api_v1.php`, the boundary map), and the backend has been Node since
+2026-10-20, with its Laravel tree only at `laravel-archive`. So nothing checked
+the routes this app declares against the API it calls, while `tool/certify.sh`
+still listed both as gates. A guard that cannot run is worse than none.
+
+**Decision.**
+
+1. **The contract is the vendored file.** `check_backend_routes.sh` reads every
+   `BackendRoute(verb, path, …)` in `backend_routes.dart` and fails unless
+   `docs/integration/taytay-node-openapi.json` publishes that path under
+   `/api/v1` at that verb, with the spec's `{param}` names flattened to `{}`.
+   No clone and no network. `routesAheadOfBaseline` keeps its ratchet: a missing
+   route it does not name fails, and so does a named route the spec publishes.
+   The script walks the JSON, because the spec's indentation is not uniform
+   (twenty of 301 operations sit deeper), and refuses to run (exit 2) when the
+   walk disagrees with the file's own count of path keys and `operationId`s.
+2. **The vendored file is pinned.** `nodeContractCommit` (`52c82cb`) and
+   `nodeContractSha256` in `lib/core/api/backend_baseline.dart` record where it
+   came from. `check_backend_baseline.sh` fails if the file's sha256 differs from
+   the record, on any machine; when the backend clone has the commit, it fails
+   unless `git show <commit>:openapi/openapi.json` is the file byte for byte.
+   Without the clone or the commit it exits 3: NOT PROVEN, never a pass.
+3. **The record is kept in three places that cannot drift.** Re-vendoring
+   changes the file, the two constants and the table in
+   `docs/integration/backend-baseline.md` in one commit;
+   `backend_baseline_test.dart` fails if the document stops naming the commit or
+   the hash. `.gitattributes` marks the file `-text`, because `core.autocrlf`
+   would otherwise rewrite it with CRLF on a Windows checkout (the certify
+   worktree included) and break the hash.
+4. **`certify.sh` calls both as before**, and now names the real checkout's
+   sibling `taytay-backend` when `TAYTAY_BACKEND` is unset, since its worktree
+   has no sibling.
+
+**Proven.** Each script failed on planted regressions, all reverted: an
+undeclared edit to the vendored file; the same edit with its sha256 re-recorded;
+a CRLF copy; a recorded commit the clone lacks (3) or that has no spec; no clone
+(3); a declared route the spec does not publish; a wrong verb; a spec that
+stops publishing `GET changes`; stale `routesAheadOfBaseline` entries; an
+operation without an `operationId` (2); unbalanced JSON (2); a renamed list (2).
+
+**Not done.** The historical PHP module table in `backend-baseline.md` is now
+checked only against the enums, not against the backend: the Node backend
+publishes no boundary map. The fixture recorder still names the PHP tag.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -3964,5 +4017,6 @@ node-postgres, *Client* (`LISTEN`/`NOTIFY` notifications),
 | D-216 | `sector_application_decided` opens Sectors and benefits: the deep-link target `sector_applications` → `/sectors`, with the notice's `subject_id` kept off that target because the route takes none. Unknown targets, and an id on a route that takes none, are still refused; an unknown kind opens nothing. Replaces D-215's "opens nothing yet" | product / authorization | settled |
 | D-217 | The Filipino copy was reviewed for grammar and consistency by Claude, not a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT. 25 ARB strings and 4 inline strings changed: "Subukang muli" for every "Try again", "subok" for attempts, "tanggapan" for office, "pag-verify" / "Verified na" for verification, "na-type" for typed, "numero ng cellphone", "Paki-update", and five meaning fixes. The consent screens (D-208 to D-214) stay English with the English screens they sit on; translating those screens whole is an open owner item (NPC Circular 2023-04) | localisation | settled |
 | D-218 | Screens update themselves from change hints (DL-222): `LiveUpdates` holds `GET changes` open only while the app is resumed and signed in, with the bearer in a header; backoff with jitter 1–30 s, at once after `expired`; a `404`/`501` turns it off with no polling; reconnects, `resync` and returning re-read every listening screen; each re-read is quiet (old data kept, no loading, failure silent), throttled to one per 2 s, deferred while the screen is hidden, and never resets a draft, form, sheet or scroll; `account` re-reads the session's tier. No pause control and no live-region announcements: the updates are event-driven, not timed (WCAG 2.2 SC 2.2.2) | product / contract / accessibility | settled |
+| D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
 
-**214 decisions — 210 settled, 4 provisional.**
+**215 decisions — 211 settled, 4 provisional.**

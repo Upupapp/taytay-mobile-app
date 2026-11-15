@@ -156,13 +156,22 @@ else
 fi
 
 # --- cross-repo guards ----------------------------------------------------
-# These read the backend at the pinned tag. Without TAYTAY_BACKEND they fetch
-# from raw.githubusercontent, which is legitimate and slower; either way the
-# script says which one happened rather than leaving it to be guessed.
+# Since D-219 these check the vendored Node contract, with no network:
+# check_backend_routes.sh needs nothing outside the worktree, and
+# check_backend_baseline.sh needs a backend clone only to prove which commit the
+# contract came from. The worktree has no sibling checkout, so the real repo's
+# sibling is named here when TAYTAY_BACKEND is not set. Without either, that
+# half honestly skips (exit 3), and the script says which happened rather than
+# leaving it to be guessed.
+if [ -z "${TAYTAY_BACKEND:-}" ] \
+  && git -C "$REPO_ROOT/../taytay-backend" rev-parse --git-dir >/dev/null 2>&1; then
+  TAYTAY_BACKEND="$(cd "$REPO_ROOT/../taytay-backend" && pwd)"
+  export TAYTAY_BACKEND
+fi
 if [ -n "${TAYTAY_BACKEND:-}" ]; then
   echo "  backend source: local clone at $TAYTAY_BACKEND"
 else
-  echo "  backend source: raw.githubusercontent at the pinned tag"
+  echo "  backend source: none; the contract's origin will be NOT PROVEN"
 fi
 
 # The type-aware render guard. A `dart run` rather than a shell script: inside

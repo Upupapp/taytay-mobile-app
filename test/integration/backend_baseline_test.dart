@@ -8,9 +8,12 @@ import 'package:taytay_resident/core/api/unwired_repository.dart';
 
 /// The half of the TAB 00 staleness guard that needs no network.
 ///
-/// `tool/check_backend_baseline.sh` is the other half: it compares the committed
-/// module table against the backend's own boundary map at the pinned tag, and so
-/// catches the backend moving. This file catches *us* moving — an enum edited
+/// `tool/check_backend_baseline.sh` is the other half: it holds the vendored
+/// Node contract to the commit and sha256 recorded in `backend_baseline.dart`
+/// (D-219). It used to compare this module table with the backend's boundary
+/// map at the PHP tag, which the Node backend no longer has; the table is
+/// history now, and nothing outside this file checks it. This file catches *us*
+/// moving — an enum edited
 /// without the document, or a document edited without the enum. Both directions
 /// matter, because the original defect was a belief that no longer matched
 /// anything and had nothing checking it.
@@ -55,6 +58,16 @@ void main() {
         expect(text, contains(backendBaselineTag));
         expect(text, contains(backendBaselineCommit));
         expect(text, contains(backendBaselineDate));
+      },
+    );
+
+    test(
+      'the document names the commit and sha256 the Node contract is pinned to',
+      () {
+        // tool/check_backend_baseline.sh holds the vendored file to these two
+        // values; this keeps the record a reader opens saying the same (D-219).
+        expect(text, contains(nodeContractCommit));
+        expect(text, contains(nodeContractSha256));
       },
     );
 

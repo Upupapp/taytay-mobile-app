@@ -84,5 +84,5 @@ fixture committed once is published permanently.
 | `contract_conformance_test.dart` | the app's envelope, error taxonomy and pagination match the published schemas | nothing |
 | `../integration/backend_baseline_test.dart` | the enums match the committed baseline document | nothing |
 | `../integration/wiring_detector_test.dart` | no repository is stubbed except with a declared, owned reason | nothing |
-| `../../tool/check_backend_baseline.sh` | the committed baseline still matches the backend at its tag | the backend repo |
+| `../../tool/check_backend_baseline.sh` | the vendored Node contract has its recorded sha256 and is the recorded backend commit's `openapi/openapi.json`, byte for byte (D-219) | nothing for the hash; the backend clone for the commit |
 | `../../tool/check_fixture_drift.sh` | the server still sends what it publishes | **a staging API** |
