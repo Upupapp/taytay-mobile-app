@@ -586,7 +586,8 @@ void main() {
       await tester.tap(find.text('Your application moved'));
       await tester.pumpAndSettle();
 
-      expect(currentLocation(tester), '/requests/req-1');
+      // My requests (D-223).
+      expect(currentLocation(tester), '/my-requests/req-1');
     });
 
     testWidgets('a payload naming an action is refused, not followed', (

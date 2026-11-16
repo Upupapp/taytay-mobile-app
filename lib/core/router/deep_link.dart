@@ -168,9 +168,10 @@ abstract final class DeepLink {
     // Events.
     'events': AppRoute.events,
     'event': AppRoute.eventDetail,
-    // Assistance request and its status.
-    'assistance_requests': AppRoute.requests,
-    'assistance_request': AppRoute.requestDetail,
+    // The resident's own assistance requests and one of them: My requests
+    // (D-223). `assistance_request_updated` opens the request it names.
+    'assistance_requests': AppRoute.myRequests,
+    'assistance_request': AppRoute.myRequestDetail,
     // Outstanding requirements on a request.
     'assistance_requirements': AppRoute.requestRequirements,
     // Verification steps.

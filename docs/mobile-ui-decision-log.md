@@ -4032,6 +4032,120 @@ fail; the two that pin what is kept pass either way.
 
 ---
 
+## D-223 — A resident sees her own assistance requests on My requests, and is told when one moves
+
+**Status: settled.** Category: product / privacy. Recorded 2026-11-16, relayed
+by the lead for Ella (Michaela Cailing), with the contract pinned at backend
+`d1e997c` (ADR 0003, section C).
+
+**Context.** A launch-gate finding: a resident was shown nothing of her own
+assistance request, not that it was approved, nor when and where to collect the
+payout. She went back to the MSWDO counter to ask. The backend now serves
+`GET /me/assistance-requests` to registered and verified residents, a cursor
+page at a time (`meta.pagination` `{has_more, next_cursor}`), newest filing
+first, across her whole person (ADR 0003, B). Each row carries only `id`,
+`reference_number`, `program_name`, `filed_at`, the raw `status`,
+`status_changed_at`, `approved_amount_centavos` (once approved),
+`payout_scheduled_for` and `payout_venue` (while scheduled) and `released_at`.
+A move to approved, scheduled, released, returned or rejected sends
+`assistance_request_updated` ("There is an update on your assistance request
+{reference}.", `subject_id` the request), pushed, and raises her own
+`notifications` live topic; the API has no topic of its own for these rows.
+The app had only the PHP-era `/requests` case pages (timeline, requirements,
+cancel), verified-only and unwired since the move to Node.
+
+**Decision.**
+
+1. **My requests** (`/my-requests`, `AccessRequirement.authenticated`, as the
+   API) lists her filed requests: the programme, the control number, the
+   filing date and the status in her words. A row opens the request
+   (`/my-requests/:requestId`), which adds what the API sends for that status:
+   the approved amount in pesos (integer centavos through `formatPesos`, never
+   floating point), the payout date and venue, the released date, and the date
+   the status last changed. The API has no route for one request, so it is
+   found in her list (`findOwn`: pages of 50, at most ten); one the list does
+   not carry reads "This request is not shown here", never an error and never
+   a reason. More pages are offered with "Show older requests" while the API
+   says `has_more`, never as "page 1 of N".
+2. **Her words, one switch.** `submitted` and `intake-review` read
+   "Received"; `assessment` and `endorsed` "Being assessed"; `approved`
+   "Approved"; `scheduled` "Payout scheduled"; `released` and `completed`
+   "Released"; `returned` "The office needs more from you — please visit or
+   contact the MSWDO"; `rejected` "Not approved — the MSWDO can tell you why";
+   `cancelled` "Cancelled"; `expired` "Expired"; any other value "Status:
+   updated", kept raw and never guessed. Which desk holds the file is not said.
+   The words carry the status; an icon and the ink repeat it.
+3. **Every frame, every resident** shows "Some requests are discussed only in
+   person at the MSWDO.": loading, failure, empty, the list, one request and
+   the not-shown state alike. An empty list says plainly that no request filed
+   with the office is shown here, and nothing about why.
+4. **Where it is reached.** A verified resident's My Account lists My requests
+   beside Request documents. For a registered resident, the account centre's
+   "Track your assistance requests" (`ResidentCapability.trackAssistanceRequests`)
+   now opens it: authenticated and available, where it was verified, planned
+   and pointed at `/requests`. The deep-link targets `assistance_requests` and
+   `assistance_request` now name My requests and one request;
+   `assistance_requirements` and the `/requests` pages are unchanged and stay
+   unwired.
+5. **The notice.** `assistance_request_updated` is said under "Assistance
+   updates" and opens the request it names; the screen reads where it stands
+   from the list, never from the notice. My requests and an open request
+   re-read quietly when the `notifications` topic fires (D-218: foreground
+   only, no polling, no loading state, a failed re-read keeps what is shown).
+   Moves she is not told of show on her next read, on return to the app or on
+   a reconnect.
+6. All copy is in `app_en.arb` and `app_fil.arb`. The Filipino was written by
+   Claude in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native
+   speaker; a native speaker from the MSWDO should read it during UAT.
+
+**Why.** RA 10173 gives her the right to know what the office holds about her,
+and a request she cannot see sends her to the counter to ask where it stands:
+a fare and a morning, for a family that came because it could not afford one.
+She sees the minimum that says where it stands, what was decided and when to
+come, not how it was decided. No case, staff name, note, assessment, reason or
+requested amount reaches the app, and the domain type has nowhere to put one;
+a case is protected social work and stays in the office. A survivor of
+violence or a child in conflict with the law (RA 9262, RA 9344) reads an empty
+list and is sent no notice, because the phone may be read by the person the
+case is about; the sentence shown to everybody and the reasonless empty and
+not-shown states keep the app from becoming evidence that a request exists.
+The notice is generic for the same reason: a lock screen is read by whoever
+holds the phone, so it names the control number and nothing else.
+
+**Known gap.** There is no per-type opt-out for these notices: the API pushes
+`assistance_request_updated` whatever the resident set, and its preference
+types do not include it. The notification settings still draw an "Assistance
+updates" switch which, like every category but identity verification, is not
+sent to the server and does not stop these notices. That switch predates this
+decision and is left for the owner; it should be removed or wired to a server
+preference before launch.
+
+**Rejected.** Wiring the `/requests` case pages to the new route: they are
+built around a case, a timeline and requirements, which the API will never send
+a resident. Showing the detail on every row: an amount and a venue on a list a
+household's shared phone opens to are one tap further, as a document request's
+purpose is. A "page 1 of N": the API sends no total.
+
+**Sources.** Backend `d1e997c` (`openapi/openapi.json`
+`listMyAssistanceRequests`, `OwnAssistanceRequest`, `Notification.type`;
+`docs/api/endpoints.md` "Assistance requests in the residents' app";
+`docs/adr/0003-launch-gate-findings.md` section C) and `dd8dbc3` (section B);
+D-216; D-218; D-219.
+
+**Tests.** `test/features/my_requests_test.dart`: the codec (every field, null
+fields, non-integer amounts, an unknown status kept raw, a row with no id),
+every raw status's stage and words, the repository (the query, the cursor,
+`findOwn` paging, its ceiling and not-found, failures), the list's loading,
+empty, list, failure with Try again, offline and paging states, one request
+for each status's facts and the not-shown state, access from every session
+state, and every frame at 360, 375 and 430 dp and 200% text, each with the
+in-person sentence. `test/features/sector_notice_test.dart`: the notice is
+known, keeps its id, and opens the request from the inbox.
+`test/features/load_failures_test.dart`: the list and one request re-read on
+`notifications` and not on `news`.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4258,5 +4372,6 @@ fail; the two that pin what is kept pass either way.
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 | D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
 | D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance. Tulong's "saved on this phone" forgets a page whose own read answers `404`, or that a whole catalogue read no longer lists after a list carried it | product / contract | settled |
+| D-223 | My requests (`/my-requests`, any signed-in resident) lists her own filed assistance requests from `GET /me/assistance-requests` (backend `d1e997c`): programme, control number, filing date and the status in her words; one request adds the approved amount (integer centavos), payout date and venue, released date and the date the status changed, found in her list. Every frame says "Some requests are discussed only in person at the MSWDO."; an empty list and a request not shown give no reason. `assistance_request_updated` is "Assistance updates" and opens the request; both screens re-read on `notifications`. No case, staff, note or reason. No per-type opt-out yet (known gap) | product / privacy | settled |
 
-**218 decisions — 214 settled, 4 provisional.**
+**219 decisions — 215 settled, 4 provisional.**

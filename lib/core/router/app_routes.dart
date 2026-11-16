@@ -352,6 +352,21 @@ enum AppRoute {
     AccessRequirement.verified,
   ),
 
+  /// My requests: the resident's own filed assistance requests (D-223). Any
+  /// signed-in resident, like the API's `GET /me/assistance-requests`
+  /// (registered or verified). No identifier in the list's path: the read is
+  /// `/me`-scoped.
+  myRequests('my-requests', '/my-requests', AccessRequirement.authenticated),
+
+  /// One of them, by the opaque id an `assistance_request_updated` notice
+  /// carries. Found in her own list; the URL grants nothing.
+  myRequestDetail(
+    'my-request',
+    '/my-requests/:requestId',
+    AccessRequirement.authenticated,
+    parameters: <String>['requestId'],
+  ),
+
   /// The resident's own non-sensitive sectors and their sector applications
   /// (D-215). Verified only, like the API's `/me/sectors`. No identifier in
   /// the path: the reads are `/me`-scoped.

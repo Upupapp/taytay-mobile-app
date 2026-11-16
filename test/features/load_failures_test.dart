@@ -30,6 +30,8 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
+import 'package:taytay_resident/features/assistance/presentation/my_request_detail_screen.dart';
+import 'package:taytay_resident/features/assistance/presentation/my_requests_screen.dart';
 import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_screen.dart';
@@ -692,6 +694,44 @@ void main() {
         path: 'me/consents',
         answer: (ApiRequest request) =>
             Ok<ApiHttpResponse>(_page(const <Object?>[])),
+      );
+    });
+
+    // The API has no topic for assistance requests: the notice that one
+    // moved raises the resident's own notifications topic (D-223).
+    testWidgets('My requests hears notifications', (tester) async {
+      await expectQuietReread(
+        tester,
+        screen: const MyRequestsScreen(),
+        topic: LiveTopics.notifications,
+        path: 'me/assistance-requests',
+        answer: (ApiRequest request) =>
+            Ok<ApiHttpResponse>(_page(const <Object?>[])),
+      );
+    });
+
+    testWidgets('one of my requests hears notifications', (tester) async {
+      await expectQuietReread(
+        tester,
+        screen: const MyRequestDetailScreen(requestId: 'ar-1'),
+        topic: LiveTopics.notifications,
+        path: 'me/assistance-requests',
+        answer: (ApiRequest request) => Ok<ApiHttpResponse>(
+          _page(<Object?>[
+            <String, Object?>{
+              'id': 'ar-1',
+              'reference_number': 'AR-SAMPLE-1',
+              'program_name': 'Sample aid',
+              'filed_at': '2026-11-03T01:15:00Z',
+              'status': 'approved',
+              'status_changed_at': '2026-11-12T02:00:00Z',
+              'approved_amount_centavos': 100000,
+              'payout_scheduled_for': null,
+              'payout_venue': null,
+              'released_at': null,
+            },
+          ]),
+        ),
       );
     });
 

@@ -1191,5 +1191,143 @@
         "example": "1–3 working days"
       }
     }
+  },
+  "myRequestsTitle": "My requests",
+  "@myRequestsTitle": {
+    "description": "Title of My requests, the resident's own assistance requests (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsSubtitle": "Assistance requests filed with the MSWDO",
+  "@myRequestsSubtitle": {
+    "description": "Subtitle of My requests, and the My Account row's line (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsInPerson": "Some requests are discussed only in person at the MSWDO.",
+  "@myRequestsInPerson": {
+    "description": "Shown on My requests to every resident, whatever the list holds, so an empty list reveals nothing about anyone (D-223, ADR 0003 C: VAWC and CICL). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsEmptyTitle": "No requests to show",
+  "@myRequestsEmptyTitle": {
+    "description": "Empty My requests: the title. Says nothing about why (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsEmptyMessage": "No request filed with the office is shown here.",
+  "@myRequestsEmptyMessage": {
+    "description": "Empty My requests: the sentence under the title. Plain, and says nothing about why; the in-person sentence follows it (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsLoading": "Loading your requests",
+  "@myRequestsLoading": {
+    "description": "Screen-reader label of the My requests skeleton. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsShowOlder": "Show older requests",
+  "@myRequestsShowOlder": {
+    "description": "Button under My requests when the API says more exist (has_more). Never a page count: the API sends none. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsLoadingMore": "Loading…",
+  "@myRequestsLoadingMore": {
+    "description": "The Show older requests button while the next page is read. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsMoreFailed": "Could not load more. Try again",
+  "@myRequestsMoreFailed": {
+    "description": "The Show older requests button after the next page failed; tapping it tries again. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsFiled": "Filed {date}",
+  "@myRequestsFiled": {
+    "description": "A My requests row: the filing date, pre-formatted in Manila time. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.",
+    "placeholders": {
+      "date": {
+        "type": "String",
+        "example": "03 Nov 2026"
+      }
+    }
+  },
+  "myRequestsUnnamedProgramme": "Assistance request",
+  "@myRequestsUnnamedProgramme": {
+    "description": "A My requests row whose programme the API does not name. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageReceived": "Received",
+  "@assistanceStageReceived": {
+    "description": "Status of an assistance request: submitted or intake-review (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageBeingAssessed": "Being assessed",
+  "@assistanceStageBeingAssessed": {
+    "description": "Status of an assistance request: assessment or endorsed (D-223). Which desk holds it is never said. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageApproved": "Approved",
+  "@assistanceStageApproved": {
+    "description": "Status of an assistance request: approved (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStagePayoutScheduled": "Payout scheduled",
+  "@assistanceStagePayoutScheduled": {
+    "description": "Status of an assistance request: scheduled (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageReleased": "Released",
+  "@assistanceStageReleased": {
+    "description": "Status of an assistance request: released or completed (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageNeedsMore": "The office needs more from you — please visit or contact the MSWDO",
+  "@assistanceStageNeedsMore": {
+    "description": "Status of an assistance request: returned (D-223). The office's reason is never sent to the app. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageNotApproved": "Not approved — the MSWDO can tell you why",
+  "@assistanceStageNotApproved": {
+    "description": "Status of an assistance request: rejected (D-223). The office's reason is never sent to the app. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageCancelled": "Cancelled",
+  "@assistanceStageCancelled": {
+    "description": "Status of an assistance request: cancelled (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageExpired": "Expired",
+  "@assistanceStageExpired": {
+    "description": "Status of an assistance request: expired (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "assistanceStageUpdated": "Status: updated",
+  "@assistanceStageUpdated": {
+    "description": "Status of an assistance request this build does not know (D-223): neutral, never a guess. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestDetailTitle": "Assistance request",
+  "@myRequestDetailTitle": {
+    "description": "Title of one request on My requests (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestReference": "Reference number",
+  "@myRequestReference": {
+    "description": "Label: the request's control number. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestFiledOn": "Filed on",
+  "@myRequestFiledOn": {
+    "description": "Label: when the request was filed. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestStatusChangedOn": "Status last changed",
+  "@myRequestStatusChangedOn": {
+    "description": "Label: when the request's status last changed. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestApprovedAmount": "Approved amount",
+  "@myRequestApprovedAmount": {
+    "description": "Label: the approved amount, shown once approved (pesos from integer centavos). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestPayoutDate": "Payout date",
+  "@myRequestPayoutDate": {
+    "description": "Label: the payout session's date, while the payout is scheduled. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestPayoutVenue": "Where to collect",
+  "@myRequestPayoutVenue": {
+    "description": "Label: the payout session's venue, while the payout is scheduled. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestReleasedOn": "Released on",
+  "@myRequestReleasedOn": {
+    "description": "Label: when the assistance was handed over. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestLoading": "Loading the request",
+  "@myRequestLoading": {
+    "description": "Screen-reader label of one request's skeleton. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestNotShownTitle": "This request is not shown here",
+  "@myRequestNotShownTitle": {
+    "description": "One request the list does not carry. Says nothing about why (D-223); the in-person sentence follows. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestNotShownMessage": "It is not among the requests shown for your account.",
+  "@myRequestNotShownMessage": {
+    "description": "Under myRequestNotShownTitle. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
+  },
+  "myRequestsSeeAll": "See all my requests",
+  "@myRequestsSeeAll": {
+    "description": "Button from one request that is not shown to My requests. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT."
   }
 }

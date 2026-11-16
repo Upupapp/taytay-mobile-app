@@ -282,7 +282,7 @@
       "post": {
         "operationId": "replaceVerificationDocuments",
         "summary": "Replace images on the caller's verification request",
-        "description": "Registered residents only, while the latest request is pending or rejected. At least one of id_front, id_back, or selfie is required. A selfie needs the same standing biometric consent as on the first send (403 BIOMETRIC_CONSENT_REQUIRED otherwise, nothing stored); ID images alone do not. A new selfie clears selfie_erased_at.",
+        "description": "Registered residents only, while the latest request is pending or rejected. At least one of id_front, id_back, or selfie is required. A selfie needs the same standing biometric consent as on the first send (403 BIOMETRIC_CONSENT_REQUIRED otherwise, nothing stored); ID images alone do not. A new selfie clears selfie_erased_at. An image a reviewer decided on (on the request when it was rejected or approved) is kept as the evidence of that decision and appears in no response; a replaced image nobody decided on is removed.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -733,7 +733,7 @@
       "get": {
         "operationId": "listOwnSectors",
         "summary": "The signed-in resident's own sectors",
-        "description": "Verified residents only (registered is 403). The account's own current memberships of senior-citizen, pwd and solo-parent, read from the registry record the office linked to the account when it first decided one of its applications; none before that. No other sector is selected, so none can be sent: never vawc-survivor, cicl, four-ps (means-tested), the office's own assessments, an income, or anybody else's sectors, a household member's included (mobile D-205). A bare list.",
+        "description": "Verified residents only (registered is 403). The account's own current memberships of senior-citizen, pwd and solo-parent, read from the account's person: the registry record the office linked to the account when it first decided one of its applications, and every record a same-person finding superseded into it, transitively (ADR 0003, B; nothing is merged — a sector is the person's while the latest act on it across those records recorded it); none before the link. No other sector is selected, so none can be sent: never vawc-survivor, cicl, four-ps (means-tested), the office's own assessments, an income, or anybody else's sectors, a household member's included (mobile D-205). A bare list.",
         "security": [{ "firebaseIdToken": [] }],
         "responses": {
           "200": { "description": "The account’s own sectors, possibly none.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnSectorListEnvelope" } } } },
@@ -820,7 +820,7 @@
       "post": {
         "operationId": "approveSectorApplication",
         "summary": "Approve: record the sector in the registry",
-        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). One transaction under the application's lock. If the office has not linked this account to a registry record before, resident_id names the record the account is and link_reason says why (409 without them): the link is an identity finding, made once, audited resident_account.linked, and never moved; a record already linked to another account is 409, a record not found, retired or outside scope 422. The sector is then recorded on that record through the registry's own act: reason is kept in its append-only history (audit office_resident.sector_recorded), with the card's optional id_number (last four characters kept), issued_on, valid_until, social_pension (senior-citizen only) and disability_type (pwd only), which need resident.view-sensitive (403). The application is approved (audit sector_application.approved) and the resident is told in the app (sector_application_decided, never pushed). A decided application is 409.",
+        "description": "Needs resident.update, because approving records a sector in the registry; an assigned-cases account is 403, and an own-barangay account reads only applicants whose account names its barangay (others answer 404). One transaction under the application's lock. If the office has not linked this account to a registry record before, resident_id names the record the account is and link_reason says why (409 without them): the link is an identity finding, made once and audited resident_account.linked; it moves only with a same-person finding that supersedes its record (ADR 0003, B). A record already linked to another account is 409, a record a finding superseded is 409 (name the record kept), a record not found, retired or outside scope 422. An account already linked records the sector on the record it is linked to now — after a finding, the record kept. The sector is then recorded on that record through the registry's own act: reason is kept in its append-only history (audit office_resident.sector_recorded), with the card's optional id_number (last four characters kept), issued_on, valid_until, social_pension (senior-citizen only) and disability_type (pwd only), which need resident.view-sensitive (403). The application is approved (audit sector_application.approved) and the resident is told in the app (sector_application_decided, never pushed). A decided application is 409.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SectorApplicationApproveBody" } } } },
@@ -5204,7 +5204,7 @@
       "post": {
         "operationId": "moveOfficeRequest",
         "summary": "Move a request through its lifecycle",
-        "description": "Needs request.view and the key the console’s TRANSITION_PERMISSIONS names for the status moved into — request.approve and release.release are never held together. Only along office_request_transitions; appended with who, when and why, and the database sets the status from the history. Already there answers as it stands. A move to approved says what was approved: approved_amount_centavos, or for goods approved_in_kind_description (422 otherwise). Cancelling or expiring is refused while the request has an open release — anything not voided and not handed over — and the message says to void the release first (409); the database refuses it too (DL-183). Filing is its own act (409); scheduled and released wait for payouts, which this API does not hold yet (409). Audited office_request.status_changed. A social worker (assigned-cases) is answered only for the filed requests assigned to them; any other request answers as not found.",
+        "description": "Needs request.view and the key the console’s TRANSITION_PERMISSIONS names for the status moved into — request.approve and release.release are never held together. Only along office_request_transitions; appended with who, when and why, and the database sets the status from the history. Already there answers as it stands. A move to approved says what was approved: approved_amount_centavos, or for goods approved_in_kind_description (422 otherwise). Cancelling or expiring is refused while the request has an open release — anything not voided and not handed over — and the message says to void the release first (409); the database refuses it too (DL-183). Filing is its own act (409); scheduled and released wait for payouts, which this API does not hold yet (409). Audited office_request.status_changed. An approval by the account that made the request's latest endorsement is allowed, and recorded: the database marks the history's approval self_approved (read from the history, never from a role), the request answers self_approved true, and one more audit row office_request.self_approved is written in the same transaction — warned (would_self_approve on the request before it is approved), never refused, as a self-release is (DL-91, ADR 0003). A move to approved, returned or rejected tells the residents whose person holds the request (assistance_request_updated, ADR 0003 C), unless their person is held under vawc-survivor or cicl. A social worker (assigned-cases) is answered only for the filed requests assigned to them; any other request answers as not found.",
         "security": [
           {
             "firebaseIdToken": []
@@ -8553,7 +8553,7 @@
       "post": {
         "operationId": "releaseOfficeRelease",
         "summary": "Record the hand-over",
-        "description": "Needs release.release. A scheduled release is recorded as handed over by the officer signed in, and the request behind it moves from scheduled to released in the same transaction. When that officer approved the request, the record says so (self_release) and the audit trail carries office_release.self_released; it is never refused (DL-91).",
+        "description": "Needs release.release. A scheduled release is recorded as handed over by the officer signed in, and the request behind it moves from scheduled to released in the same transaction. When that officer approved the request, the record says so (self_release) and the audit trail carries office_release.self_released; it is never refused (DL-91). The residents whose person holds the request are told (assistance_request_updated, ADR 0003 C), unless held under vawc-survivor or cicl; a replay tells nobody again.",
         "security": [
           {
             "firebaseIdToken": []
@@ -8838,7 +8838,7 @@
       "post": {
         "operationId": "moveOfficeRelease",
         "summary": "Move a release",
-        "description": "The key is the status moved into: voided needs release.void, every other move release.schedule. Handing over, a receipt and a deferral are their own acts and refused here (409). Moving back to scheduled keeps the release in its session and is refused to a release that was never in one. The reason is kept on the event and shown as the release’s remarks.",
+        "description": "The key is the status moved into: voided needs release.void, every other move release.schedule. Handing over, a receipt and a deferral are their own acts and refused here (409). Moving back to scheduled keeps the release in its session and is refused to a release that was never in one; the resident is told (assistance_request_updated, ADR 0003 C). The reason is kept on the event and shown as the release’s remarks.",
         "security": [
           {
             "firebaseIdToken": []
@@ -8975,7 +8975,7 @@
       "post": {
         "operationId": "openOfficeReleaseBatch",
         "summary": "Open a payout session",
-        "description": "Needs release.schedule. A date (today or later), a place and the releases planned for it; the officer is whoever opens it. Each member is scheduled individually and keeps its own status, and the request behind each moves from approved to scheduled in the same transaction. Refused whole when any member cannot be scheduled: a session never quietly leaves somebody out.",
+        "description": "Needs release.schedule. A date (today or later), a place and the releases planned for it; the officer is whoever opens it. Each member is scheduled individually and keeps its own status, and the request behind each moves from approved to scheduled in the same transaction. Refused whole when any member cannot be scheduled: a session never quietly leaves somebody out. Each member's residents are told their payout is scheduled (assistance_request_updated, ADR 0003 C) — when and where is read in the app, never in the notice — unless held under vawc-survivor or cicl.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11638,6 +11638,79 @@
         }
       }
     },
+    "/api/v1/me/assistance-requests": {
+      "get": {
+        "operationId": "listMyAssistanceRequests",
+        "summary": "The signed-in resident's own assistance requests",
+        "description": "Registered or verified (staff and admin are 403). ADR 0003, C: the resident's own filed requests — never a draft — across her person (the registry record the office linked to her account and every record a same-person finding superseded into it, transitively), newest filing first, a cursor page at a time. Each row is the minimum that says where the request stands: its control number, the programme's name, when it was filed, its raw status and when that last changed, the approved amount in integer centavos once approved (null before, and for goods), the payout's date and venue while it is scheduled, and when it was released. Never who worked on it, notes, the assessment, any reason the office wrote, the amount asked for, or a case. A person any of whose records the office holds under vawc-survivor or cicl (RA 9262, RA 9344) reads an empty list, exactly as if she had none. An account the office has not linked reads an empty list. A read only: it writes nothing. She is told of each move to approved, scheduled, released, returned and rejected by a notification of type assistance_request_updated, pushed, whose words name the control number and nothing else.",
+        "security": [
+          {
+            "firebaseIdToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page, possibly empty.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnAssistanceRequestListEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No token.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not a resident.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A limit out of range or a cursor that is not valid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me/issuance-requests": {
       "post": {
         "operationId": "submitIssuanceRequest",
@@ -12995,7 +13068,7 @@
       "get": {
         "operationId": "previewOfficeIdentityFinding",
         "summary": "What a same-person finding would carry across",
-        "description": "Needs beneficiary.review-duplicates. Counts what stays attached to the record that would be superseded, to be read under the record kept. Records nothing and moves nothing.",
+        "description": "Needs beneficiary.review-duplicates. Counts what stays attached to the record that would be superseded, to be read under the record kept, and says in app_account what the finding would do to an app account linked to that record, so the screen can say it before the button. Records nothing and moves nothing.",
         "security": [
           {
             "firebaseIdToken": []
@@ -13079,7 +13152,7 @@
       "post": {
         "operationId": "decideOfficeDuplicatePair",
         "summary": "Record a finding about one pair",
-        "description": "Needs beneficiary.review-duplicates; refused to a caseload. A reason is required. Idempotent on the pair: the same finding again answers 200 with the one recorded; a different one is 409. same-person supersedes one record without deleting it; nothing is merged.",
+        "description": "Needs beneficiary.review-duplicates; refused to a caseload. A reason is required. Idempotent on the pair: the same finding again answers 200 with the one recorded; a different one is 409. same-person supersedes one record without deleting it; nothing is merged. An app account follows the record kept (ADR 0003, B): in the same transaction, an app account linked to the record superseded is relinked to the record kept, appended to office_resident_account_relinks with the finding as its reason and the reviewer as its actor and audited resident_account.relinked — unless the record kept already has an app account of its own, when nothing moves (two app accounts for one person; the office decides), which is appended and audited resident_account.not_relinked. The finding still succeeds either way, and app_account says what happened.",
         "security": [
           {
             "firebaseIdToken": []
@@ -18895,7 +18968,8 @@
               "message_received",
               "issuance_request_updated",
               "event_registration_updated",
-              "sector_application_decided"
+              "sector_application_decided",
+              "assistance_request_updated"
             ]
           },
           "title": {
@@ -21418,7 +21492,8 @@
           "actor_name",
           "occurred_at",
           "approved_amount_centavos",
-          "approved_in_kind_description"
+          "approved_in_kind_description",
+          "self_approved"
         ],
         "properties": {
           "from": {
@@ -21461,6 +21536,10 @@
               "null"
             ],
             "description": "On a move to approved for goods: what was approved."
+          },
+          "self_approved": {
+            "type": "boolean",
+            "description": "On a move to approved: the approving account made the request's latest endorsement too. Set by the database from the history (migration 0065), recorded and audited office_request.self_approved, never refused (ADR 0003). False on every other move."
           }
         }
       },
@@ -21492,7 +21571,10 @@
           "assignments",
           "assessment",
           "approved_amount_centavos",
-          "approved_in_kind_description"
+          "approved_in_kind_description",
+          "endorsed_by",
+          "would_self_approve",
+          "self_approved"
         ],
         "properties": {
           "id": {
@@ -21652,6 +21734,22 @@
               "null"
             ],
             "description": "The goods the latest approval described, if it approved goods."
+          },
+          "endorsed_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "The account that made the latest move to endorsed, read from the history; null if the request was never endorsed."
+          },
+          "would_self_approve": {
+            "type": "boolean",
+            "description": "The request stands at endorsed and the reader made that endorsement: approving it now would be recorded as a self-approval. Said before the reader approves, so a screen can warn; never a refusal (ADR 0003, DL-91)."
+          },
+          "self_approved": {
+            "type": "boolean",
+            "description": "The latest approval was made by the account that made the endorsement before it (its status_history entry says so too). False before approval."
           }
         }
       },
@@ -27514,6 +27612,106 @@
           }
         }
       },
+      "OwnAssistanceRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "reference_number",
+          "program_name",
+          "filed_at",
+          "status",
+          "status_changed_at",
+          "approved_amount_centavos",
+          "payout_scheduled_for",
+          "payout_venue",
+          "released_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reference_number": {
+            "type": "string",
+            "description": "The control number issued at filing."
+          },
+          "program_name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The name of the programme the request was filed under."
+          },
+          "filed_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/OfficeRequestStatus",
+            "description": "The raw status; the app words it. Never draft."
+          },
+          "status_changed_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When the status last changed."
+          },
+          "approved_amount_centavos": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Integer centavos, from the latest approval, while the request stands approved, scheduled, released or completed. Null before approval, after a cancellation or expiry, and for goods."
+          },
+          "payout_scheduled_for": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "The payout session's date, while the request stands scheduled and its release is scheduled into the session; null otherwise."
+          },
+          "payout_venue": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Where the payout session is held, under the same rule as payout_scheduled_for."
+          },
+          "released_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "When it was handed over, once the request stands released or completed; null before."
+          }
+        },
+        "description": "A resident's own assistance request, as the app shows it (ADR 0003, C). The minimum; nothing of the office's record."
+      },
+      "OwnAssistanceRequestListEnvelope": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnAssistanceRequest"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "pagination": {
+                "$ref": "#/components/schemas/Pagination"
+              }
+            }
+          }
+        }
+      },
       "IssuanceRequestListEnvelope": {
         "type": "object",
         "required": [
@@ -28493,7 +28691,8 @@
           "pair",
           "reason",
           "decided_by",
-          "decided_at"
+          "decided_at",
+          "app_account"
         ],
         "properties": {
           "id": {
@@ -28544,9 +28743,56 @@
           "decided_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "app_account": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OfficeIdentityAccountOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the finding did to an app account linked to the record it superseded. Null when none was linked to it, and for distinct-people."
           }
         },
         "description": "A reviewer’s finding about one pair. Append-only. There is no merge."
+      },
+      "OfficeIdentityAccountOutcome": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "outcome",
+          "reason",
+          "linked_resident_id"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "relinked",
+              "not-relinked"
+            ],
+            "description": "relinked: the account was moved to the record kept, and reads that record and every record superseded into it. not-relinked: nothing moved."
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "kept-record-has-account",
+              null
+            ],
+            "description": "Why nothing moved: the record kept already has an app account of its own — two app accounts for one person, which the office decides. Null when the account moved."
+          },
+          "linked_resident_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The registry record the account is linked to after the finding."
+          }
+        },
+        "description": "What a same-person finding did, or would do, to an app account linked to the record it supersedes (ADR 0003, B). No account id is sent."
       },
       "OfficeBeneficiarySummary": {
         "type": "object",
@@ -28692,7 +28938,8 @@
           "moving_release_count",
           "moving_case_count",
           "moving_enrollment_count",
-          "overlapping_program_names"
+          "overlapping_program_names",
+          "app_account"
         ],
         "properties": {
           "pair_id": {
@@ -28728,6 +28975,17 @@
             "items": {
               "type": "string"
             }
+          },
+          "app_account": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/OfficeIdentityAccountOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What recording this finding would do to an app account linked to the record superseded: said before the button. Null when none is linked to it."
           }
         }
       },

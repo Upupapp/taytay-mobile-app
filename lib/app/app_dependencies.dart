@@ -35,6 +35,9 @@ import '../core/telemetry/telemetry.dart';
 import '../features/account/data/firebase_account_password_client.dart';
 import '../features/account/data/mock_account_password_client.dart';
 import '../features/account/domain/account_password_client.dart';
+import '../features/assistance/data/mock_own_assistance_repository.dart';
+import '../features/assistance/data/own_assistance_api_repository.dart';
+import '../features/assistance/domain/own_assistance_repository.dart';
 import '../features/auth/data/auth_api_repository.dart';
 import '../features/auth/data/firebase_identity.dart';
 import '../features/auth/data/session_api_repository.dart';
@@ -131,6 +134,7 @@ class AppDependencies {
     OfficeMessagingRepository? officeMessaging,
     IssuanceRepository? issuance,
     SectorRepository? sectors,
+    OwnAssistanceRepository? ownAssistance,
     AccountPasswordClient? passwordClient,
     ConsentGateController? consentGate,
     LiveUpdates? live,
@@ -153,6 +157,8 @@ class AppDependencies {
        issuanceRepository =
            issuance ?? IssuanceApiRepository(apiClient: apiClient),
        sectorRepository = sectors ?? SectorApiRepository(apiClient: apiClient),
+       ownAssistanceRepository =
+           ownAssistance ?? OwnAssistanceApiRepository(apiClient: apiClient),
        accountPasswordClient =
            passwordClient ?? const FirebaseAccountPasswordClient(),
        citizenApi = NodeCitizenApi(apiClient: apiClient),
@@ -419,6 +425,9 @@ class AppDependencies {
       sectors: mock == null
           ? SectorApiRepository(apiClient: apiClient)
           : MockSectorRepository(mock),
+      ownAssistance: mock == null
+          ? OwnAssistanceApiRepository(apiClient: apiClient)
+          : MockOwnAssistanceRepository(mock),
       passwordClient: mock == null
           ? const FirebaseAccountPasswordClient()
           : MockAccountPasswordClient(),
@@ -605,6 +614,10 @@ class AppDependencies {
   /// (`me/sectors`, `me/sector-applications`, D-215). A dev mock build
   /// supplies synthetic ones.
   final SectorRepository sectorRepository;
+
+  /// The resident's own filed assistance requests (`me/assistance-requests`,
+  /// D-223): read only. A dev mock build supplies synthetic ones.
+  final OwnAssistanceRepository ownAssistanceRepository;
 
   /// In-session password change. Firebase on a live build, a mock in dev.
   final AccountPasswordClient accountPasswordClient;

@@ -9,6 +9,7 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../profile/domain/profile_fields.dart';
@@ -158,6 +159,7 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   }
 
   List<AccountMenuRow> _menu(BuildContext context) {
+    final AppStrings strings = AppStrings.of(context);
     final ResidentProfileDetail? detail = _detail;
     final String? decided = manilaDecisionDate(_detail?.verificationDecidedAt);
     return <AccountMenuRow>[
@@ -201,8 +203,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
         iconColor: BrandColors.green,
         onTap: () => context.goNamed(AppRoute.verification.routeName),
       ),
-      // `/documents` and `/household` are top-level routes, so they are
-      // pushed: back returns here rather than to Home.
+      // `/my-requests`, `/documents` and `/household` are top-level routes,
+      // so they are pushed: back returns here rather than to Home.
+      AccountMenuRow(
+        title: strings.myRequestsTitle,
+        subtitle: strings.myRequestsSubtitle,
+        icon: TaytayIcons.handHelping,
+        tile: BrandColors.blue50,
+        iconColor: BrandColors.blue,
+        onTap: () => context.pushNamed(AppRoute.myRequests.routeName),
+      ),
       AccountMenuRow(
         title: 'Request documents',
         subtitle: 'Certificates and copies from offices',

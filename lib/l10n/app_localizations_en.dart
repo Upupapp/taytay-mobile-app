@@ -995,4 +995,110 @@ class AppStringsEn extends AppStrings {
   String verificationReviewTimelineDetail(String duration) {
     return 'Usually $duration';
   }
+
+  @override
+  String get myRequestsTitle => 'My requests';
+
+  @override
+  String get myRequestsSubtitle => 'Assistance requests filed with the MSWDO';
+
+  @override
+  String get myRequestsInPerson =>
+      'Some requests are discussed only in person at the MSWDO.';
+
+  @override
+  String get myRequestsEmptyTitle => 'No requests to show';
+
+  @override
+  String get myRequestsEmptyMessage =>
+      'No request filed with the office is shown here.';
+
+  @override
+  String get myRequestsLoading => 'Loading your requests';
+
+  @override
+  String get myRequestsShowOlder => 'Show older requests';
+
+  @override
+  String get myRequestsLoadingMore => 'Loading…';
+
+  @override
+  String get myRequestsMoreFailed => 'Could not load more. Try again';
+
+  @override
+  String myRequestsFiled(String date) {
+    return 'Filed $date';
+  }
+
+  @override
+  String get myRequestsUnnamedProgramme => 'Assistance request';
+
+  @override
+  String get assistanceStageReceived => 'Received';
+
+  @override
+  String get assistanceStageBeingAssessed => 'Being assessed';
+
+  @override
+  String get assistanceStageApproved => 'Approved';
+
+  @override
+  String get assistanceStagePayoutScheduled => 'Payout scheduled';
+
+  @override
+  String get assistanceStageReleased => 'Released';
+
+  @override
+  String get assistanceStageNeedsMore =>
+      'The office needs more from you — please visit or contact the MSWDO';
+
+  @override
+  String get assistanceStageNotApproved =>
+      'Not approved — the MSWDO can tell you why';
+
+  @override
+  String get assistanceStageCancelled => 'Cancelled';
+
+  @override
+  String get assistanceStageExpired => 'Expired';
+
+  @override
+  String get assistanceStageUpdated => 'Status: updated';
+
+  @override
+  String get myRequestDetailTitle => 'Assistance request';
+
+  @override
+  String get myRequestReference => 'Reference number';
+
+  @override
+  String get myRequestFiledOn => 'Filed on';
+
+  @override
+  String get myRequestStatusChangedOn => 'Status last changed';
+
+  @override
+  String get myRequestApprovedAmount => 'Approved amount';
+
+  @override
+  String get myRequestPayoutDate => 'Payout date';
+
+  @override
+  String get myRequestPayoutVenue => 'Where to collect';
+
+  @override
+  String get myRequestReleasedOn => 'Released on';
+
+  @override
+  String get myRequestLoading => 'Loading the request';
+
+  @override
+  String get myRequestNotShownTitle => 'This request is not shown here';
+
+  @override
+  String get myRequestNotShownMessage =>
+      'It is not among the requests shown for your account.';
+
+  @override
+  String get myRequestsSeeAll => 'See all my requests';
 }

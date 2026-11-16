@@ -1009,4 +1009,111 @@ class AppStringsFil extends AppStrings {
   String verificationReviewTimelineDetail(String duration) {
     return 'Karaniwang $duration';
   }
+
+  @override
+  String get myRequestsTitle => 'Aking mga hiling';
+
+  @override
+  String get myRequestsSubtitle => 'Mga hiling na tulong na naisampa sa MSWDO';
+
+  @override
+  String get myRequestsInPerson =>
+      'May mga hiling na pinag-uusapan lamang nang personal sa tanggapan ng MSWDO.';
+
+  @override
+  String get myRequestsEmptyTitle => 'Walang hiling na maipapakita';
+
+  @override
+  String get myRequestsEmptyMessage =>
+      'Walang hiling na naisampa sa tanggapan ang ipinapakita rito.';
+
+  @override
+  String get myRequestsLoading => 'Kinukuha ang iyong mga hiling';
+
+  @override
+  String get myRequestsShowOlder => 'Ipakita ang mas lumang mga hiling';
+
+  @override
+  String get myRequestsLoadingMore => 'Kinukuha…';
+
+  @override
+  String get myRequestsMoreFailed => 'Hindi nakuha ang iba pa. Subukang muli';
+
+  @override
+  String myRequestsFiled(String date) {
+    return 'Naisampa noong $date';
+  }
+
+  @override
+  String get myRequestsUnnamedProgramme => 'Hiling na tulong';
+
+  @override
+  String get assistanceStageReceived => 'Natanggap';
+
+  @override
+  String get assistanceStageBeingAssessed => 'Sinusuri';
+
+  @override
+  String get assistanceStageApproved => 'Aprubado';
+
+  @override
+  String get assistanceStagePayoutScheduled => 'Nakaiskedyul na ang pagkuha';
+
+  @override
+  String get assistanceStageReleased => 'Naibigay na';
+
+  @override
+  String get assistanceStageNeedsMore =>
+      'May kailangan pa sa iyo ang tanggapan — pakibisita o kontakin ang MSWDO';
+
+  @override
+  String get assistanceStageNotApproved =>
+      'Hindi naaprubahan — masasabi sa iyo ng MSWDO kung bakit';
+
+  @override
+  String get assistanceStageCancelled => 'Kinansela';
+
+  @override
+  String get assistanceStageExpired => 'Nag-expire';
+
+  @override
+  String get assistanceStageUpdated => 'Katayuan: may update';
+
+  @override
+  String get myRequestDetailTitle => 'Hiling na tulong';
+
+  @override
+  String get myRequestReference => 'Numero ng reperensiya';
+
+  @override
+  String get myRequestFiledOn => 'Petsa ng pagsampa';
+
+  @override
+  String get myRequestStatusChangedOn => 'Huling nagbago ang katayuan';
+
+  @override
+  String get myRequestApprovedAmount => 'Halagang inaprubahan';
+
+  @override
+  String get myRequestPayoutDate => 'Petsa ng pagkuha';
+
+  @override
+  String get myRequestPayoutVenue => 'Saan kukunin';
+
+  @override
+  String get myRequestReleasedOn => 'Naibigay noong';
+
+  @override
+  String get myRequestLoading => 'Kinukuha ang hiling';
+
+  @override
+  String get myRequestNotShownTitle =>
+      'Hindi ipinapakita rito ang hiling na ito';
+
+  @override
+  String get myRequestNotShownMessage =>
+      'Wala ito sa mga hiling na ipinapakita para sa iyong account.';
+
+  @override
+  String get myRequestsSeeAll => 'Tingnan ang lahat ng aking hiling';
 }

@@ -79,6 +79,9 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.issuanceRequestDetail: <String, String>{
     'requestId': 'dr-sample-ready',
   },
+  AppRoute.myRequestDetail: <String, String>{
+    'requestId': 'ar-sample-scheduled',
+  },
 };
 
 String _openLocation(AppRoute route) =>

@@ -107,18 +107,25 @@ enum ResidentCapability {
     route: AppRoute.verification,
   ),
 
+  /// My requests (D-223): the resident's own filed assistance requests and
+  /// where each stands. **Authenticated and available** since backend
+  /// `d1e997c`: `GET /me/assistance-requests` serves registered and verified
+  /// residents alike. It used to point at the PHP-era `/requests` case pages,
+  /// verified and planned; cases are never a resident's to read (ADR 0003 C),
+  /// and those pages stay unwired.
+  trackAssistanceRequests(
+    AccessRequirement.authenticated,
+    'Track your assistance requests',
+    BackendAvailability.available,
+    route: AppRoute.myRequests,
+  ),
+
   // --- Verified: acts on the resident's civil record. -----------------------
   holdDigitalId(
     AccessRequirement.verified,
     'Hold your Taytay digital ID',
     BackendAvailability.planned,
     route: AppRoute.digitalId,
-  ),
-  trackAssistanceRequests(
-    AccessRequirement.verified,
-    'Track your assistance requests',
-    BackendAvailability.planned,
-    route: AppRoute.requests,
   ),
 
   /// Filing an application. The resident app does not do this.

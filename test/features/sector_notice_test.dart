@@ -25,6 +25,7 @@ import 'package:taytay_resident/features/notifications/domain/notification_repos
 import 'package:taytay_resident/features/sectors/presentation/sectors_copy.dart';
 
 /// D-216: the sector notice opens Sectors and benefits, with no id on the way.
+/// D-223: the assistance request notice opens that request on My requests.
 ///
 /// Synthetic: the ids are made up and nobody here is a real resident.
 const String _applicationId = '00000000-0000-4000-8000-000000000215';
@@ -162,6 +163,7 @@ Future<void> _openInbox(WidgetTester tester, List<Object?> rows) async {
     socialServices: base.socialServiceRepository,
     issuance: base.issuanceRepository,
     sectors: base.sectorRepository,
+    ownAssistance: base.ownAssistanceRepository,
     passwordClient: base.accountPasswordClient,
     onDispose: base.onDispose,
   );
@@ -181,7 +183,63 @@ String _location(WidgetTester tester) => GoRouter.of(
   tester.element(find.byType(Scaffold).first),
 ).routerDelegate.currentConfiguration.uri.path;
 
+/// An `assistance_request_updated` notice as the API words it (D-223). The
+/// subject is the dev mock's synthetic scheduled request.
+const String _assistanceId = 'ar-sample-scheduled';
+
+Map<String, Object?> _assistanceNotice() => <String, Object?>{
+  'id': 'n-assistance',
+  'type': 'assistance_request_updated',
+  'title': 'Assistance request update',
+  'body': 'There is an update on your assistance request AR-SAMPLE-0003.',
+  'subject_id': _assistanceId,
+  'read_at': null,
+  'created_at': '2026-11-16T05:20:00Z',
+};
+
 void main() {
+  group('the assistance request notice (D-223)', () {
+    test(
+      'is known: Assistance updates, opening the request it names',
+      () async {
+        final ResidentNotification notice = await _decoded(_assistanceNotice());
+
+        expect(notice.category?.known, NotificationCategory.assistanceStatus);
+        expect(notice.target[DeepLink.targetKey], 'assistance_request');
+        expect(notice.target[DeepLink.idKey], _assistanceId);
+        final DeepLinkResult link = DeepLink.resolve(notice.target);
+        expect(link, isA<DeepLinkResolved>());
+        final DeepLinkTarget target = (link as DeepLinkResolved).target;
+        expect(target.route, AppRoute.myRequestDetail);
+        expect(target.location, '/my-requests/$_assistanceId');
+      },
+    );
+
+    test('with no subject it keeps its row and opens nothing', () async {
+      final ResidentNotification notice = await _decoded(<String, Object?>{
+        ..._assistanceNotice(),
+        'subject_id': null,
+      });
+      expect(notice.target.containsKey(DeepLink.targetKey), isFalse);
+      expect(notice.category?.known, NotificationCategory.assistanceStatus);
+    });
+
+    testWidgets('tapping it in the inbox opens the request', (tester) async {
+      await _openInbox(tester, <Object?>[_assistanceNotice()]);
+
+      await tester.tap(find.text('Assistance request update'));
+      await tester.pumpAndSettle();
+
+      expect(_location(tester), '/my-requests/$_assistanceId');
+      // Read from the list, never from the notice.
+      expect(find.text('Payout scheduled'), findsOneWidget);
+      expect(
+        find.text('Some requests are discussed only in person at the MSWDO.'),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('the notice maps to a place, not a record', () {
     test('sector_application_decided targets /sectors with no id', () async {
       final ResidentNotification notice = await _decoded(

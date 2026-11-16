@@ -1789,6 +1789,204 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'Usually {duration}'**
   String verificationReviewTimelineDetail(String duration);
+
+  /// Title of My requests, the resident's own assistance requests (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'My requests'**
+  String get myRequestsTitle;
+
+  /// Subtitle of My requests, and the My Account row's line (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistance requests filed with the MSWDO'**
+  String get myRequestsSubtitle;
+
+  /// Shown on My requests to every resident, whatever the list holds, so an empty list reveals nothing about anyone (D-223, ADR 0003 C: VAWC and CICL). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Some requests are discussed only in person at the MSWDO.'**
+  String get myRequestsInPerson;
+
+  /// Empty My requests: the title. Says nothing about why (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'No requests to show'**
+  String get myRequestsEmptyTitle;
+
+  /// Empty My requests: the sentence under the title. Plain, and says nothing about why; the in-person sentence follows it (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'No request filed with the office is shown here.'**
+  String get myRequestsEmptyMessage;
+
+  /// Screen-reader label of the My requests skeleton. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading your requests'**
+  String get myRequestsLoading;
+
+  /// Button under My requests when the API says more exist (has_more). Never a page count: the API sends none. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Show older requests'**
+  String get myRequestsShowOlder;
+
+  /// The Show older requests button while the next page is read. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get myRequestsLoadingMore;
+
+  /// The Show older requests button after the next page failed; tapping it tries again. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load more. Try again'**
+  String get myRequestsMoreFailed;
+
+  /// A My requests row: the filing date, pre-formatted in Manila time. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed {date}'**
+  String myRequestsFiled(String date);
+
+  /// A My requests row whose programme the API does not name. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistance request'**
+  String get myRequestsUnnamedProgramme;
+
+  /// Status of an assistance request: submitted or intake-review (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Received'**
+  String get assistanceStageReceived;
+
+  /// Status of an assistance request: assessment or endorsed (D-223). Which desk holds it is never said. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Being assessed'**
+  String get assistanceStageBeingAssessed;
+
+  /// Status of an assistance request: approved (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get assistanceStageApproved;
+
+  /// Status of an assistance request: scheduled (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout scheduled'**
+  String get assistanceStagePayoutScheduled;
+
+  /// Status of an assistance request: released or completed (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Released'**
+  String get assistanceStageReleased;
+
+  /// Status of an assistance request: returned (D-223). The office's reason is never sent to the app. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office needs more from you — please visit or contact the MSWDO'**
+  String get assistanceStageNeedsMore;
+
+  /// Status of an assistance request: rejected (D-223). The office's reason is never sent to the app. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Not approved — the MSWDO can tell you why'**
+  String get assistanceStageNotApproved;
+
+  /// Status of an assistance request: cancelled (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled'**
+  String get assistanceStageCancelled;
+
+  /// Status of an assistance request: expired (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Expired'**
+  String get assistanceStageExpired;
+
+  /// Status of an assistance request this build does not know (D-223): neutral, never a guess. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Status: updated'**
+  String get assistanceStageUpdated;
+
+  /// Title of one request on My requests (D-223). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Assistance request'**
+  String get myRequestDetailTitle;
+
+  /// Label: the request's control number. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference number'**
+  String get myRequestReference;
+
+  /// Label: when the request was filed. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed on'**
+  String get myRequestFiledOn;
+
+  /// Label: when the request's status last changed. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Status last changed'**
+  String get myRequestStatusChangedOn;
+
+  /// Label: the approved amount, shown once approved (pesos from integer centavos). The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved amount'**
+  String get myRequestApprovedAmount;
+
+  /// Label: the payout session's date, while the payout is scheduled. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Payout date'**
+  String get myRequestPayoutDate;
+
+  /// Label: the payout session's venue, while the payout is scheduled. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Where to collect'**
+  String get myRequestPayoutVenue;
+
+  /// Label: when the assistance was handed over. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Released on'**
+  String get myRequestReleasedOn;
+
+  /// Screen-reader label of one request's skeleton. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading the request'**
+  String get myRequestLoading;
+
+  /// One request the list does not carry. Says nothing about why (D-223); the in-person sentence follows. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'This request is not shown here'**
+  String get myRequestNotShownTitle;
+
+  /// Under myRequestNotShownTitle. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'It is not among the requests shown for your account.'**
+  String get myRequestNotShownMessage;
+
+  /// Button from one request that is not shown to My requests. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'See all my requests'**
+  String get myRequestsSeeAll;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

@@ -7,6 +7,8 @@ import '../../features/account/presentation/account_home_screen.dart';
 import '../../features/account/presentation/account_pages.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
+import '../../features/assistance/presentation/my_request_detail_screen.dart';
+import '../../features/assistance/presentation/my_requests_screen.dart';
 import '../../features/auth/domain/code_exchange.dart';
 import '../../features/auth/presentation/account_wizard_screen.dart';
 import '../../features/auth/presentation/forgot_password_screen.dart';
@@ -622,6 +624,21 @@ GoRouter buildAppRouter({
             path: 'correction',
             name: AppRoute.householdCorrection.routeName,
             builder: (context, state) => const HouseholdCorrectionScreen(),
+          ),
+        ],
+      ),
+      // My requests (D-223), pushed from My Account so back returns there.
+      GoRoute(
+        path: AppRoute.myRequests.path,
+        name: AppRoute.myRequests.routeName,
+        builder: (context, state) => const MyRequestsScreen(),
+        routes: <RouteBase>[
+          GoRoute(
+            path: ':requestId',
+            name: AppRoute.myRequestDetail.routeName,
+            builder: (context, state) => MyRequestDetailScreen(
+              requestId: state.pathParameters['requestId'] ?? '',
+            ),
           ),
         ],
       ),

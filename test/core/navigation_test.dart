@@ -309,9 +309,12 @@ void main() {
       // A guest asking for a verified-only capability is told to sign in — not
       // that the feature is missing, which would be a different answer for
       // different people and would send them away instead of onward.
+      // (`trackAssistanceRequests` served this test until D-223 made it
+      // authenticated and available; `submitRequirements` is still verified
+      // and planned.)
       final verdict = CapabilityService.evaluate(
         session: guest(),
-        capability: ResidentCapability.trackAssistanceRequests,
+        capability: ResidentCapability.submitRequirements,
       );
       expect(verdict, const CapabilityNeedsSignIn());
     });
@@ -320,7 +323,7 @@ void main() {
       expect(
         CapabilityService.evaluate(
           session: verified(),
-          capability: ResidentCapability.trackAssistanceRequests,
+          capability: ResidentCapability.submitRequirements,
         ),
         const CapabilityNotYetAvailable(),
       );
@@ -525,7 +528,7 @@ void main() {
         'news_post': AppRoute.newsPost,
         'announcement': AppRoute.newsPost,
         'event': AppRoute.eventDetail,
-        'assistance_request': AppRoute.requestDetail,
+        'assistance_request': AppRoute.myRequestDetail,
         'assistance_requirements': AppRoute.requestRequirements,
       };
 

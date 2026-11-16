@@ -86,6 +86,15 @@ maintenance. `ApiErrorCode.listTooLong` maps it to a temporary server failure th
 maintenance, so a resident sees the failed load with Try again and is not sent to the maintenance
 screen (D-222's open question, closed). No route changed.
 
+It was re-vendored from backend `d1e997c` on 16 November 2026, for D-223. One route was added and
+this app calls it: `GET /me/assistance-requests` (registered or verified, a cursor page), the
+resident's own filed assistance requests with the minimum that says where each stands (ADR 0003,
+C). `Notification.type` gained `assistance_request_updated`, which this app opens on My requests.
+In between, backend `dd8dbc3` (ADR 0003, B) changed only descriptions on routes this app calls:
+`GET /me/sectors` now reads her whole person after a same-person finding, and a re-sent ID image a
+reviewer decided on is kept (backend `9d4072c`). No response this app reads lost or renamed a
+field, and no route it calls was removed.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -99,9 +108,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `70c8b84faaa71e7deed4f0ea61ad51bdacdf998c` (`70c8b84`) |
-| **sha256** | `4e7858fbc569b601cc0582f65576c474cbd0af327535bebf21b263725ce3fa8a` |
-| **Vendored on** | 15 November 2026 (app commit `07d1c28`) |
+| **Backend commit** | `d1e997cc054243c77960c0945735fe9c97c5a7f3` (`d1e997c`) |
+| **sha256** | `3fe45d642788fcf7a1d82a92a1db5f078a160d99d5de6659023fa7a85d5a6bb3` |
+| **Vendored on** | 16 November 2026 (D-223) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two
