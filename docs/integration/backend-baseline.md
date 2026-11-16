@@ -80,6 +80,12 @@ the hotline ceiling: `ca71f23`).
 - No public response gained a field, and no route this app calls was removed. The removed routes
   were all admin (`DELETE /admin/...`, `DELETE /office/saved-views/{id}`).
 
+It was re-vendored from backend `70c8b84` the same day. A hotline list too long to send whole
+now answers `503 LIST_TOO_LONG` instead of `SERVICE_UNAVAILABLE`, which this app reads as
+maintenance. `ApiErrorCode.listTooLong` maps it to a temporary server failure that is never
+maintenance, so a resident sees the failed load with Try again and is not sent to the maintenance
+screen (D-222's open question, closed). No route changed.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -93,8 +99,8 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `ca71f23f9cb0ec93cb3b8b56279f10953e8b126c` (`ca71f23`) |
-| **sha256** | `a8b28f25eabb4e410e94833e2454cf8f76fda0f1bee8843a59d767b085839b7c` |
+| **Backend commit** | `70c8b84faaa71e7deed4f0ea61ad51bdacdf998c` (`70c8b84`) |
+| **sha256** | `4e7858fbc569b601cc0582f65576c474cbd0af327535bebf21b263725ce3fa8a` |
 | **Vendored on** | 15 November 2026 (app commit `07d1c28`) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change

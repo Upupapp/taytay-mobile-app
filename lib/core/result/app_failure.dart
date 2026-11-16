@@ -591,6 +591,16 @@ AppFailure failureFromApiError({
         requestId: requestId,
         debugMessage: message,
       );
+    // A list too long to send whole: the request was turned away (so it is
+    // temporary, and nothing was done), but the server is up. Never
+    // [ServerFailure.isMaintenance], which would send a signed-in resident to
+    // the maintenance screen for one oversized list.
+    case ApiErrorCode.listTooLong:
+      return ServerFailure(
+        isTemporary: true,
+        requestId: requestId,
+        debugMessage: message,
+      );
     case ApiErrorCode.serverError:
     case ApiErrorCode.internalError:
       return ServerFailure(requestId: requestId, debugMessage: message);

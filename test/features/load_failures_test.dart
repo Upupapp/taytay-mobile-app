@@ -884,7 +884,7 @@ void main() {
     testWidgets('hotlines past what the API reads whole (503) show the failure '
         'with Try again, not offline and not an empty list', (tester) async {
       _tallView(tester);
-      final ApiHttpResponse unavailable = _refusal(503, 'SERVICE_UNAVAILABLE');
+      final ApiHttpResponse unavailable = _refusal(503, 'LIST_TOO_LONG');
       final _Gated transport = _Gated(
         (ApiRequest request) => Ok<ApiHttpResponse>(
           request.path == 'hotlines' || request.path == 'home'

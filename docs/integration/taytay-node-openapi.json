@@ -2346,7 +2346,7 @@
         "security": [],
         "responses": {
           "200": { "description": "Home payload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HomeEnvelope" } } } },
-          "503": { "description": "There are more hotlines than the home screen reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "503": { "description": "There are more hotlines than the home screen reads whole; nothing is cut short (LIST_TOO_LONG).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2532,7 +2532,7 @@
         "security": [],
         "responses": {
           "200": { "description": "Active hotlines.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineListEnvelope" } } } },
-          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short (LIST_TOO_LONG).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2546,7 +2546,7 @@
         "responses": {
           "200": { "description": "Hotlines, each with its archive state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminHotlineListEnvelope" } } } },
           "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short (LIST_TOO_LONG).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       },
       "post": {
@@ -17350,8 +17350,8 @@
             "properties": {
               "code": {
                 "type": "string",
-                "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked. Archive, never delete (ADR 0002), answers 409 with ALREADY_ARCHIVED (archiving an archived record), NOT_ARCHIVED (restoring a live one), ARCHIVED (changing an archived record: it is read-only until restored), OFFICE_IN_USE (archiving an office staff, Tulong services or document types still hang off; details carries each count) or OFFICE_ARCHIVED (putting staff, a service, a document type or an article under an archived office).",
-                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "BIOMETRIC_CONSENT_REQUIRED", "NOT_FOUND", "CONFLICT", "ALREADY_ARCHIVED", "NOT_ARCHIVED", "ARCHIVED", "OFFICE_IN_USE", "OFFICE_ARCHIVED", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
+                "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked. Archive, never delete (ADR 0002), answers 409 with ALREADY_ARCHIVED (archiving an archived record), NOT_ARCHIVED (restoring a live one), ARCHIVED (changing an archived record: it is read-only until restored), OFFICE_IN_USE (archiving an office staff, Tulong services or document types still hang off; details carries each count) or OFFICE_ARCHIVED (putting staff, a service, a document type or an article under an archived office). A list a resident reads that is longer than the API reads whole answers 503 LIST_TOO_LONG rather than being cut short; it is not SERVICE_UNAVAILABLE, which clients read as the platform being down.",
+                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "BIOMETRIC_CONSENT_REQUIRED", "NOT_FOUND", "CONFLICT", "ALREADY_ARCHIVED", "NOT_ARCHIVED", "ARCHIVED", "OFFICE_IN_USE", "OFFICE_ARCHIVED", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE", "LIST_TOO_LONG"]
               },
               "message": { "type": "string" },
               "details": {

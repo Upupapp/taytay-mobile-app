@@ -154,6 +154,30 @@ void main() {
       }
     });
 
+    test('LIST_TOO_LONG is a turned-away read, never maintenance', () {
+      final failure =
+          failureFromApiError(
+                statusCode: 503,
+                code: ApiErrorCode.parse('LIST_TOO_LONG'),
+              )
+              as ServerFailure;
+      expect(failure.isTemporary, isTrue);
+      expect(failure.outcomeUnknown, isFalse);
+      // The one difference from SERVICE_UNAVAILABLE, and the reason the code
+      // exists: a list too long to send whole must not send a signed-in
+      // resident to the maintenance screen.
+      expect(failure.isMaintenance, isFalse);
+      expect(
+        (failureFromApiError(
+                  statusCode: 503,
+                  code: ApiErrorCode.serviceUnavailable,
+                )
+                as ServerFailure)
+            .isMaintenance,
+        isTrue,
+      );
+    });
+
     test('SERVICE_UNAVAILABLE is temporary and retryable', () {
       final failure =
           failureFromApiError(

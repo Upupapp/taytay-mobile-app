@@ -109,6 +109,11 @@ enum ApiErrorCode {
   /// 503 — dependency down or maintenance.
   serviceUnavailable('SERVICE_UNAVAILABLE'),
 
+  /// 503 — a list is longer than the API reads whole, so it refused rather than
+  /// cut it short (backend `ca71f23`+, the hotlines in `GET /hotlines` and
+  /// `GET /home`). The server is up: this is not maintenance.
+  listTooLong('LIST_TOO_LONG'),
+
   /// A code this build does not know about. Never thrown away — the raw string
   /// is preserved on the failure for logging and support.
   unknown('UNKNOWN');

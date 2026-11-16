@@ -3988,13 +3988,17 @@ archiving its last programme stopped hearing changes.
    `ConflictFailure`, so the contract's drift test holds and one that ever
    arrived is not "something went wrong".
 
-**Not done.** The API sends the hotline `503` as `SERVICE_UNAVAILABLE`, the
-code the app reads as maintenance (`PlatformController.observe`): until some
-request succeeds, the route guard sends a signed-in resident's protected routes
-to the maintenance screen. Telling "too many hotlines" from maintenance needs a
-different code from the backend, which is a decision for the owner. Pages
-opened earlier in the session stay in Tulong's "saved on this phone" list when
-it cannot load, even after a `404`.
+**Closed the same day.** The API first sent the hotline `503` as
+`SERVICE_UNAVAILABLE`, the code the app reads as maintenance
+(`PlatformController.observe`): until some request succeeded, the route guard
+would have sent a signed-in resident's protected routes to the maintenance
+screen. Backend `70c8b84` answers `503 LIST_TOO_LONG` instead, and
+`ApiErrorCode.listTooLong` maps it to a temporary `ServerFailure` that is never
+`isMaintenance` (`test/core/result_test.dart`), so the resident sees the failed
+load with Try again.
+
+**Not done.** Pages opened earlier in the session stay in Tulong's "saved on
+this phone" list when it cannot load, even after a `404`.
 
 **Tests.** `test/features/load_failures_test.dart`, group "a record the office
 archives while it is open (D-222)": an office page and a programme page keep
@@ -4234,6 +4238,6 @@ failed on them before.
 | D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 | D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
-| D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503`'s `SERVICE_UNAVAILABLE` code also raises maintenance, left for the owner | product / contract | settled |
+| D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance | product / contract | settled |
 
 **218 decisions — 214 settled, 4 provisional.**
