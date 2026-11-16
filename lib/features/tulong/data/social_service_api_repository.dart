@@ -23,6 +23,7 @@ import 'social_service_codec.dart';
 ///   string exists.
 /// * No saved-pages resource and no saved-at. [savedOnThisPhone] is the list
 ///   already loaded in this process. Nothing is written to device storage.
+///   A page the API says is gone leaves it (D-222): see [savedOnThisPhone].
 /// * No apply or submit route.
 /// * `hero_url` is stored. The service page reads `GET /services/{slug}/hero`
 ///   when it is set. A null URL keeps the icon tile. The list does not.
@@ -40,6 +41,12 @@ class SocialServiceApiRepository implements SocialServiceRepository {
 
   /// Services this process has already decoded, newest first.
   final List<SocialService> _seen = <SocialService>[];
+
+  /// The slugs in [_seen] that a list read has carried as listed. Only these
+  /// can be forgotten for missing from a whole catalogue: a page only ever
+  /// reached by its address (a hidden one, or a link) was never the list's to
+  /// speak for (D-222).
+  final Set<String> _listed = <String>{};
 
   static const String path = 'services';
 
@@ -82,29 +89,50 @@ class SocialServiceApiRepository implements SocialServiceRepository {
           final String? next = meta?.nextCursor;
           if (meta == null || !meta.hasMore) {
             return Ok<ServiceCatalogue>(
-              ServiceCatalogue(services: await _joined(read), complete: true),
+              ServiceCatalogue(
+                services: await _joined(read, whole: true),
+                complete: true,
+              ),
             );
           }
           if (next == null || next.isEmpty) {
             // More, and no way to ask for it.
             return Ok<ServiceCatalogue>(
-              ServiceCatalogue(services: await _joined(read), complete: false),
+              ServiceCatalogue(
+                services: await _joined(read, whole: false),
+                complete: false,
+              ),
             );
           }
           cursor = next;
       }
     }
     return Ok<ServiceCatalogue>(
-      ServiceCatalogue(services: await _joined(read), complete: false),
+      ServiceCatalogue(
+        services: await _joined(read, whole: false),
+        complete: false,
+      ),
     );
   }
 
-  Future<List<SocialService>> _joined(List<SocialService> read) async {
+  /// [whole] is a read that reached the catalogue's last page. Only that read
+  /// can say a saved page is no longer listed; a cut one cannot (D-222).
+  Future<List<SocialService>> _joined(
+    List<SocialService> read, {
+    required bool whole,
+  }) async {
     final List<SocialService> joined = List<SocialService>.unmodifiable(
       await _withOffices(read),
     );
+    if (whole) {
+      final Set<String> listed = <String>{
+        for (final SocialService service in joined) service.slug,
+      };
+      _forget(_listed.difference(listed));
+    }
     // The first twenty, kept in the catalogue's order, are the saved pages.
     _remember(joined.take(20).toList().reversed.toList());
+    _carried(joined);
     return joined;
   }
 
@@ -144,6 +172,7 @@ class SocialServiceApiRepository implements SocialServiceRepository {
             if (featured ? service.featured : !service.hiddenFromList) service,
         ];
         _remember(visible);
+        _carried(visible);
         final PageMeta? page = value.pagination;
         if (page == null) {
           return Ok<Paginated<SocialService>>(
@@ -176,6 +205,12 @@ class SocialServiceApiRepository implements SocialServiceRepository {
         );
     switch (response) {
       case Err<ApiEnvelope<SocialService?>>(:final failure):
+        // The API's answer that the page is gone, as an archived one is: it
+        // is no longer offered as saved (D-222). Any other failure keeps it,
+        // which is what the saved list is for.
+        if (failure is NotFoundFailure) {
+          _forget(<String>{slug});
+        }
         return Err<SocialService>(failure);
       case Ok<ApiEnvelope<SocialService?>>(:final value):
         final SocialService? service = value.data;
@@ -192,6 +227,9 @@ class SocialServiceApiRepository implements SocialServiceRepository {
     }
   }
 
+  /// The pages already loaded in this process, never one the API has since
+  /// said is withdrawn (D-222): a `404` on its own read forgets it, and so
+  /// does a whole catalogue that no longer lists a page a list read carried.
   @override
   Future<List<SocialService>> savedOnThisPhone() async =>
       List<SocialService>.unmodifiable(_seen);
@@ -203,7 +241,26 @@ class SocialServiceApiRepository implements SocialServiceRepository {
     }
     if (_seen.length > 20) {
       _seen.removeRange(20, _seen.length);
+      _listed.retainWhere(_saved);
     }
+  }
+
+  /// Marks the saved pages among [rows] as ones the list speaks for. A row
+  /// hidden from the list (the featured list carries some) is not: the
+  /// catalogue never lists it, so its absence there says nothing.
+  void _carried(Iterable<SocialService> rows) {
+    for (final SocialService row in rows) {
+      if (!row.hiddenFromList && _saved(row.slug)) _listed.add(row.slug);
+    }
+  }
+
+  bool _saved(String slug) =>
+      _seen.any((SocialService seen) => seen.slug == slug);
+
+  void _forget(Set<String> slugs) {
+    if (slugs.isEmpty) return;
+    _seen.removeWhere((SocialService seen) => slugs.contains(seen.slug));
+    _listed.removeAll(slugs);
   }
 
   List<SocialService> _decodeList(Object? data) {

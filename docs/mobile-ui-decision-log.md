@@ -3997,8 +3997,19 @@ screen. Backend `70c8b84` answers `503 LIST_TOO_LONG` instead, and
 `isMaintenance` (`test/core/result_test.dart`), so the resident sees the failed
 load with Try again.
 
-**Not done.** Pages opened earlier in the session stay in Tulong's "saved on
-this phone" list when it cannot load, even after a `404`.
+**Saved on this phone never offers a withdrawn page** (decided the same day by
+the lead on best practice, for the owner). Tulong shows that list when it cannot
+load, so it went on offering a page the office had archived, in words the office
+withdrew. `SocialServiceApiRepository` now forgets a page the API says is gone: a
+`404` on its own read, whether it is being opened or quietly re-read; and a
+catalogue read that reached the last page forgets a saved page a list read had
+carried and no longer lists (archived, or taken off the list). A page only ever
+reached by its address (a hidden one, or a link) was never the list's to speak
+for, and stays until its own read answers `404`. A cut catalogue, an office's
+list and every other failure (offline, `500`, `503`, an unreadable body) forget
+nothing, which is what the list is for. Nothing is written to device storage,
+and the dev mock is unchanged: its saved specimens are fixtures that never
+answer `404`.
 
 **Tests.** `test/features/load_failures_test.dart`, group "a record the office
 archives while it is open (D-222)": an office page and a programme page keep
@@ -4009,7 +4020,15 @@ hotlines with `503` on `/hotlines` and `/home` show the failure with Try again,
 which then loads the list. Against the screens before this change the office,
 programme and Tulong cases fail. `test/core/result_test.dart` parses the five
 archive codes and maps them to a plain conflict; `contract_conformance_test`
-failed on them before.
+failed on them before. For the saved list, two more in the same group: a
+programme whose re-read or opening answers `404` is gone from "Saved pages"
+while one whose re-read failed with a `500` stays, and a programme the whole
+list stops carrying is gone while a hidden page opened by its address stays.
+`test/features/tulong_search_test.dart`, group "saved on this phone never
+offers a withdrawn page (D-222)", holds the rules at the repository, including
+that a cut catalogue, a failed read, an office's list and a hidden featured
+page forget nothing. Against the repository before this change four of the six
+fail; the two that pin what is kept pass either way.
 
 ---
 
@@ -4238,6 +4257,6 @@ failed on them before.
 | D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 | D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
-| D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance | product / contract | settled |
+| D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance. Tulong's "saved on this phone" forgets a page whose own read answers `404`, or that a whole catalogue read no longer lists after a list carried it | product / contract | settled |
 
 **218 decisions — 214 settled, 4 provisional.**

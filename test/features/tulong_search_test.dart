@@ -69,6 +69,27 @@ final ApiHttpResponse _serverError = ApiHttpResponse(
   }),
 );
 
+/// What the API answers for a page the office archived (backend `70c8b84`).
+final ApiHttpResponse _notFound = ApiHttpResponse(
+  statusCode: 404,
+  body: jsonEncode(<String, Object?>{
+    'error': <String, Object?>{
+      'code': 'NOT_FOUND',
+      'message': 'operator text',
+      'details': null,
+      'request_id': 'req-synthetic',
+    },
+  }),
+);
+
+ApiHttpResponse _item(Object? data) => ApiHttpResponse(
+  statusCode: 200,
+  body: jsonEncode(<String, Object?>{
+    'data': data,
+    'meta': <String, Object?>{},
+  }),
+);
+
 int _ids = 0;
 
 Map<String, Object?> _service(
@@ -235,6 +256,168 @@ void main() {
         hasLength(SocialServiceApiRepository.catalogueMaxPages),
       );
       _expectNoTerm(transport, 'programme');
+    });
+  });
+
+  group('saved on this phone never offers a withdrawn page (D-222)', () {
+    Future<List<String>> saved(
+      SocialServiceApiRepository repository,
+    ) async => <String>[
+      for (final SocialService service in await repository.savedOnThisPhone())
+        service.slug,
+    ];
+
+    test("a 404 on a page's own read forgets it; a 500 or an unreadable "
+        'answer keeps it', () async {
+      final Map<String, ApiHttpResponse> pages = <String, ApiHttpResponse>{
+        'services/burial': _item(_service('Burial Assistance', 'burial')),
+        'services/senior-pension': _item(
+          _service('Senior Citizen Pension', 'senior-pension'),
+        ),
+      };
+      final SocialServiceApiRepository repository = _repository(
+        _Routed((ApiRequest request) => pages[request.path] ?? _serverError),
+      );
+      await repository.loadService('burial');
+      await repository.loadService('senior-pension');
+      expect(await saved(repository), <String>['senior-pension', 'burial']);
+
+      pages['services/burial'] = _serverError;
+      expect((await repository.loadService('burial')).isErr, isTrue);
+      // Not the API saying it is gone: a body with no service in it.
+      pages['services/burial'] = _item(null);
+      expect((await repository.loadService('burial')).isErr, isTrue);
+      expect(await saved(repository), <String>['senior-pension', 'burial']);
+
+      pages['services/burial'] = _notFound;
+      expect(
+        (await repository.loadService('burial')).failureOrNull,
+        isA<NotFoundFailure>(),
+      );
+      expect(await saved(repository), <String>['senior-pension']);
+    });
+
+    test(
+      'a whole catalogue forgets a saved page it no longer lists; a page '
+      'only reached by its address stays until its own read answers 404',
+      () async {
+        List<Object?> listed = <Object?>[
+          _service('Burial Assistance', 'burial'),
+          _service('Senior Citizen Pension', 'senior-pension'),
+        ];
+        ApiHttpResponse linked = _item(_service('Linked Programme', 'linked'));
+        final SocialServiceApiRepository repository = _repository(
+          _Routed(
+            (ApiRequest request) => switch (request.path) {
+              'services' => _page(listed),
+              'services/burial' => _item(
+                _service('Burial Assistance', 'burial'),
+              ),
+              'services/hidden' => _item(
+                _service('Hidden Programme', 'hidden', hidden: true),
+              ),
+              'services/linked' => linked,
+              _ => _serverError,
+            },
+          ),
+        );
+        await repository.loadService('hidden');
+        await repository.loadService('linked');
+        expect(
+          (await repository.readCatalogue()).valueOrNull!.complete,
+          isTrue,
+        );
+        // Opened after the list carried it: still the list's to speak for.
+        await repository.loadService('burial');
+        expect(
+          await saved(repository),
+          unorderedEquals(<String>[
+            'burial',
+            'senior-pension',
+            'hidden',
+            'linked',
+          ]),
+        );
+
+        listed = <Object?>[
+          _service('Senior Citizen Pension', 'senior-pension'),
+        ];
+        expect(
+          (await repository.readCatalogue()).valueOrNull!.complete,
+          isTrue,
+        );
+        expect(
+          await saved(repository),
+          unorderedEquals(<String>['senior-pension', 'hidden', 'linked']),
+        );
+
+        linked = _notFound;
+        await repository.loadService('linked');
+        expect(
+          await saved(repository),
+          unorderedEquals(<String>['senior-pension', 'hidden']),
+        );
+      },
+    );
+
+    test("a catalogue read that is not whole, a failed one and an office's "
+        'list forget nothing', () async {
+      ApiHttpResponse answer = _page(<Object?>[
+        _service('Burial Assistance', 'burial'),
+        _service('Senior Citizen Pension', 'senior-pension'),
+      ]);
+      final SocialServiceApiRepository repository = _repository(
+        _Routed((ApiRequest request) => answer),
+      );
+      await repository.readCatalogue();
+      expect(
+        await saved(repository),
+        unorderedEquals(<String>['burial', 'senior-pension']),
+      );
+
+      // More pages and no cursor to read them by: not the whole catalogue.
+      answer = _page(<Object?>[
+        _service('Senior Citizen Pension', 'senior-pension'),
+      ], more: true);
+      expect((await repository.readCatalogue()).valueOrNull!.complete, isFalse);
+      answer = _serverError;
+      expect((await repository.readCatalogue()).isErr, isTrue);
+      expect((await repository.loadService('burial')).isErr, isTrue);
+      answer = _page(<Object?>[
+        _service('Senior Citizen Pension', 'senior-pension'),
+      ]);
+      expect(
+        (await repository.listServices(office: 'mswdo')).valueOrNull!.items,
+        hasLength(1),
+      );
+      expect(
+        await saved(repository),
+        unorderedEquals(<String>['burial', 'senior-pension']),
+      );
+    });
+
+    test('a page the featured list carries while hidden from the catalogue '
+        'is not forgotten for missing from it', () async {
+      final SocialServiceApiRepository repository = _repository(
+        _Routed(
+          (ApiRequest request) => request.query['featured'] == 'true'
+              ? _page(<Object?>[
+                  <String, Object?>{
+                    ..._service('Synthetic Gift', 'gift', hidden: true),
+                    'featured': true,
+                  },
+                ])
+              : _page(<Object?>[
+                  _service('Senior Citizen Pension', 'senior-pension'),
+                ]),
+        ),
+      );
+      await repository.listServices(featured: true);
+      expect((await repository.readCatalogue()).valueOrNull!.complete, isTrue);
+      expect(
+        await saved(repository),
+        unorderedEquals(<String>['gift', 'senior-pension']),
+      );
     });
   });
 

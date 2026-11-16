@@ -6,7 +6,7 @@
 // D-222: a record the office archives while a resident has it open. The API
 // (backend ca71f23) drops an archived office or programme from its lists and
 // answers 404 for its page, and answers 503 rather than a cut list past 100
-// hotlines.
+// hotlines. Tulong's "saved on this phone" then no longer offers that page.
 //
 // The inbox and the privacy notice are held in account_s8_test, the digital
 // ID in digital_id_test, the events list in events_test.
@@ -747,6 +747,14 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
     }
 
+    /// Puts [screen] on screen in place of what was there, over the same app
+    /// and so the same Tulong repository.
+    Future<void> show(WidgetTester tester, _LiveApp app, Widget screen) async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pumpWidget(_host(app.dependencies, screen));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('an office page whose re-read answers 404 says the office is '
         'no longer listed', (tester) async {
       ApiHttpResponse page = _item(_office('Synthetic Health Office', 'shoh'));
@@ -878,6 +886,103 @@ void main() {
       expect(shows('Synthetic Livelihood Aid'), isTrue);
       expect(find.byType(FailureView), findsNothing);
       expectNotOffline(tester);
+      await app.close(tester);
+    });
+
+    testWidgets('a programme whose own read answers 404 is no longer offered '
+        'as saved when Tulong cannot load; a failed read keeps it', (
+      tester,
+    ) async {
+      final ApiHttpResponse burialPage = _item(
+        _service('Burial Assistance', 'burial'),
+      );
+      ApiHttpResponse burial = burialPage;
+      ApiHttpResponse scholarship = _item(
+        _service('Synthetic Scholarship', 'scholarship'),
+      );
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(switch (request.path) {
+          'services/burial' => burial,
+          'services/scholarship' => scholarship,
+          'services' => _serverError,
+          _ => _page(const <Object?>[]),
+        }),
+      );
+      final _LiveApp app = await open(
+        tester,
+        transport,
+        const ServiceInfoScreen(slug: 'scholarship'),
+      );
+      await show(tester, app, const ServiceInfoScreen(slug: 'burial'));
+      expect(shows('Burial Assistance'), isTrue);
+
+      // A re-read that fails for another reason keeps it saved.
+      burial = _serverError;
+      await change(tester, app, LiveTopics.services);
+      expect(shows('Burial Assistance'), isTrue);
+      await show(tester, app, const TulongScreen());
+      expect(find.text('Saved pages'), findsOneWidget);
+      expect(shows('Burial Assistance'), isTrue);
+      expect(shows('Synthetic Scholarship'), isTrue);
+
+      // Archived while open: the quiet re-read answers 404.
+      burial = burialPage;
+      await show(tester, app, const ServiceInfoScreen(slug: 'burial'));
+      burial = _archived;
+      await change(tester, app, LiveTopics.services);
+      expect(find.text('This programme is not available'), findsOneWidget);
+      await show(tester, app, const TulongScreen());
+      expect(find.text('Saved pages'), findsOneWidget);
+      expect(shows('Burial Assistance'), isFalse);
+      expect(shows('Synthetic Scholarship'), isTrue);
+
+      // Archived before it was opened again: opening it answers 404.
+      scholarship = _archived;
+      await show(tester, app, const ServiceInfoScreen(slug: 'scholarship'));
+      expect(find.text('This programme is not available'), findsOneWidget);
+      await show(tester, app, const TulongScreen());
+      expect(find.text('Saved pages'), findsNothing);
+      expect(shows('Synthetic Scholarship'), isFalse);
+      expect(find.byType(FailureView), findsOneWidget);
+      await app.close(tester);
+    });
+
+    testWidgets('a programme the whole list no longer carries is no longer '
+        'offered as saved; one opened by its address stays', (tester) async {
+      List<Object?> services = <Object?>[
+        _service('Burial Assistance', 'burial'),
+        _service('Synthetic Scholarship', 'scholarship'),
+      ];
+      bool listFails = false;
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(switch (request.path) {
+          'services' => listFails ? _serverError : _page(services),
+          'services/quiet-aid' => _item(<String, Object?>{
+            ..._service('Synthetic Quiet Aid', 'quiet-aid'),
+            'hidden_from_list': true,
+          }),
+          _ => _page(const <Object?>[]),
+        }),
+      );
+      final _LiveApp app = await open(
+        tester,
+        transport,
+        const ServiceInfoScreen(slug: 'quiet-aid'),
+      );
+      await show(tester, app, const TulongScreen());
+      expect(shows('Burial Assistance'), isTrue);
+      expect(shows('Synthetic Quiet Aid'), isFalse);
+
+      services = <Object?>[_service('Synthetic Scholarship', 'scholarship')];
+      await change(tester, app, LiveTopics.services);
+      expect(shows('Burial Assistance'), isFalse);
+
+      listFails = true;
+      await show(tester, app, const TulongScreen());
+      expect(find.text('Saved pages'), findsOneWidget);
+      expect(shows('Burial Assistance'), isFalse);
+      expect(shows('Synthetic Scholarship'), isTrue);
+      expect(shows('Synthetic Quiet Aid'), isTrue);
       await app.close(tester);
     });
 

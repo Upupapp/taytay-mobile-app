@@ -40,7 +40,9 @@ abstract interface class SocialServiceRepository {
 
   /// Pages this process has already shown, or the fixture's saved specimen.
   ///
-  /// Not a server resource and not written to device storage.
+  /// Not a server resource and not written to device storage. Never a page
+  /// the API has since said is withdrawn: a `404` on its own read, or a whole
+  /// catalogue that no longer lists a page a list read carried (D-222).
   Future<List<SocialService>> savedOnThisPhone();
 }
 
