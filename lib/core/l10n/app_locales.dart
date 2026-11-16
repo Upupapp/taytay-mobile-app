@@ -643,6 +643,23 @@ String notificationCategoryLabel(
   };
 }
 
+/// The name of a notification switch on the settings screen (D-224). Three
+/// share the inbox's category names, because they are the same notices.
+String notificationSwitchLabel(BuildContext context, NotificationSwitch kind) {
+  final strings = AppStrings.of(context);
+  return switch (kind) {
+    NotificationSwitch.verificationDecided => strings.notifCatVerification,
+    NotificationSwitch.assistanceRequestUpdated => strings.notifCatAssistance,
+    NotificationSwitch.issuanceRequestUpdated =>
+      strings.notifSwitchDocumentRequests,
+    NotificationSwitch.eventRegistrationUpdated =>
+      strings.notifCatEventRegistration,
+    NotificationSwitch.sectorApplicationDecided =>
+      strings.notifSwitchSectorApplications,
+    NotificationSwitch.messageReceived => strings.notifSwitchOfficeReplies,
+  };
+}
+
 /// The name a resident reads for a service category.
 ///
 /// ## The defect this closes

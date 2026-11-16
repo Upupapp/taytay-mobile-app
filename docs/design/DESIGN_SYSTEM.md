@@ -389,7 +389,7 @@ const SettingsSectionTitle('Privacy'),
 SettingsList(children: <Widget>[
   SettingsRow(icon: TaytayIcons.fileText, title: 'Privacy notice',
       detail: 'What Taytay LGU holds, and your rights', onTap: openNotice),
-  SettingsSwitchRow(icon: TaytayIcons.bell, title: 'Balita & advisories',
+  SettingsSwitchRow(icon: TaytayIcons.bell, title: 'Assistance updates',
       value: on, onChanged: setOn),
   SettingsRow(icon: TaytayIcons.logOut, title: 'Sign out', destructive: true,
       showChevron: false, onTap: signOut),

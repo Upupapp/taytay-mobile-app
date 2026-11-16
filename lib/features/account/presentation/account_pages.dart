@@ -20,14 +20,11 @@ import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
-import '../../../shared/widgets/failure_view.dart';
-import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../messaging/domain/message_send_failure.dart';
 import '../../messaging/domain/office_messaging_repository.dart';
-import '../../notifications/domain/notification_repository.dart';
 import '../../profile/domain/name_lock.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
@@ -1022,89 +1019,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
 /// Notification, language and privacy rows.
 ///
-/// Balita and emergency are `in_app` and `push` preferences. The row writes
-/// both. An absent row is on.
-class AccountSettingsScreen extends StatefulWidget {
+/// **No switch of its own.** The notification settings are the one place a
+/// resident's switches live (D-224); this page links to them. It used to draw
+/// "Balita & advisories", "Office replies" and "Emergency alerts": nothing
+/// sends a Balita or an emergency notice for a switch to silence, an emergency
+/// switch contradicted "always sent", and two screens drawing office replies
+/// could disagree.
+class AccountSettingsScreen extends StatelessWidget {
   const AccountSettingsScreen({super.key});
-
-  @override
-  State<AccountSettingsScreen> createState() => _AccountSettingsScreenState();
-}
-
-class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
-  bool _started = false;
-  bool _officeReplies = true;
-  bool _balita = true;
-  bool _emergency = true;
-
-  /// False until the preferences read answered: the switches are not drawn
-  /// before then, so a default "on" is never shown as the resident's choice.
-  bool _preferencesRead = false;
-  AppFailure? _preferencesFailure;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    _load();
-  }
-
-  Future<void> _load() async {
-    final result = await AppDependencies.of(
-      context,
-    ).notificationRepository.loadPreferences();
-    if (!mounted) return;
-    setState(() {
-      _preferencesRead = true;
-      switch (result) {
-        case Ok(:final value):
-          _preferencesFailure = null;
-          _officeReplies = preferenceEnabled(
-            value.channels,
-            'message_received',
-          );
-          _balita = preferenceEnabled(value.channels, 'balita');
-          _emergency = preferenceEnabled(value.channels, 'emergency');
-        case Err(:final failure):
-          _preferencesFailure = failure;
-      }
-    });
-  }
-
-  void _retry() {
-    setState(() {
-      _preferencesRead = false;
-      _preferencesFailure = null;
-    });
-    _load();
-  }
-
-  Future<void> _setChannel(
-    String type,
-    bool on, {
-    required bool pushOnly,
-    required void Function(bool value) apply,
-  }) async {
-    final dependencies = AppDependencies.of(context);
-    final Result<NotificationPreferences> loaded = await dependencies
-        .notificationRepository
-        .loadPreferences();
-    if (!mounted || loaded is Err<NotificationPreferences>) return;
-    final NotificationPreferences current =
-        (loaded as Ok<NotificationPreferences>).value;
-    final List<ChannelPreference> channels = writePreference(
-      current.channels,
-      type: type,
-      on: on,
-      pushOnly: pushOnly,
-    );
-    setState(() => apply(on));
-    final Result<void> saved = await dependencies.notificationRepository
-        .updatePreferences(current.copyWith(channels: channels));
-    if (!mounted) return;
-    if (saved is Err<void>) setState(() => apply(!on));
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1114,63 +1036,8 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
       showBack: true,
       showBell: false,
       onBack: () => context.goNamed(AppRoute.profile.routeName),
-      togglesPlaceholder: !_preferencesRead
-          ? const LoadingSkeleton(
-              layout: SkeletonLayout.text,
-              semanticLabel: 'Loading notification settings',
-            )
-          : switch (_preferencesFailure) {
-              final AppFailure failure => FailureView(
-                failure: failure,
-                environment: AppDependencies.of(context).config.environment,
-                onRetry: _retry,
-              ),
-              null => null,
-            },
-      toggles: <AccountToggle>[
-        AccountToggle(
-          title: 'Balita & advisories',
-          subtitle: 'Push notifications',
-          icon: TaytayIcons.bell,
-          tile: BrandColors.blue50,
-          iconColor: BrandColors.blue,
-          on: _balita,
-          onChanged: (bool on) => _setChannel(
-            'balita',
-            on,
-            pushOnly: false,
-            apply: (bool value) => _balita = value,
-          ),
-        ),
-        AccountToggle(
-          title: 'Office replies',
-          subtitle: 'Push notifications',
-          icon: TaytayIcons.messageSquare,
-          tile: BrandColors.blue50,
-          iconColor: BrandColors.blue,
-          on: _officeReplies,
-          onChanged: (bool on) => _setChannel(
-            'message_received',
-            on,
-            pushOnly: true,
-            apply: (bool value) => _officeReplies = value,
-          ),
-        ),
-        AccountToggle(
-          title: 'Emergency alerts',
-          subtitle: 'Push notifications',
-          icon: TaytayIcons.siren,
-          tile: BrandColors.red50,
-          iconColor: BrandColors.redInk,
-          on: _emergency,
-          onChanged: (bool on) => _setChannel(
-            'emergency',
-            on,
-            pushOnly: false,
-            apply: (bool value) => _emergency = value,
-          ),
-        ),
-      ],
+      onNotifications: () =>
+          context.goNamed(AppRoute.notificationSettings.routeName),
       changePasswordSubtitle: '',
       showDataExport: false,
       onLanguage: () => AppDialog.acknowledge(

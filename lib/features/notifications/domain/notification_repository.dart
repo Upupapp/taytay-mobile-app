@@ -5,19 +5,17 @@ import '../../services/domain/lgu_service.dart';
 
 export '../../../core/api/server_value.dart';
 
-/// What a notification is about.
+/// What a notification in the inbox is about: its eyebrow, icon and ink.
 ///
 /// ---
 ///
-/// **The categories are the ones a resident would switch off separately.** They
-/// come from the Master Command's list, and each maps to a workflow the LGU
-/// actually runs — which is what makes a preference toggle meaningful rather
-/// than a wall of switches nobody reads.
-///
-/// [isCritical] marks the ones this app will not offer to silence. A resident
-/// can turn off event reminders; they cannot turn off a security notice about
-/// their own account, and an emergency public advisory is the reason a
-/// municipality has a notification channel at all.
+/// **A category is not a switch.** These name what a row is about, from the
+/// Master Command's list; several have no notice the server sends (documents
+/// needed, collecting assistance, referrals, event reminders). What a resident
+/// can silence is [NotificationSwitch], one per notice the server sends and
+/// honours (D-224). Public advisories and account security have no switch at
+/// all: they are how the LGU reaches her in an emergency, or tells her somebody
+/// signed in as her.
 enum NotificationCategory {
   verificationUpdate('verification_update', 'Identity verification'),
   assistanceStatus('assistance_status', 'Assistance updates'),
@@ -26,22 +24,46 @@ enum NotificationCategory {
   referralUpdate('referral_update', 'Referrals'),
   eventRegistration('event_registration', 'Event registrations'),
   eventReminder('event_reminder', 'Event reminders'),
-  publicAdvisory('public_advisory', 'Public advisories', isCritical: true),
-  accountSecurity('account_security', 'Account and security', isCritical: true);
+  publicAdvisory('public_advisory', 'Public advisories'),
+  accountSecurity('account_security', 'Account and security');
 
-  const NotificationCategory(
-    this.wireValue,
-    this.label, {
-    this.isCritical = false,
-  });
+  const NotificationCategory(this.wireValue, this.label);
 
   final String wireValue;
 
-  /// Resident-facing name, used on the preference row.
+  /// Resident-facing name, the fallback for `notificationCategoryLabel`.
   final String label;
+}
 
-  /// Whether this app refuses to offer a switch for it.
-  final bool isCritical;
+/// A notice the server sends a resident, and the one switch that silences it
+/// (D-224).
+///
+/// ---
+///
+/// **Every value is a notice type the API both sends and honours.** Each is a
+/// row of `me/notification-preferences` with the notice's own `type`, and the
+/// server reads that row where the notice is made: `in_app` off writes no feed
+/// row, `push` off sends no push (backend `0068`). A switch with no notice
+/// behind it is not offered: it would leave a resident believing she silenced
+/// something that was never going to be sent, or that will be sent anyway.
+///
+/// `balita` and `emergency` are preference types the API still accepts and
+/// gates nothing with — nothing sends either — so they are not here, and this
+/// app neither reads nor writes them.
+///
+/// The screen draws the switches in this order.
+enum NotificationSwitch {
+  verificationDecided('verification_decided'),
+  assistanceRequestUpdated('assistance_request_updated'),
+  issuanceRequestUpdated('issuance_request_updated'),
+  eventRegistrationUpdated('event_registration_updated'),
+  sectorApplicationDecided('sector_application_decided'),
+  messageReceived('message_received');
+
+  const NotificationSwitch(this.preferenceType);
+
+  /// The `type` of its preference row, which is the notice's own `type`.
+  final String preferenceType;
 }
 
 /// A message the LGU sent to this resident.
@@ -92,9 +114,8 @@ class ResidentNotification {
 
 /// One row of `GET /me/notification-preferences`.
 ///
-/// The spec publishes `verification_decided`, `message_received`, `balita`, and
-/// `emergency`. Each has `in_app` and `push`. SMS and email are not on this
-/// contract. A missing row is on: both flags default to true.
+/// Each has `in_app` and `push`. SMS and email are not on this contract. A
+/// missing row is on: both flags default to true.
 @immutable
 class ChannelPreference {
   const ChannelPreference({
@@ -111,54 +132,13 @@ class ChannelPreference {
   String toString() => 'ChannelPreference($type, inApp: $inApp, push: $push)';
 }
 
-/// Types `GET /me/notification-preferences` publishes, in wire order.
-const List<String> preferenceTypes = <String>[
-  'verification_decided',
-  'message_received',
-  'balita',
-  'emergency',
-];
-
-/// Whether [type] is on. An absent row is on.
-bool preferenceEnabled(List<ChannelPreference> channels, String type) {
-  for (final ChannelPreference channel in channels) {
-    if (channel.type == type) return channel.push;
-  }
-  return true;
-}
-
-/// A copy of [channels] with [type] set.
-///
-/// [pushOnly] keeps `in_app` when the row already exists. Balita and emergency
-/// write both flags, because the settings row is the whole preference.
-List<ChannelPreference> writePreference(
-  List<ChannelPreference> channels, {
-  required String type,
-  required bool on,
-  bool pushOnly = false,
-}) {
-  var found = false;
-  final List<ChannelPreference> next = <ChannelPreference>[
-    for (final ChannelPreference channel in channels)
-      if (channel.type == type)
-        ChannelPreference(
-          type: type,
-          inApp: pushOnly ? channel.inApp : on,
-          push: on,
-        )
-      else
-        channel,
-  ];
-  for (final ChannelPreference channel in next) {
-    if (channel.type == type) found = true;
-  }
-  if (!found) {
-    next.add(
-      ChannelPreference(type: type, inApp: pushOnly ? true : on, push: on),
-    );
-  }
-  return next;
-}
+/// The `me/notification-preferences` types this app reads and writes: one per
+/// [NotificationSwitch], in its order. Any other row the server lists
+/// (`balita`, `emergency`, a type a later API adds) is neither read nor sent.
+final List<String> preferenceTypes = List<String>.unmodifiable(<String>[
+  for (final NotificationSwitch kind in NotificationSwitch.values)
+    kind.preferenceType,
+]);
 
 /// Which channels a resident wants to be contacted on, and about what.
 ///
@@ -169,17 +149,16 @@ List<ChannelPreference> writePreference(
 /// preference would keep the LGU sending messages the resident asked it to stop
 /// sending.
 ///
-/// **A category absent from [categories] is treated as on.** The backend is the
-/// source of truth for what a resident chose; an absent entry means it has not
-/// been set, and defaulting a municipal advisory to off because a field was
-/// missing is the wrong failure.
+/// **A switch with no row is on.** The backend is the source of truth for what
+/// a resident chose; an absent row means it has not been set, and the server
+/// sends that notice. Reporting it off because a row was missing would say she
+/// silenced something she did not.
 @immutable
 class NotificationPreferences {
   const NotificationPreferences({
     required this.push,
     required this.sms,
     required this.email,
-    this.categories = const <NotificationCategory, bool>{},
     this.channels = const <ChannelPreference>[],
   });
 
@@ -187,58 +166,62 @@ class NotificationPreferences {
   final bool sms;
   final bool email;
 
-  /// Per-category switches, where the backend supports them.
-  final Map<NotificationCategory, bool> categories;
-
-  /// The spec list. Empty until `GET /me/notification-preferences` answers.
+  /// The server's rows for [preferenceTypes]. Empty until
+  /// `GET /me/notification-preferences` answers.
   final List<ChannelPreference> channels;
 
-  /// Whether [category] is currently on.
+  /// Whether the office still tells her of [kind]: on while either channel of
+  /// its row is on, and when there is no row.
   ///
-  /// Always true for a critical category — the app does not offer to silence a
-  /// security notice or an emergency advisory, so it does not report one as
-  /// silenced either.
-  bool isEnabled(NotificationCategory category) {
-    if (category.isCritical) return true;
-    return categories[category] ?? true;
+  /// A row with one channel off (an older app's push-only switch wrote one)
+  /// reads on, because she is still told in the other. "Off" is said only when
+  /// nothing of that notice reaches her.
+  bool isOn(NotificationSwitch kind) {
+    for (final ChannelPreference channel in channels) {
+      if (channel.type == kind.preferenceType) {
+        return channel.inApp || channel.push;
+      }
+    }
+    return true;
   }
 
-  /// The categories a resident may actually switch.
-  static List<NotificationCategory> get switchable => NotificationCategory
-      .values
-      .where((category) => !category.isCritical)
-      .toList(growable: false);
+  /// A copy with [kind]'s row set to [on] in both channels — one switch
+  /// silences the notice in the app and as a push — and every other row as it
+  /// was.
+  NotificationPreferences withSwitch(
+    NotificationSwitch kind, {
+    required bool on,
+  }) {
+    final ChannelPreference row = ChannelPreference(
+      type: kind.preferenceType,
+      inApp: on,
+      push: on,
+    );
+    var found = false;
+    final List<ChannelPreference> next = <ChannelPreference>[];
+    for (final ChannelPreference channel in channels) {
+      if (channel.type == kind.preferenceType) {
+        found = true;
+        next.add(row);
+      } else {
+        next.add(channel);
+      }
+    }
+    if (!found) next.add(row);
+    return copyWith(channels: List<ChannelPreference>.unmodifiable(next));
+  }
 
   NotificationPreferences copyWith({
     bool? push,
     bool? sms,
     bool? email,
-    Map<NotificationCategory, bool>? categories,
     List<ChannelPreference>? channels,
   }) => NotificationPreferences(
     push: push ?? this.push,
     sms: sms ?? this.sms,
     email: email ?? this.email,
-    categories: categories ?? this.categories,
     channels: channels ?? this.channels,
   );
-
-  /// A copy with one category switched.
-  ///
-  /// Refuses to record a critical category as off — the UI does not offer it,
-  /// and a caller that tried would be writing a preference the LGU must ignore.
-  NotificationPreferences withCategory(
-    NotificationCategory category, {
-    required bool enabled,
-  }) {
-    if (category.isCritical) return this;
-    return copyWith(
-      categories: <NotificationCategory, bool>{
-        ...categories,
-        category: enabled,
-      },
-    );
-  }
 
   @override
   String toString() => 'NotificationPreferences(push: $push)';

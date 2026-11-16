@@ -1484,6 +1484,24 @@ abstract class AppStrings {
   /// **'Account and security'**
   String get notifCatAccountSecurity;
 
+  /// Notification settings switch for a move on a document request the resident filed (issuance_request_updated).
+  ///
+  /// In en, this message translates to:
+  /// **'Document requests'**
+  String get notifSwitchDocumentRequests;
+
+  /// Notification settings switch for the office's decision on a sector application (sector_application_decided).
+  ///
+  /// In en, this message translates to:
+  /// **'Sector applications'**
+  String get notifSwitchSectorApplications;
+
+  /// Notification settings switch for a new message from an office (message_received).
+  ///
+  /// In en, this message translates to:
+  /// **'Office replies'**
+  String get notifSwitchOfficeReplies;
+
   /// Resident-facing enum copy.
   ///
   /// In en, this message translates to:

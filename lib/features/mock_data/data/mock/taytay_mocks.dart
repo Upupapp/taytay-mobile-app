@@ -874,8 +874,26 @@ class MockNotificationRepository
             push: true,
           ),
           ChannelPreference(type: 'message_received', inApp: true, push: true),
-          ChannelPreference(type: 'balita', inApp: true, push: true),
-          ChannelPreference(type: 'emergency', inApp: true, push: true),
+          ChannelPreference(
+            type: 'issuance_request_updated',
+            inApp: true,
+            push: true,
+          ),
+          ChannelPreference(
+            type: 'event_registration_updated',
+            inApp: true,
+            push: true,
+          ),
+          ChannelPreference(
+            type: 'sector_application_decided',
+            inApp: true,
+            push: true,
+          ),
+          ChannelPreference(
+            type: 'assistance_request_updated',
+            inApp: true,
+            push: true,
+          ),
         ],
       ),
     );

@@ -319,14 +319,21 @@ class _Footer extends StatelessWidget {
   }
 }
 
-/// Where a resident chooses what to be told about.
+/// Where a resident chooses what to be told about: the one place the app
+/// offers notification switches (D-224).
 ///
 /// ---
 ///
-/// **Critical categories have no switch, and the screen says why.** A security
-/// notice about somebody's own account and an emergency public advisory are the
-/// reason a municipality has a notification channel at all; offering to silence
-/// them would be offering a setting the LGU must then ignore.
+/// **One switch per notice the server sends and honours** ([NotificationSwitch]),
+/// each saved to its own server type. A category with no notice behind it has
+/// no switch: a switch that does nothing leaves a resident believing she
+/// silenced something.
+///
+/// **Public advisories and account security have no switch, and the screen
+/// says why.** A security notice about somebody's own account and an emergency
+/// public advisory are the reason a municipality has a notification channel at
+/// all; offering to silence them would be offering a setting the LGU must then
+/// ignore.
 class NotificationPreferencesScreen extends StatefulWidget {
   const NotificationPreferencesScreen({super.key});
 
@@ -377,11 +384,11 @@ class _NotificationPreferencesScreenState
     });
   }
 
-  Future<void> _set(NotificationCategory category, {required bool on}) async {
+  Future<void> _set(NotificationSwitch kind, {required bool on}) async {
     final current = _preferences;
     if (current == null) return;
 
-    final next = current.withCategory(category, enabled: on);
+    final next = current.withSwitch(kind, on: on);
     setState(() {
       _preferences = next;
       _saveFailure = null;
@@ -475,13 +482,12 @@ class _NotificationPreferencesScreenState
 
                     SettingsList(
                       children: <Widget>[
-                        for (final category
-                            in NotificationPreferences.switchable)
+                        for (final kind in NotificationSwitch.values)
                           SettingsSwitchRow(
-                            title: notificationCategoryLabel(context, category),
+                            title: notificationSwitchLabel(context, kind),
                             icon: TaytayIcons.bell,
-                            value: loaded.isEnabled(category),
-                            onChanged: (on) => _set(category, on: on),
+                            value: loaded.isOn(kind),
+                            onChanged: (on) => _set(kind, on: on),
                           ),
                       ],
                     ),

@@ -950,6 +950,18 @@
   "@notifCatAccountSecurity": {
     "description": "Resident-facing enum copy."
   },
+  "notifSwitchDocumentRequests": "Document requests",
+  "@notifSwitchDocumentRequests": {
+    "description": "Notification settings switch for a move on a document request the resident filed (issuance_request_updated)."
+  },
+  "notifSwitchSectorApplications": "Sector applications",
+  "@notifSwitchSectorApplications": {
+    "description": "Notification settings switch for the office's decision on a sector application (sector_application_decided)."
+  },
+  "notifSwitchOfficeReplies": "Office replies",
+  "@notifSwitchOfficeReplies": {
+    "description": "Notification settings switch for a new message from an office (message_received)."
+  },
   "inboxGroupToday": "Today",
   "@inboxGroupToday": {
     "description": "Resident-facing enum copy."

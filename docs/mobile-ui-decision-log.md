@@ -4112,13 +4112,11 @@ not-shown states keep the app from becoming evidence that a request exists.
 The notice is generic for the same reason: a lock screen is read by whoever
 holds the phone, so it names the control number and nothing else.
 
-**Known gap.** There is no per-type opt-out for these notices: the API pushes
-`assistance_request_updated` whatever the resident set, and its preference
-types do not include it. The notification settings still draw an "Assistance
-updates" switch which, like every category but identity verification, is not
-sent to the server and does not stop these notices. That switch predates this
-decision and is left for the owner; it should be removed or wired to a server
-preference before launch.
+**Known gap (closed by D-224).** When this was recorded there was no per-type
+opt-out for these notices: the API pushed `assistance_request_updated` whatever
+the resident set, and the notification settings' "Assistance updates" switch
+was not sent to the server. Since backend `769deea` it is a preference type,
+and the switch saves it (D-224).
 
 **Rejected.** Wiring the `/requests` case pages to the new route: they are
 built around a case, a timeline and requirements, which the API will never send
@@ -4143,6 +4141,111 @@ in-person sentence. `test/features/sector_notice_test.dart`: the notice is
 known, keeps its id, and opens the request from the inbox.
 `test/features/load_failures_test.dart`: the list and one request re-read on
 `notifications` and not on `news`.
+
+---
+
+## D-224 — Every notification switch controls something real, and nothing else is offered
+
+**Status: settled.** Category: product / privacy. Recorded 2026-11-16, the
+lead's decision for Ella (Michaela Cailing), with the contract pinned at
+backend `769deea`.
+
+**Context.** A resident's notification switches mostly did nothing. The
+notification settings drew a switch for every non-critical
+`NotificationCategory` — Identity verification, Assistance updates, Documents
+needed, Collecting assistance, Referrals, Event registrations, Event reminders
+— but only Identity verification reached the server: the API's preference
+types were `verification_decided`, `message_received`, `balita` and
+`emergency`. Four notices the API sends (`issuance_request_updated`,
+`event_registration_updated`, `sector_application_decided`,
+`assistance_request_updated`) could not be silenced at all, and four of the
+switches named notices the API never sends. Separately, Settings & privacy
+drew "Balita & advisories", "Office replies" and "Emergency alerts" switches
+(`balita`, `message_received`, `emergency`), while the notification settings
+said public advisories "are always sent". D-223 recorded the gap.
+
+Backend `769deea` makes every notice type a preference type and gates each
+notice where it is made, by the row of its own type: `in_app` off writes no
+feed row, `push` off sends no push. Document requests, event registrations and
+sector applications are never pushed whatever `push` says. Nothing sends a
+Balita or an emergency notice, in the app or as a push (the push provider is
+the backend's mock, and its one caller is the notice writer); `balita` and
+`emergency` stay accepted for older apps and gate nothing.
+
+**Decision.**
+
+1. **One honest set, in one place.** The notification settings
+   (`/notifications/settings`) draw exactly one switch per notice the server
+   sends and honours (`NotificationSwitch`), in this order: Identity
+   verification (`verification_decided`), Assistance updates
+   (`assistance_request_updated`), Document requests
+   (`issuance_request_updated`, a move on a document request she filed),
+   Event registrations (`event_registration_updated`), Sector applications
+   (`sector_application_decided`) and Office replies (`message_received`).
+2. **No switch without a notice.** Documents needed, Collecting assistance,
+   Referrals and Event reminders stay inbox categories (an eyebrow, an icon)
+   and are not offered as switches: the API sends no such notice.
+   `NotificationCategory` no longer decides what is switchable, and
+   `isCritical`, `withCategory` and `switchable` are gone.
+3. **One switch, both channels.** A switch writes its row's `in_app` and
+   `push` together, so off means nothing of that notice reaches her. It reads
+   on while either channel of its row is on, and when there is no row (the
+   server sends it). A row an older app's push-only "Office replies" switch
+   left at `in_app` on and `push` off reads on, because she is still told in
+   the app; switching it off writes both.
+4. **The whole set is sent each time**, as held: the six rows, the one just
+   switched and every other as the server last listed it. `balita` and
+   `emergency` are neither read nor sent; the server leaves a row it is not
+   sent as it was. A failed save puts the switch back with the existing note,
+   and a timeout says the change may not have been saved.
+5. **Settings & privacy owns no switch.** Its three switches are gone; its
+   Notifications section is one row, "Notification settings — What Taytay LGU
+   tells you about", that opens the notification settings, as the Settings
+   screen already did. Balita & advisories and Emergency alerts are not
+   offered anywhere, because nothing sends them, and an emergency switch
+   contradicted "always sent".
+6. **Always sent** stays as the screen says it: public advisories and messages
+   about her account and security have no switch.
+7. The three new labels are in `app_en.arb` and `app_fil.arb`
+   (`notifSwitchDocumentRequests` "Mga hiling na dokumento",
+   `notifSwitchSectorApplications` "Mga aplikasyon sa sektor",
+   `notifSwitchOfficeReplies` "Mga sagot ng tanggapan"); the other three reuse
+   the inbox's category names. The Filipino was written by Claude in D-217's
+   terms, not by a native speaker; a native speaker from the MSWDO should read
+   it during UAT.
+
+**Why.** A switch that does nothing leaves a resident believing she silenced
+something: either a notice keeps arriving that she turned off, or she relies on
+a switch for a notice that was never going to come. Two screens drawing the
+same switch can disagree, and then neither can be believed. Emergency
+advisories and account security stay always on, because they are how the LGU
+reaches her in an emergency, or tells her somebody signed in as her.
+
+**Rejected.** Keeping the four category switches with no notice "for later":
+a switch for a notice that does not exist is the defect. Keeping Balita &
+advisories as a switch: nothing sends a Balita push, so it would silence
+nothing. Separate in-app and push switches per notice: push is the backend's
+mock today, and two switches per row would ask a resident to reason about a
+channel she cannot observe. Sending only the switched row: the existing
+whole-set save is idempotent and kept, and the server leaves unsent rows alone.
+
+**Sources.** Backend `769deea` (`openapi/openapi.json`
+`getNotificationPreferences`, `patchNotificationPreferences`,
+`NotificationPreference`; `docs/api/endpoints.md` "Notifications, media, and
+home"; `migrations/0068_notification_preference_types.sql`); D-220; D-223.
+
+**Tests.** `test/features/notifications_test.dart`: one switch per served
+notice type, an unset switch reads on, switching writes both channels of its
+own row and nothing else, a one-channel row reads on; the screen shows exactly
+the six switches (none for the four categories with no notice, none for Balita
+or Emergency, Always sent still said), saving each sends its own server type,
+a failed save puts the switch back with the note, a timeout says it may not
+have been saved. `test/features/wired_repositories_test.dart`: the six types
+and no others; reading drops `balita`, `emergency` and unknown rows; an update
+sends the six types and nothing else; every switch round-trips to its own
+server type; a row the server holds is sent as held. `account_s8_test` and
+`profile_test`: Settings & privacy draws no switch and its one row opens the
+notification settings.
 
 ---
 
@@ -4372,6 +4475,7 @@ known, keeps its id, and opens the request from the inbox.
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 | D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
 | D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance. Tulong's "saved on this phone" forgets a page whose own read answers `404`, or that a whole catalogue read no longer lists after a list carried it | product / contract | settled |
-| D-223 | My requests (`/my-requests`, any signed-in resident) lists her own filed assistance requests from `GET /me/assistance-requests` (backend `d1e997c`): programme, control number, filing date and the status in her words; one request adds the approved amount (integer centavos), payout date and venue, released date and the date the status changed, found in her list. Every frame says "Some requests are discussed only in person at the MSWDO."; an empty list and a request not shown give no reason. `assistance_request_updated` is "Assistance updates" and opens the request; both screens re-read on `notifications`. No case, staff, note or reason. No per-type opt-out yet (known gap) | product / privacy | settled |
+| D-223 | My requests (`/my-requests`, any signed-in resident) lists her own filed assistance requests from `GET /me/assistance-requests` (backend `d1e997c`): programme, control number, filing date and the status in her words; one request adds the approved amount (integer centavos), payout date and venue, released date and the date the status changed, found in her list. Every frame says "Some requests are discussed only in person at the MSWDO."; an empty list and a request not shown give no reason. `assistance_request_updated` is "Assistance updates" and opens the request; both screens re-read on `notifications`. No case, staff, note or reason. Per-type opt-out since D-224 | product / privacy | settled |
+| D-224 | Every notification switch controls something real: the notification settings are the one place switches live, one per notice the server sends and honours (backend `769deea`): Identity verification, Assistance updates, Document requests, Event registrations, Sector applications, Office replies, each writing `in_app` and `push` of its own type. No switch for Documents needed, Collecting assistance, Referrals or Event reminders (no notice), nor for Balita or Emergency (nothing sends them; they gate nothing). Settings & privacy links to the notification settings instead of drawing switches. Public advisories and account security stay always sent | product / privacy | settled |
 
-**219 decisions — 215 settled, 4 provisional.**
+**220 decisions — 216 settled, 4 provisional.**

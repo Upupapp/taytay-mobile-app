@@ -2692,7 +2692,7 @@
       "get": {
         "operationId": "getNotificationPreferences",
         "summary": "Notification preferences",
-        "description": "One row per notification type. A missing row means in-app and push are both on.",
+        "description": "One row per preference type, in the order of the enum. A missing row means in-app and push are both on. The first six types are the notices a resident is sent, and each is gated where it is made by the row of its own type: in_app false writes no feed row, push false sends no push. issuance_request_updated, event_registration_updated and sector_application_decided are never pushed, whatever push says. balita and emergency gate nothing: nothing sends either. They are listed and accepted so an older app that writes them is not refused.",
         "security": [{ "firebaseIdToken": [] }],
         "responses": {
           "200": { "description": "Preferences.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferenceListEnvelope" } } } }
@@ -2701,6 +2701,7 @@
       "patch": {
         "operationId": "patchNotificationPreferences",
         "summary": "Update notification preferences",
+        "description": "Saves the rows sent, each type at most once; rows not sent are left as they are. An unknown type is 422. Answers with the full list.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PreferencePatch" } } } },
         "responses": {
@@ -19665,7 +19666,11 @@
         "type": "object",
         "required": ["type", "in_app", "push"],
         "properties": {
-          "type": { "type": "string", "enum": ["verification_decided", "message_received", "balita", "emergency"] },
+          "type": {
+            "type": "string",
+            "enum": ["verification_decided", "message_received", "issuance_request_updated", "event_registration_updated", "sector_application_decided", "assistance_request_updated", "balita", "emergency"],
+            "description": "A notice type (GET /api/v1/notifications), or balita or emergency, which gate nothing."
+          },
           "in_app": { "type": "boolean" },
           "push": { "type": "boolean" }
         }
@@ -19688,7 +19693,7 @@
         "type": "object",
         "required": ["preferences"],
         "properties": {
-          "preferences": { "type": "array", "items": { "$ref": "#/components/schemas/NotificationPreference" } }
+          "preferences": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/components/schemas/NotificationPreference" } }
         }
       },
     "DigitalIdCard": {

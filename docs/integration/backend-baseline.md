@@ -95,6 +95,13 @@ In between, backend `dd8dbc3` (ADR 0003, B) changed only descriptions on routes 
 reviewer decided on is kept (backend `9d4072c`). No response this app reads lost or renamed a
 field, and no route it calls was removed.
 
+It was re-vendored from backend `769deea` on 16 November 2026, for D-224. No route changed. The
+preference types of `GET` and `PATCH /me/notification-preferences` gained every notice type the
+server sends (`issuance_request_updated`, `event_registration_updated`,
+`sector_application_decided`, `assistance_request_updated`), each gated where the notice is made
+by the row of its own type; `balita` and `emergency` stay accepted and are said to gate nothing.
+The notification settings now read and write the six notice types and no other.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -108,9 +115,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `d1e997cc054243c77960c0945735fe9c97c5a7f3` (`d1e997c`) |
-| **sha256** | `3fe45d642788fcf7a1d82a92a1db5f078a160d99d5de6659023fa7a85d5a6bb3` |
-| **Vendored on** | 16 November 2026 (D-223) |
+| **Backend commit** | `769deea58402ffbc301bc48ea951e5ad3907119c` (`769deea`) |
+| **sha256** | `d848895ea888018b8452434b46f106252e098414e3534338d067998f35635875` |
+| **Vendored on** | 16 November 2026 (D-224) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

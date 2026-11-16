@@ -47,14 +47,24 @@ ResidentNotification notification({
 );
 
 NotificationPreferences preferences({
-  Map<NotificationCategory, bool> categories =
-      const <NotificationCategory, bool>{},
+  List<ChannelPreference> channels = const <ChannelPreference>[],
 }) => NotificationPreferences(
   push: true,
   sms: true,
   email: false,
-  categories: categories,
+  channels: channels,
 );
+
+/// The resident-facing name of each switch, in the order the screen draws them.
+const Map<NotificationSwitch, String> switchLabels =
+    <NotificationSwitch, String>{
+      NotificationSwitch.verificationDecided: 'Identity verification',
+      NotificationSwitch.assistanceRequestUpdated: 'Assistance updates',
+      NotificationSwitch.issuanceRequestUpdated: 'Document requests',
+      NotificationSwitch.eventRegistrationUpdated: 'Event registrations',
+      NotificationSwitch.sectorApplicationDecided: 'Sector applications',
+      NotificationSwitch.messageReceived: 'Office replies',
+    };
 
 class ScriptedNotificationRepository implements NotificationRepository {
   ScriptedNotificationRepository({this.items, this.prefs});
@@ -335,52 +345,64 @@ void main() {
     });
   });
 
-  group('categories and preferences', () {
-    test('critical categories cannot be switched off', () {
-      final prefs = preferences();
+  group('switches and preferences', () {
+    test('there is one switch per notice the server sends and honours', () {
+      expect(
+        NotificationSwitch.values.map((kind) => kind.preferenceType),
+        <String>[
+          'verification_decided',
+          'assistance_request_updated',
+          'issuance_request_updated',
+          'event_registration_updated',
+          'sector_application_decided',
+          'message_received',
+        ],
+        reason:
+            'A switch with no server notice behind it leaves a resident '
+            'believing she silenced something (D-224).',
+      );
+    });
 
-      for (final category in NotificationCategory.values) {
-        if (!category.isCritical) continue;
-        expect(prefs.isEnabled(category), isTrue);
-        expect(
-          prefs.withCategory(category, enabled: false).isEnabled(category),
-          isTrue,
-          reason:
-              'Offering to silence a security notice or an emergency '
-              'advisory is offering a setting the LGU must then ignore.',
-        );
+    test('a switch with no row is on', () {
+      // An absent row means it has not been chosen, and the server sends it;
+      // reporting it off would say she silenced something she did not.
+      for (final kind in NotificationSwitch.values) {
+        expect(preferences().isOn(kind), isTrue, reason: '$kind');
       }
     });
 
-    test('the switchable list excludes the critical ones', () {
-      expect(
-        NotificationPreferences.switchable.any((c) => c.isCritical),
-        isFalse,
-      );
-      expect(
-        NotificationPreferences.switchable,
-        contains(NotificationCategory.eventReminder),
-      );
+    test('switching one writes both channels of its row and nothing else', () {
+      for (final kind in NotificationSwitch.values) {
+        final prefs = preferences().withSwitch(kind, on: false);
+
+        expect(prefs.isOn(kind), isFalse, reason: '$kind');
+        final row = prefs.channels.singleWhere(
+          (channel) => channel.type == kind.preferenceType,
+        );
+        expect(row.inApp, isFalse);
+        expect(row.push, isFalse);
+        for (final other in NotificationSwitch.values) {
+          if (other != kind) expect(prefs.isOn(other), isTrue);
+        }
+        expect(prefs.withSwitch(kind, on: true).isOn(kind), isTrue);
+      }
     });
 
-    test('an unset category defaults to on', () {
-      // An absent entry means it has not been chosen; defaulting a municipal
-      // message to off because a field was missing is the wrong failure.
-      expect(
-        preferences().isEnabled(NotificationCategory.assistanceStatus),
-        isTrue,
+    test('a row with one channel still on reads on', () {
+      // An older app's push-only switch left in_app on: she is still told in
+      // the app, so the switch does not say she is not.
+      final prefs = preferences(
+        channels: const <ChannelPreference>[
+          ChannelPreference(type: 'message_received', inApp: true, push: false),
+        ],
       );
-    });
-
-    test('a switched-off category is reported off', () {
-      final prefs = preferences().withCategory(
-        NotificationCategory.eventReminder,
-        enabled: false,
+      expect(prefs.isOn(NotificationSwitch.messageReceived), isTrue);
+      final off = prefs.withSwitch(
+        NotificationSwitch.messageReceived,
+        on: false,
       );
-
-      expect(prefs.isEnabled(NotificationCategory.eventReminder), isFalse);
-      // And nothing else moved.
-      expect(prefs.isEnabled(NotificationCategory.assistanceStatus), isTrue);
+      expect(off.channels.single.inApp, isFalse);
+      expect(off.channels.single.push, isFalse);
     });
   });
 
@@ -700,17 +722,17 @@ void main() {
 
       expect(find.textContaining('switched these on'), findsNothing);
       expect(find.text('Try again'), findsOneWidget);
-      expect(find.text('Event reminders'), findsNothing);
+      expect(find.text('Event registrations'), findsNothing);
 
       booted.notifications.prefs = preferences();
       await tester.tap(find.text('Try again'));
       await tester.pumpAndSettle();
-      expect(find.text('Event reminders'), findsOneWidget);
+      expect(find.text('Event registrations'), findsOneWidget);
     });
   });
 
   group('the preferences screen', () {
-    testWidgets('critical categories have no switch, and it says why', (
+    testWidgets('it shows exactly the switches the server honours', (
       tester,
     ) async {
       await bootInbox(
@@ -719,26 +741,64 @@ void main() {
         location: '/notifications/settings',
       );
 
-      expect(find.text('Event reminders'), findsOneWidget);
-      expect(find.text('Public advisories'), findsNothing);
+      expect(find.byType(SwitchListTile), findsNWidgets(switchLabels.length));
+      for (final label in switchLabels.values) {
+        expect(
+          find.widgetWithText(SwitchListTile, label),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      // No notice is sent for these, so no switch is offered for them.
+      for (final label in <String>[
+        'Documents needed',
+        'Collecting assistance',
+        'Referrals',
+        'Event reminders',
+        'Balita & advisories',
+        'Emergency alerts',
+      ]) {
+        expect(find.text(label), findsNothing, reason: label);
+      }
+      // Public advisories and account security are always sent, and it says so.
+      expect(
+        find.widgetWithText(SwitchListTile, 'Public advisories'),
+        findsNothing,
+      );
       expect(find.text('Always sent'), findsOneWidget);
+      expect(find.textContaining('Public advisories'), findsOneWidget);
     });
 
-    testWidgets('turning a category off saves it', (tester) async {
+    testWidgets('saving each switch sends its own server type', (tester) async {
       final booted = await bootInbox(
         tester,
         prefs: preferences(),
         location: '/notifications/settings',
       );
 
-      await tester.tap(find.widgetWithText(SwitchListTile, 'Event reminders'));
-      await tester.pumpAndSettle();
+      for (final MapEntry<NotificationSwitch, String> entry
+          in switchLabels.entries) {
+        final tile = find.widgetWithText(SwitchListTile, entry.value);
+        await tester.ensureVisible(tile);
+        await tester.tap(tile);
+        await tester.pumpAndSettle();
 
+        final saved = booted.notifications.saved.last;
+        final row = saved.channels.singleWhere(
+          (channel) => channel.type == entry.key.preferenceType,
+        );
+        expect(row.inApp, isFalse, reason: entry.value);
+        expect(row.push, isFalse, reason: entry.value);
+        expect(
+          tester.widget<SwitchListTile>(tile).value,
+          isFalse,
+          reason: entry.value,
+        );
+      }
+      expect(booted.notifications.saved, hasLength(switchLabels.length));
       expect(
-        booted.notifications.saved.single.isEnabled(
-          NotificationCategory.eventReminder,
-        ),
-        isFalse,
+        booted.notifications.saved.last.channels.map((c) => c.type).toSet(),
+        switchLabels.keys.map((kind) => kind.preferenceType).toSet(),
       );
     });
 
@@ -752,12 +812,14 @@ void main() {
       );
       booted.notifications.updateFails = true;
 
-      await tester.tap(find.widgetWithText(SwitchListTile, 'Event reminders'));
+      await tester.tap(
+        find.widgetWithText(SwitchListTile, 'Event registrations'),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('That change was not saved'), findsOneWidget);
       final tile = tester.widget<SwitchListTile>(
-        find.widgetWithText(SwitchListTile, 'Event reminders'),
+        find.widgetWithText(SwitchListTile, 'Event registrations'),
       );
       expect(
         tile.value,
@@ -780,7 +842,9 @@ void main() {
         ..updateFails = true
         ..updateFailure = const TimeoutFailure();
 
-      await tester.tap(find.widgetWithText(SwitchListTile, 'Event reminders'));
+      await tester.tap(
+        find.widgetWithText(SwitchListTile, 'Event registrations'),
+      );
       await tester.pumpAndSettle();
 
       expect(find.text('Your change may not have been saved'), findsOneWidget);

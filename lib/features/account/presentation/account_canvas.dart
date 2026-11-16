@@ -202,6 +202,7 @@ class AccountCanvas extends StatelessWidget {
     this.showLegalNameNote = true,
     this.toggles = const <AccountToggle>[],
     this.togglesPlaceholder,
+    this.onNotifications,
     this.onLanguage,
     this.onChangePassword,
     this.changePasswordSubtitle = '',
@@ -279,6 +280,12 @@ class AccountCanvas extends StatelessWidget {
   /// read has not answered or has failed, so a default is never shown as the
   /// resident's own setting.
   final Widget? togglesPlaceholder;
+
+  /// Opens the notification settings. The live settings page draws this one
+  /// row under the Notifications heading instead of switches of its own: the
+  /// notification settings are the one place a resident's switches live
+  /// (D-224), so two screens never show the same switch in disagreement.
+  final VoidCallback? onNotifications;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
   final String changePasswordSubtitle;
@@ -957,6 +964,7 @@ class _BackPage extends StatelessWidget {
       AccountFrame.settings => _SettingsBody(
         toggles: c.toggles,
         togglesPlaceholder: c.togglesPlaceholder,
+        onNotifications: c.onNotifications,
         onLanguage: c.onLanguage,
         onChangePassword: c.onChangePassword,
         changePasswordSubtitle: c.changePasswordSubtitle,
@@ -1512,6 +1520,7 @@ class _SettingsBody extends StatelessWidget {
   const _SettingsBody({
     required this.toggles,
     this.togglesPlaceholder,
+    this.onNotifications,
     this.onLanguage,
     this.onChangePassword,
     this.changePasswordSubtitle = '',
@@ -1523,6 +1532,7 @@ class _SettingsBody extends StatelessWidget {
 
   final List<AccountToggle> toggles;
   final Widget? togglesPlaceholder;
+  final VoidCallback? onNotifications;
   final VoidCallback? onLanguage;
   final VoidCallback? onChangePassword;
   final String changePasswordSubtitle;
@@ -1559,6 +1569,19 @@ class _SettingsBody extends StatelessWidget {
                   value: toggle.on || toggle.locked,
                   onChanged: toggle.locked ? null : toggle.onChanged,
                 ),
+            ],
+          ),
+          const SizedBox(height: Spacing.xl),
+        ] else if (onNotifications != null) ...<Widget>[
+          const SettingsSectionTitle('Notifications'),
+          SettingsList(
+            children: <Widget>[
+              SettingsRow(
+                title: 'Notification settings',
+                detail: 'What Taytay LGU tells you about',
+                icon: TaytayIcons.bell,
+                onTap: onNotifications,
+              ),
             ],
           ),
           const SizedBox(height: Spacing.xl),

@@ -424,124 +424,169 @@ void main() {
       }
     });
 
-    test('preferences are the two published types', () async {
+    /// The rows a `PATCH me/notification-preferences` sent, by type.
+    Map<String, Map<String, Object?>> sentRows() {
+      final Map<String, Object?> body =
+          transport.requests.last.body as Map<String, Object?>;
+      return <String, Map<String, Object?>>{
+        for (final Object? row in body['preferences'] as List<Object?>)
+          (row as Map<String, Object?>)['type'] as String: row,
+      };
+    }
+
+    Map<String, Object?> row(String type, {bool on = true}) =>
+        <String, Object?>{'type': type, 'in_app': on, 'push': on};
+
+    Future<NotificationPreferences> load(List<Object?> rows) async {
+      transport.responses.add(ok(<String, Object?>{'preferences': rows}));
+      return ((await NotificationApiRepository(
+                apiClient: clientFor(transport),
+              ).loadPreferences())
+              as Ok<NotificationPreferences>)
+          .value;
+    }
+
+    Future<void> save(NotificationPreferences preferences) async {
       transport.responses.add(
-        ok(<String, Object?>{
-          'preferences': <Object?>[
-            <String, Object?>{
-              'type': 'message_received',
-              'in_app': false,
-              'push': false,
-            },
-            <String, Object?>{
-              'type': 'verification_decided',
-              'in_app': false,
-              'push': true,
-            },
-          ],
-        }),
+        ok(<String, Object?>{'preferences': <Object?>[]}),
       );
+      final Result<void> result = await NotificationApiRepository(
+        apiClient: clientFor(transport),
+      ).updatePreferences(preferences);
+      expect(result.isOk, isTrue);
+    }
 
-      final Result<NotificationPreferences> result =
-          await NotificationApiRepository(
-            apiClient: clientFor(transport),
-          ).loadPreferences();
+    test('the switches are the six notices the server sends and honours', () {
+      expect(preferenceTypes, <String>[
+        'verification_decided',
+        'assistance_request_updated',
+        'issuance_request_updated',
+        'event_registration_updated',
+        'sector_application_decided',
+        'message_received',
+      ]);
+      expect(preferenceTypes, isNot(contains('balita')));
+      expect(preferenceTypes, isNot(contains('emergency')));
+    });
 
-      final NotificationPreferences preferences =
-          (result as Ok<NotificationPreferences>).value;
-      expect(preferences.channels, hasLength(2));
+    test('preferences are read from the served types only', () async {
+      final NotificationPreferences preferences = await load(<Object?>[
+        row('verification_decided', on: false),
+        row('message_received'),
+        row('balita', on: false),
+        row('emergency', on: false),
+        row('staff_only', on: false),
+      ]);
+
       expect(
-        preferences.isEnabled(NotificationCategory.accountSecurity),
+        preferences.channels.map((ChannelPreference c) => c.type),
+        <String>['verification_decided', 'message_received'],
+      );
+      expect(preferences.isOn(NotificationSwitch.verificationDecided), isFalse);
+      expect(preferences.isOn(NotificationSwitch.messageReceived), isTrue);
+      expect(
+        preferences.isOn(NotificationSwitch.issuanceRequestUpdated),
         isTrue,
+        reason: 'A type with no row is sent, so its switch reads on.',
       );
       expect(transport.requests.single.path, 'me/notification-preferences');
       expect(sentAuthenticated(transport.requests.single), isTrue);
     });
 
-    test('an update sends the spec list and not sms or email', () async {
-      transport.responses.add(
-        ok(<String, Object?>{'preferences': <Object?>[]}),
+    test('an update sends the six types and nothing else', () async {
+      await save(
+        const NotificationPreferences(push: true, sms: false, email: false),
       );
-      final Result<void> result =
-          await NotificationApiRepository(
-            apiClient: clientFor(transport),
-          ).updatePreferences(
-            const NotificationPreferences(
-              push: true,
-              sms: false,
-              email: false,
-              categories: <NotificationCategory, bool>{
-                NotificationCategory.verificationUpdate: true,
-              },
-            ),
-          );
 
-      expect(result.isOk, isTrue);
-      final Object? body = transport.requests.single.body;
-      expect(body, isA<Map<String, Object?>>());
-      final String encoded = body.toString();
-      expect(encoded, contains('verification_decided'));
-      expect(encoded, contains('message_received'));
-      expect(encoded, contains('in_app'));
-      expect(encoded, isNot(contains('sms')));
-      expect(encoded, isNot(contains('email')));
-      expect(encoded, contains('balita'));
-      expect(encoded, contains('emergency'));
+      final Map<String, Map<String, Object?>> sent = sentRows();
+      expect(sent.keys, preferenceTypes);
+      for (final Map<String, Object?> value in sent.values) {
+        expect(value['in_app'], isTrue, reason: 'a row never read is on');
+        expect(value['push'], isTrue);
+      }
+      final String encoded = transport.requests.last.body.toString();
+      for (final String never in <String>[
+        'balita',
+        'emergency',
+        'sms',
+        'email',
+      ]) {
+        expect(encoded, isNot(contains(never)), reason: never);
+      }
+    });
+
+    test('each switch round-trips to its own server type', () async {
+      for (final NotificationSwitch kind in NotificationSwitch.values) {
+        final NotificationPreferences loaded = await load(<Object?>[
+          for (final String type in preferenceTypes) row(type),
+        ]);
+        expect(loaded.isOn(kind), isTrue);
+
+        await save(loaded.withSwitch(kind, on: false));
+        final Map<String, Map<String, Object?>> sent = sentRows();
+        expect(sent.keys, preferenceTypes);
+        for (final String type in preferenceTypes) {
+          final bool on = type != kind.preferenceType;
+          expect(sent[type], row(type, on: on), reason: '$kind sent $type');
+        }
+
+        final NotificationPreferences reread = await load(<Object?>[
+          for (final String type in preferenceTypes)
+            row(type, on: type != kind.preferenceType),
+        ]);
+        for (final NotificationSwitch other in NotificationSwitch.values) {
+          expect(
+            reread.isOn(other),
+            other != kind,
+            reason: '$kind read $other',
+          );
+        }
+      }
     });
 
     test(
-      'balita and emergency round-trip, and a missing flag stays on',
+      'a row the server holds is sent as held, and a missing flag stays on',
       () async {
-        transport.responses.add(
-          ok(<String, Object?>{
-            'preferences': <Object?>[
-              <String, Object?>{'type': 'balita', 'in_app': false},
-              <String, Object?>{
-                'type': 'emergency',
-                'in_app': true,
-                'push': false,
-              },
-              <String, Object?>{
-                'type': 'staff_only',
-                'in_app': false,
-                'push': false,
-              },
-            ],
-          }),
-        );
-
-        final NotificationPreferences loaded =
-            ((await NotificationApiRepository(
-                      apiClient: clientFor(transport),
-                    ).loadPreferences())
-                    as Ok<NotificationPreferences>)
-                .value;
-        expect(loaded.channels.map((ChannelPreference c) => c.type), <String>[
-          'balita',
-          'emergency',
+        final NotificationPreferences loaded = await load(<Object?>[
+          <String, Object?>{
+            'type': 'assistance_request_updated',
+            'in_app': false,
+          },
+          <String, Object?>{
+            'type': 'message_received',
+            'in_app': true,
+            'push': false,
+          },
         ]);
         expect(loaded.channels.first.inApp, isFalse);
         expect(loaded.channels.first.push, isTrue);
-        expect(loaded.channels.last.push, isFalse);
-
-        transport.responses.add(
-          ok(<String, Object?>{'preferences': <Object?>[]}),
+        expect(
+          loaded.isOn(NotificationSwitch.messageReceived),
+          isTrue,
+          reason: 'Told in the app still, so not said to be off.',
         );
-        await NotificationApiRepository(
-          apiClient: clientFor(transport),
-        ).updatePreferences(
-          loaded.copyWith(
-            channels: writePreference(
-              loaded.channels,
-              type: 'balita',
-              on: true,
-            ),
+
+        await save(
+          loaded.withSwitch(
+            NotificationSwitch.issuanceRequestUpdated,
+            on: false,
           ),
         );
-        final String encoded = transport.requests.last.body.toString();
-        expect(encoded, contains('balita'));
-        expect(encoded, contains('emergency'));
-        expect(encoded, isNot(contains('staff_only')));
+        final Map<String, Map<String, Object?>> sent = sentRows();
+        expect(sent['assistance_request_updated'], <String, Object?>{
+          'type': 'assistance_request_updated',
+          'in_app': false,
+          'push': true,
+        });
+        expect(sent['message_received'], <String, Object?>{
+          'type': 'message_received',
+          'in_app': true,
+          'push': false,
+        });
+        expect(
+          sent['issuance_request_updated'],
+          row('issuance_request_updated', on: false),
+        );
       },
     );
   });

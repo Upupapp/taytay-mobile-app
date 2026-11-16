@@ -24,7 +24,6 @@ import 'package:taytay_resident/features/account/presentation/account_canvas.dar
 import 'package:taytay_resident/features/account/presentation/account_pages.dart';
 import 'package:taytay_resident/features/account/presentation/change_password_form.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
-import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/platform_repository.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
@@ -134,31 +133,56 @@ void main() {
     expect(manilaDecisionDate(DateTime.utc(2026, 10, 22, 20)), 'Oct 23, 2026');
   });
 
-  test('balita and emergency write both flags and default on', () {
-    expect(preferenceEnabled(const <ChannelPreference>[], 'balita'), isTrue);
-    final List<ChannelPreference> written = writePreference(
-      const <ChannelPreference>[
-        ChannelPreference(type: 'balita', inApp: true, push: true),
-      ],
-      type: 'emergency',
-      on: false,
+  test('the account settings own no switch and link to the one set', () {
+    final String settings =
+        File('lib/features/account/presentation/account_pages.dart')
+            .readAsStringSync()
+            .split('class AccountSettingsScreen')
+            .last
+            .split('class PrivacyNoticeScreen')
+            .first;
+    // D-224: the notification settings are the one place a switch lives.
+    // Nothing sends a Balita or an emergency notice, and an emergency switch
+    // contradicted "always sent".
+    for (final String gone in <String>[
+      'AccountToggle',
+      'toggles:',
+      "'balita'",
+      "'emergency'",
+      'Balita & advisories',
+      'Emergency alerts',
+      'updatePreferences',
+      'loadPreferences',
+    ]) {
+      expect(settings, isNot(contains(gone)), reason: gone);
+    }
+    expect(settings, contains('onNotifications:'));
+    expect(settings, contains('AppRoute.notificationSettings'));
+  });
+
+  testWidgets('the settings page opens the notification settings', (
+    tester,
+  ) async {
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: AccountCanvas(
+            frame: AccountFrame.settings,
+            title: 'Settings & privacy',
+            showBack: true,
+            showBell: false,
+            onNotifications: () => opened++,
+          ),
+        ),
+      ),
     );
-    final ChannelPreference emergency = written.firstWhere(
-      (ChannelPreference channel) => channel.type == 'emergency',
-    );
-    expect(emergency.inApp, isFalse);
-    expect(emergency.push, isFalse);
-    final List<ChannelPreference> office = writePreference(
-      written,
-      type: 'message_received',
-      on: false,
-      pushOnly: true,
-    );
-    final ChannelPreference replies = office.firstWhere(
-      (ChannelPreference channel) => channel.type == 'message_received',
-    );
-    expect(replies.inApp, isTrue);
-    expect(replies.push, isFalse);
+
+    expect(find.text('Notifications'), findsOneWidget);
+    expect(find.byType(SwitchListTile), findsNothing);
+    await tester.tap(find.text('Notification settings'));
+    await tester.pump();
+    expect(opened, 1);
   });
 
   test('placeholder and a missing notice keep the bundled draft', () {
@@ -296,7 +320,7 @@ void main() {
       expect(edit, isNot(contains('verified: true')));
       expect(edit, contains('verified: _emailVerified'));
       expect(settings, isNot(contains('Push and email')));
-      expect(settings, contains('Push notifications'));
+      expect(settings, isNot(contains('Push notifications')));
       expect(settings, contains('showDataExport: false'));
       expect(settings, isNot(contains('Request a copy of my data')));
       expect(notice, contains('showDataExport: false'));

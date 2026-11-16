@@ -819,6 +819,15 @@ class AppStringsEn extends AppStrings {
   String get notifCatAccountSecurity => 'Account and security';
 
   @override
+  String get notifSwitchDocumentRequests => 'Document requests';
+
+  @override
+  String get notifSwitchSectorApplications => 'Sector applications';
+
+  @override
+  String get notifSwitchOfficeReplies => 'Office replies';
+
+  @override
   String get inboxGroupToday => 'Today';
 
   @override

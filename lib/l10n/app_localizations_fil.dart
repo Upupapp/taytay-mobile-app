@@ -828,6 +828,15 @@ class AppStringsFil extends AppStrings {
   String get notifCatAccountSecurity => 'Account at seguridad';
 
   @override
+  String get notifSwitchDocumentRequests => 'Mga hiling na dokumento';
+
+  @override
+  String get notifSwitchSectorApplications => 'Mga aplikasyon sa sektor';
+
+  @override
+  String get notifSwitchOfficeReplies => 'Mga sagot ng tanggapan';
+
+  @override
   String get inboxGroupToday => 'Ngayong araw';
 
   @override

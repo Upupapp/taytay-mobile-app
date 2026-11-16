@@ -633,8 +633,6 @@ void main() {
         level: AccessLevel.verified,
         detail: fullDetail(),
         location: '/profile/settings',
-        // The switches are drawn only from a preferences read that answered
-        // (D-220).
         notifications: MockNotificationRepository(
           MockBehaviorController(
             latency: Duration.zero,
@@ -646,7 +644,12 @@ void main() {
       expect(find.text('Push and email'), findsNothing);
       expect(find.text('Request a copy of my data'), findsNothing);
       expect(find.text('Always on for MDRRMO alerts'), findsNothing);
-      expect(find.text('Push notifications'), findsWidgets);
+      // D-224: no switch of its own; one row opens the notification settings.
+      expect(find.text('Push notifications'), findsNothing);
+      expect(find.text('Balita & advisories'), findsNothing);
+      expect(find.text('Emergency alerts'), findsNothing);
+      expect(find.byType(SwitchListTile), findsNothing);
+      expect(find.text('Notification settings'), findsOneWidget);
       expect(find.text('Change password'), findsOneWidget);
       expect(find.text('Current password, then a new one'), findsNothing);
     });
