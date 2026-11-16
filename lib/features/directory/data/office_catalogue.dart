@@ -37,22 +37,27 @@ abstract final class OfficeCatalogue {
     String id, {
     bool mock = true,
     ApiClient? api,
+  }) async => (await read(id, mock: mock, api: api)).valueOrNull;
+
+  /// One office, keeping why it could not be read. An office the LGU
+  /// archived answers `404` ([NotFoundFailure]), which is not the same as a
+  /// read that failed: the first is an answer, the second is not.
+  static Future<Result<Office?>> read(
+    String id, {
+    bool mock = true,
+    ApiClient? api,
   }) async {
     if (mock) {
       final ({List<String> chips, List<Office> offices}) catalogue =
           await _fixture();
       for (final Office office in catalogue.offices) {
-        if (office.id == id) return office;
+        if (office.id == id) return Ok<Office?>(office);
       }
-      return null;
+      return const Err<Office?>(
+        NotFoundFailure(debugMessage: 'No fixture office with that id.'),
+      );
     }
-    final Result<Office?> result = await OfficeApiRepository(
-      apiClient: api!,
-    ).bySlug(id);
-    return switch (result) {
-      Ok(:final value) => value,
-      Err() => null,
-    };
+    return OfficeApiRepository(apiClient: api!).bySlug(id);
   }
 
   static Future<({List<String> chips, List<Office> offices})> _fixture() async {

@@ -3,6 +3,11 @@
 // often it is tapped; the screens whose data the server publishes topics for
 // re-read quietly when those topics change.
 //
+// D-222: a record the office archives while a resident has it open. The API
+// (backend ca71f23) drops an archived office or programme from its lists and
+// answers 404 for its page, and answers 503 rather than a cut list past 100
+// hotlines.
+//
 // The inbox and the privacy notice are held in account_s8_test, the digital
 // ID in digital_id_test, the events list in events_test.
 import 'dart:async';
@@ -28,6 +33,7 @@ import 'package:taytay_resident/features/account/presentation/account_canvas.dar
 import 'package:taytay_resident/features/directory/domain/office.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_canvas.dart';
 import 'package:taytay_resident/features/directory/presentation/directory_screen.dart';
+import 'package:taytay_resident/features/home/presentation/hotlines_screen.dart';
 import 'package:taytay_resident/features/household/presentation/household_screen.dart';
 import 'package:taytay_resident/features/issuance/presentation/issuance_catalogue_screen.dart';
 import 'package:taytay_resident/features/news/presentation/balita_canvas.dart';
@@ -40,6 +46,8 @@ import 'package:taytay_resident/features/verification/domain/resident_record_rep
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_page.dart';
 import 'package:taytay_resident/features/verification/presentation/profile_wizard_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
+import 'package:taytay_resident/shared/widgets/error_state.dart';
+import 'package:taytay_resident/shared/widgets/failure_view.dart';
 import 'package:taytay_resident/shared/widgets/loading_skeleton.dart';
 
 import '../support/layout_matrix.dart';
@@ -83,6 +91,35 @@ final ApiHttpResponse _serverError = ApiHttpResponse(
     },
   }),
 );
+
+/// The backend's error envelope for [status] and [code].
+ApiHttpResponse _refusal(int status, String code) => ApiHttpResponse(
+  statusCode: status,
+  body: jsonEncode(<String, Object?>{
+    'error': <String, Object?>{
+      'code': code,
+      'message': 'operator text',
+      'details': null,
+      'request_id': 'req-synthetic',
+    },
+  }),
+);
+
+/// What the API answers for an office or a programme the office archived.
+final ApiHttpResponse _archived = _refusal(404, 'NOT_FOUND');
+
+Map<String, Object?> _office(String name, String slug) => <String, Object?>{
+  'id': '22222222-2222-4222-8222-${slug.hashCode.abs() % 999999999999}',
+  'name': name,
+  'slug': slug,
+  'description': 'A synthetic office description',
+  'category': 'Synthetic',
+  'phone': '',
+  'email': '',
+  'hours': '',
+  'address': '',
+  'service_lines': const <Object?>[],
+};
 
 Map<String, Object?> _service(String name, String slug) => <String, Object?>{
   'id': '11111111-1111-4111-8111-${slug.hashCode.abs() % 999999999999}',
@@ -669,6 +706,224 @@ void main() {
         answer: (ApiRequest request) =>
             Ok<ApiHttpResponse>(_page(const <Object?>[])),
       );
+    });
+  });
+
+  group('a record the office archives while it is open (D-222)', () {
+    bool shows(String text) => find.textContaining(text).evaluate().isNotEmpty;
+
+    /// Nothing on screen calls an answer from the API "offline".
+    void expectNotOffline(WidgetTester tester) {
+      expect(
+        find.textContaining(RegExp('offline|connection', caseSensitive: false)),
+        findsNothing,
+      );
+      for (final ErrorState state in tester.widgetList<ErrorState>(
+        find.byType(ErrorState),
+      )) {
+        expect(state.offline, isFalse);
+      }
+      expect(find.text('operator text'), findsNothing);
+    }
+
+    /// Opens [screen] signed in over [transport] with the stream connected.
+    Future<_LiveApp> open(
+      WidgetTester tester,
+      _Gated transport,
+      Widget screen,
+    ) async {
+      _tallView(tester);
+      final _LiveApp app = await _LiveApp.open(transport);
+      await tester.pumpWidget(_host(app.dependencies, screen));
+      await tester.pumpAndSettle();
+      await app.connect(tester);
+      return app;
+    }
+
+    /// Sends a change to [topic] and lets the quiet re-read answer.
+    Future<void> change(WidgetTester tester, _LiveApp app, String topic) async {
+      await app.change(tester, topic);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(seconds: 3));
+    }
+
+    testWidgets('an office page whose re-read answers 404 says the office is '
+        'no longer listed', (tester) async {
+      ApiHttpResponse page = _item(_office('Synthetic Health Office', 'shoh'));
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          request.path == 'offices/shoh' ? page : _page(const <Object?>[]),
+        ),
+      );
+      final _LiveApp app = await open(
+        tester,
+        transport,
+        const OfficeDetailScreen(officeId: 'shoh'),
+      );
+      expect(shows('Synthetic Health Office'), isTrue);
+
+      // A re-read that fails for another reason keeps the page (D-218).
+      page = _serverError;
+      await change(tester, app, LiveTopics.offices);
+      expect(transport.asked('offices/shoh'), 2);
+      expect(shows('Synthetic Health Office'), isTrue);
+      expect(find.text('This office could not be shown'), findsNothing);
+
+      // Archived: the page is not kept as if the office were still listed.
+      page = _archived;
+      await change(tester, app, LiveTopics.offices);
+      expect(transport.asked('offices/shoh'), 3);
+      expect(tester.takeException(), isNull);
+      expect(shows('Synthetic Health Office'), isFalse);
+      expect(find.text('This office could not be shown'), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+      expectNotOffline(tester);
+
+      // Nothing is left on the page to re-read.
+      await change(tester, app, LiveTopics.services);
+      expect(transport.asked('offices/shoh'), 3);
+      await app.close(tester);
+    });
+
+    testWidgets('a Tulong programme page whose re-read answers 404 says it is '
+        'not available', (tester) async {
+      ApiHttpResponse page = _item(_service('Burial Assistance', 'burial'));
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          request.path == 'services/burial' ? page : _page(const <Object?>[]),
+        ),
+      );
+      final _LiveApp app = await open(
+        tester,
+        transport,
+        const ServiceInfoScreen(slug: 'burial'),
+      );
+      expect(shows('Burial Assistance'), isTrue);
+
+      page = _serverError;
+      await change(tester, app, LiveTopics.services);
+      expect(transport.asked('services/burial'), 2);
+      expect(shows('Burial Assistance'), isTrue);
+      expect(find.text(_serverWords), findsNothing);
+
+      page = _archived;
+      await change(tester, app, LiveTopics.services);
+      expect(transport.asked('services/burial'), 3);
+      expect(tester.takeException(), isNull);
+      expect(shows('Burial Assistance'), isFalse);
+      expect(find.text('This programme is not available'), findsOneWidget);
+      expect(find.byType(FailureView), findsNothing);
+      expectNotOffline(tester);
+      await app.close(tester);
+    });
+
+    testWidgets('the directory re-reads without an archived office, and says '
+        'nothing about it', (tester) async {
+      List<Object?> offices = <Object?>[
+        _office('Synthetic Health Office', 'shoh'),
+        _office('Synthetic Treasury Office', 'stro'),
+      ];
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          _page(request.path == 'offices' ? offices : const <Object?>[]),
+        ),
+      );
+      final _LiveApp app = await open(
+        tester,
+        transport,
+        const DirectoryScreen(),
+      );
+      expect(shows('Synthetic Health Office'), isTrue);
+      expect(shows('Synthetic Treasury Office'), isTrue);
+
+      offices = <Object?>[_office('Synthetic Treasury Office', 'stro')];
+      await change(tester, app, LiveTopics.offices);
+      expect(tester.takeException(), isNull);
+      expect(shows('Synthetic Health Office'), isFalse);
+      expect(shows('Synthetic Treasury Office'), isTrue);
+      expect(find.byType(FailureView), findsNothing);
+      expect(find.byType(ErrorState), findsNothing);
+      expect(find.byType(LoadingSkeleton), findsNothing);
+      expectNotOffline(tester);
+      await app.close(tester);
+    });
+
+    testWidgets('Tulong re-reads without an archived programme, and still '
+        'hears the next one after its last was archived', (tester) async {
+      List<Object?> services = <Object?>[
+        _service('Burial Assistance', 'burial'),
+        _service('Synthetic Scholarship', 'scholarship'),
+      ];
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          _page(request.path == 'services' ? services : const <Object?>[]),
+        ),
+      );
+      final _LiveApp app = await open(tester, transport, const TulongScreen());
+      expect(shows('Burial Assistance'), isTrue);
+
+      services = <Object?>[_service('Synthetic Scholarship', 'scholarship')];
+      await change(tester, app, LiveTopics.services);
+      expect(shows('Burial Assistance'), isFalse);
+      expect(shows('Synthetic Scholarship'), isTrue);
+
+      services = const <Object?>[];
+      await change(tester, app, LiveTopics.services);
+      expect(shows('Synthetic Scholarship'), isFalse);
+      expect(find.text('No programmes listed yet'), findsOneWidget);
+
+      // An emptied list is still a list that was read, so it still hears.
+      services = <Object?>[_service('Synthetic Livelihood Aid', 'livelihood')];
+      await change(tester, app, LiveTopics.services);
+      expect(shows('Synthetic Livelihood Aid'), isTrue);
+      expect(find.byType(FailureView), findsNothing);
+      expectNotOffline(tester);
+      await app.close(tester);
+    });
+
+    testWidgets('hotlines past what the API reads whole (503) show the failure '
+        'with Try again, not offline and not an empty list', (tester) async {
+      _tallView(tester);
+      final ApiHttpResponse unavailable = _refusal(503, 'SERVICE_UNAVAILABLE');
+      final _Gated transport = _Gated(
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          request.path == 'hotlines' || request.path == 'home'
+              ? unavailable
+              : _page(const <Object?>[]),
+        ),
+      );
+      await tester.pumpWidget(_host(_guest(transport), const HotlinesScreen()));
+      await tester.pumpAndSettle();
+      expect(transport.asked('hotlines'), 1);
+      expect(transport.asked('home'), 1, reason: 'the fallback read');
+      expect(
+        find.text(const ServerFailure(isTemporary: true).residentMessage),
+        findsOneWidget,
+      );
+      expect(find.byType(FailureView), findsOneWidget);
+      expect(find.text('Try again'), findsOneWidget);
+      expect(find.text('No hotlines to show'), findsNothing);
+      expectNotOffline(tester);
+
+      transport.answer = (ApiRequest request) => Ok<ApiHttpResponse>(
+        request.path == 'hotlines'
+            ? _page(<Object?>[
+                <String, Object?>{
+                  'id': 'hl-synthetic',
+                  'name': 'Synthetic Rescue Line',
+                  'number': '0000-000-0000',
+                  'category': 'Rescue',
+                  'kind': 'other',
+                  'sort_order': 1,
+                  'active': true,
+                },
+              ])
+            : _page(const <Object?>[]),
+      );
+      await tester.tap(find.text('Try again'));
+      await tester.pumpAndSettle();
+      expect(shows('Synthetic Rescue Line'), isTrue);
+      expect(find.byType(FailureView), findsNothing);
     });
   });
 }

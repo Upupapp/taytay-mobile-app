@@ -75,7 +75,9 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
   }
 
   /// Reads the programme. A [quiet] re-read (D-218) only replaces a page
-  /// already on screen, and keeps it when the read fails.
+  /// already on screen, and keeps it when the read fails. A `404` is an
+  /// answer, not a failure: the office archived the programme, so the page
+  /// says it is not available instead of keeping it (D-222).
   Future<void> _load({bool quiet = false}) async {
     if (_reading || (quiet && _service == null)) return;
     _reading = true;
@@ -92,10 +94,12 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
           _failure = null;
         });
       case Err<SocialService>(:final failure):
-        if (quiet) return;
+        final bool gone = failure is NotFoundFailure;
+        if (quiet && !gone) return;
         setState(() {
-          _missing = failure is NotFoundFailure;
-          _failure = failure is NotFoundFailure ? null : failure;
+          if (gone) _service = null;
+          _missing = gone;
+          _failure = gone ? null : failure;
         });
     }
   }

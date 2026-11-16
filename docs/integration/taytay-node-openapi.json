@@ -411,7 +411,7 @@
       "get": {
         "operationId": "getOfficeHero",
         "summary": "Office hero image",
-        "description": "Public bytes for the office banner. No banner is 404.",
+        "description": "Public bytes for the office banner. No banner, or an archived office, is 404.",
         "security": [],
         "parameters": [
           { "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }
@@ -439,11 +439,24 @@
         ],
         "responses": {
           "200": { "description": "Office.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfficeEnvelope" } } } },
-          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "404": { "description": "Not found, or archived: an archived office is out of the residents' directory.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
     "/api/v1/admin/offices": {
+      "get": {
+        "operationId": "listAdminOffices",
+        "summary": "Every office, live or archived, for the administrator",
+        "description": "Admin only. Whole, never paged, ordered by name: the console reads this rather than the residents' directory, which leaves archived offices out. More offices than the API reads whole (500) is 503 rather than a truncated list.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "false (the default): the live offices. true: the archived ones only." }],
+        "responses": {
+          "200": { "description": "Offices, each with its archive state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminOfficeListEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "archived is not true or false, or another parameter was sent.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "503": { "description": "There are more offices than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
       "post": {
         "operationId": "createOffice",
         "summary": "Create an office",
@@ -453,8 +466,8 @@
           "content": { "multipart/form-data": { "schema": { "$ref": "#/components/schemas/OfficeWrite" } } }
         },
         "responses": {
-          "201": { "description": "Created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfficeEnvelope" } } } },
-          "409": { "description": "Slug already used.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "201": { "description": "Created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminOfficeEnvelope" } } } },
+          "409": { "description": "CONFLICT: the slug is used. An archived office keeps its slug reserved, so old links never lead to a different office, and the message says so.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -471,21 +484,43 @@
           "content": { "multipart/form-data": { "schema": { "$ref": "#/components/schemas/OfficePatch" } } }
         },
         "responses": {
-          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OfficeEnvelope" } } } },
-          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "200": { "description": "Updated. A replaced banner image is kept in storage (ADR 0002).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminOfficeEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ARCHIVED: an archived office is read-only until restored, and no image is stored. CONFLICT: the slug is used (an archived office keeps its slug reserved).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
-      },
-      "delete": {
-        "operationId": "deleteOffice",
-        "summary": "Delete an office",
-        "description": "Refused while staff or later records still reference the office.",
+      }
+    },
+    "/api/v1/admin/offices/{id}/archive": {
+      "post": {
+        "operationId": "archiveOffice",
+        "summary": "Archive an office",
+        "description": "Admin only. Archive, never delete (ADR 0002): the row is kept whole, leaves every public read, and is read-only until restored. The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row office.archived are written in one transaction. Its slug stays reserved. Media is never touched.",
         "security": [{ "firebaseIdToken": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
         "responses": {
-          "200": { "description": "Deleted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } },
-          "409": { "description": "Still referenced.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "200": { "description": "The archived office, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminOfficeEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED. OFFICE_IN_USE while any staff account is linked to it, or any live Tulong service or active document type is under it: details carries staff_accounts, services and issuance_types, each a count. Unlink, archive or retire them first.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/offices/{id}/restore": {
+      "post": {
+        "operationId": "restoreOffice",
+        "summary": "Restore an office from the archive",
+        "description": "Admin only. Puts an archived row back where residents see it (unless it is otherwise hidden). The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row office.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
+        "responses": {
+          "200": { "description": "The restored office, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminOfficeEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -493,7 +528,7 @@
       "patch": {
         "operationId": "assignUserOffice",
         "summary": "Link a staff account to an office",
-        "description": "office_id null clears the link. A non-staff account cannot be assigned an office.",
+        "description": "office_id null clears the link. A non-staff account cannot be assigned an office. An archived office takes no staff: 409 OFFICE_ARCHIVED.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -1701,7 +1736,8 @@
         "description": "A name over a list's query parameters. Reading the views of a list needs the key that opens it: residents resident.view, beneficiaries beneficiary.view, assistance-requests request.view, releases release.view, cases case.view, households household.view; an account with none of them is 403 before the query is read. The office's shared views first, then the reader's own, each by name; somebody else's personal view is never listed. A view whose sector parameter is vawc-survivor or cicl is left out for a reader without request.view-sensitive, because its name can describe that population. Whole, never paged: the caps bound it. Not scoped by barangay: a view holds no records, and the list it opens applies the reader's scope.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
-          { "name": "resource", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/SavedViewResource" } }
+          { "name": "resource", "in": "query", "required": true, "schema": { "$ref": "#/components/schemas/SavedViewResource" } },
+          { "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "true lists instead the archived views of the list this account could restore: its own personal ones, and the office's shared ones when it holds saved-view.share; newest archive first, whole up to 500 (more is 503). Protected sectors are left out as above." }
         ],
         "responses": {
           "200": { "description": "Every view of the list this reader may see.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SavedViewListEnvelope" } } } },
@@ -1721,22 +1757,38 @@
         "responses": {
           "201": { "description": "Saved.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SavedViewEnvelope" } } } },
           "403": { "description": "Without the list's key; shared without saved-view.share; a protected sector without request.view-sensitive.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "The cap is reached; take one away first.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The cap is reached; archive one first.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "A field is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
-    "/api/v1/office/saved-views/{id}": {
-      "delete": {
-        "operationId": "removeSavedView",
-        "summary": "Take a saved view away",
-        "description": "Taken away, never deleted: removed_at and removed_by are set once and the row is kept, so a shared view others relied on can still be named afterwards. Anyone may take away their own personal view; a shared one needs saved-view.share. Somebody else's personal view, a view of a list this account may not open, one of a protected sector without request.view-sensitive, and one already taken away all answer 404: a refusal would confirm it exists. Audit saved_view.removed.",
+    "/api/v1/office/saved-views/{id}/archive": {
+      "post": {
+        "operationId": "archiveSavedView",
+        "summary": "Archive a saved view",
+        "description": "Archived, never deleted (ADR 0002): archived_at and archived_by are set and the row is kept, so a shared view others relied on can still be named afterwards and a view archived by mistake comes back. No body and no reason: a view is a filter. Anyone may archive their own personal view; a shared one needs saved-view.share. Somebody else's personal view, a view of a list this account may not open, and one of a protected sector without request.view-sensitive answer 404: a refusal would confirm it exists. The row, an archive_events row and the audit row saved_view.archived are written in one transaction.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "responses": {
-          "200": { "description": "Taken away: { id, deleted: true }.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } },
+          "200": { "description": "The archived view.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SavedViewEnvelope" } } } },
           "403": { "description": "None of the list keys, or a shared view without saved-view.share.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "404": { "description": "Not found, already taken away, or not this account's to see.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "404": { "description": "Not found, or not this account's to see.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/saved-views/{id}/restore": {
+      "post": {
+        "operationId": "restoreSavedView",
+        "summary": "Restore a saved view from the archive",
+        "description": "The same who-may as archiving. A restore that would take the list past its cap (50 personal views per account, 50 shared) is 409 CONFLICT, as a save past it is. The row, an archive_events row and the audit row saved_view.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "The restored view.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SavedViewEnvelope" } } } },
+          "403": { "description": "None of the list keys, or a shared view without saved-view.share.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found, or not this account's to see.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED; or CONFLICT when the cap is reached.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -1759,7 +1811,7 @@
       "post": {
         "operationId": "createNews",
         "summary": "Post a Balita article",
-        "description": "Needs news.write. Staff may post only for their own office. Admins choose the office. Drafts are hidden from the public list.",
+        "description": "Needs news.write. Staff may post only for their own office. Admins choose the office; an archived office is 409 OFFICE_ARCHIVED (nothing new is published in its name). Drafts are hidden from the public list.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -1788,7 +1840,7 @@
       "patch": {
         "operationId": "updateNews",
         "summary": "Edit a Balita article",
-        "description": "Staff can edit only articles of their own office. Publishing sets published_at the first time.",
+        "description": "Staff can edit only articles of their own office. Publishing sets published_at the first time. A cover this replaces is kept in storage (ADR 0002).",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -1922,6 +1974,19 @@
       }
     },
     "/api/v1/admin/services": {
+      "get": {
+        "operationId": "listAdminServices",
+        "summary": "Every Tulong service, live or archived, for the administrator",
+        "description": "Admin only. Whole, never paged, ordered by name, hidden_from_list services included: the console reads this rather than the residents' catalogue, which leaves archived and hidden services out. More services than the API reads whole (1000) is 503 rather than a truncated list.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "false (the default): the live services. true: the archived ones only." }],
+        "responses": {
+          "200": { "description": "Services, each with its archive state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceListEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "archived is not true or false, or another parameter was sent.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "503": { "description": "There are more services than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
       "post": {
         "operationId": "createService",
         "summary": "Create a Tulong service",
@@ -1931,8 +1996,9 @@
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceWrite" } } }
         },
         "responses": {
-          "201": { "description": "Created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEnvelope" } } } },
-          "409": { "description": "Slug already used.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "201": { "description": "Created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceEnvelope" } } } },
+          "409": { "description": "CONFLICT: the slug is used (an archived service keeps its slug reserved, and the message says so). OFFICE_ARCHIVED: office_id names an archived office.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "Validation failed, or office_id names no office.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -1949,19 +2015,43 @@
           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServicePatch" } } }
         },
         "responses": {
-          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEnvelope" } } } },
-          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ARCHIVED: an archived service is read-only until restored. CONFLICT: the slug is used. OFFICE_ARCHIVED: office_id names an archived office.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
-      },
-      "delete": {
-        "operationId": "deleteService",
-        "summary": "Delete a Tulong service",
+      }
+    },
+    "/api/v1/admin/services/{id}/archive": {
+      "post": {
+        "operationId": "archiveService",
+        "summary": "Archive a Tulong service",
+        "description": "Admin only. Archive, never delete (ADR 0002): the row is kept whole, leaves every public read, and is read-only until restored. The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row service.archived are written in one transaction. Its slug stays reserved. Media is never touched.",
         "security": [{ "firebaseIdToken": [] }],
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
-        ],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
         "responses": {
-          "200": { "description": "Deleted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } }
+          "200": { "description": "The archived Tulong service, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/services/{id}/restore": {
+      "post": {
+        "operationId": "restoreService",
+        "summary": "Restore a Tulong service from the archive",
+        "description": "Admin only. Puts an archived row back where residents see it (unless it is otherwise hidden). The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row service.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
+        "responses": {
+          "200": { "description": "The restored Tulong service, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED. OFFICE_ARCHIVED when its office is archived: restore the office first, or move the service.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -1986,7 +2076,9 @@
           }
         },
         "responses": {
-          "200": { "description": "Image stored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ServiceEnvelope" } } } }
+          "200": { "description": "Image stored. The image it replaces is kept in storage (ADR 0002).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminServiceEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ARCHIVED: an archived service is read-only until restored; the image is refused before it is stored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2007,7 +2099,7 @@
       "post": {
         "operationId": "startThread",
         "summary": "Start or continue a thread with an office",
-        "description": "Verified residents only. subject is stored when the thread is created. An open thread for the same resident and office is reused and keeps its original subject. A closed thread starts a new one. An optional idempotency_key (a UUID, in the body; a multipart field with a file) makes a retry safe: the same key with the same office, subject, words and image answers with the message the first send made and the thread as it stands, with the status the first send had (201 when that message opened the thread, 200 otherwise), before anything else is read or stored and without telling the office again. Keys are kept per sender in message_intents (0040), append-only. A send with no key behaves as before.",
+        "description": "Verified residents only. An archived office is not in the residents' directory and answers as an unknown office (422 office_id). subject is stored when the thread is created. An open thread for the same resident and office is reused and keeps its original subject. A closed thread starts a new one. An optional idempotency_key (a UUID, in the body; a multipart field with a file) makes a retry safe: the same key with the same office, subject, words and image answers with the message the first send made and the thread as it stands, with the status the first send had (201 when that message opened the thread, 200 otherwise), before anything else is read or stored and without telling the office again. Keys are kept per sender in message_intents (0040), append-only. A send with no key behaves as before.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
@@ -2228,7 +2320,7 @@
       "get": {
         "operationId": "getHomeBannerImage",
         "summary": "Active home banner image",
-        "description": "Public bytes for an active banner that has media. An inactive banner or a missing image is 404.",
+        "description": "Public bytes for an active, live banner that has media. An inactive or archived banner, or a missing image, is 404 — except with an admin bearer, which reads any banner's image so the console can show what it is restoring.",
         "security": [],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -2250,10 +2342,11 @@
       "get": {
         "operationId": "getHome",
         "summary": "Home screen",
-        "description": "Active banners, quick links, active hotlines, the latest published Balita, and featured Tulong services.",
+        "description": "Active banners, quick links, active hotlines, the latest published Balita, and featured Tulong services. Nothing archived is here. A featured service is listed even when hidden_from_list, as GET /services?featured=true returns it.",
         "security": [],
         "responses": {
-          "200": { "description": "Home payload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HomeEnvelope" } } } }
+          "200": { "description": "Home payload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HomeEnvelope" } } } },
+          "503": { "description": "There are more hotlines than the home screen reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2261,7 +2354,9 @@
       "get": {
         "operationId": "listBanners",
         "summary": "List banners, including inactive ones",
+        "description": "Admin only. Whole, by sort_order: the live banners (active or not), or with archived=true the archived ones.",
         "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "false (the default): the live banners. true: the archived ones only." }],
         "responses": {
           "200": { "description": "Banners.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerListEnvelope" } } } }
         }
@@ -2284,16 +2379,43 @@
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerWrite" } } } },
         "responses": {
-          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerEnvelope" } } } }
+          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ARCHIVED: an archived banner is read-only until restored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
-      },
-      "delete": {
-        "operationId": "deleteBanner",
-        "summary": "Delete a home banner",
+      }
+    },
+    "/api/v1/admin/home/banners/{id}/archive": {
+      "post": {
+        "operationId": "archiveBanner",
+        "summary": "Archive a home banner",
+        "description": "Admin only. Archive, never delete (ADR 0002): the row is kept whole, leaves every public read, and is read-only until restored. The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row banner.archived are written in one transaction. Its image is never touched.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
         "responses": {
-          "200": { "description": "Deleted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } }
+          "200": { "description": "The archived home banner, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/home/banners/{id}/restore": {
+      "post": {
+        "operationId": "restoreBanner",
+        "summary": "Restore a home banner from the archive",
+        "description": "Admin only. Puts an archived row back where residents see it (unless it is otherwise hidden). The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row banner.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
+        "responses": {
+          "200": { "description": "The restored home banner, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/BannerEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2301,7 +2423,9 @@
       "get": {
         "operationId": "listQuickLinks",
         "summary": "List quick links",
+        "description": "Admin only. Whole, by sort_order: the live links, or with archived=true the archived ones.",
         "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "false (the default): the live links. true: the archived ones only." }],
         "responses": {
           "200": { "description": "Links.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkListEnvelope" } } } }
         }
@@ -2324,16 +2448,43 @@
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkWrite" } } } },
         "responses": {
-          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkEnvelope" } } } }
+          "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ARCHIVED: an archived link is read-only until restored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
-      },
-      "delete": {
-        "operationId": "deleteQuickLink",
-        "summary": "Delete a quick link",
+      }
+    },
+    "/api/v1/admin/home/links/{id}/archive": {
+      "post": {
+        "operationId": "archiveQuickLink",
+        "summary": "Archive a quick link",
+        "description": "Admin only. Archive, never delete (ADR 0002): the row is kept whole, leaves every public read, and is read-only until restored. The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row link.archived are written in one transaction.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
         "responses": {
-          "200": { "description": "Deleted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } }
+          "200": { "description": "The archived quick link, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/home/links/{id}/restore": {
+      "post": {
+        "operationId": "restoreQuickLink",
+        "summary": "Restore a quick link from the archive",
+        "description": "Admin only. Puts an archived row back where residents see it (unless it is otherwise hidden). The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row link.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
+        "responses": {
+          "200": { "description": "The restored quick link, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LinkEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2377,10 +2528,11 @@
       "get": {
         "operationId": "listHotlines",
         "summary": "List active hotlines",
-        "description": "Public. Inactive rows are omitted. Ordered by sort_order, then name. Capped at 100.",
+        "description": "Public. Inactive and archived rows are omitted. Ordered by sort_order, then name. Read whole: past 100 the API answers 503 rather than cutting the list short.",
         "security": [],
         "responses": {
-          "200": { "description": "Active hotlines.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineListEnvelope" } } } }
+          "200": { "description": "Active hotlines.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineListEnvelope" } } } },
+          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2388,10 +2540,13 @@
       "get": {
         "operationId": "listAdminHotlines",
         "summary": "List hotlines, including inactive ones",
+        "description": "Admin only. The live hotlines (active or not), or with archived=true the archived ones; by sort_order, then name; capped at 100.",
         "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "archived", "in": "query", "schema": { "type": "string", "enum": ["true", "false"], "default": "false" }, "description": "false (the default): the live hotlines. true: the archived ones only." }],
         "responses": {
-          "200": { "description": "Hotlines.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineListEnvelope" } } } },
-          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "200": { "description": "Hotlines, each with its archive state.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AdminHotlineListEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "503": { "description": "There are more hotlines than this list reads whole; nothing is cut short.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       },
       "post": {
@@ -2416,17 +2571,41 @@
         "responses": {
           "200": { "description": "Updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineEnvelope" } } } },
           "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "The change would make a second active command-center hotline.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "409": { "description": "CONFLICT: the change would make a second active command-center hotline. ARCHIVED: an archived hotline is read-only until restored.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
-      },
-      "delete": {
-        "operationId": "deleteHotline",
-        "summary": "Delete a hotline",
+      }
+    },
+    "/api/v1/admin/hotlines/{id}/archive": {
+      "post": {
+        "operationId": "archiveHotline",
+        "summary": "Archive a hotline",
+        "description": "Admin only. Archive, never delete (ADR 0002): the row is kept whole, leaves every public read, and is read-only until restored. The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row hotline.archived are written in one transaction. An archived hotline no longer counts as the active command center.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
         "responses": {
-          "200": { "description": "Deleted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DeletedEnvelope" } } } },
-          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "200": { "description": "The archived hotline, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "ALREADY_ARCHIVED.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/hotlines/{id}/restore": {
+      "post": {
+        "operationId": "restoreHotline",
+        "summary": "Restore a hotline from the archive",
+        "description": "Admin only. Puts an archived row back where residents see it (unless it is otherwise hidden). The reason is trimmed, 1 to 500 characters. The row change, an archive_events row and the audit row hotline.restored are written in one transaction.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveReason" } } } },
+        "responses": {
+          "200": { "description": "The restored hotline, as PATCH answers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/HotlineEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "NOT_ARCHIVED. CONFLICT when restoring it would make a second active command-center hotline, as create refuses it; nothing is written.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The reason is missing, blank, longer than 500 characters, or sent with another field.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -2434,7 +2613,7 @@
       "get": {
         "operationId": "getAppConfig",
         "summary": "Public app bootstrap",
-        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, how many working days the app says an ID review usually takes (null: the app states none), public feature flags, the privacy notice and the Terms of Use (each a placeholder until published: version 'placeholder'). Flags are not secrets.",
+        "description": "LGU contact line, support email, current privacy and terms versions, minimum app version, how many working days the app says an ID review usually takes (null: the app states none), public feature flags (archived ones are left out), the privacy notice and the Terms of Use (each a placeholder until published: version 'placeholder'). Flags are not secrets.",
         "security": [],
         "responses": {
           "200": { "description": "Bootstrap config.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigEnvelope" } } } }
@@ -2445,12 +2624,42 @@
       "patch": {
         "operationId": "patchAppConfig",
         "summary": "Update public app config",
-        "description": "Admin only. Null clears a field. A feature flag value of null deletes that key. verification_review_working_days is written whole, min and max together, each an integer with 1 <= min <= max <= 30 (anything else is 422); null clears it, and the app then states no review time. privacy_notice and terms publish the privacy notice and the Terms of Use the same way: version and body_markdown together, and privacy_version or terms_version set to that version (a different one beside it is 422). The version is the administrator's choice and is never bumped by the API; a new version is what asks residents to accept again.",
+        "description": "Admin only. Null clears a field. A feature flag value of null archives that key (ADR 0002): it is kept with its value, leaves GET /app/config, and shows on GET /admin/app/feature-flags; a value for an archived key restores it with that value. Each archive or restore is an archive_events row with no reason, written with the change and its audit row app.config_updated in one transaction; null for an unknown or already archived key changes nothing. verification_review_working_days is written whole, min and max together, each an integer with 1 <= min <= max <= 30 (anything else is 422); null clears it, and the app then states no review time. privacy_notice and terms publish the privacy notice and the Terms of Use the same way: version and body_markdown together, and privacy_version or terms_version set to that version (a different one beside it is 422). The version is the administrator's choice and is never bumped by the API; a new version is what asks residents to accept again.",
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigPatch" } } } },
         "responses": {
           "200": { "description": "Updated config.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppConfigEnvelope" } } } },
           "422": { "description": "Validation failed.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/app/feature-flags": {
+      "get": {
+        "operationId": "listAdminFeatureFlags",
+        "summary": "Every feature flag, live or archived",
+        "description": "Admin only. Whole, by key, each with its value and archive state. GET /app/config carries only the live ones.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "Flags.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FeatureFlagListEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/archive-events": {
+      "get": {
+        "operationId": "listArchiveEvents",
+        "summary": "One record's archive history",
+        "description": "Admin only. Every archive and restore of one office, Tulong service, hotline, banner, quick link or feature flag, newest first, with who (actor_name, as the office trail names an account: a closed account is not named) and why. Saved views are a person's own filters and are not read here. Whole up to 500 entries; more is 503 rather than a truncated list.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "entity_type", "in": "query", "required": true, "schema": { "type": "string", "enum": ["office", "service", "hotline", "banner", "link", "feature_flag"] } },
+          { "name": "entity_id", "in": "query", "required": true, "schema": { "type": "string", "maxLength": 80 }, "description": "The record's id (a UUID), or for a feature_flag its key." }
+        ],
+        "responses": {
+          "200": { "description": "The history, newest first; empty for a record never archived.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ArchiveEventListEnvelope" } } } },
+          "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such record.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "entity_type is not one of the six, entity_id does not fit it, or another parameter was sent.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -11179,7 +11388,7 @@
       "post": {
         "operationId": "createIssuanceType",
         "summary": "Add a document type to an office catalogue",
-        "description": "Needs issuance-type.manage. Staff add to their own office (office_id omitted or their own; another is 403); the administrator names the office (422 without it). A reason is required and kept with the change. Audited issuance_type.created.",
+        "description": "Needs issuance-type.manage. Staff add to their own office (office_id omitted or their own; another is 403); the administrator names the office (422 without it). An archived office takes no new type: 409 OFFICE_ARCHIVED. A reason is required and kept with the change. Audited issuance_type.created.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11253,7 +11462,7 @@
       "patch": {
         "operationId": "updateIssuanceType",
         "summary": "Change a document type",
-        "description": "Needs issuance-type.manage, for the owning office (another office is 404). Only the fields sent change; requests already filed keep what they were filed with. A reason is required; the change records which fields moved, never their values. Audited issuance_type.updated.",
+        "description": "Needs issuance-type.manage, for the owning office (another office is 404). Only the fields sent change; requests already filed keep what they were filed with. A reason is required; the change records which fields moved, never their values. A type under an archived office is 409 OFFICE_ARCHIVED. Audited issuance_type.updated.",
         "security": [
           {
             "firebaseIdToken": []
@@ -17141,8 +17350,8 @@
             "properties": {
               "code": {
                 "type": "string",
-                "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked.",
-                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "BIOMETRIC_CONSENT_REQUIRED", "NOT_FOUND", "CONFLICT", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
+                "description": "Stable machine-readable code. Email and password-reset verification use code_invalid, code_expired, and code_locked. Archive, never delete (ADR 0002), answers 409 with ALREADY_ARCHIVED (archiving an archived record), NOT_ARCHIVED (restoring a live one), ARCHIVED (changing an archived record: it is read-only until restored), OFFICE_IN_USE (archiving an office staff, Tulong services or document types still hang off; details carries each count) or OFFICE_ARCHIVED (putting staff, a service, a document type or an article under an archived office).",
+                "enum": ["INVALID_JSON", "UNAUTHENTICATED", "FORBIDDEN", "VERIFICATION_REQUIRED", "BIOMETRIC_CONSENT_REQUIRED", "NOT_FOUND", "CONFLICT", "ALREADY_ARCHIVED", "NOT_ARCHIVED", "ARCHIVED", "OFFICE_IN_USE", "OFFICE_ARCHIVED", "PAYLOAD_TOO_LARGE", "VALIDATION_FAILED", "code_invalid", "code_expired", "code_locked", "RATE_LIMITED", "INTERNAL_ERROR", "SERVICE_UNAVAILABLE"]
               },
               "message": { "type": "string" },
               "details": {
@@ -17745,6 +17954,82 @@
           "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
         }
       },
+      "AdminOffice": {
+        "allOf": [{ "$ref": "#/components/schemas/Office" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
+      },
+      "AdminOfficeEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "$ref": "#/components/schemas/AdminOffice" }, "meta": { "type": "object" } }
+      },
+      "AdminOfficeListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminOffice" }, "description": "Whole, by name." },
+          "meta": { "type": "object" }
+        }
+      },
+      "ArchiveState": {
+        "type": "object",
+        "required": ["archived_at", "archive_reason", "archived_by_name"],
+        "properties": {
+          "archived_at": { "type": ["string", "null"], "format": "date-time", "description": "When it was archived; null while it is live." },
+          "archive_reason": { "type": ["string", "null"], "description": "Why, as the administrator wrote it. Null while live; a feature flag archived by the config patch has none." },
+          "archived_by_name": { "type": ["string", "null"], "description": "Who archived it, as the office trail names an account: the account's name, 'An account since closed', or 'An account with no name recorded'. Null while live." }
+        }
+      },
+      "ArchiveReason": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["reason"],
+        "properties": { "reason": { "type": "string", "minLength": 1, "maxLength": 500, "description": "Trimmed; 1 to 500 characters." } }
+      },
+      "ArchiveEvent": {
+        "type": "object",
+        "required": ["id", "entity_type", "entity_id", "act", "reason", "actor_id", "actor_name", "occurred_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "entity_type": { "type": "string", "enum": ["office", "service", "hotline", "banner", "link", "feature_flag"] },
+          "entity_id": { "type": "string", "description": "The record's id, or a feature flag's key." },
+          "act": { "type": "string", "enum": ["archived", "restored"] },
+          "reason": { "type": ["string", "null"], "description": "Null only for a feature flag, which the config patch archives without one." },
+          "actor_id": { "type": "string", "format": "uuid" },
+          "actor_name": { "type": "string", "description": "As the office trail names an account: a closed account is not named." },
+          "occurred_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ArchiveEventListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/ArchiveEvent" }, "description": "Newest first." },
+          "meta": { "type": "object" }
+        }
+      },
+      "FeatureFlag": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": ["key", "value", "updated_at"],
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string", "description": "Kept while archived, so a restore can see what it was." },
+              "updated_at": { "type": "string", "format": "date-time" }
+            }
+          },
+          { "$ref": "#/components/schemas/ArchiveState" }
+        ]
+      },
+      "FeatureFlagListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeatureFlag" }, "description": "Whole, by key." },
+          "meta": { "type": "object" }
+        }
+      },
       "OfficeWrite": {
         "type": "object",
         "required": ["name", "slug"],
@@ -17995,7 +18280,7 @@
       "SavedView": {
         "type": "object",
         "description": "A name over a list's query parameters. It holds no records; the list it opens applies the reader's scope when opened.",
-        "required": ["id", "resource", "name", "params", "is_shared", "owner_id", "created_at"],
+        "required": ["id", "resource", "name", "params", "is_shared", "owner_id", "created_at", "archived_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "resource": { "$ref": "#/components/schemas/SavedViewResource" },
@@ -18003,7 +18288,8 @@
           "params": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Query parameters as the console writes them in its address bar." },
           "is_shared": { "type": "boolean", "description": "The office's, listed to everyone who may open the list; otherwise the owner's alone." },
           "owner_id": { "type": "string", "format": "uuid", "description": "Who saved it. A shared view keeps its author for the record." },
-          "created_at": { "type": "string", "format": "date-time" }
+          "created_at": { "type": "string", "format": "date-time" },
+          "archived_at": { "type": ["string", "null"], "format": "date-time", "description": "When it was archived; null while it is live." }
         }
       },
       "SavedViewCreate": {
@@ -18708,16 +18994,20 @@
           "active": { "type": "boolean" }
         }
       },
+      "AdminBanner": {
+        "allOf": [{ "$ref": "#/components/schemas/Banner" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
+      },
       "BannerEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
-        "properties": { "data": { "$ref": "#/components/schemas/Banner" }, "meta": { "type": "object" } }
+        "properties": { "data": { "$ref": "#/components/schemas/AdminBanner" }, "meta": { "type": "object" } }
       },
       "BannerListEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/Banner" } },
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminBanner" } },
           "meta": { "type": "object" }
         }
       },
@@ -18740,16 +19030,20 @@
           "sort_order": { "type": "integer" }
         }
       },
+      "AdminQuickLink": {
+        "allOf": [{ "$ref": "#/components/schemas/QuickLink" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
+      },
       "LinkEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
-        "properties": { "data": { "$ref": "#/components/schemas/QuickLink" }, "meta": { "type": "object" } }
+        "properties": { "data": { "$ref": "#/components/schemas/AdminQuickLink" }, "meta": { "type": "object" } }
       },
       "LinkListEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
         "properties": {
-          "data": { "type": "array", "items": { "$ref": "#/components/schemas/QuickLink" } },
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminQuickLink" } },
           "meta": { "type": "object" }
         }
       },
@@ -18972,6 +19266,23 @@
           "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
         }
       },
+      "AdminService": {
+        "allOf": [{ "$ref": "#/components/schemas/Service" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
+      },
+      "AdminServiceEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": { "data": { "$ref": "#/components/schemas/AdminService" }, "meta": { "type": "object" } }
+      },
+      "AdminServiceListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminService" }, "description": "Whole, by name." },
+          "meta": { "type": "object" }
+        }
+      },
       "ServiceWrite": {
         "type": "object",
         "required": ["name", "slug", "summary", "details"],
@@ -19100,10 +19411,22 @@
           "active": { "type": "boolean" }
         }
       },
+      "AdminHotline": {
+        "allOf": [{ "$ref": "#/components/schemas/Hotline" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
+      },
       "HotlineEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
-        "properties": { "data": { "$ref": "#/components/schemas/Hotline" }, "meta": { "type": "object" } }
+        "properties": { "data": { "$ref": "#/components/schemas/AdminHotline" }, "meta": { "type": "object" } }
+      },
+      "AdminHotlineListEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "type": "array", "items": { "$ref": "#/components/schemas/AdminHotline" }, "description": "By sort_order, then name; capped at 100." },
+          "meta": { "type": "object" }
+        }
       },
       "HotlineListEnvelope": {
         "type": "object",

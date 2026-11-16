@@ -3948,6 +3948,67 @@ again); `digital_id_test` (Try again); `events_test` (a server failure).
 
 ---
 
+## D-222 — A record the office archives while it is open is said as gone, not kept
+
+**Status: settled.** Category: product / contract. Recorded 2026-11-16, relayed
+by the orchestrator for Ella (Michaela Cailing), with the contract pinned at
+backend `ca71f23`.
+
+**Context.** The backend (`cc86189`, `ca71f23`) now archives what the office
+used to delete. An archived office, Tulong service, hotline, home banner or
+quick link is absent from `GET /offices`, `/services`, `/hotlines` and
+`/home`; its own page (`GET /offices/{slug}`, `/services/{slug}`) answers
+`404`; an archived feature flag is absent from `GET /app/config`; starting a
+thread with an archived office answers `422`; and `GET /hotlines` and
+`GET /home` answer `503` past 100 hotlines rather than a cut list. Since D-221
+the office page and a programme page re-read on `offices` and `services`, and
+D-218's rule kept the page whenever a re-read did not answer with one. A `404`
+is an answer, so a resident with the page open kept reading an office or a
+programme the LGU had withdrawn, with Message and Call still on it. Tulong
+re-read only while its list was not empty, so a list the office emptied by
+archiving its last programme stopped hearing changes.
+
+**Decision.**
+
+1. **A `404` on a quiet re-read replaces the page with the not-found state a
+   fresh open would show.** The office page shows "This office could not be
+   shown" with Try again; a programme page shows "This programme is not
+   available". Any other failure still keeps the page and says nothing
+   (D-218). `OfficeCatalogue.read` keeps the failure kind; `byId` is now a
+   wrapper over it, so the other callers are unchanged.
+2. **Tulong re-reads once a list has been read, empty or not.** The guard is
+   the first successful read, not a non-empty list.
+3. **Lists need nothing new.** The Directory and Tulong replace their list
+   with the answer, so an archived row is simply gone, with no notice. A `503`
+   on Emergency hotlines (both reads) is D-220's `FailureView` with Try again,
+   never offline and never "No hotlines to show".
+4. **The five archive codes are known.** `ALREADY_ARCHIVED`, `NOT_ARCHIVED`,
+   `ARCHIVED`, `OFFICE_IN_USE` and `OFFICE_ARCHIVED` (all `409`) answer staff
+   routes this app never calls. `ApiErrorCode` knows them and reads them as a
+   `ConflictFailure`, so the contract's drift test holds and one that ever
+   arrived is not "something went wrong".
+
+**Not done.** The API sends the hotline `503` as `SERVICE_UNAVAILABLE`, the
+code the app reads as maintenance (`PlatformController.observe`): until some
+request succeeds, the route guard sends a signed-in resident's protected routes
+to the maintenance screen. Telling "too many hotlines" from maintenance needs a
+different code from the backend, which is a decision for the owner. Pages
+opened earlier in the session stay in Tulong's "saved on this phone" list when
+it cannot load, even after a `404`.
+
+**Tests.** `test/features/load_failures_test.dart`, group "a record the office
+archives while it is open (D-222)": an office page and a programme page keep
+the page for a `500` re-read and show their not-found state for a `404`, with
+no offline copy; the Directory and Tulong drop an archived row with no error,
+and Tulong still hears a change after its last programme went; Emergency
+hotlines with `503` on `/hotlines` and `/home` show the failure with Try again,
+which then loads the list. Against the screens before this change the office,
+programme and Tulong cases fail. `test/core/result_test.dart` parses the five
+archive codes and maps them to a plain conflict; `contract_conformance_test`
+failed on them before.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4173,5 +4234,6 @@ again); `digital_id_test` (Try again); `events_test` (a server failure).
 | D-219 | The backend guards check the vendored Node contract, not the PHP tag the Node backend lacks: `check_backend_routes.sh` holds every `BackendRoute` to a path and verb `taytay-node-openapi.json` publishes, with the `routesAheadOfBaseline` ratchet kept; `check_backend_baseline.sh` holds the file to `nodeContractSha256` and, with the clone, to backend `nodeContractCommit`'s `openapi/openapi.json` byte for byte (no clone: NOT PROVEN, exit 3). `.gitattributes` keeps the file's bytes. No network | contract / tooling | settled |
 | D-220 | A served endpoint's failure is a `FailureView` with Try again, never "not switched on" or "none published" (only a `BackendGap` may say a feature is not on); a form that could not be read is not offered and switches wait for their read; no skeleton stays; the shell's offline banner takes the status-bar inset; shared search field and upload slot replace their copies; tabs, rows and links read once as one button in 48 dp; Emergency hotlines are live (`hotlines`) | accessibility / product / design | settled |
 | D-221 | Offline means no connection: a server or other failure on Balita, Events, a programme page, Tulong, the Messages inbox and the Directory is a `FailureView`; Try again shows the skeleton and reads once; `offices`, `services`, `households` and `consents` are heard, the catalogue hears `issuance-requests`; a failed Privacy Notice read is a failure, not "when published" | accessibility / product / contract | settled |
+| D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503`'s `SERVICE_UNAVAILABLE` code also raises maintenance, left for the owner | product / contract | settled |
 
-**217 decisions — 213 settled, 4 provisional.**
+**218 decisions — 214 settled, 4 provisional.**

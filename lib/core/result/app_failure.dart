@@ -563,6 +563,13 @@ AppFailure failureFromApiError({
         requestId: requestId,
         debugMessage: message,
       );
+    // The archive codes answer staff routes only (backend `cc86189`): a
+    // conflict with the record's state, should one ever reach this app.
+    case ApiErrorCode.alreadyArchived:
+    case ApiErrorCode.notArchived:
+    case ApiErrorCode.archived:
+    case ApiErrorCode.officeInUse:
+    case ApiErrorCode.officeArchived:
     case ApiErrorCode.conflict:
       return ConflictFailure(requestId: requestId, debugMessage: message);
     case ApiErrorCode.invalidStateTransition:

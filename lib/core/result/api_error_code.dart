@@ -44,6 +44,25 @@ enum ApiErrorCode {
   /// 409 — lifecycle transition not permitted from the current state.
   invalidStateTransition('INVALID_STATE_TRANSITION'),
 
+  // The archive codes (backend `cc86189`). Each answers a staff route that
+  // archives, restores or edits a record this app never sends; they are known
+  // so that one which ever arrived is a conflict, not "something went wrong".
+
+  /// 409 — the record was archived already.
+  alreadyArchived('ALREADY_ARCHIVED'),
+
+  /// 409 — a restore of a record that is not archived.
+  notArchived('NOT_ARCHIVED'),
+
+  /// 409 — an archived record is read-only until it is restored.
+  archived('ARCHIVED'),
+
+  /// 409 — an office still has staff, live services or document types.
+  officeInUse('OFFICE_IN_USE'),
+
+  /// 409 — nothing new goes under an archived office.
+  officeArchived('OFFICE_ARCHIVED'),
+
   /// 422 — input failed validation; `details` is `field -> [messages]`.
   ///
   /// This code does not carry `attempts_remaining`. Email and reset codes use

@@ -57,6 +57,11 @@ void main() {
         'METHOD_NOT_ALLOWED': ApiErrorCode.methodNotAllowed,
         'CONFLICT': ApiErrorCode.conflict,
         'INVALID_STATE_TRANSITION': ApiErrorCode.invalidStateTransition,
+        'ALREADY_ARCHIVED': ApiErrorCode.alreadyArchived,
+        'NOT_ARCHIVED': ApiErrorCode.notArchived,
+        'ARCHIVED': ApiErrorCode.archived,
+        'OFFICE_IN_USE': ApiErrorCode.officeInUse,
+        'OFFICE_ARCHIVED': ApiErrorCode.officeArchived,
         'VALIDATION_FAILED': ApiErrorCode.validationFailed,
         'code_invalid': ApiErrorCode.codeInvalid,
         'code_expired': ApiErrorCode.codeExpired,
@@ -126,6 +131,27 @@ void main() {
               as ConflictFailure;
       expect(failure.isInvalidStateTransition, isTrue);
       expect(failure.kind, 'invalid_state_transition');
+    });
+
+    test('the archive codes (backend cc86189) are plain conflicts', () {
+      for (final ApiErrorCode code in <ApiErrorCode>[
+        ApiErrorCode.alreadyArchived,
+        ApiErrorCode.notArchived,
+        ApiErrorCode.archived,
+        ApiErrorCode.officeInUse,
+        ApiErrorCode.officeArchived,
+      ]) {
+        final AppFailure failure = failureFromApiError(
+          statusCode: 409,
+          code: code,
+        );
+        expect(failure, isA<ConflictFailure>(), reason: code.wireValue);
+        expect(
+          (failure as ConflictFailure).isInvalidStateTransition,
+          isFalse,
+          reason: code.wireValue,
+        );
+      }
     });
 
     test('SERVICE_UNAVAILABLE is temporary and retryable', () {

@@ -66,6 +66,20 @@ It was re-vendored again from backend `ff7eac7` the same day.
   carries `author_id`, the author's staff account id (data minimisation). This app never read it.
 - No route changed.
 
+It was re-vendored from backend `ca71f23` on 2026-11-16 (archive, never delete: `cc86189`, and
+the hotline ceiling: `ca71f23`).
+- The office archives what it used to delete. An archived office, Tulong service, hotline, home
+  banner or quick link is simply absent from `GET /offices`, `/services`, `/hotlines` and `/home`,
+  and its own page (`GET /offices/{slug}`, `/services/{slug}`) answers 404, which this app shows
+  as not found, also on a live re-read of a page already open (D-222; before it, an open page was
+  kept). An archived feature flag is absent from `GET /app/config`.
+- Starting a conversation with an archived office answers 422, as for an unknown office.
+- `GET /hotlines` and `GET /home` answer 503 rather than cutting the hotline list short past 100
+  rows, which this app shows as a failed load with Try again. Its `SERVICE_UNAVAILABLE` code also
+  raises the app's maintenance gate until a request succeeds (D-222, left for the owner).
+- No public response gained a field, and no route this app calls was removed. The removed routes
+  were all admin (`DELETE /admin/...`, `DELETE /office/saved-views/{id}`).
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -79,8 +93,8 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `ff7eac7253918bc5a175741fd5d704a74d34a97a` (`ff7eac7`) |
-| **sha256** | `71baf8fa16a01ced67a04559e15e0cf1af9b5bf09b0849daef710287aa968902` |
+| **Backend commit** | `ca71f23f9cb0ec93cb3b8b56279f10953e8b126c` (`ca71f23`) |
+| **sha256** | `a8b28f25eabb4e410e94833e2454cf8f76fda0f1bee8843a59d767b085839b7c` |
 | **Vendored on** | 15 November 2026 (app commit `07d1c28`) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change

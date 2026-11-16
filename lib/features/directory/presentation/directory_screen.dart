@@ -222,16 +222,28 @@ class _OfficeDetailScreenState extends State<OfficeDetailScreen>
   /// A re-read for a change to the office or its programmes (D-218, D-221):
   /// the page is replaced only when both reads answer, so nothing on it
   /// blinks out, and a read that fails keeps the page and says nothing.
+  /// A `404` is an answer: the office was archived, so the page says it is
+  /// no longer listed instead of keeping it (D-222).
   Future<void> _reloadQuietly() async {
     if (_office == null || _rereading) return;
     _rereading = true;
     final AppDependencies dependencies = AppDependencies.of(context);
     final bool mock = dependencies.config.usesMockData;
-    final Office? office = await OfficeCatalogue.byId(
+    final Result<Office?> read = await OfficeCatalogue.read(
       widget.officeId,
       mock: mock,
       api: dependencies.apiClient,
     );
+    if (read case Err(failure: NotFoundFailure())) {
+      _rereading = false;
+      if (!mounted) return;
+      setState(() {
+        _office = null;
+        _missing = true;
+      });
+      return;
+    }
+    final Office? office = read.valueOrNull;
     final List<SocialService>? catalogue = office == null || mock
         ? const <SocialService>[]
         : await _catalogue(dependencies, office.id);

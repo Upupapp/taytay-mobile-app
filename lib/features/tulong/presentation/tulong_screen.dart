@@ -102,9 +102,11 @@ class _TulongScreenState extends State<TulongScreen>
   /// filters on the phone (D-59), so typing sends nothing.
   ///
   /// [quiet] is a re-read for a change (D-218): no loading state, and a read
-  /// that fails keeps what is on screen and says nothing.
+  /// that fails keeps what is on screen and says nothing. It waits for a
+  /// first list, not for a non-empty one: a list the office emptied by
+  /// archiving its last programme still hears the next one (D-222).
   Future<void> _load({bool quiet = false}) async {
-    if (_reading || (quiet && _services.isEmpty)) return;
+    if (_reading || (quiet && _loadedAt == null)) return;
     _reading = true;
     final Result<ServiceCatalogue> result = await _repository.readCatalogue();
     if (!mounted) {
