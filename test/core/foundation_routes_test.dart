@@ -66,8 +66,10 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.newsPost: <String, String>{'postId': 'post-sample-1'},
   AppRoute.eventDetail: <String, String>{'eventId': 'evt-sample-1'},
   AppRoute.eventRegistration: <String, String>{'eventId': 'evt-sample-1'},
-  AppRoute.requestDetail: <String, String>{'requestId': 'req-sample-1'},
-  AppRoute.requestRequirements: <String, String>{'requestId': 'req-sample-1'},
+  AppRoute.oldRequestDetail: <String, String>{'requestId': 'req-sample-1'},
+  AppRoute.oldRequestRequirements: <String, String>{
+    'requestId': 'req-sample-1',
+  },
   AppRoute.programDetail: <String, String>{'programId': 'aics'},
   AppRoute.tulongOffice: <String, String>{'officeId': 'mswdo'},
   AppRoute.officeDetail: <String, String>{'officeId': 'mswdo'},
@@ -82,6 +84,13 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.myRequestDetail: <String, String>{
     'requestId': 'ar-sample-scheduled',
   },
+};
+
+/// The PHP-era `/requests` addresses, kept only to redirect (D-225).
+const Set<AppRoute> _oldRequestRoutes = <AppRoute>{
+  AppRoute.oldRequests,
+  AppRoute.oldRequestDetail,
+  AppRoute.oldRequestRequirements,
 };
 
 String _openLocation(AppRoute route) =>
@@ -262,6 +271,9 @@ void main() {
           // the consent gate sends the resident home.
           : route == AppRoute.consentUpdate
           ? AppRoute.home.path
+          // The old assistance-request addresses land on My requests (D-225).
+          : _oldRequestRoutes.contains(route)
+          ? AppRoute.myRequests.path
           : _openLocation(route);
       expect(_currentPath(tester), landed, reason: route.name);
       _expectBackButtons(route);

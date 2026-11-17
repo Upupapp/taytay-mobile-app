@@ -239,8 +239,6 @@ void main() {
       credentialRepository: base.credentialRepository,
       verificationRepository: base.verificationRepository,
       residentRecordRepository: const _FixedRecordRepository(),
-      serviceRequestRepository: base.serviceRequestRepository,
-      requirementRepository: base.requirementRepository,
       documentPicker: base.documentPicker,
       shareService: base.shareService,
       externalLinks: base.externalLinks,

@@ -147,8 +147,6 @@ List<String> _mockRepositoryNames(AppDependencies dependencies) {
     dependencies.barangayDirectory,
     dependencies.credentialRepository,
     dependencies.verificationRepository,
-    dependencies.serviceRequestRepository,
-    dependencies.requirementRepository,
     dependencies.notificationRepository,
     dependencies.accountControlsRepository,
     dependencies.officeMessagingRepository,

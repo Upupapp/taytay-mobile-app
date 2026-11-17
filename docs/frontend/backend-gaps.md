@@ -177,7 +177,7 @@ Saved pages are the in-memory list for this process. There is no saved-service r
 
 ### 20. Assistance requests and uploads
 
-`AssistanceRequestsScreen` and the requirements screen still decline. No citizen case or requirement route exists at `3e3b110`. Tulong is information only.
+My requests reads the resident's own requests (`GET /me/assistance-requests`, D-223). The old `AssistanceRequestsScreen`, case and requirements screens were removed (D-225): no citizen case or requirement route exists, and their addresses open My requests. Tulong is information only.
 
 ## Not started
 

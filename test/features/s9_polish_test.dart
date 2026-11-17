@@ -44,7 +44,7 @@ void main() {
         'lib/features/profile/presentation/profile_screen.dart',
         'lib/features/verification/presentation/kyc_claim_screen.dart',
         'lib/features/household/presentation/household_screen.dart',
-        'lib/features/services/presentation/assistance_requests_screen.dart',
+        'lib/features/assistance/presentation/my_requests_canvas.dart',
       ];
       for (final String path in files) {
         final String source = File(path).readAsStringSync();

@@ -205,9 +205,6 @@ class AppStringsFil extends AppStrings {
       'Hindi mabasa ang file na iyon bilang larawan o PDF. Kunan na lang ng larawan ang dokumento.';
 
   @override
-  String get uploadRefusedTitle => 'Hindi maipapadala ang file na iyon';
-
-  @override
   String get onboardingOfficeTitle =>
       'Ginagawa ang account sa tanggapan ng MSWDO';
 

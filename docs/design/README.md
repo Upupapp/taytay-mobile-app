@@ -105,8 +105,8 @@ chips/pills fully round · buttons 52 high · fields 54 high · icon tiles 44 (s
 | Pattern | Designed example(s) | Mobile screens to restyle |
 |---|---|---|
 | Main tab (glass, blue header) | Home, Balita, Account | home, news, account_home, tulong, services, programs, events |
-| List + search + filters | Directory, DirectorySearch | directory, issuance_catalogue, my_issuance_requests, assistance_requests, notification_inbox, requirements, hotlines |
-| Detail page (photo + white sheet + pill actions) | Office | news_post, event_detail, program_detail, service_info, issuance_type, issuance_request_detail, assistance_case |
+| List + search + filters | Directory, DirectorySearch | directory, issuance_catalogue, my_issuance_requests, notification_inbox, hotlines |
+| Detail page (photo + white sheet + pill actions) | Office | news_post, event_detail, program_detail, service_info, issuance_type, issuance_request_detail |
 | Form / step flow (wave header, filled fields) | SignIn, Reg* screens | sign_in, account_wizard, registration, profile_wizard, kyc_claim, verification, issuance_request_form, event_registration, forgot_password, household_correction, contact_details |
 | Settings / profile list | Account | account, profile, settings, security, privacy, privacy_controls, household |
 | Success | MessageSent, RegDone | result step of every form flow |

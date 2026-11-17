@@ -139,7 +139,7 @@ and the app renders what it is told.
 | Notification preferences | **withheld** | §11 of the matrix has an inbox, mark-read, mark-all-read and device registration — **no preferences row at all**. The `NotificationRepository` seam still declares them and declines; the UI offers nothing. |
 | Consent toggles | **withheld** | No consent endpoint. Under the Data Privacy Act a consent record must be *demonstrable by the controller*; a toggle whose state lives only on a phone proves nothing and tells a resident they withdrew something the LGU never heard about. |
 | Record deletion | **withheld** | The matrix marks deactivation "never a hard delete — retention is statutory". The screen says so plainly rather than offering a button that would be refused. |
-| Assistance history shortcut | **built** | `GET /api/v1/me/assistance-requests` exists; the capability routes to `/requests`. |
+| Assistance history shortcut | **built** | `GET /api/v1/me/assistance-requests` exists; the capability routes to My requests (`/my-requests`, D-223). The old `/requests` pages were removed (D-225). |
 
 Nothing is fabricated: no sample resident, no invented consent state, no
 household content, no preference defaults, no history.

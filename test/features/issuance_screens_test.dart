@@ -207,8 +207,6 @@ Future<_Booted> _boot(
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: picker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,

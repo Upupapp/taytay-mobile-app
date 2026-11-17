@@ -66,10 +66,8 @@ void main() {
     'barangayDirectory',
     // TAB 06
     'credentialRepository',
-    // TAB 08
-    'serviceRequestRepository',
-    // TAB 10
-    'requirementRepository',
+    // TAB 08 and TAB 10 bound the assistance case and requirement
+    // repositories here; both went with the /requests pages (D-225).
     // TAB 11
     'announcementRepository',
     // TAB 12
@@ -108,8 +106,6 @@ void main() {
     'barangayDirectory': d.barangayDirectory,
     'credentialRepository': d.credentialRepository,
     'verificationRepository': d.verificationRepository,
-    'serviceRequestRepository': d.serviceRequestRepository,
-    'requirementRepository': d.requirementRepository,
     'notificationRepository': d.notificationRepository,
     'accountControlsRepository': d.accountControlsRepository,
   };

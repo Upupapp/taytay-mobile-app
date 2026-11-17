@@ -172,10 +172,6 @@
   "@uploadRefusedUnreadable": {
     "description": "Shown when a file’s contents do not match the type it claims."
   },
-  "uploadRefusedTitle": "That file cannot be sent",
-  "@uploadRefusedTitle": {
-    "description": "Banner heading above any upload refusal."
-  },
   "onboardingOfficeTitle": "Accounts are made at the MSWDO office",
   "@onboardingOfficeTitle": {
     "description": "Heading of the panel shown when onboarding is staff-mediated."

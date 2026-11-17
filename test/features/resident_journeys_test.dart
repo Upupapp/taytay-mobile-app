@@ -241,7 +241,7 @@ void main() {
 
       for (final path in <String>[
         AppRoute.digitalId.path,
-        AppRoute.requests.path,
+        AppRoute.myRequests.path,
         AppRoute.household.path,
       ]) {
         await goTo(tester, path);
@@ -257,39 +257,52 @@ void main() {
   // ── 7. Assistance, requirements and the timeline ────────────────────────
 
   group('Journey: assistance for every persona who has one', () {
-    testWidgets('Marites reaches her case screen', (tester) async {
+    testWidgets('Marites reaches her request on My requests', (tester) async {
       await live(tester, verifiedWithAssistance);
-      await goTo(tester, '/requests/$maritesRequestId');
+      await goTo(tester, '/my-requests/$maritesRequestId');
 
-      expect(currentLocation(tester), '/requests/$maritesRequestId');
+      expect(currentLocation(tester), '/my-requests/$maritesRequestId');
     });
 
-    testWidgets('Rosa reaches the requirements for her case', (tester) async {
+    testWidgets("Rosa's old requirements link lands on My requests", (
+      tester,
+    ) async {
+      // The `/requests` pages were removed (D-225). A stale link opens her
+      // list, never "not found" and never a blank page.
       await live(tester, verifiedWithMissingRequirement);
       await goTo(tester, '/requests/$rosaRequestId/requirements');
 
-      expect(currentLocation(tester), '/requests/$rosaRequestId/requirements');
+      expect(currentLocation(tester), AppRoute.myRequests.path);
+      expect(renderedText(tester), isNot(contains('not found')));
     });
 
-    testWidgets('an unverified resident cannot reach either', (tester) async {
+    testWidgets('an unverified resident is on My requests too (D-223)', (
+      tester,
+    ) async {
       await live(tester, unverified);
 
       for (final path in <String>[
         '/requests/$rosaRequestId',
         '/requests/$rosaRequestId/requirements',
-        AppRoute.applyForService.path.replaceAll(
-          ':serviceCode',
-          medicalAssistanceCode,
-        ),
       ]) {
         await goTo(tester, path);
-        expect(currentLocation(tester), isNot(path), reason: path);
+        expect(currentLocation(tester), AppRoute.myRequests.path, reason: path);
       }
+
+      // Applying is not done in this app: the old address opens Tulong.
+      final String apply = AppRoute.applyForService.path.replaceAll(
+        ':serviceCode',
+        medicalAssistanceCode,
+      );
+      await goTo(tester, apply);
+      expect(currentLocation(tester), isNot(apply));
     });
 
-    testWidgets('and neither can a guest', (tester) async {
+    testWidgets('and a guest is sent to sign in', (tester) async {
       await live(tester, guest);
       await goTo(tester, '/requests/$rosaRequestId');
+      expect(currentLocation(tester), AppRoute.signIn.path);
+      await goTo(tester, '/my-requests/$rosaRequestId');
       expect(currentLocation(tester), AppRoute.signIn.path);
     });
   });
@@ -333,16 +346,16 @@ void main() {
   group('Journey: a notification deep link', () {
     testWidgets('opens directly when the session allows it', (tester) async {
       await live(tester, verified);
-      await goTo(tester, '/requests/$maritesRequestId');
+      await goTo(tester, '/my-requests/$maritesRequestId');
 
-      expect(currentLocation(tester), '/requests/$maritesRequestId');
+      expect(currentLocation(tester), '/my-requests/$maritesRequestId');
     });
 
     testWidgets('lands on sign-in when it does not, and never 404s', (
       tester,
     ) async {
       await live(tester, guest);
-      await goTo(tester, '/requests/$maritesRequestId');
+      await goTo(tester, '/my-requests/$maritesRequestId');
 
       // A resident who tapped a real notification must not be told the thing
       // does not exist.
@@ -606,7 +619,7 @@ void main() {
     ) async {
       const closed = <AppRoute>[
         AppRoute.digitalId,
-        AppRoute.requests,
+        AppRoute.sectors,
         AppRoute.household,
       ];
 

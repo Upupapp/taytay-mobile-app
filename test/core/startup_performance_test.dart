@@ -84,8 +84,10 @@ void main() {
     });
 
     test('routes the Node API does not publish do not invent paging', () {
+      // The device-session list is one; the old assistance history was the
+      // other until it went with the `/requests` pages (D-225).
       const List<String> absent = <String>[
-        'lib/features/services/data/assistance_api_repository.dart',
+        'lib/features/auth/data/session_api_repository.dart',
       ];
       for (final String path in absent) {
         final String source = sourceOf(path);

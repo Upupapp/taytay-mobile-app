@@ -250,8 +250,6 @@ Future<BootedDirectory> bootDirectory(
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,

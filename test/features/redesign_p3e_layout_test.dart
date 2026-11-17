@@ -33,7 +33,6 @@ import 'package:taytay_resident/features/notifications/presentation/notification
 import 'package:taytay_resident/features/notifications/presentation/notification_inbox_screen.dart';
 import 'package:taytay_resident/features/platform/presentation/blocking_notice_screen.dart';
 import 'package:taytay_resident/features/profile/domain/name_lock.dart';
-import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
 import 'package:taytay_resident/features/shell/presentation/shell_tab_bar.dart';
 import 'package:taytay_resident/features/verification/domain/resident_record.dart';
 import 'package:taytay_resident/features/verification/presentation/kyc_claim_screen.dart';
@@ -453,35 +452,6 @@ void main() {
     });
   });
 
-  group('requirements', () {
-    testWidgets('the checklist lays out', (tester) async {
-      final AppDependencies dependencies = await _dependencies(
-        AccessLevel.verified,
-      );
-      await _expectCleanScreen(
-        tester,
-        dependencies,
-        () => const RequirementsScreen(requestId: 'req-sample-1'),
-      );
-      expect(find.byType(BlueHeader), findsOneWidget);
-    });
-
-    testWidgets('a bad id is the unavailable state, not a crash', (
-      tester,
-    ) async {
-      final AppDependencies dependencies = await _dependencies(
-        AccessLevel.verified,
-      );
-      await _expectCleanScreen(
-        tester,
-        dependencies,
-        () => const RequirementsScreen(requestId: '../../etc'),
-      );
-      expect(find.text('Documents are not available here yet'), findsOneWidget);
-      expect(find.text('See my requests'), findsOneWidget);
-    });
-  });
-
   test('restyled screens use tokens: no raw colours, sizes or shadows', () {
     final List<String> offenders = <String>[];
     for (final String path in _restyled) {
@@ -528,7 +498,6 @@ const List<String> _restyled = <String>[
   'lib/features/issuance/presentation/issuance_request_detail_screen.dart',
   'lib/features/issuance/presentation/my_issuance_requests_screen.dart',
   'lib/features/issuance/presentation/issuance_file_slot.dart',
-  'lib/features/requirements/presentation/requirements_screen.dart',
   'lib/features/household/presentation/household_screen.dart',
   'lib/features/household/presentation/household_correction_screen.dart',
   'lib/features/verification/presentation/s3_chrome.dart',

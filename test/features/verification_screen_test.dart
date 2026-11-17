@@ -206,8 +206,6 @@ Future<AppDependencies> bootVerification(
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: repository ?? StubVerificationRepository(detail),
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: picker ?? base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,

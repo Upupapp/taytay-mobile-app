@@ -178,7 +178,7 @@ whether it should have. Cleared on sign-out and on session invalidation.
 | ResidentProfile | `ResidentProfileRepository` | Declines — module planned |
 | Credential | `CredentialRepository` | Declines — module planned |
 | Verification | `VerificationRepository` | Declines — module planned |
-| ServiceDelivery | `ServiceRequestRepository` | Declines — module planned |
+| ServiceDelivery | `ServiceRequestRepository` | Removed with the `/requests` pages (D-225); My requests reads `OwnAssistanceRepository` (D-223) |
 | Notification | `NotificationRepository` | Declines — module planned |
 
 ### Preserving server capabilities without duplicating server logic

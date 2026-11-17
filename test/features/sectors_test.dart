@@ -222,8 +222,6 @@ Future<AppDependencies> _boot(
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
     residentRecordRepository: base.residentRecordRepository,
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,

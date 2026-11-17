@@ -1,5 +1,12 @@
 # Taytay resident mobile — requirements and document upload
 
+> **Removed (D-225, 2026-11-17).** The requirements page and
+> `lib/features/requirements/` are no longer in the app. They never read the
+> Node API, nothing linked to them after My requests (D-223), and
+> `/requests/:requestId/requirements` now opens `/my-requests`.
+> `lib/core/documents/` stays: the document request, sector and verification
+> uploads use it. This page is kept as the record of what was built.
+
 The documents an office is waiting for, and how a resident sends one from a
 phone without being told something the app has no standing to say.
 

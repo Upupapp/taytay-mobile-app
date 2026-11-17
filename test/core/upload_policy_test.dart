@@ -144,11 +144,7 @@ void main() {
     /// A ceiling declared in a file that mentions none of these symbols cannot
     /// be enforcing an upload, because nothing there has a document to measure.
     Iterable<({String path, String source})> uploadPathFiles() sync* {
-      const List<String> markers = <String>[
-        'CapturedDocument',
-        'UploadPolicy',
-        'uploadRequirementDocument',
-      ];
+      const List<String> markers = <String>['CapturedDocument', 'UploadPolicy'];
 
       for (final FileSystemEntity entity in Directory(
         'lib',
@@ -169,7 +165,7 @@ void main() {
       // A scope that matched nothing would make both guards below vacuous.
       expect(
         uploadPathFiles().map((f) => f.path),
-        contains(endsWith('requirement_api_repository.dart')),
+        contains(endsWith('issuance_api_repository.dart')),
       );
     });
 
@@ -195,8 +191,8 @@ void main() {
             'A second upload ceiling is declared in:\n  ${offenders.join('\n  ')}\n'
             'There was one of these before TAB 01 and it disagreed with the '
             'other by 2 MB, so a 9 MB PDF passed the first check and died at '
-            'the second. The ceiling comes from the server, on the requirements '
-            'response, and lives in UploadPolicy.',
+            'the second. The ceiling comes from the server and lives in '
+            'UploadPolicy.',
       );
     });
 
@@ -220,8 +216,8 @@ void main() {
         isEmpty,
         reason:
             'A second list of accepted types is declared in:\n  ${offenders.join('\n  ')}\n'
-            'The server publishes its own on the requirements response. A copy '
-            'here is what lets the picker offer a type the upload then refuses.',
+            'The server publishes its own. A copy here is what lets the picker '
+            'offer a type the upload then refuses.',
       );
     });
   });
@@ -285,7 +281,6 @@ void main() {
         'uploadRefusedType',
         'uploadRefusedEmpty',
         'uploadRefusedUnreadable',
-        'uploadRefusedTitle',
       ];
 
       for (final String path in <String>[

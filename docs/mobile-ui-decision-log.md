@@ -4086,7 +4086,8 @@ cancel), verified-only and unwired since the move to Node.
    and pointed at `/requests`. The deep-link targets `assistance_requests` and
    `assistance_request` now name My requests and one request;
    `assistance_requirements` and the `/requests` pages are unchanged and stay
-   unwired.
+   unwired. *(Removed by D-225: the pages are gone, their addresses open My
+   requests, and `assistance_requirements` opens the request it names.)*
 5. **The notice.** `assistance_request_updated` is said under "Assistance
    updates" and opens the request it names; the screen reads where it stands
    from the list, never from the notice. My requests and an open request
@@ -4246,6 +4247,81 @@ sends the six types and nothing else; every switch round-trips to its own
 server type; a row the server holds is sent as held. `account_s8_test` and
 `profile_test`: Settings & privacy draws no switch and its one row opens the
 notification settings.
+
+---
+
+## D-225 — The old `/requests` pages are removed, and their addresses open My requests
+
+**Status: settled.** Category: product / privacy. Recorded 2026-11-17, the
+lead's decision for Ella (Michaela Cailing).
+
+**Context.** D-223 built My requests and left the PHP-era assistance pages
+under `/requests` "unchanged and unwired": the list (`/requests`), the case
+page with its timeline, next actions, release and referral panels
+(`/requests/:requestId`), and the documents checklist with its uploads
+(`/requests/:requestId/requirements`). Nothing in the app linked to them, and
+they read nothing: `AssistanceApiRepository` and `RequirementApiRepository`
+declined every call (`BackendGap.absentOnNodeContract`) without sending a
+request. They could still be opened by a stale link or a typed address, and
+they were built around a case, a timeline and staff next actions that D-223
+keeps out of the app.
+
+**Decision.**
+
+1. **Removed.** The three screens and the requirements controller; the
+   `ServiceRequestRepository` and `RequirementRepository` contracts, their API
+   repositories and dev mocks, and their models (`assistance_case`,
+   `assistance_history`, `request_status_copy`, `resident_requirement`); the
+   release and referral cards; `UploadGuidance`, which only the documents page
+   drew; the `uploadRefusedTitle` string; and the two `AppDependencies`
+   fields. Only what nothing else used: every symbol was checked.
+2. **The addresses stay and open My requests.** `/requests`,
+   `/requests/:requestId` and `/requests/:requestId/requirements` are
+   `oldRequests`, `oldRequestDetail` and `oldRequestRequirements` in the route
+   table, authenticated like My requests, and each redirects to
+   `/my-requests`, the list. A guest is sent to sign in and lands there after.
+3. **`assistance_requirements` opens the request it names** on My requests
+   (`/my-requests/:requestId`), like `assistance_request`. The contract sends
+   no such target today; a stale one opens somewhere true.
+4. **Kept.** My requests, unchanged. `ResidentCapability.submitRequirements`,
+   with no route, like `applyForAssistance`: the act is still named and still
+   unavailable. `DocumentCapturePolicy` and `UploadPolicy`, which the document
+   request, sector and verification uploads use; their checks moved to
+   `test/core/document_capture_test.dart`. `TelemetryFlow.documentUpload`,
+   which now has no recorder, like `assistanceApplication`.
+   `backend_routes.dart` is unchanged: the removed repositories called no
+   route.
+
+**Why.** A screen nothing links to rots: it keeps compiling against code that
+moves, and the first person to find it by an old link meets pages that say
+nothing is available, built for data the API will never send a resident. They
+were also the shape of what D-223 withholds: a case, a timeline, a next action
+owed by a named office. Left in the tree, wiring them to a new route is one
+edit away, and that edit would put protected social work on a household's
+shared phone. An address is cheaper to keep than a page: three route entries
+keep every old link landing on her own list.
+
+**Rejected.** Keeping the pages unwired: the defect this entry removes.
+Dropping the addresses: a stale link would meet "That link does not lead
+anywhere in this app." Sending `/requests/:requestId` to
+`/my-requests/:requestId`: the old pages never read the Node API, so the id in
+an old link names nothing My requests can find, and "This request is not shown
+here" would read as an answer about a request.
+
+**Sources.** D-223 and its commit `75b19d1`; D-216 (an id on a route that
+takes none is refused).
+
+**Tests.** `test/core/navigation_test.dart`: the old paths resolve to the old
+routes, which ask what My requests asks, from every session state;
+`assistance_requirements` resolves to one request on My requests and is open
+to an unverified resident; a verified-only target still sends an unverified
+resident to verification. `test/core/foundation_routes_test.dart`: each old
+address lands on `/my-requests` in the full app.
+`test/features/resident_journeys_test.dart`: a verified, an unverified and a
+guest resident following an old link land on My requests or sign-in, never on
+"not found". `test/features/home_test.dart`: a guest's Home reads nothing from
+My requests. `test/core/document_capture_test.dart`: the upload policy checks
+moved from the removed requirements test.
 
 ---
 
@@ -4477,5 +4553,6 @@ notification settings.
 | D-222 | A record the office archives while it is open: a `404` on a quiet re-read shows the office or programme page's not-found state instead of keeping the page (any other failure still keeps it); Tulong re-reads once a list has been read, empty or not; lists drop archived rows silently; a hotline `503` is a `FailureView` with Try again; the five `409` archive codes are known, as a conflict. The `503` is `LIST_TOO_LONG` (backend `70c8b84`), never maintenance. Tulong's "saved on this phone" forgets a page whose own read answers `404`, or that a whole catalogue read no longer lists after a list carried it | product / contract | settled |
 | D-223 | My requests (`/my-requests`, any signed-in resident) lists her own filed assistance requests from `GET /me/assistance-requests` (backend `d1e997c`): programme, control number, filing date and the status in her words; one request adds the approved amount (integer centavos), payout date and venue, released date and the date the status changed, found in her list. Every frame says "Some requests are discussed only in person at the MSWDO."; an empty list and a request not shown give no reason. `assistance_request_updated` is "Assistance updates" and opens the request; both screens re-read on `notifications`. No case, staff, note or reason. Per-type opt-out since D-224 | product / privacy | settled |
 | D-224 | Every notification switch controls something real: the notification settings are the one place switches live, one per notice the server sends and honours (backend `769deea`): Identity verification, Assistance updates, Document requests, Event registrations, Sector applications, Office replies, each writing `in_app` and `push` of its own type. No switch for Documents needed, Collecting assistance, Referrals or Event reminders (no notice), nor for Balita or Emergency (nothing sends them; they gate nothing). Settings & privacy links to the notification settings instead of drawing switches. Public advisories and account security stay always sent | product / privacy | settled |
+| D-225 | The old `/requests` pages, their repositories, models, mocks, `UploadGuidance` and `uploadRefusedTitle` are removed; `/requests`, `/requests/:requestId` and `/requests/:requestId/requirements` stay as authenticated addresses that redirect to `/my-requests`; `assistance_requirements` opens the request on My requests; `submitRequirements` keeps no route | product / privacy | settled |
 
-**220 decisions — 216 settled, 4 provisional.**
+**221 decisions — 217 settled, 4 provisional.**

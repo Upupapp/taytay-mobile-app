@@ -162,8 +162,6 @@ Future<BootedHousehold> bootHousehold(
     householdRepository: household,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: base.externalLinks,

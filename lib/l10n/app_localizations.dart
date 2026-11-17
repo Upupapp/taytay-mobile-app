@@ -422,12 +422,6 @@ abstract class AppStrings {
   /// **'That file could not be read as a photo or a PDF. Take a photo of the document instead.'**
   String get uploadRefusedUnreadable;
 
-  /// Banner heading above any upload refusal.
-  ///
-  /// In en, this message translates to:
-  /// **'That file cannot be sent'**
-  String get uploadRefusedTitle;
-
   /// Heading of the panel shown when onboarding is staff-mediated.
   ///
   /// In en, this message translates to:

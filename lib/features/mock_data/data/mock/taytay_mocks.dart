@@ -1,8 +1,6 @@
 import 'dart:typed_data';
 
 import '../../../../core/api/dev_mock_access.dart';
-import '../../../../core/documents/document_capture.dart';
-import '../../../../core/documents/upload_policy.dart';
 import '../../../../core/mock/mock_behavior.dart';
 import '../../../../core/mock/mock_fixtures.dart';
 import '../../../../core/result/result.dart';
@@ -35,12 +33,8 @@ import '../../../programs/domain/assistance_program.dart'
     hide RequirementObligation;
 import '../../../programs/domain/program_repository.dart';
 import '../../../registration/domain/registration_domain.dart' hide ConsentKind;
-import '../../../requirements/domain/resident_requirement.dart';
-import '../../../services/domain/assistance_case.dart';
-import '../../../services/domain/assistance_history.dart';
 import '../../../services/domain/lgu_service.dart';
 import '../../../services/domain/service_catalog_repository.dart';
-import '../../../services/domain/service_request_repository.dart';
 import '../../../settings/domain/account_controls.dart';
 import '../../../verification/domain/correctable_field.dart';
 import '../../../verification/domain/kyc_claim.dart';
@@ -1234,116 +1228,6 @@ class MockBarangayDirectory implements BarangayDirectory {
       Barangay(id: 'brgy-sample-dolores', name: 'Dolores', code: 'SAMPLE'),
     ]);
   }
-}
-
-class MockRequirementRepository implements RequirementRepository {
-  MockRequirementRepository(this._gate);
-
-  final MockBehaviorController _gate;
-
-  @override
-  Future<Result<RequirementChecklist>> listRequirements(String requestId) {
-    return _gate.respond(
-      RequirementChecklist(
-        requestId: requestId,
-        uploadPolicy: UploadPolicy.fallback,
-        items: const <ResidentRequirement>[
-          ResidentRequirement(
-            code: 'id-sample',
-            label: 'SAMPLE government ID',
-            obligation: ServerValue<RequirementObligation>(
-              raw: 'required',
-              known: RequirementObligation.required,
-            ),
-            status: ServerValue<RequirementStatus>(
-              raw: 'missing',
-              known: RequirementStatus.missing,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Future<Result<UploadedDocumentReference>> uploadRequirementDocument({
-    required String requestId,
-    required String requirementCode,
-    required CapturedDocument document,
-    required String idempotencyKey,
-    required UploadPolicy policy,
-    void Function(double fraction)? onProgress,
-    UploadCancellation? cancellation,
-  }) {
-    onProgress?.call(1);
-    return _gate.respond(
-      UploadedDocumentReference(
-        id: 'upload-sample-1',
-        requirementCode: requirementCode,
-        rawStatus: 'submitted',
-      ),
-    );
-  }
-}
-
-class MockServiceRequestRepository implements ServiceRequestRepository {
-  MockServiceRequestRepository(this._gate);
-
-  final MockBehaviorController _gate;
-
-  ServiceRequest _request(String id) => ServiceRequest(
-    id: id,
-    serviceCode: 'PWD-CASH-GIFT',
-    state: ServiceRequestState.submitted,
-    rawState: 'submitted',
-    submittedAt: mockNow,
-    referenceNumber: 'SAMPLE-0001',
-  );
-
-  @override
-  Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
-    int page = 1,
-    int perPage = 15,
-  }) {
-    return _gate.respond(_page(<ServiceRequest>[_request('req-sample-1')]));
-  }
-
-  @override
-  Future<Result<ServiceRequest>> loadOwnRequest(String id) =>
-      _gate.respond(_request(id));
-
-  @override
-  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) {
-    return _gate.respond(AssistanceCaseDetail(request: _request(id)));
-  }
-
-  @override
-  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
-    required HistoryScope scope,
-    int page = 1,
-    int perPage = 15,
-  }) {
-    return _gate.respond(
-      _page(<AssistanceHistoryEntry>[
-        AssistanceHistoryEntry(
-          requestId: 'req-sample-1',
-          serviceCode: 'PWD-CASH-GIFT',
-          serviceName: 'SAMPLE PWD Cash Gift',
-          status: const ServerValue<ServiceRequestState>(
-            raw: 'submitted',
-            known: ServiceRequestState.submitted,
-          ),
-          submittedAt: mockNow,
-        ),
-      ]),
-    );
-  }
-
-  @override
-  Future<Result<void>> cancelOwnRequest({
-    required String id,
-    required String idempotencyKey,
-  }) => _gate.respond<void>(null);
 }
 
 class MockAccountControlsRepository implements AccountControlsRepository {

@@ -205,9 +205,6 @@ class AppStringsEn extends AppStrings {
       'That file could not be read as a photo or a PDF. Take a photo of the document instead.';
 
   @override
-  String get uploadRefusedTitle => 'That file cannot be sent';
-
-  @override
   String get onboardingOfficeTitle => 'Accounts are made at the MSWDO office';
 
   @override

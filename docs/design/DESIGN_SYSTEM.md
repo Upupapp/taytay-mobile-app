@@ -730,7 +730,6 @@ await AppDialog.show<void>(
 `FormErrorSummary({errors*, focusNode})` lists what is wrong on the step, above the fields.
 `FieldLabel({label*, required = true, hint})` says required **or** optional. `WhyWeAsk({purpose*,
 whoSeesIt*, ifYouDecline, title = 'Why we ask for this'})` explains a sensitive field.
-`UploadGuidance({points*})` says what a good photo looks like before the picker opens.
 
 ### Kept for compatibility
 

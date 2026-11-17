@@ -18,7 +18,6 @@ import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/gallery/presentation/theme_gallery_section.dart';
 import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
 import 'package:taytay_resident/features/profile/presentation/profile_field_list.dart';
-import 'package:taytay_resident/features/requirements/presentation/requirements_screen.dart';
 import 'package:taytay_resident/features/verification/presentation/unverified_gate_sheet.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_screen.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
@@ -341,24 +340,6 @@ void main() {
     );
   });
 
-  testWidgets('sending a requested document is a centred dialog', (
-    tester,
-  ) async {
-    final AppDependencies deps = await dependencies(AccessLevel.verified);
-    await expectCleanDialogLayouts(
-      tester,
-      () => const RequirementsScreen(requestId: 'req-sample-1'),
-      trigger: find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text &&
-            (widget.data == 'Send this document' ||
-                widget.data == 'Replace this document'),
-      ),
-      host: routed(deps),
-      height: 900,
-    );
-  });
-
   testWidgets('the verification gate names no stage of the verification '
       'and Not now is a button (D-201)', (tester) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
@@ -446,41 +427,6 @@ void main() {
     await tester.tap(find.byKey(const Key('verification-resubmit-cancel')));
     await tester.pumpAndSettle();
     expect(note, isNull);
-    expect(find.byType(Dialog), findsNothing);
-  });
-
-  testWidgets('sending a document has a Cancel on its first step', (
-    tester,
-  ) async {
-    final AppDependencies deps = await dependencies(AccessLevel.verified);
-    tester.view
-      ..physicalSize = const Size(430, 900)
-      ..devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      routed(deps)(const RequirementsScreen(requestId: 'req-sample-1'), 1),
-    );
-    for (var i = 0; i < 5; i++) {
-      await tester.pump(const Duration(milliseconds: 50));
-    }
-    final Finder send = find.byWidgetPredicate(
-      (Widget widget) =>
-          widget is Text &&
-          (widget.data == 'Send this document' ||
-              widget.data == 'Replace this document'),
-    );
-    await tester.ensureVisible(send.first);
-    await tester.pump();
-    await tester.tap(send.first);
-    await tester.pumpAndSettle();
-    expect(find.byType(Dialog), findsOneWidget);
-
-    final Finder cancel = find.byKey(requirementsUploadCancelKey);
-    await tester.ensureVisible(cancel);
-    await tester.pumpAndSettle();
-    expect(tester.widget<AppButton>(cancel).variant, AppButtonVariant.text);
-    await tester.tap(cancel);
-    await tester.pumpAndSettle();
     expect(find.byType(Dialog), findsNothing);
   });
 }

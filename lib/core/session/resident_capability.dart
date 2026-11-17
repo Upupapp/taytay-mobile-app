@@ -145,11 +145,13 @@ enum ResidentCapability {
   /// that has switched on applications still has to switch on attachment
   /// storage, and a resident who can apply but cannot yet upload should be told
   /// exactly that rather than meeting a generic refusal.
+  ///
+  /// There is no screen, like [applyForAssistance]. The PHP-era documents page
+  /// it pointed at never reached the Node API and was removed (D-225).
   submitRequirements(
     AccessRequirement.verified,
     'Send the documents Taytay LGU asked for',
     BackendAvailability.planned,
-    route: AppRoute.requestRequirements,
   ),
 
   /// The household or family summary the Master Command asks for, **withheld**.

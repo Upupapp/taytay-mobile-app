@@ -1337,8 +1337,6 @@ Future<AppDependencies> _dependencies(
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
-    serviceRequestRepository: base.serviceRequestRepository,
-    requirementRepository: base.requirementRepository,
     documentPicker: picker ?? const UnavailableDocumentPicker(),
     shareService: base.shareService,
     externalLinks: base.externalLinks,

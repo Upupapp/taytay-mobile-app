@@ -65,11 +65,13 @@ void main() {
       expect(AppRoute.forPath('/news/abc123'), AppRoute.newsPost);
       expect(AppRoute.forPath('/events'), AppRoute.events);
       expect(AppRoute.forPath('/events/e-1'), AppRoute.eventDetail);
-      expect(AppRoute.forPath('/requests'), AppRoute.requests);
-      expect(AppRoute.forPath('/requests/r-1'), AppRoute.requestDetail);
+      expect(AppRoute.forPath('/my-requests'), AppRoute.myRequests);
+      expect(AppRoute.forPath('/my-requests/r-1'), AppRoute.myRequestDetail);
+      expect(AppRoute.forPath('/requests'), AppRoute.oldRequests);
+      expect(AppRoute.forPath('/requests/r-1'), AppRoute.oldRequestDetail);
       expect(
         AppRoute.forPath('/requests/r-1/requirements'),
-        AppRoute.requestRequirements,
+        AppRoute.oldRequestRequirements,
       );
     });
 
@@ -86,16 +88,46 @@ void main() {
       expect(AppRoute.forPath('/staff/queue'), isNull);
     });
 
+    test('the old /requests addresses are as open as My requests (D-225)', () {
+      // Their pages are gone and the router sends each to My requests. The
+      // guard asks what My requests asks, so a stale link is never refused on
+      // the way to a page the resident may open.
+      for (final String path in <String>[
+        '/requests',
+        '/requests/r-1',
+        '/requests/r-1/requirements',
+      ]) {
+        expect(
+          AppRoute.forPath(path)?.requirement,
+          AppRoute.myRequests.requirement,
+          reason: path,
+        );
+        expect(
+          resolveRedirect(session: guest(), location: path),
+          startsWith(AppRoute.signIn.path),
+          reason: path,
+        );
+        expect(
+          resolveRedirect(session: unverified(), location: path),
+          isNull,
+          reason: path,
+        );
+        expect(
+          resolveRedirect(session: verified(), location: path),
+          isNull,
+          reason: path,
+        );
+      }
+    });
+
     test('location() builds a concrete path and encodes the value', () {
       expect(
         AppRoute.newsPost.location(<String, String>{'postId': 'abc'}),
         '/news/abc',
       );
       expect(
-        AppRoute.requestRequirements.location(<String, String>{
-          'requestId': 'r-1',
-        }),
-        '/requests/r-1/requirements',
+        AppRoute.myRequestDetail.location(<String, String>{'requestId': 'r-1'}),
+        '/my-requests/r-1',
       );
       // A value that would otherwise change the shape of the path is encoded,
       // so it becomes a 404 instead of a different route.
@@ -529,7 +561,8 @@ void main() {
         'announcement': AppRoute.newsPost,
         'event': AppRoute.eventDetail,
         'assistance_request': AppRoute.myRequestDetail,
-        'assistance_requirements': AppRoute.requestRequirements,
+        // The documents page it opened is gone; it opens the request (D-225).
+        'assistance_requirements': AppRoute.myRequestDetail,
       };
 
       cases.forEach((target, route) {
@@ -558,13 +591,13 @@ void main() {
                 'id': 'r-1',
               })
               as DeepLinkResolved;
-      expect(result.target.location, '/requests/r-1/requirements');
+      expect(result.target.location, '/my-requests/r-1');
       // The location a link produces must resolve back to the route the guard
       // will evaluate — otherwise access is decided for one screen and another
       // one opens.
       expect(
         AppRoute.forPath(result.target.location),
-        AppRoute.requestRequirements,
+        AppRoute.myRequestDetail,
       );
     });
 
@@ -717,10 +750,27 @@ void main() {
     );
 
     test('an unverified resident is sent to verification', () {
+      // Sectors and benefits is verified-only and takes no id (D-216).
+      final link =
+          DeepLink.resolve(<String, String>{'target': 'sector_applications'})
+              as DeepLinkResolved;
+      expect(
+        resolveRedirect(session: unverified(), location: link.target.location),
+        AppRoute.verification.path,
+      );
+    });
+
+    test('an old requirements notice opens the request for any signed-in '
+        'resident (D-225)', () {
       final link = resolved('assistance_requirements', 'r-1');
+      expect(link.route, AppRoute.myRequestDetail);
       expect(
         resolveRedirect(session: unverified(), location: link.location),
-        AppRoute.verification.path,
+        isNull,
+      );
+      expect(
+        resolveRedirect(session: guest(), location: link.location),
+        startsWith(AppRoute.signIn.path),
       );
     });
 

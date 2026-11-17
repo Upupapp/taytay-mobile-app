@@ -10,7 +10,7 @@ import '../session/access_policy.dart';
 /// ---
 ///
 /// **Path parameters.** Some routes carry one opaque server identifier —
-/// `/news/:postId`, `/requests/:requestId`. That identifier arrives from a push
+/// `/news/:postId`, `/my-requests/:requestId`. That identifier arrives from a push
 /// notification, an SMS or a printed QR code, so it is attacker-writable and is
 /// validated on the way in (`DeepLink`), never trusted on the way out. A route
 /// declares its parameters here so the matcher, the guard and the link builder
@@ -281,23 +281,27 @@ enum AppRoute {
     AccessRequirement.authenticated,
   ),
 
-  /// The resident's own assistance requests. Verified only: an assistance
-  /// request is an act on the resident's civil record.
-  requests('requests', '/requests', AccessRequirement.verified),
+  /// Old address of the PHP-era assistance-request list, removed with its
+  /// pages (D-225). It redirects to My requests.
+  ///
+  /// Authenticated, like the page it opens. The three old addresses all land
+  /// on the list: the old pages never read the Node API, so an id in an old
+  /// link names nothing My requests can find.
+  oldRequests('old-requests', '/requests', AccessRequirement.authenticated),
 
-  /// One assistance request, by opaque id.
-  requestDetail(
-    'request-detail',
+  /// Old address of one request's case page. Redirects to My requests.
+  oldRequestDetail(
+    'old-request-detail',
     '/requests/:requestId',
-    AccessRequirement.verified,
+    AccessRequirement.authenticated,
     parameters: <String>['requestId'],
   ),
 
-  /// The documents outstanding on one assistance request.
-  requestRequirements(
-    'request-requirements',
+  /// Old address of one request's documents. Redirects to My requests.
+  oldRequestRequirements(
+    'old-request-requirements',
     '/requests/:requestId/requirements',
-    AccessRequirement.verified,
+    AccessRequirement.authenticated,
     parameters: <String>['requestId'],
   ),
 

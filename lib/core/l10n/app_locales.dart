@@ -471,8 +471,10 @@ String gateVerificationMessage(
 /// The label on an upload button — camera, gallery or file.
 ///
 /// `DocumentSource` was recorded as "rendered through the picker sheet, which
-/// composes its own copy". The picker sheet composes nothing:
-/// `requirements_screen.dart:478` passes `source.label` to `AppButton(label:)`.
+/// composes its own copy". The picker sheet composed nothing:
+/// `requirements_screen.dart:478` (removed in D-225) passed `source.label` to
+/// `AppButton(label:)`, and the upload slots that remain label buttons the same
+/// way.
 /// The enum's own doc comment says `Resident-facing action label` one line above
 /// the field, so the claim contradicted the source it was written about.
 String documentSourceLabel(BuildContext context, DocumentSource source) {

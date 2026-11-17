@@ -1,18 +1,13 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/auth_coordinator.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
-import 'package:taytay_resident/core/documents/document_capture.dart';
-import 'package:taytay_resident/core/documents/upload_policy.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/features/events/data/event_api_repository.dart';
 import 'package:taytay_resident/features/events/domain/event_registration.dart';
-import 'package:taytay_resident/features/requirements/data/requirement_api_repository.dart';
-import 'package:taytay_resident/features/requirements/domain/resident_requirement.dart';
 
 /// The failure paths TAB 23 names, tested deliberately rather than hoped for.
 ///
@@ -24,6 +19,9 @@ import 'package:taytay_resident/features/requirements/domain/resident_requiremen
 /// mid-upload, a duplicate submit, a capacity race, an oversized upload
 /// *including* the proxy rejection that does not look like one, and rate
 /// limiting on OTP.
+///
+/// The two upload paths were tested on the requirements page's repository,
+/// which declined without sending; it went with the `/requests` pages (D-225).
 ///
 /// What they have in common is that none of them is reachable by using the app
 /// normally. Each needs a server behaving badly on purpose, which is exactly why
@@ -149,126 +147,6 @@ void main() {
 
       expect(result.failureOrNull, isA<UnauthenticatedFailure>());
       expect(transport.requests, isEmpty);
-    });
-  });
-
-  group('network loss mid-upload does not report success', () {
-    test(
-      'a dropped connection during an upload is a failure, not a document',
-      () async {
-        final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
-          const Err<ApiHttpResponse>(NetworkFailure()),
-        ]);
-
-        final Result<UploadedDocumentReference> result =
-            await RequirementApiRepository(
-              apiClient: ApiClient(
-                config: config(),
-                transport: transport,
-                accessTokenProvider: () async => 'tok',
-              ),
-            ).uploadRequirementDocument(
-              requestId: 'case-1',
-              requirementCode: 'valid-id',
-              policy: UploadPolicy.fallback,
-              document: CapturedDocument(
-                bytes: Uint8List.fromList(<int>[1, 2, 3]),
-                fileName: 'id.pdf',
-                mimeType: 'application/pdf',
-                source: DocumentSource.file,
-              ),
-              idempotencyKey: 'k',
-            );
-
-        // A mocked success here would tell a resident their barangay clearance had
-        // reached Taytay LGU when nothing left the phone — and they would find out
-        // at the counter, having travelled on the strength of it.
-        expect(result.isErr, isTrue);
-        expect(result.valueOrNull, isNull);
-      },
-    );
-  });
-
-  group('an oversized upload is refused before it costs anything', () {
-    test('a body over the client ceiling never leaves the device', () async {
-      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[]);
-      final Result<UploadedDocumentReference> result =
-          await RequirementApiRepository(
-            apiClient: ApiClient(config: config(), transport: transport),
-          ).uploadRequirementDocument(
-            requestId: 'case-1',
-            requirementCode: 'valid-id',
-            policy: UploadPolicy.fallback,
-            // Not an image, so it is not downscaled — a PDF larger than the ceiling.
-            document: CapturedDocument(
-              bytes: Uint8List(9 * 1024 * 1024),
-              fileName: 'huge.pdf',
-              mimeType: 'application/pdf',
-              source: DocumentSource.file,
-            ),
-            idempotencyKey: 'k',
-          );
-
-      // The Node API has no requirement-document route. The file stays on
-      // the device, and the resident is told the office cannot take it here.
-      expect(result.failureOrNull, isA<ServerFailure>());
-      expect(result.failureOrNull!.debugMessage, contains('F32'));
-      expect(transport.requests, isEmpty);
-    });
-
-    test('a PROXY rejection is not reported as a lost connection', () async {
-      // The failure path TAB 10 warns about and nothing had covered. nginx
-      // answers before the application when a body exceeds
-      // client_max_body_size, so the response is HTML rather than the error
-      // envelope. Reporting that as "no connection" sends a resident to a
-      // barangay hall over a file size.
-      final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
-        const Ok<ApiHttpResponse>(
-          ApiHttpResponse(
-            statusCode: 413,
-            body:
-                '<html><head><title>413 Request Entity Too Large</title></head>'
-                '<body><center><h1>413</h1></center></body></html>',
-            headers: <String, String>{'content-type': 'text/html'},
-          ),
-        ),
-      ]);
-
-      final Result<UploadedDocumentReference> result =
-          await RequirementApiRepository(
-            apiClient: ApiClient(
-              config: config(),
-              transport: transport,
-              accessTokenProvider: () async => 'tok',
-            ),
-          ).uploadRequirementDocument(
-            requestId: 'case-1',
-            requirementCode: 'valid-id',
-            policy: UploadPolicy.fallback,
-            document: CapturedDocument(
-              bytes: Uint8List.fromList(<int>[1, 2, 3]),
-              fileName: 'id.pdf',
-              mimeType: 'application/pdf',
-              source: DocumentSource.file,
-            ),
-            idempotencyKey: 'k',
-          );
-
-      // Asserted as what the resident is *told*, not merely as what it is not.
-      // The first version of this test only checked it was not a network
-      // failure, and it passed against `UnexpectedFailure` — "something went
-      // wrong" — which is the exact outcome TAB 10 exists to prevent, on the one
-      // screen where the remedy is obvious and the resident's.
-      // The upload is declined before the proxy is asked. A 413 HTML page
-      // never becomes "no connection", because the request is not sent.
-      final AppFailure failure = result.failureOrNull!;
-      expect(failure, isA<ServerFailure>());
-      expect(failure.debugMessage, contains('F32'));
-      expect(transport.requests, isEmpty);
-      expect(
-        failure.residentMessage.toLowerCase(),
-        isNot(contains('connection')),
-      );
     });
   });
 

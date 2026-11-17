@@ -71,15 +71,11 @@ import '../features/programs/domain/program_repository.dart';
 import '../features/registration/data/barangay_api_repository.dart';
 import '../features/registration/data/planned_registration_repository.dart';
 import '../features/registration/domain/registration_domain.dart';
-import '../features/requirements/data/requirement_api_repository.dart';
-import '../features/requirements/domain/resident_requirement.dart';
 import '../features/sectors/data/mock_sector_repository.dart';
 import '../features/sectors/data/sector_api_repository.dart';
 import '../features/sectors/domain/sector_repository.dart';
-import '../features/services/data/assistance_api_repository.dart';
 import '../features/services/data/service_catalog_api_repository.dart';
 import '../features/services/domain/service_catalog_repository.dart';
-import '../features/services/domain/service_request_repository.dart';
 import '../features/settings/data/privacy_api_repository.dart';
 import '../features/settings/domain/account_controls.dart';
 import '../features/tulong/data/mock_social_service_repository.dart';
@@ -121,8 +117,6 @@ class AppDependencies {
     required this.credentialRepository,
     required this.verificationRepository,
     this.residentRecordRepository,
-    required this.serviceRequestRepository,
-    required this.requirementRepository,
     required this.notificationRepository,
     required this.documentPicker,
     required this.shareService,
@@ -395,12 +389,6 @@ class AppDependencies {
       residentRecordRepository: mock == null
           ? ResidentRecordApiRepository(apiClient: apiClient)
           : MockResidentRecordRepository(mock),
-      serviceRequestRepository: mock == null
-          ? AssistanceApiRepository(apiClient: apiClient, telemetry: telemetry)
-          : MockServiceRequestRepository(mock),
-      requirementRepository: mock == null
-          ? RequirementApiRepository(apiClient: apiClient, telemetry: telemetry)
-          : MockRequirementRepository(mock),
       notificationRepository: notifications,
       // Defaults to the real system pickers. Tests inject
       // `UnavailableDocumentPicker`, which reports every source as absent
@@ -570,13 +558,6 @@ class AppDependencies {
   /// A dev mock build supplies [MockResidentRecordRepository]; every other
   /// build talks to `/me` and `/households/current`.
   final ResidentRecordRepository? residentRecordRepository;
-  final ServiceRequestRepository serviceRequestRepository;
-
-  /// The documents one request is waiting on, and their uploads. Same
-  /// `ServiceDelivery` module as the requests themselves, and equally `planned`,
-  /// so the shipped implementation declines rather than reporting that a
-  /// barangay clearance reached the LGU when nothing left the phone.
-  final RequirementRepository requirementRepository;
 
   final NotificationRepository notificationRepository;
 

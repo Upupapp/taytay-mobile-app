@@ -17,56 +17,39 @@ import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
+import 'package:taytay_resident/features/assistance/domain/own_assistance_repository.dart';
+import 'package:taytay_resident/features/assistance/domain/own_assistance_request.dart';
 import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/domain/home_emphasis.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
-import 'package:taytay_resident/features/services/domain/assistance_case.dart';
-import 'package:taytay_resident/features/services/domain/assistance_history.dart';
-import 'package:taytay_resident/features/services/domain/service_request_repository.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
 import 'package:taytay_resident/features/verification/domain/verification_status_detail.dart';
 
 /// Counts every `/me/` read so a test can assert a guest issued none.
-class CountingRequestRepository implements ServiceRequestRepository {
+///
+/// The resident's own assistance requests (My requests, D-223). Home does not
+/// read them; the count proves a guest's Home never asks.
+class CountingRequestRepository implements OwnAssistanceRepository {
   int listCalls = 0;
 
   @override
-  Future<Result<Paginated<ServiceRequest>>> listOwnRequests({
-    int page = 1,
-    int perPage = 20,
+  Future<Result<Paginated<OwnAssistanceRequest>>> listOwn({
+    String? cursor,
   }) async {
     listCalls++;
-    return const Err<Paginated<ServiceRequest>>(ServerFailure());
+    return const Err<Paginated<OwnAssistanceRequest>>(ServerFailure());
   }
 
   @override
-  Future<Result<ServiceRequest>> loadOwnRequest(String id) async =>
-      const Err<ServiceRequest>(ServerFailure());
-
-  @override
-  Future<Result<AssistanceCaseDetail>> loadOwnCase(String id) async =>
-      const Err<AssistanceCaseDetail>(ServerFailure());
-
-  @override
-  Future<Result<Paginated<AssistanceHistoryEntry>>> listOwnHistory({
-    required HistoryScope scope,
-    int page = 1,
-    int perPage = 25,
-  }) async {
+  Future<Result<OwnAssistanceRequest>> findOwn(String id) async {
     listCalls++;
-    return const Err<Paginated<AssistanceHistoryEntry>>(ServerFailure());
+    return const Err<OwnAssistanceRequest>(ServerFailure());
   }
-
-  @override
-  Future<Result<void>> cancelOwnRequest({
-    required String id,
-    required String idempotencyKey,
-  }) async => const Err<void>(ServerFailure());
 }
 
 /// Counts verification reads for the same reason.
@@ -359,8 +342,6 @@ Future<Booted> bootHome(
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: verification,
-    serviceRequestRepository: requests,
-    requirementRepository: base.requirementRepository,
     documentPicker: base.documentPicker,
     shareService: base.shareService,
     externalLinks: links ?? base.externalLinks,
@@ -369,6 +350,7 @@ Future<Booted> bootHome(
     registrationRepository: base.registrationRepository,
     barangayDirectory: base.barangayDirectory,
     platform: base.platform,
+    ownAssistance: requests,
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);

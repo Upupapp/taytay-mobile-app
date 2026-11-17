@@ -173,9 +173,9 @@ front of `DeepLink.resolve` — so it is treated as untrusted input.
 | `news` | `/news` | no |
 | `event` | `/events/:eventId` | yes |
 | `events` | `/events` | no |
-| `assistance_request` | `/requests/:requestId` | yes |
-| `assistance_requirements` | `/requests/:requestId/requirements` | yes |
-| `assistance_requests` | `/requests` | no |
+| `assistance_request` | `/my-requests/:requestId` | yes |
+| `assistance_requirements` | `/my-requests/:requestId` (D-225) | yes |
+| `assistance_requests` | `/my-requests` | no |
 | `verification` | `/verification` | no |
 | `services`, `home` | those routes | no |
 
@@ -235,8 +235,8 @@ reporting a fault.
 | Services | `GET /api/v1/services` | **implemented** — real repository |
 | News | `GET /api/v1/announcements` (public) | `planned` — declines |
 | Events | `GET /api/v1/events` (public) | **served** on the Node API since backend `580acbb` (D-191). Not a tab (D-178): reached from a notification or a home banner whose link names events (D-192) |
-| My requests | `GET /api/v1/me/assistance-requests` | `planned` — declines |
-| Request detail | `GET /api/v1/me/assistance-requests/{id}` | `planned` — declines |
+| My requests | `GET /api/v1/me/assistance-requests` | **served** since backend `d1e997c` (D-223) |
+| One request | found in that list; the API has no item route | **served** (D-223). The old `/requests` pages were removed and their addresses redirect to `/my-requests` (D-225) |
 
 Nothing is mocked. Sample announcements would be a fabricated statement by a
 local government; an invented event would send residents to a municipal hall on a
@@ -282,8 +282,8 @@ absence of actions on link-reachable screens, and 200% text scale.
 | --- | --- | --- |
 | N-1 | No announcements or events endpoint | Both destinations render an honest "not published yet" state. Nothing simulated. |
 | N-2 | No `/me/household` row | The household summary is declared and reported unavailable. |
-| N-3 | No assistance-request endpoints | My requests declines; no request can be submitted or cancelled from this app. |
+| N-3 | No assistance-request write endpoints | My requests reads the resident's own requests (D-223); no request can be submitted or cancelled from this app. |
 | N-4 | Notification payload keys are this app's convention | `target` and `id` are not published. Confirm when the `Notification` module ships. |
 | N-5 | No OS-level deep-link registration | `DeepLink.resolve` is wired and tested, but no Android App Link or iOS Universal Link is declared, so nothing outside the app can hand it a payload yet. |
-| N-6 | Requirement resubmission is not built | The requirements screen explains and points at the municipal hall. Blocked on backend gap **G-18**. |
+| N-6 | Requirement resubmission is not built | There is no requirements screen: the PHP-era one was removed with the `/requests` pages (D-225). Blocked on backend gap **G-18**. |
 | N-7 | English only | Filipino copy arrives with app-wide localisation. |

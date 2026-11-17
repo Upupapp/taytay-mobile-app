@@ -172,8 +172,9 @@ abstract final class DeepLink {
     // (D-223). `assistance_request_updated` opens the request it names.
     'assistance_requests': AppRoute.myRequests,
     'assistance_request': AppRoute.myRequestDetail,
-    // Outstanding requirements on a request.
-    'assistance_requirements': AppRoute.requestRequirements,
+    // Outstanding requirements on a request: the request it names, on My
+    // requests. The documents page it used to open is gone (D-225).
+    'assistance_requirements': AppRoute.myRequestDetail,
     // Verification steps.
     'verification': AppRoute.verification,
     // Document requests: the resident's list, and one request.

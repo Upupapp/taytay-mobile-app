@@ -295,7 +295,7 @@ void main() {
     testWidgets('a guest deep-linking into a request lands on sign-in', (
       tester,
     ) async {
-      await boot(tester, initialLocation: '/requests/r-1');
+      await boot(tester, initialLocation: '/my-requests/r-1');
 
       expect(find.text('Maligayang pagbabalik!'), findsOneWidget);
       expect(find.text('Request status'), findsNothing);
@@ -307,11 +307,10 @@ void main() {
       await boot(
         tester,
         level: AccessLevel.unverified,
-        initialLocation: '/requests/r-1/requirements',
+        initialLocation: '/household/correction',
       );
 
       expect(find.text('Verification status'), findsWidgets);
-      expect(find.text('Documents needed'), findsNothing);
     });
   });
 
@@ -350,7 +349,7 @@ void main() {
       await boot(
         tester,
         level: AccessLevel.verified,
-        initialLocation: '/requests/r-1/requirements',
+        initialLocation: '/my-requests/r-1',
       );
       await tester.pumpAndSettle();
 

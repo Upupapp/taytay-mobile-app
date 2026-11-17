@@ -17,9 +17,6 @@ import 'package:taytay_resident/features/notifications/domain/notification_repos
 import 'package:taytay_resident/features/platform/data/platform_api_repository.dart';
 import 'package:taytay_resident/features/platform/domain/app_bootstrap.dart';
 import 'package:taytay_resident/features/platform/domain/privacy_notice.dart';
-import 'package:taytay_resident/features/services/data/assistance_api_repository.dart';
-import 'package:taytay_resident/features/services/domain/assistance_case.dart';
-import 'package:taytay_resident/features/services/domain/assistance_history.dart';
 
 /// Wire tests for the repositories TABs 05 and 08–13 wired.
 ///
@@ -136,33 +133,6 @@ void main() {
       expect(summary.toString(), isNot(contains('hh-1')));
       expect(summary.members.single.toString(), isNot(contains('Juana')));
     });
-  });
-
-  group('assistance — the key goes on the irreversible call only', () {
-    test('history declines for both scopes', () async {
-      final AssistanceApiRepository repository = AssistanceApiRepository(
-        apiClient: clientFor(transport),
-      );
-      final past = await repository.listOwnHistory(scope: HistoryScope.past);
-      final open = await repository.listOwnHistory(scope: HistoryScope.open);
-
-      expect(past.failureOrNull, isA<ServerFailure>());
-      expect(open.failureOrNull, isA<ServerFailure>());
-      expect(transport.requests, isEmpty);
-    });
-
-    test(
-      'a case is not loaded from a route the contract does not publish',
-      () async {
-        final Result<AssistanceCaseDetail> result =
-            await AssistanceApiRepository(
-              apiClient: clientFor(transport),
-            ).loadOwnCase('case-9');
-
-        expect(result.failureOrNull, isA<ServerFailure>());
-        expect(transport.requests, isEmpty);
-      },
-    );
   });
 
   group('newsfeed — public reads stay anonymous, comments do not', () {

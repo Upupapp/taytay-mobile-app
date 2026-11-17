@@ -187,8 +187,6 @@ AppDependencies _rebuild(
   credentialRepository: base.credentialRepository,
   verificationRepository: base.verificationRepository,
   residentRecordRepository: records ?? base.residentRecordRepository,
-  serviceRequestRepository: base.serviceRequestRepository,
-  requirementRepository: base.requirementRepository,
   documentPicker: base.documentPicker,
   shareService: base.shareService,
   externalLinks: base.externalLinks,

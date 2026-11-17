@@ -40,12 +40,9 @@ import '../../features/platform/presentation/consent_update_screen.dart';
 import '../../features/profile/presentation/contact_details_screen.dart';
 import '../../features/profile/presentation/privacy_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
-import '../../features/requirements/presentation/requirements_screen.dart';
 import '../../features/sectors/domain/resident_sector.dart';
 import '../../features/sectors/presentation/sector_apply_screen.dart';
 import '../../features/sectors/presentation/sectors_screen.dart';
-import '../../features/services/presentation/assistance_case_screen.dart';
-import '../../features/services/presentation/assistance_requests_screen.dart';
 import '../../features/settings/presentation/privacy_controls_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../../features/shell/presentation/root_shell.dart';
@@ -541,31 +538,29 @@ GoRouter buildAppRouter({
           ),
         ],
       ),
+      // The old assistance-request addresses (D-225). Their pages are gone;
+      // a stale link lands on My requests rather than on "not found".
       GoRoute(
-        path: AppRoute.requests.path,
-        name: AppRoute.requests.routeName,
-        builder: (context, state) => const AssistanceRequestsScreen(),
+        path: AppRoute.oldRequests.path,
+        name: AppRoute.oldRequests.routeName,
+        redirect: (context, state) => AppRoute.myRequests.path,
         routes: <RouteBase>[
           GoRoute(
             path: ':requestId',
-            name: AppRoute.requestDetail.routeName,
-            builder: (context, state) => AssistanceCaseScreen(
-              requestId: state.pathParameters['requestId'] ?? '',
-            ),
+            name: AppRoute.oldRequestDetail.routeName,
+            redirect: (context, state) => AppRoute.myRequests.path,
             routes: <RouteBase>[
               GoRoute(
                 path: 'requirements',
-                name: AppRoute.requestRequirements.routeName,
-                builder: (context, state) => RequirementsScreen(
-                  requestId: state.pathParameters['requestId'] ?? '',
-                ),
+                name: AppRoute.oldRequestRequirements.routeName,
+                redirect: (context, state) => AppRoute.myRequests.path,
               ),
             ],
           ),
         ],
       ),
-      // Document requests. Full-screen, like assistance requests: the form and
-      // the request each fill the phone.
+      // Document requests. Full-screen, like My requests: the form and the
+      // request each fill the phone.
       GoRoute(
         path: AppRoute.issuanceCatalogue.path,
         name: AppRoute.issuanceCatalogue.routeName,

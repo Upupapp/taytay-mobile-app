@@ -1,5 +1,10 @@
 # Taytay resident mobile — assistance status, timeline and next steps
 
+> **Removed (D-225, 2026-11-17).** These pages and their code are no longer in
+> the app. They never read the Node API, nothing linked to them after My
+> requests (D-223) replaced them, and their `/requests` addresses now open
+> `/my-requests`. This page is kept as the record of what was built.
+
 Where a request stands, what happens next, and the line between an admin case
 file and what a citizen may see of it.
 
