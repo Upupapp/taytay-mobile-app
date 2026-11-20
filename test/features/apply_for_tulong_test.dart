@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -31,6 +32,7 @@ import 'package:taytay_resident/features/assistance/domain/own_assistance_reques
 import 'package:taytay_resident/features/assistance/presentation/apply_controller.dart';
 import 'package:taytay_resident/features/assistance/presentation/apply_for_tulong_screen.dart';
 import 'package:taytay_resident/features/assistance/presentation/my_requests_canvas.dart';
+import 'package:taytay_resident/features/tulong/data/social_service_api_repository.dart';
 import 'package:taytay_resident/features/tulong/data/social_service_codec.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
@@ -192,19 +194,62 @@ class _Transport implements ApiTransport {
   }
 }
 
+ApiClient _client(_Transport transport) => ApiClient(
+  config: AppConfig.from(
+    rawEnvironment: 'dev',
+    rawApiBaseUrl: 'https://example.test/api/v1',
+    isReleaseBuild: false,
+    rawMockLatencyMs: '0',
+  ),
+  transport: transport,
+  accessTokenProvider: () async => 'tok',
+);
+
 OwnAssistanceApiRepository _api(_Transport transport) =>
-    OwnAssistanceApiRepository(
-      apiClient: ApiClient(
-        config: AppConfig.from(
-          rawEnvironment: 'dev',
-          rawApiBaseUrl: 'https://example.test/api/v1',
-          isReleaseBuild: false,
-          rawMockLatencyMs: '0',
-        ),
-        transport: transport,
-        accessTokenProvider: () async => 'tok',
-      ),
+    OwnAssistanceApiRepository(apiClient: _client(transport));
+
+/// What the local API answered in the P3 flow simulation, verbatim
+/// (`test/fixtures/local_api/apply_flow.json`).
+Map<String, dynamic> _localApi() =>
+    jsonDecode(
+          File('test/fixtures/local_api/apply_flow.json').readAsStringSync(),
+        )
+        as Map<String, dynamic>;
+
+/// Answers as the local API did: the Tulong page, the filing (or the 409 for
+/// an account the office has not linked), her list; anything else is a 404.
+_Transport _localTransport({required bool linked}) {
+  final Map<String, dynamic> api = _localApi();
+  ApiHttpResponse answer(String key) {
+    final Map<String, dynamic> recorded = api[key] as Map<String, dynamic>;
+    return ApiHttpResponse(
+      statusCode: recorded['status'] as int,
+      body: jsonEncode(recorded['body']),
     );
+  }
+
+  final String slug = _localSlug();
+  return _Transport((ApiRequest request) {
+    if (request.path == 'services/$slug') {
+      return Ok(answer('service_detail'));
+    }
+    if (request.path == 'me/assistance-applications') {
+      return Ok(answer(linked ? 'apply_201' : 'apply_409_unlinked'));
+    }
+    if (request.path == 'me/assistance-requests') {
+      return Ok(answer('my_requests'));
+    }
+    return Ok(_error(404, 'NOT_FOUND'));
+  });
+}
+
+String _localSlug() {
+  final Map<String, dynamic> detail =
+      _localApi()['service_detail'] as Map<String, dynamic>;
+  final Map<String, dynamic> body = detail['body'] as Map<String, dynamic>;
+  final Map<String, dynamic> data = body['data'] as Map<String, dynamic>;
+  return data['slug'] as String;
+}
 
 Map<String, Object?> _row({
   String status = 'submitted',
@@ -277,6 +322,7 @@ Future<_Booted> _boot(
   WidgetTester tester, {
   AccessLevel? level = AccessLevel.verified,
   required String location,
+  ApiClient? liveApi,
 }) async {
   tester.view.physicalSize = const Size(420, 2400);
   tester.view.devicePixelRatio = 1;
@@ -342,10 +388,14 @@ Future<_Booted> _boot(
     barangayDirectory: base.barangayDirectory,
     platform: base.platform,
     mockBehavior: base.mockBehavior,
-    socialServices: base.socialServiceRepository,
+    socialServices: liveApi == null
+        ? base.socialServiceRepository
+        : SocialServiceApiRepository(apiClient: liveApi),
     issuance: base.issuanceRepository,
     sectors: base.sectorRepository,
-    ownAssistance: assistance,
+    ownAssistance: liveApi == null
+        ? assistance
+        : OwnAssistanceApiRepository(apiClient: liveApi),
     onDispose: base.onDispose,
   );
   addTearDown(dependencies.dispose);
@@ -1110,6 +1160,90 @@ void main() {
       await _boot(tester, location: '/my-requests/ar-sample-assessment');
       expect(find.byKey(const Key('my-request-missing')), findsNothing);
       expect(find.byKey(const Key('my-request-add-documents')), findsNothing);
+    });
+
+    // P3: the real wizard, against what the local API actually answered in the
+    // flow simulation — the page, the filing or the 409, and her list.
+    testWidgets('against the local API: the page, the filing, My requests', (
+      tester,
+    ) async {
+      final _Transport transport = _localTransport(linked: true);
+      await _boot(
+        tester,
+        location: '/tulong/${_localSlug()}/apply',
+        liveApi: _client(transport),
+      );
+      expect(find.byKey(const Key('apply-about')), findsOneWidget);
+      expect(find.text('Valid ID · Required'), findsOneWidget);
+      expect(
+        find.text('Barangay certificate of indigency · Required'),
+        findsOneWidget,
+      );
+      await _tap(tester, find.byKey(const Key('apply-start')));
+      await tester.enterText(
+        find.byKey(const Key('apply-purpose')),
+        'School fees and books for my son this semester.',
+      );
+      await tester.enterText(find.byKey(const Key('apply-amount')), '1,500');
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byKey(const Key('apply-details-next')));
+      for (final String code in <String>[
+        'valid-id',
+        'certificate-of-indigency',
+      ]) {
+        await _tap(tester, find.byKey(Key('apply-add-$code')));
+        await _tap(tester, find.byKey(const Key('apply-source-camera')));
+      }
+      await _tap(tester, find.byKey(const Key('apply-documents-next')));
+      expect(find.byKey(const Key('apply-review')), findsOneWidget);
+      await _tap(tester, find.byKey(const Key('apply-send')));
+
+      expect(find.byKey(const Key('apply-done')), findsOneWidget);
+      expect(find.text('TAY-2026-000042'), findsOneWidget);
+      final ApiRequest sent = transport.requests.singleWhere(
+        (ApiRequest r) => r.path == 'me/assistance-applications',
+      );
+      expect(sent.body, containsPair('service_slug', _localSlug()));
+      expect(sent.body, containsPair('requested_amount_centavos', '150000'));
+      expect(sent.files.map((MultipartFile f) => f.field).toSet(), <String>{
+        'valid-id',
+        'certificate-of-indigency',
+      });
+
+      await _tap(tester, find.text('Open My requests'));
+      expect(_path(tester), '/my-requests');
+      expect(find.text('Applied in the app'), findsWidgets);
+      expect(find.textContaining('TAY-2026-000042'), findsWidgets);
+    });
+
+    testWidgets('against the local API: not linked is the 409 it sent', (
+      tester,
+    ) async {
+      await _boot(
+        tester,
+        location: '/tulong/${_localSlug()}/apply',
+        liveApi: _client(_localTransport(linked: false)),
+      );
+      await _tap(tester, find.byKey(const Key('apply-start')));
+      await tester.enterText(
+        find.byKey(const Key('apply-purpose')),
+        'Rent and food after a fire in our street.',
+      );
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byKey(const Key('apply-details-next')));
+      for (final String code in <String>[
+        'valid-id',
+        'certificate-of-indigency',
+      ]) {
+        await _tap(tester, find.byKey(Key('apply-add-$code')));
+        await _tap(tester, find.byKey(const Key('apply-source-camera')));
+      }
+      await _tap(tester, find.byKey(const Key('apply-documents-next')));
+      await _tap(tester, find.byKey(const Key('apply-send')));
+      expect(find.byKey(const Key('apply-not-linked')), findsOneWidget);
+      expect(find.textContaining('Nothing was sent.'), findsOneWidget);
+      // The server's own sentence never reaches the resident (Article 8).
+      expect(find.textContaining('MSWDO has not linked'), findsNothing);
     });
   });
 

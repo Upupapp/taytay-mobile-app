@@ -102,6 +102,13 @@ server sends (`issuance_request_updated`, `event_registration_updated`,
 by the row of its own type; `balita` and `emergency` stay accepted and are said to gate nothing.
 The notification settings now read and write the six notice types and no other.
 
+It was re-vendored from backend `f7f0cb5` the same day, after the full-flow simulation. No
+operation was added or removed and no response this app reads changed shape: `GET /me` already
+carried `linked_to_office_record` (`ab2c2b7`); `OwnAssistanceRequest` for a request imported from
+a past report now carries real dates where it sent the word "null" (`f7f0cb5`); the rest is the
+office's (a registry record's `app_account` and `origin`, an import row's `creates_with_row`, the
+payout method `not-recorded`).
+
 It was re-vendored from backend `6794f8d` on 20 November 2026, for D-226. Fourteen operations were
 added and none removed. This app calls two of them: `POST /me/assistance-applications` (a verified
 resident whose account the office has linked applies for Tulong, multipart, ADR 0004 decision 2) and
@@ -126,9 +133,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `6794f8d632a0875ca283a63cfd836d400474a625` (`6794f8d`) |
-| **sha256** | `f3381b3583982126c957b6ac268799bafd236adcd87424409bb1d2b67f98d402` |
-| **Vendored on** | 20 November 2026 (D-226) |
+| **Backend commit** | `f7f0cb5d9095f56b7b37fb5ad014641ba7590a00` (`f7f0cb5`) |
+| **sha256** | `ce5657c2c7df24a9a0a993059629eb930b35045ed8776e65cc7a434634480114` |
+| **Vendored on** | 20 November 2026 (P3 flow simulation, after D-226) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

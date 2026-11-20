@@ -1,0 +1,191 @@
+{
+  "_note": "Answers the local API (backend dev:memory, P3 flow simulation 2026-11-20) gave for the apply flow, verbatim. Synthetic data: no real resident.",
+  "service_detail": {
+    "status": 200,
+    "body": {
+      "data": {
+        "id": "38d01d19-ff48-4050-83d3-b726b4c06250",
+        "name": "Financial assistance",
+        "slug": "tulong-financial-e8ht8",
+        "category": null,
+        "summary": "Cash aid for families in crisis.",
+        "details": "Apply from the app or at the MSWDO counter.",
+        "eligibility": null,
+        "requirements": [],
+        "contacts": [],
+        "locations": [],
+        "office_id": null,
+        "office_slug": null,
+        "media_id": null,
+        "featured": false,
+        "icon_key": null,
+        "tile_color": null,
+        "badge": null,
+        "legal_basis": null,
+        "claim_steps": [],
+        "featured_headline": null,
+        "schedule": null,
+        "hero_url": null,
+        "hidden_from_list": false,
+        "can_apply": true,
+        "created_at": "2026-11-20T03:02:39.782Z",
+        "updated_at": "2026-11-20T03:02:39.782Z",
+        "application_requirements": [
+          {
+            "code": "valid-id",
+            "name": "Valid ID",
+            "obligation": "required",
+            "condition": null
+          },
+          {
+            "code": "certificate-of-indigency",
+            "name": "Barangay certificate of indigency",
+            "obligation": "required",
+            "condition": null
+          },
+          {
+            "code": "quotation",
+            "name": "Quotation or bill",
+            "obligation": "optional",
+            "condition": null
+          },
+          {
+            "code": "authorization-letter",
+            "name": "Authorization letter",
+            "obligation": "conditional",
+            "condition": "When somebody else files on the applicant’s behalf."
+          }
+        ]
+      },
+      "meta": {}
+    }
+  },
+  "apply_201": {
+    "status": 201,
+    "body": {
+      "data": {
+        "id": "44b41375-3a75-4c49-ab2b-79fdeaf3daa2",
+        "reference_number": "TAY-2026-000042",
+        "program_name": "Financial Assistance (Tulong)",
+        "channel": "online",
+        "filed_at": "2026-11-20T03:06:52.722Z",
+        "status": "submitted",
+        "status_changed_at": "2026-11-20T03:06:52.722Z",
+        "approved_amount_centavos": null,
+        "payout_scheduled_for": null,
+        "payout_venue": null,
+        "released_at": null,
+        "missing_documents": []
+      },
+      "meta": {}
+    }
+  },
+  "apply_409_unlinked": {
+    "status": 409,
+    "body": {
+      "error": {
+        "code": "CONFLICT",
+        "message": "The MSWDO has not linked your account to its records yet. Ask the office to link it — at the counter, when you show your ID, or by message — and then apply.",
+        "details": {},
+        "request_id": "63efb4e1-ce55-4eb3-889c-942fa4a13668"
+      }
+    }
+  },
+  "my_requests": {
+    "status": 200,
+    "body": {
+      "data": [
+        {
+          "id": "44b41375-3a75-4c49-ab2b-79fdeaf3daa2",
+          "reference_number": "TAY-2026-000042",
+          "program_name": "Financial Assistance (Tulong)",
+          "channel": "online",
+          "filed_at": "2026-11-20T03:06:52.722Z",
+          "status": "submitted",
+          "status_changed_at": "2026-11-20T03:06:52.722Z",
+          "approved_amount_centavos": null,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": null,
+          "missing_documents": []
+        },
+        {
+          "id": "047947ac-3f9e-4c32-b133-ad7fb9b051b0",
+          "reference_number": "TAY-2026-000001",
+          "program_name": "Financial Assistance (Tulong)",
+          "channel": "online",
+          "filed_at": "2026-11-20T03:02:41.398Z",
+          "status": "released",
+          "status_changed_at": "2026-11-20T03:02:47.361Z",
+          "approved_amount_centavos": 300000,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": "2026-11-20T03:02:47.361Z",
+          "missing_documents": []
+        },
+        {
+          "id": "be5355c7-dd33-4993-9953-7443505243e8",
+          "reference_number": "TAY-2026-000002",
+          "program_name": "Burial Assistance",
+          "channel": "office",
+          "filed_at": "2026-10-15T16:00:00.000Z",
+          "status": "completed",
+          "status_changed_at": "null",
+          "approved_amount_centavos": null,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": null,
+          "missing_documents": []
+        },
+        {
+          "id": "e9c62d91-6f84-4311-8cdd-71933eea9143",
+          "reference_number": "TAY-2026-000012",
+          "program_name": "Educational Assistance",
+          "channel": "office",
+          "filed_at": "2026-04-18T16:00:00.000Z",
+          "status": "rejected",
+          "status_changed_at": "null",
+          "approved_amount_centavos": null,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": null,
+          "missing_documents": []
+        },
+        {
+          "id": "f1b707c9-1f95-4f66-b518-26b139578219",
+          "reference_number": "TAY-2025-000022",
+          "program_name": "Financial Assistance (Tulong)",
+          "channel": "office",
+          "filed_at": "2025-10-20T16:00:00.000Z",
+          "status": "completed",
+          "status_changed_at": "null",
+          "approved_amount_centavos": null,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": null,
+          "missing_documents": []
+        },
+        {
+          "id": "602d0335-392f-490d-991b-df837e710beb",
+          "reference_number": "TAY-2025-000032",
+          "program_name": "Burial Assistance",
+          "channel": "office",
+          "filed_at": "2025-04-23T16:00:00.000Z",
+          "status": "completed",
+          "status_changed_at": "null",
+          "approved_amount_centavos": null,
+          "payout_scheduled_for": null,
+          "payout_venue": null,
+          "released_at": null,
+          "missing_documents": []
+        }
+      ],
+      "meta": {
+        "pagination": {
+          "has_more": false,
+          "next_cursor": null
+        }
+      }
+    }
+  }
+}

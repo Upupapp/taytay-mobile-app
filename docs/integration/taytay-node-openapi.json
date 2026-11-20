@@ -1104,7 +1104,7 @@
       "get": {
         "operationId": "getOfficeResident",
         "summary": "Read one resident",
-        "description": "Needs resident.view. Redacted for the reader. A record outside the reader's barangay answers 404, exactly as one that does not exist. A social worker (assigned-cases) reads this for their own clients — the subject of a filed request or a case assigned to them — and for nobody else (404, as absent) (DL-183). The registry's list stays refused to them.",
+        "description": "Needs resident.view. Redacted for the reader. A record outside the reader's barangay answers 404, exactly as one that does not exist. A social worker (assigned-cases) reads this for their own clients — the subject of a filed request or a case assigned to them — and for nobody else (404, as absent) (DL-183). The registry's list stays refused to them. The record's own read also carries app_account (null when no app account reads the record; otherwise the act that linked it — sector-application, verification or relink — and linked_since, when the account came to this record) and origin (citizen-import or assistance-import with the import's id and file name, verification when a reviewer made it from a verified account, counter otherwise, with when). Nothing about the account itself is sent: no name, email or mobile (docs/adr/0004-apply-from-the-app.md, decision 5).",
         "security": [
           {
             "firebaseIdToken": []
@@ -1127,7 +1127,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OfficeResidentEnvelope"
+                  "$ref": "#/components/schemas/OfficeResidentDetailEnvelope"
                 }
               }
             }
@@ -17490,7 +17490,7 @@
       "AssistanceImportRow": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["row", "source_line", "group", "values", "problems", "match", "will_create", "create_problems", "candidates", "duplicate", "resolution"],
+        "required": ["row", "source_line", "group", "values", "problems", "match", "will_create", "creates_with_row", "create_problems", "candidates", "duplicate", "resolution"],
         "properties": {
           "row": { "type": "integer", "minimum": 1, "description": "The row's number among the file's rows; what resolve names." },
           "source_line": { "type": "integer", "minimum": 1, "description": "The line in the file, for the clerk to find it." },
@@ -17498,7 +17498,8 @@
           "values": { "type": ["object", "null"], "additionalProperties": { "type": "string" }, "description": "Each field's text as read under the mapping." },
           "problems": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["field", "message"], "properties": { "field": { "type": "string" }, "message": { "type": "string" } } } },
           "match": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["resident_id", "label", "how"], "properties": { "resident_id": { "type": "string", "format": "uuid" }, "label": { "type": "string", "description": "Surname and given initial." }, "how": { "type": "string", "enum": ["proposed", "linked"] } } }] },
-          "will_create": { "type": "boolean", "description": "A record will be made from the row at commit." },
+          "will_create": { "type": "boolean", "description": "A record will be made from the row at commit. False on a row filed on the record an earlier row makes (creates_with_row)." },
+          "creates_with_row": { "type": ["integer", "null"], "description": "For a ready row resolved create: the earlier row of this file, resolved create for the same name, barangay, birth date and sex, whose record this row is filed on, so a person new to the registry who appears in several rows becomes one record. Null otherwise." },
           "create_problems": { "type": "array", "items": { "type": "string" }, "description": "What the registry would refuse in the record a create resolution would make." },
           "candidates": {
             "type": "array",
@@ -17946,6 +17947,7 @@
           "verification_decided_at": { "type": ["string", "null"], "format": "date-time", "description": "When the current tier became verified or rejected. Null for unverified and pending." },
           "rejection_reason": { "type": ["string", "null"], "description": "Notes from the latest rejection. Null unless verification_status is rejected." },
           "verification_method": { "type": ["string", "null"], "enum": ["selfie", "in-person", null], "description": "How a verified account was verified, whichever came last: an approved selfie request, or an in-person check at the office. Null unless verification_status is verified, and for an account made verified by a role change." },
+          "linked_to_office_record": { "type": ["boolean", "null"], "description": "Whether the MSWDO has linked this resident account to its office registry record (ADR 0004), which applying for Tulong and My requests need. Null for a staff account." },
           "role": { "type": "string", "enum": ["registered", "verified", "staff", "admin"] },
           "office_id": { "type": ["string", "null"], "format": "uuid" },
           "office_role": {
@@ -18004,7 +18006,6 @@
           "program.manage",
           "request.view",
           "request.create",
-          "request.import",
           "request.intake",
           "request.assess",
           "request.endorse",
@@ -18012,6 +18013,7 @@
           "request.reject",
           "request.schedule",
           "request.close",
+          "request.import",
           "request.view-sensitive",
           "document.record",
           "document.download",
@@ -18045,7 +18047,7 @@
       "Permission": {
         "type": "string",
         "description": "Every key GET /me may carry: StaffCapability, then CaseworkPermission.",
-        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "resident.import", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.import", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
+        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "resident.import", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.import", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
       },
       "OfficeRole": {
         "type": "string",
@@ -18774,6 +18776,50 @@
         "required": ["data", "meta"],
         "properties": {
           "data": { "$ref": "#/components/schemas/OfficeResident" },
+          "meta": { "type": "object" }
+        }
+      },
+      "OfficeResidentDetail": {
+        "description": "One record as its own read answers it: the record, where it came from, and whether an app account reads it (docs/adr/0004-apply-from-the-app.md, decision 5).",
+        "allOf": [
+          { "$ref": "#/components/schemas/OfficeResident" },
+          {
+            "type": "object",
+            "required": ["app_account", "origin"],
+            "properties": {
+              "app_account": {
+                "description": "Null when no app account reads this record. Says nothing about the account itself.",
+                "oneOf": [
+                  { "type": "null" },
+                  {
+                    "type": "object",
+                    "required": ["act", "linked_since"],
+                    "properties": {
+                      "act": { "type": "string", "enum": ["sector-application", "verification", "relink"], "description": "sector-application: linked when the office approved a sector application (0058). verification: linked or made by the reviewer who verified the account (0069). relink: moved here by a same-person finding that superseded the record it was linked to (0066)." },
+                      "linked_since": { "type": "string", "format": "date-time", "description": "When the account came to read this record." }
+                    }
+                  }
+                ]
+              },
+              "origin": {
+                "type": "object",
+                "required": ["kind", "import_id", "file_name", "at"],
+                "properties": {
+                  "kind": { "type": "string", "enum": ["citizen-import", "assistance-import", "verification", "counter"], "description": "citizen-import: created by a committed citizen import (0057). assistance-import: created for a row of a past-assistance import the officer resolved create (0071). verification: made by the reviewer from a verified account (0069). counter: typed in by staff." },
+                  "import_id": { "type": ["string", "null"], "format": "uuid" },
+                  "file_name": { "type": ["string", "null"] },
+                  "at": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "OfficeResidentDetailEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/OfficeResidentDetail" },
           "meta": { "type": "object" }
         }
       },
