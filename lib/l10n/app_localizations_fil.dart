@@ -1215,6 +1215,18 @@ class AppStringsFil extends AppStrings {
   String get applyMessageOffice => 'Magmensahe sa tanggapan';
 
   @override
+  String get applyUnlinkedBody =>
+      'Beripikado ang iyong account, pero hindi pa ito naiuugnay ng MSWDO sa iyong rekord sa tanggapan, kaya hindi pa maipapadala ang aplikasyon mula sa app. Ginagawa nila ito kapag sinuri ang iyong ID, o sa counter: magdala ng valid ID sa tanggapan ng MSWDO at hilinging iugnay ang iyong account sa app. Kapag naiugnay na, bumalik sa pahinang ito para mag-apply.';
+
+  @override
+  String get accountLinkedNote =>
+      'Naiugnay na ang iyong account sa iyong rekord sa MSWDO.';
+
+  @override
+  String get accountNotLinkedNote =>
+      'Hindi pa naiuugnay ang iyong account sa iyong rekord sa MSWDO. Iniuugnay ito ng MSWDO kapag sinuri ang iyong ID, o sa counter.';
+
+  @override
   String get applyDetailsHeading => 'Ang iyong aplikasyon';
 
   @override
@@ -1519,6 +1531,10 @@ class AppStringsFil extends AppStrings {
   @override
   String get verifiedLinkNote =>
       'May isa pang hakbang sa tanggapan: iniuugnay ng MSWDO ang iyong account sa iyong rekord doon, kadalasan kapag sinuri ang iyong ID, o sa counter. Kapag naiugnay na, makikita sa Aking mga hiling ang iyong mga hiling na tulong at puwede ka nang mag-apply ng Tulong sa app.';
+
+  @override
+  String get verifiedLinkedNote =>
+      'Naiugnay na ang iyong account sa iyong rekord sa MSWDO. Makikita sa Aking mga hiling ang iyong mga hiling na tulong, at puwede ka nang mag-apply ng Tulong sa app.';
 
   @override
   String get verifiedApplyStep => 'Mag-apply ng Tulong';

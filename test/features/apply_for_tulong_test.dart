@@ -32,9 +32,13 @@ import 'package:taytay_resident/features/assistance/domain/own_assistance_reques
 import 'package:taytay_resident/features/assistance/presentation/apply_controller.dart';
 import 'package:taytay_resident/features/assistance/presentation/apply_for_tulong_screen.dart';
 import 'package:taytay_resident/features/assistance/presentation/my_requests_canvas.dart';
+import 'package:taytay_resident/features/profile/data/resident_profile_api_repository.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/tulong/data/social_service_api_repository.dart';
 import 'package:taytay_resident/features/tulong/data/social_service_codec.dart';
 import 'package:taytay_resident/features/tulong/domain/social_service.dart';
+import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
 import 'package:taytay_resident/l10n/app_localizations.dart';
 
 import '../support/layout_matrix.dart';
@@ -288,9 +292,52 @@ ApiHttpResponse _error(int status, String code, {Object? details}) =>
       }),
     );
 
+/// `GET /me` as the wizard reads it: [linked] is `linked_to_office_record`,
+/// and [fails] makes the read fail, as a dropped connection would.
+class _Profiles implements ResidentProfileRepository {
+  _Profiles({this.linked, this.fails = false});
+
+  final bool? linked;
+  final bool fails;
+  int reads = 0;
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async {
+    reads++;
+    if (fails) {
+      return const Err<ResidentProfileDetail>(NetworkFailure());
+    }
+    return Ok<ResidentProfileDetail>(
+      ResidentProfileDetail(
+        verificationTier: 'verified',
+        linkedToOfficeRecord: linked,
+      ),
+    );
+  }
+
+  @override
+  Future<Result<ResidentProfileSummary>> loadOwnSummary() async =>
+      const Ok<ResidentProfileSummary>(
+        ResidentProfileSummary(verificationTier: 'verified'),
+      );
+
+  @override
+  Future<Result<void>> updateContactDetails({
+    required ContactDetailsUpdate update,
+    required String idempotencyKey,
+  }) async => const Ok<void>(null);
+
+  @override
+  Future<Result<void>> submitOwnUpdate({
+    required Map<String, Object?> changes,
+    required String idempotencyKey,
+  }) async => const Ok<void>(null);
+}
+
 ApplyController _controller(
   _Assistance assistance, {
   bool verified = true,
+  bool? linked,
   SocialService service = _service,
   List<String>? keys,
 }) {
@@ -300,6 +347,7 @@ ApplyController _controller(
     picker: _Picker(_png()),
     service: service,
     verified: verified,
+    linkedToOfficeRecord: linked,
     sendKey: SendKey(mint: () => keys?[minted++] ?? 'key-${++minted}'),
   );
 }
@@ -323,6 +371,7 @@ Future<_Booted> _boot(
   AccessLevel? level = AccessLevel.verified,
   required String location,
   ApiClient? liveApi,
+  ResidentProfileRepository? profiles,
 }) async {
   tester.view.physicalSize = const Size(420, 2400);
   tester.view.devicePixelRatio = 1;
@@ -375,7 +424,7 @@ Future<_Booted> _boot(
     programRepository: base.programRepository,
     announcementRepository: base.announcementRepository,
     eventRepository: base.eventRepository,
-    residentProfileRepository: base.residentProfileRepository,
+    residentProfileRepository: profiles ?? base.residentProfileRepository,
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: base.verificationRepository,
@@ -1262,6 +1311,8 @@ void main() {
           'about': () async => _controller(_Assistance()),
           'not verified': () async =>
               _controller(_Assistance(), verified: false),
+          'not linked, said up front': () async =>
+              _controller(_Assistance(), linked: false),
           'details with problems': () async {
             final ApplyController c = _controller(_Assistance())
               ..start()
@@ -1347,6 +1398,254 @@ void main() {
     });
   });
 
+  group('the account link, said before anything is typed', () {
+    Future<bool?> decode(Map<String, Object?> me) async {
+      final _Transport transport = _Transport(
+        (ApiRequest request) => Ok(
+          ApiHttpResponse(
+            statusCode: 200,
+            body: jsonEncode(<String, Object?>{
+              'data': me,
+              'meta': <String, Object?>{},
+            }),
+          ),
+        ),
+      );
+      final Result<ResidentProfileDetail> read =
+          await ResidentProfileApiRepository(
+            apiClient: _client(transport),
+          ).loadOwnDetail();
+      expect(transport.requests.single.path, 'me');
+      return switch (read) {
+        Ok(:final ResidentProfileDetail value) => value.linkedToOfficeRecord,
+        Err() => fail('GET /me did not decode'),
+      };
+    }
+
+    Map<String, Object?> me([Object? linked = #missing]) => <String, Object?>{
+      'name': 'Sample Resident',
+      'role': 'verified',
+      'verification_status': 'verified',
+      if (linked != #missing) 'linked_to_office_record': linked,
+    };
+
+    test('GET /me: true and false are read; null, missing and anything '
+        'else are unknown', () async {
+      expect(await decode(me(true)), isTrue);
+      expect(await decode(me(false)), isFalse);
+      expect(await decode(me(null)), isNull);
+      expect(await decode(me()), isNull);
+      // Not a boolean is "not said", never "not linked".
+      expect(await decode(me('false')), isNull);
+      expect(await decode(me(0)), isNull);
+    });
+
+    test('verified and not linked starts on what to do first, with no '
+        'form', () async {
+      final _Assistance assistance = _Assistance();
+      final ApplyController c = _controller(assistance, linked: false);
+      expect(c.stage, ApplyStage.unlinked);
+      expect(c.stepNumber, isNull);
+      c.start();
+      expect(c.stage, ApplyStage.unlinked);
+      expect(c.toDocuments(), isFalse);
+      expect(c.back(), isFalse);
+      await c.submit();
+      expect(c.stage, ApplyStage.unlinked);
+      expect(assistance.applies, isEmpty);
+    });
+
+    test('linked, or not said, keeps the four steps; unverified comes '
+        'first', () {
+      expect(_controller(_Assistance(), linked: true).stage, ApplyStage.about);
+      expect(_controller(_Assistance()).stage, ApplyStage.about);
+      expect(
+        _controller(_Assistance(), verified: false, linked: false).stage,
+        ApplyStage.notVerified,
+      );
+    });
+
+    testWidgets('the wizard says it up front and offers no form', (
+      tester,
+    ) async {
+      final _Profiles profiles = _Profiles(linked: false);
+      final _Booted booted = await _boot(
+        tester,
+        location: _apply,
+        profiles: profiles,
+      );
+      expect(profiles.reads, greaterThanOrEqualTo(1));
+      expect(find.byKey(const Key('apply-unlinked')), findsOneWidget);
+      expect(find.text('The MSWDO needs to link your account'), findsOneWidget);
+      expect(
+        find.textContaining('ask them to link your app account'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('come back to this page'), findsOneWidget);
+      // Nothing was typed, so nothing is said about a send.
+      expect(find.textContaining('Nothing was sent.'), findsNothing);
+      expect(find.text('Step 1 of 4'), findsNothing);
+      expect(find.byKey(const Key('apply-start')), findsNothing);
+      expect(find.byKey(const Key('apply-purpose')), findsNothing);
+      expect(find.byKey(const Key('apply-try-again')), findsNothing);
+      expect(find.byKey(const Key('apply-back-to-programme')), findsOneWidget);
+      expect(
+        find.text('You can also apply in person at the MSWDO.'),
+        findsOneWidget,
+      );
+      expect(booted.assistance.applies, isEmpty);
+    });
+
+    testWidgets('linked opens the first step as before', (tester) async {
+      await _boot(tester, location: _apply, profiles: _Profiles(linked: true));
+      expect(find.byKey(const Key('apply-about')), findsOneWidget);
+      expect(find.byKey(const Key('apply-unlinked')), findsNothing);
+    });
+
+    testWidgets('an older API (null) finds out at the send, as before', (
+      tester,
+    ) async {
+      final _Booted booted = await _boot(
+        tester,
+        location: _apply,
+        profiles: _Profiles(),
+      );
+      expect(find.byKey(const Key('apply-about')), findsOneWidget);
+      booted.assistance.failures.add(const ConflictFailure());
+      await _tap(tester, find.byKey(const Key('apply-start')));
+      await tester.enterText(
+        find.byKey(const Key('apply-purpose')),
+        'Sample school fees for my daughter',
+      );
+      await tester.pumpAndSettle();
+      await _tap(tester, find.byKey(const Key('apply-details-next')));
+      await _tap(
+        tester,
+        find.byKey(const Key('apply-add-sample-school-enrolment')),
+      );
+      await _tap(tester, find.byKey(const Key('apply-source-camera')));
+      await _tap(tester, find.byKey(const Key('apply-documents-next')));
+      await _tap(tester, find.byKey(const Key('apply-send')));
+      expect(find.byKey(const Key('apply-not-linked')), findsOneWidget);
+      expect(find.textContaining('Nothing was sent.'), findsOneWidget);
+    });
+
+    testWidgets('a failed GET /me is unknown, never "not linked"', (
+      tester,
+    ) async {
+      await _boot(tester, location: _apply, profiles: _Profiles(fails: true));
+      expect(find.byKey(const Key('apply-about')), findsOneWidget);
+      expect(find.byKey(const Key('apply-unlinked')), findsNothing);
+    });
+
+    testWidgets('an unverified resident is told to verify, not about the '
+        'link', (tester) async {
+      await _boot(
+        tester,
+        level: AccessLevel.unverified,
+        location: _apply,
+        profiles: _Profiles(linked: false),
+      );
+      expect(find.byKey(const Key('apply-not-verified')), findsOneWidget);
+      expect(find.byKey(const Key('apply-unlinked')), findsNothing);
+    });
+
+    testWidgets('the Tulong card says when the account is not linked', (
+      tester,
+    ) async {
+      await _boot(
+        tester,
+        location: '/programs/educational-assistance',
+        profiles: _Profiles(linked: false),
+      );
+      expect(find.byKey(const Key('tulong-apply')), findsOneWidget);
+      expect(
+        find.text(
+          'Your account is not yet linked to your MSWDO record. The MSWDO '
+          'links it when it reviews your ID, or at the counter.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the Tulong card says linked when it is', (tester) async {
+      await _boot(
+        tester,
+        location: '/programs/educational-assistance',
+        profiles: _Profiles(linked: true),
+      );
+      expect(
+        find.text('Your account is linked to your MSWDO record.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('the Tulong card says nothing of the link when not said', (
+      tester,
+    ) async {
+      await _boot(
+        tester,
+        location: '/programs/educational-assistance',
+        profiles: _Profiles(),
+      );
+      expect(find.byKey(const Key('tulong-apply')), findsOneWidget);
+      expect(find.byKey(const Key('tulong-apply-linked')), findsNothing);
+      expect(find.byKey(const Key('tulong-apply-not-linked')), findsNothing);
+    });
+
+    testWidgets('an empty My requests names an unlinked account only', (
+      tester,
+    ) async {
+      Future<void> pump(bool? linked) => tester.pumpWidget(
+        layoutHost(
+          MyRequestsCanvas(
+            environment: AppEnvironment.dev,
+            items: const <OwnAssistanceRequest>[],
+            accountLinked: linked,
+          ),
+          scrollable: false,
+        ),
+      );
+      await pump(false);
+      expect(find.byKey(const Key('my-requests-empty')), findsOneWidget);
+      expect(find.byKey(const Key('my-requests-not-linked')), findsOneWidget);
+      await pump(true);
+      expect(find.byKey(const Key('my-requests-not-linked')), findsNothing);
+      await pump(null);
+      expect(find.byKey(const Key('my-requests-not-linked')), findsNothing);
+    });
+
+    testWidgets('the Verified page says linked, or explains the link', (
+      tester,
+    ) async {
+      Future<void> pump(bool? linked) => tester.pumpWidget(
+        layoutHost(
+          VerifiedStatusPage(linkedToOfficeRecord: linked),
+          scrollable: false,
+        ),
+      );
+      await pump(true);
+      expect(
+        find.textContaining('Your account is linked to your MSWDO record.'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('One more step happens at the office'),
+        findsNothing,
+      );
+      await pump(false);
+      expect(
+        find.textContaining('One more step happens at the office'),
+        findsOneWidget,
+      );
+      await pump(null);
+      expect(
+        find.textContaining('One more step happens at the office'),
+        findsOneWidget,
+      );
+    });
+  });
+
   group('every new string speaks Filipino too', () {
     test('the Tulong card, the steps and the states', () {
       final AppStrings en = lookupAppStrings(const Locale('en'));
@@ -1368,6 +1667,10 @@ void main() {
             (AppStrings s) => s.myRequestsChannelOnline,
             (AppStrings s) => s.myRequestMissingHeading,
             (AppStrings s) => s.verifiedLinkNote,
+            (AppStrings s) => s.verifiedLinkedNote,
+            (AppStrings s) => s.applyUnlinkedBody,
+            (AppStrings s) => s.accountLinkedNote,
+            (AppStrings s) => s.accountNotLinkedNote,
           ];
       for (final String Function(AppStrings) key in keys) {
         expect(key(fil), isNot(key(en)));

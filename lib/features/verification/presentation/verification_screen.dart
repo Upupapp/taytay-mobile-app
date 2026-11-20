@@ -77,6 +77,9 @@ class _VerificationScreenState extends State<VerificationScreen>
   /// `verification_method` and `verification_decided_at` from `GET /me`.
   VerificationMethod? _method;
   DateTime? _decidedAt;
+
+  /// `linked_to_office_record` from `GET /me` (D-226). Null until it answers.
+  bool? _linked;
   bool _tierReady = false;
   String _idType = 'philid';
   CapturedDocument? _front;
@@ -142,6 +145,7 @@ class _VerificationScreenState extends State<VerificationScreen>
         _accountCreated = _stamp(value.createdAt);
         _method = value.verificationMethod;
         _decidedAt = value.verificationDecidedAt;
+        _linked = value.linkedToOfficeRecord;
         _tierReady = true;
       });
       return;
@@ -268,6 +272,7 @@ class _VerificationScreenState extends State<VerificationScreen>
         onTulong: () => context.goNamed(AppRoute.programs.routeName),
         onMyRequests: () => context.pushNamed(AppRoute.myRequests.routeName),
         verifiedOn: reviewed,
+        linkedToOfficeRecord: _linked,
         method: VerificationMethodCopy.of(_method),
         replaced: status?.supersededInPerson == true
             ? VerificationMethodCopy.replaced(

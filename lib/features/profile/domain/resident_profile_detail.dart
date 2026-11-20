@@ -38,6 +38,7 @@ class ResidentProfileDetail {
     this.createdAt,
     this.verificationDecidedAt,
     this.verificationMethod,
+    this.linkedToOfficeRecord,
   });
 
   /// Only fields this app names. Anything else was dropped at the decoder.
@@ -100,6 +101,16 @@ class ResidentProfileDetail {
   /// some other way, from an older server, or for a value this build does not
   /// know. It describes; it grants nothing.
   final VerificationMethod? verificationMethod;
+
+  /// `linked_to_office_record` on `GET /me` (backend `ab2c2b7`): whether the
+  /// MSWDO has linked this account to her registry record, which applying for
+  /// Tulong and My requests need (ADR 0004, D-226).
+  ///
+  /// Null when the server did not say: a staff account, an older API, or a
+  /// value that is not a boolean. Null is "unknown", never "not linked": a
+  /// screen that reads null behaves as it did before the flag existed. It
+  /// describes; it grants nothing — the server refuses an unlinked send.
+  final bool? linkedToOfficeRecord;
 
   /// Who may change [field], preferring the office's answer.
   ///

@@ -20,6 +20,7 @@ import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../../shared/widgets/taytay_states.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../domain/social_service.dart';
 import '../domain/social_service_repository.dart';
 import 'tulong_canvas.dart';
@@ -53,6 +54,12 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
   bool _started = false;
   bool _reading = false;
 
+  /// `linked_to_office_record` from `GET /me`, read only for a verified
+  /// resident on a page that takes applications. Null is "not said" (a
+  /// guest, an older API, a failed read), and the Apply card then says
+  /// nothing about the link (D-226).
+  bool? _linked;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -64,6 +71,33 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     listenLive(AppDependencies.of(context).live, const <String>{
       LiveTopics.services,
     }, () => unawaited(_load(quiet: true)));
+    // The office links the account on ID review or at the counter; the card
+    // says so without a restart.
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.account,
+    }, () => unawaited(_loadLink()));
+  }
+
+  /// Whether the MSWDO has linked the account, for the Apply card. Quiet: a
+  /// failed read leaves the card as it was.
+  Future<void> _loadLink() async {
+    final SocialService? service = _service;
+    if (service == null || !service.takesApplications) return;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final bool verified =
+        AccessPolicy.evaluate(
+              session: dependencies.session.state,
+              requirement: ResidentIntentKind.applyForService.requirement,
+            )
+            is AccessAllowed;
+    if (!verified) return;
+    final Result<ResidentProfileDetail> me = await dependencies
+        .residentProfileRepository
+        .loadOwnDetail();
+    if (!mounted) return;
+    if (me case Ok(:final ResidentProfileDetail value)) {
+      setState(() => _linked = value.linkedToOfficeRecord);
+    }
   }
 
   SocialServiceRepository get _repository =>
@@ -91,11 +125,13 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     if (!mounted) return;
     switch (result) {
       case Ok<SocialService>(:final value):
+        final bool first = _service == null;
         setState(() {
           _service = value;
           _missing = false;
           _failure = null;
         });
+        if (first) unawaited(_loadLink());
       case Err<SocialService>(:final failure):
         final bool gone = failure is NotFoundFailure;
         if (quiet && !gone) return;
@@ -251,6 +287,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
           onOffice: _office,
           onShare: _share,
           onApply: service.takesApplications ? () => unawaited(_apply()) : null,
+          accountLinked: _linked,
           loadHero: AppDependencies.of(context).config.usesMockData
               ? null
               : AppDependencies.of(context).mediaBytes.serviceHero,

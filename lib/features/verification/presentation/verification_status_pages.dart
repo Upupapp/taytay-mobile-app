@@ -172,6 +172,7 @@ class VerifiedStatusPage extends StatelessWidget {
     this.method = '',
     this.replaced = '',
     this.completeness,
+    this.linkedToOfficeRecord,
     super.key,
   });
 
@@ -180,6 +181,10 @@ class VerifiedStatusPage extends StatelessWidget {
   final VoidCallback? onProfile;
   final VoidCallback? onDigitalId;
   final VoidCallback? onMessage;
+
+  /// `linked_to_office_record` from `GET /me` (D-226). True says the account
+  /// is linked; false and unknown keep the note that explains the link.
+  final bool? linkedToOfficeRecord;
 
   /// Opens the document-request catalogue.
   final VoidCallback? onRequestDocuments;
@@ -290,7 +295,9 @@ class VerifiedStatusPage extends StatelessWidget {
           SoftNote(
             key: const Key('verified-link-note'),
             live: false,
-            message: s.verifiedLinkNote,
+            message: linkedToOfficeRecord == true
+                ? s.verifiedLinkedNote
+                : s.verifiedLinkNote,
           ),
           const SizedBox(height: Spacing.section),
           SettingsList(

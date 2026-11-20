@@ -1197,6 +1197,18 @@ class AppStringsEn extends AppStrings {
   String get applyMessageOffice => 'Message the office';
 
   @override
+  String get applyUnlinkedBody =>
+      'Your account is verified, but the MSWDO has not yet linked it to your record at the office, so an application from the app cannot be sent yet. It does this when it reviews your ID, or at the counter: bring a valid ID to the MSWDO and ask them to link your app account. Once it has, come back to this page to apply.';
+
+  @override
+  String get accountLinkedNote =>
+      'Your account is linked to your MSWDO record.';
+
+  @override
+  String get accountNotLinkedNote =>
+      'Your account is not yet linked to your MSWDO record. The MSWDO links it when it reviews your ID, or at the counter.';
+
+  @override
   String get applyDetailsHeading => 'Your application';
 
   @override
@@ -1498,6 +1510,10 @@ class AppStringsEn extends AppStrings {
   @override
   String get verifiedLinkNote =>
       'One more step happens at the office: the MSWDO links your account to your record there, usually when it reviews your ID, or at the counter. Once it has, My requests shows your assistance requests and you can apply for Tulong in the app.';
+
+  @override
+  String get verifiedLinkedNote =>
+      'Your account is linked to your MSWDO record. My requests shows your assistance requests, and you can apply for Tulong in the app.';
 
   @override
   String get verifiedApplyStep => 'Apply for Tulong';

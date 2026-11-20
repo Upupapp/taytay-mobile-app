@@ -2156,6 +2156,24 @@ abstract class AppStrings {
   /// **'Message the office'**
   String get applyMessageOffice;
 
+  /// The Apply wizard's first step when GET /me said linked_to_office_record is false, under applyNotLinkedTitle and before any form (D-226). Nothing was typed, so it says nothing about answers kept. The Filipino text was written by Claude in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is verified, but the MSWDO has not yet linked it to your record at the office, so an application from the app cannot be sent yet. It does this when it reviews your ID, or at the counter: bring a valid ID to the MSWDO and ask them to link your app account. Once it has, come back to this page to apply.'**
+  String get applyUnlinkedBody;
+
+  /// On a Tulong page's Apply card when GET /me said linked_to_office_record is true (D-226). The Filipino text was written by Claude in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is linked to your MSWDO record.'**
+  String get accountLinkedNote;
+
+  /// On a Tulong page's Apply card, and under an empty My requests, when GET /me said linked_to_office_record is false (D-226). Never shown when the flag is unknown. The Filipino text was written by Claude in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is not yet linked to your MSWDO record. The MSWDO links it when it reviews your ID, or at the counter.'**
+  String get accountNotLinkedNote;
+
   /// Step 2 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
@@ -2671,6 +2689,12 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'One more step happens at the office: the MSWDO links your account to your record there, usually when it reviews your ID, or at the counter. Once it has, My requests shows your assistance requests and you can apply for Tulong in the app.'**
   String get verifiedLinkNote;
+
+  /// The Verified status page in place of verifiedLinkNote when GET /me said linked_to_office_record is true (D-226). The Filipino text was written by Claude in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is linked to your MSWDO record. My requests shows your assistance requests, and you can apply for Tulong in the app.'**
+  String get verifiedLinkedNote;
 
   /// Verified page: a 'You can now' line (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///

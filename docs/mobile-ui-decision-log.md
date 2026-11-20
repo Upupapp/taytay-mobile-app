@@ -4420,8 +4420,11 @@ from the keyboard to the wire because a peso amount that drifts by a centavo is 
 cannot reconcile. A survivor's phone may not be hers alone, so nothing the app says after she sends
 may depend on whether the request will be shown.
 
-**Known gaps (the API's, not guessed around).** No read says whether the account is linked; the
-app learns it from the `409` at the send, so the first step explains the link to everybody. No
+**Known gaps (the API's, not guessed around).** *Closed 2026-11-20:* `GET /me` now says
+`linked_to_office_record` (backend `ab2c2b7`), so a verified resident the MSWDO has not linked is
+told so on the wizard's first step, before any form, and the Tulong Apply card, an empty My
+requests and the Verified page say whether the account is linked, while a null or absent flag (an
+older API, a failed read) keeps finding out from the `409` at the send. No
 `accepts` block for applications; the app enforces the lower, labelled fallback. Both are noted in
 `docs/frontend/backend-gaps.md`, row 20.
 

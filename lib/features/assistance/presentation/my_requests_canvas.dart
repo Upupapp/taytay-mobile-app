@@ -39,6 +39,7 @@ class MyRequestsCanvas extends StatelessWidget {
     this.onMore,
     this.onOpen,
     this.onBack,
+    this.accountLinked,
     super.key,
   });
 
@@ -59,6 +60,12 @@ class MyRequestsCanvas extends StatelessWidget {
   final VoidCallback? onMore;
   final ValueChanged<OwnAssistanceRequest>? onOpen;
   final VoidCallback? onBack;
+
+  /// `linked_to_office_record` from `GET /me`. Only `false` adds a line, under
+  /// an empty list: an account the office has not linked reads an empty list,
+  /// and saying so names the account's state, never a request's. True and
+  /// unknown leave the empty state as D-223 drew it.
+  final bool? accountLinked;
 
   @override
   Widget build(BuildContext context) {
@@ -82,14 +89,22 @@ class MyRequestsCanvas extends StatelessWidget {
             environment: environment,
             onRetry: onRetry,
           )
-        else if (items.isEmpty)
+        else if (items.isEmpty) ...<Widget>[
           EmptyState(
             key: const Key('my-requests-empty'),
             title: s.myRequestsEmptyTitle,
             message: s.myRequestsEmptyMessage,
             boxed: true,
-          )
-        else ...<Widget>[
+          ),
+          if (accountLinked == false) ...<Widget>[
+            const SizedBox(height: Spacing.lg),
+            SoftNote(
+              key: const Key('my-requests-not-linked'),
+              live: false,
+              message: s.accountNotLinkedNote,
+            ),
+          ],
+        ] else ...<Widget>[
           SettingsList(
             children: <Widget>[
               for (final OwnAssistanceRequest item in items)

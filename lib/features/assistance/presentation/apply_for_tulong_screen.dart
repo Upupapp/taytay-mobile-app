@@ -23,6 +23,7 @@ import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../../issuance/domain/issuance_terms.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../../tulong/domain/social_service.dart';
 import '../domain/assistance_application.dart';
 import 'apply_controller.dart';
@@ -68,9 +69,29 @@ class _ApplyForTulongScreenState extends State<ApplyForTulongScreen> {
       _notOffered = false;
     });
     final AppDependencies dependencies = AppDependencies.of(context);
+    // The one access decision, read the way every gate reads it.
+    final bool verified =
+        AccessPolicy.evaluate(
+              session: dependencies.session.state,
+              requirement: ResidentIntentKind.applyForService.requirement,
+            )
+            is AccessAllowed;
+    // Whether the MSWDO has linked the account is asked beside the page, so
+    // she is told before typing anything she could not send. A failed read
+    // is "not said", and the send's `409` says it instead.
+    final Future<Result<ResidentProfileDetail>>? me = verified
+        ? dependencies.residentProfileRepository.loadOwnDetail()
+        : null;
     final Result<SocialService> result = await dependencies
         .socialServiceRepository
         .loadService(widget.serviceSlug);
+    final bool? linked = me == null
+        ? null
+        : switch (await me) {
+            Ok(:final ResidentProfileDetail value) =>
+              value.linkedToOfficeRecord,
+            Err() => null,
+          };
     if (!mounted) return;
     setState(() {
       switch (result) {
@@ -79,14 +100,8 @@ class _ApplyForTulongScreenState extends State<ApplyForTulongScreen> {
             repository: dependencies.ownAssistanceRepository,
             picker: dependencies.documentPicker,
             service: value,
-            // The one access decision, read the way every gate reads it.
-            verified:
-                AccessPolicy.evaluate(
-                      session: dependencies.session.state,
-                      requirement:
-                          ResidentIntentKind.applyForService.requirement,
-                    )
-                    is AccessAllowed,
+            verified: verified,
+            linkedToOfficeRecord: linked,
           )..addListener(_changed);
         case Ok():
           _notOffered = true;
@@ -215,7 +230,8 @@ class _ApplyForTulongViewState extends State<ApplyForTulongView> {
           canPop:
               stage == ApplyStage.about ||
               stage == ApplyStage.done ||
-              stage == ApplyStage.notVerified,
+              stage == ApplyStage.notVerified ||
+              stage == ApplyStage.unlinked,
           onPopInvokedWithResult: (bool didPop, Object? result) {
             if (!didPop && stage != ApplyStage.sending) _c.back();
           },
@@ -226,6 +242,7 @@ class _ApplyForTulongViewState extends State<ApplyForTulongView> {
             ApplyStage.review || ApplyStage.sending => _review(context),
             ApplyStage.done => _done(context),
             ApplyStage.notVerified => _notVerified(context),
+            ApplyStage.unlinked => _unlinked(context),
             ApplyStage.notLinked => _notLinked(context),
           },
         );
@@ -589,6 +606,55 @@ class _ApplyForTulongViewState extends State<ApplyForTulongView> {
             tone: NoteTone.warning,
             heading: s.applyNotVerifiedTitle,
             message: s.applyNotVerifiedBody,
+          ),
+          const SizedBox(height: Spacing.section),
+          SoftNote(live: false, message: s.applyInPersonAlso),
+        ],
+      ),
+    );
+  }
+
+  /// `GET /me` said the account is not linked, before anything was typed.
+  /// The same explanation the send's `409` gives, without the form: nothing
+  /// she wrote could be sent yet. Never a dead end: the counter, a message to
+  /// the office, and the page to come back to once it is linked.
+  Widget _unlinked(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    final String? office = _c.service.officeSlug;
+    return _page(
+      context,
+      key: const Key('apply-unlinked'),
+      footer: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          if (office != null && office.isNotEmpty) ...<Widget>[
+            PrimaryButton(
+              key: const Key('apply-message-office'),
+              label: s.applyMessageOffice,
+              onPressed: () => context.pushNamed(
+                AppRoute.officeCompose.routeName,
+                pathParameters: <String, String>{'officeId': office},
+              ),
+            ),
+            const SizedBox(height: Spacing.sm),
+          ],
+          SecondaryButton(
+            key: const Key('apply-back-to-programme'),
+            label: s.applyBackToProgramme,
+            onPressed: widget.onLeave,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _ProgrammeCard(service: _c.service),
+          const SizedBox(height: Spacing.formGap),
+          SoftNote(
+            tone: NoteTone.warning,
+            heading: s.applyNotLinkedTitle,
+            message: s.applyUnlinkedBody,
           ),
           const SizedBox(height: Spacing.section),
           SoftNote(live: false, message: s.applyInPersonAlso),

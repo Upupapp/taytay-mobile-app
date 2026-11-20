@@ -9,6 +9,7 @@ import '../../../core/live/live_message.dart';
 import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../domain/own_assistance_repository.dart';
 import '../domain/own_assistance_request.dart';
 import 'my_requests_canvas.dart';
@@ -40,6 +41,10 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
   /// first and keeps the rest.
   int _pages = 0;
 
+  /// `linked_to_office_record` from `GET /me`; null until it answers, and
+  /// when it does not say (D-226).
+  bool? _linked;
+
   OwnAssistanceRepository get _repository =>
       AppDependencies.of(context).ownAssistanceRepository;
 
@@ -55,6 +60,22 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
     listenLive(AppDependencies.of(context).live, const <String>{
       LiveTopics.notifications,
     }, () => unawaited(_loadQuietly()));
+    unawaited(_loadLink());
+    listenLive(AppDependencies.of(context).live, const <String>{
+      LiveTopics.account,
+    }, () => unawaited(_loadLink()));
+  }
+
+  /// Whether the MSWDO has linked the account, said under an empty list.
+  /// Quiet: a failed read leaves the page as it was.
+  Future<void> _loadLink() async {
+    final Result<ResidentProfileDetail> me = await AppDependencies.of(
+      context,
+    ).residentProfileRepository.loadOwnDetail();
+    if (!mounted) return;
+    if (me case Ok(:final ResidentProfileDetail value)) {
+      setState(() => _linked = value.linkedToOfficeRecord);
+    }
   }
 
   Future<void> _load() async {
@@ -171,6 +192,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
       onRetry: _loading ? null : () => unawaited(_load()),
       onMore: () => unawaited(_more()),
       onOpen: _open,
+      accountLinked: _linked,
     );
   }
 }

@@ -65,6 +65,7 @@ class TulongCanvas extends StatelessWidget {
     this.onShare,
     this.onOffice,
     this.onApply,
+    this.accountLinked,
     this.onSearch,
     this.searchController,
     this.loadHero,
@@ -119,6 +120,10 @@ class TulongCanvas extends StatelessWidget {
   /// Opens the Apply wizard (D-226). Drawn only on a page whose `can_apply`
   /// is true; null draws nothing either way.
   final VoidCallback? onApply;
+
+  /// `linked_to_office_record` from `GET /me`: the Apply card says whether the
+  /// MSWDO has linked the account. Null says nothing (D-226).
+  final bool? accountLinked;
   final ValueChanged<String>? onSearch;
   final TextEditingController? searchController;
 
@@ -164,6 +169,7 @@ class TulongCanvas extends StatelessWidget {
               onOffice: onOffice,
               onShare: onShare,
               onApply: onApply,
+              accountLinked: accountLinked,
             )
           : _ListPage(canvas: this),
     );
@@ -511,6 +517,7 @@ class _DetailPage extends StatelessWidget {
     this.onOffice,
     this.onShare,
     this.onApply,
+    this.accountLinked,
   });
 
   final SocialService service;
@@ -522,6 +529,7 @@ class _DetailPage extends StatelessWidget {
   final VoidCallback? onOffice;
   final VoidCallback? onShare;
   final VoidCallback? onApply;
+  final bool? accountLinked;
 
   @override
   Widget build(BuildContext context) {
@@ -534,7 +542,12 @@ class _DetailPage extends StatelessWidget {
   Widget _page(Uint8List? bytes) {
     final Widget sheet = DetailSheet(
       children: service.showsFeaturedLayout
-          ? _featured(service, onShare, onApply: onApply)
+          ? _featured(
+              service,
+              onShare,
+              onApply: onApply,
+              accountLinked: accountLinked,
+            )
           : _standard(
               service,
               onCall: onCall,
@@ -542,6 +555,7 @@ class _DetailPage extends StatelessWidget {
               onMessage: onMessage,
               onOffice: onOffice,
               onApply: onApply,
+              accountLinked: accountLinked,
             ),
     );
     return ColoredBox(
@@ -588,6 +602,7 @@ List<Widget> _standard(
   VoidCallback? onMessage,
   VoidCallback? onOffice,
   VoidCallback? onApply,
+  bool? accountLinked,
 }) {
   final String? eligibility = service.eligibility;
   final String? source = service.legalBasis;
@@ -622,7 +637,7 @@ List<Widget> _standard(
     ),
     if (service.takesApplications && onApply != null) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
-      _ApplyCard(onApply: onApply),
+      _ApplyCard(onApply: onApply, linked: accountLinked),
     ],
     if (service.details.isNotEmpty) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
@@ -685,6 +700,7 @@ List<Widget> _featured(
   SocialService service,
   VoidCallback? onShare, {
   VoidCallback? onApply,
+  bool? accountLinked,
 }) {
   final TulongPresentation? presentation = service.presentation;
   final String headline = service.featuredHeadline ?? service.name;
@@ -705,7 +721,7 @@ List<Widget> _featured(
     ],
     if (service.takesApplications && onApply != null) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
-      _ApplyCard(onApply: onApply),
+      _ApplyCard(onApply: onApply, linked: accountLinked),
     ],
     if (schedule != null || questions != null) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
@@ -741,11 +757,15 @@ List<Widget> _featured(
 
 /// "You can apply in the app" and the Apply button, on a page whose
 /// programme takes applications (D-226). What the wizard asks for, and who
-/// may send it, is said on its first step, not here.
+/// may send it, is said on its first step, not here — except whether the
+/// MSWDO has linked her account, when `GET /me` said (D-226).
 class _ApplyCard extends StatelessWidget {
-  const _ApplyCard({required this.onApply});
+  const _ApplyCard({required this.onApply, this.linked});
 
   final VoidCallback onApply;
+
+  /// Null says nothing: a guest, an unverified resident, an older API.
+  final bool? linked;
 
   @override
   Widget build(BuildContext context) {
@@ -768,6 +788,19 @@ class _ApplyCard extends StatelessWidget {
               height: 1.5,
             ),
           ),
+          if (linked case final bool isLinked) ...<Widget>[
+            const SizedBox(height: Spacing.xs),
+            Text(
+              isLinked ? s.accountLinkedNote : s.accountNotLinkedNote,
+              key: Key(
+                isLinked ? 'tulong-apply-linked' : 'tulong-apply-not-linked',
+              ),
+              style: AppTypography.listDetail.copyWith(
+                color: BrandColors.ink,
+                height: 1.5,
+              ),
+            ),
+          ],
           const SizedBox(height: Spacing.md),
           PrimaryButton(
             key: const Key('tulong-apply'),

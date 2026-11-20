@@ -12,9 +12,13 @@ import '../domain/own_assistance_request.dart';
 /// Where the Apply wizard stands (D-226).
 ///
 /// The four steps a resident moves through — [about], [details],
-/// [documents], [review] — then [sending] and [done]. [notVerified] and
-/// [notLinked] are what the server or the session said instead: each tells
-/// her what to do first, and neither is a dead end.
+/// [documents], [review] — then [sending] and [done]. [notVerified],
+/// [unlinked] and [notLinked] are what the server or the session said
+/// instead: each tells her what to do first, and none is a dead end.
+///
+/// [unlinked] is said up front, before anything is typed, when `GET /me`
+/// said the account is not linked to her office record; [notLinked] is the
+/// send's `409`, after she has answered, from an API that did not say.
 enum ApplyStage {
   about,
   details,
@@ -23,6 +27,7 @@ enum ApplyStage {
   sending,
   done,
   notVerified,
+  unlinked,
   notLinked,
 }
 
@@ -38,11 +43,19 @@ class ApplyController extends ChangeNotifier {
     required DocumentPicker picker,
     required this.service,
     required bool verified,
+    bool? linkedToOfficeRecord,
     SendKey? sendKey,
   }) : _repository = repository,
        _picker = picker,
        _key = sendKey ?? SendKey(),
-       _stage = verified ? ApplyStage.about : ApplyStage.notVerified;
+       _stage = !verified
+           ? ApplyStage.notVerified
+           // Only a server that said "not linked" stops her here. Unknown
+           // (an older API, a failed read) keeps the four steps, and the
+           // send's `409` says it then.
+           : linkedToOfficeRecord == false
+           ? ApplyStage.unlinked
+           : ApplyStage.about;
 
   final OwnAssistanceRepository _repository;
   final DocumentPicker _picker;
@@ -135,7 +148,10 @@ class ApplyController extends ChangeNotifier {
     ApplyStage.details => 2,
     ApplyStage.documents => 3,
     ApplyStage.review || ApplyStage.sending => 4,
-    ApplyStage.done || ApplyStage.notVerified || ApplyStage.notLinked => null,
+    ApplyStage.done ||
+    ApplyStage.notVerified ||
+    ApplyStage.unlinked ||
+    ApplyStage.notLinked => null,
   };
 
   static const int stepCount = 4;
@@ -192,7 +208,8 @@ class ApplyController extends ChangeNotifier {
       ApplyStage.about ||
       ApplyStage.sending ||
       ApplyStage.done ||
-      ApplyStage.notVerified => null,
+      ApplyStage.notVerified ||
+      ApplyStage.unlinked => null,
     };
     if (previous == null) return false;
     _stage = previous;

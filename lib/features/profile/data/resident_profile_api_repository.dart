@@ -258,6 +258,12 @@ class ResidentProfileApiRepository implements ResidentProfileRepository {
         decidedAt is String ? decidedAt : '',
       )?.toUtc(),
       verificationMethod: VerificationMethod.parse(map['verification_method']),
+      // Only a real boolean counts. Anything else is "not said", so an older
+      // API keeps today's behaviour rather than reading as "not linked".
+      linkedToOfficeRecord: switch (map['linked_to_office_record']) {
+        final bool linked => linked,
+        _ => null,
+      },
     );
   }
 
