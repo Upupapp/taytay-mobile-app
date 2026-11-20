@@ -4,6 +4,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/api_envelope.dart';
 import '../../../core/api/api_transport.dart';
 import '../../../core/api/paginated.dart';
+import '../../../core/documents/document_capture.dart';
 import '../../../core/result/result.dart';
 import '../domain/own_assistance_repository.dart';
 import '../domain/own_assistance_request.dart';
@@ -11,7 +12,9 @@ import 'own_assistance_codec.dart';
 
 /// The resident's own assistance requests on the Node API (backend
 /// `d1e997c`, ADR 0003 C, D-223): `GET /me/assistance-requests`, registered
-/// or verified, a cursor page at a time.
+/// or verified, a cursor page at a time. Applying from a Tulong page and
+/// adding documents to a returned request (backend `6794f8d`, ADR 0004
+/// decision 2, D-226) are the two multipart writes.
 class OwnAssistanceApiRepository implements OwnAssistanceRepository {
   const OwnAssistanceApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
@@ -61,6 +64,90 @@ class OwnAssistanceApiRepository implements OwnAssistanceRepository {
     return const Err<OwnAssistanceRequest>(
       NotFoundFailure(debugMessage: 'Not within the pages read.'),
     );
+  }
+
+  @override
+  Future<Result<OwnAssistanceRequest>> apply({
+    required String serviceSlug,
+    required String purpose,
+    int? requestedAmountCentavos,
+    required Map<String, CapturedDocument> files,
+    required String idempotencyKey,
+  }) async {
+    final int? amount = requestedAmountCentavos;
+    final Result<ApiEnvelope<OwnAssistanceRequest?>> response = await _apiClient
+        .send<OwnAssistanceRequest?>(
+          method: HttpMethod.post,
+          path: 'me/assistance-applications',
+          authenticated: true,
+          // Filed means 201. Any other success would show a control number
+          // for a request the server did not say it filed.
+          requiredStatus: 201,
+          idempotencyKey: idempotencyKey,
+          body: <String, Object?>{
+            'service_slug': serviceSlug,
+            'purpose': purpose.trim(),
+            // Whole centavos as digits, as the route reads a multipart field.
+            if (amount != null) 'requested_amount_centavos': '$amount',
+            'idempotency_key': idempotencyKey,
+          },
+          files: _parts(files),
+          decode: OwnAssistanceCodec.row,
+        );
+    return response.flatMap(_present);
+  }
+
+  @override
+  Future<Result<OwnAssistanceRequest>> addDocuments(
+    String requestId, {
+    required Map<String, CapturedDocument> files,
+    required String idempotencyKey,
+  }) async {
+    final Result<ApiEnvelope<OwnAssistanceRequest?>> response = await _apiClient
+        .send<OwnAssistanceRequest?>(
+          method: HttpMethod.post,
+          path: 'me/assistance-requests/$requestId/documents',
+          authenticated: true,
+          requiredStatus: 201,
+          idempotencyKey: idempotencyKey,
+          body: <String, Object?>{'idempotency_key': idempotencyKey},
+          files: _parts(files),
+          decode: OwnAssistanceCodec.row,
+        );
+    return response.flatMap(_present);
+  }
+
+  /// One part per document, named by its code.
+  static List<MultipartFile> _parts(Map<String, CapturedDocument> files) =>
+      <MultipartFile>[
+        for (final MapEntry<String, CapturedDocument> entry in files.entries)
+          MultipartFile(
+            field: entry.key,
+            filename: '${entry.key}.${_extension(entry.value.mimeType)}',
+            bytes: entry.value.bytes,
+            mimeType: entry.value.mimeType,
+          ),
+      ];
+
+  static String _extension(String mimeType) => switch (mimeType) {
+    'application/pdf' => 'pdf',
+    'image/png' => 'png',
+    _ => 'jpg',
+  };
+
+  static Result<OwnAssistanceRequest> _present(
+    ApiEnvelope<OwnAssistanceRequest?> envelope,
+  ) {
+    final OwnAssistanceRequest? value = envelope.data;
+    if (value == null) {
+      return Err<OwnAssistanceRequest>(
+        ContractFailure(
+          requestId: envelope.requestId,
+          debugMessage: 'Assistance response had no readable row.',
+        ),
+      );
+    }
+    return Ok<OwnAssistanceRequest>(value);
   }
 
   Future<Result<Paginated<OwnAssistanceRequest>>> _read({

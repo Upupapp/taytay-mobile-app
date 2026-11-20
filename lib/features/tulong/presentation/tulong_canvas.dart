@@ -4,13 +4,13 @@ import 'package:flutter/material.dart';
 
 import '../../../core/config/app_environment.dart';
 import '../../../core/design/brand_gradients.dart';
-import '../../../core/design/button_styles.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_glyphs.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
 import '../../../core/result/result.dart';
 import '../../../core/time/manila_time.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/blue_header.dart';
 import '../../../shared/widgets/detail_page.dart';
 import '../../../shared/widgets/error_state.dart';
@@ -23,6 +23,7 @@ import '../../../shared/widgets/pill_button_row.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/surface_cards.dart';
+import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_rows.dart';
 import '../../../shared/widgets/taytay_states.dart';
@@ -63,6 +64,7 @@ class TulongCanvas extends StatelessWidget {
     this.onMessage,
     this.onShare,
     this.onOffice,
+    this.onApply,
     this.onSearch,
     this.searchController,
     this.loadHero,
@@ -113,6 +115,10 @@ class TulongCanvas extends StatelessWidget {
   final VoidCallback? onMessage;
   final VoidCallback? onShare;
   final VoidCallback? onOffice;
+
+  /// Opens the Apply wizard (D-226). Drawn only on a page whose `can_apply`
+  /// is true; null draws nothing either way.
+  final VoidCallback? onApply;
   final ValueChanged<String>? onSearch;
   final TextEditingController? searchController;
 
@@ -157,6 +163,7 @@ class TulongCanvas extends StatelessWidget {
               onMessage: onMessage,
               onOffice: onOffice,
               onShare: onShare,
+              onApply: onApply,
             )
           : _ListPage(canvas: this),
     );
@@ -503,6 +510,7 @@ class _DetailPage extends StatelessWidget {
     this.onMessage,
     this.onOffice,
     this.onShare,
+    this.onApply,
   });
 
   final SocialService service;
@@ -513,6 +521,7 @@ class _DetailPage extends StatelessWidget {
   final VoidCallback? onMessage;
   final VoidCallback? onOffice;
   final VoidCallback? onShare;
+  final VoidCallback? onApply;
 
   @override
   Widget build(BuildContext context) {
@@ -525,13 +534,14 @@ class _DetailPage extends StatelessWidget {
   Widget _page(Uint8List? bytes) {
     final Widget sheet = DetailSheet(
       children: service.showsFeaturedLayout
-          ? _featured(service, onShare)
+          ? _featured(service, onShare, onApply: onApply)
           : _standard(
               service,
               onCall: onCall,
               onDirections: onDirections,
               onMessage: onMessage,
               onOffice: onOffice,
+              onApply: onApply,
             ),
     );
     return ColoredBox(
@@ -577,6 +587,7 @@ List<Widget> _standard(
   VoidCallback? onDirections,
   VoidCallback? onMessage,
   VoidCallback? onOffice,
+  VoidCallback? onApply,
 }) {
   final String? eligibility = service.eligibility;
   final String? source = service.legalBasis;
@@ -609,6 +620,10 @@ List<Widget> _standard(
         ),
       ],
     ),
+    if (service.takesApplications && onApply != null) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      _ApplyCard(onApply: onApply),
+    ],
     if (service.details.isNotEmpty) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
       _BodyText(service.details),
@@ -666,7 +681,11 @@ List<Widget> _standard(
 
 /// The featured page: the headline, what it is, how to claim, when and
 /// whom to ask, and Share.
-List<Widget> _featured(SocialService service, VoidCallback? onShare) {
+List<Widget> _featured(
+  SocialService service,
+  VoidCallback? onShare, {
+  VoidCallback? onApply,
+}) {
   final TulongPresentation? presentation = service.presentation;
   final String headline = service.featuredHeadline ?? service.name;
   final List<String> steps = service.claimSteps;
@@ -683,6 +702,10 @@ List<Widget> _featured(SocialService service, VoidCallback? onShare) {
       const _SectionTitle('How to claim'),
       for (var i = 0; i < steps.length; i++)
         _StepLine(number: i + 1, text: steps[i]),
+    ],
+    if (service.takesApplications && onApply != null) ...<Widget>[
+      const SizedBox(height: Spacing.formGap),
+      _ApplyCard(onApply: onApply),
     ],
     if (schedule != null || questions != null) ...<Widget>[
       const SizedBox(height: Spacing.formGap),
@@ -714,6 +737,47 @@ List<Widget> _featured(SocialService service, VoidCallback? onShare) {
       label: Text(presentation?.shareLabel ?? 'Share with a family member'),
     ),
   ];
+}
+
+/// "You can apply in the app" and the Apply button, on a page whose
+/// programme takes applications (D-226). What the wizard asks for, and who
+/// may send it, is said on its first step, not here.
+class _ApplyCard extends StatelessWidget {
+  const _ApplyCard({required this.onApply});
+
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    return SoftCard(
+      key: const Key('tulong-apply-card'),
+      filled: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Text(
+            s.applyCardTitle,
+            style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
+          ),
+          const SizedBox(height: Spacing.xs),
+          Text(
+            s.applyCardBody,
+            style: AppTypography.listDetail.copyWith(
+              color: BrandColors.muted,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: Spacing.md),
+          PrimaryButton(
+            key: const Key('tulong-apply'),
+            label: s.applyCardButton,
+            onPressed: onApply,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 /// The sheet's first row: the large tile beside the badge and the title.

@@ -54,7 +54,41 @@ SocialService? decodeSocialService(
     presentation: allowPresentation
         ? _presentation(json['presentation'])
         : null,
+    takesApplications: json['can_apply'] == true,
+    applicationRequirements: _applicationRequirements(
+      json['application_requirements'],
+    ),
   );
+}
+
+/// `application_requirements` (D-226). A row with no code or no name is
+/// dropped: a file cannot be sent under a field nobody named, and a document
+/// cannot be asked for without saying which. An obligation this build does
+/// not know reads as conditional, never as required.
+List<ApplicationRequirement> _applicationRequirements(Object? raw) {
+  if (raw is! List<Object?>) return const <ApplicationRequirement>[];
+  final List<ApplicationRequirement> rows = <ApplicationRequirement>[];
+  final Set<String> seen = <String>{};
+  for (final Object? item in raw) {
+    if (item is! Map) continue;
+    final Map<Object?, Object?> json = item.cast<Object?, Object?>();
+    final String? code = _text(json['code']);
+    final String? name = _text(json['name']);
+    if (code == null || name == null || !seen.add(code)) continue;
+    rows.add(
+      ApplicationRequirement(
+        code: code,
+        name: name,
+        obligation: switch (_text(json['obligation'])) {
+          'required' => ApplicationObligation.required,
+          'optional' => ApplicationObligation.optional,
+          _ => ApplicationObligation.conditional,
+        },
+        condition: _text(json['condition']),
+      ),
+    );
+  }
+  return List<ApplicationRequirement>.unmodifiable(rows);
 }
 
 List<ServiceRequirement> _requirements(

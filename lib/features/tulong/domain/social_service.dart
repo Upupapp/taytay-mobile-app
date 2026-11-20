@@ -15,6 +15,45 @@ class ServiceRequirement {
   String toString() => 'ServiceRequirement(sample: $sample)';
 }
 
+/// Whether the programme behind a Tulong page asks for a document always,
+/// sometimes, or only in a circumstance it states (DL-76, D-226).
+enum ApplicationObligation {
+  required,
+  optional,
+
+  /// Needed only when [ApplicationRequirement.condition] applies. An
+  /// obligation this build does not know is read as this one: the app never
+  /// guesses that a document is required, and the office says so when it is.
+  conditional,
+}
+
+/// One document the programme behind a Tulong page asks for, when the page
+/// takes applications in the app (`application_requirements`, backend
+/// `6794f8d`, ADR 0004 decision 2).
+///
+/// [code] is the multipart field its file is sent under. [condition] is the
+/// office's own words for when a conditional document is needed. Nothing else
+/// of the programme reaches the app: not its id, funding, guidance or notes.
+@immutable
+class ApplicationRequirement {
+  const ApplicationRequirement({
+    required this.code,
+    required this.name,
+    required this.obligation,
+    this.condition,
+  });
+
+  final String code;
+  final String name;
+  final ApplicationObligation obligation;
+  final String? condition;
+
+  bool get required => obligation == ApplicationObligation.required;
+
+  @override
+  String toString() => 'ApplicationRequirement($code, ${obligation.name})';
+}
+
 /// How a published contact is reached. An unrecognised wire value is
 /// [unknown] and is still shown.
 enum ServiceContactType {
@@ -135,8 +174,8 @@ String canonicalServiceIconKey(String? raw) {
 /// One published social service. `GET /services` and `GET /services/{slug}`.
 ///
 /// Office name, short name, and hours are joined from `GET /offices`. They
-/// are not copied onto the service by the widget. There is no hours field
-/// and no apply route on `Service`.
+/// are not copied onto the service by the widget. There is no hours field.
+/// Whether the page takes applications in the app is [takesApplications] (D-226).
 @immutable
 class SocialService {
   const SocialService({
@@ -167,6 +206,8 @@ class SocialService {
     this.officeHours,
     this.officePhone,
     this.presentation,
+    this.takesApplications = false,
+    this.applicationRequirements = const <ApplicationRequirement>[],
   });
 
   final String id;
@@ -210,6 +251,15 @@ class SocialService {
   final String? officePhone;
 
   final TulongPresentation? presentation;
+
+  /// The page offers Apply: it is live, takes applications in the app, and
+  /// names an office programme that is open (`can_apply`, D-226). False on
+  /// anything the API did not say.
+  final bool takesApplications;
+
+  /// What the programme asks for, read on `GET /services/{slug}` only, and
+  /// empty unless [takesApplications]. A list read carries none.
+  final List<ApplicationRequirement> applicationRequirements;
 
   String get listTitle {
     final String? named = presentation?.listName;
@@ -322,6 +372,8 @@ class SocialService {
       officeHours: hours ?? officeHours,
       officePhone: phone ?? officePhone,
       presentation: presentation,
+      takesApplications: takesApplications,
+      applicationRequirements: applicationRequirements,
     );
   }
 

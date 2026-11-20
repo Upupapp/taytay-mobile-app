@@ -7,6 +7,8 @@ import '../../features/account/presentation/account_home_screen.dart';
 import '../../features/account/presentation/account_pages.dart';
 import '../../features/account/presentation/account_screen.dart';
 import '../../features/account/presentation/security_screen.dart';
+import '../../features/assistance/presentation/add_request_documents_screen.dart';
+import '../../features/assistance/presentation/apply_for_tulong_screen.dart';
 import '../../features/assistance/presentation/my_request_detail_screen.dart';
 import '../../features/assistance/presentation/my_requests_screen.dart';
 import '../../features/auth/domain/code_exchange.dart';
@@ -272,8 +274,9 @@ GoRouter buildAppRouter({
                 name: AppRoute.services.routeName,
                 builder: (context, state) => const DirectoryScreen(),
                 routes: <RouteBase>[
-                  // The old catalogue detail opened an apply screen. Tulong
-                  // is information only, so this address opens that page.
+                  // The old catalogue detail opened an apply screen. This
+                  // address opens the Tulong page, which offers Apply when
+                  // the page takes applications (D-226).
                   GoRoute(
                     path: ':serviceCode',
                     name: AppRoute.serviceDetail.routeName,
@@ -598,8 +601,8 @@ GoRouter buildAppRouter({
           ),
         ],
       ),
-      // The old application address. Tulong is information only, so this
-      // opens the programme page for the same slug.
+      // The old application address opens the programme page for the same
+      // slug, which offers Apply when the page takes applications (D-226).
       GoRoute(
         path: AppRoute.applyForService.path,
         name: AppRoute.applyForService.routeName,
@@ -609,6 +612,14 @@ GoRouter buildAppRouter({
             'programId': code,
           });
         },
+      ),
+      // Applying for Tulong (D-226). Full-screen, like a document request.
+      GoRoute(
+        path: AppRoute.applyForTulong.path,
+        name: AppRoute.applyForTulong.routeName,
+        builder: (context, state) => ApplyForTulongScreen(
+          serviceSlug: state.pathParameters['serviceSlug'] ?? '',
+        ),
       ),
       GoRoute(
         path: AppRoute.household.path,
@@ -634,6 +645,15 @@ GoRouter buildAppRouter({
             builder: (context, state) => MyRequestDetailScreen(
               requestId: state.pathParameters['requestId'] ?? '',
             ),
+            routes: <RouteBase>[
+              GoRoute(
+                path: 'documents',
+                name: AppRoute.addRequestDocuments.routeName,
+                builder: (context, state) => AddRequestDocumentsScreen(
+                  requestId: state.pathParameters['requestId'] ?? '',
+                ),
+              ),
+            ],
           ),
         ],
       ),

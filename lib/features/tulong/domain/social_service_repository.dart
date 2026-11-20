@@ -7,7 +7,9 @@ import 'social_service.dart';
 /// Published social services. Information only.
 ///
 /// Live: `GET /services` and `GET /services/{slug}`. A dev mock reads
-/// `test/fixtures/mock/tulong_services.json`. There is no apply method.
+/// `test/fixtures/mock/tulong_services.json`. Applying is not here: a page
+/// says whether it takes applications (`SocialService.takesApplications`), and the
+/// application is filed through `OwnAssistanceRepository.apply` (D-226).
 ///
 /// **No method takes a search term** (D-59, D-205). `GET /services` accepts
 /// `q`, and this app never sends it: Tulong reads the whole catalogue with

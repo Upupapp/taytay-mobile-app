@@ -1122,4 +1122,416 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get myRequestsSeeAll => 'Tingnan ang lahat ng aking hiling';
+
+  @override
+  String get applyCardTitle => 'Mag-apply sa app';
+
+  @override
+  String get applyCardBody =>
+      'Ipadala mula sa iyong telepono ang iyong aplikasyon at mga dokumento sa tanggapan ng MSWDO. Susuriin ito ng tanggapan gaya ng sa counter.';
+
+  @override
+  String get applyCardButton => 'Mag-apply';
+
+  @override
+  String get applyTitle => 'Mag-apply ng tulong';
+
+  @override
+  String applyStepOf(int step, int total) {
+    return 'Hakbang $step sa $total';
+  }
+
+  @override
+  String get applyLoading => 'Binubuksan ang aplikasyon';
+
+  @override
+  String get applyNotOfferedTitle =>
+      'Hindi tumatanggap ng aplikasyon sa app ang programang ito';
+
+  @override
+  String get applyNotOfferedMessage =>
+      'Pumunta o makipag-ugnayan sa tanggapan ng MSWDO para mag-apply. Nakasulat sa pahina ng programa kung paano.';
+
+  @override
+  String get applyBackToProgramme => 'Bumalik sa programa';
+
+  @override
+  String get applyBack => 'Bumalik';
+
+  @override
+  String get applyNext => 'Susunod';
+
+  @override
+  String get applyAboutHeading => 'Ano ito';
+
+  @override
+  String get applyAboutBody =>
+      'Nag-a-apply ka sa tanggapan ng MSWDO para sa tulong sa ilalim ng programang ito. Babasahin ng tanggapan ang iyong aplikasyon at mga dokumento, gaya ng sa counter, at ito ang magpapasya. Ang pagpapadala ay hindi nangangahulugang aprubado na ito.';
+
+  @override
+  String get applyWhoHeading => 'Sino ang puwedeng mag-apply sa app';
+
+  @override
+  String get applyWhoBody =>
+      'Residenteng beripikado na ng Taytay LGU ang account, at naiugnay na ng MSWDO sa kanyang rekord sa tanggapan. Iniuugnay ng MSWDO ang iyong account kapag sinuri nito ang iyong ID, o sa counter.';
+
+  @override
+  String get applyNeedsHeading => 'Ano ang hinihingi ng tanggapan';
+
+  @override
+  String get applyNeedsNone =>
+      'Walang hinihinging dokumento sa app ang tanggapan para sa programang ito.';
+
+  @override
+  String get applyInPersonAlso =>
+      'Puwede ka ring mag-apply nang personal sa tanggapan ng MSWDO.';
+
+  @override
+  String get applyStart => 'Magsimula';
+
+  @override
+  String get applyNotVerifiedTitle =>
+      'Tapusin muna ang beripikasyon ng iyong account';
+
+  @override
+  String get applyNotVerifiedBody =>
+      'Ang residenteng beripikado na ng Taytay LGU ang pagkakakilanlan lamang ang puwedeng mag-apply sa app. Ipadala ang iyong valid ID at selfie sa app, o magpa-beripika nang personal sa Munisipyo.';
+
+  @override
+  String get applyGoToVerification => 'Pumunta sa beripikasyon';
+
+  @override
+  String get applyNotLinkedTitle =>
+      'Kailangang iugnay ng MSWDO ang iyong account';
+
+  @override
+  String get applyNotLinkedBody =>
+      'Walang naipadala. Beripikado ang iyong account, pero hindi pa ito naiuugnay ng MSWDO sa iyong rekord sa tanggapan. Ginagawa nila ito kapag sinuri ang iyong ID, o sa counter: magdala ng valid ID sa tanggapan ng MSWDO at hilinging iugnay ang iyong account sa app. Mananatili rito ang iyong mga sagot hanggang umalis ka sa pahinang ito.';
+
+  @override
+  String get applyTryAgain => 'Subukang ipadala muli';
+
+  @override
+  String get applyMessageOffice => 'Magmensahe sa tanggapan';
+
+  @override
+  String get applyDetailsHeading => 'Ang iyong aplikasyon';
+
+  @override
+  String get applyPurposeLabel => 'Saan mo kailangan ng tulong?';
+
+  @override
+  String get applyPurposeHint =>
+      'Halimbawa: gamot ng aking ina pagkatapos ng operasyon';
+
+  @override
+  String get applyPurposeHelp =>
+      'Sa sarili mong salita. Babasahin ito ng tanggapan.';
+
+  @override
+  String get applyPurposeEmpty => 'Sabihin kung para saan ang tulong.';
+
+  @override
+  String applyPurposeTooShort(int min) {
+    return 'Dagdagan pa nang kaunti: hindi bababa sa $min titik.';
+  }
+
+  @override
+  String applyPurposeTooLong(int max) {
+    return 'Hanggang $max titik lamang.';
+  }
+
+  @override
+  String get applyAmountLabel => 'Halagang hinihingi (hindi kailangan)';
+
+  @override
+  String get applyAmountHint => 'Halimbawa: 5,000';
+
+  @override
+  String get applyAmountHelp =>
+      'Sa piso. Iwanang blangko kung hindi sigurado. Ang tanggapan ang magpapasya ng halaga.';
+
+  @override
+  String get applyAmountUnreadable =>
+      'Isulat ang halaga sa piso, gaya ng 5000 o 5,000.50.';
+
+  @override
+  String get applyAmountZero =>
+      'Isulat ang halagang higit sa zero, o iwanang blangko.';
+
+  @override
+  String get applyAmountTooLarge =>
+      'Masyadong malaki ang halagang iyan. Iwanang blangko kung hindi sigurado.';
+
+  @override
+  String get applyServerFlagged =>
+      'Hindi ito matanggap ng tanggapan. Tingnan ang isinulat mo.';
+
+  @override
+  String get applyDocumentsHeading => 'Mga dokumento';
+
+  @override
+  String applyDocumentsIntro(int limit) {
+    return 'Isang file bawat isa: litrato (JPEG o PNG) o PDF, hanggang $limit MB bawat isa. Ilatag nang patag ang papel, punuin ang frame, at tiyaking nababasa ang bawat salita.';
+  }
+
+  @override
+  String get applyObligationRequired => 'Kailangan';
+
+  @override
+  String get applyObligationOptional => 'Hindi kailangan';
+
+  @override
+  String get applyObligationConditional => 'Kung ito ay para sa iyo lamang';
+
+  @override
+  String get applyConditionUnstated =>
+      'Sasabihin ng tanggapan kung kailangan mo ito.';
+
+  @override
+  String get applyAddFile => 'Magdagdag ng file';
+
+  @override
+  String get applyRemoveFile => 'Alisin';
+
+  @override
+  String get applyFilePhoto => 'Litrato';
+
+  @override
+  String get applyFilePdf => 'file na PDF';
+
+  @override
+  String applyFileAdded(String kind, String size) {
+    return 'Naidagdag ang $kind · $size';
+  }
+
+  @override
+  String get applyMissingFile => 'Idagdag ang file na ito para magpatuloy.';
+
+  @override
+  String get applyFileFlagged =>
+      'Hindi matanggap ng tanggapan ang file na ito. Piliin itong muli, o pumili ng iba.';
+
+  @override
+  String get applyRequiredMissing =>
+      'Idagdag ang mga dokumentong may markang Kailangan. Kung wala ka nito, puwede ka pa ring mag-apply nang personal sa tanggapan ng MSWDO.';
+
+  @override
+  String applyChooseSource(String name) {
+    return 'Idagdag: $name';
+  }
+
+  @override
+  String get applyNoPicker =>
+      'Hindi makapili ng file ang teleponong ito. Puwede kang mag-apply nang personal sa tanggapan ng MSWDO.';
+
+  @override
+  String get applyReviewHeading => 'Suriin ang iyong aplikasyon';
+
+  @override
+  String get applyReviewProgramme => 'Programa';
+
+  @override
+  String get applyReviewPurpose => 'Para saan ito';
+
+  @override
+  String get applyReviewAmount => 'Halagang hinihingi';
+
+  @override
+  String get applyReviewNoAmount => 'Walang ibinigay';
+
+  @override
+  String get applyReviewDocuments => 'Mga dokumentong ipapadala mo';
+
+  @override
+  String applyReviewFile(String name, String kind, String size) {
+    return '$name: $kind na $size';
+  }
+
+  @override
+  String applyReviewNotSent(String name) {
+    return '$name: hindi ipapadala';
+  }
+
+  @override
+  String get applyEdit => 'Baguhin';
+
+  @override
+  String get applyReviewNote =>
+      'Babasahin ito ng tanggapan at maaaring tawagan o padalhan ka ng mensahe. Hindi mo na ito mababago pagkatapos ipadala. Kung may kailangan pa ang tanggapan, ibabalik nito ang hiling at sasabihin kung ano.';
+
+  @override
+  String get applySend => 'Ipadala ang aplikasyon';
+
+  @override
+  String get applySending => 'Ipinapadala…';
+
+  @override
+  String get applyUnconfirmedTitle => 'Hindi pa kumpirmado';
+
+  @override
+  String get applyUnconfirmedBody =>
+      'Hindi namin makumpirma kung natanggap ang iyong aplikasyon. Ligtas itong ipadala muli: hindi ito maihahain nang dalawang beses. Puwede mo ring tingnan ang Aking mga hiling.';
+
+  @override
+  String get applyOfflineTitle => 'Wala kang koneksyon';
+
+  @override
+  String get applyOfflineBody =>
+      'Walang naipadala. Nandito pa sa telepono ang iyong mga sagot. Kumonekta sa internet at subukang muli.';
+
+  @override
+  String get applyCheckTitle => 'May kailangang tingnang muli';
+
+  @override
+  String get applyCheckBody =>
+      'Walang naipadala. May bahaging hindi matanggap ng tanggapan. Tingnan ang mga may marka.';
+
+  @override
+  String get applyFileTitle => 'May file na hindi matanggap';
+
+  @override
+  String get applyFileBody =>
+      'Walang naipadala. May file na masyadong malaki o hindi mabasa. Pumili ng mas maliit na litrato o ibang file, at subukang muli.';
+
+  @override
+  String get applyRateTitle => 'Masyadong maraming subok';
+
+  @override
+  String get applyRateBody =>
+      'Walang naipadala. Maghintay ng ilang minuto, saka subukang muli.';
+
+  @override
+  String get applyClosedBody =>
+      'Walang naipadala. Huminto na ang tanggapan sa pagtanggap ng aplikasyon sa app para sa programang ito. Pumunta o makipag-ugnayan sa tanggapan ng MSWDO para mag-apply.';
+
+  @override
+  String get applySessionTitle => 'Mag-sign in muli';
+
+  @override
+  String get applySessionBody =>
+      'Walang naipadala. Natapos ang iyong session. Mag-sign in, saka subukang muli.';
+
+  @override
+  String get applyNotAllowedTitle => 'Hindi available para sa account na ito';
+
+  @override
+  String get applyNotAllowedBody =>
+      'Walang naipadala. Hindi bukas sa account na ito ang pag-a-apply sa app. Masasabi pa ng tanggapan ng MSWDO.';
+
+  @override
+  String get applyServerTitle => 'Hindi ito natuloy';
+
+  @override
+  String get applyServerBody =>
+      'Walang naipadala. May nagkaproblema sa aming panig. Subukang muli maya-maya.';
+
+  @override
+  String applyFailureReference(String reference) {
+    return 'Reperensiya: $reference';
+  }
+
+  @override
+  String get applyDoneTitle => 'Natanggap na ng MSWDO ang iyong aplikasyon';
+
+  @override
+  String get applyDoneMessage =>
+      'Itago ang control number na ito. Ginagamit ito ng tanggapan kapag nagtanong ka tungkol sa iyong aplikasyon.';
+
+  @override
+  String get applyDoneControlNumber => 'Numero ng kontrol';
+
+  @override
+  String get applyDoneNote =>
+      'Susuriin ito ng tanggapan sa intake. Makikita sa Aking mga hiling kung nasaan na ang iyong mga hiling. May mga hiling na pinag-uusapan lamang nang personal sa tanggapan ng MSWDO.';
+
+  @override
+  String get applyOpenMyRequests => 'Buksan ang Aking mga hiling';
+
+  @override
+  String get applyBackToTulong => 'Bumalik sa Tulong';
+
+  @override
+  String get addDocsTitle => 'Magdagdag ng dokumento';
+
+  @override
+  String addDocsIntro(int limit) {
+    return 'Ibinalik ng tanggapan ang hiling na ito at kailangan nito ang mga dokumento sa ibaba. Magpadala ng litrato (JPEG o PNG) o PDF ng bawat isa, hanggang $limit MB bawat isa.';
+  }
+
+  @override
+  String get addDocsStateNotSent => 'Hindi pa naipapadala';
+
+  @override
+  String get addDocsStateSendAgain => 'Ipadala itong muli';
+
+  @override
+  String get addDocsStateOther => 'Kailangan';
+
+  @override
+  String get addDocsSend => 'Ipadala ang mga dokumento';
+
+  @override
+  String get addDocsNothingChosen =>
+      'Magdagdag ng kahit isang dokumento para maipadala.';
+
+  @override
+  String get addDocsDoneTitle => 'Naipadala ang mga dokumento';
+
+  @override
+  String get addDocsDoneMessage =>
+      'Natanggap na ito ng tanggapan. Ito na ang magpapatuloy sa iyong hiling.';
+
+  @override
+  String get addDocsBackToRequest => 'Bumalik sa hiling';
+
+  @override
+  String get addDocsMovedTitle => 'Umusad na ang hiling';
+
+  @override
+  String get addDocsMovedBody =>
+      'Walang naipadala. Hindi na naghihintay ng dokumento ang tanggapan para sa hiling na ito. Buksan itong muli para makita kung nasaan na ito.';
+
+  @override
+  String get addDocsUnconfirmedBody =>
+      'Hindi namin makumpirma kung natanggap ang iyong mga dokumento. Ligtas itong ipadala muli: hindi ito maidadagdag nang dalawang beses. Puwede mo ring buksan ang hiling para tingnan.';
+
+  @override
+  String get addDocsNoneNeeded =>
+      'Hindi naghihintay ng dokumento ang tanggapan para sa hiling na ito.';
+
+  @override
+  String get myRequestsChannelOnline => 'In-apply sa app';
+
+  @override
+  String get myRequestsChannelOffice => 'Inihain sa tanggapan';
+
+  @override
+  String get myRequestChannel => 'Paano ito inihain';
+
+  @override
+  String get myRequestMissingHeading =>
+      'Mga dokumentong kailangan ng tanggapan';
+
+  @override
+  String get myRequestAddDocuments => 'Magdagdag ng dokumento';
+
+  @override
+  String get verifiedLinkNote =>
+      'May isa pang hakbang sa tanggapan: iniuugnay ng MSWDO ang iyong account sa iyong rekord doon, kadalasan kapag sinuri ang iyong ID, o sa counter. Kapag naiugnay na, makikita sa Aking mga hiling ang iyong mga hiling na tulong at puwede ka nang mag-apply ng Tulong sa app.';
+
+  @override
+  String get verifiedApplyStep => 'Mag-apply ng Tulong';
+
+  @override
+  String get verifiedApplyStepDetail =>
+      'Mula sa pahina ng programang may Mag-apply';
+
+  @override
+  String get verifiedRequestsStep =>
+      'Subaybayan ang iyong mga hiling na tulong';
+
+  @override
+  String get verifiedRequestsStepDetail =>
+      'Sa Aking mga hiling, kapag naiugnay na ng MSWDO ang iyong account';
 }

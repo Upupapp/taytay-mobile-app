@@ -84,6 +84,12 @@ _sampleArguments = <AppRoute, Map<String, String>>{
   AppRoute.myRequestDetail: <String, String>{
     'requestId': 'ar-sample-scheduled',
   },
+  AppRoute.addRequestDocuments: <String, String>{
+    'requestId': 'ar-sample-returned',
+  },
+  AppRoute.applyForTulong: <String, String>{
+    'serviceSlug': 'educational-assistance',
+  },
 };
 
 /// The PHP-era `/requests` addresses, kept only to redirect (D-225).

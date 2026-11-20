@@ -67,6 +67,55 @@ enum AssistanceStage {
       };
 }
 
+/// How a request reached the office (`channel`, backend `6794f8d`, D-226):
+/// sent from this app, or filed at the office by any of its own channels.
+/// Null on a row that does not say, which is not shown as either.
+enum AssistanceChannel {
+  /// Sent from this app.
+  online,
+
+  /// Filed at the office, by any of its channels.
+  office,
+}
+
+/// Whether a document a returned request still needs was never sent, or was
+/// sent and must be sent again (`missing_documents[].state`, D-226). A state
+/// this build does not know is [other], and is said without a reason.
+enum MissingDocumentState {
+  /// Never sent.
+  notSent,
+
+  /// Sent, and the office needs it again.
+  sendAgain,
+
+  /// A state this build does not know.
+  other,
+}
+
+/// One document the office still needs for a returned request, in the
+/// office's words for the resident (`missing_documents`, D-226). Never the
+/// office's remarks on it: the API sends none.
+@immutable
+class MissingDocument {
+  const MissingDocument({
+    required this.code,
+    required this.name,
+    required this.state,
+    this.instruction,
+  });
+
+  /// The multipart field its file is sent under.
+  final String code;
+  final String name;
+  final MissingDocumentState state;
+
+  /// What to send, as the office wrote it for residents. Null when empty.
+  final String? instruction;
+
+  @override
+  String toString() => 'MissingDocument($code, ${state.name})';
+}
+
 /// One of the resident's own filed assistance requests (D-223, ADR 0003 C).
 ///
 /// **The minimum that says where it stands, and nothing of the office's
@@ -87,6 +136,8 @@ class OwnAssistanceRequest {
     this.payoutScheduledFor,
     this.payoutVenue,
     this.releasedAt,
+    this.channel,
+    this.missingDocuments = const <MissingDocument>[],
   });
 
   /// Opaque. Matches the `subject_id` of an `assistance_request_updated`
@@ -117,6 +168,19 @@ class OwnAssistanceRequest {
 
   /// When it was handed over, once released.
   final DateTime? releasedAt;
+
+  /// Sent from this app, or filed at the office (D-226).
+  final AssistanceChannel? channel;
+
+  /// For a returned request only: what she has not sent, or must send again.
+  /// Empty otherwise, and empty when the office named nothing.
+  final List<MissingDocument> missingDocuments;
+
+  /// She can send documents from the app: the office has returned it and
+  /// named what is missing. The server decides; this only offers the button.
+  bool get takesDocuments =>
+      status.known == AssistanceRequestStatus.returned &&
+      missingDocuments.isNotEmpty;
 
   AssistanceStage get stage => AssistanceStage.of(status.known);
 

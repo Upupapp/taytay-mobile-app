@@ -371,6 +371,26 @@ enum AppRoute {
     parameters: <String>['requestId'],
   ),
 
+  /// Sending the documents a returned request still needs (D-226). Signed in
+  /// is enough to open it: the server decides whether the request is hers and
+  /// returned, and the screen says what it answers.
+  addRequestDocuments(
+    'my-request-documents',
+    '/my-requests/:requestId/documents',
+    AccessRequirement.authenticated,
+    parameters: <String>['requestId'],
+  ),
+
+  /// Applying for Tulong from a page whose `can_apply` is true (D-226). Any
+  /// signed-in resident may open it: its first step tells an unverified one to
+  /// finish verification, and the server decides who may send.
+  applyForTulong(
+    'apply-for-tulong',
+    '/tulong/:serviceSlug/apply',
+    AccessRequirement.authenticated,
+    parameters: <String>['serviceSlug'],
+  ),
+
   /// The resident's own non-sensitive sectors and their sector applications
   /// (D-215). Verified only, like the API's `/me/sectors`. No identifier in
   /// the path: the reads are `/me`-scoped.

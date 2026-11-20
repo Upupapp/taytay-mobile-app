@@ -4325,6 +4325,133 @@ moved from the removed requirements test.
 
 ---
 
+## D-226 — A resident applies for Tulong from the app, and sends what a returned request still needs
+
+**Status: settled.** Category: product / privacy. Recorded 2026-11-20. **Ella (Michaela
+Cailing), who decides for this repository, decided OD-4 and mobile backend gap 20, "apply for
+assistance from the app": build it.** It had been deferred "until Paul approves"; she lifted that.
+The contract is pinned at backend `6794f8d` (ADR 0004, decisions 1 and 2).
+
+**Context.** Tulong was information only. A family that needed help with school fees or medicine
+read the programme page in the app and then took a morning off and a fare to hand over papers the
+office could have received from a phone. The backend now lets a Tulong page name the office
+programme it applies to and say whether it takes applications in the app (`can_apply`), and the
+single read of a page lists what that programme asks for (`application_requirements`: a code, a
+name, `required`, `optional` or `conditional` with the office's condition, DL-76). A verified
+resident whose account the MSWDO has linked to her registry record files with
+`POST /me/assistance-applications`; the request lands in the office's intake queue in `submitted`
+with a `TAY-` control number, channel `online`, and the intake check runs and decides nothing
+(DL-60). Her list now says each request's `channel` and, for a returned request, the documents
+still missing (`not-sent` or `send-again`, with an instruction); she sends them with
+`POST /me/assistance-requests/{id}/documents` while the request stays returned. The account link is
+made by the reviewer who verifies the account, with the ID in hand (ADR 0004, decision 1).
+
+**Decision.**
+
+1. **Apply on the page.** A Tulong page whose `can_apply` is true shows "Apply in the app" and an
+   Apply button; any other page shows nothing new. Apply is gated as Message is: a guest is asked
+   to sign in and an unverified resident to verify, in the gate's existing words
+   (`ResidentIntentKind.applyForService`); a verified resident opens the wizard.
+2. **The wizard** (`/tulong/:serviceSlug/apply`, `AccessRequirement.authenticated`; it reads the
+   page again, and a page that no longer takes applications opens nothing). Four steps, "Step N of
+   4": (a) what this is (the office reads and decides; sending is not approval), who can apply
+   (verified, and linked by the MSWDO when it reviews the ID or at the counter), and what the
+   office asks for, each document with its obligation and condition; (b) the purpose in her words
+   (12 to 2000 characters, trimmed, as the server counts) and an optional amount in pesos, read
+   digit by digit into **integer centavos** (`ApplicationAmount`; commas, `₱` and up to two
+   decimals accepted; a minus sign, three decimals, a zero or more than ten digits of centavos
+   refused; never a `double`); (c) one slot per document: required, optional or "only if this
+   applies to you" with the office's condition, or "the office will tell you" when it wrote none;
+   camera, photo or file; the limit said before any pick; (d) the review, every answer with a
+   Change link. Send carries a fresh idempotency key, kept across retries of the same answers and
+   dropped on any change. An unverified resident who opens the address is told to finish
+   verification, and no form is shown.
+3. **What is sent, and what is not.** The page's slug, the purpose, the amount if she typed one,
+   one file per document under its code, and the key. Never her name, barangay, sector, an
+   eligibility claim or anything the server reads from her account; never a programme id. Files
+   are held to `UploadPolicy.fallback` (8 MB, JPEG, PNG or PDF, checked by their bytes), because the
+   route publishes no `accepts` block: under the server's 10 MB, so a file the app takes is never
+   one the server refuses for its size. Only `required` documents block the review; an optional or
+   conditional one is hers to judge.
+4. **Every answer is said.** Filed: the control number, the programme, and "Where your requests
+   stand is shown in My requests. Some requests are discussed only in person at the MSWDO.", with
+   Open My requests and Back to Tulong. `403 VERIFICATION_REQUIRED`: "Finish verifying your account
+   first", with Go to verification. **`409`: "The MSWDO needs to link your account"**: nothing was
+   sent, the MSWDO links the account when it reviews the ID or at the counter, bring a valid ID and
+   ask; Try sending again, Message the office and the counter are offered and her answers stay
+   while the page is open, so it is never a dead end. A retired record's `409` is said the same
+   way; a reused key cannot happen, because every change drops the key. A `422` goes back to the
+   step that holds what it named (the purpose, the amount, or a document's slot), or says the
+   programme stopped taking applications. Any other failure says plainly "Nothing was sent."
+   (D-087, D-213), except an answer that never came: "Not confirmed yet", and sending again is
+   safe. The server's `message` is never shown.
+5. **My requests** shows how each request was filed ("Applied in the app" or "Filed at the
+   office") on the row and on the request. A returned request that names missing documents shows
+   them in the office's words (the name, "Not sent yet" or "Send it again", the instruction) with
+   Add documents (`/my-requests/:requestId/documents`): one slot per document, at least one file,
+   the same limit and the same failure words, and "The request has moved on" when the office is no
+   longer waiting. Nothing she sent before is removed (DL-77). D-223 holds: no staff name, note,
+   reason, remark or requested amount is shown, and the in-person sentence is on every frame.
+6. **A protected person.** The API files an application from somebody held under `vawc-survivor`
+   or `cicl` (help is not refused because of the protection) but never lists it to her, sends her
+   no notice, and takes no documents for it from the app. **The app says nothing that could reveal
+   it**: the filed screen is the same for everybody, says where requests are shown and that some
+   are discussed only in person, and never promises that this one will appear in the list or that
+   she will be notified. The not-shown and empty states keep giving no reason (D-223).
+7. **Onboarding.** The Verified page now says, in plain words, that the MSWDO links the account to
+   her record at the office, usually when it reviews the ID, or at the counter, and that once it
+   has, My requests shows her requests and she can apply for Tulong; it lists Apply for Tulong and
+   Follow your assistance requests. The pending timeline's last step names applying for Tulong.
+   Three stale lines were corrected: the first-time start card read "Send a new valid ID" (now
+   "Send your valid ID"), the unverified page spoke of completing a resident profile (now the ID
+   and selfie, or in person), and the sign-up's first step promised the Resident Profile "later"
+   (now "once your account is verified"). `docs/taytay-registration-wizard.md` is rewritten for the
+   Node flow, and Article 0's states table says what each state can do.
+8. All new copy is in `app_en.arb` and `app_fil.arb`. The Filipino was written by Claude in D-217's
+   terms, not by a native speaker; a native speaker from the MSWDO should read it during UAT.
+
+**Why.** The office already runs every request through one lifecycle with an intake review, so an
+online application is the same request arriving through another door; the intake officer still
+reads it and moves it on. Asking the reviewer to link the account when the ID is in hand means every
+online request lands on a person the office has identified. Saying the link plainly, on the
+Verified page and at the refusal, is what keeps a verified resident from concluding that the app is
+broken when her list is empty or her application is refused. The amount stays integer centavos
+from the keyboard to the wire because a peso amount that drifts by a centavo is a record the office
+cannot reconcile. A survivor's phone may not be hers alone, so nothing the app says after she sends
+may depend on whether the request will be shown.
+
+**Known gaps (the API's, not guessed around).** No read says whether the account is linked; the
+app learns it from the `409` at the send, so the first step explains the link to everybody. No
+`accepts` block for applications; the app enforces the lower, labelled fallback. Both are noted in
+`docs/frontend/backend-gaps.md`, row 20.
+
+**Rejected.** Probing the route with an empty application to learn whether the account is linked:
+a write used as a read. Showing the amount as required, or suggesting one: the office decides what
+it gives. Opening My requests by itself after the send: it would hide the control number she should
+keep, and the list may not show the request.
+
+**Sources.** Backend `6794f8d` (`openapi/openapi.json` `applyForAssistance`,
+`addMyAssistanceRequestDocuments`, `Service.can_apply`, `Service.application_requirements`,
+`OwnAssistanceRequest.channel` and `missing_documents`; `docs/api/endpoints.md` "Applying from the
+app" and "Assistance requests in the residents' app"; `docs/adr/0004-apply-from-the-app.md`);
+D-087; D-213; D-223; DL-60; DL-76; DL-77. Esperanza-Mobile's service request wizard was read for
+the shape of the steps only (Article 0).
+
+**Tests.** `test/features/apply_for_tulong_test.dart`: the page codec (`can_apply`, each
+obligation, an unknown one read as conditional, rows without a code or a name dropped, a code
+twice), the row codec (`channel`, `missing_documents`, `takesDocuments`), the purpose and amount
+rules, the repository (the multipart fields, files by code, no amount field when none, a `200` is
+not a filing, `403 VERIFICATION_REQUIRED`, `409`, `422` by code, add documents), the controller
+(not verified, details and documents refusing, a refused file, back and edit, filed, not linked
+then sent again, verification required at the send, each `422` to its step, the key kept across an
+unanswered send and changed after an edit), on screen (Apply shown and not, a guest's gate, the
+whole way from the page to My requests, not verified, not linked, a failed send, a page that takes
+none, a returned request's documents sent, a request that moved on, no Add documents when not
+returned), every stage and the returned request at 360, 375 and 430 dp and 200% text, and the new
+strings in Filipino. `test/core/foundation_routes_test.dart`: the two new routes.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4554,5 +4681,6 @@ moved from the removed requirements test.
 | D-223 | My requests (`/my-requests`, any signed-in resident) lists her own filed assistance requests from `GET /me/assistance-requests` (backend `d1e997c`): programme, control number, filing date and the status in her words; one request adds the approved amount (integer centavos), payout date and venue, released date and the date the status changed, found in her list. Every frame says "Some requests are discussed only in person at the MSWDO."; an empty list and a request not shown give no reason. `assistance_request_updated` is "Assistance updates" and opens the request; both screens re-read on `notifications`. No case, staff, note or reason. Per-type opt-out since D-224 | product / privacy | settled |
 | D-224 | Every notification switch controls something real: the notification settings are the one place switches live, one per notice the server sends and honours (backend `769deea`): Identity verification, Assistance updates, Document requests, Event registrations, Sector applications, Office replies, each writing `in_app` and `push` of its own type. No switch for Documents needed, Collecting assistance, Referrals or Event reminders (no notice), nor for Balita or Emergency (nothing sends them; they gate nothing). Settings & privacy links to the notification settings instead of drawing switches. Public advisories and account security stay always sent | product / privacy | settled |
 | D-225 | The old `/requests` pages, their repositories, models, mocks, `UploadGuidance` and `uploadRefusedTitle` are removed; `/requests`, `/requests/:requestId` and `/requests/:requestId/requirements` stay as authenticated addresses that redirect to `/my-requests`; `assistance_requirements` opens the request on My requests; `submitRequirements` keeps no route | product / privacy | settled |
+| D-226 | Apply for Tulong from the app (Ella decided OD-4, gap 20: build it): a page whose `can_apply` is true offers Apply, gated as Message; a four-step wizard (`/tulong/:serviceSlug/apply`): what it is and who can apply (verified, and linked by the MSWDO at ID review or the counter), purpose (12–2000) and an optional amount read into integer centavos, one file per `application_requirements` code (required / optional / conditional, the 8 MB fallback said first), review, `POST /me/assistance-applications` with an idempotency key; a `409` says the MSWDO must link the account and is never a dead end; a failed send says nothing was sent; the filed screen is the same for everybody (VAWC/CICL requests are filed but never listed). My requests shows the channel and, for a returned request, the missing documents with Add documents (`POST /me/assistance-requests/{id}/documents`). The Verified page explains the account link | product / privacy | settled |
 
-**221 decisions — 217 settled, 4 provisional.**
+**222 decisions — 218 settled, 4 provisional.**

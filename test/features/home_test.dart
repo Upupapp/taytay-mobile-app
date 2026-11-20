@@ -9,6 +9,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/links/external_link_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/session/access_level.dart';
@@ -47,6 +48,28 @@ class CountingRequestRepository implements OwnAssistanceRepository {
 
   @override
   Future<Result<OwnAssistanceRequest>> findOwn(String id) async {
+    listCalls++;
+    return const Err<OwnAssistanceRequest>(ServerFailure());
+  }
+
+  @override
+  Future<Result<OwnAssistanceRequest>> apply({
+    required String serviceSlug,
+    required String purpose,
+    int? requestedAmountCentavos,
+    required Map<String, CapturedDocument> files,
+    required String idempotencyKey,
+  }) async {
+    listCalls++;
+    return const Err<OwnAssistanceRequest>(ServerFailure());
+  }
+
+  @override
+  Future<Result<OwnAssistanceRequest>> addDocuments(
+    String requestId, {
+    required Map<String, CapturedDocument> files,
+    required String idempotencyKey,
+  }) async {
     listCalls++;
     return const Err<OwnAssistanceRequest>(ServerFailure());
   }

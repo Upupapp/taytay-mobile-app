@@ -1999,6 +1999,702 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'See all my requests'**
   String get myRequestsSeeAll;
+
+  /// Title of the card on a Tulong page whose can_apply is true (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply in the app'**
+  String get applyCardTitle;
+
+  /// Body of the Apply card on a Tulong page (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Send your application and documents to the MSWDO from your phone. The office reviews it as it does at the counter.'**
+  String get applyCardBody;
+
+  /// The Apply button on a Tulong page (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply'**
+  String get applyCardButton;
+
+  /// Title of every step of the Apply wizard (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for assistance'**
+  String get applyTitle;
+
+  /// The Apply wizard's step counter (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Step {step} of {total}'**
+  String applyStepOf(int step, int total);
+
+  /// Skeleton label while the Tulong page is read for the wizard (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the application'**
+  String get applyLoading;
+
+  /// The wizard opened for a page whose can_apply is false, or that stopped taking applications (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'This programme does not take applications in the app'**
+  String get applyNotOfferedTitle;
+
+  /// Under applyNotOfferedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Visit or contact the MSWDO to apply. The programme page says how.'**
+  String get applyNotOfferedMessage;
+
+  /// Button back to the Tulong page (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the programme'**
+  String get applyBackToProgramme;
+
+  /// The wizard's back button on a step (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get applyBack;
+
+  /// Moves to the next step of the Apply wizard (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get applyNext;
+
+  /// Step 1 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'What this is'**
+  String get applyAboutHeading;
+
+  /// Step 1: what applying in the app is (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'You are applying to the MSWDO for help under this programme. The office reads your application and documents, as it does at the counter, and decides. Sending it does not mean it is approved.'**
+  String get applyAboutBody;
+
+  /// Step 1 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Who can apply in the app'**
+  String get applyWhoHeading;
+
+  /// Step 1: who may apply, and the account link (ADR 0004 decision 1, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'A resident whose account Taytay LGU has verified, and whom the MSWDO has linked to their record at the office. The MSWDO links your account when it reviews your ID, or at the counter.'**
+  String get applyWhoBody;
+
+  /// Step 1 heading over the document list (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'What the office asks for'**
+  String get applyNeedsHeading;
+
+  /// Step 1 when application_requirements is empty (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office asks for no documents in the app for this programme.'**
+  String get applyNeedsNone;
+
+  /// Step 1 and the blocked states: the counter is always another way (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'You can also apply in person at the MSWDO.'**
+  String get applyInPersonAlso;
+
+  /// Step 1 button (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Start'**
+  String get applyStart;
+
+  /// Shown instead of the wizard to a resident who is not verified, or when the server says VERIFICATION_REQUIRED (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Finish verifying your account first'**
+  String get applyNotVerifiedTitle;
+
+  /// Under applyNotVerifiedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Only a resident whose identity Taytay LGU has verified can apply in the app. Send your valid ID and selfie in the app, or verify in person at the Municipal Hall.'**
+  String get applyNotVerifiedBody;
+
+  /// Button to verification (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to verification'**
+  String get applyGoToVerification;
+
+  /// After the server's 409: the verified account is not linked to a registry record (ADR 0004, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The MSWDO needs to link your account'**
+  String get applyNotLinkedTitle;
+
+  /// Under applyNotLinkedTitle. Never a dead end: the counter, messaging the office and sending again are offered (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Your account is verified, but the MSWDO has not yet linked it to your record at the office. It does this when it reviews your ID, or at the counter: bring a valid ID to the MSWDO and ask them to link your app account. Your answers stay here until you leave this page.'**
+  String get applyNotLinkedBody;
+
+  /// After not linked: sends the same application again (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Try sending again'**
+  String get applyTryAgain;
+
+  /// After not linked: opens a message to the programme's office (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Message the office'**
+  String get applyMessageOffice;
+
+  /// Step 2 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Your application'**
+  String get applyDetailsHeading;
+
+  /// Label of the purpose field (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'What do you need help with?'**
+  String get applyPurposeLabel;
+
+  /// Hint in the purpose field. Synthetic example (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: medicines for my mother after her operation'**
+  String get applyPurposeHint;
+
+  /// Helper under the purpose field (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'In your own words. The office reads this.'**
+  String get applyPurposeHelp;
+
+  /// Purpose left empty (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Say what the assistance is for.'**
+  String get applyPurposeEmpty;
+
+  /// Purpose shorter than the server's minimum (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Say a little more: at least {min} characters.'**
+  String applyPurposeTooShort(int min);
+
+  /// Purpose longer than the server's maximum (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep it to {max} characters or fewer.'**
+  String applyPurposeTooLong(int max);
+
+  /// Label of the amount field (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount you are asking for (optional)'**
+  String get applyAmountLabel;
+
+  /// Hint in the amount field (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'For example: 5,000'**
+  String get applyAmountHint;
+
+  /// Helper under the amount field (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'In pesos. Leave it blank if you are not sure. The office decides the amount.'**
+  String get applyAmountHelp;
+
+  /// An amount that cannot be read (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Write the amount in pesos, like 5000 or 5,000.50.'**
+  String get applyAmountUnreadable;
+
+  /// A zero amount (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Write an amount above zero, or leave it blank.'**
+  String get applyAmountZero;
+
+  /// An amount above ten digits of centavos (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'That amount is too large. Leave it blank if you are not sure.'**
+  String get applyAmountTooLarge;
+
+  /// A field the server named in a 422 (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office could not accept this. Check what you wrote.'**
+  String get applyServerFlagged;
+
+  /// Step 3 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get applyDocumentsHeading;
+
+  /// Step 3: the size limit said before any pick (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'One file for each: a photo (JPEG or PNG) or a PDF, up to {limit} MB each. Lay paper flat, fill the frame, and make every word readable.'**
+  String applyDocumentsIntro(int limit);
+
+  /// A required document (DL-76, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Required'**
+  String get applyObligationRequired;
+
+  /// An optional document (DL-76, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Optional'**
+  String get applyObligationOptional;
+
+  /// A conditional document (DL-76, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Only if this applies to you'**
+  String get applyObligationConditional;
+
+  /// A conditional document whose condition the office did not write (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office will tell you if you need this.'**
+  String get applyConditionUnstated;
+
+  /// An empty document slot (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add file'**
+  String get applyAddFile;
+
+  /// Removes a chosen file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get applyRemoveFile;
+
+  /// The kind of a chosen file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Photo'**
+  String get applyFilePhoto;
+
+  /// The kind of a chosen file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get applyFilePdf;
+
+  /// A chosen file's line (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind} added · {size}'**
+  String applyFileAdded(String kind, String size);
+
+  /// A required document with no file, after Next (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add this file to continue.'**
+  String get applyMissingFile;
+
+  /// A document the server named in a 422 (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office could not accept this file. Choose it again, or choose another.'**
+  String get applyFileFlagged;
+
+  /// Under the slots when a required document has no file (ADR 0004: an online applicant cannot excuse one, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add the documents marked Required. If you do not have one, you can still apply in person at the MSWDO.'**
+  String get applyRequiredMissing;
+
+  /// Title of the sheet that asks camera, photo or file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add: {name}'**
+  String applyChooseSource(String name);
+
+  /// The source sheet when the phone offers no picker (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'This phone cannot pick a file. You can apply in person at the MSWDO instead.'**
+  String get applyNoPicker;
+
+  /// Step 4 heading (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your application'**
+  String get applyReviewHeading;
+
+  /// Review and done: the programme (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Programme'**
+  String get applyReviewProgramme;
+
+  /// Review: the purpose (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'What it is for'**
+  String get applyReviewPurpose;
+
+  /// Review: the amount (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Amount asked for'**
+  String get applyReviewAmount;
+
+  /// Review: no amount typed (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'None given'**
+  String get applyReviewNoAmount;
+
+  /// Review: the documents (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents you are sending'**
+  String get applyReviewDocuments;
+
+  /// Review: a document with a file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: {kind}, {size}'**
+  String applyReviewFile(String name, String kind, String size);
+
+  /// Review: a document with no file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'{name}: not sent'**
+  String applyReviewNotSent(String name);
+
+  /// Review: goes back to a step to change it (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Change'**
+  String get applyEdit;
+
+  /// Review: what happens after sending (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office reads it and may call or message you. You cannot change it after sending. If the office needs more, it returns the request and says what.'**
+  String get applyReviewNote;
+
+  /// Review: the send button (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Send application'**
+  String get applySend;
+
+  /// The send button while sending (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get applySending;
+
+  /// A send whose answer never came (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Not confirmed yet'**
+  String get applyUnconfirmedTitle;
+
+  /// Under applyUnconfirmedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm that your application was received. Sending it again is safe: it will not be filed twice. You can also check My requests.'**
+  String get applyUnconfirmedBody;
+
+  /// A send that could not leave the phone (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'You are offline'**
+  String get applyOfflineTitle;
+
+  /// Under applyOfflineTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Your answers are still here on the phone. Connect to the internet and try again.'**
+  String get applyOfflineBody;
+
+  /// A 422 on the send (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Something needs another look'**
+  String get applyCheckTitle;
+
+  /// Under applyCheckTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. The office could not accept part of it. The items marked need checking.'**
+  String get applyCheckBody;
+
+  /// A 413 or refused upload (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'A file could not be accepted'**
+  String get applyFileTitle;
+
+  /// Under applyFileTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. A file was too large or could not be read. Choose a smaller photo or another file, and try again.'**
+  String get applyFileBody;
+
+  /// A 429 (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many tries'**
+  String get applyRateTitle;
+
+  /// Under applyRateTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Wait a few minutes, then try again.'**
+  String get applyRateBody;
+
+  /// A 422 keyed by service_slug, under applyNotOfferedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. The office stopped taking applications for this programme in the app. Visit or contact the MSWDO to apply.'**
+  String get applyClosedBody;
+
+  /// A 401 on the send (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Please sign in again'**
+  String get applySessionTitle;
+
+  /// Under applySessionTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Your session ended. Sign in, then try again.'**
+  String get applySessionBody;
+
+  /// A plain 403 (a staff account) (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available for this account'**
+  String get applyNotAllowedTitle;
+
+  /// Under applyNotAllowedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Applying in the app is not open to this account. The MSWDO can tell you more.'**
+  String get applyNotAllowedBody;
+
+  /// Any other refusal (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'It did not go through'**
+  String get applyServerTitle;
+
+  /// Under applyServerTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. Something went wrong on our side. Try again in a moment.'**
+  String get applyServerBody;
+
+  /// The request id of a failed send, to quote at the support desk (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Reference: {reference}'**
+  String applyFailureReference(String reference);
+
+  /// Done: the control number follows (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The MSWDO has your application'**
+  String get applyDoneTitle;
+
+  /// Done (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep this control number. The office uses it when you ask about your application.'**
+  String get applyDoneMessage;
+
+  /// Done: the label of the control number (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Control number'**
+  String get applyDoneControlNumber;
+
+  /// Done: the same for every resident, so nothing reveals that a request will not be listed (ADR 0004, VAWC and CICL; D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office reviews it at intake. Where your requests stand is shown in My requests. Some requests are discussed only in person at the MSWDO.'**
+  String get applyDoneNote;
+
+  /// Done: primary button (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Open My requests'**
+  String get applyOpenMyRequests;
+
+  /// Done: secondary button (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to Tulong'**
+  String get applyBackToTulong;
+
+  /// Title of the screen that sends documents to a returned request (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add documents'**
+  String get addDocsTitle;
+
+  /// Add documents: what and the size limit, said before any pick (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office returned this request and needs the documents below. Send a photo (JPEG or PNG) or a PDF of each, up to {limit} MB each.'**
+  String addDocsIntro(int limit);
+
+  /// missing_documents state not-sent (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Not sent yet'**
+  String get addDocsStateNotSent;
+
+  /// missing_documents state send-again (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Send it again'**
+  String get addDocsStateSendAgain;
+
+  /// A missing_documents state this build does not know (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Needed'**
+  String get addDocsStateOther;
+
+  /// Add documents: the send button (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Send documents'**
+  String get addDocsSend;
+
+  /// Add documents: send with no file (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add at least one document to send.'**
+  String get addDocsNothingChosen;
+
+  /// Add documents: done (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents sent'**
+  String get addDocsDoneTitle;
+
+  /// Add documents: done (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office has them. It moves your request on from here.'**
+  String get addDocsDoneMessage;
+
+  /// Add documents: back (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the request'**
+  String get addDocsBackToRequest;
+
+  /// A 409: the request is no longer returned (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The request has moved on'**
+  String get addDocsMovedTitle;
+
+  /// Under addDocsMovedTitle (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing was sent. The office is no longer waiting for documents on this request. Open it again to see where it stands.'**
+  String get addDocsMovedBody;
+
+  /// Add documents: a send whose answer never came (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'We could not confirm that your documents were received. Sending them again is safe: they will not be added twice. You can also open the request to check.'**
+  String get addDocsUnconfirmedBody;
+
+  /// Add documents opened for a request with nothing missing (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'The office is not waiting for documents on this request.'**
+  String get addDocsNoneNeeded;
+
+  /// A request filed from this app (channel online, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Applied in the app'**
+  String get myRequestsChannelOnline;
+
+  /// A request filed at the office (channel office, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Filed at the office'**
+  String get myRequestsChannelOffice;
+
+  /// One request: label of the channel fact (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'How it was filed'**
+  String get myRequestChannel;
+
+  /// One returned request: the missing documents (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents the office needs'**
+  String get myRequestMissingHeading;
+
+  /// One returned request: opens Add documents (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Add documents'**
+  String get myRequestAddDocuments;
+
+  /// The Verified status page: the account link that makes My requests and Apply work (ADR 0004 decision 1, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'One more step happens at the office: the MSWDO links your account to your record there, usually when it reviews your ID, or at the counter. Once it has, My requests shows your assistance requests and you can apply for Tulong in the app.'**
+  String get verifiedLinkNote;
+
+  /// Verified page: a 'You can now' line (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Apply for Tulong'**
+  String get verifiedApplyStep;
+
+  /// Under verifiedApplyStep (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'From a programme page that offers Apply'**
+  String get verifiedApplyStepDetail;
+
+  /// Verified page: a 'You can now' line (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow your assistance requests'**
+  String get verifiedRequestsStep;
+
+  /// Under verifiedRequestsStep (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'In My requests, once the MSWDO has linked your account'**
+  String get verifiedRequestsStepDetail;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

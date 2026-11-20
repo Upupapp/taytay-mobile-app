@@ -16,7 +16,8 @@ import 'my_requests_canvas.dart';
 ///
 /// The API has no route for one request, so it is found in her list. A
 /// request the list does not carry is said as not shown here, the same way
-/// whatever the reason.
+/// whatever the reason. A returned request that names what is missing offers
+/// Add documents (D-226).
 class MyRequestDetailScreen extends StatefulWidget {
   const MyRequestDetailScreen({required this.requestId, super.key});
 
@@ -92,6 +93,18 @@ class _MyRequestDetailScreenState extends State<MyRequestDetailScreen>
       loading: _loading,
       onRetry: _loading ? null : () => unawaited(_load()),
       onSeeAll: () => context.goNamed(AppRoute.myRequests.routeName),
+      onAddDocuments: () => unawaited(_addDocuments()),
     );
+  }
+
+  /// Opens Add documents, and reads the request again on the way back, so
+  /// what it shows is what the office now holds (D-226).
+  Future<void> _addDocuments() async {
+    await context.pushNamed(
+      AppRoute.addRequestDocuments.routeName,
+      pathParameters: <String, String>{'requestId': widget.requestId},
+    );
+    if (!mounted) return;
+    await _loadQuietly();
   }
 }

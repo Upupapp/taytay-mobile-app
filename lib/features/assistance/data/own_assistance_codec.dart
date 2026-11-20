@@ -31,7 +31,39 @@ abstract final class OwnAssistanceCodec {
       payoutScheduledFor: _day(data['payout_scheduled_for']),
       payoutVenue: _text(data['payout_venue']),
       releasedAt: _instant(data['released_at']),
+      channel: switch (data['channel']) {
+        'online' => AssistanceChannel.online,
+        'office' => AssistanceChannel.office,
+        _ => null,
+      },
+      missingDocuments: _missing(data['missing_documents']),
     );
+  }
+
+  /// `missing_documents` (D-226). A row with no code or no name is dropped:
+  /// nothing could be sent for it, or said about it.
+  static List<MissingDocument> _missing(Object? raw) {
+    if (raw is! List<dynamic>) return const <MissingDocument>[];
+    final List<MissingDocument> rows = <MissingDocument>[];
+    for (final Object? entry in raw) {
+      if (entry is! Map<String, dynamic>) continue;
+      final String? code = _text(entry['code']);
+      final String? name = _text(entry['name']);
+      if (code == null || name == null) continue;
+      rows.add(
+        MissingDocument(
+          code: code,
+          name: name,
+          state: switch (entry['state']) {
+            'not-sent' => MissingDocumentState.notSent,
+            'send-again' => MissingDocumentState.sendAgain,
+            _ => MissingDocumentState.other,
+          },
+          instruction: _text(entry['instruction']),
+        ),
+      );
+    }
+    return List<MissingDocument>.unmodifiable(rows);
   }
 
   static ServerValue<AssistanceRequestStatus> status(Object? raw) =>

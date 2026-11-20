@@ -253,7 +253,28 @@
       "badge": "MSWDO · EDUCATION",
       "legal_basis": "Requirements: DSWD AICS educational assistance (national). Taytay-specific schedule: SAMPLE.",
       "hero_url": null,
-      "hidden_from_list": false
+      "hidden_from_list": false,
+      "can_apply": true,
+      "application_requirements": [
+        {
+          "code": "sample-school-enrolment",
+          "name": "Sample certificate of enrolment",
+          "obligation": "required",
+          "condition": null
+        },
+        {
+          "code": "sample-grades",
+          "name": "Sample report card",
+          "obligation": "optional",
+          "condition": null
+        },
+        {
+          "code": "sample-indigency",
+          "name": "Sample certificate of indigency",
+          "obligation": "conditional",
+          "condition": "Sample: when the family has no income on record."
+        }
+      ]
     },
     {
       "id": "11111111-1111-4111-8111-111111111106",

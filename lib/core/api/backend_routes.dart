@@ -101,8 +101,18 @@ const List<BackendRoute> backendRoutes = <BackendRoute>[
   BackendRoute('GET', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute('PATCH', 'me', 'resident_profile_api_repository.dart'),
   BackendRoute(
+    'POST',
+    'me/assistance-applications',
+    'own_assistance_api_repository.dart',
+  ),
+  BackendRoute(
     'GET',
     'me/assistance-requests',
+    'own_assistance_api_repository.dart',
+  ),
+  BackendRoute(
+    'POST',
+    'me/assistance-requests/{}/documents',
     'own_assistance_api_repository.dart',
   ),
   BackendRoute('POST', 'me/avatar', 'resident_profile_api_repository.dart'),

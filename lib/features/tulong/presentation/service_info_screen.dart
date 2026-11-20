@@ -26,9 +26,12 @@ import 'tulong_canvas.dart';
 
 /// One social service. The same screen paints every slug.
 ///
-/// Information only. There is no apply control. Message is gated the same
-/// way an office message is: a guest signs in, an unverified resident is
-/// asked to verify, a verified resident opens compose.
+/// Message is gated the same way an office message is: a guest signs in, an
+/// unverified resident is asked to verify, a verified resident opens compose.
+///
+/// A page whose `can_apply` is true also offers Apply (D-226), gated the same
+/// way, which opens the wizard. The wizard's first step says who may apply
+/// and what to do first.
 class ServiceInfoScreen extends StatefulWidget {
   const ServiceInfoScreen({required this.slug, super.key});
 
@@ -174,6 +177,32 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
     );
   }
 
+  /// Gated as Message is: a guest is asked to sign in and an unverified
+  /// resident to verify, in the gate's own words; a verified resident opens
+  /// the wizard, whose first step says who may apply (D-226).
+  Future<void> _apply() async {
+    final SocialService? service = _service;
+    if (service == null || !service.takesApplications) return;
+    final AccessDecision decision = AccessPolicy.evaluate(
+      session: AppDependencies.of(context).session.state,
+      requirement: ResidentIntentKind.applyForService.requirement,
+    );
+    if (decision is! AccessAllowed) {
+      await AccessGateSheet.show(
+        context: context,
+        decision: decision,
+        intent: ResidentIntentKind.applyForService,
+        targetId: service.slug,
+      );
+      return;
+    }
+    if (!mounted) return;
+    await context.pushNamed(
+      AppRoute.applyForTulong.routeName,
+      pathParameters: <String, String>{'serviceSlug': service.slug},
+    );
+  }
+
   void _office() {
     final String? office = _service?.officeSlug;
     if (office == null || office.isEmpty) return;
@@ -221,6 +250,7 @@ class _ServiceInfoScreenState extends State<ServiceInfoScreen>
           onMessage: _message,
           onOffice: _office,
           onShare: _share,
+          onApply: service.takesApplications ? () => unawaited(_apply()) : null,
           loadHero: AppDependencies.of(context).config.usesMockData
               ? null
               : AppDependencies.of(context).mediaBytes.serviceHero,

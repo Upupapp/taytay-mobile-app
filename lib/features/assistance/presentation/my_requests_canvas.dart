@@ -153,6 +153,7 @@ class AssistanceRequestRow extends StatelessWidget {
     final String programme = AssistanceCopy.programme(s, request);
     final String? filed = AssistanceCopy.date(request.filedAt);
     final String filedLine = filed == null ? '' : s.myRequestsFiled(filed);
+    final String? channel = AssistanceCopy.channel(s, request.channel);
     final String status = AssistanceCopy.stage(s, request.stage);
     final Widget row = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: ComponentSizes.listRow),
@@ -194,6 +195,16 @@ class AssistanceRequestRow extends StatelessWidget {
                       ),
                     ),
                   ],
+                  if (channel != null) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    Text(
+                      channel,
+                      key: const Key('my-request-channel-line'),
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.muted,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: Spacing.sm),
                   StageLine(stage: request.stage),
                 ],
@@ -220,6 +231,7 @@ class AssistanceRequestRow extends StatelessWidget {
         programme,
         request.referenceNumber,
         filedLine,
+        channel,
         status,
       ]),
       onTap: onTap,
@@ -287,6 +299,7 @@ class MyRequestDetailCanvas extends StatelessWidget {
     this.onRetry,
     this.onSeeAll,
     this.onBack,
+    this.onAddDocuments,
     super.key,
   });
 
@@ -297,6 +310,10 @@ class MyRequestDetailCanvas extends StatelessWidget {
   final VoidCallback? onRetry;
   final VoidCallback? onSeeAll;
   final VoidCallback? onBack;
+
+  /// Opens Add documents, for a returned request that names what is missing
+  /// (D-226). Null draws no button.
+  final VoidCallback? onAddDocuments;
 
   @override
   Widget build(BuildContext context) {
@@ -330,6 +347,10 @@ class MyRequestDetailCanvas extends StatelessWidget {
           )
         else ...<Widget>[
           _Head(request: request),
+          if (request.takesDocuments) ...<Widget>[
+            const SizedBox(height: Spacing.lg),
+            _Missing(request: request, onAddDocuments: onAddDocuments),
+          ],
           const SizedBox(height: Spacing.lg),
           _Facts(request: request),
         ],
@@ -417,6 +438,12 @@ class _Facts extends StatelessWidget {
             s.myRequestStatusChangedOn,
             AssistanceCopy.date(request.statusChangedAt),
           ),
+          (
+            const Key('my-request-channel'),
+            TaytayIcons.send,
+            s.myRequestChannel,
+            AssistanceCopy.channel(s, request.channel),
+          ),
         ];
     final List<(Key, IconData, String, String)> shown =
         <(Key, IconData, String, String)>[
@@ -437,6 +464,69 @@ class _Facts extends StatelessWidget {
               value: shown[i].$4,
               divider: i < shown.length - 1,
             ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A returned request's documents still needed, in the office's words for
+/// residents, and Add documents (D-226). Never the office's remarks or why it
+/// returned the request: the API sends neither.
+class _Missing extends StatelessWidget {
+  const _Missing({required this.request, this.onAddDocuments});
+
+  final OwnAssistanceRequest request;
+  final VoidCallback? onAddDocuments;
+
+  @override
+  Widget build(BuildContext context) {
+    final AppStrings s = AppStrings.of(context);
+    final VoidCallback? onAdd = onAddDocuments;
+    return SoftCard(
+      key: const Key('my-request-missing'),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Semantics(
+            header: true,
+            child: Text(
+              s.myRequestMissingHeading,
+              style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
+            ),
+          ),
+          for (final MissingDocument document in request.missingDocuments)
+            Padding(
+              key: Key('my-request-missing-${document.code}'),
+              padding: const EdgeInsets.only(top: Spacing.sm),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    '${document.name} · ${AssistanceCopy.missingState(s, document.state)}',
+                    style: AppTypography.bodyStyle.copyWith(
+                      color: BrandColors.ink,
+                    ),
+                  ),
+                  if (document.instruction case final String instruction)
+                    Text(
+                      instruction,
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.muted,
+                        height: 1.5,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          if (onAdd != null) ...<Widget>[
+            const SizedBox(height: Spacing.md),
+            PrimaryButton(
+              key: const Key('my-request-add-documents'),
+              label: s.myRequestAddDocuments,
+              onPressed: onAdd,
+            ),
+          ],
         ],
       ),
     );

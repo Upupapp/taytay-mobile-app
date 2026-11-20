@@ -1107,4 +1107,409 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get myRequestsSeeAll => 'See all my requests';
+
+  @override
+  String get applyCardTitle => 'Apply in the app';
+
+  @override
+  String get applyCardBody =>
+      'Send your application and documents to the MSWDO from your phone. The office reviews it as it does at the counter.';
+
+  @override
+  String get applyCardButton => 'Apply';
+
+  @override
+  String get applyTitle => 'Apply for assistance';
+
+  @override
+  String applyStepOf(int step, int total) {
+    return 'Step $step of $total';
+  }
+
+  @override
+  String get applyLoading => 'Opening the application';
+
+  @override
+  String get applyNotOfferedTitle =>
+      'This programme does not take applications in the app';
+
+  @override
+  String get applyNotOfferedMessage =>
+      'Visit or contact the MSWDO to apply. The programme page says how.';
+
+  @override
+  String get applyBackToProgramme => 'Back to the programme';
+
+  @override
+  String get applyBack => 'Back';
+
+  @override
+  String get applyNext => 'Next';
+
+  @override
+  String get applyAboutHeading => 'What this is';
+
+  @override
+  String get applyAboutBody =>
+      'You are applying to the MSWDO for help under this programme. The office reads your application and documents, as it does at the counter, and decides. Sending it does not mean it is approved.';
+
+  @override
+  String get applyWhoHeading => 'Who can apply in the app';
+
+  @override
+  String get applyWhoBody =>
+      'A resident whose account Taytay LGU has verified, and whom the MSWDO has linked to their record at the office. The MSWDO links your account when it reviews your ID, or at the counter.';
+
+  @override
+  String get applyNeedsHeading => 'What the office asks for';
+
+  @override
+  String get applyNeedsNone =>
+      'The office asks for no documents in the app for this programme.';
+
+  @override
+  String get applyInPersonAlso => 'You can also apply in person at the MSWDO.';
+
+  @override
+  String get applyStart => 'Start';
+
+  @override
+  String get applyNotVerifiedTitle => 'Finish verifying your account first';
+
+  @override
+  String get applyNotVerifiedBody =>
+      'Only a resident whose identity Taytay LGU has verified can apply in the app. Send your valid ID and selfie in the app, or verify in person at the Municipal Hall.';
+
+  @override
+  String get applyGoToVerification => 'Go to verification';
+
+  @override
+  String get applyNotLinkedTitle => 'The MSWDO needs to link your account';
+
+  @override
+  String get applyNotLinkedBody =>
+      'Nothing was sent. Your account is verified, but the MSWDO has not yet linked it to your record at the office. It does this when it reviews your ID, or at the counter: bring a valid ID to the MSWDO and ask them to link your app account. Your answers stay here until you leave this page.';
+
+  @override
+  String get applyTryAgain => 'Try sending again';
+
+  @override
+  String get applyMessageOffice => 'Message the office';
+
+  @override
+  String get applyDetailsHeading => 'Your application';
+
+  @override
+  String get applyPurposeLabel => 'What do you need help with?';
+
+  @override
+  String get applyPurposeHint =>
+      'For example: medicines for my mother after her operation';
+
+  @override
+  String get applyPurposeHelp => 'In your own words. The office reads this.';
+
+  @override
+  String get applyPurposeEmpty => 'Say what the assistance is for.';
+
+  @override
+  String applyPurposeTooShort(int min) {
+    return 'Say a little more: at least $min characters.';
+  }
+
+  @override
+  String applyPurposeTooLong(int max) {
+    return 'Keep it to $max characters or fewer.';
+  }
+
+  @override
+  String get applyAmountLabel => 'Amount you are asking for (optional)';
+
+  @override
+  String get applyAmountHint => 'For example: 5,000';
+
+  @override
+  String get applyAmountHelp =>
+      'In pesos. Leave it blank if you are not sure. The office decides the amount.';
+
+  @override
+  String get applyAmountUnreadable =>
+      'Write the amount in pesos, like 5000 or 5,000.50.';
+
+  @override
+  String get applyAmountZero =>
+      'Write an amount above zero, or leave it blank.';
+
+  @override
+  String get applyAmountTooLarge =>
+      'That amount is too large. Leave it blank if you are not sure.';
+
+  @override
+  String get applyServerFlagged =>
+      'The office could not accept this. Check what you wrote.';
+
+  @override
+  String get applyDocumentsHeading => 'Documents';
+
+  @override
+  String applyDocumentsIntro(int limit) {
+    return 'One file for each: a photo (JPEG or PNG) or a PDF, up to $limit MB each. Lay paper flat, fill the frame, and make every word readable.';
+  }
+
+  @override
+  String get applyObligationRequired => 'Required';
+
+  @override
+  String get applyObligationOptional => 'Optional';
+
+  @override
+  String get applyObligationConditional => 'Only if this applies to you';
+
+  @override
+  String get applyConditionUnstated =>
+      'The office will tell you if you need this.';
+
+  @override
+  String get applyAddFile => 'Add file';
+
+  @override
+  String get applyRemoveFile => 'Remove';
+
+  @override
+  String get applyFilePhoto => 'Photo';
+
+  @override
+  String get applyFilePdf => 'PDF';
+
+  @override
+  String applyFileAdded(String kind, String size) {
+    return '$kind added · $size';
+  }
+
+  @override
+  String get applyMissingFile => 'Add this file to continue.';
+
+  @override
+  String get applyFileFlagged =>
+      'The office could not accept this file. Choose it again, or choose another.';
+
+  @override
+  String get applyRequiredMissing =>
+      'Add the documents marked Required. If you do not have one, you can still apply in person at the MSWDO.';
+
+  @override
+  String applyChooseSource(String name) {
+    return 'Add: $name';
+  }
+
+  @override
+  String get applyNoPicker =>
+      'This phone cannot pick a file. You can apply in person at the MSWDO instead.';
+
+  @override
+  String get applyReviewHeading => 'Check your application';
+
+  @override
+  String get applyReviewProgramme => 'Programme';
+
+  @override
+  String get applyReviewPurpose => 'What it is for';
+
+  @override
+  String get applyReviewAmount => 'Amount asked for';
+
+  @override
+  String get applyReviewNoAmount => 'None given';
+
+  @override
+  String get applyReviewDocuments => 'Documents you are sending';
+
+  @override
+  String applyReviewFile(String name, String kind, String size) {
+    return '$name: $kind, $size';
+  }
+
+  @override
+  String applyReviewNotSent(String name) {
+    return '$name: not sent';
+  }
+
+  @override
+  String get applyEdit => 'Change';
+
+  @override
+  String get applyReviewNote =>
+      'The office reads it and may call or message you. You cannot change it after sending. If the office needs more, it returns the request and says what.';
+
+  @override
+  String get applySend => 'Send application';
+
+  @override
+  String get applySending => 'Sending…';
+
+  @override
+  String get applyUnconfirmedTitle => 'Not confirmed yet';
+
+  @override
+  String get applyUnconfirmedBody =>
+      'We could not confirm that your application was received. Sending it again is safe: it will not be filed twice. You can also check My requests.';
+
+  @override
+  String get applyOfflineTitle => 'You are offline';
+
+  @override
+  String get applyOfflineBody =>
+      'Nothing was sent. Your answers are still here on the phone. Connect to the internet and try again.';
+
+  @override
+  String get applyCheckTitle => 'Something needs another look';
+
+  @override
+  String get applyCheckBody =>
+      'Nothing was sent. The office could not accept part of it. The items marked need checking.';
+
+  @override
+  String get applyFileTitle => 'A file could not be accepted';
+
+  @override
+  String get applyFileBody =>
+      'Nothing was sent. A file was too large or could not be read. Choose a smaller photo or another file, and try again.';
+
+  @override
+  String get applyRateTitle => 'Too many tries';
+
+  @override
+  String get applyRateBody =>
+      'Nothing was sent. Wait a few minutes, then try again.';
+
+  @override
+  String get applyClosedBody =>
+      'Nothing was sent. The office stopped taking applications for this programme in the app. Visit or contact the MSWDO to apply.';
+
+  @override
+  String get applySessionTitle => 'Please sign in again';
+
+  @override
+  String get applySessionBody =>
+      'Nothing was sent. Your session ended. Sign in, then try again.';
+
+  @override
+  String get applyNotAllowedTitle => 'Not available for this account';
+
+  @override
+  String get applyNotAllowedBody =>
+      'Nothing was sent. Applying in the app is not open to this account. The MSWDO can tell you more.';
+
+  @override
+  String get applyServerTitle => 'It did not go through';
+
+  @override
+  String get applyServerBody =>
+      'Nothing was sent. Something went wrong on our side. Try again in a moment.';
+
+  @override
+  String applyFailureReference(String reference) {
+    return 'Reference: $reference';
+  }
+
+  @override
+  String get applyDoneTitle => 'The MSWDO has your application';
+
+  @override
+  String get applyDoneMessage =>
+      'Keep this control number. The office uses it when you ask about your application.';
+
+  @override
+  String get applyDoneControlNumber => 'Control number';
+
+  @override
+  String get applyDoneNote =>
+      'The office reviews it at intake. Where your requests stand is shown in My requests. Some requests are discussed only in person at the MSWDO.';
+
+  @override
+  String get applyOpenMyRequests => 'Open My requests';
+
+  @override
+  String get applyBackToTulong => 'Back to Tulong';
+
+  @override
+  String get addDocsTitle => 'Add documents';
+
+  @override
+  String addDocsIntro(int limit) {
+    return 'The office returned this request and needs the documents below. Send a photo (JPEG or PNG) or a PDF of each, up to $limit MB each.';
+  }
+
+  @override
+  String get addDocsStateNotSent => 'Not sent yet';
+
+  @override
+  String get addDocsStateSendAgain => 'Send it again';
+
+  @override
+  String get addDocsStateOther => 'Needed';
+
+  @override
+  String get addDocsSend => 'Send documents';
+
+  @override
+  String get addDocsNothingChosen => 'Add at least one document to send.';
+
+  @override
+  String get addDocsDoneTitle => 'Documents sent';
+
+  @override
+  String get addDocsDoneMessage =>
+      'The office has them. It moves your request on from here.';
+
+  @override
+  String get addDocsBackToRequest => 'Back to the request';
+
+  @override
+  String get addDocsMovedTitle => 'The request has moved on';
+
+  @override
+  String get addDocsMovedBody =>
+      'Nothing was sent. The office is no longer waiting for documents on this request. Open it again to see where it stands.';
+
+  @override
+  String get addDocsUnconfirmedBody =>
+      'We could not confirm that your documents were received. Sending them again is safe: they will not be added twice. You can also open the request to check.';
+
+  @override
+  String get addDocsNoneNeeded =>
+      'The office is not waiting for documents on this request.';
+
+  @override
+  String get myRequestsChannelOnline => 'Applied in the app';
+
+  @override
+  String get myRequestsChannelOffice => 'Filed at the office';
+
+  @override
+  String get myRequestChannel => 'How it was filed';
+
+  @override
+  String get myRequestMissingHeading => 'Documents the office needs';
+
+  @override
+  String get myRequestAddDocuments => 'Add documents';
+
+  @override
+  String get verifiedLinkNote =>
+      'One more step happens at the office: the MSWDO links your account to your record there, usually when it reviews your ID, or at the counter. Once it has, My requests shows your assistance requests and you can apply for Tulong in the app.';
+
+  @override
+  String get verifiedApplyStep => 'Apply for Tulong';
+
+  @override
+  String get verifiedApplyStepDetail =>
+      'From a programme page that offers Apply';
+
+  @override
+  String get verifiedRequestsStep => 'Follow your assistance requests';
+
+  @override
+  String get verifiedRequestsStepDetail =>
+      'In My requests, once the MSWDO has linked your account';
 }

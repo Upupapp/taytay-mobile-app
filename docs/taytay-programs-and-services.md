@@ -25,14 +25,14 @@ The Tulong tab is a second reader of that same services contract. `/programs`
 and `/programs/:slug` call `GET /api/v1/services` and `GET /api/v1/services/{slug}`.
 Both are public. `GET /api/v1/programs` is still absent from the Node contract.
 `ProgramApiRepository` still declines that call, and Tulong does not make it.
-The pages are information only: there is no apply control. `/services/:serviceCode` and `/apply/:serviceCode` redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone. `Service` publishes
+A page whose `can_apply` is true offers Apply, a four-step wizard at `/tulong/:serviceSlug/apply` that files an assistance application (`POST /api/v1/me/assistance-applications`, D-226); every other page is information only. `/services/:serviceCode` and `/apply/:serviceCode` redirect to `/programs/:slug`. The catalogue detail screen and the assistance intake are gone. `Service` publishes
 `icon_key`, `tile_color`, `badge`, `legal_basis`, `claim_steps`,
 `featured_headline`, `schedule`, `hero_url`, and `hidden_from_list`. Contacts
 are `{type, label|null, value}`. The catalogue omits hidden services.
 `featured=true` returns featured services, including hidden ones, and a hidden
 service still opens by slug. The featured layout needs both a headline and a
 claim step. There is still no hours field on `Service` (hours come from
-`GET /offices`), no apply route, no SAMPLE flag, and no saved-at. `hero_url`
+`GET /offices`), no SAMPLE flag, and no saved-at. `can_apply` and, on the single read, `application_requirements` say whether and how a page takes applications (D-226). `hero_url`
 is null until an image is stored; this app does not fetch
 `GET /services/{slug}/hero`. Staging and production refuse mock mode.
 
@@ -144,7 +144,7 @@ app.
 
 The catalogue detail and the assistance intake are no longer routed.
 `/services/:serviceCode` and `/apply/:serviceCode` open the Tulong page, which
-has no apply control.
+offers Apply only when the page takes applications (D-226), gated as Message is.
 
 | Session | Tapping "How to apply" |
 | --- | --- |

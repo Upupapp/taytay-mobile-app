@@ -59,6 +59,23 @@ abstract final class AssistanceCopy {
   static String? date(DateTime? instant) =>
       instant == null ? null : ManilaTime.formatDate(instant);
 
+  /// "Applied in the app" or "Filed at the office" (D-226); null when the
+  /// row does not say.
+  static String? channel(AppStrings s, AssistanceChannel? channel) =>
+      switch (channel) {
+        AssistanceChannel.online => s.myRequestsChannelOnline,
+        AssistanceChannel.office => s.myRequestsChannelOffice,
+        null => null,
+      };
+
+  /// What a missing document's state asks of her (D-226).
+  static String missingState(AppStrings s, MissingDocumentState state) =>
+      switch (state) {
+        MissingDocumentState.notSent => s.addDocsStateNotSent,
+        MissingDocumentState.sendAgain => s.addDocsStateSendAgain,
+        MissingDocumentState.other => s.addDocsStateOther,
+      };
+
   /// `₱5,000.00` from integer centavos, or null.
   static String? amount(int? centavos) =>
       centavos == null ? null : formatPesos(centavos);
