@@ -265,6 +265,8 @@ class _VerificationScreenState extends State<VerificationScreen>
         onMessage: () => context.goNamed(AppRoute.messagesInbox.routeName),
         onRequestDocuments: () =>
             context.pushNamed(AppRoute.issuanceCatalogue.routeName),
+        onTulong: () => context.goNamed(AppRoute.programs.routeName),
+        onMyRequests: () => context.pushNamed(AppRoute.myRequests.routeName),
         verifiedOn: reviewed,
         method: VerificationMethodCopy.of(_method),
         replaced: status?.supersededInPerson == true
@@ -653,7 +655,8 @@ class _VerificationScreenState extends State<VerificationScreen>
           Semantics(
             header: true,
             child: Text(
-              'Send a new valid ID',
+              // A first start: nothing was sent before, so nothing is "new".
+              'Send your valid ID',
               style: AppTypography.sectionTitle.copyWith(
                 color: BrandColors.ink,
               ),

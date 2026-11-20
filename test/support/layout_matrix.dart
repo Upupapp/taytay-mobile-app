@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/l10n/app_locales.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 
 /// The phone widths every redesigned widget and screen must fit
 /// (MOBILE_TASK Phase 3: 360, 375 and 430).
@@ -24,6 +26,10 @@ Widget layoutHost(
   return MaterialApp(
     debugShowCheckedModeBanner: false,
     theme: AppTheme.light(),
+    // The app's strings, in English, so a widget that reads them lays out
+    // here as it does in the app (D-226: the Verified page reads some).
+    localizationsDelegates: AppStrings.localizationsDelegates,
+    supportedLocales: AppLocales.supported,
     home: Builder(
       builder: (context) => MediaQuery(
         data: MediaQuery.of(

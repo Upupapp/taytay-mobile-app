@@ -1,265 +1,102 @@
-# Taytay resident mobile — citizen registration wizard
+# Taytay resident mobile — sign-up and verification
 
-The guided, multi-step registration flow: what it collects, why each field is
-there, which steps are server-gated, and what is deliberately not built.
+How a resident goes from no account to a verified account the MSWDO can serve, on the Node API
+(backend `taytay-backend`, contract pinned in `lib/core/api/backend_baseline.dart`). Rewritten
+20 November 2026 (D-226). The earlier version of this file described a mobile one-time-code wizard
+with a birth date against the retired PHP contract; that flow no longer exists, and git history
+keeps it.
 
-Implemented in `lib/features/registration/` and
-`lib/shared/widgets/form_support.dart`.
+Implemented in `lib/features/auth/presentation/account_wizard_screen.dart` (the sign-up wizard),
+`lib/features/verification/` (the verification status pages) and `lib/features/registration/`
+(barangays and validation).
 
 ---
 
-## 1. What the committed backend actually supports
+## 1. The sign-up wizard (`/register`)
 
-Audited against **`Taytay_Rizal_LGUIDS_Backend@896cec9`**
-(`docs/contracts/frontend-endpoint-matrix.md`, `frontend-backend-gap-list.md`),
-working tree clean. `modules/` still holds only `Shared`, `AccessControl` and
-`ServiceCatalog`.
+One route, `AccountWizardScreen`, with its steps in memory (`_Step`). The order is the server's:
+the Node API makes the profile row on the first `GET /me`, and `POST /auth/email-otp/send` refuses a
+profile with no email, so the account exists before the code is sent.
 
-**The single most important finding: there is no account-creation endpoint.**
-
-The citizen contract is:
-
-| Row | Endpoint | Status |
+| Step | What it asks | What it calls |
 | --- | --- | --- |
-| Request code | `POST /api/v1/auth/otp` `{mobile_number}` → `202` | `planned` |
-| Verify code | `POST /api/v1/auth/otp/verify` `{mobile_number,code}` → `{token,…}` | `planned` |
-| Session bootstrap | `GET /api/v1/me` → actor + `verification_tier` | `planned` |
-| Profile update | `PATCH /api/v1/me/profile` — **contact fields only** | `planned` |
-| Verification status | `GET /api/v1/me/verification` → tier + outstanding steps | `planned` |
-| Submit verification | `POST /api/v1/me/verification/submissions` → `202` | `planned` |
-| Barangay reference | `GET /api/v1/barangays` | `planned` |
+| Personal details | First and last name, mobile (`09…`), barangay picked from `GET /barangays`, street or purok (optional) | Nothing yet. Once the account exists, a change here is saved with `PATCH /me` |
+| Account | Email and password (8 or more characters) | Firebase `createUserWithEmailAndPassword`; `GET /me` (makes the profile row); `PATCH /me` with the name, mobile, email, barangay and street; `POST /auth/email-otp/send`. The email cannot be changed after this step |
+| Email code | The 6-digit code sent to the email, with a resend countdown and a hold screen after too many tries | `POST /auth/email-otp/verify` |
+| Terms and privacy | Two separate ticks, Terms of Use and the Privacy Notice | `GET /app/config` for the current versions, then `POST /me/consents` once for `privacy` and once for `terms` (D-208); the consent gate is checked again (D-187) |
+| Valid ID | ID type, front photo, back photo (optional), and the name check (D-195) | Nothing yet |
+| Selfie | The camera, behind the biometric consent (D-209). Declining, or no published consent text, offers verification in person and "Finish for now" (D-210) | The consent dialog records `kind: biometric` itself |
+| Review | Every answer, each with an edit link that returns to review | `POST /me/verification-requests`, multipart, with an idempotency key (D-213) |
+| Done | "You're all set" | Home |
 
-So a citizen account **comes into existence through the one-time-code
-exchange**, and identity details travel as a *verification submission*, not as
-an account payload. The matrix is also explicit that a citizen *may not edit
-their own eligibility-bearing fields*.
+A resident who leaves part-way signs in later and is picked up where the server says she is:
+consents by `/consent-update` (D-187), the ID and selfie from `/verification` ("Start
+verification"). A submit that finds a request already waiting opens the pending page; one that
+finds the account already verified reads `GET /me` again and goes home.
 
-This shaped the whole feature. A `POST /api/v1/register` carrying demographics
-would have been an invented endpoint, and `RegistrationRepository` therefore has
-**no `createAccount` method** — a test asserts the contract surface is
-OTP + capabilities + barangays + submit.
+## 2. What is not collected, and why
 
-**OTP is in the flow because the contract puts it there**, not because the app
-wanted a code screen (Master Command item 2: "OTP only if contract
-supports/requires it").
+- **No birth date** (D-198; D-195: the app has never collected it). The registry record the office
+  holds has one; the account does not need it.
+- **No sex, civil status, PhilSys number or sector** at sign-up (D-31). Sectors are applied for
+  later, with proof, and decided by a person (D-215).
+- **The name is one string on the account** (`PATCH /me` `name`); the wizard joins the parts it
+  asks for. The office may correct a verified name against the ID it saw (console DL-198).
+- **No account exists without Firebase.** The password is Firebase's; this app never sees it after
+  the call that creates the account.
 
----
+## 3. Verification (`/verification`)
 
-## 2. The steps
+`/verification` reads `GET /me/verification-requests/current` (a `404` is "not started") and the
+tier from `GET /me`, and shows one of four pages (`verification_face.dart`):
 
-| # | Step | Present when |
-| --- | --- | --- |
-| 1 | Contact — mobile number | always |
-| 2 | Confirm code | always (contract authenticates this way) |
-| 3 | Your details — name, birth date | always |
-| 4 | Your address — barangay, street | always |
-| 5 | Terms and privacy | always |
-| 6 | Proof of identity | **only when the server requires it** |
-| 7 | Photo of you | **only when the server requires it AND biometric consent is given** |
-| 8 | Review | always |
-| 9 | Submitting | outcome |
-| 10 | Status and next step | outcome |
+- **Not verified**: start with the ID and the selfie (`POST /me/verification-requests`), or verify
+  in person at the Municipal Hall.
+- **Pending**: the review time from `GET /app/config` (D-200); what became of an erased selfie
+  (D-212).
+- **Needs correction**: the office's per-field notes; photos replaced with
+  `POST …/current/documents`, a message with `POST …/current/corrections`. A rejected request is
+  said here too: there is no separate rejected page.
+- **Verified**: when and how (in the app or in person, D-210), what the resident can now do, and
+  the account link below.
 
-Six input steps in the current build; steps 9 and 10 are outcomes and are
-excluded from "Step 3 of 6", because counting them would tell a resident there
-is more to do than there is.
+The pages re-read when the office acts (D-218).
 
-### Why a wizard rather than one form
+## 4. After verification: the MSWDO links the account to her record
 
-A single screen carrying name, birth date, address, consent checkboxes and two
-file pickers is abandoned far more often, and — more importantly — it presents
-consent as one more checkbox in a wall of inputs. Under RA 10173 consent must be
-*informed*; it cannot be informed if the explanation sits as fine print beside
-twelve other controls.
+Verifying an account says who the resident is. It does not yet say **which record at the office**
+is hers: the registry was kept at the counter long before the app, and a verified account starts
+unconnected to it. The reviewer who verifies her, with her ID in front of them, links the account
+to her registry record, makes one, or leaves it unlinked with a reason (backend ADR 0004, decision
+1); a sector approval also links it (D-215).
 
----
+Until it is linked, **My requests reads empty** and **Apply is refused** (the API's `409`). The
+Verified page says so in plain words, and so does the Apply wizard when the send is refused: the
+MSWDO links the account when it reviews the ID, or at the counter, and the resident can bring a
+valid ID and ask (D-226). No read tells the app beforehand whether the account is linked; the app
+does not guess.
 
-## 3. Data minimisation
+## 5. Applying for Tulong (D-226)
 
-`RegistrationDraft` holds only what lets the LGU match an existing resident
-record:
+A Tulong page whose `can_apply` is true offers Apply: what the programme is and who may apply, the
+purpose and an optional amount, one file per document the programme asks for (required, optional
+or conditional, DL-76), a review, and the send (`POST /me/assistance-applications`). The request
+lands in the office's intake queue with a control number; My requests shows it as "Applied in the
+app". When the office returns it, the request names the documents still missing and offers Add
+documents (`POST /me/assistance-requests/{id}/documents`). See D-226 in
+`docs/mobile-ui-decision-log.md`.
 
-- given / middle / family name and suffix,
-- date of birth,
-- barangay and street address,
-- the mobile number the account authenticates on.
+## 6. Rules that hold throughout
 
-**Deliberately absent**, though the staff console's own `Resident` model carries
-them: `sex`, `civilStatus`, `sectors`, `monthlyIncome`, `philsysLastFour`,
-`householdId`. None narrows a name-and-birth-date match; several are sensitive
-personal information under RA 10173 §13; and the committed contract gives this
-client no endpoint that would accept them. A test asserts they are not there.
+- **The server decides.** Every gate in the app explains; none protects (Article 3).
+- **No server message is shown as the headline.** The app words each failure from its kind; a
+  field's own validation message may appear beside that field (Article 5.5).
+- **A failed send says plainly that nothing was sent**, or that it is not confirmed when the
+  answer never came, and that sending again is safe (D-213, D-226).
+- **Nothing personal is logged**, and wizard answers live only in memory.
 
-`RegistrationDraft.toString()` renders nothing — it is exactly the kind of
-object that reaches a crash report. `SelectedUpload.toString()` reports a MIME
-type and a size, never the file reference.
+## 7. Related records
 
----
-
-## 4. Consent
-
-Four separate consents, each recorded individually:
-
-| Consent | Required |
-| --- | --- |
-| Terms of Use | yes |
-| Privacy Notice | yes |
-| Processing of identity information | yes |
-| Processing of photo for identity checking | **no** |
-
-Bundling them into one "I agree" is what makes consent unfree: a resident who
-wants a municipal service but not biometric processing would have no way to say
-so, and the LGU could not show which processing was agreed to. RA 10173 requires
-consent to be freely given, specific and informed.
-
-The biometric consent is **optional and only shown when the server actually
-requires a face capture** — asking for it otherwise would collect a consent for
-processing that will not happen. Consent that cannot be refused is not consent.
-
----
-
-## 5. Feature gating — deny by default
-
-`RegistrationCapabilities` starts with every flag `false` and **only a server
-response may widen it**. The authoritative source is
-`GET /api/v1/me/verification` ("tier + outstanding steps"), which is `planned`.
-
-So in this build:
-
-- `requiresIdentityDocument` = false → step 6 is absent,
-- `requiresFaceCapture` = false → step 7 is absent,
-- `acceptsSubmissions` = false.
-
-**No camera or file picker is opened anywhere**, and a test asserts the steps do
-not appear. Two reasons this is the right default rather than a placeholder: a
-client that decides on its own to collect a face photo is collecting the most
-sensitive artifact in the system (backend gap **G-18**, which leaves the upload
-contract unspecified) without the LGU asking; and whether a given resident needs
-a document at all is a matching decision only the server can make.
-
-The selfie step needs **both** the server requirement **and** explicit consent.
-Either alone is insufficient, and withdrawing consent removes the step again —
-all three cases are tested.
-
----
-
-## 6. Non-enumerating errors
-
-On the contact and code steps, the answer must be identical whether or not the
-number belongs to an existing account. "This number is already registered" would
-turn registration into an oracle for testing who is a Taytay resident. The
-committed matrix states this on the `POST /api/v1/auth/otp` row — *"must not
-reveal whether the number is registered"* — and the client must not undo it.
-
-`_residentSafeMessage` therefore renders a `409 CONFLICT` as:
-
-- contact / code steps → *"If this mobile number can be used, we have sent a
-  code to it."*
-- later steps → *"We could not complete this automatically. Please visit the
-  Taytay municipal hall with a valid ID."*
-
-A `422` shows a generic banner; field-level server messages appear against their
-fields, which is the one place server text is actionable. **No server message is
-ever rendered as the headline**, and no message describes another record.
-
----
-
-## 7. Form quality
-
-- **Error summary** at the top, a live region, focused when submission fails —
-  an inline message beside a field below the fold is invisible to a sighted
-  resident and silent to a screen-reader user. This is the GOV.UK Design System
-  pattern and the reasoning carries: a government form is used once, under time
-  pressure.
-- **Inline errors** as well, against each field.
-- **Required *and* optional are labelled in words.** Marking only required
-  fields leaves the rest to inference, and an asterisk means nothing to a screen
-  reader.
-- **"Why we ask for this"** — an expandable panel on every sensitive field
-  giving purpose, who sees it, and what happens if the resident declines.
-  Collapsed by default; expanding never costs progress. RA 10173 requires the
-  purpose to be available *at the moment of collection*.
-- **Upload guidance** states what a good photo looks like *before* the picker
-  opens, rather than after a review queue rejects it days later.
-- **Safe back navigation**: back never validates, always retains the draft, and
-  the system back gesture steps backwards rather than discarding everything.
-- **Review with per-row "Change"**, which jumps backwards only — never forward
-  into a step that was not completed.
-
----
-
-## 8. Submission
-
-`submitRegistration` requires an `Idempotency-Key`, and the controller mints one
-per attempt and **reuses it across retries**. A registration submitted twice is a
-duplicate identity review in a municipal queue, and the resident cannot tell
-whether the first arrived.
-
-A failed submission says plainly that **nothing was submitted**, so retrying is
-safe, and offers the municipal hall as the alternative.
-
-The shipped `PlannedRegistrationRepository` declines every call with a temporary
-`ServerFailure`. A mock that succeeded would be the most dangerous placeholder in
-this app: it would tell a resident their identity documents had reached the LGU
-when nothing left the device, and it is exactly the screen that gets demonstrated
-to a municipal officer as proof the system works.
-
----
-
-## 9. Barangays
-
-Five, names only, no PSGC codes: Dolores, Muzon, San Isidro, San Juan,
-Santa Ana. Source: `Taytay_Rizal_Social_Welfare_Angular@c470960`,
-`src/app/domain/geography/barangay.ts`.
-
-PSGC codes are deliberately absent. The staff console leaves them `null` with a
-comment that a wrong code is worse than an absent one because DSWD reporting
-keys off it; the backend repeats this as gap **G-11** and resolves it by loading
-the authoritative PSA dataset server-side. This client is in no position to
-improve on that. The local `id` values are selection keys, not municipal
-identifiers, and the server's list replaces this one wholesale when
-`GET /api/v1/barangays` lands.
-
----
-
-## 10. Verification
-
-`dart format` clean · `flutter analyze` clean · **382 tests pass** · debug and
-release APKs build.
-
-Registration-specific coverage (47 tests): draft minimisation and redaction;
-upload descriptor redaction; mobile-number, name, birth-date and address
-validation; acceptance of single-word, accented, hyphenated and apostrophe names;
-the 15-year age floor; no invented code-length rule; required-versus-optional
-consent gating; capabilities defaulting to denied; document and selfie steps
-absent, present only on server requirement, and the selfie needing consent as
-well; consent alone never enabling it; invalid steps not advancing; back
-retaining every field; back clearing errors; progress counting input steps only;
-review "Change" refusing forward jumps and steps outside the flow; failed
-code-request and code-verify keeping the resident in place; capabilities re-read
-after verification; idempotency key present and reused across retries; failed
-submission stating nothing was submitted; the shipped repository declining; the
-barangay list carrying no PSGC codes; reaching the wizard from sign-in and from
-the gate sheet; progress announced as text; one step per screen; error summary;
-expandable explanations; no picker opened; 200% text scale; and the progress bar
-hidden from assistive technology.
-
-Source scans additionally assert that registration types never interpolate
-personal fields into `toString`, and that no file under `lib/features/registration/`
-references `Uint8List`, `dart:io` or `File(` — this build holds no identity image
-bytes it cannot send.
-
----
-
-## 11. Gaps
-
-| # | Gap | Effect |
-| --- | --- | --- |
-| R-1 | No `Identity` module or OTP endpoints | Requesting and verifying a code decline; registration cannot complete end to end. |
-| R-2 | No verification-submission endpoint | Submission declines; the status step reports that nothing was sent. |
-| R-3 | No upload contract (backend **G-18**) | Document and selfie steps carry guidance and consent but capture nothing. |
-| R-4 | No `GET /api/v1/me/verification` | Capabilities stay denied, so optional steps never appear. |
-| R-5 | No `GET /api/v1/barangays` | A five-item local list is used, names only. |
-| R-6 | No resident-matching contract | Duplicate/match handling is copy-only; the actual match happens server-side. |
-| R-7 | Draft is not persisted | Closing the app mid-registration loses progress. Deliberate: a partly-filled identity form is personal data, and persisting it needs the keystore and a retention rule. |
-| R-8 | English only | Filipino copy arrives with app-wide localisation. |
+- `docs/frontend/backend-gaps.md`, rows 2, 3 and 20.
+- `docs/taytay-startup-and-gates.md`, the consent gate during sign-up.
+- `docs/mobile-ui-decision-log.md`: D-187, D-195, D-198, D-200, D-208 to D-213, D-215, D-223, D-226.

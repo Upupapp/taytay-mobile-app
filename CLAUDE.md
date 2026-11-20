@@ -25,8 +25,8 @@ channel.
 | State | Meaning | Can do |
 | --- | --- | --- |
 | **Guest** | Nobody signed in | Browse municipal services, offices, announcements |
-| **Authenticated / Unverified** | Signed in, identity not confirmed by the LGU | Manage the account, start verification |
-| **Verified** | Identity confirmed by the LGU | Hold and present the digital ID, apply for services |
+| **Authenticated / Unverified** | Signed in, identity not confirmed by the LGU | Manage the account, start verification, follow own assistance requests |
+| **Verified** | Identity confirmed by the LGU | Hold and present the digital ID, request documents, message offices; once the MSWDO has linked the account to her registry record, apply for Tulong from a page that offers Apply (D-226) |
 
 **No admin, staff, verifier or back-office feature is ever built here.** No staff-only
 field, no approval queue, no "office" or "role" selector, no admin route prefix, no

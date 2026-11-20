@@ -36,6 +36,7 @@ import 'package:taytay_resident/features/verification/presentation/manila_stamp.
 import 'package:taytay_resident/features/verification/presentation/s3_chrome.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_screen.dart';
 import 'package:taytay_resident/features/verification/presentation/verification_status_pages.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/biometric_consent_dialog.dart';
 import 'package:taytay_resident/shared/widgets/soft_note.dart';
 import 'package:taytay_resident/shared/widgets/taytay_buttons.dart';
@@ -328,7 +329,15 @@ void main() {
       expect(find.text('Pending review'), findsOneWidget);
       expect(find.text('Your account is verified'), findsNothing);
 
-      await tester.pumpWidget(const MaterialApp(home: VerifiedStatusPage()));
+      await tester.pumpWidget(
+        const MaterialApp(
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: VerifiedStatusPage(),
+        ),
+      );
+      // D-226: the account link is said on the Verified page.
+      expect(find.byKey(const Key('verified-link-note')), findsOneWidget);
       expect(find.text('Your account is verified'), findsOneWidget);
       expect(find.text('Not verified'), findsNothing);
 

@@ -1042,8 +1042,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return switch (_step) {
       _Step.personal => (
         'Tungkol sa iyo',
-        'Basic details only. You can complete your full Resident Profile '
-            'later.',
+        'Basic details only. You can complete your Resident Profile once '
+            'your account is verified.',
       ),
       _Step.account =>
         _accountCreated

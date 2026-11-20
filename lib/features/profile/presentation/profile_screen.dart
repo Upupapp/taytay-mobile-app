@@ -231,7 +231,7 @@ class _IdentityCard extends StatelessWidget {
       AccessLevel.unverified => (
         name ?? 'Your account',
         'Taytay LGU has not confirmed your identity yet. Verifying unlocks '
-            'your digital ID. Programme pages are information only.',
+            'your digital ID and applying for Tulong in the app.',
         'Verify my identity',
         AppRoute.verification,
       ),

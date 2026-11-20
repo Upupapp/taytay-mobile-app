@@ -4,6 +4,7 @@ import '../../../core/design/brand_gradients.dart';
 import '../../../core/design/design_tokens.dart';
 import '../../../core/design/taytay_icons.dart';
 import '../../../core/design/typography.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/network_status_views.dart';
 import '../../../shared/widgets/settings_list.dart';
 import '../../../shared/widgets/soft_note.dart';
@@ -128,7 +129,9 @@ class PendingStatusPage extends StatelessWidget {
                     const TimelineStep(
                       icon: TaytayIcons.badgeCheck,
                       title: 'Verified',
-                      detail: 'Unlocks document requests and messaging offices',
+                      detail:
+                          'Unlocks document requests, messaging offices and '
+                          'applying for Tulong',
                       tone: TimelineTone.upcoming,
                     ),
                   ],
@@ -163,6 +166,8 @@ class VerifiedStatusPage extends StatelessWidget {
     this.onDigitalId,
     this.onMessage,
     this.onRequestDocuments,
+    this.onTulong,
+    this.onMyRequests,
     this.verifiedOn = '',
     this.method = '',
     this.replaced = '',
@@ -178,6 +183,13 @@ class VerifiedStatusPage extends StatelessWidget {
 
   /// Opens the document-request catalogue.
   final VoidCallback? onRequestDocuments;
+
+  /// Opens Tulong, where a programme page that takes applications offers
+  /// Apply (D-226).
+  final VoidCallback? onTulong;
+
+  /// Opens My requests (D-223).
+  final VoidCallback? onMyRequests;
 
   /// Date the server says the account was verified. Empty hides the date.
   final String verifiedOn;
@@ -200,6 +212,7 @@ class VerifiedStatusPage extends StatelessWidget {
         : 'Verified by Taytay LGU on $verifiedOn. You now '
               'have full access to resident services.';
     final int? percent = completeness;
+    final AppStrings s = AppStrings.of(context);
     return _StatusScaffold(
       title: 'Verification status',
       onBack: onBack,
@@ -252,10 +265,32 @@ class VerifiedStatusPage extends StatelessWidget {
                       tone: TimelineTone.navy,
                       onTap: onDigitalId,
                     ),
+                    TimelineStep(
+                      icon: TaytayIcons.check,
+                      title: s.verifiedApplyStep,
+                      detail: s.verifiedApplyStepDetail,
+                      tone: TimelineTone.navy,
+                      onTap: onTulong,
+                    ),
+                    TimelineStep(
+                      icon: TaytayIcons.check,
+                      title: s.verifiedRequestsStep,
+                      detail: s.verifiedRequestsStepDetail,
+                      tone: TimelineTone.navy,
+                      onTap: onMyRequests,
+                    ),
                   ],
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: Spacing.section),
+          // The account link (ADR 0004, decision 1): without it My requests
+          // reads empty and Apply is refused, and nothing else says why.
+          SoftNote(
+            key: const Key('verified-link-note'),
+            live: false,
+            message: s.verifiedLinkNote,
           ),
           const SizedBox(height: Spacing.section),
           SettingsList(
@@ -508,7 +543,8 @@ class UnverifiedStatusPage extends StatelessWidget {
                 const SizedBox(height: Spacing.xs),
                 const _Body(
                   'Taytay LGU has not confirmed this account. You can browse '
-                  'services while you complete your resident profile.',
+                  'services while you send your valid ID and selfie, or '
+                  'verify in person.',
                 ),
               ],
             ),
