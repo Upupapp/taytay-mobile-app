@@ -355,7 +355,7 @@
       "post": {
         "operationId": "approveVerification",
         "summary": "Approve a verification request",
-        "description": "Sets the resident to verified. A registered role becomes verified. Staff and admin roles are left unchanged. The reviewer confirms the name and birth date the account gives (account_name, account_birthdate) against the ID by sending them back as confirmed_name and confirmed_birthdate. They are compared with the account under a lock, and the name is kept as the one confirmed.",
+        "description": "Sets the resident to verified. A registered role becomes verified. Staff and admin roles are left unchanged. The reviewer confirms the name and birth date the account gives (account_name, account_birthdate) against the ID by sending them back as confirmed_name and confirmed_birthdate. They are compared with the account under a lock, and the name is kept as the one confirmed. Optional account_link is the reviewer's decision about the account's registry record (link to a record, create one from the verified account, or leave it unlinked, each with a reason), made in the approval's own transaction and appended to verification_account_links (migration 0069; docs/adr/0004-apply-from-the-app.md). A refused link approves nothing.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -367,7 +367,8 @@
         "responses": {
           "200": { "description": "Approved. The response includes staff-only notes.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationStaffEnvelope" } } } },
           "404": { "description": "Not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "Not pending, the account gives no name, its name or birth date is not the one confirmed, or the resident withdrew the biometric consent and the selfie was erased (selfie_erased_at set; reject and ask for a new selfie).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+          "409": { "description": "Not pending, the account gives no name, its name or birth date is not the one confirmed, or the resident withdrew the biometric consent and the selfie was erased (selfie_erased_at set; reject and ask for a new selfie). Also, with account_link: the account is already linked, the record was superseded by a same-person finding, the record is linked to another app account, or create for an account that gives no barangay.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The body could not be validated, or account_link names an unknown or retired record, lacks a reason, splits a name that is not the verified name, or leaves no sex, birth date or street to write.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -569,7 +570,7 @@
       "post": {
         "operationId": "verifyUserInPerson",
         "summary": "Verify a resident's account in person, against a government ID shown at the counter",
-        "description": "Needs verification.review (admin only), the key that approves a selfie request; verifying your own account is 403. For a resident who declines the biometric consent, or meets a consent text not yet published: consent under RA 10173 must be freely given, so declining the selfie leaves this way to be verified. No image is taken and nothing biometric is stored. id_last_four is the last four characters of the ID's number and nothing more (longer is 422; the database refuses it too). confirmed_name is the account's name as the screen showed it, compared under a lock; id_shows_name must be true: the reviewer has seen that the ID shows that name. corrected_name, when the ID shows another name, corrects it in the same act through the name-correction history (audit user.name_corrected). The account becomes verified exactly as an approval makes it, and GET /api/v1/me reports verification_method in-person. A pending selfie request is closed as superseded, with a staff-only note, and its selfie is erased (audit verification.superseded and verification.selfie_erased); a rejected request stays rejected and can no longer be corrected. No digital ID is issued, because a card needs a photo. idempotency_key is minted when the reviewer presses the button and kept across retries: the same key and body answers 201 with the first record and writes nothing; the same key with another body is 409. Audited as verification.in_person_verified on the account, with ids and the code only. The resident is notified (verification_decided).",
+        "description": "Needs verification.review (admin only), the key that approves a selfie request; verifying your own account is 403. For a resident who declines the biometric consent, or meets a consent text not yet published: consent under RA 10173 must be freely given, so declining the selfie leaves this way to be verified. No image is taken and nothing biometric is stored. id_last_four is the last four characters of the ID's number and nothing more (longer is 422; the database refuses it too). confirmed_name is the account's name as the screen showed it, compared under a lock; id_shows_name must be true: the reviewer has seen that the ID shows that name. corrected_name, when the ID shows another name, corrects it in the same act through the name-correction history (audit user.name_corrected). The account becomes verified exactly as an approval makes it, and GET /api/v1/me reports verification_method in-person. A pending selfie request is closed as superseded, with a staff-only note, and its selfie is erased (audit verification.superseded and verification.selfie_erased); a rejected request stays rejected and can no longer be corrected. No digital ID is issued, because a card needs a photo. idempotency_key is minted when the reviewer presses the button and kept across retries: the same key and body answers 201 with the first record and writes nothing; the same key with another body is 409. Audited as verification.in_person_verified on the account, with ids and the code only. The resident is notified (verification_decided). Optional account_link decides the account's registry record in the same act, exactly as on an approval (migration 0069), and is part of the body a retry repeats.",
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
@@ -583,8 +584,26 @@
           "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "403": { "description": "Not an admin, or the caller's own account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "404": { "description": "User not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
-          "409": { "description": "The account is closed, already verified, not a resident's, or gives no name; its name is not confirmed_name; or the key was used for another body.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is closed, already verified, not a resident's, or gives no name; its name is not confirmed_name; or the key was used for another body. With account_link: the account is already linked, the record was superseded, the record has another app account, or create for an account with no barangay.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "The body could not be validated: id_shows_name is not true, id_last_four is longer than four characters, a field is unknown, or the key is missing.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/registry-matches": {
+      "get": {
+        "operationId": "listAccountRegistryMatches",
+        "summary": "Registry records that may be this account's person",
+        "description": "Needs verification.review (admin only). For the reviewer verifying an account with the ID in hand, at the selfie review and the in-person verification alike (migration 0069; docs/adr/0004-apply-from-the-app.md). Each match carries the record's id, its surname and a given initial (label), a band that only orders the list, and signals (attribute, outcome, rule) for surname, given-name, barangay, mobile, birth-date and sex. No name, barangay, number or date is sent (the console's DL-73). Names are compared as words: every word of the record's surname and given name among the account's words, one letter of difference allowed in a word of five letters or more. Only live records not superseded by a same-person finding, whose whole name agrees, at most ten; the account's own linked record is left out. Not audited.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "responses": {
+          "200": { "description": "The proposals, and the record the account is linked to now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/RegistryMatchesEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Not an admin.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "User not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A staff or admin account: only a resident's account is linked to the registry.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -726,6 +745,145 @@
           "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "409": { "description": "Already committed, a required field unmapped, or rows unresolved (details.rows lists up to 50).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/imports/template": {
+      "get": {
+        "operationId": "getResidentImportTemplate",
+        "summary": "A header-only CSV for the citizen import",
+        "description": "Needs resident.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. content is a CSV with a byte-order mark and one header row, every column of which the mapping recognises. No sample row: nothing in it is anybody's data.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The template.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportTemplateEnvelope" } } } },
+          "403": { "description": "Without resident.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports": {
+      "get": {
+        "operationId": "listAssistanceImports",
+        "summary": "Recent imports of past assistance",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. Newest first, a cursor page of summaries: status open, committed or withdrawn; on commit the counts imported, skipped, duplicates, errors and residents created; once withdrawn, by whom, when and why (docs/adr/0005, decision 3).",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "A page of imports.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportListEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      },
+      "post": {
+        "operationId": "uploadAssistanceImport",
+        "summary": "Upload an old Tulong report to import",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. One file, multipart field file, read as the citizen import reads one: a .csv or the first sheet of an .xlsx, at most 5 MB, 5,000 rows and 40 columns. Nothing is written but the rows, held for checking under a mapping guessed from the header in English and Filipino (Pangalan, Uri ng tulong, Petsa ng pagbibigay, Halaga, Katayuan, ...), which a person confirms. Audit assistance_import.uploaded.",
+        "security": [{ "firebaseIdToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "format": "binary" } } } } }
+        },
+        "responses": {
+          "201": { "description": "Held for checking; data.id names it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportSummaryEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "413": { "description": "Larger than 5 MB.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No file, not a .csv or .xlsx, unreadable, empty, or over a limit.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/template": {
+      "get": {
+        "operationId": "getAssistanceImportTemplate",
+        "summary": "A header-only CSV for the past-assistance import",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. content is a CSV with a byte-order mark and one header row (Surname, Given name, Middle name, Suffix, Sex, Birth date, Barangay, Purok, Address, Contact number, Type of assistance, Date given, Date applied, Amount, Status, Control no., Purpose, Remarks, Received by), every column of which the mapping recognises.",
+        "security": [{ "firebaseIdToken": [] }],
+        "responses": {
+          "200": { "description": "The template.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ImportTemplateEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/{id}": {
+      "get": {
+        "operationId": "getAssistanceImport",
+        "summary": "Check an import of past assistance, row by row",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. While open: the columns with up to three samples, the fields, the mapping, the fields still missing, counts, and every row read and checked: error (with each problem), duplicate (the same control number under the same programme, or the same person, programme and day, in the system or earlier in the file), skipped (by an officer), ready (on the record an officer linked, a record an officer will make, or the one record a single strong match in the barangay proposes) or needs-review. Candidates carry a masked label, a band and signals, never a value (DL-73). Once committed: rows is empty and outcomes says what became of each row.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "The import as it reads now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/{id}/mapping": {
+      "put": {
+        "operationId": "mapAssistanceImport",
+        "summary": "Say which column feeds each field",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. The whole mapping: a field left out or null is unmapped; a column feeds one field at most. Refused (409) once a row is resolved or the import is no longer open. Audit assistance_import.mapped.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportMappingBody" } } } },
+        "responses": {
+          "200": { "description": "The import read under the new mapping.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A row is already resolved, or the import is not open.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A column out of range, or used twice.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/{id}/rows/{row}/resolve": {
+      "post": {
+        "operationId": "resolveAssistanceImportRow",
+        "summary": "Resolve one row: link, create, or skip",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. link: the row is for the registry record resident_id names (in the reader's scope). create: a record is made from the row at commit, with record supplying what the registry requires and the row lacks (each field replaces the row's; the barangay is the row's); what the registry would refuse is 422 with details.record. skip: the row is left out. Each with a reason, kept with the officer's name and time; a later resolution is appended and is the one in force. A row with errors is 409. Audit assistance_import.row_resolved.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }, { "name": "row", "in": "path", "required": true, "schema": { "type": "integer", "minimum": 1 } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportResolveBody" } } } },
+        "responses": {
+          "200": { "description": "The import as it reads now.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import or row.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "A row with errors, or the import is not open.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "An unknown action, no reason, link without resident_id or a record not found, or a record the registry would refuse.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/{id}/commit": {
+      "post": {
+        "operationId": "commitAssistanceImport",
+        "summary": "Import the rows as closed requests",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. One transaction, under one lock every commit takes; the rows are read again inside it, so what another import committed since counts. Refused (409) while a required field is unmapped, a row needs review (details.rows, up to 50), or the import is not open. Each ready row becomes a request with channel imported, status completed (released), rejected or cancelled, on the file's dates at Manila midnight, with no status history; a released row also gets a release completed on the day given (money with method not-recorded, or goods described by the purpose). A create row makes its record first (audit office_resident.created). Then the cells, and what create added, are emptied. Audit assistance_import.committed, and per row office_request.imported (office_release.imported) or assistance_import.row_skipped, .row_duplicate, .row_error.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "responses": {
+          "200": { "description": "Committed; data.result has the counts.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportSummaryEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Not open, a required field unmapped, or rows waiting for review.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/assistance-imports/{id}/withdraw": {
+      "post": {
+        "operationId": "withdrawAssistanceImport",
+        "summary": "Withdraw a committed import, never deleting it",
+        "description": "Needs request.import (the intake officer, the MSWDO head and the administrator); an assigned-cases account is 403. A reason (1 to 500 characters). The import, its requests and their releases are flagged withdrawn in the same act (ADR 0002): nothing is deleted, and every count, list and look-back reads past them. A committed import only, once (409 otherwise). Audit assistance_import.withdrawn and office_request.import_withdrawn for each request.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportWithdrawBody" } } } },
+        "responses": {
+          "200": { "description": "Withdrawn.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AssistanceImportSummaryEnvelope" } } } },
+          "403": { "description": "Without request.import, or an assigned-cases account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "No such import.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "Not committed, or already withdrawn.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No reason, or one too long.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -11643,7 +11801,7 @@
       "get": {
         "operationId": "listMyAssistanceRequests",
         "summary": "The signed-in resident's own assistance requests",
-        "description": "Registered or verified (staff and admin are 403). ADR 0003, C: the resident's own filed requests — never a draft — across her person (the registry record the office linked to her account and every record a same-person finding superseded into it, transitively), newest filing first, a cursor page at a time. Each row is the minimum that says where the request stands: its control number, the programme's name, when it was filed, its raw status and when that last changed, the approved amount in integer centavos once approved (null before, and for goods), the payout's date and venue while it is scheduled, and when it was released. Never who worked on it, notes, the assessment, any reason the office wrote, the amount asked for, or a case. A person any of whose records the office holds under vawc-survivor or cicl (RA 9262, RA 9344) reads an empty list, exactly as if she had none. An account the office has not linked reads an empty list. A read only: it writes nothing. She is told of each move to approved, scheduled, released, returned and rejected by a notification of type assistance_request_updated, pushed, whose words name the control number and nothing else.",
+        "description": "Registered or verified (staff and admin are 403). ADR 0003, C: the resident's own filed requests — never a draft — across her person (the registry record the office linked to her account and every record a same-person finding superseded into it, transitively), newest filing first, a cursor page at a time. Each row is the minimum that says where the request stands: its control number, the programme's name, when it was filed, its raw status and when that last changed, the approved amount in integer centavos once approved (null before, and for goods), the payout's date and venue while it is scheduled, and when it was released. Never who worked on it, notes, the assessment, any reason the office wrote, the amount asked for, or a case. A person any of whose records the office holds under vawc-survivor or cicl (RA 9262, RA 9344) reads an empty list, exactly as if she had none. An account the office has not linked reads an empty list. Each row also says its channel (online when she filed it from the app, office otherwise) and, for a returned request, missing_documents: what the office still needs from her, in her words, never its remarks (ADR 0004, decision 2). A read only: it writes nothing. She is told of each move to approved, scheduled, released, returned and rejected by a notification of type assistance_request_updated, pushed, whose words name the control number and nothing else.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11709,6 +11867,50 @@
               }
             }
           }
+        }
+      }
+    },
+    "/api/v1/me/assistance-applications": {
+      "post": {
+        "operationId": "applyForAssistance",
+        "summary": "Apply for assistance from the app",
+        "description": "docs/adr/0004-apply-from-the-app.md, decision 2 (migration 0070). A verified resident whose account the office has linked to a registry record, each refusal made before the upload is read: a registered account is 403 VERIFICATION_REQUIRED (verify in the app first), a verified account not linked is 409 (ask the office to link it), staff or admin 403. Multipart: service_slug (a Tulong page whose can_apply is true) or program_id (a programme such a page names), one of the two; purpose (12-2000 characters); optional requested_amount_centavos (whole centavos, digits); optional idempotency_key; and one file per document in the field named by its code from application_requirements (PDF, JPEG or PNG by their bytes, at most 10 MB each, 413). Every required document needs its file (422 keyed by the code); an unknown code, two files for one code, an empty file or another type is 422 keyed by the code. Files the request the counter files: on her linked record, channel online, a TAY- control number, status submitted (the intake queue); each file is version 1 of its document. The duplicate and previous-assistance check refuses nothing; its signals are kept on the request as filing_advisory for intake. Audited office_request.filed and office_request.document_recorded by her account. She is sent assistance_request_updated (\"The office received your assistance request {reference}.\"), except a person held under vawc-survivor or cicl, whose request is filed but never listed to her. A retry under the same key answers 201 with the first request; the same key with another body is 409.",
+        "security": [{ "firebaseIdToken": [] }],
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "$ref": "#/components/schemas/AssistanceApplicationInput" } } }
+        },
+        "responses": {
+          "201": { "description": "Filed, or the first filing for a retry: her own row.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnAssistanceRequestEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "VERIFICATION_REQUIRED for an account not yet verified; FORBIDDEN for staff or admin.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The account is not linked to a registry record yet, her registry record is retired, or the key was used for another body.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "413": { "description": "A file is larger than 10 MB.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "The page or programme does not take applications in the app, a required document is missing, a file is unknown, doubled, empty or of another type, or a field is invalid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/me/assistance-requests/{id}/documents": {
+      "post": {
+        "operationId": "addMyAssistanceRequestDocuments",
+        "summary": "Send more documents for a request the office returned",
+        "description": "docs/adr/0004-apply-from-the-app.md, decision 2. The same gate as applying. Only a filed request of her person that is not of a protected person (otherwise 404), and only while it stands returned (otherwise 409). Multipart: at least one file, each in the field named by its document's code on the request (an unknown code is 422), optional idempotency_key. Each file is appended as a new version; a version in force is superseded with a stated reason and kept (DL-77). Audited office_request.document_recorded. The status does not move. A retry under the same key answers the same.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "multipart/form-data": { "schema": { "$ref": "#/components/schemas/AssistanceDocumentsInput" } } }
+        },
+        "responses": {
+          "201": { "description": "Appended: her own row, with missing_documents read again.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OwnAssistanceRequestEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "VERIFICATION_REQUIRED, or not a resident.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "404": { "description": "Not a request of hers.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "409": { "description": "The request is not returned, the account is not linked, or the key was used for another body.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "413": { "description": "A file is larger than 10 MB.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "No file, a code the request does not list, or a file that is empty or of another type.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -13752,6 +13954,53 @@
               }
             }
           }
+        }
+      }
+    },
+    "/api/v1/office/reports/summary": {
+      "get": {
+        "operationId": "getSummaryReport",
+        "summary": "The summary report (Esperanza's standard template), as data",
+        "description": "Needs report.view; an assigned-cases account is 403 (the report counts the whole office's requests and payouts), a barangay link is held to its barangay. The data of the office's summary report, drawn by the console as an A4 sheet: letterhead, period, filters in words, an executive summary written from the figures, sections A (at a glance) to I (digital IDs), signatories and footer (docs/adr/0005, decision 4). Every count of people is suppressed cell by cell under the small-cell rule, totals taken before (DL-105); counts of requests and releases, and money, are not. Imported past assistance counts everywhere but processing time; a withdrawn import nowhere. overdue_now is null: no service standard is set (DL-101). Strict: any other parameter is 422. Audit office_report.summary_read.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "First Manila day of the period, from 1990-01-01. Defaults to 1 January of to's year." },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Last Manila day of the period, today at the latest. Defaults to today." },
+          { "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "program_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } },
+          { "name": "age", "in": "query", "schema": { "type": "string", "enum": ["0-17", "18-59", "60-plus"] }, "description": "On the day filed or served." },
+          { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" }, "description": "A protected sector only for a reader holding request.view-sensitive." }
+        ],
+        "responses": {
+          "200": { "description": "The report.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SummaryReportEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without report.view, an assigned-cases account, or another barangay than a barangay link's own.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "A period that ends after today, starts after it ends or before 1990, an unknown parameter, a barangay or programme that does not exist, or a protected sector for a reader not cleared for it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
+        }
+      }
+    },
+    "/api/v1/office/reports/summary/export": {
+      "get": {
+        "operationId": "exportSummaryReport",
+        "summary": "The summary report's tables as CSV",
+        "description": "Needs report.view and report.export-person-level, the key every report export takes. The same filters and the same suppressed figures, as CSV with the conditions before the first figure (DL-106); a withheld cell reads Withheld. Audit office_report.exported.",
+        "security": [{ "firebaseIdToken": [] }],
+        "parameters": [
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "First Manila day of the period, from 1990-01-01. Defaults to 1 January of to's year." },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date" }, "description": "Last Manila day of the period, today at the latest. Defaults to today." },
+          { "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "program_id", "in": "query", "schema": { "type": "string", "format": "uuid" } },
+          { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } },
+          { "name": "age", "in": "query", "schema": { "type": "string", "enum": ["0-17", "18-59", "60-plus"] }, "description": "On the day filed or served." },
+          { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" }, "description": "A protected sector only for a reader holding request.view-sensitive." },
+          { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["csv"], "default": "csv" } }
+        ],
+        "responses": {
+          "200": { "description": "The file.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SummaryReportExportEnvelope" } } } },
+          "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "403": { "description": "Without report.view or report.export-person-level, or as for the report.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+          "422": { "description": "As for the report, or a format other than csv.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
     },
@@ -17140,6 +17389,186 @@
           "proof_media_ids": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "type": "string", "format": "uuid" } }
         }
       },
+      "SummaryReportCell": { "type": ["integer", "number", "string", "null"] },
+      "SummaryReportSection": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "letter", "title", "note", "available", "unavailable_reason", "tiles", "columns", "rows", "totals", "totals_label", "suppression_notice"],
+        "properties": {
+          "key": { "type": "string", "enum": ["at-a-glance", "month-by-month", "by-program", "by-barangay", "by-sex", "by-age", "by-sector", "open-by-stage", "digital-ids"] },
+          "letter": { "type": "string", "enum": ["A", "B", "C", "D", "E", "F", "G", "H", "I"] },
+          "title": { "type": "string" },
+          "note": { "type": ["string", "null"] },
+          "available": { "type": "boolean", "description": "False only for digital-ids, for a reader without digital-id.manage." },
+          "unavailable_reason": { "type": ["string", "null"] },
+          "tiles": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "measure", "withheld", "hint"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "value": { "type": ["integer", "null"] }, "measure": { "type": "string", "enum": ["records", "people", "centavos"] }, "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] }, "hint": { "type": "string" } } } },
+          "columns": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "measure"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "measure": { "type": "string", "enum": ["records", "people", "centavos", "percent", "days"] } } } },
+          "rows": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "values", "withheld"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "values": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SummaryReportCell" } }, "withheld": { "type": "object", "additionalProperties": { "type": "string", "enum": ["small-cell", "protected-sector"] }, "description": "Each withheld column; its value is null." } } } },
+          "totals": { "type": ["object", "null"], "additionalProperties": { "type": "integer" }, "description": "Taken before anything was withheld." },
+          "totals_label": { "type": ["string", "null"] },
+          "suppression_notice": { "type": ["string", "null"] }
+        }
+      },
+      "SummaryReportSignatory": { "type": "object", "additionalProperties": false, "required": ["name", "title"], "properties": { "name": { "type": ["string", "null"] }, "title": { "type": ["string", "null"] } } },
+      "SummaryReport": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["letterhead", "title", "period", "filters", "filters_in_words", "executive_summary", "sections", "signatories", "footer", "disclosure"],
+        "properties": {
+          "letterhead": { "type": "array", "items": { "type": "string" } },
+          "title": { "type": "string" },
+          "period": { "type": "object", "additionalProperties": false, "required": ["from", "to", "label"], "properties": { "from": { "type": "string", "format": "date" }, "to": { "type": "string", "format": "date" }, "label": { "type": "string" } } },
+          "filters": { "type": "object", "additionalProperties": false, "required": ["barangay_id", "program_id", "sex", "age", "sector"], "properties": { "barangay_id": { "type": ["string", "null"], "format": "uuid" }, "program_id": { "type": ["string", "null"], "format": "uuid" }, "sex": { "type": ["string", "null"] }, "age": { "type": ["string", "null"] }, "sector": { "type": ["string", "null"] } } },
+          "filters_in_words": { "type": "array", "items": { "type": "string" } },
+          "executive_summary": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["paragraphs", "figures"],
+            "properties": {
+              "paragraphs": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+              "figures": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["received", "served", "persons_served", "persons_served_withheld", "amount_released_centavos", "goods_released", "rejected", "top_program", "top_barangay", "women_share_percent", "average_processing_days", "processing_basis", "open_now", "overdue_now", "overdue_basis"],
+                "properties": {
+                  "received": { "type": "integer" },
+                  "served": { "type": "integer", "description": "Releases handed over in the period." },
+                  "persons_served": { "type": ["integer", "null"], "description": "Null when withheld (DL-105)." },
+                  "persons_served_withheld": { "type": ["string", "null"], "enum": ["small-cell", null] },
+                  "amount_released_centavos": { "type": "integer" },
+                  "goods_released": { "type": "integer" },
+                  "rejected": { "type": "integer" },
+                  "top_program": { "type": ["object", "null"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "served": { "type": "integer" } } },
+                  "top_barangay": { "type": ["object", "null"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "served": { "type": "integer" } } },
+                  "women_share_percent": { "type": ["integer", "null"] },
+                  "average_processing_days": { "type": ["number", "null"], "description": "One decimal; imported records left out." },
+                  "processing_basis": { "type": "string" },
+                  "open_now": { "type": "integer" },
+                  "overdue_now": { "type": "null", "description": "No service standard is set (DL-101)." },
+                  "overdue_basis": { "type": "string" }
+                }
+              }
+            }
+          },
+          "sections": { "type": "array", "items": { "$ref": "#/components/schemas/SummaryReportSection" } },
+          "signatories": { "type": "object", "additionalProperties": false, "required": ["prepared_by", "noted_by", "approved_by"], "properties": { "prepared_by": { "$ref": "#/components/schemas/SummaryReportSignatory" }, "noted_by": { "$ref": "#/components/schemas/SummaryReportSignatory" }, "approved_by": { "$ref": "#/components/schemas/SummaryReportSignatory" } } },
+          "footer": { "type": "object", "additionalProperties": false, "required": ["generated_at", "generated_by", "handling_notice"], "properties": { "generated_at": { "type": "string", "format": "date-time" }, "generated_by": { "type": "string" }, "handling_notice": { "type": "string" } } },
+          "disclosure": { "type": "object", "additionalProperties": false, "required": ["threshold", "provenance", "basis"], "properties": { "threshold": { "type": "integer" }, "provenance": { "type": "string" }, "basis": { "type": "string" } } }
+        }
+      },
+      "SummaryReportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/SummaryReport" }, "meta": { "type": "object" } } },
+      "SummaryReportExportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "object", "additionalProperties": false, "required": ["format", "filename", "content"], "properties": { "format": { "type": "string", "enum": ["csv"] }, "filename": { "type": "string" }, "content": { "type": "string" } } }, "meta": { "type": "object" } } },
+      "ImportTemplateEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "object", "additionalProperties": false, "required": ["file_name", "content_type", "content"], "properties": { "file_name": { "type": "string" }, "content_type": { "type": "string", "enum": ["text/csv"] }, "content": { "type": "string", "description": "The CSV: a byte-order mark and one header row." } } }, "meta": { "type": "object" } } },
+      "AssistanceImportSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "file_name", "kind", "status", "row_count", "created_at", "created_by", "committed_at", "committed_by", "result", "withdrawal"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "file_name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["csv", "xlsx"] },
+          "status": { "type": "string", "enum": ["open", "committed", "withdrawn"] },
+          "row_count": { "type": "integer", "minimum": 1 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "created_by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+          "committed_at": { "type": ["string", "null"], "format": "date-time" },
+          "committed_by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] },
+          "result": {
+            "oneOf": [
+              { "type": "null" },
+              { "type": "object", "additionalProperties": false, "required": ["imported", "skipped", "duplicates", "errors", "residents_created"], "properties": { "imported": { "type": "integer" }, "skipped": { "type": "integer" }, "duplicates": { "type": "integer" }, "errors": { "type": "integer" }, "residents_created": { "type": "integer" } } }
+            ]
+          },
+          "withdrawal": {
+            "oneOf": [
+              { "type": "null" },
+              { "type": "object", "additionalProperties": false, "required": ["at", "by", "reason"], "properties": { "at": { "type": "string", "format": "date-time" }, "by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] }, "reason": { "type": "string" } } }
+            ]
+          }
+        }
+      },
+      "AssistanceImportRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["row", "source_line", "group", "values", "problems", "match", "will_create", "create_problems", "candidates", "duplicate", "resolution"],
+        "properties": {
+          "row": { "type": "integer", "minimum": 1, "description": "The row's number among the file's rows; what resolve names." },
+          "source_line": { "type": "integer", "minimum": 1, "description": "The line in the file, for the clerk to find it." },
+          "group": { "type": "string", "enum": ["ready", "needs-review", "skipped", "duplicate", "error"] },
+          "values": { "type": ["object", "null"], "additionalProperties": { "type": "string" }, "description": "Each field's text as read under the mapping." },
+          "problems": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["field", "message"], "properties": { "field": { "type": "string" }, "message": { "type": "string" } } } },
+          "match": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["resident_id", "label", "how"], "properties": { "resident_id": { "type": "string", "format": "uuid" }, "label": { "type": "string", "description": "Surname and given initial." }, "how": { "type": "string", "enum": ["proposed", "linked"] } } }] },
+          "will_create": { "type": "boolean", "description": "A record will be made from the row at commit." },
+          "create_problems": { "type": "array", "items": { "type": "string" }, "description": "What the registry would refuse in the record a create resolution would make." },
+          "candidates": {
+            "type": "array",
+            "maxItems": 10,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["resident_id", "label", "strength", "signals"],
+              "properties": {
+                "resident_id": { "type": "string", "format": "uuid" },
+                "label": { "type": "string", "description": "Surname and given initial (DL-73)." },
+                "strength": { "type": "string", "enum": ["strong", "moderate", "weak"] },
+                "signals": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["attribute", "outcome", "rule"], "properties": { "attribute": { "type": "string" }, "outcome": { "type": "string" }, "rule": { "type": "string" } } } }
+              }
+            }
+          },
+          "duplicate": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["reason", "of_row", "of_request_reference"], "properties": { "reason": { "type": "string", "enum": ["control-number", "same-day"] }, "of_row": { "type": ["integer", "null"] }, "of_request_reference": { "type": ["string", "null"] } } }] },
+          "resolution": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["action", "resident_id", "record", "reason", "by", "at"], "properties": { "action": { "type": "string", "enum": ["link", "create", "skip"] }, "resident_id": { "type": ["string", "null"], "format": "uuid" }, "record": { "type": ["object", "null"] }, "reason": { "type": "string" }, "by": { "oneOf": [{ "type": "null" }, { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }] }, "at": { "type": "string", "format": "date-time" } } }] }
+        }
+      },
+      "AssistanceImport": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AssistanceImportSummary" },
+          {
+            "type": "object",
+            "required": ["columns", "fields", "mapping", "missing_fields", "counts", "rows", "outcomes"],
+            "properties": {
+              "columns": { "type": "array", "items": { "type": "object", "required": ["index", "header", "samples"], "properties": { "index": { "type": "integer" }, "header": { "type": "string" }, "samples": { "type": "array", "items": { "type": "string" } } } } },
+              "fields": { "type": "array", "items": { "type": "object", "required": ["field", "label", "required"], "properties": { "field": { "type": "string" }, "label": { "type": "string" }, "required": { "type": "boolean" } } } },
+              "mapping": { "type": "object", "additionalProperties": { "type": ["integer", "null"] } },
+              "missing_fields": { "type": "array", "items": { "type": "string" }, "description": "full_name when neither a whole name nor surname and given name are mapped." },
+              "counts": { "type": "object", "required": ["ready", "needs_review", "skipped", "duplicate", "error"], "properties": { "ready": { "type": "integer" }, "needs_review": { "type": "integer" }, "skipped": { "type": "integer" }, "duplicate": { "type": "integer" }, "error": { "type": "integer" } } },
+              "rows": { "type": "array", "items": { "$ref": "#/components/schemas/AssistanceImportRow" }, "description": "Empty once committed." },
+              "outcomes": { "type": "array", "items": { "type": "object", "required": ["row", "source_line", "outcome", "request_id", "note"], "properties": { "row": { "type": "integer" }, "source_line": { "type": "integer" }, "outcome": { "type": ["string", "null"], "enum": ["imported", "skipped", "duplicate", "error", null] }, "request_id": { "type": ["string", "null"], "format": "uuid" }, "note": { "type": ["string", "null"], "description": "Why a row was not imported, naming nobody." } } } }
+            }
+          }
+        ]
+      },
+      "AssistanceImportMappingBody": { "type": "object", "additionalProperties": false, "required": ["mapping"], "properties": { "mapping": { "type": "object", "additionalProperties": false, "properties": { "full_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "last_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "first_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "middle_name": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "suffix": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "sex": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "birth_date": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "barangay": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "purok_or_sitio": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "street_address": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "mobile": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "program": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "date_given": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "date_applied": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "amount": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "status": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "control_number": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "purpose": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "remarks": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 }, "received_by": { "type": ["integer", "null"], "minimum": 0, "maximum": 39 } } } } },
+      "AssistanceImportResolveBody": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "reason"],
+        "properties": {
+          "action": { "type": "string", "enum": ["link", "create", "skip"] },
+          "resident_id": { "type": "string", "format": "uuid", "description": "With link only." },
+          "record": {
+            "type": "object",
+            "additionalProperties": false,
+            "description": "With create only: what the registry requires and the row lacks. Each field replaces the row's.",
+            "properties": {
+              "first_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "middle_name": { "type": ["string", "null"], "maxLength": 255 },
+              "last_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+              "suffix": { "type": ["string", "null"], "maxLength": 20 },
+              "sex": { "type": "string", "enum": ["female", "male"] },
+              "birth_date": { "type": "string", "format": "date" },
+              "civil_status": { "type": "string", "enum": ["single", "married", "widowed", "separated", "annulled", "cohabiting"] },
+              "purok_or_sitio": { "type": ["string", "null"], "maxLength": 255 },
+              "street_address": { "type": "string", "minLength": 1, "maxLength": 255 },
+              "mobile": { "type": ["string", "null"], "maxLength": 20 }
+            }
+          },
+          "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+        }
+      },
+      "AssistanceImportWithdrawBody": { "type": "object", "additionalProperties": false, "required": ["reason"], "properties": { "reason": { "type": "string", "minLength": 1, "maxLength": 500 } } },
+      "AssistanceImportSummaryEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/AssistanceImportSummary" }, "meta": { "type": "object" } } },
+      "AssistanceImportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/AssistanceImport" }, "meta": { "type": "object" } } },
+      "AssistanceImportListEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/AssistanceImportSummary" } }, "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } } } },
       "ResidentImportSummary": {
         "type": "object",
         "required": ["id", "file_name", "kind", "status", "row_count", "created_at", "created_by", "committed_at", "committed_by", "result"],
@@ -17575,6 +18004,7 @@
           "program.manage",
           "request.view",
           "request.create",
+          "request.import",
           "request.intake",
           "request.assess",
           "request.endorse",
@@ -17615,7 +18045,7 @@
       "Permission": {
         "type": "string",
         "description": "Every key GET /me may carry: StaffCapability, then CaseworkPermission.",
-        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "resident.import", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
+        "enum": ["household.view-counts", "digital-id.verify", "news.write", "office-inbox.manage", "user.view", "user.change-role", "user.assign-office", "verification.review", "digital-id.manage", "office.manage", "service.manage", "home.manage", "hotline.manage", "app-config.manage", "audit.view", "issuance-type.manage", "issuance-request.manage", "dashboard.view", "resident.view", "resident.view-sensitive", "resident.create", "resident.update", "resident.deactivate", "resident.export", "resident.import", "beneficiary.view", "beneficiary.review-duplicates", "beneficiary.export", "household.view", "household.manage", "household.correct-vulnerability", "family.view", "family.manage", "case.view", "case.manage", "case.note", "case-note.view-protected", "case.close", "program.view", "program.manage", "request.view", "request.create", "request.import", "request.intake", "request.assess", "request.endorse", "request.approve", "request.reject", "request.schedule", "request.close", "request.view-sensitive", "document.record", "document.download", "release.view", "release.schedule", "release.release", "release.void", "referral.view", "referral.manage", "report.view", "report.export-person-level", "audit.view-detail", "staff.view", "staff.manage", "saved-view.share", "visit.view", "visit.manage", "event.view", "event.create", "event.edit", "event.publish", "event.cancel", "event.archive", "event.manage-registrations", "event.export-registrants", "event.mark-attendance", "event.view-insights", "settings.manage"]
       },
       "OfficeRole": {
         "type": "string",
@@ -17931,7 +18361,8 @@
             "properties": {
               "notes": { "type": ["string", "null"], "description": "Staff only. Omitted from citizen responses." },
               "account_name": { "type": ["string", "null"], "description": "Staff only, and present only while status is pending: the name the account gives, for the reviewer to check against the ID. Null when the account gives none." },
-              "account_birthdate": { "type": ["string", "null"], "format": "date", "description": "Staff only, and present only while status is pending: the birth date the account gives. Null when it holds none." }
+              "account_birthdate": { "type": ["string", "null"], "format": "date", "description": "Staff only, and present only while status is pending: the birth date the account gives. Null when it holds none." },
+              "account_link": { "oneOf": [{ "$ref": "#/components/schemas/AccountLinkOutcome" }, { "type": "null" }], "description": "Staff only: what the reviewer decided about the account's registry record with this approval, or null." }
             }
           }
         ]
@@ -17980,7 +18411,102 @@
         "properties": {
           "notes": { "type": "string", "minLength": 1, "maxLength": 1000, "description": "For the office. The resident never reads it." },
           "confirmed_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The account name the reviewer checked against the ID, as account_name gave it." },
-          "confirmed_birthdate": { "type": ["string", "null"], "format": "date", "description": "The account birth date the reviewer checked against the ID, as account_birthdate gave it. Null when the account holds none." }
+          "confirmed_birthdate": { "type": ["string", "null"], "format": "date", "description": "The account birth date the reviewer checked against the ID, as account_birthdate gave it. Null when the account holds none." },
+          "account_link": { "$ref": "#/components/schemas/AccountLinkInput" }
+        }
+      },
+      "AccountLinkInput": {
+        "description": "The reviewer's decision about the account's registry record, with the ID in hand (migration 0069). link names a record; create makes one from the verified account, its name split into the registry's parts (the same words as the verified name, or 422), with the barangay, purok and mobile the account gives; leave-unlinked keeps the reason and links nothing.",
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["decision", "resident_id", "reason"],
+            "properties": {
+              "decision": { "type": "string", "const": "link" },
+              "resident_id": { "type": "string", "format": "uuid" },
+              "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["decision", "record"],
+            "properties": {
+              "decision": { "type": "string", "const": "create" },
+              "record": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["first_name", "last_name", "civil_status"],
+                "properties": {
+                  "first_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+                  "middle_name": { "type": ["string", "null"], "minLength": 1, "maxLength": 100 },
+                  "last_name": { "type": "string", "minLength": 1, "maxLength": 100 },
+                  "suffix": { "type": ["string", "null"], "minLength": 1, "maxLength": 20 },
+                  "sex": { "type": "string", "enum": ["female", "male"], "description": "As the ID shows it. Defaults to the account's when it gives one." },
+                  "birth_date": { "type": "string", "format": "date", "description": "As the ID shows it. Defaults to the account's when it gives one." },
+                  "civil_status": { "type": "string", "enum": ["single", "married", "widowed", "separated", "annulled", "cohabiting"] },
+                  "street_address": { "type": "string", "minLength": 1, "maxLength": 200, "description": "Defaults to the account's street, then its address." }
+                }
+              },
+              "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["decision", "reason"],
+            "properties": {
+              "decision": { "type": "string", "const": "leave-unlinked" },
+              "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+            }
+          }
+        ]
+      },
+      "AccountLinkOutcome": {
+        "type": "object",
+        "required": ["decision", "resident_id"],
+        "properties": {
+          "decision": { "type": "string", "enum": ["link", "create", "leave-unlinked"] },
+          "resident_id": { "type": ["string", "null"], "format": "uuid", "description": "The record linked, or made and linked; null when left unlinked." }
+        }
+      },
+      "RegistryMatch": {
+        "type": "object",
+        "required": ["resident_id", "label", "strength", "signals", "linked_to_other_account"],
+        "properties": {
+          "resident_id": { "type": "string", "format": "uuid" },
+          "label": { "type": "string", "description": "Surname and a given initial, e.g. Mercado, L." },
+          "strength": { "type": "string", "enum": ["strong", "moderate", "weak"], "description": "Orders the list. Decides nothing." },
+          "signals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["attribute", "outcome", "rule"],
+              "properties": {
+                "attribute": { "type": "string", "enum": ["surname", "given-name", "barangay", "mobile", "birth-date", "sex"] },
+                "outcome": { "type": "string", "enum": ["same", "similar", "differs", "not-comparable"] },
+                "rule": { "type": "string" }
+              }
+            }
+          },
+          "linked_to_other_account": { "type": "boolean", "description": "Another app account holds this record; linking to it is refused." }
+        }
+      },
+      "RegistryMatchesEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": ["user_id", "linked_resident_id", "matches"],
+            "properties": {
+              "user_id": { "type": "string", "format": "uuid" },
+              "linked_resident_id": { "type": ["string", "null"], "format": "uuid", "description": "The record the account is linked to now." },
+              "matches": { "type": "array", "items": { "$ref": "#/components/schemas/RegistryMatch" } }
+            }
+          },
+          "meta": { "type": "object" }
         }
       },
       "RejectNotes": {
@@ -18168,12 +18694,13 @@
           "id_last_four": { "type": "string", "pattern": "^[A-Za-z0-9]{1,4}$", "description": "The last four characters of the ID's number, nothing more. Stored upper-cased." },
           "confirmed_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The account's name as the screen showed it." },
           "id_shows_name": { "type": "boolean", "const": true, "description": "The reviewer has seen that the ID shows the name (corrected_name when given)." },
-          "corrected_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The name as the ID shows it, when it differs from the account's." }
+          "corrected_name": { "type": "string", "minLength": 1, "maxLength": 120, "description": "The name as the ID shows it, when it differs from the account's." },
+          "account_link": { "$ref": "#/components/schemas/AccountLinkInput" }
         }
       },
       "InPersonVerification": {
         "type": "object",
-        "required": ["id", "user_id", "method", "id_type", "id_last_four", "name_corrected", "superseded_request_id", "verified_by", "verified_at"],
+        "required": ["id", "user_id", "method", "id_type", "id_last_four", "name_corrected", "superseded_request_id", "verified_by", "verified_at", "account_link"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "user_id": { "type": "string", "format": "uuid" },
@@ -18183,7 +18710,8 @@
           "name_corrected": { "type": "boolean" },
           "superseded_request_id": { "type": ["string", "null"], "format": "uuid", "description": "The pending selfie request this closed, if there was one." },
           "verified_by": { "type": "string", "format": "uuid" },
-          "verified_at": { "type": "string", "format": "date-time" }
+          "verified_at": { "type": "string", "format": "date-time" },
+          "account_link": { "oneOf": [{ "$ref": "#/components/schemas/AccountLinkOutcome" }, { "type": "null" }], "description": "What the reviewer decided about the account's registry record in the same act, or null." }
         }
       },
       "InPersonVerificationEnvelope": {
@@ -19321,6 +19849,21 @@
           "schedule": { "type": ["string", "null"] },
           "hero_url": { "type": ["string", "null"], "description": "Public URL of GET /api/v1/services/{slug}/hero when an image is stored." },
           "hidden_from_list": { "type": "boolean" },
+          "can_apply": { "type": "boolean", "description": "The app offers Apply: the page is live, takes applications, and names a programme open to requests (ADR 0004, decision 2)." },
+          "application_requirements": {
+            "type": "array",
+            "description": "GET /api/v1/services/{slug} only: what the programme asks for, empty unless can_apply. Never its internal fields.",
+            "items": {
+              "type": "object",
+              "required": ["code", "name", "obligation", "condition"],
+              "properties": {
+                "code": { "type": "string", "description": "The field name the file is sent under." },
+                "name": { "type": "string" },
+                "obligation": { "type": "string", "enum": ["required", "optional", "conditional"] },
+                "condition": { "type": ["string", "null"], "description": "When a conditional document is needed, in the office's words." }
+              }
+            }
+          },
           "created_at": { "type": "string", "format": "date-time" },
           "updated_at": { "type": "string", "format": "date-time" }
         }
@@ -19342,7 +19885,17 @@
         }
       },
       "AdminService": {
-        "allOf": [{ "$ref": "#/components/schemas/Service" }, { "$ref": "#/components/schemas/ArchiveState" }],
+        "allOf": [
+          { "$ref": "#/components/schemas/Service" },
+          {
+            "type": "object",
+            "properties": {
+              "program_id": { "type": ["string", "null"], "format": "uuid", "description": "The office programme this page applies to." },
+              "accepts_online_applications": { "type": "boolean" }
+            }
+          },
+          { "$ref": "#/components/schemas/ArchiveState" }
+        ],
         "description": "What the administrator reads: the residents' shape and where the record stands in the archive. Public responses never carry the archive fields."
       },
       "AdminServiceEnvelope": {
@@ -19379,7 +19932,9 @@
           "claim_steps": { "type": "array", "items": { "type": "string" } },
           "featured_headline": { "type": ["string", "null"] },
           "schedule": { "type": ["string", "null"] },
-          "hidden_from_list": { "type": "boolean" }
+          "hidden_from_list": { "type": "boolean" },
+          "program_id": { "type": ["string", "null"], "format": "uuid", "description": "The office programme this page applies to; must exist (422)." },
+          "accepts_online_applications": { "type": "boolean", "description": "Residents apply from the app. Needs program_id (422)." }
         }
       },
       "ServicePatch": {
@@ -19403,7 +19958,9 @@
           "claim_steps": { "type": "array", "items": { "type": "string" } },
           "featured_headline": { "type": ["string", "null"] },
           "schedule": { "type": ["string", "null"] },
-          "hidden_from_list": { "type": "boolean" }
+          "hidden_from_list": { "type": "boolean" },
+          "program_id": { "type": ["string", "null"], "format": "uuid", "description": "The office programme this page applies to; must exist (422)." },
+          "accepts_online_applications": { "type": "boolean", "description": "Residents apply from the app. Needs program_id (422)." }
         }
       },
       "NewsWrite": {
@@ -21619,8 +22176,31 @@
               "walk-in",
               "barangay-referral",
               "encoded",
-              "online"
-            ]
+              "online",
+              "imported"
+            ],
+            "description": "imported: from an old Tulong report (docs/adr/0005), closed on arrival with no status history."
+          },
+          "imported": {
+            "type": ["object", "null"],
+            "additionalProperties": false,
+            "description": "For an imported request: its import, the source's control or voucher number, the day it was decided (Manila midnight), and when its import was withdrawn. Null for every other request.",
+            "required": ["import_id", "source_reference", "decided_at", "withdrawn_at"],
+            "properties": {
+              "import_id": { "type": "string", "format": "uuid" },
+              "source_reference": { "type": ["string", "null"] },
+              "decided_at": { "type": "string", "format": "date-time" },
+              "withdrawn_at": { "type": ["string", "null"], "format": "date-time" }
+            }
+          },
+          "filing_advisory": {
+            "type": ["object", "null"],
+            "description": "For a request the resident filed from the app: what the duplicate check found then, codes and tones only, kept once (ADR 0004, decision 2). Null for every other request.",
+            "properties": {
+              "signals": { "type": "array", "items": { "type": "object", "properties": { "code": { "type": "string" }, "tone": { "type": "string", "enum": ["note", "caution"] } } } },
+              "computed_at": { "type": "string", "format": "date-time" },
+              "records_read": { "type": "integer" }
+            }
           },
           "referred_by": {
             "type": [
@@ -24596,6 +25176,7 @@
           "in-kind"
         ]
       },
+      "OfficeReleaseMethod": { "type": "string", "enum": ["cash", "check", "e-wallet", "bank-transfer", "in-kind", "not-recorded"], "description": "How a release was paid. not-recorded only on a release imported from an old Tulong report (docs/adr/0005), which does not say; never accepted when preparing one." },
       "OfficeDeferralReason": {
         "type": "string",
         "enum": [
@@ -24684,7 +25265,7 @@
             "$ref": "#/components/schemas/OfficeReleaseKind"
           },
           "method": {
-            "$ref": "#/components/schemas/OfficePayoutMethod"
+            "$ref": "#/components/schemas/OfficeReleaseMethod"
           },
           "amount_centavos": {
             "type": [
@@ -27630,7 +28211,9 @@
           "approved_amount_centavos",
           "payout_scheduled_for",
           "payout_venue",
-          "released_at"
+          "released_at",
+          "channel",
+          "missing_documents"
         ],
         "properties": {
           "id": {
@@ -27690,9 +28273,53 @@
             ],
             "format": "date-time",
             "description": "When it was handed over, once the request stands released or completed; null before."
+          },
+          "channel": { "type": "string", "enum": ["online", "office"], "description": "online when she filed it from the app; office for any of the counter's channels." },
+          "missing_documents": {
+            "type": "array",
+            "description": "Empty unless the request stands returned: each document it requires, or a conditional one ruled to apply, that she has not sent (not-sent) or must send again (send-again). Never the office's remarks.",
+            "items": {
+              "type": "object",
+              "required": ["code", "name", "state", "instruction"],
+              "properties": {
+                "code": { "type": "string", "description": "The field name to send its file under." },
+                "name": { "type": "string" },
+                "state": { "type": "string", "enum": ["not-sent", "send-again"] },
+                "instruction": { "type": "string" }
+              }
+            }
           }
         },
         "description": "A resident's own assistance request, as the app shows it (ADR 0003, C). The minimum; nothing of the office's record."
+      },
+      "OwnAssistanceRequestEnvelope": {
+        "type": "object",
+        "required": ["data", "meta"],
+        "properties": {
+          "data": { "$ref": "#/components/schemas/OwnAssistanceRequest" },
+          "meta": { "type": "object" }
+        }
+      },
+      "AssistanceApplicationInput": {
+        "type": "object",
+        "required": ["purpose"],
+        "description": "One of service_slug and program_id. Besides these fields, one file per document, each in the field named by its code (application_requirements on the Tulong page).",
+        "properties": {
+          "service_slug": { "type": "string", "description": "The Tulong page applied from." },
+          "program_id": { "type": "string", "format": "uuid", "description": "The programme a live page takes applications for." },
+          "purpose": { "type": "string", "minLength": 12, "maxLength": 2000, "description": "In her words: what the assistance is for." },
+          "requested_amount_centavos": { "type": "string", "pattern": "^[0-9]{1,10}$", "description": "Whole centavos, optional." },
+          "idempotency_key": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": { "type": "string", "format": "binary" }
+      },
+      "AssistanceDocumentsInput": {
+        "type": "object",
+        "description": "One file per document, each in the field named by its code on the request.",
+        "properties": {
+          "idempotency_key": { "type": "string", "format": "uuid" }
+        },
+        "additionalProperties": { "type": "string", "format": "binary" }
       },
       "OwnAssistanceRequestListEnvelope": {
         "type": "object",
@@ -28400,7 +29027,8 @@
                     "check",
                     "e-wallet",
                     "bank-transfer",
-                    "in-kind"
+                    "in-kind",
+                    "not-recorded"
                   ]
                 },
                 "kind": {
@@ -29369,7 +29997,8 @@
                         "check",
                         "e-wallet",
                         "bank-transfer",
-                        "in-kind"
+                        "in-kind",
+                        "not-recorded"
                       ]
                     },
                     "kind": {

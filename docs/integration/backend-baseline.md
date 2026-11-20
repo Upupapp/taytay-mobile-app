@@ -102,6 +102,17 @@ server sends (`issuance_request_updated`, `event_registration_updated`,
 by the row of its own type; `balita` and `emergency` stay accepted and are said to gate nothing.
 The notification settings now read and write the six notice types and no other.
 
+It was re-vendored from backend `6794f8d` on 20 November 2026, for D-226. Fourteen operations were
+added and none removed. This app calls two of them: `POST /me/assistance-applications` (a verified
+resident whose account the office has linked applies for Tulong, multipart, ADR 0004 decision 2) and
+`POST /me/assistance-requests/{id}/documents` (more documents while the office has returned her
+request). `Service` gained `can_apply` and, on `GET /services/{slug}`, `application_requirements`;
+`OwnAssistanceRequest` gained `channel` and `missing_documents`. The other twelve are the office's:
+the account link at verification (`GET /admin/users/{id}/registry-matches`, backend `bd2e479`),
+the past-assistance import (`/office/assistance-imports*`, `/office/imports/template`, `625bb77`)
+and the summary report (`/office/reports/summary*`, `6794f8d`). No response this app reads lost or
+renamed a field.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -115,9 +126,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `769deea58402ffbc301bc48ea951e5ad3907119c` (`769deea`) |
-| **sha256** | `d848895ea888018b8452434b46f106252e098414e3534338d067998f35635875` |
-| **Vendored on** | 16 November 2026 (D-224) |
+| **Backend commit** | `6794f8d632a0875ca283a63cfd836d400474a625` (`6794f8d`) |
+| **sha256** | `f3381b3583982126c957b6ac268799bafd236adcd87424409bb1d2b67f98d402` |
+| **Vendored on** | 20 November 2026 (D-226) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two
