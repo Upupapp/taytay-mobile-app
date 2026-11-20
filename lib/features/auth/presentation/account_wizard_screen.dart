@@ -305,16 +305,13 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     super.dispose();
   }
 
-  int get _dot {
-    return switch (_step) {
-      _Step.personal || _Step.account || _Step.code => 1,
-      _Step.terms => 2,
-      _Step.idCard => 3,
-      _Step.selfie => 4,
-      _Step.review => 5,
-      _Step.submitted => 6,
-    };
-  }
+  /// Every screen the resident moves through, done included.
+  static final int _stepCount = _Step.values.length;
+
+  /// The screen's own place in the wizard, so each Continue moves the counter.
+  /// Personal details, account and email code once all read "Step 1", which
+  /// looked like a Continue that had done nothing.
+  int get _dot => _step.index + 1;
 
   Map<String, String> _personalErrors() {
     final errors = <String, String>{};
@@ -1015,8 +1012,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return AuthFormPage(
       title: title,
       subtitle: subtitle,
-      stepLabel: 'Step $_dot of 6',
-      progress: _dot / 6,
+      stepLabel: 'Step $_dot of $_stepCount',
+      progress: _dot / _stepCount,
       progressSemanticLabel: 'Create account progress',
       onBack: _back,
       backEnabled: !_busy,
@@ -1756,7 +1753,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       backgroundColor: BrandColors.white,
       body: SuccessScreen(
         mark: SuccessMarkStyle.medal,
-        stepLabel: 'Step 6 of 6',
+        stepLabel: 'Step $_stepCount of $_stepCount',
         progress: 1,
         progressSemanticLabel: 'Create account progress',
         showBack: true,

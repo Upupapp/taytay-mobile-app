@@ -267,7 +267,7 @@ void main() {
         ),
       );
       expect(find.byType(WaveHeader), findsOneWidget);
-      expect(find.text('Step 2 of 6'), findsOneWidget);
+      expect(find.text('Step 4 of 8'), findsOneWidget);
       expect(find.bySemanticsLabel('Create account progress'), findsWidgets);
       expect(find.byType(ConsentCheckCard), findsNWidgets(2));
       // The draft marker and the privacy notice's points stay.
@@ -295,7 +295,27 @@ void main() {
       expect(find.text('Juana Dela Cruz'), findsOneWidget);
     });
 
-    testWidgets('submitted is the medal success screen, step 6 of 6', (
+    // Personal details, account and email code all once read "Step 1 of 6",
+    // so a Continue looked as if it had done nothing.
+    const List<(AccountFixture, String)> counted = <(AccountFixture, String)>[
+      (AccountFixture.personal, 'Step 1 of 8'),
+      (AccountFixture.account, 'Step 2 of 8'),
+      (AccountFixture.code, 'Step 3 of 8'),
+      (AccountFixture.terms, 'Step 4 of 8'),
+      (AccountFixture.idCard, 'Step 5 of 8'),
+      (AccountFixture.selfie, 'Step 6 of 8'),
+      (AccountFixture.review, 'Step 7 of 8'),
+    ];
+    for (final (AccountFixture fixture, String label) in counted) {
+      testWidgets('the ${fixture.name} step says $label', (tester) async {
+        await tester.pumpWidget(
+          layoutHost(AccountWizardScreen(fixture: fixture), scrollable: false),
+        );
+        expect(find.text(label), findsOneWidget);
+      });
+    }
+
+    testWidgets('submitted is the medal success screen, step 8 of 8', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -308,7 +328,7 @@ void main() {
         find.byType(SuccessScreen),
       );
       expect(done.mark, SuccessMarkStyle.medal);
-      expect(done.stepLabel, 'Step 6 of 6');
+      expect(done.stepLabel, 'Step 8 of 8');
       expect(find.text("You're all set, Juana!"), findsOneWidget);
       expect(find.text('Pending review'), findsOneWidget);
     });

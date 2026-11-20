@@ -29,6 +29,11 @@ profile with no email, so the account exists before the code is sent.
 | Review | Every answer, each with an edit link that returns to review | `POST /me/verification-requests`, multipart, with an idempotency key (D-213) |
 | Done | "You're all set" | Home |
 
+The header counts these eight screens, "Step 1 of 8" to "Step 8 of 8", so every Continue moves the
+counter. It used to read "Step 1 of 6" on personal details, account and email code alike, which
+looked like a Continue that had done nothing. A resident whose email is already verified skips the
+code screen, and the counter skips its number with it.
+
 A resident who leaves part-way signs in later and is picked up where the server says she is:
 consents by `/consent-update` (D-187), the ID and selfie from `/verification` ("Start
 verification"). A submit that finds a request already waiting opens the pending page; one that

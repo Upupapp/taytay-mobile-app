@@ -131,7 +131,7 @@ class SuccessScreen extends StatelessWidget {
 
   final SuccessMarkStyle mark;
 
-  /// Registration's last "Step 6 of 6" and full bar.
+  /// Registration's last step ("Step 8 of 8") and full bar.
   final String? stepLabel;
   final double? progress;
   final String? progressSemanticLabel;
