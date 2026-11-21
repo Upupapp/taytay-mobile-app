@@ -1059,6 +1059,10 @@ class AppStringsEn extends AppStrings {
       'The office needs more from you — please visit or contact the MSWDO';
 
   @override
+  String get assistanceStageDocumentsSent =>
+      'Sent — waiting for the office to review what you sent';
+
+  @override
   String get assistanceStageNotApproved =>
       'Not approved — the MSWDO can tell you why';
 

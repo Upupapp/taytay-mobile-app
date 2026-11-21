@@ -164,6 +164,10 @@ class MockOwnAssistanceRepository implements OwnAssistanceRepository {
         for (final MissingDocument document in before.missingDocuments)
           if (!files.containsKey(document.code)) document,
       ],
+      // Everything named was sent: the sample waits for the office (A10).
+      documentsSent: before.missingDocuments.every(
+        (MissingDocument document) => files.containsKey(document.code),
+      ),
     );
     _rows[index] = after;
     return Ok<OwnAssistanceRequest>(after);

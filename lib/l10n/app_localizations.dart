@@ -1904,6 +1904,12 @@ abstract class AppStrings {
   /// **'The office needs more from you — please visit or contact the MSWDO'**
   String get assistanceStageNeedsMore;
 
+  /// Status of an assistance request the office returned, once the resident has sent from the app every document it named (A10). The Filipino text was written by Claude and not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent — waiting for the office to review what you sent'**
+  String get assistanceStageDocumentsSent;
+
   /// Status of an assistance request: rejected (D-223). The office's reason is never sent to the app. The Filipino text was written by Claude for D-223 and reviewed for consistency with D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:

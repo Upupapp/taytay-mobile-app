@@ -43,6 +43,11 @@ enum AssistanceStage {
   payoutScheduled,
   released,
   needsMore,
+
+  /// Returned, and she has sent from this app every document the office
+  /// named: the office now has them to review (A10). Said only while the
+  /// request has not moved since she sent them.
+  documentsSent,
   notApproved,
   cancelled,
   expired,
@@ -143,6 +148,7 @@ class OwnAssistanceRequest {
     this.channel,
     this.sourceReference,
     this.missingDocuments = const <MissingDocument>[],
+    this.documentsSent = false,
   });
 
   /// Opaque. Matches the `subject_id` of an `assistance_request_updated`
@@ -188,13 +194,45 @@ class OwnAssistanceRequest {
   /// Empty otherwise, and empty when the office named nothing.
   final List<MissingDocument> missingDocuments;
 
+  /// She sent, from this app, every document the office named while the
+  /// request stood returned, and it has not moved since (A10). The API says
+  /// only what is still missing, so an empty list alone cannot tell "sent"
+  /// from "the office named nothing"; the data layer sets this from its own
+  /// send, for as long as the app runs, and never stores it.
+  final bool documentsSent;
+
+  /// This request, marked as one whose documents she has sent.
+  OwnAssistanceRequest withDocumentsSent() => OwnAssistanceRequest(
+    id: id,
+    referenceNumber: referenceNumber,
+    programName: programName,
+    filedAt: filedAt,
+    status: status,
+    statusChangedAt: statusChangedAt,
+    approvedAmountCentavos: approvedAmountCentavos,
+    payoutScheduledFor: payoutScheduledFor,
+    payoutVenue: payoutVenue,
+    releasedAt: releasedAt,
+    channel: channel,
+    sourceReference: sourceReference,
+    missingDocuments: missingDocuments,
+    documentsSent: true,
+  );
+
   /// She can send documents from the app: the office has returned it and
   /// named what is missing. The server decides; this only offers the button.
   bool get takesDocuments =>
       status.known == AssistanceRequestStatus.returned &&
       missingDocuments.isNotEmpty;
 
-  AssistanceStage get stage => AssistanceStage.of(status.known);
+  /// Where it stands in her terms. A returned request whose documents she
+  /// has all sent is waiting for the office, not for her (A10).
+  AssistanceStage get stage =>
+      status.known == AssistanceRequestStatus.returned &&
+          missingDocuments.isEmpty &&
+          documentsSent
+      ? AssistanceStage.documentsSent
+      : AssistanceStage.of(status.known);
 
   /// Redacted: a control number and a venue are about a person.
   @override

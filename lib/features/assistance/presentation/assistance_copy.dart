@@ -20,6 +20,7 @@ abstract final class AssistanceCopy {
     AssistanceStage.payoutScheduled => s.assistanceStagePayoutScheduled,
     AssistanceStage.released => s.assistanceStageReleased,
     AssistanceStage.needsMore => s.assistanceStageNeedsMore,
+    AssistanceStage.documentsSent => s.assistanceStageDocumentsSent,
     AssistanceStage.notApproved => s.assistanceStageNotApproved,
     AssistanceStage.cancelled => s.assistanceStageCancelled,
     AssistanceStage.expired => s.assistanceStageExpired,
@@ -33,6 +34,7 @@ abstract final class AssistanceCopy {
     AssistanceStage.payoutScheduled => TaytayIcons.calendar,
     AssistanceStage.released => TaytayIcons.handCoins,
     AssistanceStage.needsMore => TaytayIcons.triangleAlert,
+    AssistanceStage.documentsSent => TaytayIcons.hourglass,
     AssistanceStage.notApproved => TaytayIcons.circleX,
     AssistanceStage.cancelled => TaytayIcons.circleSlash,
     AssistanceStage.expired => TaytayIcons.clock,
@@ -42,6 +44,7 @@ abstract final class AssistanceCopy {
   static Color ink(AssistanceStage stage) => switch (stage) {
     AssistanceStage.received ||
     AssistanceStage.beingAssessed ||
+    AssistanceStage.documentsSent ||
     AssistanceStage.updated => BrandColors.blue,
     AssistanceStage.approved ||
     AssistanceStage.payoutScheduled ||

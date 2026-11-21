@@ -301,6 +301,7 @@
   "assistanceStagePayoutScheduled": "Nakaiskedyul na ang pagkuha",
   "assistanceStageReleased": "Naibigay na",
   "assistanceStageNeedsMore": "May kailangan pa sa iyo ang tanggapan — pakibisita o kontakin ang MSWDO",
+  "assistanceStageDocumentsSent": "Naipadala na — hinihintay ang pagsusuri ng tanggapan",
   "assistanceStageNotApproved": "Hindi naaprubahan — masasabi sa iyo ng MSWDO kung bakit",
   "assistanceStageCancelled": "Kinansela",
   "assistanceStageExpired": "Nag-expire",

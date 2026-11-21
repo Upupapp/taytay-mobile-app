@@ -16,10 +16,30 @@ import 'own_assistance_codec.dart';
 /// adding documents to a returned request (backend `6794f8d`, ADR 0004
 /// decision 2, D-226) are the two multipart writes.
 class OwnAssistanceApiRepository implements OwnAssistanceRepository {
-  const OwnAssistanceApiRepository({required ApiClient apiClient})
+  OwnAssistanceApiRepository({required ApiClient apiClient})
     : _apiClient = apiClient;
 
   final ApiClient _apiClient;
+
+  /// Requests she sent every named document for from this app, with the
+  /// `status_changed_at` they had then (A10). In memory only: whether a
+  /// person has an assistance request is not written to the phone. A move by
+  /// the office (a new `status_changed_at`) or a newly named document ends it.
+  final Map<String, DateTime?> _sent = <String, DateTime?>{};
+
+  /// [request] as she should read it, given what this app has sent.
+  OwnAssistanceRequest _withSends(OwnAssistanceRequest request) {
+    if (!_sent.containsKey(request.id)) return request;
+    final bool stillWaiting =
+        request.status.known == AssistanceRequestStatus.returned &&
+        request.missingDocuments.isEmpty &&
+        _sent[request.id] == request.statusChangedAt;
+    if (!stillWaiting) {
+      _sent.remove(request.id);
+      return request;
+    }
+    return request.withDocumentsSent();
+  }
 
   /// The route's ceiling on `limit`. The office's default page size may be
   /// larger, and a larger `limit` is a 422.
@@ -114,7 +134,12 @@ class OwnAssistanceApiRepository implements OwnAssistanceRepository {
           files: _parts(files),
           decode: OwnAssistanceCodec.row,
         );
-    return response.flatMap(_present);
+    return response.flatMap(_present).map((OwnAssistanceRequest sent) {
+      // Her row as it stands after the send: when nothing named is left, the
+      // request waits for the office until it moves (A10).
+      if (sent.missingDocuments.isEmpty) _sent[sent.id] = sent.statusChangedAt;
+      return _withSends(sent);
+    });
   }
 
   /// One part per document, named by its code.
@@ -162,7 +187,24 @@ class OwnAssistanceApiRepository implements OwnAssistanceRepository {
           query: <String, String>{'limit': '$limit', 'cursor': ?cursor},
           decode: OwnAssistanceCodec.list,
         );
-    return response.map(_page);
+    return response
+        .map(_page)
+        .map(
+          (Paginated<OwnAssistanceRequest> page) => _sent.isEmpty
+              ? page
+              : Paginated<OwnAssistanceRequest>(
+                  items: <OwnAssistanceRequest>[
+                    for (final OwnAssistanceRequest item in page.items)
+                      _withSends(item),
+                  ],
+                  page: page.page,
+                  perPage: page.perPage,
+                  total: page.total,
+                  totalPages: page.totalPages,
+                  hasMore: page.hasMore,
+                  nextCursor: page.nextCursor,
+                ),
+        );
   }
 
   static Paginated<OwnAssistanceRequest> _page(

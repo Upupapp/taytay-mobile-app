@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/config/app_environment.dart';
 import 'package:taytay_resident/core/design/app_theme.dart';
+import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/l10n/app_locales.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
@@ -364,6 +366,112 @@ void main() {
         );
         expect(find.text(entry.value.$2), findsOneWidget, reason: entry.key);
       }
+    });
+  });
+
+  // After she re-sent the document, the request still said "The office needs
+  // more from you": the API keeps it `returned` until the office moves it,
+  // and lists only what is still missing (A10).
+  group('a returned request whose documents she sent waits for the office', () {
+    Map<String, Object?> returned(
+      String changedAt, {
+      List<Object?> missing = const <Object?>[],
+    }) => <String, Object?>{
+      ..._row('ar-r', status: 'returned'),
+      'status_changed_at': changedAt,
+      'missing_documents': missing,
+    };
+    const Map<String, Object?> blurred = <String, Object?>{
+      'code': 'medical-abstract',
+      'name': 'Medical abstract',
+      'state': 'send-again',
+      'instruction': 'Send a new copy of the Medical abstract.',
+    };
+    final CapturedDocument file = CapturedDocument(
+      bytes: Uint8List.fromList(<int>[1, 2, 3]),
+      fileName: 'abstract.jpg',
+      mimeType: 'image/jpeg',
+      source: DocumentSource.camera,
+    );
+
+    test('sent, it reads as waiting until the office moves it', () async {
+      String changedAt = '2026-11-12T02:00:00Z';
+      List<Object?> missing = <Object?>[blurred];
+      final _Transport transport = _Transport((ApiRequest request) {
+        if (request.method == HttpMethod.post) {
+          missing = const <Object?>[];
+          return Ok<ApiHttpResponse>(
+            ApiHttpResponse(
+              statusCode: 201,
+              body: jsonEncode(<String, Object?>{'data': returned(changedAt)}),
+            ),
+          );
+        }
+        return Ok<ApiHttpResponse>(
+          _page(<Object?>[returned(changedAt, missing: missing)]),
+        );
+      });
+      final OwnAssistanceApiRepository repository = _repository(transport);
+
+      final OwnAssistanceRequest before = (await repository.findOwn(
+        'ar-r',
+      )).valueOrNull!;
+      expect(before.stage, AssistanceStage.needsMore);
+      expect(before.takesDocuments, isTrue);
+
+      final OwnAssistanceRequest sent = (await repository.addDocuments(
+        'ar-r',
+        files: <String, CapturedDocument>{'medical-abstract': file},
+        idempotencyKey: 'key-1',
+      )).valueOrNull!;
+      expect(sent.stage, AssistanceStage.documentsSent);
+
+      // A later read of the same, unmoved request still says so.
+      final OwnAssistanceRequest read = (await repository.findOwn(
+        'ar-r',
+      )).valueOrNull!;
+      expect(read.stage, AssistanceStage.documentsSent);
+      expect(read.status.known, AssistanceRequestStatus.returned);
+
+      // The office returns it again: it is hers to answer once more.
+      changedAt = '2026-11-20T02:00:00Z';
+      final OwnAssistanceRequest again = (await repository.findOwn(
+        'ar-r',
+      )).valueOrNull!;
+      expect(again.stage, AssistanceStage.needsMore);
+    });
+
+    test('returned with nothing named, and nothing sent, still needs her', () {
+      final OwnAssistanceRequest? row = OwnAssistanceCodec.row(
+        returned('2026-11-12T02:00:00Z'),
+      );
+      expect(row?.stage, AssistanceStage.needsMore);
+      expect(row?.withDocumentsSent().stage, AssistanceStage.documentsSent);
+    });
+
+    testWidgets('the request says it was sent and waits for the office', (
+      tester,
+    ) async {
+      final OwnAssistanceRequest? row = OwnAssistanceCodec.row(
+        returned('2026-11-12T02:00:00Z'),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light(),
+          localizationsDelegates: AppStrings.localizationsDelegates,
+          supportedLocales: AppLocales.supported,
+          home: MyRequestDetailCanvas(
+            environment: AppEnvironment.dev,
+            request: row?.withDocumentsSent(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.textContaining('waiting for the office to review'),
+        findsWidgets,
+      );
+      expect(find.textContaining('needs more from you'), findsNothing);
     });
   });
 

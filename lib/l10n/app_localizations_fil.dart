@@ -1073,6 +1073,10 @@ class AppStringsFil extends AppStrings {
       'May kailangan pa sa iyo ang tanggapan — pakibisita o kontakin ang MSWDO';
 
   @override
+  String get assistanceStageDocumentsSent =>
+      'Naipadala na — hinihintay ang pagsusuri ng tanggapan';
+
+  @override
   String get assistanceStageNotApproved =>
       'Hindi naaprubahan — masasabi sa iyo ng MSWDO kung bakit';
 
