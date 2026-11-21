@@ -152,6 +152,9 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   final _code = TextEditingController();
   final _idType = TextEditingController(text: 'PhilSys National ID');
   final _summary = FocusNode();
+
+  /// The email code's field, so an empty Confirm opens the keyboard on it.
+  final FocusNode _codeFocus = FocusNode();
   bool _terms = false;
   bool _privacy = false;
   bool _obscure = true;
@@ -344,6 +347,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     _code.dispose();
     _idType.dispose();
     _summary.dispose();
+    _codeFocus.dispose();
     super.dispose();
   }
 
@@ -433,6 +437,14 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
           return;
         }
         final code = _code.text.trim();
+        if (code.isEmpty) {
+          // Nothing typed yet (a second tap on the button that opened this
+          // step lands here): open the keyboard on the code, and say nothing
+          // is wrong until she has typed or pressed Confirm on a code (A13).
+          setState(() => _status = null);
+          _codeFocus.requestFocus();
+          return;
+        }
         if (!RegExp(r'^\d{6}$').hasMatch(code)) {
           setState(() => _status = 'Enter the 6-digit code.');
           return;
@@ -1423,6 +1435,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 child: TextField(
                   key: const Key('email-code-field'),
                   controller: _code,
+                  focusNode: _codeFocus,
                   maxLength: 6,
                   keyboardType: TextInputType.number,
                   showCursor: false,
@@ -1431,7 +1444,8 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                     color: BrandColors.transparent,
                   ),
                   decoration: bareField.copyWith(counterText: ''),
-                  onChanged: (_) => setState(() {}),
+                  // Typing answers whatever was said about the last code.
+                  onChanged: (_) => setState(() => _status = null),
                 ),
               ),
           ],

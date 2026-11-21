@@ -463,6 +463,39 @@ void main() {
     expect(find.text('San Juan'), findsOneWidget);
   });
 
+  // The code step said "Enter the 6-digit code." in red before anything was
+  // typed (A13): an empty Confirm opens the keyboard and says nothing wrong.
+  testWidgets('the code step judges a code only once one is typed', (
+    tester,
+  ) async {
+    await boot(tester, auth: FakeAuthRepository());
+    await goTo(tester, 'register');
+    await _createAccount(tester);
+    expect(find.text('Enter the 6-digit code'), findsOneWidget);
+    expect(find.text('Enter the 6-digit code.'), findsNothing);
+
+    await tester.tap(find.text('Confirm email'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the 6-digit code.'), findsNothing);
+    final EditableText field = tester.widget<EditableText>(
+      find.descendant(
+        of: find.byKey(const Key('email-code-field')),
+        matching: find.byType(EditableText),
+      ),
+    );
+    expect(field.focusNode.hasFocus, isTrue);
+
+    await tester.enterText(find.byKey(const Key('email-code-field')), '48');
+    await tester.tap(find.text('Confirm email'));
+    await tester.pumpAndSettle();
+    expect(find.text('Enter the 6-digit code.'), findsOneWidget);
+
+    // Typing again answers it.
+    await tester.enterText(find.byKey(const Key('email-code-field')), '482');
+    await tester.pump();
+    expect(find.text('Enter the 6-digit code.'), findsNothing);
+  });
+
   testWidgets('an expired code stays on the code step', (tester) async {
     await boot(tester, auth: FakeAuthRepository());
     await goTo(tester, 'register');
