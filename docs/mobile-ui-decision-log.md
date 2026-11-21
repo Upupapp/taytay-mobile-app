@@ -4550,6 +4550,50 @@ nothing), `test/core/session_test.dart` (greeting name), `test/features/account_
 
 ---
 
+## D-229 — A returned request she has answered says it waits for the office; My requests reads again when she comes back; the email code is judged once typed
+
+**Status: settled.** Category: product / contract. Recorded 2026-11-22. Decided on researched best
+practice, as Ella's standing rule asks.
+
+**Context.** The demo rehearsal (after D-228) found four more things. A9: a returned request shows
+"Send a new copy of the Medical abstract." but never what the office wrote about it ("scan too
+blurred"). A10: after Maria sent the document again, the request still said "The office needs more
+from you — please visit or contact the MSWDO". A12: My requests stayed as it was until a pull to
+refresh. A13: the email-code step said "Enter the 6-digit code." in red before anything was typed.
+
+**Decision.**
+
+1. **A9 is not the app's to fix.** `GET /me/assistance-requests` sends `missing_documents[]` as
+   `{ code, name, state, instruction }`; `instruction` is the API's own sentence ("Send a new copy
+   of the {name}."), and the endpoint is documented as "Never the office's remarks" and "never any
+   reason the office wrote" (backend `docs/api/endpoints.md`, `resident-requests.ts`
+   `missingDocumentJson`, which says "Why it could not is the office's to say in person"). The
+   office's words live in `office_request_requirements.remarks`. Showing them needs a backend
+   decision to add a resident-worded field, for example `missing_documents[].office_remark`, and the
+   privacy review that goes with it (a remark can name a diagnosis). The app invents nothing.
+2. **A10: a returned request whose named documents she has all sent from the app reads "Sent —
+   waiting for the office to review what you sent"** (a new stage, `documentsSent`, hourglass,
+   blue). The API keeps the request `returned` until the office moves it and lists only what is
+   still missing, so an empty list alone cannot tell "sent" from "the office named nothing". The
+   data layer therefore remembers its own successful send with the request's `status_changed_at`,
+   in memory only (whether somebody has an assistance request is never written to the phone), and
+   drops it once the office moves the request or names a document again. After the app is closed
+   and opened again the request reads as returned, as the API says, until the office moves it. A
+   field such as `documents_sent_at` on the row would let the app say it across restarts.
+3. **A12: My requests reads its first page again, quietly, whenever it is shown again after being
+   covered** (back from a request or from Add documents, where her own send raises no topic of
+   hers). The office's moves were already heard: the `notifications` topic and the return to the
+   foreground re-read it through `LiveRefresh` (D-218).
+4. **A13: an empty Confirm on the email-code step opens the keyboard on the code and says nothing
+   is wrong**; a code is judged once one is typed and confirmed, and typing clears what was said
+   about the last one.
+
+**Tests.** `test/features/my_requests_test.dart` (sent then read again, then returned again; the
+request's words; the list reads again when uncovered), `test/features/account_wizard_test.dart`
+(the code step).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4782,5 +4826,6 @@ nothing), `test/core/session_test.dart` (greeting name), `test/features/account_
 | D-226 | Apply for Tulong from the app (Ella decided OD-4, gap 20: build it): a page whose `can_apply` is true offers Apply, gated as Message; a four-step wizard (`/tulong/:serviceSlug/apply`): what it is and who can apply (verified, and linked by the MSWDO at ID review or the counter), purpose (12–2000) and an optional amount read into integer centavos, one file per `application_requirements` code (required / optional / conditional, the 8 MB fallback said first), review, `POST /me/assistance-applications` with an idempotency key; a `409` says the MSWDO must link the account and is never a dead end; a failed send says nothing was sent; the filed screen is the same for everybody (VAWC/CICL requests are filed but never listed). My requests shows the channel and, for a returned request, the missing documents with Add documents (`POST /me/assistance-requests/{id}/documents`). The Verified page explains the account link | product / privacy | settled |
 | D-227 | An imported request (`channel` `imported`, backend `28f246f`) shows `source_reference`, the control number on her old papers, first: "Control no. MSWDO-2024-0046" on its My requests row and in the head of its page; this system's reference stays beneath it and as the "System reference" fact; the channel reads "From the office's records". A request filed in this system shows neither | product / contract | settled |
 | D-228 | What a screen says about an account follows the server: the sign-up terms step shows the published Privacy Notice with its version and date (the app's summary only under "DRAFT · Not yet published by Taytay LGU", a failed read with Try again); the ID step offers Verify in person instead before any photo; Home's header shows the account (initials or a person glyph), never Sign in, and its card follows `verification_status` (not sent, pending, rejected, unknown); `verification_decided` opens `/verification` and a type alone opens nothing; `GET /me` is read again on a resumed cold start and on return to the foreground, and the live hint hears `verification`; a barangay is named from `GET /barangays`, never its id (My Account, Edit profile); Tulong's footer says "not applications" only while no page takes them | product / privacy / contract | settled |
+| D-229 | A returned request whose named documents she has all sent from the app reads "Sent — waiting for the office to review what you sent" until the office moves it (remembered in memory with `status_changed_at`, never stored); the office's remarks on a document are not sent by the API ("Never the office's remarks") and are not invented; My requests re-reads when shown again; an empty email-code Confirm opens the keyboard instead of an error | product / contract | settled |
 
 **223 decisions — 219 settled, 4 provisional.**
