@@ -47,6 +47,8 @@ Map<String, Object?> _row(
   String? payoutOn,
   String? venue,
   String? releasedAt,
+  String? channel,
+  String? sourceReference,
 }) => <String, Object?>{
   'id': id,
   'reference_number': 'AR-SAMPLE-$id',
@@ -58,7 +60,19 @@ Map<String, Object?> _row(
   'payout_scheduled_for': payoutOn,
   'payout_venue': venue,
   'released_at': releasedAt,
+  'channel': channel,
+  'source_reference': sourceReference,
 };
+
+/// A request imported from the office's old paper records (D-227).
+Map<String, Object?> _imported(String id) => _row(
+  id,
+  status: 'completed',
+  amount: 150000,
+  releasedAt: '2024-03-12T03:00:00Z',
+  channel: 'imported',
+  sourceReference: 'MSWDO-2024-0046',
+);
 
 ApiHttpResponse _page(
   List<Object?> rows, {
@@ -224,6 +238,30 @@ void main() {
       expect(request.payoutVenue, isNull);
       expect(request.releasedAt, isNull);
     });
+
+    test(
+      'an imported request keeps the number on her papers beside its own',
+      () {
+        final OwnAssistanceRequest request = OwnAssistanceCodec.row(
+          _imported('ar-9'),
+        )!;
+        expect(request.channel, AssistanceChannel.imported);
+        expect(request.sourceReference, 'MSWDO-2024-0046');
+        expect(request.referenceNumber, 'AR-SAMPLE-ar-9');
+        final OwnAssistanceRequest filed = OwnAssistanceCodec.row(
+          _row('ar-8', channel: 'office'),
+        )!;
+        expect(filed.channel, AssistanceChannel.office);
+        expect(filed.sourceReference, isNull);
+        expect(
+          OwnAssistanceCodec.row(
+            _row('ar-7', channel: 'online', sourceReference: '  '),
+          )!.sourceReference,
+          isNull,
+          reason: 'blank is absent',
+        );
+      },
+    );
 
     test('an amount that is not integer centavos is not an amount', () {
       Map<String, Object?> withAmount(Object? amount) => <String, Object?>{
@@ -477,6 +515,27 @@ void main() {
       expect(find.text('Show older requests'), findsNothing);
     });
 
+    testWidgets('an imported request shows the control number on her papers '
+        'first, and this system’s reference beneath it', (tester) async {
+      await _open(
+        tester,
+        const MyRequestsScreen(),
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          _page(<Object?>[_imported('ar-1'), _row('ar-2', channel: 'office')]),
+        ),
+      );
+      expect(find.text('Control no. MSWDO-2024-0046'), findsOneWidget);
+      expect(find.text('AR-SAMPLE-ar-1'), findsOneWidget);
+      expect(find.text("From the office's records"), findsOneWidget);
+      expect(find.text('Filed at the office'), findsOneWidget);
+      expect(find.byKey(const Key('my-request-control-line')), findsOneWidget);
+      final double control = tester
+          .getTopLeft(find.text('Control no. MSWDO-2024-0046'))
+          .dy;
+      final double system = tester.getTopLeft(find.text('AR-SAMPLE-ar-1')).dy;
+      expect(control, lessThan(system), reason: 'her number comes first');
+    });
+
     testWidgets('a failure is said with Try again, and Try again reads', (
       tester,
     ) async {
@@ -613,6 +672,43 @@ void main() {
       expect(find.text('21 Nov 2026'), findsOneWidget);
       expect(find.text('Payout date'), findsNothing);
       expect(find.text('Where to collect'), findsNothing);
+    });
+
+    testWidgets('an imported request: the control number on her papers in '
+        'the head, this system’s reference as a fact', (tester) async {
+      await _open(
+        tester,
+        const MyRequestDetailScreen(requestId: 'ar-1'),
+        (ApiRequest request) =>
+            Ok<ApiHttpResponse>(_page(<Object?>[_imported('ar-1')])),
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('my-request-head')),
+          matching: find.text('Control no. MSWDO-2024-0046'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('System reference'), findsOneWidget);
+      expect(find.text('Reference number'), findsNothing);
+      expect(find.text('AR-SAMPLE-ar-1'), findsOneWidget);
+      expect(find.text("From the office's records"), findsOneWidget);
+    });
+
+    testWidgets('a request filed in this system has no control number line', (
+      tester,
+    ) async {
+      await _open(
+        tester,
+        const MyRequestDetailScreen(requestId: 'ar-1'),
+        (ApiRequest request) => Ok<ApiHttpResponse>(
+          _page(<Object?>[_row('ar-1', channel: 'online')]),
+        ),
+      );
+      expect(find.byKey(const Key('my-request-control-number')), findsNothing);
+      expect(find.textContaining('Control no.'), findsNothing);
+      expect(find.text('Reference number'), findsOneWidget);
+      expect(find.text('Applied in the app'), findsOneWidget);
     });
 
     testWidgets('before approval, no amount and no payout', (tester) async {
@@ -756,6 +852,15 @@ void main() {
       'one request': () => MyRequestDetailCanvas(
         environment: AppEnvironment.dev,
         request: scheduled,
+      ),
+      'one imported request': () => MyRequestDetailCanvas(
+        environment: AppEnvironment.dev,
+        request: OwnAssistanceCodec.row(_imported('ar-5'))!,
+      ),
+      'imported in the list': () => MyRequestsCanvas(
+        environment: AppEnvironment.dev,
+        items: OwnAssistanceCodec.list(<Object?>[_imported('ar-6')]),
+        onOpen: (_) {},
       ),
       'not shown': () => const MyRequestDetailCanvas(
         environment: AppEnvironment.dev,

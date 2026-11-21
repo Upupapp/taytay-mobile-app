@@ -34,8 +34,10 @@ abstract final class OwnAssistanceCodec {
       channel: switch (data['channel']) {
         'online' => AssistanceChannel.online,
         'office' => AssistanceChannel.office,
+        'imported' => AssistanceChannel.imported,
         _ => null,
       },
+      sourceReference: _text(data['source_reference']),
       missingDocuments: _missing(data['missing_documents']),
     );
   }

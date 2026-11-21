@@ -68,14 +68,18 @@ enum AssistanceStage {
 }
 
 /// How a request reached the office (`channel`, backend `6794f8d`, D-226):
-/// sent from this app, or filed at the office by any of its own channels.
-/// Null on a row that does not say, which is not shown as either.
+/// sent from this app, filed at the office by any of its own channels, or
+/// imported from the office's old paper records (D-227). Null on a row that
+/// does not say, which is not shown as any of them.
 enum AssistanceChannel {
   /// Sent from this app.
   online,
 
   /// Filed at the office, by any of its channels.
   office,
+
+  /// Imported from the office's old paper records (D-227).
+  imported,
 }
 
 /// Whether a document a returned request still needs was never sent, or was
@@ -137,6 +141,7 @@ class OwnAssistanceRequest {
     this.payoutVenue,
     this.releasedAt,
     this.channel,
+    this.sourceReference,
     this.missingDocuments = const <MissingDocument>[],
   });
 
@@ -169,8 +174,15 @@ class OwnAssistanceRequest {
   /// When it was handed over, once released.
   final DateTime? releasedAt;
 
-  /// Sent from this app, or filed at the office (D-226).
+  /// Sent from this app, filed at the office (D-226), or imported from the
+  /// office's old paper records (D-227).
   final AssistanceChannel? channel;
+
+  /// For a request imported from the office's old paper records, the control
+  /// or voucher number printed on them (`source_reference`, D-227): the number
+  /// she holds in her hand. [referenceNumber] stays this system's own. Null
+  /// for a request filed in this system.
+  final String? sourceReference;
 
   /// For a returned request only: what she has not sent, or must send again.
   /// Empty otherwise, and empty when the office named nothing.

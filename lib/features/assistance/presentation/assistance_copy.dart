@@ -59,12 +59,21 @@ abstract final class AssistanceCopy {
   static String? date(DateTime? instant) =>
       instant == null ? null : ManilaTime.formatDate(instant);
 
-  /// "Applied in the app" or "Filed at the office" (D-226); null when the
-  /// row does not say.
+  /// "Applied in the app", "Filed at the office" (D-226) or "From the
+  /// office's records" (D-227); null when the row does not say.
   static String? channel(AppStrings s, AssistanceChannel? channel) =>
       switch (channel) {
         AssistanceChannel.online => s.myRequestsChannelOnline,
         AssistanceChannel.office => s.myRequestsChannelOffice,
+        AssistanceChannel.imported => s.myRequestsChannelImported,
+        null => null,
+      };
+
+  /// "Control no. MSWDO-2024-0046": the number on the office's old paper
+  /// records she holds, for an imported request (D-227); null otherwise.
+  static String? controlNumber(AppStrings s, OwnAssistanceRequest request) =>
+      switch (request.sourceReference) {
+        final String number => s.myRequestControlNumber(number),
         null => null,
       };
 

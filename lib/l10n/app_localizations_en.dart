@@ -1499,6 +1499,17 @@ class AppStringsEn extends AppStrings {
   String get myRequestsChannelOffice => 'Filed at the office';
 
   @override
+  String get myRequestsChannelImported => 'From the office\'s records';
+
+  @override
+  String myRequestControlNumber(String number) {
+    return 'Control no. $number';
+  }
+
+  @override
+  String get myRequestSystemReference => 'System reference';
+
+  @override
   String get myRequestChannel => 'How it was filed';
 
   @override

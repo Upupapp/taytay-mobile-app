@@ -120,6 +120,13 @@ the past-assistance import (`/office/assistance-imports*`, `/office/imports/temp
 and the summary report (`/office/reports/summary*`, `6794f8d`). No response this app reads lost or
 renamed a field.
 
+It was re-vendored from backend `28f246f` on 21 November 2026, for D-227. No operation was added
+or removed. `OwnAssistanceRequest` gained `source_reference` (for a request imported from the
+office's old paper records, the control or voucher number printed on them; null otherwise), and
+its `channel` gained `imported`, which those rows now say where they said `office`. In between,
+backend `577c6c9` and `747f004` changed only the office's reports and programme categories. No
+response this app reads lost or renamed a field.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -133,9 +140,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `f7f0cb5d9095f56b7b37fb5ad014641ba7590a00` (`f7f0cb5`) |
-| **sha256** | `ce5657c2c7df24a9a0a993059629eb930b35045ed8776e65cc7a434634480114` |
-| **Vendored on** | 20 November 2026 (P3 flow simulation, after D-226) |
+| **Backend commit** | `28f246f29b429cf0ab8f36b11c677a457f81e032` (`28f246f`) |
+| **sha256** | `54172c09db4a5fea8cf8a65ee1bddf98656055ce0b608420ccd6d4f56a818fcb` |
+| **Vendored on** | 21 November 2026 (D-227) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

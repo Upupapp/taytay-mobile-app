@@ -225,11 +225,12 @@
         "parameters": [
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
           { "name": "cursor", "in": "query", "schema": { "type": "string" } },
-          { "name": "verification_status", "in": "query", "description": "The open residents' app accounts (role registered or verified, not closed) with this status: exactly those the dashboard counts by verification. Staff and closed accounts are not listed by it.", "schema": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] } }
+          { "name": "verification_status", "in": "query", "description": "The open residents' app accounts (role registered or verified, not closed) with this status: exactly those the dashboard counts by verification. Staff and closed accounts are not listed by it.", "schema": { "type": "string", "enum": ["unverified", "pending", "verified", "rejected"] } },
+          { "name": "card", "in": "query", "description": "none: open residents' app accounts (role registered or verified, not closed) holding no current card — none active or suspended; a revoked card is no card. With verification_status=verified, the accounts a card could be issued to and has not been (the Digital IDs page's Verified, no card tab).", "schema": { "type": "string", "enum": ["none"] } }
         ],
         "responses": {
           "200": {
-            "description": "Admin user list. Address and birthdate are omitted.",
+            "description": "Admin user list. Address and birthdate are omitted. meta.counts gives open accounts by kind, whole.",
             "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserListEnvelope" } } }
           },
           "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
@@ -346,7 +347,7 @@
           { "name": "cursor", "in": "query", "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "Cursor page of requests. Includes staff-only notes.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationStaffListEnvelope" } } } },
+          "200": { "description": "Cursor page of requests. Includes staff-only notes. meta.stats gives the queue's figures, never narrowed by status.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/VerificationStaffListEnvelope" } } } },
           "403": { "description": "Admin role required.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
         }
       }
@@ -643,7 +644,7 @@
           { "name": "cursor", "in": "query", "schema": { "type": "string" } }
         ],
         "responses": {
-          "200": { "description": "A page of cards, and the counts of each status.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DigitalIdListEnvelope" } } } },
+          "200": { "description": "A page of cards, the counts of each status, and the funnel from sign-up to a card.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DigitalIdListEnvelope" } } } },
           "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "403": { "description": "Without digital-id.manage.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
           "422": { "description": "A query value or the cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
@@ -674,7 +675,11 @@
         "security": [{ "firebaseIdToken": [] }],
         "requestBody": {
           "required": true,
-          "content": { "multipart/form-data": { "schema": { "type": "object", "required": ["file"], "properties": { "file": { "type": "string", "format": "binary" } } } } }
+          "content": { "multipart/form-data": { "schema": { "type": "object", "additionalProperties": false, "required": ["file"], "properties": {
+            "file": { "type": "string", "format": "binary" },
+            "source": { "type": "string", "enum": ["rbi-census", "osca", "pdao", "solo-parent-office", "four-ps", "other-spreadsheet"], "description": "Where the list came from, as the officer says (ADR 0006): the barangay's RBI or a census, OSCA, PDAO, the solo parent office, 4Ps, or another spreadsheet. Optional: not said is null, which is not other-spreadsheet." },
+            "barangay_id": { "type": "string", "format": "uuid", "description": "The barangay the officer says the list covers (ADR 0006). Optional. A record of what was said: it moves and filters no row, each of which names its own barangay. An unknown barangay is 422; for an own-barangay account another barangay is 403." }
+          } } } }
         },
         "responses": {
           "201": { "description": "Held for checking; data.id names it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ResidentImportSummaryEnvelope" } } } },
@@ -2248,10 +2253,11 @@
         "security": [{ "firebaseIdToken": [] }],
         "parameters": [
           { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
-          { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+          { "name": "cursor", "in": "query", "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "description": "Only open or only closed threads. meta.counts is never narrowed by it.", "schema": { "type": "string", "enum": ["open", "closed"] } }
         ],
         "responses": {
-          "200": { "description": "Thread page.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ThreadListEnvelope" } } } }
+          "200": { "description": "Thread page, with meta.counts (open, closed, unread) over the reader's threads.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ThreadListEnvelope" } } } }
         }
       },
       "post": {
@@ -3094,7 +3100,7 @@
         "get": {
           "operationId": "getUserDigitalId",
           "summary": "Get a resident's current digital ID",
-          "description": "Admin. The current active or suspended card. Revoked-only history is 404.",
+          "description": "Admin. The current active or suspended card. Revoked-only history is 404. Beside the card (ADR 0006): photo_source, what the card's photo is — selfie (from an approved ID review), card-photo (taken by the office) or null when it is neither any more; checks_count, how many times this card's QR code was checked (digital_id.scanned in the audit trail); and holder — purok_or_sitio from the account, verified_at, and id_type, the ID the account was last verified with (an approved review or an in-person verification), both null when the account is not verified.",
           "security": [
             {
               "firebaseIdToken": []
@@ -3117,7 +3123,7 @@
               "content": {
                 "application/json": {
                   "schema": {
-                    "$ref": "#/components/schemas/DigitalIdAdminEnvelope"
+                    "$ref": "#/components/schemas/DigitalIdRecordEnvelope"
                   }
                 }
               }
@@ -3205,6 +3211,26 @@
                 }
               }
             }
+          }
+        }
+      },
+      "/api/v1/admin/users/{id}/digital-id/events": {
+        "get": {
+          "operationId": "listUserDigitalIdEvents",
+          "summary": "The card history on a holder's record",
+          "description": "Needs digital-id.manage (administrators today). Every act the audit trail holds on any card the account was issued, a reissued card's predecessors included, newest first, a cursor page (ADR 0006): issued, reissued, suspended, revoked and checked (scanned). Audit rows as recorded, with the acting staff account's name, which the administrator already reads on the accounts list; nothing else is looked up. An account with no card answers an empty page; an unknown account is 404. Not audited.",
+          "security": [{ "firebaseIdToken": [] }],
+          "parameters": [
+            { "name": "id", "in": "path", "required": true, "schema": { "type": "string", "format": "uuid" } },
+            { "name": "limit", "in": "query", "schema": { "type": "integer", "minimum": 1, "maximum": 50, "default": 20 } },
+            { "name": "cursor", "in": "query", "schema": { "type": "string" } }
+          ],
+          "responses": {
+            "200": { "description": "A page of the holder's card history.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/DigitalIdEventListEnvelope" } } } },
+            "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+            "403": { "description": "Without digital-id.manage.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+            "404": { "description": "No such account.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } },
+            "422": { "description": "A query value or the cursor is not valid.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }
           }
         }
       },
@@ -6913,7 +6939,7 @@
       "get": {
         "operationId": "getOfficeDashboard",
         "summary": "The office dashboard",
-        "description": "Needs dashboard.view. What needs attention, the caseload and payout position, and — for whoever holds a residents’ app key — the app’s accounts, ID reviews and cards. Every figure is counted under the scope of the list it links to: a barangay link counts its own barangay, a social worker (assigned-cases) the filed requests and referrals assigned to them. Filed requests only; a draft is not counted. A group the reader’s lists would refuse is null, never zero: `payouts` without release.view or for a caseload, `resident_app` without user.view, verification.review or digital-id.manage, and each of its figures without its own key. Money is integer centavos of money releases; goods are counted beside it and never valued. Read-only.",
+        "description": "Needs dashboard.view. What needs attention, the caseload and payout position, and — for whoever holds a residents’ app key — the app’s accounts, ID reviews and cards. Every figure is counted under the scope of the list it links to: a barangay link counts its own barangay, a social worker (assigned-cases) the filed requests and referrals assigned to them. Filed requests only; a draft is not counted. A group the reader’s lists would refuse is null, never zero: `payouts` without release.view or for a caseload, `resident_app` without user.view, verification.review or digital-id.manage, and each of its figures without its own key. Money is integer centavos of money releases; goods are counted beside it and never valued. Two lines ignore the period: requests.received_by_week (eight Asia/Manila weeks, Monday first) and payouts.handed_over_by_day (seven Asia/Manila days), each oldest first with every slot present. Read-only.",
         "security": [
           {
             "firebaseIdToken": []
@@ -11801,7 +11827,7 @@
       "get": {
         "operationId": "listMyAssistanceRequests",
         "summary": "The signed-in resident's own assistance requests",
-        "description": "Registered or verified (staff and admin are 403). ADR 0003, C: the resident's own filed requests — never a draft — across her person (the registry record the office linked to her account and every record a same-person finding superseded into it, transitively), newest filing first, a cursor page at a time. Each row is the minimum that says where the request stands: its control number, the programme's name, when it was filed, its raw status and when that last changed, the approved amount in integer centavos once approved (null before, and for goods), the payout's date and venue while it is scheduled, and when it was released. Never who worked on it, notes, the assessment, any reason the office wrote, the amount asked for, or a case. A person any of whose records the office holds under vawc-survivor or cicl (RA 9262, RA 9344) reads an empty list, exactly as if she had none. An account the office has not linked reads an empty list. Each row also says its channel (online when she filed it from the app, office otherwise) and, for a returned request, missing_documents: what the office still needs from her, in her words, never its remarks (ADR 0004, decision 2). A read only: it writes nothing. She is told of each move to approved, scheduled, released, returned and rejected by a notification of type assistance_request_updated, pushed, whose words name the control number and nothing else.",
+        "description": "Registered or verified (staff and admin are 403). ADR 0003, C: the resident's own filed requests — never a draft — across her person (the registry record the office linked to her account and every record a same-person finding superseded into it, transitively), newest filing first, a cursor page at a time. Each row is the minimum that says where the request stands: its control number, the programme's name, when it was filed, its raw status and when that last changed, the approved amount in integer centavos once approved (null before, and for goods), the payout's date and venue while it is scheduled, and when it was released. Never who worked on it, notes, the assessment, any reason the office wrote, the amount asked for, or a case. A person any of whose records the office holds under vawc-survivor or cicl (RA 9262, RA 9344) reads an empty list, exactly as if she had none. An account the office has not linked reads an empty list. Each row also says its channel (online when she filed it from the app, imported when it came from the office's old paper records, office otherwise), source_reference (for an imported request, the control or voucher number printed on those papers; null otherwise) and, for a returned request, missing_documents: what the office still needs from her, in her words, never its remarks (ADR 0004, decision 2). A read only: it writes nothing. She is told of each move to approved, scheduled, released, returned and rejected by a notification of type assistance_request_updated, pushed, whose words name the control number and nothing else.",
         "security": [
           {
             "firebaseIdToken": []
@@ -13957,6 +13983,8 @@
         }
       }
     },
+    "/api/v1/office/reports/citizens": { "get": { "operationId": "getCitizenReport", "summary": "The citizen registry report (the standard template), as data", "description": "Needs resident.view, under the registry's own scope: an assigned-cases account is 403, a barangay link is held to its barangay. The registry overview (GET /office/residents/summary) laid out in the summary report's template: letterhead, period, filters in words, an executive summary written from the figures, sections A (at a glance) to G (this month: birthdays at 18, 60 and the RA 11982 milestones, sector IDs ending), signatories and footer (docs/adr/0007). Every count of people is suppressed cell by cell under the small-cell rule, totals taken before (DL-105); a protected sector is never counted for a reader without request.view-sensitive. Strict: any other parameter is 422. Audit office_report.citizens_read.", "security": [{ "firebaseIdToken": [] }], "parameters": [{ "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "A barangay link is held to its own." }, { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" }, "description": "A protected sector only for a reader holding request.view-sensitive." }, { "name": "age_group", "in": "query", "schema": { "type": "string", "enum": ["child", "youth", "adult", "senior"] }, "description": "Age today." }, { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } }, { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["month", "quarter", "year"], "default": "year" }, "description": "The calendar period, to date, over which \"registered this period\" and the change in the registry are counted." }], "responses": { "200": { "description": "The report.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CitizenReportEnvelope" } } } }, "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }, "403": { "description": "Without resident.view, an assigned-cases account, another barangay than a barangay link's own, or a protected sector for a reader not cleared for it.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }, "422": { "description": "An unknown parameter or value, or a barangay that does not exist.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } } } } },
+    "/api/v1/office/reports/citizens/export": { "get": { "operationId": "exportCitizenReport", "summary": "The citizen registry report's tables as CSV", "description": "Needs resident.view and report.export-person-level, the key every report export takes. The same filters and the same suppressed figures, as CSV with the conditions before the first figure (DL-106); a withheld cell reads Withheld. Audit office_report.exported.", "security": [{ "firebaseIdToken": [] }], "parameters": [{ "name": "barangay_id", "in": "query", "schema": { "type": "string", "format": "uuid" }, "description": "A barangay link is held to its own." }, { "name": "sector", "in": "query", "schema": { "$ref": "#/components/schemas/VulnerabilitySector" }, "description": "A protected sector only for a reader holding request.view-sensitive." }, { "name": "age_group", "in": "query", "schema": { "type": "string", "enum": ["child", "youth", "adult", "senior"] }, "description": "Age today." }, { "name": "sex", "in": "query", "schema": { "type": "string", "enum": ["female", "male"] } }, { "name": "period", "in": "query", "schema": { "type": "string", "enum": ["month", "quarter", "year"], "default": "year" }, "description": "The calendar period, to date, over which \"registered this period\" and the change in the registry are counted." }, { "name": "format", "in": "query", "schema": { "type": "string", "enum": ["csv"], "default": "csv" } }], "responses": { "200": { "description": "The file.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/SummaryReportExportEnvelope" } } } }, "401": { "description": "No token.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }, "403": { "description": "Without resident.view or report.export-person-level, or as for the report.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } }, "422": { "description": "As for the report, or a format other than csv.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorEnvelope" } } } } } } },
     "/api/v1/office/reports/summary": {
       "get": {
         "operationId": "getSummaryReport",
@@ -17456,6 +17484,9 @@
           "disclosure": { "type": "object", "additionalProperties": false, "required": ["threshold", "provenance", "basis"], "properties": { "threshold": { "type": "integer" }, "provenance": { "type": "string" }, "basis": { "type": "string" } } }
         }
       },
+      "CitizenReportSection": { "type": "object", "additionalProperties": false, "required": ["key", "letter", "title", "note", "available", "unavailable_reason", "tiles", "columns", "rows", "totals", "totals_label", "suppression_notice"], "properties": { "key": { "type": "string", "enum": ["at-a-glance", "registry-by-month", "by-barangay", "by-age-sex", "by-sector", "registry-to-id", "this-month"] }, "letter": { "type": "string", "enum": ["A", "B", "C", "D", "E", "F", "G"] }, "title": { "type": "string" }, "note": { "type": ["string", "null"] }, "available": { "type": "boolean", "description": "Always true: every section counts the registry the reader already reads." }, "unavailable_reason": { "type": ["string", "null"] }, "tiles": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "value", "measure", "withheld", "hint"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "value": { "type": ["integer", "null"] }, "measure": { "type": "string", "enum": ["records", "people"] }, "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] }, "hint": { "type": "string" } } } }, "columns": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "measure"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "measure": { "type": "string", "enum": ["records", "people", "centavos", "percent", "days"] } } } }, "rows": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["key", "label", "values", "withheld"], "properties": { "key": { "type": "string" }, "label": { "type": "string" }, "values": { "type": "object", "additionalProperties": { "$ref": "#/components/schemas/SummaryReportCell" } }, "withheld": { "type": "object", "additionalProperties": { "type": "string", "enum": ["small-cell", "protected-sector"] }, "description": "Each withheld column; its value is null." } } } }, "totals": { "type": ["object", "null"], "additionalProperties": { "type": "integer" }, "description": "Taken before anything was withheld." }, "totals_label": { "type": ["string", "null"] }, "suppression_notice": { "type": ["string", "null"] } } },
+      "CitizenReport": { "type": "object", "additionalProperties": false, "required": ["letterhead", "title", "period", "filters", "filters_in_words", "executive_summary", "sections", "signatories", "footer", "disclosure"], "properties": { "letterhead": { "type": "array", "items": { "type": "string" } }, "title": { "type": "string" }, "period": { "type": "object", "additionalProperties": false, "required": ["from", "to", "label"], "properties": { "from": { "type": "string", "format": "date" }, "to": { "type": "string", "format": "date" }, "label": { "type": "string" } } }, "filters": { "type": "object", "additionalProperties": false, "required": ["barangay_id", "sector", "age_group", "sex", "period"], "properties": { "barangay_id": { "type": ["string", "null"], "format": "uuid" }, "sector": { "type": ["string", "null"] }, "age_group": { "type": ["string", "null"] }, "sex": { "type": ["string", "null"] }, "period": { "type": "string", "enum": ["month", "quarter", "year"] } } }, "filters_in_words": { "type": "array", "items": { "type": "string" } }, "executive_summary": { "type": "object", "additionalProperties": false, "required": ["paragraphs", "figures"], "properties": { "paragraphs": { "type": "array", "minItems": 2, "items": { "type": "string" } }, "figures": { "type": "object", "additionalProperties": false, "required": ["residents", "residents_previous", "registered", "registered_withheld", "women_share_percent", "on_app", "verified", "active_ids"], "properties": { "residents": { "type": "integer", "description": "Active records under the filter now; a total, taken before suppression." }, "residents_previous": { "type": "integer", "description": "The same as the period began." }, "registered": { "type": ["integer", "null"], "description": "Records created in the period; null when withheld (DL-105)." }, "registered_withheld": { "type": "boolean" }, "women_share_percent": { "type": ["integer", "null"], "description": "Null when either sex is withheld or nobody is counted." }, "on_app": { "type": ["integer", "null"], "description": "Null when withheld." }, "verified": { "type": ["integer", "null"], "description": "Null when withheld." }, "active_ids": { "type": ["integer", "null"], "description": "Null when withheld." } } } } }, "sections": { "type": "array", "items": { "$ref": "#/components/schemas/CitizenReportSection" } }, "signatories": { "type": "object", "additionalProperties": false, "required": ["prepared_by", "noted_by", "approved_by"], "properties": { "prepared_by": { "$ref": "#/components/schemas/SummaryReportSignatory" }, "noted_by": { "$ref": "#/components/schemas/SummaryReportSignatory" }, "approved_by": { "$ref": "#/components/schemas/SummaryReportSignatory" } } }, "footer": { "type": "object", "additionalProperties": false, "required": ["generated_at", "generated_by", "handling_notice"], "properties": { "generated_at": { "type": "string", "format": "date-time" }, "generated_by": { "type": "string" }, "handling_notice": { "type": "string" } } }, "disclosure": { "type": "object", "additionalProperties": false, "required": ["threshold", "provenance", "basis"], "properties": { "threshold": { "type": "integer" }, "provenance": { "type": "string" }, "basis": { "type": "string" } } } } },
+      "CitizenReportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/CitizenReport" }, "meta": { "type": "object" } } },
       "SummaryReportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "$ref": "#/components/schemas/SummaryReport" }, "meta": { "type": "object" } } },
       "SummaryReportExportEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "object", "additionalProperties": false, "required": ["format", "filename", "content"], "properties": { "format": { "type": "string", "enum": ["csv"] }, "filename": { "type": "string" }, "content": { "type": "string" } } }, "meta": { "type": "object" } } },
       "ImportTemplateEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "object", "additionalProperties": false, "required": ["file_name", "content_type", "content"], "properties": { "file_name": { "type": "string" }, "content_type": { "type": "string", "enum": ["text/csv"] }, "content": { "type": "string", "description": "The CSV: a byte-order mark and one header row." } } }, "meta": { "type": "object" } } },
@@ -17572,10 +17603,12 @@
       "AssistanceImportListEnvelope": { "type": "object", "required": ["data", "meta"], "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/AssistanceImportSummary" } }, "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } } } },
       "ResidentImportSummary": {
         "type": "object",
-        "required": ["id", "file_name", "kind", "status", "row_count", "created_at", "created_by", "committed_at", "committed_by", "result"],
+        "required": ["id", "file_name", "source", "barangay_id", "kind", "status", "row_count", "created_at", "created_by", "committed_at", "committed_by", "result"],
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "file_name": { "type": "string" },
+          "source": { "type": ["string", "null"], "enum": ["rbi-census", "osca", "pdao", "solo-parent-office", "four-ps", "other-spreadsheet", null], "description": "As said at upload, and kept as said; null when nothing was said (ADR 0006)." },
+          "barangay_id": { "type": ["string", "null"], "format": "uuid", "description": "The barangay the officer said the list covers, kept as said; null when nothing was said (ADR 0006)." },
           "kind": { "type": "string", "enum": ["csv", "xlsx"] },
           "status": { "type": "string", "enum": ["open", "committed"] },
           "row_count": { "type": "integer", "minimum": 1 },
@@ -17708,7 +17741,7 @@
       "OfficeResidentSummary": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["as_of", "period", "applied_filter", "residents", "registered", "by_barangay", "by_sector", "by_age_sex", "records_to_tidy", "disclosure"],
+        "required": ["as_of", "period", "applied_filter", "residents", "registered", "by_barangay", "by_sector", "by_age_sex", "funnel", "this_month", "coverage", "attention", "by_disability_type", "records_to_tidy", "disclosure"],
         "properties": {
           "as_of": { "type": "string", "format": "date-time" },
           "period": {
@@ -17737,9 +17770,28 @@
           "residents": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["current", "previous"],
+            "required": ["current", "previous", "by_month"],
             "description": "Totals, taken before anything is withheld (DL-105): now, and as the period began.",
-            "properties": { "current": { "type": "integer", "minimum": 0 }, "previous": { "type": "integer", "minimum": 0 } }
+            "properties": {
+              "current": { "type": "integer", "minimum": 0 },
+              "previous": { "type": "integer", "minimum": 0 },
+              "by_month": {
+                "type": "array",
+                "minItems": 12,
+                "maxItems": 12,
+                "description": "The registry under the filter at the end of each of the last twelve Asia/Manila months, the current one as it stands now, oldest first (ADR 0006). Each point counts people, so it is withheld below the small-cell threshold like any figure; ages are on each month's last day. Ignores period.",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["month", "value", "withheld"],
+                  "properties": {
+                    "month": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+                    "value": { "type": ["integer", "null"], "minimum": 0, "description": "Null exactly when withheld." },
+                    "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] }
+                  }
+                }
+              }
+            }
           },
           "registered": {
             "type": "object",
@@ -17750,7 +17802,91 @@
           },
           "by_barangay": { "$ref": "#/components/schemas/OfficeReportSeries" },
           "by_sector": { "$ref": "#/components/schemas/OfficeReportSeries" },
-          "by_age_sex": { "$ref": "#/components/schemas/OfficeReportSeries", "description": "Row keys are <age_group>.<sex>, as given: child, youth, adult, senior, each female then male." },
+          "by_age_sex": {
+            "description": "Row keys are <age_group>.<sex>, as given: child, youth, adult, senior, each female then male. total_by_sex (ADR 0006) gives each sex's total across the age groups, taken before anything is withheld and so not the sum of the rows shown.",
+            "allOf": [
+              { "$ref": "#/components/schemas/OfficeReportSeries" },
+              {
+                "type": "object",
+                "required": ["total_by_sex"],
+                "properties": {
+                  "total_by_sex": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["female", "male"],
+                    "properties": { "female": { "type": "integer", "minimum": 0 }, "male": { "type": "integer", "minimum": 0 } }
+                  }
+                }
+              }
+            ]
+          },
+          "funnel": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["on_registry", "on_app", "verified", "active_ids"],
+            "description": "From the registry to a Digital ID under the same filter (ADR 0006): on_registry is the total (residents.current); on_app the records linked to an open residents' app account; verified those whose account is verified; active_ids those whose account holds a card that is active and not past its date. The three after the total are people, each withheld below the threshold. They are also the citizens overview's KPI row (On the residents' app, Active Digital IDs); no previous-period figure is sent for either, because neither a link nor a card keeps its state at an earlier instant.",
+            "properties": {
+              "on_registry": { "type": "integer", "minimum": 0 },
+              "on_app": { "$ref": "#/components/schemas/PeopleFigure" },
+              "verified": { "$ref": "#/components/schemas/PeopleFigure" },
+              "active_ids": { "$ref": "#/components/schemas/PeopleFigure" }
+            }
+          },
+          "this_month": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["month", "turning_60", "turning_18", "solo_parent_ids_due", "pwd_ids_expiring"],
+            "description": "This Asia/Manila calendar month, under the filter (ADR 0006): records whose birth date makes them 60 (a senior citizen, RA 9994) or 18 (leaving the children's count) this month; solo parents and persons with disability whose latest sector record gives an ID validity ending this month. People, each withheld below the threshold. It counts what the registry holds and decides nothing.",
+            "properties": {
+              "month": { "type": "string", "pattern": "^\\d{4}-\\d{2}$" },
+              "turning_60": { "$ref": "#/components/schemas/PeopleFigure" },
+              "turning_18": { "$ref": "#/components/schemas/PeopleFigure" },
+              "solo_parent_ids_due": { "$ref": "#/components/schemas/PeopleFigure" },
+              "pwd_ids_expiring": { "$ref": "#/components/schemas/PeopleFigure" }
+            }
+          },
+          "coverage": {
+            "description": "Only with sector senior-citizen, pwd or solo-parent; null otherwise (ADR 0006). Of the sector's members under the filter: those whose latest sector record holds an ID number, those recorded as receiving a social pension (seniors only; null for the other two), those linked to an open app account, and those whose account holds a card in force. People, each withheld below the threshold.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["sector_id_on_file", "social_pension", "app_accounts", "digital_ids"],
+                "properties": {
+                  "sector_id_on_file": { "$ref": "#/components/schemas/PeopleFigure" },
+                  "social_pension": { "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/PeopleFigure" }] },
+                  "app_accounts": { "$ref": "#/components/schemas/PeopleFigure" },
+                  "digital_ids": { "$ref": "#/components/schemas/PeopleFigure" }
+                }
+              }
+            ]
+          },
+          "attention": {
+            "description": "Only with sector senior-citizen, pwd or solo-parent; null otherwise (ADR 0006). Each line states its rule (basis) and decides nothing. Seniors: milestone-birthdays (turning 80, 85, 90, 95 or 100 this calendar year, the birthdays RA 11982 marks with a cash gift) and centenarians (100 or over today). Every sector page: no-sector-id (members whose latest sector record holds no ID number). Nothing records a social pension waitlist, so none is sent.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["key", "label", "value", "withheld", "basis"],
+                  "properties": {
+                    "key": { "type": "string", "enum": ["milestone-birthdays", "centenarians", "no-sector-id"] },
+                    "label": { "type": "string" },
+                    "value": { "type": ["integer", "null"], "minimum": 0, "description": "Null exactly when withheld." },
+                    "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] },
+                    "basis": { "type": "string" }
+                  }
+                }
+              }
+            ]
+          },
+          "by_disability_type": {
+            "description": "Only with sector pwd; null otherwise (ADR 0006). Persons with disability by the type on their latest sector record, folded for case and spacing. The type is free text, so a type recorded for fewer people than the threshold is pooled into the row other-types rather than printed under its own words; not-recorded counts members with no type. Row keys: type:<folded type>, other-types, not-recorded. A series of people: suppressed, total taken before.",
+            "oneOf": [{ "type": "null" }, { "$ref": "#/components/schemas/OfficeReportSeries" }]
+          },
           "records_to_tidy": {
             "type": "array",
             "items": {
@@ -17773,6 +17909,16 @@
           }
         }
       },
+      "PeopleFigure": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["value", "withheld"],
+        "description": "A count of people: null with withheld small-cell below the threshold, never a zero for a withheld figure (DL-105).",
+        "properties": {
+          "value": { "type": ["integer", "null"], "minimum": 0 },
+          "withheld": { "type": ["string", "null"], "enum": ["small-cell", null] }
+        }
+      },
       "OfficeResidentSummaryEnvelope": {
         "type": "object",
         "required": ["data", "meta"],
@@ -17792,10 +17938,12 @@
           "holder": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["id", "name", "barangay"],
+            "required": ["id", "name", "email", "verified_at", "barangay"],
             "properties": {
               "id": { "type": "string", "format": "uuid", "description": "The holder's user id." },
               "name": { "type": ["string", "null"], "description": "The account's name; null once the account is closed or when none was given." },
+              "email": { "type": ["string", "null"], "description": "The account's email, as the accounts list shows it to the same administrator (ADR 0006); null once closed or when none was given." },
+              "verified_at": { "type": ["string", "null"], "format": "date-time", "description": "When the account was verified; null when it is not verified, or once closed (ADR 0006)." },
               "barangay": {
                 "oneOf": [
                   { "type": "null" },
@@ -17813,9 +17961,22 @@
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/DigitalIdListItem" } },
           "meta": {
             "type": "object",
-            "required": ["pagination", "counts"],
+            "required": ["pagination", "counts", "funnel"],
             "properties": {
               "pagination": { "$ref": "#/components/schemas/Pagination" },
+              "funnel": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["app_accounts", "pending_verification", "oldest_pending_at", "verified", "verified_without_card"],
+                "description": "From sign-up to a card, municipality-wide: never narrowed by status, q or barangay_id (ADR 0006). Open residents' app accounts (role registered or verified, not closed); of those, waiting on an ID review (verification_status pending) and verified; and the verified holding no current card (none active or suspended), which GET /api/v1/admin/users?verification_status=verified&card=none lists. oldest_pending_at is the submitted_at of the longest-waiting pending ID review. Counts of accounts the administrator opens one by one, so not suppressed.",
+                "properties": {
+                  "app_accounts": { "type": "integer", "minimum": 0 },
+                  "pending_verification": { "type": "integer", "minimum": 0 },
+                  "oldest_pending_at": { "type": ["string", "null"], "format": "date-time" },
+                  "verified": { "type": "integer", "minimum": 0 },
+                  "verified_without_card": { "type": "integer", "minimum": 0 }
+                }
+              },
               "counts": {
                 "type": "object",
                 "additionalProperties": false,
@@ -18288,7 +18449,23 @@
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/UserListItem" } },
           "meta": {
             "type": "object",
-            "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } }
+            "required": ["pagination", "counts"],
+            "properties": {
+              "pagination": { "$ref": "#/components/schemas/Pagination" },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["residents", "verified", "staff", "admins", "staff_without_office"],
+                "description": "Open accounts (not closed), whole: never narrowed by the list's filters. The list sends cursors and no total (DL-161); these count accounts its reader can open one by one, so they are not suppressed.",
+                "properties": {
+                  "residents": { "type": "integer", "minimum": 0, "description": "Residents' app accounts: role registered or verified." },
+                  "verified": { "type": "integer", "minimum": 0, "description": "Residents' app accounts whose verification_status is verified." },
+                  "staff": { "type": "integer", "minimum": 0 },
+                  "admins": { "type": "integer", "minimum": 0 },
+                  "staff_without_office": { "type": "integer", "minimum": 0, "description": "Staff accounts with no office_id; counted within staff." }
+                }
+              }
+            }
           }
         }
       },
@@ -18392,7 +18569,37 @@
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/VerificationRequestStaff" } },
           "meta": {
             "type": "object",
-            "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } }
+            "required": ["pagination", "stats"],
+            "properties": {
+              "pagination": { "$ref": "#/components/schemas/Pagination" },
+              "stats": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["pending", "oldest_pending_at", "decided_7d", "sent_by_day"],
+                "description": "The review queue's figures, never narrowed by status. The list sends cursors and no total (DL-161); these count requests its reader can open one by one, so they are not suppressed. The seven days are Asia/Manila calendar days ending today.",
+                "properties": {
+                  "pending": { "type": "integer", "minimum": 0 },
+                  "oldest_pending_at": { "type": ["string", "null"], "format": "date-time", "description": "submitted_at of the longest-waiting pending request; null when none waits." },
+                  "decided_7d": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["approved", "rejected"],
+                    "description": "Requests decided (reviewed_at) in the seven days, by outcome. An in-person verification is not a queue decision and is not counted.",
+                    "properties": {
+                      "approved": { "type": "integer", "minimum": 0 },
+                      "rejected": { "type": "integer", "minimum": 0 }
+                    }
+                  },
+                  "sent_by_day": {
+                    "type": "array",
+                    "minItems": 7,
+                    "maxItems": 7,
+                    "items": { "$ref": "#/components/schemas/DayCount" },
+                    "description": "Requests by the day they were last sent (submitted_at), oldest first, every day present. A request sent again counts once, on its latest day."
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -18764,12 +18971,31 @@
           "is_active": { "type": "boolean" },
           "is_protected": { "type": "boolean", "description": "Under vawc-survivor or cicl. Said even when the sector is withheld." },
           "given_name_masked": { "type": "boolean" },
-          "withheld": { "type": "array", "items": { "type": "string", "enum": ["philsys_last_four", "monthly_income", "protected_sectors", "contact", "exact_address"] } },
+          "withheld": { "type": "array", "items": { "type": "string", "enum": ["philsys_last_four", "monthly_income", "protected_sectors", "contact", "exact_address", "household"] }, "description": "household (on the list and the record read): the record lives in a household this reader, without household.view, is not told." },
           "created_at": { "type": "string", "format": "date-time" },
           "created_by": { "type": "string", "format": "uuid" },
           "updated_at": { "type": "string", "format": "date-time" },
-          "updated_by": { "type": "string", "format": "uuid" }
+          "updated_by": { "type": "string", "format": "uuid" },
+          "household_reference": { "type": ["string", "null"], "description": "On the list and the record read (ADR 0006): the reference number of the household the record lives in now; null when it lives in none, or when withheld (then withheld lists household). Needs household.view, the key that opens the household." },
+          "app_account": { "$ref": "#/components/schemas/OfficeResidentAccountLink", "description": "On the list and the record read (ADR 0006)." }
         }
+      },
+      "OfficeResidentAccountLink": {
+        "description": "Null when no app account reads this record. The act and since when are said to every reader of the record (docs/adr/0004-apply-from-the-app.md); verified and digital_id_status only to a reader holding the key that already opens the account (user.view) or its card (digital-id.manage), and null — not for this reader — otherwise (ADR 0006). Nothing else about the account: no name, email or mobile.",
+        "oneOf": [
+          { "type": "null" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["act", "linked_since", "verified", "digital_id_status"],
+            "properties": {
+              "act": { "type": "string", "enum": ["sector-application", "verification", "relink"], "description": "sector-application: linked when the office approved a sector application (0058). verification: linked or made by the reviewer who verified the account (0069). relink: moved here by a same-person finding (0066)." },
+              "linked_since": { "type": "string", "format": "date-time", "description": "When the account came to read this record." },
+              "verified": { "type": ["boolean", "null"], "description": "The account is verified and not closed. Null without user.view." },
+              "digital_id_status": { "type": ["string", "null"], "enum": ["active", "suspended", "expired", "none", null], "description": "The account's current card: expired is active and past its date; none is no active or suspended card. Null without digital-id.manage." }
+            }
+          }
+        ]
       },
       "OfficeResidentEnvelope": {
         "type": "object",
@@ -18787,20 +19013,7 @@
             "type": "object",
             "required": ["app_account", "origin"],
             "properties": {
-              "app_account": {
-                "description": "Null when no app account reads this record. Says nothing about the account itself.",
-                "oneOf": [
-                  { "type": "null" },
-                  {
-                    "type": "object",
-                    "required": ["act", "linked_since"],
-                    "properties": {
-                      "act": { "type": "string", "enum": ["sector-application", "verification", "relink"], "description": "sector-application: linked when the office approved a sector application (0058). verification: linked or made by the reviewer who verified the account (0069). relink: moved here by a same-person finding that superseded the record it was linked to (0066)." },
-                      "linked_since": { "type": "string", "format": "date-time", "description": "When the account came to read this record." }
-                    }
-                  }
-                ]
-              },
+              "app_account": { "$ref": "#/components/schemas/OfficeResidentAccountLink" },
               "origin": {
                 "type": "object",
                 "required": ["kind", "import_id", "file_name", "at"],
@@ -19784,7 +19997,24 @@
         "required": ["data", "meta"],
         "properties": {
           "data": { "type": "array", "items": { "$ref": "#/components/schemas/Thread" } },
-          "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
+          "meta": {
+            "type": "object",
+            "required": ["pagination", "counts"],
+            "properties": {
+              "pagination": { "$ref": "#/components/schemas/Pagination" },
+              "counts": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["open", "closed", "unread"],
+                "description": "The reader's own threads (the list's scope), never narrowed by status. unread counts threads holding a message the reader's side has not read, the rule behind each row's unread. Counts of conversations the reader can open, so not suppressed (DL-161: the list has no total).",
+                "properties": {
+                  "open": { "type": "integer", "minimum": 0 },
+                  "closed": { "type": "integer", "minimum": 0 },
+                  "unread": { "type": "integer", "minimum": 0 }
+                }
+              }
+            }
+          }
         }
       },
       "ThreadMessageEnvelope": {
@@ -20299,6 +20529,63 @@
           "preferences": { "type": "array", "minItems": 1, "maxItems": 8, "items": { "$ref": "#/components/schemas/NotificationPreference" } }
         }
       },
+    "DigitalIdRecordEnvelope": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "allOf": [
+            { "$ref": "#/components/schemas/DigitalIdCard" },
+            {
+              "type": "object",
+              "required": ["photo_source", "checks_count", "holder"],
+              "properties": {
+                "photo_source": { "type": ["string", "null"], "enum": ["selfie", "card-photo", null] },
+                "checks_count": { "type": "integer", "minimum": 0 },
+                "holder": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["purok_or_sitio", "verified_at", "id_type"],
+                  "properties": {
+                    "purok_or_sitio": { "type": ["string", "null"] },
+                    "verified_at": { "type": ["string", "null"], "format": "date-time" },
+                    "id_type": { "type": ["string", "null"], "description": "As the review or the in-person verification recorded it." }
+                  }
+                }
+              }
+            }
+          ]
+        },
+        "meta": { "type": "object" }
+      }
+    },
+    "DigitalIdEventListEnvelope": {
+      "type": "object",
+      "required": ["data", "meta"],
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "action", "card_id", "created_at", "actor"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid", "description": "The audit row." },
+              "action": { "type": "string", "description": "As the audit trail recorded it: digital_id.issued, digital_id.reissued, digital_id.suspended, digital_id.revoked or digital_id.scanned." },
+              "card_id": { "type": "string", "format": "uuid", "description": "Which of the holder's cards; a reissue names the new card." },
+              "created_at": { "type": "string", "format": "date-time" },
+              "actor": {
+                "oneOf": [
+                  { "type": "null" },
+                  { "type": "object", "additionalProperties": false, "required": ["id", "name"], "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": ["string", "null"] } } }
+                ]
+              }
+            }
+          }
+        },
+        "meta": { "type": "object", "properties": { "pagination": { "$ref": "#/components/schemas/Pagination" } } }
+      }
+    },
     "DigitalIdCard": {
         "type": "object",
         "required": [
@@ -20923,6 +21210,7 @@
         "medical-assistance",
         "burial-assistance",
         "educational-assistance",
+        "transportation-assistance",
         "food-and-relief",
         "livelihood",
         "senior-citizen",
@@ -24514,6 +24802,24 @@
           }
         }
       },
+      "DayCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "count"],
+        "properties": {
+          "date": { "type": "string", "format": "date", "description": "An Asia/Manila calendar day." },
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      },
+      "WeekCount": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["week_start", "count"],
+        "properties": {
+          "week_start": { "type": "string", "format": "date", "description": "The Monday the Asia/Manila week starts on." },
+          "count": { "type": "integer", "minimum": 0 }
+        }
+      },
       "OfficeDashboardPeriod": {
         "type": "string",
         "enum": [
@@ -24574,9 +24880,17 @@
           "open",
           "awaiting_approval",
           "by_status",
-          "by_barangay"
+          "by_barangay",
+          "received_by_week"
         ],
         "properties": {
+          "received_by_week": {
+            "type": "array",
+            "minItems": 8,
+            "maxItems": 8,
+            "items": { "$ref": "#/components/schemas/WeekCount" },
+            "description": "Filed requests by the Asia/Manila week (Monday first) they were filed in: the current week to date and the seven before it whole, oldest first, every week present (a zero is a zero). Ignores period; honours barangay_id, category and the reader's scope, like the other request figures. An imported past request counts in the week its source says it was filed; a withdrawn import does not. Requests, not people: not suppressed."
+          },
           "open": {
             "type": "integer",
             "minimum": 0,
@@ -24640,9 +24954,17 @@
           "released_amount_centavos",
           "goods_released",
           "residents_served",
-          "by_category"
+          "by_category",
+          "handed_over_by_day"
         ],
         "properties": {
+          "handed_over_by_day": {
+            "type": "array",
+            "minItems": 7,
+            "maxItems": 7,
+            "items": { "$ref": "#/components/schemas/DayCount" },
+            "description": "Releases handed over (released, claimed or completed) by the Asia/Manila day of released_at: today and the six days before, oldest first, every day present. Money and goods alike, counted and never valued (DL-93). Ignores period; honours barangay_id and category. Records, not people: not suppressed."
+          },
           "scheduled": {
             "type": "integer",
             "minimum": 0,
@@ -28259,6 +28581,7 @@
           "payout_venue",
           "released_at",
           "channel",
+          "source_reference",
           "missing_documents"
         ],
         "properties": {
@@ -28320,7 +28643,8 @@
             "format": "date-time",
             "description": "When it was handed over, once the request stands released or completed; null before."
           },
-          "channel": { "type": "string", "enum": ["online", "office"], "description": "online when she filed it from the app; office for any of the counter's channels." },
+          "channel": { "type": "string", "enum": ["online", "office", "imported"], "description": "online when she filed it from the app; imported when it came from the office's old paper records; office for any of the counter's channels." },
+          "source_reference": { "type": ["string", "null"], "description": "For a request imported from the office's old paper records, the control or voucher number printed on them (e.g. MSWDO-2024-0046): the number she holds in her hand. reference_number stays this system's own. Null for a request filed in this system." },
           "missing_documents": {
             "type": "array",
             "description": "Empty unless the request stands returned: each document it requires, or a conditional one ruled to apply, that she has not sent (not-sent) or must send again (send-again). Never the office's remarks.",

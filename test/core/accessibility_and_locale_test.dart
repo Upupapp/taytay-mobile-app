@@ -129,6 +129,9 @@ void main() {
         'profileFieldBarangay': 'As fieldBarangay.',
         'fieldEmail': '"Email address" is used untranslated in Filipino UI.',
         'profileFieldEmailAddress': 'As fieldEmail.',
+        'myRequestControlNumber':
+            '"Control no." is the label printed on the office’s own papers '
+            '(D-227), so she reads the same words she holds in her hand.',
         // NOT a settled decision. Recorded honestly rather than dressed up:
         // D-217 kept "Suffix" because Philippine forms print the word
         // untranslated, but that review was not a native speaker's, and

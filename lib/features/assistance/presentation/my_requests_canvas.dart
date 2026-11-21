@@ -169,6 +169,7 @@ class AssistanceRequestRow extends StatelessWidget {
     final String? filed = AssistanceCopy.date(request.filedAt);
     final String filedLine = filed == null ? '' : s.myRequestsFiled(filed);
     final String? channel = AssistanceCopy.channel(s, request.channel);
+    final String? control = AssistanceCopy.controlNumber(s, request);
     final String status = AssistanceCopy.stage(s, request.stage);
     final Widget row = ConstrainedBox(
       constraints: const BoxConstraints(minHeight: ComponentSizes.listRow),
@@ -192,6 +193,19 @@ class AssistanceRequestRow extends StatelessWidget {
                       color: BrandColors.ink,
                     ),
                   ),
+                  // An imported request: the number on the papers she holds
+                  // first, this system's own beneath it (D-227).
+                  if (control != null) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    Text(
+                      control,
+                      key: const Key('my-request-control-line'),
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.ink,
+                        fontWeight: AppTypography.medium,
+                      ),
+                    ),
+                  ],
                   if (request.referenceNumber.isNotEmpty) ...<Widget>[
                     const SizedBox(height: Spacing.xxs),
                     Text(
@@ -244,6 +258,7 @@ class AssistanceRequestRow extends StatelessWidget {
       button: onTap != null,
       label: AssistanceCopy.join(<String?>[
         programme,
+        control,
         request.referenceNumber,
         filedLine,
         channel,
@@ -393,6 +408,17 @@ class _Head extends StatelessWidget {
             AssistanceCopy.programme(s, request),
             style: AppTypography.cardTitle.copyWith(color: BrandColors.ink),
           ),
+          // An imported request: the number on the papers she holds, where
+          // she looks first (D-227). This system's own is in the facts below.
+          if (AssistanceCopy.controlNumber(s, request)
+              case final String control) ...<Widget>[
+            const SizedBox(height: Spacing.xs),
+            Text(
+              control,
+              key: const Key('my-request-control-number'),
+              style: AppTypography.listTitle.copyWith(color: BrandColors.ink),
+            ),
+          ],
           const SizedBox(height: Spacing.md),
           StageLine(stage: request.stage, large: true),
         ],
@@ -414,7 +440,9 @@ class _Facts extends StatelessWidget {
           (
             const Key('my-request-reference'),
             TaytayIcons.fileText,
-            s.myRequestReference,
+            request.sourceReference == null
+                ? s.myRequestReference
+                : s.myRequestSystemReference,
             request.referenceNumber.isEmpty ? null : request.referenceNumber,
           ),
           (

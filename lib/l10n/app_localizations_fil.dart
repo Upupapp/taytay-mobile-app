@@ -1519,6 +1519,17 @@ class AppStringsFil extends AppStrings {
   String get myRequestsChannelOffice => 'Inihain sa tanggapan';
 
   @override
+  String get myRequestsChannelImported => 'Mula sa mga talaan ng tanggapan';
+
+  @override
+  String myRequestControlNumber(String number) {
+    return 'Control no. $number';
+  }
+
+  @override
+  String get myRequestSystemReference => 'Reperensiya ng sistema';
+
+  @override
   String get myRequestChannel => 'Paano ito inihain';
 
   @override

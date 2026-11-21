@@ -4455,6 +4455,35 @@ strings in Filipino. `test/core/foundation_routes_test.dart`: the two new routes
 
 ---
 
+## D-227 — An imported request shows the control number on her papers, with this system's reference beneath it
+
+**Status: settled.** Category: product / contract. Recorded 2026-11-21. Decided on researched best
+practice (show what she holds in her hand; keep the system's reference), as Ella's standing rule
+asks.
+
+**Context.** The office imports past assistance from its old paper records (backend `625bb77`).
+Each imported request gets this system's own control number (`TAY-…`), and the resident saw only
+that in My requests, while the papers in her hand carry the office's old control or voucher number
+(e.g. `MSWDO-2024-0046`). She could not match the two, and the counter could not either.
+
+**Decision.** `OwnAssistanceRequest` gains `source_reference` (backend `28f246f`): the control
+or voucher number on the old papers, null for a request filed in this system; `channel` says
+`imported` for those rows (it said `office`). The app reads both. An imported request's row in My
+requests and the head of its page show "Control no. MSWDO-2024-0046" first and prominently; this
+system's reference stays, beneath it on the row and as the "System reference" fact on the page.
+The channel reads "From the office's records". A request filed in this system shows no control-no.
+line and keeps "Reference number". An older build reads `imported` as no channel and ignores the
+new field, which it already did for unknown fields (Article 8).
+
+**Tests.** `test/features/my_requests_test.dart`: the codec (imported, office, a blank number is
+absent), the list (control number above the system reference, the channel words), one request
+(the control number in the head, "System reference", none for a request filed in the app), and
+both new frames at 360, 375 and 430 dp and 200% text. `test/core/accessibility_and_locale_test.dart`:
+"Control no. {number}" is identical in Filipino on purpose, because it is the label printed on the
+office's papers she holds.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4685,5 +4714,6 @@ strings in Filipino. `test/core/foundation_routes_test.dart`: the two new routes
 | D-224 | Every notification switch controls something real: the notification settings are the one place switches live, one per notice the server sends and honours (backend `769deea`): Identity verification, Assistance updates, Document requests, Event registrations, Sector applications, Office replies, each writing `in_app` and `push` of its own type. No switch for Documents needed, Collecting assistance, Referrals or Event reminders (no notice), nor for Balita or Emergency (nothing sends them; they gate nothing). Settings & privacy links to the notification settings instead of drawing switches. Public advisories and account security stay always sent | product / privacy | settled |
 | D-225 | The old `/requests` pages, their repositories, models, mocks, `UploadGuidance` and `uploadRefusedTitle` are removed; `/requests`, `/requests/:requestId` and `/requests/:requestId/requirements` stay as authenticated addresses that redirect to `/my-requests`; `assistance_requirements` opens the request on My requests; `submitRequirements` keeps no route | product / privacy | settled |
 | D-226 | Apply for Tulong from the app (Ella decided OD-4, gap 20: build it): a page whose `can_apply` is true offers Apply, gated as Message; a four-step wizard (`/tulong/:serviceSlug/apply`): what it is and who can apply (verified, and linked by the MSWDO at ID review or the counter), purpose (12–2000) and an optional amount read into integer centavos, one file per `application_requirements` code (required / optional / conditional, the 8 MB fallback said first), review, `POST /me/assistance-applications` with an idempotency key; a `409` says the MSWDO must link the account and is never a dead end; a failed send says nothing was sent; the filed screen is the same for everybody (VAWC/CICL requests are filed but never listed). My requests shows the channel and, for a returned request, the missing documents with Add documents (`POST /me/assistance-requests/{id}/documents`). The Verified page explains the account link | product / privacy | settled |
+| D-227 | An imported request (`channel` `imported`, backend `28f246f`) shows `source_reference`, the control number on her old papers, first: "Control no. MSWDO-2024-0046" on its My requests row and in the head of its page; this system's reference stays beneath it and as the "System reference" fact; the channel reads "From the office's records". A request filed in this system shows neither | product / contract | settled |
 
-**222 decisions — 218 settled, 4 provisional.**
+**223 decisions — 219 settled, 4 provisional.**

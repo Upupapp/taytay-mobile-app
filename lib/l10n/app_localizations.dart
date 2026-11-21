@@ -2666,6 +2666,24 @@ abstract class AppStrings {
   /// **'Filed at the office'**
   String get myRequestsChannelOffice;
 
+  /// A request imported from the office's old paper records (channel imported, D-227). The Filipino text was written by Claude for D-227 in D-217's terms ("tanggapan"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'From the office\'s records'**
+  String get myRequestsChannelImported;
+
+  /// An imported request: the control or voucher number printed on the office's old paper records she holds (source_reference, D-227), shown before this system's reference. The Filipino text was written by Claude for D-227 in D-217's terms ("tanggapan"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Control no. {number}'**
+  String myRequestControlNumber(String number);
+
+  /// One imported request: label of this system's own reference number, shown below the control number on her papers (D-227). The Filipino text was written by Claude for D-227 in D-217's terms ("tanggapan"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'System reference'**
+  String get myRequestSystemReference;
+
   /// One request: label of the channel fact (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
