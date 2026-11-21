@@ -475,6 +475,36 @@ void main() {
     });
   });
 
+  // My requests stayed as it was after she came back from a request (where
+  // she had sent documents) until she pulled to refresh (A12).
+  testWidgets('My requests reads again when she comes back to it', (
+    tester,
+  ) async {
+    final _Transport transport = await _open(
+      tester,
+      const MyRequestsScreen(),
+      (ApiRequest request) => Ok<ApiHttpResponse>(
+        request.path == 'me/assistance-requests'
+            ? _page(<Object?>[_row('ar-1')])
+            : _serverError,
+      ),
+    );
+    final int before = transport.reads.length;
+    final NavigatorState navigator = Navigator.of(
+      tester.element(find.byType(MyRequestsScreen)),
+    );
+    navigator.push<void>(
+      MaterialPageRoute<void>(
+        builder: (BuildContext context) => const Scaffold(body: Text('above')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(transport.reads.length, before, reason: 'covered, it reads nothing');
+    navigator.pop();
+    await tester.pumpAndSettle();
+    expect(transport.reads.length, before + 1);
+  });
+
   group('the repository reads her own list a cursor page at a time', () {
     test('GET me/assistance-requests, signed in, within the limit', () async {
       final _Transport transport = _Transport(

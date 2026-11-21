@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart' show ValueListenable;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
@@ -45,12 +46,48 @@ class _MyRequestsScreenState extends State<MyRequestsScreen>
   /// when it does not say (D-226).
   bool? _linked;
 
+  /// Whether this page is on screen (its ticker mode), and whether it was
+  /// covered since it last read.
+  ValueListenable<TickerModeData>? _shown;
+  bool _wasCovered = false;
+
+  @override
+  void dispose() {
+    _shown?.removeListener(_onShown);
+    super.dispose();
+  }
+
+  /// Coming back to the list from a request (where she may have sent
+  /// documents, which raises no topic of hers) reads it again, quietly
+  /// (A12). The live hints cover what the office does; this covers what she
+  /// did on the page above.
+  void _onShown() {
+    final bool shown = _shown?.value.enabled ?? true;
+    if (!shown) {
+      _wasCovered = true;
+      return;
+    }
+    if (!_wasCovered || !mounted) return;
+    _wasCovered = false;
+    // The ticker mode changes while the tree above builds; read after it.
+    scheduleMicrotask(() {
+      if (mounted) unawaited(_loadQuietly());
+    });
+  }
+
   OwnAssistanceRepository get _repository =>
       AppDependencies.of(context).ownAssistanceRepository;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final ValueListenable<TickerModeData> shown = TickerMode.getValuesNotifier(
+      context,
+    );
+    if (!identical(shown, _shown)) {
+      _shown?.removeListener(_onShown);
+      _shown = shown..addListener(_onShown);
+    }
     if (_started) return;
     _started = true;
     unawaited(_load());
