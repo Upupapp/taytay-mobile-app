@@ -10,6 +10,7 @@ import '../core/design/design_tokens.dart';
 import '../core/design/taytay_icons.dart';
 import '../core/l10n/app_locales.dart';
 import '../core/router/app_router.dart';
+import '../core/session/session_state.dart';
 import '../core/telemetry/telemetry_route_observer.dart';
 import '../features/auth/presentation/app_lock_screen.dart';
 import '../l10n/app_localizations.dart';
@@ -41,6 +42,19 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
 
   AppLifecycleListener? _lifecycle;
 
+  /// True until the stored session has been read.
+  bool _restoring = false;
+
+  void _onSession() {
+    if (!_restoring) return;
+    final SessionState state = widget.dependencies.session.state;
+    if (state is SessionRestoring) return;
+    _restoring = false;
+    if (state is AuthenticatedSession) {
+      unawaited(widget.dependencies.refreshAccount());
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -70,6 +84,12 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
       widget.dependencies.live.handleLifecycle(
         WidgetsBinding.instance.lifecycleState ?? AppLifecycleState.resumed,
       );
+
+      // A stored session resumes with the tier it was signed in with. The
+      // account may have been verified since (at the counter, say), so the
+      // first resolved session asks `GET /me` once (D-228).
+      _restoring = widget.dependencies.session.state is SessionRestoring;
+      widget.dependencies.session.addListener(_onSession);
     }
 
     _lifecycle = AppLifecycleListener(
@@ -98,6 +118,8 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
     final AppDependencies dependencies = widget.dependencies;
     final bool ended = await dependencies.session.endSessionIfTokenExpired();
     if (ended || !dependencies.config.isUsable) return;
+    // What the office decided while the app was away: the tier, and the name.
+    unawaited(dependencies.refreshAccount());
     await dependencies.consentGate.checkOnResume();
   }
 
@@ -118,6 +140,7 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
 
   @override
   void dispose() {
+    widget.dependencies.session.removeListener(_onSession);
     _lifecycle?.dispose();
     _router?.dispose();
     super.dispose();

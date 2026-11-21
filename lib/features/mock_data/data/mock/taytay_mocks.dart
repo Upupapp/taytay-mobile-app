@@ -953,9 +953,17 @@ class MockPlatformRepository implements PlatformRepository {
 }
 
 class MockProfileRepository implements ResidentProfileRepository {
-  MockProfileRepository(this._gate);
+  MockProfileRepository(this._gate, {String Function()? tier})
+    : _tier = tier ?? _verified;
 
   final MockBehaviorController _gate;
+
+  /// The tier the sample `GET /me` reports. The app reads `GET /me` on start
+  /// and on resume and takes its tier (D-228), so the sample follows the
+  /// session the developer chose rather than verifying every mock account.
+  final String Function() _tier;
+
+  static String _verified() => 'verified';
 
   @override
   Future<Result<ResidentProfileSummary>> loadOwnSummary() {
@@ -969,7 +977,7 @@ class MockProfileRepository implements ResidentProfileRepository {
     final resident = await MockResident.load();
     return _gate.respond(
       ResidentProfileDetail(
-        verificationTier: 'verified',
+        verificationTier: _tier(),
         emailVerified: false,
         createdAt: MockResidentRecordRepository.sampleAccountCreatedAt,
         verificationDecidedAt: DateTime.utc(2026, 10, 21, 16),

@@ -23,7 +23,39 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../domain/home_content.dart';
 
 /// Which verification card Home shows. Verified shows none.
-enum HomeStatusKind { none, pending, guest }
+///
+/// A signed-in account that is not verified is told where its verification
+/// actually stands, read from `GET /me` (D-228): no ID sent, an ID under
+/// review, an ID that was not accepted, or, until that read answers, only
+/// that it is not yet verified.
+enum HomeStatusKind { none, guest, notSent, pending, rejected, unknown }
+
+/// What the status card says for each [HomeStatusKind].
+abstract final class HomeStatusCopy {
+  static const String guestTitle = 'Browsing as guest';
+  static const String guest = 'Sign up to message offices.';
+  static const String unlocks = 'Messaging offices unlocks once verified.';
+
+  static const String notSentTitle = 'Not yet verified';
+  static const String notSent =
+      'No ID has been sent yet. Send one in the app, or verify in person at '
+      'the MSWDO. $unlocks';
+
+  static const String pendingTitle = 'Verification pending';
+  static const String pending = 'Taytay LGU is reviewing your ID. $unlocks';
+
+  static const String rejectedTitle = 'Your ID was not accepted';
+  static const String rejected =
+      'See what to fix and send it again, or verify in person at the MSWDO. '
+      '$unlocks';
+
+  static const String unknownTitle = 'Not yet verified';
+  static const String unknown = unlocks;
+
+  static const String verifyAction = 'Verify my identity';
+  static const String fixAction = 'See what to fix';
+  static const String statusAction = 'Verification status';
+}
 
 /// Home (design `Home.dc.html`): the glass main tab under the blue header.
 ///
@@ -45,6 +77,8 @@ class HomeCanvas extends StatefulWidget {
     this.onAvatar,
     this.onSignIn,
     this.onCreateAccount,
+    this.onVerify,
+    this.signedIn = false,
     this.onSlide,
     this.onNews,
     this.onSeeAllNews,
@@ -58,6 +92,10 @@ class HomeCanvas extends StatefulWidget {
 
   final String greeting;
   final String initials;
+
+  /// A resident is signed in. The header then shows the account, never
+  /// Sign in, even when the account has no name to draw initials from.
+  final bool signedIn;
   final int bellCount;
   final HomeStatusKind status;
   final List<HomeSlide> slides;
@@ -75,6 +113,9 @@ class HomeCanvas extends StatefulWidget {
   final VoidCallback? onAvatar;
   final VoidCallback? onSignIn;
   final VoidCallback? onCreateAccount;
+
+  /// Opens the verification screen from the status card.
+  final VoidCallback? onVerify;
   final ValueChanged<HomeSlide>? onSlide;
   final ValueChanged<HomeNewsItem>? onNews;
 
@@ -169,6 +210,7 @@ class _HomeCanvasState extends State<HomeCanvas> {
         _StatusCard(
           kind: widget.status,
           onCreateAccount: widget.onCreateAccount,
+          onVerify: widget.onVerify,
         ),
       if (widget.refreshing || widget.slides.isEmpty)
         const LoadingSkeleton(
@@ -239,6 +281,7 @@ class _HomeCanvasState extends State<HomeCanvas> {
               _Header(
                 greeting: widget.greeting,
                 initials: widget.initials,
+                signedIn: widget.signedIn || widget.initials.isNotEmpty,
                 bellCount: widget.bellCount,
                 refreshing: widget.refreshing,
                 onBell: widget.onBell,
@@ -272,6 +315,7 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.greeting,
     required this.initials,
+    required this.signedIn,
     required this.bellCount,
     required this.refreshing,
     this.onBell,
@@ -281,6 +325,7 @@ class _Header extends StatelessWidget {
 
   final String greeting;
   final String initials;
+  final bool signedIn;
   final int bellCount;
   final bool refreshing;
   final VoidCallback? onBell;
@@ -327,7 +372,7 @@ class _Header extends StatelessWidget {
           onPressed: onBell,
           visualKey: const Key('home-bell'),
         ),
-        if (initials.isEmpty)
+        if (!signedIn)
           _SignInPill(onTap: onSignIn)
         else
           _Avatar(initials: initials, onTap: onAvatar),
@@ -380,14 +425,24 @@ class _Avatar extends StatelessWidget {
           color: BrandColors.gold,
           shape: BoxShape.circle,
         ),
-        child: Text(
-          initials,
-          maxLines: 1,
-          style: AppTypography.listTitle.copyWith(
-            fontWeight: AppTypography.black,
-            color: BrandColors.navy,
-          ),
-        ),
+        // An account with no name yet still shows the account, as a neutral
+        // person glyph (D-228).
+        child: initials.isEmpty
+            ? const TaytayIcon(
+                icon: TaytayIcons.user,
+                semanticLabel: '',
+                excludeSemantics: true,
+                size: IconSizes.sm,
+                color: BrandColors.navy,
+              )
+            : Text(
+                initials,
+                maxLines: 1,
+                style: AppTypography.listTitle.copyWith(
+                  fontWeight: AppTypography.black,
+                  color: BrandColors.navy,
+                ),
+              ),
       ),
     );
   }
@@ -460,16 +515,46 @@ class _UpdatingLine extends StatelessWidget {
   }
 }
 
-/// Guest and pending verification. A glass card in the header overlap.
+/// Guest, and an account not yet verified. A glass card in the header
+/// overlap.
 class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.kind, this.onCreateAccount});
+  const _StatusCard({required this.kind, this.onCreateAccount, this.onVerify});
 
   final HomeStatusKind kind;
   final VoidCallback? onCreateAccount;
+  final VoidCallback? onVerify;
 
   @override
   Widget build(BuildContext context) {
     final bool guest = kind == HomeStatusKind.guest;
+    final (String title, String body, String? action) = switch (kind) {
+      HomeStatusKind.guest => (
+        HomeStatusCopy.guestTitle,
+        HomeStatusCopy.guest,
+        null,
+      ),
+      HomeStatusKind.notSent => (
+        HomeStatusCopy.notSentTitle,
+        HomeStatusCopy.notSent,
+        HomeStatusCopy.verifyAction,
+      ),
+      HomeStatusKind.pending => (
+        HomeStatusCopy.pendingTitle,
+        HomeStatusCopy.pending,
+        null,
+      ),
+      HomeStatusKind.rejected => (
+        HomeStatusCopy.rejectedTitle,
+        HomeStatusCopy.rejected,
+        HomeStatusCopy.fixAction,
+      ),
+      HomeStatusKind.unknown || HomeStatusKind.none => (
+        HomeStatusCopy.unknownTitle,
+        HomeStatusCopy.unknown,
+        HomeStatusCopy.statusAction,
+      ),
+    };
+    final VoidCallback? verify = onVerify;
     return GlassCard(
       pinned: !guest,
       child: Column(
@@ -478,8 +563,17 @@ class _StatusCard extends StatelessWidget {
           Row(
             children: <Widget>[
               IconTile.glyph(
-                glyph: guest ? TaytayGlyph.users : TaytayGlyph.clock,
-                tone: guest ? TileTone.sky : TileTone.gold,
+                glyph: switch (kind) {
+                  HomeStatusKind.guest => TaytayGlyph.users,
+                  HomeStatusKind.pending => TaytayGlyph.clock,
+                  _ => TaytayGlyph.document,
+                },
+                tone: switch (kind) {
+                  HomeStatusKind.guest => TileTone.sky,
+                  HomeStatusKind.rejected => TileTone.red,
+                  HomeStatusKind.pending => TileTone.gold,
+                  _ => TileTone.blue,
+                },
               ),
               const SizedBox(width: Spacing.md),
               Expanded(
@@ -487,7 +581,7 @@ class _StatusCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     Text(
-                      guest ? 'Browsing as guest' : 'Verification pending',
+                      title,
                       style: AppTypography.listTitle.copyWith(
                         fontWeight: AppTypography.strong,
                         color: BrandColors.ink,
@@ -495,10 +589,7 @@ class _StatusCard extends StatelessWidget {
                     ),
                     const SizedBox(height: Spacing.xxs),
                     Text(
-                      guest
-                          ? 'Sign up to message offices.'
-                          : 'Taytay LGU is reviewing your ID. Messaging '
-                                'offices unlocks once verified.',
+                      body,
                       style: AppTypography.listDetail.copyWith(
                         color: BrandColors.muted,
                       ),
@@ -514,12 +605,22 @@ class _StatusCard extends StatelessWidget {
               onPressed: onCreateAccount,
               child: const Text('Create account', maxLines: 1, softWrap: false),
             ),
+          ] else if (action != null && verify != null) ...<Widget>[
+            const SizedBox(height: Spacing.md),
+            FilledButton(
+              key: homeVerifyActionKey,
+              onPressed: verify,
+              child: Text(action, maxLines: 1, softWrap: false),
+            ),
           ],
         ],
       ),
     );
   }
 }
+
+/// The status card's button to the verification screen.
+const Key homeVerifyActionKey = Key('home-verify-action');
 
 class _SlidePhoto extends StatelessWidget {
   const _SlidePhoto({required this.slide, this.load});

@@ -220,7 +220,10 @@ void main() {
       await boot(tester, welcomeSeen: true, stored: unverifiedSession);
       await settle(tester);
 
-      expect(find.text('Verification pending'), findsOneWidget);
+      // `GET /me` cannot answer here, so the card says only that the account
+      // is not yet verified, never that an ID is under review (D-228).
+      expect(find.text('Not yet verified'), findsOneWidget);
+      expect(find.text('Verification pending'), findsNothing);
     });
 
     testWidgets('an expired session drops to guest and explains why', (
@@ -587,7 +590,7 @@ void main() {
       await settle(tester);
 
       // Home states the session. Verification itself is opened from My Account.
-      expect(find.text('Verification pending'), findsOneWidget);
+      expect(find.text('Not yet verified'), findsOneWidget);
       await openProfileShortcut(tester, 'Verify my identity');
 
       // TAB 04 wired this to `GET me/kyc`, so the screen now reports a real

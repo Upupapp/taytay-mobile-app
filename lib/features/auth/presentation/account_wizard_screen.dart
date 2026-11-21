@@ -15,6 +15,7 @@ import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
 import '../../../core/session/biometric_consent_controller.dart';
+import '../../../core/time/manila_time.dart';
 import '../../../shared/widgets/app_sheet.dart';
 import '../../../shared/widgets/barangay_picker.dart';
 import '../../../shared/widgets/biometric_consent_dialog.dart';
@@ -29,6 +30,7 @@ import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/upload_slot.dart';
 import '../../platform/domain/app_bootstrap.dart';
+import '../../platform/domain/privacy_notice.dart';
 import '../../profile/domain/name_lock.dart';
 import '../../registration/domain/registration_domain.dart';
 import '../../verification/domain/verification_id_type.dart';
@@ -48,6 +50,28 @@ const String wizardFinishForNow = 'Finish for now';
 const Key wizardFinishForNowKey = Key('wizard-finish-for-now');
 const Key wizardSelfieUnavailableKey = Key('wizard-selfie-unavailable');
 const Key wizardConsentFailedKey = Key('wizard-consent-failed');
+
+/// The ID step's other way: verify in person, with nothing uploaded (D-228).
+const Key wizardChooseInPersonKey = Key('wizard-choose-in-person');
+const Key wizardChosenInPersonKey = Key('wizard-chosen-in-person');
+const Key wizardUndoInPersonKey = Key('wizard-undo-in-person');
+
+/// The ID step's offer and its answer, said in the wizard's words (D-228).
+abstract final class WizardInPersonCopy {
+  static const String offerHeading = 'Rather verify in person?';
+  static const String offer =
+      'You do not have to upload anything. Bring a valid ID to the MSWDO and '
+      'staff verify your account there. No selfie is taken.';
+  static const String offerAction = 'Verify in person instead';
+  static const String chosenHeading = 'You chose to verify in person';
+  static const String chosen =
+      'Nothing about your ID is sent from the app. Your account is kept and '
+      'works without it until staff verify you at the office.';
+  static const String undo = 'Send my ID in the app instead';
+  static const String stepTitle = 'Verify in person';
+  static const String stepSubtitle =
+      'Your account is ready. Staff verify it at the MSWDO counter.';
+}
 
 /// Which `02` frame the wizard paints.
 enum AccountFixture {
@@ -173,6 +197,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// The resident chose "No, I'll verify in person" (D-210).
   bool _declinedSelfie = false;
 
+  /// The resident chose in person on the ID step, before any photo (D-228).
+  /// Nothing is uploaded and no selfie consent is asked for.
+  bool _chosenInPerson = false;
+
   /// The verification request's idempotency key (D-213): minted on the first
   /// Submit, the same on every retry of it, and new once the ID type or a
   /// photo changes, because the server refuses a key reused for other
@@ -204,11 +232,25 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
 
   /// No selfie can be sent: the text is not published, or the resident chose
   /// to verify in person. The wizard then ends here, with the account kept
-  /// and the in-person way said (D-210).
+  /// and the in-person way said (D-210, D-228).
   bool get _selfieWayClosed {
+    if (_chosenInPerson) return true;
     final BiometricConsentController? controller = _biometric;
     if (controller == null) return false;
     return controller.status is BiometricConsentUnavailable || _declinedSelfie;
+  }
+
+  /// Verify in person, chosen on the ID step: no ID is asked for and any
+  /// photo already picked is let go, because it would be held for nothing.
+  void _chooseInPerson() {
+    setState(() {
+      _chosenInPerson = true;
+      _front = null;
+      _idBack = null;
+      _status = null;
+    });
+    final BiometricConsentController? controller = _biometric;
+    if (controller != null) unawaited(controller.loadInPersonOffice());
   }
 
   @override
@@ -629,6 +671,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
         return;
       case Ok<SavedProfile>(:final value):
         _emailVerified = value.emailVerified;
+        // The account was opened with no name; the one just saved is what
+        // Home greets and draws initials from (D-228).
+        AppDependencies.of(
+          context,
+        ).session.applyGreetingName(_first.text.trim(), replace: true);
     }
     if (_emailVerified) {
       setState(() {
@@ -734,6 +781,7 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       _status = null;
       _errors = <String, String>{};
       _returnToReview = false;
+      if (previous == _Step.terms) _chosenInPerson = false;
     });
   }
 
@@ -1066,6 +1114,10 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
                 'We sent a code to $address. It expires in 10 minutes.',
               ),
       _Step.terms => ('Your data, protected', 'Terms at Privacy'),
+      _Step.idCard when _chosenInPerson => (
+        WizardInPersonCopy.stepTitle,
+        WizardInPersonCopy.stepSubtitle,
+      ),
       _Step.idCard => (
         'Upload a valid government ID',
         'The LGU uses it to confirm who you are. Make sure all four corners '
@@ -1447,7 +1499,11 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
-        const _PrivacyNoticeCard(),
+        _PrivacyNoticeCard(
+          load: widget.fixture == AccountFixture.live
+              ? AppDependencies.of(context).platformRepository.loadBootstrap
+              : null,
+        ),
         const SizedBox(height: Spacing.formGap),
         _LegalLinks(onTerms: _openTerms, onPrivacy: _openPrivacyNotice),
         const SizedBox(height: Spacing.formGap),
@@ -1472,6 +1528,23 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
   /// why no selfie can be sent and the in-person way (D-209, D-210).
   Widget _consentNotes() {
     final BiometricConsentController? controller = _biometric;
+    if (_chosenInPerson) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: Spacing.formGap),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            const SoftNote(
+              key: wizardChosenInPersonKey,
+              heading: WizardInPersonCopy.chosenHeading,
+              message: WizardInPersonCopy.chosen,
+            ),
+            const SizedBox(height: Spacing.md),
+            InPersonVerificationNote(office: controller?.inPersonOffice),
+          ],
+        ),
+      );
+    }
     if (controller == null) return const SizedBox.shrink();
     final BiometricConsentStatus status = controller.status;
     final List<Widget> notes = switch (status) {
@@ -1534,10 +1607,39 @@ class _AccountWizardScreenState extends State<AccountWizardScreen> {
       // needs both, and an ID uploaded for nothing is data held for nothing.
       return _consentNotes();
     }
+    if (_chosenInPerson) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _consentNotes(),
+          AuthLink(
+            WizardInPersonCopy.undo,
+            key: wizardUndoInPersonKey,
+            alignment: AlignmentDirectional.centerStart,
+            onPressed: _busy
+                ? null
+                : () => setState(() => _chosenInPerson = false),
+          ),
+        ],
+      );
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _consentNotes(),
+        // The other way, offered before any photo is asked for: a resident
+        // may verify in person without uploading anything (D-210, D-228).
+        SoftNote(
+          heading: WizardInPersonCopy.offerHeading,
+          message: WizardInPersonCopy.offer,
+          live: false,
+          action: AuthLink(
+            WizardInPersonCopy.offerAction,
+            key: wizardChooseInPersonKey,
+            onPressed: _busy ? null : _chooseInPerson,
+          ),
+        ),
+        const SizedBox(height: Spacing.formGap),
         _NameCheckCard(name: name),
         const SizedBox(height: Spacing.formGap),
         _picker(
@@ -2174,37 +2276,106 @@ class _NameCheckCard extends StatelessWidget {
   }
 }
 
-/// RegTerms `.pn`: the privacy notice summary. The full notice is a tap away
-/// ([_LegalLinks]); this card is marked a draft until the LGU approves it.
-class _PrivacyNoticeCard extends StatelessWidget {
-  const _PrivacyNoticeCard();
+/// Keys for the Privacy Notice card on the terms step.
+const Key wizardNoticePublishedKey = Key('wizard-notice-published');
+const Key wizardNoticeDraftKey = Key('wizard-notice-draft');
+const Key wizardNoticeFailedKey = Key('wizard-notice-failed');
+
+/// What the Privacy Notice card says while Taytay LGU has published none.
+const String wizardNoticeDraftPill = 'DRAFT · Not yet published by Taytay LGU';
+
+/// RegTerms `.pn`: the Privacy Notice the resident acknowledges below it.
+///
+/// The text is the one `GET /app/config` publishes (`privacy_notice`), with
+/// its version and date, drawn where it is agreed to, as the selfie's consent
+/// is (D-209). While the API answers the `placeholder` version the card says
+/// the notice is not published and keeps the summary marked as a draft; a
+/// failed read is said as a failure with Try again, never as "not published"
+/// (D-221). A design frame reads nothing and shows the draft (D-228).
+class _PrivacyNoticeCard extends StatefulWidget {
+  const _PrivacyNoticeCard({this.load});
+
+  /// `GET /app/config`. Null in a design frame.
+  final Future<Result<AppBootstrap>> Function()? load;
+
+  @override
+  State<_PrivacyNoticeCard> createState() => _PrivacyNoticeCardState();
+}
+
+class _PrivacyNoticeCardState extends State<_PrivacyNoticeCard> {
+  bool _loading = false;
+  PrivacyNotice? _notice;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loading = widget.load != null;
+    unawaited(_read());
+  }
+
+  Future<void> _read() async {
+    final Future<Result<AppBootstrap>> Function()? load = widget.load;
+    if (load == null) return;
+    if (!_loading) {
+      setState(() {
+        _loading = true;
+        _failed = false;
+      });
+    }
+    final Result<AppBootstrap> result = await load();
+    if (!mounted) return;
+    setState(() {
+      _loading = false;
+      switch (result) {
+        case Ok<AppBootstrap>(:final value):
+          _notice = value.privacyNotice;
+        case Err<AppBootstrap>():
+          _failed = true;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle point = AppTypography.listDetail.copyWith(
-      color: BrandColors.text,
-      height: 1.5,
-    );
-    final TextStyle pointTitle = AppTypography.listDetail.copyWith(
-      fontWeight: AppTypography.strong,
-      color: BrandColors.blue,
-    );
-    Widget item(String title, String body) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: Spacing.md),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    final PrivacyNotice? notice = _notice;
+    final Widget body;
+    if (_loading) {
+      body = const LoadingSkeleton(
+        layout: SkeletonLayout.text,
+        count: 4,
+        semanticLabel: 'Loading the Privacy Notice',
+      );
+    } else if (_failed) {
+      body = SoftNote(
+        key: wizardNoticeFailedKey,
+        tone: NoteTone.error,
+        heading: 'Could not load the Privacy Notice',
+        message:
+            'Check your connection and try again. Read it before you '
+            'acknowledge it below.',
+        action: AuthLink('Try again', onPressed: () => unawaited(_read())),
+      );
+    } else if (notice != null && notice.isPublished) {
+      final DateTime? updated = notice.updatedAt;
+      final String version = 'Version ${notice.version.trim()}';
+      body = Column(
+        key: wizardNoticePublishedKey,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Text(title, style: pointTitle),
-          const SizedBox(height: Spacing.xxs),
-          Text(body, style: point),
+          _NoticePill(
+            text: updated == null
+                ? version
+                : '$version · Updated ${ManilaTime.formatDate(updated)}',
+            published: true,
+          ),
+          const SizedBox(height: Spacing.section),
+          NoticeTextColumn(markdown: notice.bodyMarkdown),
         ],
-      ),
-    );
-    const Widget divider = Divider(
-      height: 1,
-      thickness: 1,
-      color: BrandColors.divider,
-    );
+      );
+    } else {
+      body = const _DraftSummary(key: wizardNoticeDraftKey);
+    }
     return SoftCard(
       filled: true,
       radius: Radii.cardLarge,
@@ -2241,68 +2412,121 @@ class _PrivacyNoticeCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: Spacing.section),
-          Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: DecoratedBox(
-              decoration: const ShapeDecoration(
-                color: BrandColors.gold50,
-                shape: StadiumBorder(),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: Spacing.sm + Spacing.xxs,
-                  vertical: Spacing.xs,
-                ),
-                child: Text(
-                  'DRAFT · LGU-approved Privacy Notice to be inserted',
-                  style: AppTypography.small.copyWith(
-                    fontWeight: AppTypography.black,
-                    color: BrandColors.goldInk,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: Spacing.section),
-          Text(
-            'The Municipality of Taytay collects your name, contact details, '
-            'address, valid ID and selfie to create and verify your resident '
-            'account and to deliver municipal services you request.',
-            style: AppTypography.bodyStyle.copyWith(
-              color: BrandColors.text,
-              height: 1.55,
-            ),
-          ),
-          const SizedBox(height: Spacing.section),
-          SoftCard(
-            radius: Radii.lg,
-            padding: const EdgeInsets.symmetric(
-              horizontal: Spacing.lg,
-              vertical: Spacing.xs,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                item(
-                  'How we use it',
-                  'Identity and residency verification, service requests, '
-                      'and notices from the LGU.',
-                ),
-                divider,
-                item('Who can see it', 'Authorised Taytay LGU personnel only.'),
-                divider,
-                item(
-                  'Your rights',
-                  'To be informed, to access, correct, object and erase, and '
-                      'to file a complaint with the National Privacy '
-                      'Commission. Contact the LGU Data Protection Officer '
-                      'for requests.',
-                ),
-              ],
-            ),
-          ),
+          body,
         ],
       ),
+    );
+  }
+}
+
+/// The version line over the published notice, or the draft marker.
+class _NoticePill extends StatelessWidget {
+  const _NoticePill({required this.text, required this.published});
+
+  final String text;
+  final bool published;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: AlignmentDirectional.centerStart,
+      child: DecoratedBox(
+        decoration: ShapeDecoration(
+          color: published ? BrandColors.green50 : BrandColors.gold50,
+          shape: const StadiumBorder(),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.sm + Spacing.xxs,
+            vertical: Spacing.xs,
+          ),
+          child: Text(
+            text,
+            style: AppTypography.small.copyWith(
+              fontWeight: AppTypography.black,
+              color: published ? BrandColors.green : BrandColors.goldInk,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// The app's own summary, shown only while no notice is published and
+/// marked as a draft: it is not the LGU's text.
+class _DraftSummary extends StatelessWidget {
+  const _DraftSummary({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final TextStyle point = AppTypography.listDetail.copyWith(
+      color: BrandColors.text,
+      height: 1.5,
+    );
+    final TextStyle pointTitle = AppTypography.listDetail.copyWith(
+      fontWeight: AppTypography.strong,
+      color: BrandColors.blue,
+    );
+    Widget item(String title, String body) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: Spacing.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text(title, style: pointTitle),
+          const SizedBox(height: Spacing.xxs),
+          Text(body, style: point),
+        ],
+      ),
+    );
+    const Widget divider = Divider(
+      height: 1,
+      thickness: 1,
+      color: BrandColors.divider,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        const _NoticePill(text: wizardNoticeDraftPill, published: false),
+        const SizedBox(height: Spacing.section),
+        Text(
+          'The Municipality of Taytay collects your name, contact details, '
+          'address, valid ID and selfie to create and verify your resident '
+          'account and to deliver municipal services you request.',
+          style: AppTypography.bodyStyle.copyWith(
+            color: BrandColors.text,
+            height: 1.55,
+          ),
+        ),
+        const SizedBox(height: Spacing.section),
+        SoftCard(
+          radius: Radii.lg,
+          padding: const EdgeInsets.symmetric(
+            horizontal: Spacing.lg,
+            vertical: Spacing.xs,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              item(
+                'How we use it',
+                'Identity and residency verification, service requests, '
+                    'and notices from the LGU.',
+              ),
+              divider,
+              item('Who can see it', 'Authorised Taytay LGU personnel only.'),
+              divider,
+              item(
+                'Your rights',
+                'To be informed, to access, correct, object and erase, and '
+                    'to file a complaint with the National Privacy '
+                    'Commission. Contact the LGU Data Protection Officer '
+                    'for requests.',
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

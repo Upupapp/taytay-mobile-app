@@ -11,7 +11,9 @@ import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/design/design_tokens.dart';
 import 'package:taytay_resident/core/result/result.dart';
 import 'package:taytay_resident/core/router/app_routes.dart';
+import 'package:taytay_resident/core/session/access_level.dart';
 import 'package:taytay_resident/core/session/local_authenticator.dart';
+import 'package:taytay_resident/core/session/session_state.dart';
 import 'package:taytay_resident/core/session/session_store.dart';
 import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
@@ -21,6 +23,7 @@ import 'package:taytay_resident/features/account/domain/notice_markdown.dart';
 import 'package:taytay_resident/features/account/domain/photo_credit.dart';
 import 'package:taytay_resident/features/account/domain/profile_completion.dart';
 import 'package:taytay_resident/features/account/presentation/account_canvas.dart';
+import 'package:taytay_resident/features/account/presentation/account_home_screen.dart';
 import 'package:taytay_resident/features/account/presentation/account_pages.dart';
 import 'package:taytay_resident/features/account/presentation/change_password_form.dart';
 import 'package:taytay_resident/features/messaging/domain/office_messaging_repository.dart';
@@ -32,6 +35,7 @@ import 'package:taytay_resident/features/profile/domain/resident_profile_detail.
 import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/profile/domain/verification_decision.dart';
 import 'package:taytay_resident/features/registration/domain/registration_domain.dart';
+import 'package:taytay_resident/l10n/app_localizations.dart';
 import 'package:taytay_resident/shared/widgets/barangay_picker.dart';
 import 'package:taytay_resident/shared/widgets/loading_skeleton.dart';
 import 'package:taytay_resident/shared/widgets/taytay_back_button.dart';
@@ -627,6 +631,88 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(const NetworkFailure().residentMessage), findsOneWidget);
     expect(find.textContaining('when Taytay LGU publishes it'), findsNothing);
+  });
+
+  // `GET /me` gives `barangay_id`; My Account printed the UUID (D-228).
+  group('the barangay is named, never its id (D-228)', () {
+    const String sanJuanId = '00000000-0000-4000-8000-0000000000a1';
+    const List<Barangay> listed = <Barangay>[
+      Barangay(id: sanJuanId, name: 'San Juan'),
+      Barangay(id: '00000000-0000-4000-8000-0000000000d1', name: 'Dolores'),
+    ];
+
+    test('an id, a name, or nothing the list knows', () {
+      expect(barangayFor(sanJuanId, listed)?.name, 'San Juan');
+      expect(barangayFor('dolores', listed)?.name, 'Dolores');
+      expect(barangayFor('00000000-0000-4000-8000-00000000ffff', listed), null);
+      expect(barangayFor('', listed), null);
+      expect(barangayFor(null, listed), null);
+    });
+
+    Future<void> pumpVerified(
+      WidgetTester tester,
+      Widget screen, {
+      required List<Barangay> barangays,
+    }) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final AppDependencies dependencies = await _accountDependencies(
+        profile: _RecordingProfile(
+          detail: const ResidentProfileDetail(
+            verificationTier: 'verified',
+            values: <ResidentProfileField, String>{
+              ResidentProfileField.fullName: 'Juana Dela Cruz',
+              ResidentProfileField.barangay: sanJuanId,
+            },
+          ),
+        ),
+        barangays: barangays,
+      );
+      addTearDown(dependencies.dispose);
+      await dependencies.session.signIn(
+        resident: const ResidentSession(
+          accountId: 'acct-sample',
+          accessLevel: AccessLevel.verified,
+        ),
+        accessToken: 'token',
+      );
+      await tester.pumpWidget(
+        AppDependenciesScope(
+          dependencies: dependencies,
+          child: MaterialApp(
+            localizationsDelegates: AppStrings.localizationsDelegates,
+            supportedLocales: AppStrings.supportedLocales,
+            home: screen,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('My Account says the barangay by name', (tester) async {
+      await pumpVerified(tester, const AccountHomeScreen(), barangays: listed);
+      expect(find.text('Brgy. San Juan, Taytay, Rizal'), findsOneWidget);
+      expect(find.textContaining(sanJuanId), findsNothing);
+    });
+
+    testWidgets('an id the list cannot name says the town alone', (
+      tester,
+    ) async {
+      await pumpVerified(
+        tester,
+        const AccountHomeScreen(),
+        barangays: const <Barangay>[],
+      );
+      expect(find.text('Taytay, Rizal'), findsOneWidget);
+      expect(find.textContaining(sanJuanId), findsNothing);
+    });
+
+    testWidgets('Edit profile shows the barangay by name', (tester) async {
+      await pumpVerified(tester, const EditProfileScreen(), barangays: listed);
+      expect(find.text('San Juan'), findsOneWidget);
+      expect(find.textContaining(sanJuanId), findsNothing);
+    });
   });
 
   test('the design specimen still paints Display name', () {

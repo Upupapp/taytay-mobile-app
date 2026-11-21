@@ -189,6 +189,26 @@ class SessionController extends ChangeNotifier {
     _set(AuthenticatedSession(current.resident.copyWith(accessLevel: level)));
   }
 
+  /// Gives the session its greeting name once the account has one: an account
+  /// opened in the sign-up wizard has no name until `PATCH /me` saves it, and
+  /// Home then had nothing to greet or to draw initials from (D-228).
+  ///
+  /// The first word of [name], as sign-in takes it. A blank name changes
+  /// nothing, and a guest has nothing to name. A session that already has a
+  /// name keeps it unless [replace] says the resident has just saved a new
+  /// one. Greeting only: it grants nothing.
+  void applyGreetingName(String? name, {bool replace = false}) {
+    final current = _state;
+    if (current is! AuthenticatedSession) return;
+    final String trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) return;
+    final String held = current.resident.displayName?.trim() ?? '';
+    if (held.isNotEmpty && !replace) return;
+    final String first = trimmed.split(RegExp(r'\s+')).first;
+    if (first == current.resident.displayName) return;
+    _set(AuthenticatedSession(current.resident.copyWith(displayName: first)));
+  }
+
   /// Replaces the bearer on the current session.
   ///
   /// Used when Firebase refreshes an ID token. The resident summary is kept.

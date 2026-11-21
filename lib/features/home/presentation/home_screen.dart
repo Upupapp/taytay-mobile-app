@@ -12,15 +12,30 @@ import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
 import '../../citizen_api/domain/citizen_contract.dart';
 import '../../news/domain/announcement_repository.dart';
 import '../../notifications/domain/notification_repository.dart';
+import '../../profile/domain/profile_fields.dart';
+import '../../profile/domain/resident_profile_detail.dart';
 import '../data/home_catalogue.dart';
 import '../domain/home_content.dart';
 import '../domain/home_greeting.dart';
 import 'home_canvas.dart';
+
+/// The status card for an account that is not verified, from the
+/// `verification_status` `GET /me` reports (D-228). Null (not read yet, or
+/// the read failed) and a word this build does not know say only that the
+/// account is not yet verified: the card never guesses that an ID was sent.
+HomeStatusKind homeStatusForTier(String? tier) => switch (tier) {
+  'unverified' => HomeStatusKind.notSent,
+  'pending' => HomeStatusKind.pending,
+  'rejected' => HomeStatusKind.rejected,
+  'verified' => HomeStatusKind.none,
+  _ => HomeStatusKind.unknown,
+};
 
 /// Home for a guest, an unverified resident, and a verified resident.
 ///
@@ -45,21 +60,84 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
   List<HomeNewsItem> _news = const <HomeNewsItem>[];
   HomeHotline? _hotline;
 
+  /// `verification_status` from `GET /me`, and the account it was read for.
+  /// Read only for a signed-in account that is not verified (D-228).
+  String? _tier;
+  String? _tierAccount;
+  SessionController? _session;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    final AppDependencies dependencies = AppDependencies.of(context);
+    _session = dependencies.session..addListener(_onSession);
     _load(initial: true);
     // Banners, news, the hotline and the bell count follow the office
-    // without a pull (D-218).
-    listenLive(AppDependencies.of(context).live, const <String>{
+    // without a pull (D-218). The account's verification is heard too, so
+    // the status card follows a decision made while Home is open.
+    listenLive(dependencies.live, const <String>{
       LiveTopics.home,
       LiveTopics.news,
       LiveTopics.events,
       LiveTopics.notifications,
       LiveTopics.hotlines,
+      LiveTopics.account,
+      LiveTopics.verification,
     }, () => unawaited(_load(initial: false, quiet: true)));
+  }
+
+  @override
+  void dispose() {
+    _session?.removeListener(_onSession);
+    super.dispose();
+  }
+
+  /// A resident who signs in, or whose account changes, while Home is open
+  /// gets the card for that account, not the last one's.
+  void _onSession() {
+    final ResidentSession? resident = _session?.state.residentOrNull;
+    if (!mounted || resident == null) return;
+    if (resident.accessLevel != AccessLevel.unverified) return;
+    if (_tierAccount == resident.accountId) return;
+    unawaited(_loadTier(quiet: false));
+  }
+
+  /// Reads where the account's verification stands, for an account that is
+  /// not verified. The tier is the server's word, so the session takes it as
+  /// well; a failed read keeps what the card said, or says only "not yet
+  /// verified" when it said nothing yet.
+  Future<void> _loadTier({required bool quiet}) async {
+    final AppDependencies dependencies = AppDependencies.of(context);
+    final ResidentSession? resident = dependencies.session.state.residentOrNull;
+    if (resident == null || resident.accessLevel != AccessLevel.unverified) {
+      return;
+    }
+    final Result<ResidentProfileDetail> me = await dependencies
+        .residentProfileRepository
+        .loadOwnDetail();
+    if (!mounted) return;
+    switch (me) {
+      case Ok<ResidentProfileDetail>(:final value):
+        setState(() {
+          _tier = value.verificationTier;
+          _tierAccount = resident.accountId;
+        });
+        final String? tier = value.verificationTier;
+        if (tier != null && tier.isNotEmpty) {
+          dependencies.session.applyVerificationTier(tier);
+        }
+        dependencies.session.applyGreetingName(
+          value.valueOf(ResidentProfileField.fullName),
+        );
+      case Err<ResidentProfileDetail>():
+        if (quiet && _tierAccount == resident.accountId) return;
+        setState(() {
+          _tier = null;
+          _tierAccount = resident.accountId;
+        });
+    }
   }
 
   /// Reads everything Home shows.
@@ -75,6 +153,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
     }
     final SessionState session = dependencies.session.state;
     final bool guest = session is! AuthenticatedSession;
+    if (!guest) unawaited(_loadTier(quiet: quiet));
     final List<HomeSlide> bundled = await HomeCatalogue.slides();
     final Result<HomeFeed> home = await dependencies.citizenApi.loadHome();
     if (quiet && !home.isOk) {
@@ -233,10 +312,15 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
       builder: (BuildContext context, Widget? _) {
         final SessionState session = dependencies.session.state;
         final bool guest = session is! AuthenticatedSession;
-        final String? name = session.residentOrNull?.displayName;
+        final ResidentSession? resident = session.residentOrNull;
+        final String? name = resident?.displayName;
         final HomeStatusKind status = switch (session.accessLevel) {
           AccessLevel.guest => HomeStatusKind.guest,
-          AccessLevel.unverified => HomeStatusKind.pending,
+          // The card says what `GET /me` says, never "reviewing your ID"
+          // for an account that sent none (D-228).
+          AccessLevel.unverified => homeStatusForTier(
+            _tierAccount == resident?.accountId ? _tier : null,
+          ),
           AccessLevel.verified => HomeStatusKind.none,
         };
         return Scaffold(
@@ -248,6 +332,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
               guest: guest,
             ),
             initials: guest ? '' : HomeGreeting.initials(name),
+            signedIn: !guest,
             bellCount: guest ? 0 : _bellCount,
             status: status,
             slides: _slides,
@@ -268,6 +353,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
                 : () => context.goNamed(AppRoute.profile.routeName),
             onSignIn: () => context.goNamed(AppRoute.signIn.routeName),
             onCreateAccount: () => context.goNamed(AppRoute.register.routeName),
+            onVerify: () => context.goNamed(AppRoute.verification.routeName),
             onSlide: (HomeSlide slide) => _open(slide.routeName),
             onNews: (HomeNewsItem item) => context.goNamed(
               AppRoute.newsPost.routeName,

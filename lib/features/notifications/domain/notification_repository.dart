@@ -104,7 +104,12 @@ class ResidentNotification {
 
   bool get isUnread => readAt == null;
 
-  bool get hasTarget => target.isNotEmpty;
+  /// Whether tapping it opens a place: the map names a `target`
+  /// (`DeepLink.targetKey`). A map holding only the notice's `type` is a
+  /// routing hint this build could not turn into a place, so tapping it marks
+  /// it read and opens nothing, rather than saying a link failed that was
+  /// never there.
+  bool get hasTarget => (target['target'] ?? '').trim().isNotEmpty;
 
   /// Redacted: a notification body can name a service a resident applied for,
   /// which is personal data.

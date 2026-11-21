@@ -9,6 +9,8 @@ import 'package:taytay_resident/core/api/auth_coordinator.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/result/result.dart';
+import 'package:taytay_resident/core/router/app_routes.dart';
+import 'package:taytay_resident/core/router/deep_link.dart';
 import 'package:taytay_resident/features/auth/data/firebase_identity.dart';
 import 'package:taytay_resident/features/credential/data/credential_api_repository.dart';
 import 'package:taytay_resident/features/credential/domain/credential_repository.dart';
@@ -466,6 +468,17 @@ void main() {
         NotificationCategory.verificationUpdate,
       );
       expect(page.items.single.target['type'], 'verification_decided');
+      // No subject_id, and still somewhere to go: the verification screen,
+      // which reads the decision from GET /me (D-228).
+      expect(page.items.single.hasTarget, isTrue);
+      expect(
+        DeepLink.resolve(page.items.single.target),
+        isA<DeepLinkResolved>().having(
+          (DeepLinkResolved r) => r.target.route,
+          'route',
+          AppRoute.verification,
+        ),
+      );
       expect(transport.requests.single.query.containsKey('cursor'), isFalse);
 
       final Result<Paginated<ResidentNotification>> second = await repository
@@ -478,6 +491,8 @@ void main() {
         isNot(NotificationCategory.accountSecurity),
       );
       expect(message.category?.raw, 'message_received');
+      // Its type alone is not a place: tapping it opens nothing (D-228).
+      expect(message.hasTarget, isFalse);
       expect(message.target['type'], 'message_received');
     },
   );

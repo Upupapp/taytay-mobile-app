@@ -18,6 +18,7 @@ import '../core/live/live_updates.dart';
 import '../core/mock/mock_behavior.dart';
 import '../core/network/network_monitor.dart';
 import '../core/result/result.dart';
+import '../core/session/access_level.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/consent_gate_controller.dart';
 import '../core/session/local_authenticator.dart';
@@ -64,6 +65,7 @@ import '../features/notifications/domain/notification_repository.dart';
 import '../features/platform/data/platform_api_repository.dart';
 import '../features/platform/domain/platform_repository.dart';
 import '../features/profile/data/resident_profile_api_repository.dart';
+import '../features/profile/domain/profile_fields.dart';
 import '../features/profile/domain/resident_profile_detail.dart';
 import '../features/profile/domain/resident_profile_repository.dart';
 import '../features/programs/data/program_api_repository.dart';
@@ -372,7 +374,12 @@ class AppDependencies {
       // build substitutes synthetic fixtures behind the same interfaces.
       residentProfileRepository: mock == null
           ? ResidentProfileApiRepository(apiClient: apiClient)
-          : MockProfileRepository(mock),
+          : MockProfileRepository(
+              mock,
+              tier: () => session.accessLevel == AccessLevel.verified
+                  ? 'verified'
+                  : 'unverified',
+            ),
       householdRepository: mock == null
           ? HouseholdApiRepository(apiClient: apiClient)
           : MockHouseholdRepository(mock),
@@ -426,8 +433,10 @@ class AppDependencies {
     // changes the account (approves a verification, changes the role), the
     // session takes the new tier at once, and every verification-gated route
     // re-evaluates without a restart. The subscription lives as long as
-    // [live] does.
-    live.listen(<String>{LiveTopics.account}, () {
+    // [live] does. A decision on the account's verification (a selfie review
+    // or an in-person check at the counter) is heard on `verification` as
+    // well, beside the notice it sends (D-228).
+    live.listen(<String>{LiveTopics.account, LiveTopics.verification}, () {
       unawaited(
         _refreshAccountTier(session, dependencies.residentProfileRepository),
       );
@@ -436,7 +445,18 @@ class AppDependencies {
     return dependencies;
   }
 
-  /// Applies the tier `GET /me` reports to the session.
+  /// Reads `GET /me` and applies its tier and greeting name to the session.
+  ///
+  /// Called on a cold start that resumed a stored session and whenever the
+  /// app comes back to the foreground: the stored session carries the tier it
+  /// was signed in with, so an account verified at the counter since then
+  /// read "Not yet verified" until the verification screen was opened
+  /// (D-228). Quiet: a failed read changes nothing.
+  Future<void> refreshAccount() =>
+      _refreshAccountTier(session, residentProfileRepository);
+
+  /// Applies the tier `GET /me` reports to the session, and the greeting
+  /// name when the account has one.
   ///
   /// Quiet: a failed read changes nothing. The tier is only ever the server's
   /// word, and [SessionController.applyVerificationTier] fails closed on one it
@@ -450,6 +470,7 @@ class AppDependencies {
     if (me case Ok(:final ResidentProfileDetail value)) {
       final String? tier = value.verificationTier;
       if (tier != null && tier.isNotEmpty) session.applyVerificationTier(tier);
+      session.applyGreetingName(value.valueOf(ResidentProfileField.fullName));
     }
   }
 

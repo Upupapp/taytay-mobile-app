@@ -23,8 +23,8 @@ profile with no email, so the account exists before the code is sent.
 | Personal details | First and last name, mobile (`09…`), barangay picked from `GET /barangays`, street or purok (optional) | Nothing yet. Once the account exists, a change here is saved with `PATCH /me` |
 | Account | Email and password (8 or more characters) | Firebase `createUserWithEmailAndPassword`; `GET /me` (makes the profile row); `PATCH /me` with the name, mobile, email, barangay and street; `POST /auth/email-otp/send`. The email cannot be changed after this step |
 | Email code | The 6-digit code sent to the email, with a resend countdown and a hold screen after too many tries | `POST /auth/email-otp/verify` |
-| Terms and privacy | Two separate ticks, Terms of Use and the Privacy Notice | `GET /app/config` for the current versions, then `POST /me/consents` once for `privacy` and once for `terms` (D-208); the consent gate is checked again (D-187) |
-| Valid ID | ID type, front photo, back photo (optional), and the name check (D-195) | Nothing yet |
+| Terms and privacy | The published Privacy Notice with its version and date (the app's summary, marked a draft, only while none is published; D-228), then two separate ticks, Terms of Use and the Privacy Notice | `GET /app/config` for the notice and the current versions, then `POST /me/consents` once for `privacy` and once for `terms` (D-208); the consent gate is checked again (D-187) |
+| Valid ID | "Verify in person instead" first, which ends the wizard with nothing uploaded (D-228); otherwise ID type, front photo, back photo (optional), and the name check (D-195) | Nothing yet |
 | Selfie | The camera, behind the biometric consent (D-209). Declining, or no published consent text, offers verification in person and "Finish for now" (D-210) | The consent dialog records `kind: biometric` itself |
 | Review | Every answer, each with an edit link that returns to review | `POST /me/verification-requests`, multipart, with an idempotency key (D-213) |
 | Done | "You're all set" | Home |

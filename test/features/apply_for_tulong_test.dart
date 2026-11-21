@@ -295,10 +295,14 @@ ApiHttpResponse _error(int status, String code, {Object? details}) =>
 /// `GET /me` as the wizard reads it: [linked] is `linked_to_office_record`,
 /// and [fails] makes the read fail, as a dropped connection would.
 class _Profiles implements ResidentProfileRepository {
-  _Profiles({this.linked, this.fails = false});
+  _Profiles({this.linked, this.fails = false, this.tier = 'verified'});
 
   final bool? linked;
   final bool fails;
+
+  /// What `GET /me` says the account is. The app reads it on start and takes
+  /// its tier (D-228), so an unverified session needs an unverified answer.
+  final String tier;
   int reads = 0;
 
   @override
@@ -309,7 +313,7 @@ class _Profiles implements ResidentProfileRepository {
     }
     return Ok<ResidentProfileDetail>(
       ResidentProfileDetail(
-        verificationTier: 'verified',
+        verificationTier: tier,
         linkedToOfficeRecord: linked,
       ),
     );
@@ -1544,7 +1548,7 @@ void main() {
         tester,
         level: AccessLevel.unverified,
         location: _apply,
-        profiles: _Profiles(linked: false),
+        profiles: _Profiles(linked: false, tier: 'unverified'),
       );
       expect(find.byKey(const Key('apply-not-verified')), findsOneWidget);
       expect(find.byKey(const Key('apply-unlinked')), findsNothing);

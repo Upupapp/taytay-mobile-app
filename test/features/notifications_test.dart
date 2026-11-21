@@ -653,6 +653,49 @@ void main() {
       expect(currentLocation(tester), '/notifications');
     });
 
+    // `verification_decided` has no subject_id: its target was only its
+    // type, so a tap said "That link could not be opened" (D-228).
+    testWidgets('a verification decision opens the verification screen', (
+      tester,
+    ) async {
+      await bootInbox(
+        tester,
+        level: AccessLevel.unverified,
+        items: <ResidentNotification>[
+          notification(
+            category: NotificationCategory.verificationUpdate,
+            target: const <String, String>{
+              'type': 'verification_decided',
+              'target': 'verification',
+            },
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Your application moved'));
+      await tester.pumpAndSettle();
+
+      expect(currentLocation(tester), '/verification');
+    });
+
+    testWidgets('a notice whose type opens nowhere is read, and no link is '
+        'said to have failed', (tester) async {
+      final booted = await bootInbox(
+        tester,
+        items: <ResidentNotification>[
+          notification(
+            target: const <String, String>{'type': 'message_received'},
+          ),
+        ],
+      );
+      await tester.tap(find.text('Your application moved'));
+      await tester.pumpAndSettle();
+
+      expect(currentLocation(tester), '/notifications');
+      expect(booted.notifications.markedRead.single, 'n-1');
+      expect(find.textContaining('could not be opened'), findsNothing);
+    });
+
     testWidgets('a message with no target still reads', (tester) async {
       await bootInbox(tester, items: <ResidentNotification>[notification()]);
 

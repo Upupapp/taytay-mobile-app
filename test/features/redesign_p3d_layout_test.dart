@@ -119,11 +119,39 @@ void main() {
       expect(find.byKey(const Key('tulong-bell')), findsOneWidget);
       expect(find.text('Tulong'), findsOneWidget);
       expect(find.text(TulongCanvas.listSubtitle), findsOneWidget);
+      // No listed page takes applications, so the note says so.
+      expect(find.text(TulongCanvas.noteInformationOnly), findsOneWidget);
+      expect(find.text(TulongCanvas.noteSomeApply), findsNothing);
+      expect(find.byKey(const Key('tulong-open-sample-one')), findsOneWidget);
+    });
+
+    // A page can take applications in the app (D-226), so "not applications"
+    // is said only while none does (D-228).
+    testWidgets('a list with a page that takes applications says so', (
+      WidgetTester tester,
+    ) async {
+      const SocialService applies = SocialService(
+        id: '11111111-1111-4111-8111-111111111104',
+        name: 'Sample Programme That Applies',
+        slug: 'sample-applies',
+        summary: 'A synthetic summary',
+        details: 'Synthetic details.',
+        iconKey: 'accessibility',
+        tileColor: 0xFF0F7A4D,
+        takesApplications: true,
+      );
+      await pump(
+        tester,
+        const TulongCanvas(
+          frame: TulongFrame.list,
+          services: <SocialService>[..._services, applies],
+        ),
+      );
+      expect(find.text(TulongCanvas.noteSomeApply), findsOneWidget);
       expect(
         find.textContaining('These are information pages, not applications'),
-        findsOneWidget,
+        findsNothing,
       );
-      expect(find.byKey(const Key('tulong-open-sample-one')), findsOneWidget);
     });
 
     testWidgets(

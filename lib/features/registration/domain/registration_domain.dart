@@ -182,6 +182,26 @@ class Barangay {
   String toString() => 'Barangay($name)';
 }
 
+/// The barangay's name for what an account holds: `GET /me` sends
+/// `barangay_id`, a UUID, which is never shown to a resident (D-228).
+///
+/// Matched on the id first, then on the name (a dev mock and an older
+/// payload carry the name itself). Null when [value] is empty or names no
+/// barangay in [barangays], so a screen says "Taytay, Rizal" rather than an
+/// identifier.
+Barangay? barangayFor(String? value, List<Barangay> barangays) {
+  final String wanted = value?.trim() ?? '';
+  if (wanted.isEmpty) return null;
+  for (final Barangay barangay in barangays) {
+    if (barangay.id == wanted) return barangay;
+  }
+  final String lower = wanted.toLowerCase();
+  for (final Barangay barangay in barangays) {
+    if (barangay.name.trim().toLowerCase() == lower) return barangay;
+  }
+  return null;
+}
+
 /// The consents a resident gives, each recorded separately.
 ///
 /// Bundling them into one "I agree" is what makes consent unfree: a resident who

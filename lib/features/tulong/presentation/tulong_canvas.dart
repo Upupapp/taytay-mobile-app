@@ -134,6 +134,17 @@ class TulongCanvas extends StatelessWidget {
   /// The tab's second line.
   static const String listSubtitle = 'Social services & programmes';
 
+  /// The note under a list where no page takes applications in the app.
+  static const String noteInformationOnly =
+      'Information on municipal programmes. These are information pages, not '
+      'applications.';
+
+  /// The note under a list where at least one page takes applications in the
+  /// app (`can_apply`, D-226).
+  static const String noteSomeApply =
+      'Information on municipal programmes. Some pages also take '
+      'applications in the app: open a page to see whether it does.';
+
   /// The note over a list a refresh could not replace (D-205).
   static const String staleHeading = "Couldn't refresh the list";
 
@@ -340,25 +351,32 @@ class _ListBody extends StatelessWidget {
             message: 'Programme information from Taytay LGU will appear here.',
             boxed: true,
           ),
-        const _Note(),
+        _Note(
+          takesApplications: services.any(
+            (SocialService service) => service.takesApplications,
+          ),
+        ),
       ],
     );
   }
 }
 
-/// Tulong is information, never an application. Said under the list.
+/// What the list is, said under it. A page whose `can_apply` is true takes
+/// applications in the app (D-226), so the note says "not applications" only
+/// while no listed page does (D-228).
 class _Note extends StatelessWidget {
-  const _Note();
+  const _Note({required this.takesApplications});
 
-  static const String copy =
-      'Information on municipal programmes. These are information pages, not applications.';
+  final bool takesApplications;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(Spacing.xs, Spacing.md, Spacing.xs, 0),
       child: Text(
-        copy,
+        takesApplications
+            ? TulongCanvas.noteSomeApply
+            : TulongCanvas.noteInformationOnly,
         style: AppTypography.listDetail.copyWith(color: BrandColors.muted),
       ),
     );

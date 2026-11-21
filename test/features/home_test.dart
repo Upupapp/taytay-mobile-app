@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
@@ -24,8 +25,12 @@ import 'package:taytay_resident/features/events/domain/event_repository.dart';
 import 'package:taytay_resident/features/home/domain/home_content.dart';
 import 'package:taytay_resident/features/home/domain/home_emphasis.dart';
 import 'package:taytay_resident/features/home/presentation/home_canvas.dart';
+import 'package:taytay_resident/features/home/presentation/home_screen.dart';
 import 'package:taytay_resident/features/news/domain/announcement_repository.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
+import 'package:taytay_resident/features/profile/domain/profile_fields.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
+import 'package:taytay_resident/features/profile/domain/resident_profile_repository.dart';
 import 'package:taytay_resident/features/verification/domain/correctable_field.dart';
 import 'package:taytay_resident/features/verification/domain/kyc_claim.dart';
 import 'package:taytay_resident/features/verification/domain/verification_repository.dart';
@@ -310,6 +315,8 @@ Future<Booted> bootHome(
   bool disableAnimations = false,
   String dataMode = '',
   ExternalLinkService? links,
+  ResidentProfileRepository? profile,
+  String? displayName = 'Ana',
 }) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1;
@@ -325,7 +332,7 @@ Future<Booted> bootHome(
         resident: ResidentSession(
           accountId: 'acct-1',
           accessLevel: level,
-          displayName: 'Ana',
+          displayName: displayName,
         ),
         accessToken: 'token',
       ),
@@ -361,7 +368,7 @@ Future<Booted> bootHome(
     programRepository: base.programRepository,
     announcementRepository: StubAnnouncementRepository(announcements),
     eventRepository: StubEventRepository(events),
-    residentProfileRepository: base.residentProfileRepository,
+    residentProfileRepository: profile ?? base.residentProfileRepository,
     householdRepository: base.householdRepository,
     credentialRepository: base.credentialRepository,
     verificationRepository: verification,
@@ -611,7 +618,9 @@ void main() {
     ) async {
       await bootHome(tester, level: AccessLevel.unverified);
 
-      expect(find.text('Verification pending'), findsOneWidget);
+      // `GET /me` did not answer here, so the card claims no review (D-228).
+      expect(find.text(HomeStatusCopy.unknownTitle), findsOneWidget);
+      expect(find.text('Verification pending'), findsNothing);
       expect(
         find.textContaining('Messaging offices unlocks once verified.'),
         findsOneWidget,
@@ -639,9 +648,10 @@ void main() {
         ),
       );
 
-      // Home does not read the verification case. The card is the session.
+      // Home does not read the verification case: the card is the tier
+      // `GET /me` reports, which did not answer here (D-228).
       expect(booted.verification.statusCalls, 0);
-      expect(find.text('Verification pending'), findsOneWidget);
+      expect(find.text(HomeStatusCopy.unknownTitle), findsOneWidget);
       expect(find.text('More information needed'), findsNothing);
     });
   });
@@ -875,6 +885,146 @@ void main() {
       );
     });
   });
+
+  // Found recording the demo against staging (D-228).
+  group('the status card follows GET /me, and the header the session', () {
+    test('each verification_status has its own card', () {
+      expect(homeStatusForTier('unverified'), HomeStatusKind.notSent);
+      expect(homeStatusForTier('pending'), HomeStatusKind.pending);
+      expect(homeStatusForTier('rejected'), HomeStatusKind.rejected);
+      expect(homeStatusForTier('verified'), HomeStatusKind.none);
+      expect(homeStatusForTier(null), HomeStatusKind.unknown);
+      expect(homeStatusForTier('registered'), HomeStatusKind.unknown);
+    });
+
+    testWidgets('no ID sent is not called a review, and offers the way', (
+      tester,
+    ) async {
+      final _Me me = _Me(tier: 'unverified');
+      await bootHome(tester, level: AccessLevel.unverified, profile: me);
+
+      expect(find.text(HomeStatusCopy.notSentTitle), findsOneWidget);
+      expect(find.textContaining('No ID has been sent yet'), findsOneWidget);
+      expect(find.textContaining('reviewing your ID'), findsNothing);
+      await tester.tap(find.byKey(homeVerifyActionKey));
+      await tester.pumpAndSettle();
+      expect(currentLocation(tester), '/verification');
+    });
+
+    testWidgets('an ID under review says so', (tester) async {
+      await bootHome(
+        tester,
+        level: AccessLevel.unverified,
+        profile: _Me(tier: 'pending'),
+      );
+      expect(find.text(HomeStatusCopy.pendingTitle), findsOneWidget);
+      expect(find.textContaining('reviewing your ID'), findsOneWidget);
+      expect(find.byKey(homeVerifyActionKey), findsNothing);
+    });
+
+    testWidgets('an ID that was not accepted says so, with what to fix', (
+      tester,
+    ) async {
+      await bootHome(
+        tester,
+        level: AccessLevel.unverified,
+        profile: _Me(tier: 'rejected'),
+      );
+      expect(find.text(HomeStatusCopy.rejectedTitle), findsOneWidget);
+      expect(find.textContaining('reviewing your ID'), findsNothing);
+      expect(find.text(HomeStatusCopy.fixAction), findsOneWidget);
+    });
+
+    testWidgets('an account verified since sign-in loses the card on start', (
+      tester,
+    ) async {
+      final booted = await bootHome(
+        tester,
+        level: AccessLevel.unverified,
+        profile: _Me(tier: 'verified'),
+      );
+      expect(booted.dependencies.session.accessLevel, AccessLevel.verified);
+      expect(find.text(HomeStatusCopy.unknownTitle), findsNothing);
+      expect(find.text(HomeStatusCopy.pendingTitle), findsNothing);
+    });
+
+    testWidgets('a signed-in account with no name shows the account, never '
+        'Sign in', (tester) async {
+      // `GET /me` cannot name it either: the header still shows the account.
+      await bootHome(tester, level: AccessLevel.unverified, displayName: null);
+
+      expect(find.text('Sign in'), findsNothing);
+      expect(find.byKey(const Key('home-avatar')), findsOneWidget);
+    });
+
+    testWidgets('the name GET /me gives becomes the greeting and initials', (
+      tester,
+    ) async {
+      await bootHome(
+        tester,
+        level: AccessLevel.unverified,
+        displayName: null,
+        profile: _Me(tier: 'unverified', name: 'Juana Dela Cruz'),
+      );
+      expect(find.textContaining(', Juana!'), findsOneWidget);
+      expect(find.text('J'), findsOneWidget);
+      expect(find.text('Sign in'), findsNothing);
+    });
+
+    testWidgets('coming back to the app reads the tier again', (tester) async {
+      final _Me me = _Me(tier: 'unverified');
+      final booted = await bootHome(
+        tester,
+        level: AccessLevel.unverified,
+        profile: me,
+      );
+      expect(booted.dependencies.session.accessLevel, AccessLevel.unverified);
+
+      // Verified at the counter while the app was in the background.
+      me.tier = 'verified';
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      expect(booted.dependencies.session.accessLevel, AccessLevel.verified);
+      expect(find.text(HomeStatusCopy.notSentTitle), findsNothing);
+    });
+  });
+}
+
+String currentLocation(WidgetTester tester) => GoRouter.of(
+  tester.element(find.byType(Scaffold).first),
+).routerDelegate.currentConfiguration.uri.path;
+
+/// `GET /me` answering with one verification status, and a name when given.
+class _Me implements ResidentProfileRepository {
+  _Me({required this.tier, this.name});
+
+  String tier;
+  final String? name;
+  int reads = 0;
+
+  @override
+  Future<Result<ResidentProfileDetail>> loadOwnDetail() async {
+    reads++;
+    final String? named = name;
+    return Ok<ResidentProfileDetail>(
+      ResidentProfileDetail(
+        verificationTier: tier,
+        values: <ResidentProfileField, String>{
+          ResidentProfileField.fullName: ?named,
+        },
+      ),
+    );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 const List<HomeSlide> _slides = <HomeSlide>[

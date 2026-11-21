@@ -230,7 +230,8 @@ class _RecordingMessaging implements OfficeMessagingRepository {
 class _TierProfile implements ResidentProfileRepository {
   _TierProfile(this.tier);
 
-  final String tier;
+  /// Mutable: the office can change the account while the app is open.
+  String tier;
 
   @override
   Future<Result<ResidentProfileDetail>> loadOwnDetail() async {
@@ -861,14 +862,18 @@ void main() {
   ) async {
     final messaging = _RecordingMessaging()
       ..sendResult = const Err(ForbiddenFailure());
+    final _TierProfile profile = _TierProfile('verified');
     final booted = await _boot(
       tester,
       location: '/offices/bplo/message',
       messaging: messaging,
-      profile: _TierProfile('pending'),
+      profile: profile,
     );
 
     expect(booted.dependencies.session.state.accessLevel, AccessLevel.verified);
+    // The office takes the verification back while the composer is open:
+    // the app read `verified` on start (D-228), and learns of it at the 403.
+    profile.tier = 'pending';
     await tester.enterText(
       find.byKey(const Key('directory-message-field')),
       'Hello',

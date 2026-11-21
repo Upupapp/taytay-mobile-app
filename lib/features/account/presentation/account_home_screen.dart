@@ -9,12 +9,14 @@ import '../../../core/motion/motion_tokens.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_policy.dart';
+import '../../../core/session/session_controller.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/error_state.dart';
 import '../../profile/domain/profile_fields.dart';
 import '../../profile/domain/resident_profile_detail.dart';
 import '../../profile/domain/verification_decision.dart';
+import '../../registration/domain/registration_domain.dart';
 import '../domain/profile_completion.dart';
 import 'account_canvas.dart';
 import 'account_copy.dart';
@@ -42,12 +44,33 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
   String _messagesLine = 'Office replies';
   int _unread = 0;
 
+  /// `GET /barangays`, to name the barangay `GET /me` gives as an id. Null
+  /// until read, and when the read failed.
+  List<Barangay>? _barangays;
+
+  SessionController? _session;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_started) return;
     _started = true;
+    _session = AppDependencies.of(context).session..addListener(_onSession);
     _load();
+  }
+
+  /// The tier can turn verified while this tab is open (an in-person check
+  /// at the counter, read from `GET /me`): the verified home then reads its
+  /// record, which it skipped while the account was not verified.
+  void _onSession() {
+    if (!mounted || _loading || _detail != null || _failed) return;
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _session?.removeListener(_onSession);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -65,8 +88,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
     if (!mounted) return;
     final threads = await dependencies.officeMessagingRepository.listThreads();
     if (!mounted) return;
+    final List<Barangay>? known = _barangays;
+    final Result<List<Barangay>> barangays = known != null
+        ? Ok<List<Barangay>>(known)
+        : await dependencies.barangayDirectory.listBarangays();
+    if (!mounted) return;
     setState(() {
       _loading = false;
+      if (barangays case Ok(:final value) when value.isNotEmpty) {
+        _barangays = value;
+      }
       switch (result) {
         case Ok(:final value):
           _detail = value;
@@ -139,10 +170,16 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
             detail?.valueOf(ResidentProfileField.fullName) ??
             session.residentOrNull?.displayName ??
             'Verified resident';
-        final String? barangay = detail?.valueOf(ResidentProfileField.barangay);
-        final String location = barangay == null || barangay.isEmpty
+        // `GET /me` gives `barangay_id`; the name is the directory's. An id
+        // the list does not name, or a list that could not be read, says the
+        // town alone rather than a UUID (D-228).
+        final Barangay? barangay = barangayFor(
+          detail?.valueOf(ResidentProfileField.barangay),
+          _barangays ?? const <Barangay>[],
+        );
+        final String location = barangay == null
             ? 'Taytay, Rizal'
-            : 'Brgy. $barangay, Taytay, Rizal';
+            : 'Brgy. ${barangay.name}, Taytay, Rizal';
         return AccountCanvas(
           frame: AccountFrame.home,
           name: name,

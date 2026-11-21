@@ -308,8 +308,14 @@ class NotificationApiRepository
   /// lists them all and takes no id. The notice opens it, and the page reads
   /// the decision and any reason from `GET /me/sector-applications`, never
   /// from the notice (D-216).
+  ///
+  /// `verification_decided` carries no `subject_id` (a selfie review or an
+  /// in-person check at the counter decided the account). It opens the
+  /// verification status screen, which reads where the account stands from
+  /// `GET /me` (D-228).
   static String? _placeTarget(String? type) => switch (type) {
     'sector_application_decided' => 'sector_applications',
+    'verification_decided' => 'verification',
     _ => null,
   };
 

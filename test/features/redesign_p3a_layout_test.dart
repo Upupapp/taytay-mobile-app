@@ -270,11 +270,10 @@ void main() {
       expect(find.text('Step 4 of 8'), findsOneWidget);
       expect(find.bySemanticsLabel('Create account progress'), findsWidgets);
       expect(find.byType(ConsentCheckCard), findsNWidgets(2));
-      // The draft marker and the privacy notice's points stay.
-      expect(
-        find.text('DRAFT · LGU-approved Privacy Notice to be inserted'),
-        findsOneWidget,
-      );
+      // A design frame reads no notice, so it shows the app's summary marked
+      // as a draft; a live build shows the published text (D-228).
+      expect(find.text(wizardNoticeDraftPill), findsOneWidget);
+      expect(find.textContaining('to be inserted'), findsNothing);
       expect(
         find.textContaining('National Privacy Commission'),
         findsOneWidget,

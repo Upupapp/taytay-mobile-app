@@ -169,6 +169,31 @@ void main() {
       expect(controller.state, const GuestSession());
       expect(controller.accessLevel, AccessLevel.guest);
     });
+
+    // An account opened in the sign-up wizard has no name until `PATCH /me`
+    // saves one; Home drew "Sign in" for it (D-228).
+    test('a greeting name is the first word, and never cleared', () async {
+      await controller.signIn(resident: _unverified, accessToken: 'token');
+      controller.applyGreetingName('  Juana Dela Cruz ');
+      expect(controller.state.residentOrNull?.displayName, 'Juana');
+
+      controller.applyGreetingName('');
+      controller.applyGreetingName(null);
+      expect(controller.state.residentOrNull?.displayName, 'Juana');
+      expect(controller.accessLevel, AccessLevel.unverified);
+
+      // A read fills a missing name; only a name just saved replaces one.
+      controller.applyGreetingName('Maria Santos');
+      expect(controller.state.residentOrNull?.displayName, 'Juana');
+      controller.applyGreetingName('Maria Santos', replace: true);
+      expect(controller.state.residentOrNull?.displayName, 'Maria');
+    });
+
+    test('a greeting name cannot sign a guest in', () async {
+      await controller.restore();
+      controller.applyGreetingName('Juana');
+      expect(controller.state, const GuestSession());
+    });
   });
 
   group('AccessPolicy', () {

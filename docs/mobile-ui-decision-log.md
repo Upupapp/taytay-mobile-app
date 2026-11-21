@@ -4484,6 +4484,72 @@ office's papers she holds.
 
 ---
 
+## D-228 — What a screen says about an account follows the server: the notice, the verification, the name, the barangay
+
+**Status: settled.** Category: product / privacy / contract. Recorded 2026-11-22. Decided on
+researched best practice, as Ella's standing rule asks: say what the API says, and say nothing it
+did not.
+
+**Context.** Recording the demo against staging (`fa1cb7d`) found eight places where a screen said
+something the server had not: the sign-up terms step drew "DRAFT · LGU-approved Privacy Notice to be
+inserted" although `GET /app/config` publishes the notice (`2026.1` on staging); the ID step asked
+for a photo before the resident could choose to verify in person (D-210); Home drew "Sign in" for a
+signed-in account whose session had no name, and "Taytay LGU is reviewing your ID" for an account
+that had sent none; the `verification_decided` notice, which carries no `subject_id`, answered a tap
+with "That link could not be opened"; a stored session kept the tier it was signed in with, so an
+account verified at the counter read "Not yet verified" until the verification screen was opened;
+My Account printed "Brgy. <UUID>" because `GET /me` gives `barangay_id`; and Tulong's footer said
+"These are information pages, not applications" over a page that takes applications (D-226).
+
+**Decision.**
+
+1. **The terms step shows the published notice where it is acknowledged** (the layered notice of
+   NPC guidance, drawn in the page like the selfie consent, D-209): its version and date ("Version
+   2026.1 · Updated 20 Nov 2026") and its text. While the API answers the `placeholder` version the
+   card keeps the app's summary under "DRAFT · Not yet published by Taytay LGU"; a failed read is a
+   failure with Try again, never "draft" (D-221). A design frame reads nothing and shows the draft.
+2. **The ID step offers in person before any photo**: "Rather verify in person?" with "Verify in
+   person instead". Chosen, the step shows that nothing is sent and the in-person note (the MSWDO's
+   details from the directory), lets go of any photo already picked, and ends with Finish for now;
+   "Send my ID in the app instead" undoes it. Declining the selfie consent still leads to the same
+   place (D-210).
+3. **A signed-in account always shows the account in Home's header**: initials when the session
+   has a name, a neutral person glyph when it has none, never Sign in. The session takes a greeting
+   name (the first word, as sign-in does) when the wizard saves the profile, and from `GET /me`
+   when it has none; a blank name never clears one. The dev mock's `GET /me` reports the tier of
+   the session the developer chose, so the re-read below never verifies a mock account.
+4. **Home's card follows `verification_status` from `GET /me`**: `unverified` is "Not yet verified
+   · No ID has been sent yet" with Verify my identity; `pending` is "Verification pending";
+   `rejected` is "Your ID was not accepted" with See what to fix; an unread or unknown status says
+   only "Not yet verified" with Verification status. Home still never reads the verification case.
+5. **`verification_decided` opens the verification screen** (a place, no id, like D-216), and a
+   notice opens anything only when its target names a place: a type alone marks it read and opens
+   nothing, rather than saying a link failed.
+6. **The tier is read again on a cold start that resumes a stored session and whenever the app
+   returns to the foreground** (`AppDependencies.refreshAccount`, `GET /me`), and the app-level live
+   hint now hears `verification` beside `account`. The stored session is not rewritten: the server
+   stays the authority and a write racing sign-out could restore a session (Article 3.6).
+7. **A barangay is named, never shown as its id**: `barangayFor` matches `GET /me`'s `barangay_id`
+   against `GET /barangays` (by id, then by name for a mock); My Account says "Brgy. San Juan,
+   Taytay, Rizal" or, when the list cannot name it, "Taytay, Rizal". Edit profile had the same fault
+   (its field showed the UUID and its picker never matched) and is fixed the same way. My Account
+   also reads its record once the tier turns verified while it is open.
+8. **Tulong's footer says "not applications" only while no listed page takes them**; otherwise
+   "Some pages also take applications in the app: open a page to see whether it does."
+
+**Tests.** `test/features/account_wizard_test.dart` (published, placeholder and failed notice; in
+person before any photo, undo, nothing picked or submitted, 360/375/430 dp at 200%; the saved first
+name greets), `test/features/redesign_p3a_layout_test.dart` (the frame's draft marker),
+`test/features/home_test.dart` (each status, the verify button's route, verified since sign-in, no
+name shows the avatar, the name from `GET /me`, a resume re-reads the tier),
+`test/features/welcome_and_gates_test.dart`, `test/features/notifications_test.dart` and
+`test/features/backend_contract_test.dart` (the decision opens `/verification`; a type alone opens
+nothing), `test/core/session_test.dart` (greeting name), `test/features/account_s8_test.dart`
+(`barangayFor`, My Account and Edit profile by name), `test/features/redesign_p3d_layout_test.dart`
+(both footers).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4715,5 +4781,6 @@ office's papers she holds.
 | D-225 | The old `/requests` pages, their repositories, models, mocks, `UploadGuidance` and `uploadRefusedTitle` are removed; `/requests`, `/requests/:requestId` and `/requests/:requestId/requirements` stay as authenticated addresses that redirect to `/my-requests`; `assistance_requirements` opens the request on My requests; `submitRequirements` keeps no route | product / privacy | settled |
 | D-226 | Apply for Tulong from the app (Ella decided OD-4, gap 20: build it): a page whose `can_apply` is true offers Apply, gated as Message; a four-step wizard (`/tulong/:serviceSlug/apply`): what it is and who can apply (verified, and linked by the MSWDO at ID review or the counter), purpose (12–2000) and an optional amount read into integer centavos, one file per `application_requirements` code (required / optional / conditional, the 8 MB fallback said first), review, `POST /me/assistance-applications` with an idempotency key; a `409` says the MSWDO must link the account and is never a dead end; a failed send says nothing was sent; the filed screen is the same for everybody (VAWC/CICL requests are filed but never listed). My requests shows the channel and, for a returned request, the missing documents with Add documents (`POST /me/assistance-requests/{id}/documents`). The Verified page explains the account link | product / privacy | settled |
 | D-227 | An imported request (`channel` `imported`, backend `28f246f`) shows `source_reference`, the control number on her old papers, first: "Control no. MSWDO-2024-0046" on its My requests row and in the head of its page; this system's reference stays beneath it and as the "System reference" fact; the channel reads "From the office's records". A request filed in this system shows neither | product / contract | settled |
+| D-228 | What a screen says about an account follows the server: the sign-up terms step shows the published Privacy Notice with its version and date (the app's summary only under "DRAFT · Not yet published by Taytay LGU", a failed read with Try again); the ID step offers Verify in person instead before any photo; Home's header shows the account (initials or a person glyph), never Sign in, and its card follows `verification_status` (not sent, pending, rejected, unknown); `verification_decided` opens `/verification` and a type alone opens nothing; `GET /me` is read again on a resumed cold start and on return to the foreground, and the live hint hears `verification`; a barangay is named from `GET /barangays`, never its id (My Account, Edit profile); Tulong's footer says "not applications" only while no page takes them | product / privacy / contract | settled |
 
 **223 decisions — 219 settled, 4 provisional.**

@@ -776,6 +776,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   String _mobileOriginal = '';
   String _emailOriginal = '';
   String _barangay = '';
+
+  /// What `GET /me` holds for the barangay: its id. [_barangay] is its name.
+  String _barangayHeld = '';
   String? _barangayId;
   String? _barangayIdOriginal;
   List<Barangay> _barangays = const <Barangay>[];
@@ -813,7 +816,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _emailOriginal = email.trim();
       setState(() {
         _showName(value);
-        _barangay = value.valueOf(ResidentProfileField.barangay) ?? '';
+        // `GET /me` holds `barangay_id`. The field shows a name, once the
+        // directory below names it, and never the id (D-228).
+        _barangayHeld = value.valueOf(ResidentProfileField.barangay) ?? '';
         _emailVerified = value.emailVerified;
       });
     } else {
@@ -828,8 +833,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     if (barangays case Ok(:final value)) {
       setState(() {
         _barangays = value;
-        for (final Barangay barangay in value) {
-          if (barangay.name == _barangay) _barangayId = barangay.id;
+        if (barangayFor(_barangayHeld, value) case final Barangay held) {
+          _barangay = held.name;
+          _barangayId = held.id;
         }
         _barangayIdOriginal = _barangayId;
       });

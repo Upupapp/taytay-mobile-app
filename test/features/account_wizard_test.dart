@@ -61,6 +61,37 @@ class _Picker implements DocumentPicker {
   bool supports(DocumentSource source) => true;
 }
 
+/// Counts what was picked: choosing in person must upload nothing.
+class _CountingPicker extends _Picker {
+  int picks = 0;
+
+  @override
+  Future<CapturedDocument?> pick(DocumentSource source, UploadPolicy policy) {
+    picks++;
+    return super.pick(source, policy);
+  }
+}
+
+/// `GET /app/config` failing until [failing] is cleared, then answering
+/// with [notice].
+class _FailsOnce implements PlatformRepository {
+  _FailsOnce(this.notice);
+
+  final PrivacyNotice notice;
+  bool failing = true;
+
+  @override
+  Future<Result<ServiceHealth>> checkHealth() async => const Ok<ServiceHealth>(
+    ServiceHealth(service: 'taytay', status: 'ok', apiVersion: '1'),
+  );
+
+  @override
+  Future<Result<AppBootstrap>> loadBootstrap() async {
+    if (failing) return const Err<AppBootstrap>(NetworkFailure());
+    return _Bootstrap(notice).loadBootstrap();
+  }
+}
+
 /// `GET /app/config` answering with one privacy notice.
 class _Bootstrap implements PlatformRepository {
   const _Bootstrap(this.notice, {this.terms = TermsOfUse.missing});
@@ -679,8 +710,19 @@ void main() {
 
       await tester.tap(find.byKey(const Key('privacy-read-full')));
       await tester.pumpAndSettle();
-      expect(find.text('Ano ang kinokolekta'), findsOneWidget);
-      expect(find.textContaining('Ang iyong pangalan.'), findsOneWidget);
+      // The card on the step shows it too (D-228); this is the dialog's copy.
+      final Finder sheet = find.byType(LegalTextSheet);
+      expect(
+        find.descendant(of: sheet, matching: find.text('Ano ang kinokolekta')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: sheet,
+          matching: find.textContaining('Ang iyong pangalan.'),
+        ),
+        findsOneWidget,
+      );
       expect(find.textContaining('will be available soon'), findsNothing);
     });
 
@@ -763,6 +805,83 @@ void main() {
     });
   });
 
+  // The terms step drew a hard-coded "DRAFT" pill over the app's own summary
+  // even once the LGU had published its notice (D-228).
+  group('the Privacy Notice card on the terms step (D-228)', () {
+    testWidgets('a published notice shows its version, date and text', (
+      tester,
+    ) async {
+      await boot(
+        tester,
+        auth: FakeAuthRepository(),
+        platform: _Bootstrap(
+          PrivacyNotice(
+            version: '2026.1',
+            updatedAt: DateTime.utc(2026, 11, 20, 2),
+            bodyMarkdown: '## Ano ang kinokolekta\n\n- Ang iyong **pangalan**.',
+          ),
+        ),
+      );
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+
+      expect(find.byKey(wizardNoticePublishedKey), findsOneWidget);
+      expect(find.text('Version 2026.1 · Updated 20 Nov 2026'), findsOneWidget);
+      expect(find.text('Ano ang kinokolekta'), findsOneWidget);
+      expect(find.textContaining('DRAFT'), findsNothing);
+      expect(find.textContaining('to be inserted'), findsNothing);
+    });
+
+    testWidgets('the server placeholder keeps the summary, marked a draft', (
+      tester,
+    ) async {
+      await boot(
+        tester,
+        auth: FakeAuthRepository(),
+        platform: const _Bootstrap(
+          PrivacyNotice(version: 'placeholder', bodyMarkdown: 'TODO notice'),
+        ),
+      );
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+
+      expect(find.byKey(wizardNoticeDraftKey), findsOneWidget);
+      expect(find.text(wizardNoticeDraftPill), findsOneWidget);
+      expect(find.textContaining('TODO notice'), findsNothing);
+      expect(find.byKey(wizardNoticePublishedKey), findsNothing);
+    });
+
+    testWidgets('a failed read says so with Try again, never "draft"', (
+      tester,
+    ) async {
+      final _FailsOnce platform = _FailsOnce(
+        const PrivacyNotice(
+          version: '2026.1',
+          bodyMarkdown: '## Ano ang kinokolekta',
+        ),
+      );
+      await boot(tester, auth: FakeAuthRepository(), platform: platform);
+      await goTo(tester, 'register');
+      await _toTerms(tester);
+
+      expect(find.byKey(wizardNoticeFailedKey), findsOneWidget);
+      expect(find.text(wizardNoticeDraftPill), findsNothing);
+      platform.failing = false;
+      await _tapText(tester, 'Try again');
+      expect(find.byKey(wizardNoticePublishedKey), findsOneWidget);
+      expect(find.text('Version 2026.1'), findsOneWidget);
+    });
+  });
+
+  testWidgets('the saved first name greets the new account (D-228)', (
+    tester,
+  ) async {
+    final dependencies = await boot(tester, auth: FakeAuthRepository());
+    await goTo(tester, 'register');
+    await _toTerms(tester);
+    expect(dependencies.session.state.residentOrNull?.displayName, 'Juana');
+  });
+
   testWidgets('the ID type offers every kind the API accepts', (tester) async {
     final SemanticsHandle semantics = tester.ensureSemantics();
     await boot(tester, auth: FakeAuthRepository(), documentPicker: _Picker());
@@ -774,6 +893,7 @@ void main() {
     expect(find.text('Upload a valid government ID'), findsOneWidget);
     expect(find.text('PhilSys National ID'), findsOneWidget);
 
+    await reveal(tester, find.byKey(const Key('id-type-picker')));
     await tester.tap(find.byKey(const Key('id-type-picker')));
     await tester.pumpAndSettle();
     for (final String wire in verificationIdTypes) {
@@ -882,6 +1002,74 @@ void main() {
       await tester.pumpAndSettle();
       expect(auth.calls, isNot(contains('submitProfile')));
       expect(find.text('Take a quick selfie'), findsNothing);
+    });
+
+    // The ID step asked for a photo before the resident could choose to
+    // verify in person; the choice is offered first now (D-228).
+    testWidgets('in person can be chosen before any ID photo', (tester) async {
+      final FakeAuthRepository auth = FakeAuthRepository();
+      final _CountingPicker picker = _CountingPicker();
+      await boot(
+        tester,
+        auth: auth,
+        documentPicker: picker,
+        platform: BiometricPlatform(),
+        accountControls: BiometricConsents(start: BiometricStart.owed),
+      );
+      await toIdStep(tester);
+      expect(find.byKey(const Key('id-front-pick')), findsOneWidget);
+
+      await reveal(tester, find.byKey(wizardChooseInPersonKey));
+      await tester.tap(find.byKey(wizardChooseInPersonKey));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(wizardChosenInPersonKey), findsOneWidget);
+      expect(find.byKey(inPersonVerificationNoteKey), findsOneWidget);
+      expect(find.byKey(const Key('id-front-pick')), findsNothing);
+      expect(find.byKey(wizardFinishForNowKey), findsOneWidget);
+
+      // Changing her mind brings the ID fields back.
+      await reveal(tester, find.byKey(wizardUndoInPersonKey));
+      await tester.tap(find.byKey(wizardUndoInPersonKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('id-front-pick')), findsOneWidget);
+      expect(find.byKey(wizardFinishForNowKey), findsNothing);
+
+      await reveal(tester, find.byKey(wizardChooseInPersonKey));
+      await tester.tap(find.byKey(wizardChooseInPersonKey));
+      await tester.pumpAndSettle();
+      await reveal(tester, find.byKey(wizardFinishForNowKey));
+      await tester.tap(find.byKey(wizardFinishForNowKey));
+      await tester.pumpAndSettle();
+
+      expect(picker.picks, 0, reason: 'nothing was uploaded');
+      expect(auth.calls, isNot(contains('submitProfile')));
+      expect(find.text('Upload a valid government ID'), findsNothing);
+    });
+
+    testWidgets('in person chosen on the ID step fits every phone at 200%', (
+      tester,
+    ) async {
+      for (final double width in <double>[360, 375, 430]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        await boot(
+          tester,
+          auth: FakeAuthRepository(),
+          documentPicker: _Picker(),
+          platform: BiometricPlatform(),
+          accountControls: BiometricConsents(start: BiometricStart.owed),
+          textScaler: const TextScaler.linear(2),
+        );
+        tester.view.physicalSize = Size(width, 900);
+        await tester.pumpAndSettle();
+        await toIdStep(tester);
+        await reveal(tester, find.byKey(wizardChooseInPersonKey));
+        expect(tester.takeException(), isNull, reason: '$width');
+        await tester.tap(find.byKey(wizardChooseInPersonKey));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: '$width');
+        expect(find.byKey(wizardChosenInPersonKey), findsOneWidget);
+      }
     });
 
     testWidgets('unpublished: no ID is asked for, in person is offered', (
