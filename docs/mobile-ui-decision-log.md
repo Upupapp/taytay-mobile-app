@@ -4555,6 +4555,8 @@ nothing), `test/core/session_test.dart` (greeting name), `test/features/account_
 **Status: settled.** Category: product / contract. Recorded 2026-11-22. Decided on researched best
 practice, as Ella's standing rule asks.
 
+*Points 1 and 2 revised by D-230: the API now sends the office's note for her and `documents_sent_at`.*
+
 **Context.** The demo rehearsal (after D-228) found four more things. A9: a returned request shows
 "Send a new copy of the Medical abstract." but never what the office wrote about it ("scan too
 blurred"). A10: after Maria sent the document again, the request still said "The office needs more
@@ -4591,6 +4593,59 @@ refresh. A13: the email-code step said "Enter the 6-digit code." in red before a
 **Tests.** `test/features/my_requests_test.dart` (sent then read again, then returned again; the
 request's words; the list reads again when uncovered), `test/features/account_wizard_test.dart`
 (the code step).
+
+---
+
+## D-230 — The MSWDO's note on a returned document is shown as its own words; "sent, waiting for the office" comes from the server
+
+**Status: settled.** Category: product / contract / privacy. Recorded 2026-11-22. Revises points 1
+and 2 of D-229. Decided on researched best practice, as Ella's standing rule asks.
+
+**Context.** D-229 left A9 to the backend and answered A10 from the app's memory, which a restart
+loses. Backend ADR 0009 (`a74c97d`, `7fa7dfe`) added both fields the app asked for, on her own row
+of `GET /me/assistance-requests` and the `201` of `POST /me/assistance-requests/{id}/documents`:
+`missing_documents[].applicant_note` (string or null: what an officer wrote *for the applicant*
+about that document, typed under "The applicant will see this in the app", console `DL-237`; stored
+apart from the office's remarks, which still never reach her) and `documents_sent_at` (while the
+request stands `returned`, when she last sent documents from the app since the return; null when
+she sent none since, and whenever it is not returned). The vendored contract moves to `7fa7dfe`.
+
+**Decision.**
+
+1. **The note is shown under its document, attributed.** In the request (`_Missing`) and in Add
+   documents (`DocumentSlot`), a returned document with a note shows an `ApplicantNote`: a blue
+   `SoftNote` headed "From the MSWDO:" ("Mula sa MSWDO:") with the officer's words below it,
+   exactly, never reworded or translated, and not a live region (it is part of the page as it
+   opens). Its heading is a line of its own because the words are somebody else's (the `heading`
+   form of `SoftNote`). Nothing else of the office's record is shown: the app has no field for the
+   remarks, and the codec reads only `applicant_note`. A blank or non-string note is no note.
+   `MissingDocument.toString` still names only the code and state: a note is about a person.
+2. **"Sent — waiting for the office to review what you sent" is the server's `documents_sent_at`.**
+   The stage is `documentsSent` when the request is `returned`, nothing named is still missing, and
+   `documents_sent_at` is set; the request also shows "Documents sent on" with that date. If she has
+   sent some and the office still names others, the request stays hers to answer ("needs more"),
+   with Add documents and the date she last sent. Returned with nothing named and nothing sent still
+   says to contact the office.
+3. **The in-memory record of D-229 is removed, not kept as a fallback.** The send's own `201`
+   already carries `documents_sent_at`, so the screen says "sent" at once without it; a second
+   source would only matter against a server older than `a74c97d`, which the contract this app pins
+   no longer describes, and two sources of one fact can disagree, in which case the resident reads
+   the wrong one with no way to tell. `OwnAssistanceApiRepository` is stateless again (`const`). Against an older API the
+   field is absent and reads as null: the request says "returned", as the API says, which is the
+   honest degradation. Staging needs backend `a74c97d` or later deployed for the line to appear.
+4. **The sample data says the same.** The dev mock's returned request carries a sample note, and its
+   send sets `documentsSentAt` as the API does.
+
+**Strings.** `myRequestApplicantNoteFrom`, `myRequestDocumentsSentOn`. The Filipino text was written
+by Claude in D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should
+still read it during UAT (marked in each string's description).
+
+**Tests.** `test/features/my_requests_test.dart` (the codec reads both fields, and absent, blank or
+mistyped values as null; sent then returned again; a fresh repository after a restart reads
+"waiting"; some sent and some named still hers; the detail shows the date and the attributed note,
+and no note when there is none), `test/features/apply_for_tulong_test.dart` (the note in the
+request and in Add documents, from the mock), `test/integration/backend_baseline_test.dart` and
+`tool/check_backend_baseline.sh` (the pin at `7fa7dfe`).
 
 ---
 
@@ -4827,5 +4882,6 @@ request's words; the list reads again when uncovered), `test/features/account_wi
 | D-227 | An imported request (`channel` `imported`, backend `28f246f`) shows `source_reference`, the control number on her old papers, first: "Control no. MSWDO-2024-0046" on its My requests row and in the head of its page; this system's reference stays beneath it and as the "System reference" fact; the channel reads "From the office's records". A request filed in this system shows neither | product / contract | settled |
 | D-228 | What a screen says about an account follows the server: the sign-up terms step shows the published Privacy Notice with its version and date (the app's summary only under "DRAFT · Not yet published by Taytay LGU", a failed read with Try again); the ID step offers Verify in person instead before any photo; Home's header shows the account (initials or a person glyph), never Sign in, and its card follows `verification_status` (not sent, pending, rejected, unknown); `verification_decided` opens `/verification` and a type alone opens nothing; `GET /me` is read again on a resumed cold start and on return to the foreground, and the live hint hears `verification`; a barangay is named from `GET /barangays`, never its id (My Account, Edit profile); Tulong's footer says "not applications" only while no page takes them | product / privacy / contract | settled |
 | D-229 | A returned request whose named documents she has all sent from the app reads "Sent — waiting for the office to review what you sent" until the office moves it (remembered in memory with `status_changed_at`, never stored); the office's remarks on a document are not sent by the API ("Never the office's remarks") and are not invented; My requests re-reads when shown again; an empty email-code Confirm opens the keyboard instead of an error | product / contract | settled |
+| D-230 | A returned document's `applicant_note` (backend ADR 0009) is shown under it, in the request and in Add documents, as "From the MSWDO:" and the officer's words exactly, never the office's remarks; "Sent — waiting for the office to review what you sent" and "Documents sent on" come from the server's `documents_sent_at`, so they survive a restart; D-229's in-memory record is removed, not kept as a fallback; contract re-vendored at `7fa7dfe` | product / contract / privacy | settled |
 
-**223 decisions — 219 settled, 4 provisional.**
+**224 decisions — 220 settled, 4 provisional.**
