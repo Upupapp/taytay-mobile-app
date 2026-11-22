@@ -18,7 +18,7 @@ import '../core/live/live_updates.dart';
 import '../core/mock/mock_behavior.dart';
 import '../core/network/network_monitor.dart';
 import '../core/result/result.dart';
-import '../core/session/access_level.dart';
+import '../core/session/access_policy.dart';
 import '../core/session/app_lock_controller.dart';
 import '../core/session/consent_gate_controller.dart';
 import '../core/session/local_authenticator.dart';
@@ -376,7 +376,12 @@ class AppDependencies {
           ? ResidentProfileApiRepository(apiClient: apiClient)
           : MockProfileRepository(
               mock,
-              tier: () => session.accessLevel == AccessLevel.verified
+              tier: () =>
+                  AccessPolicy.evaluate(
+                        session: session.state,
+                        requirement: AccessRequirement.verified,
+                      )
+                      is AccessAllowed
                   ? 'verified'
                   : 'unverified',
             ),

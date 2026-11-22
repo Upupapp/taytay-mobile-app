@@ -198,16 +198,20 @@ Future<void> reveal(WidgetTester tester, Finder finder) async {
 }
 
 /// A record with something in every group, for the rendering tests.
-ResidentProfileDetail fullDetail() => const ResidentProfileDetail(
-  values: <ResidentProfileField, String>{
-    ResidentProfileField.mobileNumber: '09171234567',
-    ResidentProfileField.emailAddress: 'ana@example.test',
-    ResidentProfileField.fullName: 'Ana Dela Cruz',
-    ResidentProfileField.birthDate: '03 March 1990',
-    ResidentProfileField.barangay: 'San Juan',
-  },
-  verificationTier: 'verified',
-);
+///
+/// [tier] is what `GET /me` reports. The app takes it on start (D-228), so a
+/// test of an account that is not verified passes the tier that says so.
+ResidentProfileDetail fullDetail({String tier = 'verified'}) =>
+    ResidentProfileDetail(
+      values: const <ResidentProfileField, String>{
+        ResidentProfileField.mobileNumber: '09171234567',
+        ResidentProfileField.emailAddress: 'ana@example.test',
+        ResidentProfileField.fullName: 'Ana Dela Cruz',
+        ResidentProfileField.birthDate: '03 March 1990',
+        ResidentProfileField.barangay: 'San Juan',
+      },
+      verificationTier: tier,
+    );
 
 void main() {
   _c13();
@@ -735,10 +739,13 @@ void main() {
     testWidgets('mid-verification, it offers the cheaper route', (
       tester,
     ) async {
+      // Mid-verification: the ID is with the office, and `GET /me` says so.
+      // The fixture used to report `verified` beside an unverified session;
+      // the app now takes the server's tier on start (D-228).
       await bootProfile(
         tester,
         level: AccessLevel.unverified,
-        detail: fullDetail(),
+        detail: fullDetail(tier: 'pending'),
       );
 
       await reveal(tester, find.text('Date of birth'));

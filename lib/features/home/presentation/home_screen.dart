@@ -12,6 +12,7 @@ import '../../../core/live/live_refresh.dart';
 import '../../../core/result/result.dart';
 import '../../../core/router/app_routes.dart';
 import '../../../core/session/access_level.dart';
+import '../../../core/session/access_policy.dart';
 import '../../../core/session/session_controller.dart';
 import '../../../core/session/session_state.dart';
 import '../../../shared/widgets/outcome_feedback.dart';
@@ -94,12 +95,21 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
     super.dispose();
   }
 
+  /// Signed in and not yet verified, as the one access policy decides it.
+  static bool _awaitsVerification(SessionState state) =>
+      AccessPolicy.evaluate(
+            session: state,
+            requirement: AccessRequirement.verified,
+          )
+          is AccessNeedsVerification;
+
   /// A resident who signs in, or whose account changes, while Home is open
   /// gets the card for that account, not the last one's.
   void _onSession() {
-    final ResidentSession? resident = _session?.state.residentOrNull;
-    if (!mounted || resident == null) return;
-    if (resident.accessLevel != AccessLevel.unverified) return;
+    final SessionState? state = _session?.state;
+    final ResidentSession? resident = state?.residentOrNull;
+    if (!mounted || state == null || resident == null) return;
+    if (!_awaitsVerification(state)) return;
     if (_tierAccount == resident.accountId) return;
     unawaited(_loadTier(quiet: false));
   }
@@ -110,10 +120,9 @@ class _HomeScreenState extends State<HomeScreen> with LiveRefresh<HomeScreen> {
   /// verified" when it said nothing yet.
   Future<void> _loadTier({required bool quiet}) async {
     final AppDependencies dependencies = AppDependencies.of(context);
-    final ResidentSession? resident = dependencies.session.state.residentOrNull;
-    if (resident == null || resident.accessLevel != AccessLevel.unverified) {
-      return;
-    }
+    final SessionState state = dependencies.session.state;
+    final ResidentSession? resident = state.residentOrNull;
+    if (resident == null || !_awaitsVerification(state)) return;
     final Result<ResidentProfileDetail> me = await dependencies
         .residentProfileRepository
         .loadOwnDetail();
