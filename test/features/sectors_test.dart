@@ -831,6 +831,14 @@ void main() {
         location: '/profile',
       );
 
+      // The row's line is a general list, never read as her own sectors
+      // (D-231): she has only PWD on her record here.
+      expect(
+        find.text('Who it can help: senior citizens, PWDs and solo parents'),
+        findsOneWidget,
+      );
+      expect(find.text('Senior citizen · PWD · solo parent'), findsNothing);
+
       await _tapVisible(tester, find.text('Sectors and benefits'));
       expect(find.text('Person with disability'), findsOneWidget);
       expect(find.byType(TaytayBackButton), findsOneWidget);

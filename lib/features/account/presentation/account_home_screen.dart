@@ -217,7 +217,9 @@ class _AccountHomeScreenState extends State<AccountHomeScreen> {
       // so back returns here (D-215).
       AccountMenuRow(
         title: 'Sectors and benefits',
-        subtitle: 'Senior citizen · PWD · solo parent',
+        // A general list, worded so it is not read as her own sectors
+        // (D-231); the page itself shows which are on her record.
+        subtitle: strings.accountSectorsSubtitle,
         icon: TaytayIcons.heart,
         tile: BrandColors.gold50,
         iconColor: BrandColors.goldInk,

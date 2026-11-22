@@ -14,13 +14,13 @@ import '../../../shared/widgets/failure_view.dart';
 import '../../../shared/widgets/form_page.dart';
 import '../../../shared/widgets/loading_skeleton.dart';
 import '../../../shared/widgets/soft_note.dart';
-import '../../../shared/widgets/success_screen.dart';
 import '../../../shared/widgets/taytay_buttons.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/own_assistance_request.dart';
 import 'apply_failure_copy.dart';
 import 'assistance_copy.dart';
 import 'document_slot.dart';
+import 'documents_sent_screen.dart';
 
 /// Sending the documents a returned request still needs (D-226, backend
 /// `6794f8d`): one file per document the office named, as a new version
@@ -51,7 +51,9 @@ class _AddRequestDocumentsScreenState extends State<AddRequestDocumentsScreen> {
   final SendKey _key = SendKey();
   bool _checked = false;
   bool _sending = false;
-  bool _sent = false;
+
+  /// What the last send carried, for its receipt; null until one is sent.
+  List<SentDocument>? _sent;
   AppFailure? _sendFailure;
   Set<String> _flagged = const <String>{};
 
@@ -156,9 +158,17 @@ class _AddRequestDocumentsScreenState extends State<AddRequestDocumentsScreen> {
       _sending = false;
       switch (result) {
         case Ok(:final value):
+          _sent = <SentDocument>[
+            for (final MissingDocument document in request.missingDocuments)
+              if (_files[document.code] case final CapturedDocument file)
+                SentDocument(
+                  name: document.name,
+                  isImage: file.isImage,
+                  size: file.readableSize,
+                ),
+          ];
           _request = value;
           _files.clear();
-          _sent = true;
         case Err(:final failure):
           _sendFailure = failure;
           _flagged = failure is ValidationFailure
@@ -182,16 +192,14 @@ class _AddRequestDocumentsScreenState extends State<AddRequestDocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final AppStrings s = AppStrings.of(context);
-    if (_sent) {
-      return SuccessScreen(
-        key: const Key('add-docs-done'),
-        title: s.addDocsDoneTitle,
-        message: s.addDocsDoneMessage,
-        primaryLabel: s.addDocsBackToRequest,
-        onPrimary: _backToRequest,
+    final OwnAssistanceRequest? request = _request;
+    if (_sent case final List<SentDocument> sent when request != null) {
+      return DocumentsSentScreen(
+        request: request,
+        sent: sent,
+        onBackToRequest: _backToRequest,
       );
     }
-    final OwnAssistanceRequest? request = _request;
     final AppFailure? loadFailure = _loadFailure;
     if (request == null || !request.takesDocuments) {
       return AuthFormPage(

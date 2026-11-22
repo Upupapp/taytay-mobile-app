@@ -379,7 +379,7 @@ abstract final class AccountSpecimen {
     ),
     AccountMenuRow(
       title: 'Sectors and benefits',
-      subtitle: 'Senior citizen · PWD · solo parent',
+      subtitle: 'Who it can help: senior citizens, PWDs and solo parents',
       icon: TaytayIcons.heart,
       tile: BrandColors.gold50,
       iconColor: BrandColors.goldInk,

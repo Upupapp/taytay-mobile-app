@@ -1476,7 +1476,7 @@ class AppStringsEn extends AppStrings {
 
   @override
   String get addDocsDoneMessage =>
-      'The office has them. It moves your request on from here.';
+      'The MSWDO will review what you sent. Until then, your request shows that it is waiting for the office.';
 
   @override
   String get addDocsBackToRequest => 'Back to the request';
@@ -1549,4 +1549,25 @@ class AppStringsEn extends AppStrings {
   @override
   String get verifiedRequestsStepDetail =>
       'In My requests, once the MSWDO has linked your account';
+
+  @override
+  String addDocsDoneStillNeeded(String documents) {
+    return 'The office still needs: $documents. Send them from the request when you have them.';
+  }
+
+  @override
+  String addDocsDoneFile(String kind, String size) {
+    return '$kind, $size';
+  }
+
+  @override
+  String get addDocsDoneSentOn => 'Sent on';
+
+  @override
+  String get addDocsDoneNote =>
+      'Open the request any time to see where it stands. If the office needs anything more, the request will say so.';
+
+  @override
+  String get accountSectorsSubtitle =>
+      'Who it can help: senior citizens, PWDs and solo parents';
 }

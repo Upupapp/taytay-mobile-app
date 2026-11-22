@@ -1496,7 +1496,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String get addDocsDoneMessage =>
-      'Natanggap na ito ng tanggapan. Ito na ang magpapatuloy sa iyong hiling.';
+      'Susuriin ng MSWDO ang iyong ipinadala. Hanggang doon, makikita sa iyong hiling na hinihintay pa ang tanggapan.';
 
   @override
   String get addDocsBackToRequest => 'Bumalik sa hiling';
@@ -1571,4 +1571,25 @@ class AppStringsFil extends AppStrings {
   @override
   String get verifiedRequestsStepDetail =>
       'Sa Aking mga hiling, kapag naiugnay na ng MSWDO ang iyong account';
+
+  @override
+  String addDocsDoneStillNeeded(String documents) {
+    return 'Kailangan pa ng tanggapan: $documents. Ipadala ang mga ito mula sa hiling kapag hawak mo na.';
+  }
+
+  @override
+  String addDocsDoneFile(String kind, String size) {
+    return '$kind, $size';
+  }
+
+  @override
+  String get addDocsDoneSentOn => 'Naipadala noong';
+
+  @override
+  String get addDocsDoneNote =>
+      'Buksan ang hiling anumang oras para makita kung nasaan na ito. Kung may kailangan pa ang tanggapan, makikita ito sa hiling.';
+
+  @override
+  String get accountSectorsSubtitle =>
+      'Sino ang matutulungan: mga senior citizen, PWD at solo parent';
 }

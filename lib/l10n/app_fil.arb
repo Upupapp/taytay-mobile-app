@@ -421,7 +421,7 @@
   "addDocsSend": "Ipadala ang mga dokumento",
   "addDocsNothingChosen": "Magdagdag ng kahit isang dokumento para maipadala.",
   "addDocsDoneTitle": "Naipadala ang mga dokumento",
-  "addDocsDoneMessage": "Natanggap na ito ng tanggapan. Ito na ang magpapatuloy sa iyong hiling.",
+  "addDocsDoneMessage": "Susuriin ng MSWDO ang iyong ipinadala. Hanggang doon, makikita sa iyong hiling na hinihintay pa ang tanggapan.",
   "addDocsBackToRequest": "Bumalik sa hiling",
   "addDocsMovedTitle": "Umusad na ang hiling",
   "addDocsMovedBody": "Walang naipadala. Hindi na naghihintay ng dokumento ang tanggapan para sa hiling na ito. Buksan itong muli para makita kung nasaan na ito.",
@@ -442,5 +442,10 @@
   "verifiedApplyStep": "Mag-apply ng Tulong",
   "verifiedApplyStepDetail": "Mula sa pahina ng programang may Mag-apply",
   "verifiedRequestsStep": "Subaybayan ang iyong mga hiling na tulong",
-  "verifiedRequestsStepDetail": "Sa Aking mga hiling, kapag naiugnay na ng MSWDO ang iyong account"
+  "verifiedRequestsStepDetail": "Sa Aking mga hiling, kapag naiugnay na ng MSWDO ang iyong account",
+  "addDocsDoneStillNeeded": "Kailangan pa ng tanggapan: {documents}. Ipadala ang mga ito mula sa hiling kapag hawak mo na.",
+  "addDocsDoneFile": "{kind}, {size}",
+  "addDocsDoneSentOn": "Naipadala noong",
+  "addDocsDoneNote": "Buksan ang hiling anumang oras para makita kung nasaan na ito. Kung may kailangan pa ang tanggapan, makikita ito sa hiling.",
+  "accountSectorsSubtitle": "Sino ang matutulungan: mga senior citizen, PWD at solo parent"
 }

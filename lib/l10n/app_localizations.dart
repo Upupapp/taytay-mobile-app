@@ -2624,10 +2624,10 @@ abstract class AppStrings {
   /// **'Documents sent'**
   String get addDocsDoneTitle;
 
-  /// Add documents: done (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  /// Add documents, done, when the office names nothing more: what happens next (D-226, D-231). No time is promised (D-37). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
-  /// **'The office has them. It moves your request on from here.'**
+  /// **'The MSWDO will review what you sent. Until then, your request shows that it is waiting for the office.'**
   String get addDocsDoneMessage;
 
   /// Add documents: back (D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
@@ -2755,6 +2755,36 @@ abstract class AppStrings {
   /// In en, this message translates to:
   /// **'In My requests, once the MSWDO has linked your account'**
   String get verifiedRequestsStepDetail;
+
+  /// Add documents, done, when the request still names documents she has not sent (D-231). {documents} is their names from the API, joined with commas. NOTE
+  ///
+  /// In en, this message translates to:
+  /// **'The office still needs: {documents}. Send them from the request when you have them.'**
+  String addDocsDoneStillNeeded(String documents);
+
+  /// Add documents, done: the value beside a document's name, what file was sent for it (applyFilePhoto or applyFilePdf, then its size) (D-231). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'{kind}, {size}'**
+  String addDocsDoneFile(String kind, String size);
+
+  /// Add documents, done: label of when the API recorded the send (documents_sent_at, ADR 0009), as a Manila date and time (D-231). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Sent on'**
+  String get addDocsDoneSentOn;
+
+  /// Add documents, done: the note under the receipt (D-231). No time is promised (D-37). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Open the request any time to see where it stands. If the office needs anything more, the request will say so.'**
+  String get addDocsDoneNote;
+
+  /// My Account: the line under Sectors and benefits. A general list of the sectors the page takes applications for, worded so it is never read as the resident's own sectors (D-231). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Who it can help: senior citizens, PWDs and solo parents'**
+  String get accountSectorsSubtitle;
 }
 
 class _AppStringsDelegate extends LocalizationsDelegate<AppStrings> {

@@ -11,6 +11,7 @@ import 'package:taytay_resident/core/api/api_client.dart';
 import 'package:taytay_resident/core/api/api_transport.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/api/send_key.dart';
+import 'package:taytay_resident/core/api/server_value.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
 import 'package:taytay_resident/core/config/app_environment.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
@@ -31,6 +32,7 @@ import 'package:taytay_resident/features/assistance/domain/own_assistance_reposi
 import 'package:taytay_resident/features/assistance/domain/own_assistance_request.dart';
 import 'package:taytay_resident/features/assistance/presentation/apply_controller.dart';
 import 'package:taytay_resident/features/assistance/presentation/apply_for_tulong_screen.dart';
+import 'package:taytay_resident/features/assistance/presentation/documents_sent_screen.dart';
 import 'package:taytay_resident/features/assistance/presentation/my_requests_canvas.dart';
 import 'package:taytay_resident/features/profile/data/resident_profile_api_repository.dart';
 import 'package:taytay_resident/features/profile/domain/resident_profile_detail.dart';
@@ -1211,6 +1213,31 @@ void main() {
         'sample-medical-certificate',
       });
       expect(booted.assistance.documents.single.id, 'ar-sample-returned');
+
+      // What was sent and when, what happens next, and the way back (D-231).
+      expect(find.text('Documents sent'), findsOneWidget);
+      expect(
+        find.text(
+          'The MSWDO will review what you sent. Until then, your request '
+          'shows that it is waiting for the office.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('TAY-SAMPLE-0004'), findsOneWidget);
+      expect(find.text('Sample medical assistance'), findsOneWidget);
+      expect(find.text('Sample medical certificate'), findsOneWidget);
+      expect(find.text('Photo, 8 bytes'), findsOneWidget);
+      expect(find.text('Sent on'), findsOneWidget);
+      expect(find.textContaining('PHT'), findsOneWidget);
+      expect(find.textContaining('Open the request any time'), findsOneWidget);
+
+      await _tap(tester, find.text('Back to the request'));
+      expect(find.byKey(const Key('add-docs-done')), findsNothing);
+      expect(
+        find.byKey(const Key('my-request-documents-sent')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('my-request-add-documents')), findsNothing);
     });
 
     testWidgets('a request that moved on says nothing was sent', (
@@ -1674,6 +1701,133 @@ void main() {
     });
   });
 
+  group('Documents sent says what was sent and what happens next (D-231)', () {
+    OwnAssistanceRequest after({
+      List<MissingDocument> stillNeeded = const <MissingDocument>[],
+      DateTime? sentAt,
+    }) => OwnAssistanceRequest(
+      id: 'ar-1',
+      referenceNumber: 'TAY-SAMPLE-0099',
+      programName: 'Sample medical assistance',
+      filedAt: DateTime.utc(2026, 11, 14),
+      status: const ServerValue<AssistanceRequestStatus>(
+        raw: 'returned',
+        known: AssistanceRequestStatus.returned,
+      ),
+      statusChangedAt: DateTime.utc(2026, 11, 17),
+      missingDocuments: stillNeeded,
+      documentsSentAt: sentAt,
+    );
+    const List<SentDocument> sent = <SentDocument>[
+      SentDocument(
+        name: 'Sample medical certificate',
+        isImage: true,
+        size: '1.2 MB',
+      ),
+      SentDocument(
+        name: 'Sample barangay certificate',
+        isImage: false,
+        size: '300 KB',
+      ),
+    ];
+
+    testWidgets('each document, the time the API recorded, and the way back', (
+      tester,
+    ) async {
+      var back = 0;
+      await tester.pumpWidget(
+        layoutHost(
+          DocumentsSentScreen(
+            request: after(sentAt: DateTime.utc(2026, 11, 22, 7, 40)),
+            sent: sent,
+            onBackToRequest: () => back++,
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('TAY-SAMPLE-0099'), findsOneWidget);
+      expect(find.text('Photo, 1.2 MB'), findsOneWidget);
+      expect(find.text('PDF, 300 KB'), findsOneWidget);
+      // 07:40 UTC is 3:40 PM in Manila.
+      expect(find.text('Sun 22 Nov 2026, 3:40 PM PHT'), findsOneWidget);
+      expect(find.textContaining('still needs'), findsNothing);
+      await tester.tap(find.text('Back to the request'));
+      expect(back, 1);
+    });
+
+    testWidgets('a request still naming documents says which', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          DocumentsSentScreen(
+            request: after(
+              stillNeeded: const <MissingDocument>[
+                MissingDocument(
+                  code: 'sample-id',
+                  name: 'Sample valid ID',
+                  state: MissingDocumentState.notSent,
+                ),
+              ],
+              sentAt: DateTime.utc(2026, 11, 22, 7, 40),
+            ),
+            sent: sent.take(1).toList(),
+            onBackToRequest: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'The office still needs: Sample valid ID. Send them from the '
+          'request when you have them.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('will review'), findsNothing);
+    });
+
+    testWidgets('no time is said when the API sent none', (tester) async {
+      await tester.pumpWidget(
+        layoutHost(
+          DocumentsSentScreen(
+            request: after(),
+            sent: sent,
+            onBackToRequest: () {},
+          ),
+          scrollable: false,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sent on'), findsNothing);
+      expect(find.textContaining('PHT'), findsNothing);
+    });
+
+    testWidgets('it fits every phone, at 200% text', (tester) async {
+      await expectCleanLayouts(
+        tester,
+        () => DocumentsSentScreen(
+          request: after(
+            stillNeeded: const <MissingDocument>[
+              MissingDocument(
+                code: 'sample-id',
+                name: 'Sample valid ID',
+                state: MissingDocumentState.notSent,
+              ),
+            ],
+            sentAt: DateTime.utc(2026, 11, 22, 7, 40),
+          ),
+          sent: sent,
+          onBackToRequest: () {},
+        ),
+        scrollable: false,
+      );
+    });
+  });
+
   group('every new string speaks Filipino too', () {
     test('the Tulong card, the steps and the states', () {
       final AppStrings en = lookupAppStrings(const Locale('en'));
@@ -1699,6 +1853,11 @@ void main() {
             (AppStrings s) => s.applyUnlinkedBody,
             (AppStrings s) => s.accountLinkedNote,
             (AppStrings s) => s.accountNotLinkedNote,
+            (AppStrings s) => s.addDocsDoneMessage,
+            (AppStrings s) => s.addDocsDoneStillNeeded('X'),
+            (AppStrings s) => s.addDocsDoneSentOn,
+            (AppStrings s) => s.addDocsDoneNote,
+            (AppStrings s) => s.accountSectorsSubtitle,
           ];
       for (final String Function(AppStrings) key in keys) {
         expect(key(fil), isNot(key(en)));
