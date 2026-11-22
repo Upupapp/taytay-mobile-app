@@ -1855,6 +1855,7 @@ void main() {
             (AppStrings s) => s.accountNotLinkedNote,
             (AppStrings s) => s.addDocsDoneMessage,
             (AppStrings s) => s.addDocsDoneStillNeeded('X'),
+            (AppStrings s) => s.addDocsDoneFile('Photo', '1 MB'),
             (AppStrings s) => s.addDocsDoneSentOn,
             (AppStrings s) => s.addDocsDoneNote,
             (AppStrings s) => s.accountSectorsSubtitle,

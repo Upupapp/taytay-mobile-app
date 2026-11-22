@@ -2762,7 +2762,7 @@ abstract class AppStrings {
   /// **'The office still needs: {documents}. Send them from the request when you have them.'**
   String addDocsDoneStillNeeded(String documents);
 
-  /// Add documents, done: the value beside a document's name, what file was sent for it (applyFilePhoto or applyFilePdf, then its size) (D-231). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  /// Add documents, done: the value beside a document's name, what file was sent for it (applyFilePhoto or applyFilePdf, then its size) (D-231). Filipino joins the two with the linker "na" ("Litrato na 1.2 MB"). The Filipino text was written by Claude for D-231 in D-217's terms ("hiling", "tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:
   /// **'{kind}, {size}'**

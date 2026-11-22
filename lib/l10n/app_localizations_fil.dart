@@ -1579,7 +1579,7 @@ class AppStringsFil extends AppStrings {
 
   @override
   String addDocsDoneFile(String kind, String size) {
-    return '$kind, $size';
+    return '$kind na $size';
   }
 
   @override

@@ -444,7 +444,7 @@
   "verifiedRequestsStep": "Subaybayan ang iyong mga hiling na tulong",
   "verifiedRequestsStepDetail": "Sa Aking mga hiling, kapag naiugnay na ng MSWDO ang iyong account",
   "addDocsDoneStillNeeded": "Kailangan pa ng tanggapan: {documents}. Ipadala ang mga ito mula sa hiling kapag hawak mo na.",
-  "addDocsDoneFile": "{kind}, {size}",
+  "addDocsDoneFile": "{kind} na {size}",
   "addDocsDoneSentOn": "Naipadala noong",
   "addDocsDoneNote": "Buksan ang hiling anumang oras para makita kung nasaan na ito. Kung may kailangan pa ang tanggapan, makikita ito sa hiling.",
   "accountSectorsSubtitle": "Sino ang matutulungan: mga senior citizen, PWD at solo parent"
