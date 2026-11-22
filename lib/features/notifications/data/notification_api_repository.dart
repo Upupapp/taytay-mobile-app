@@ -272,12 +272,10 @@ class NotificationApiRepository
         ? subjectId
         : null;
     final String? place = _placeTarget(derivedType);
-    final String body = entry['body'] is String ? entry['body'] as String : '';
-
     return ResidentNotification(
       id: id,
       title: title,
-      body: body,
+      body: entry['body'] is String ? entry['body'] as String : '',
       sentAt: DateTime.tryParse(
         entry['created_at'] is String ? entry['created_at'] as String : '',
       )?.toUtc(),
@@ -299,24 +297,24 @@ class NotificationApiRepository
         DeepLink.targetKey: ?(place ?? _deepLinkTarget(derivedType, targetId)),
       },
       verificationOutcome: rawType == 'verification_decided'
-          ? _verificationOutcomes[body.trim()]
+          ? _verificationOutcome(entry['outcome'])
           : null,
     );
   }
 
-  /// The sentences the API writes on a `verification_decided` notice, and
-  /// what each says was decided (backend `src/modules/verification/routes.ts`:
-  /// approve, reject, in person). An allow-list, like the status decoder
-  /// (D-35): the notice carries no outcome field, so only these exact words
-  /// give it one, and any other wording reads as no outcome, never as one
-  /// guessed from a word inside it (D-231).
-  static const Map<String, VerificationNoticeOutcome>
-  _verificationOutcomes = <String, VerificationNoticeOutcome>{
-    'Your identity review was approved.': VerificationNoticeOutcome.verified,
-    'Your identity was verified in person at the office.':
-        VerificationNoticeOutcome.verified,
-    'Your identity review was rejected.': VerificationNoticeOutcome.notAccepted,
-  };
+  /// What a `verification_decided` notice decided, from its `outcome`
+  /// (backend `31038a5`, migration `0077`; D-232). An allow-list, like the
+  /// status decoder (D-35): absent, null, mistyped or a value this build does
+  /// not know is no outcome, drawn as the neutral shield. The body's words are
+  /// never read for it: the spec says to read this field and never the words,
+  /// and the API filled older notices from their words itself.
+  static VerificationNoticeOutcome? _verificationOutcome(Object? raw) =>
+      switch (raw) {
+        'approved' => VerificationNoticeOutcome.verified,
+        'verified-in-person' => VerificationNoticeOutcome.verified,
+        'rejected' => VerificationNoticeOutcome.notAccepted,
+        _ => null,
+      };
 
   /// The `DeepLink` target of a notification type that opens a *place*
   /// rather than one record.

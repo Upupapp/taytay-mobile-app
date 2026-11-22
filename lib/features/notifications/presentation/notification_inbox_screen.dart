@@ -250,8 +250,9 @@ String _eyebrow(BuildContext context, ResidentNotification item) {
 /// A verification notice is drawn by what it says was decided, never as
 /// pending: `verification_decided` is only ever sent for a decision, and an
 /// hourglass on "approved" read as still waiting (D-231). Each notice keeps
-/// its own outcome, so an old "not accepted" stays that after a later
-/// approval; words the app does not recognise draw a neutral shield.
+/// its own `outcome`, so an old "not accepted" stays that after a later
+/// approval; a notice with no outcome this build knows draws a neutral
+/// shield (D-232).
 Color _tone(ResidentNotification item) {
   return switch (item.category?.known) {
     NotificationCategory.publicAdvisory => BrandColors.redInk,

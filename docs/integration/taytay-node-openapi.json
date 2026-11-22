@@ -18420,7 +18420,10 @@
         "properties": {
           "id": { "type": "string", "format": "uuid" },
           "name": { "type": ["string", "null"] },
-          "email": { "type": ["string", "null"] },
+          "email": {
+            "type": ["string", "null"],
+            "description": "The profile address the holder gave. For an open staff or admin account that gave none, the address it signs in with, read from the identity provider and not stored; null when neither is held."
+          },
           "mobile": { "type": ["string", "null"] },
           "barangay_id": { "type": ["string", "null"], "format": "uuid" },
           "verification_status": { "type": "string" },
@@ -19773,6 +19776,19 @@
               "null"
             ],
             "format": "uuid"
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "approved",
+              "rejected",
+              "verified-in-person",
+              null
+            ],
+            "description": "What a verification_decided notice decided: approved (an ID review approved), rejected (an ID review rejected) or verified-in-person (an ID checked at the office). Null on every other type, and on an older verification notice whose words matched none of the three. Read this, never the body's words."
           },
           "read_at": {
             "type": [

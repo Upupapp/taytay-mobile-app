@@ -136,6 +136,14 @@ document, or null; never the office's remarks). The office's requirement review 
 five of the office's release and transition operations, and `9c35379` and `fa8e6fc` did not touch the
 spec. No response this app reads lost or renamed a field.
 
+It was re-vendored from backend `37f3fe5` on 22 November 2026, for D-232. No operation was added or
+removed. `Notification` gained `outcome` (backend `31038a5`, migration `0077`): `approved`,
+`rejected` or `verified-in-person` on a `verification_decided` notice, null on every other type and on
+an older verification notice whose words matched none of the three. It is answered by
+`GET /notifications` and `POST /notifications/{id}/read`. In between, backend `596c0a7` described the
+`email` of a staff account in the admin users list, and `716876e` and `37f3fe5` did not touch the
+spec. No response this app reads lost or renamed a field.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -149,9 +157,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `7fa7dfec89887a23aa21d0ce72f67852e54bb281` (`7fa7dfe`) |
-| **sha256** | `3b70cbd450520e8a6028fade0a1eee405390deb69a2865b8c52e6e454b668e57` |
-| **Vendored on** | 22 November 2026 (D-230) |
+| **Backend commit** | `37f3fe5f2b71d4e6f5363d00429a7f7673fb7a2c` (`37f3fe5`) |
+| **sha256** | `86cc39e4e6099702803f4ae97d852295a0205593e35f280f48cfa90680e60573` |
+| **Vendored on** | 22 November 2026 (D-232) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

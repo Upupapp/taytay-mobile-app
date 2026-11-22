@@ -66,17 +66,17 @@ enum NotificationSwitch {
   final String preferenceType;
 }
 
-/// What a `verification_decided` notice says was decided (D-231).
+/// What a `verification_decided` notice says was decided (D-231, D-232).
 ///
 /// ---
 ///
-/// **The notice's own words, not the account's state today.** An old notice
+/// **The notice's own outcome, not the account's state today.** An old notice
 /// that said "rejected" still says so after a later approval, so its icon is
-/// never read from where the account stands now. The API sends the decision
-/// only as its sentence (`Notification` has no outcome field), so the data
-/// layer recognises the API's exact sentences and nothing else; any other
-/// wording is no outcome, drawn as a neutral identity notice, never as
-/// pending: a `verification_decided` notice is a decision by its type.
+/// never read from where the account stands now. The API sends it as the
+/// notice's `outcome` (`approved`, `rejected`, `verified-in-person`); an
+/// absent or unknown value is no outcome, drawn as a neutral identity notice,
+/// never as pending: a `verification_decided` notice is a decision by its
+/// type.
 enum VerificationNoticeOutcome {
   /// Approved from the app, or verified in person at the office.
   verified,
@@ -122,8 +122,9 @@ class ResidentNotification {
   /// fetched after the tap, never read from the message.
   final Map<String, String> target;
 
-  /// For a `verification_decided` notice whose words the app recognises,
-  /// what it says was decided; null otherwise (D-231).
+  /// For a `verification_decided` notice, what its `outcome` says was
+  /// decided; null for any other notice and for an outcome this build does
+  /// not know (D-231, D-232).
   final VerificationNoticeOutcome? verificationOutcome;
 
   bool get isUnread => readAt == null;
