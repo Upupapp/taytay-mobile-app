@@ -4654,6 +4654,9 @@ request and in Add documents, from the mock), `test/integration/backend_baseline
 **Status: settled.** Category: product / accessibility / copy. Recorded 2026-11-22. Decided on
 researched best practice, as Ella's standing rule asks.
 
+*Point 1's source revised by D-232: the outcome is now the notice's `outcome` field, and the sentences
+are no longer read.*
+
 **Context.** Recording the demo found three rough edges. The inbox drew every `verification_decided`
 notice with the pending hourglass in gold, so an approval still looked like a wait. The inbox row
 showed the title and never the body, and that title is "Verification update" for every decision, so
@@ -4703,6 +4706,48 @@ never the hourglass, the body shown, the outcome kept after marking read, 200% t
 says it is waiting; a request still naming documents; no time without `documents_sent_at`; 360,
 375 and 430 dp at 200%; the Filipino strings), `test/features/sectors_test.dart` (the My Account
 line).
+
+---
+
+## D-232 — A verification notice's icon comes from its `outcome`, and its words are no longer read
+
+**Status: settled.** Category: contract / product. Recorded 2026-11-22. Revises point 1 of D-231.
+Decided on researched best practice, as Ella's standing rule asks.
+
+**Context.** D-231 drew a `verification_decided` notice from its body, matched against the API's
+three exact sentences, because the notice had no outcome field, and asked the backend for one.
+Backend `31038a5` (migration `0077`) added it: `outcome` at the top level of each notification, beside
+`subject_id`, in `GET /notifications` and `POST /notifications/{id}/read`. Its values are `approved`,
+`rejected` and `verified-in-person`, and it is null on every other type. Older notices were filled in
+from their exact words, and one whose words matched none of the three stays null. The spec says
+"Read this, never the body's words". The vendored contract moves to backend HEAD `37f3fe5`, whose spec
+is `31038a5`'s plus a description on an admin field.
+
+**Decision.**
+
+1. **The codec reads `outcome`, null-safe, as an allow-list (D-35).** `approved` and
+   `verified-in-person` are `verified` (the green check), and `rejected` is `notAccepted` (the red
+   alert). Absent, null, mistyped or unknown values are no outcome (the neutral shield, never the
+   hourglass). It is read only on a `verification_decided` notice; any other type has none, whatever
+   it sends.
+2. **The sentence matching is dropped, not kept as a fallback.** This follows D-230 point 3 for the
+   same reason: two sources of one fact can disagree, and the resident cannot tell which one the icon
+   followed. The fallback would only matter against an API older than `31038a5`, which the contract
+   this app pins no longer describes. The backend already did that matching once, in the migration,
+   for every notice it holds, so the app matching it again would add nothing on the current API. It
+   would also keep the app tied to wording the server is now free to change. Against an older API, a
+   verification notice shows the neutral shield and its words, which is the honest degradation: it
+   never shows a wrong mark and never the pending hourglass. Staging needs backend `31038a5` or later
+   deployed for the check and the alert to appear.
+3. **Nothing else moves.** The row still shows the notice's words under the title (D-231 point 2),
+   and marking a notice read still keeps its outcome. The read's reply is not decoded: the app keeps
+   the row it already holds.
+
+**Tests.** `test/features/backend_contract_test.dart` covers the codec: each value, null, absent,
+unknown and mistyped values, a body that says "approved" with no outcome, and another type carrying
+an outcome. It also checks that the vendored `Notification` schema carries `outcome` with its three
+values. `test/features/notifications_test.dart` is unchanged and still green. `tool/check_backend_baseline.sh` and
+`tool/check_backend_routes.sh` pass at `37f3fe5`.
 
 ---
 
@@ -4941,5 +4986,6 @@ line).
 | D-229 | A returned request whose named documents she has all sent from the app reads "Sent — waiting for the office to review what you sent" until the office moves it (remembered in memory with `status_changed_at`, never stored); the office's remarks on a document are not sent by the API ("Never the office's remarks") and are not invented; My requests re-reads when shown again; an empty email-code Confirm opens the keyboard instead of an error | product / contract | settled |
 | D-230 | A returned document's `applicant_note` (backend ADR 0009) is shown under it, in the request and in Add documents, as "From the MSWDO:" and the officer's words exactly, never the office's remarks; "Sent — waiting for the office to review what you sent" and "Documents sent on" come from the server's `documents_sent_at`, so they survive a restart; D-229's in-memory record is removed, not kept as a fallback; contract re-vendored at `7fa7dfe` | product / contract / privacy | settled |
 | D-231 | A `verification_decided` notice is drawn by its own words (the API's exact sentences, an allow-list): approved or in person a green check, rejected a red alert, other wording a neutral shield, never the pending hourglass; the inbox row shows the body under the title; Documents sent is a receipt (reference, programme, each file, "Sent on" from `documents_sent_at`, what happens next or what is still needed, Back to the request); My Account's sectors line reads "Who it can help: senior citizens, PWDs and solo parents" | product / accessibility / copy | settled |
+| D-232 | A `verification_decided` notice's icon comes from its `outcome` (backend `31038a5`, migration `0077`): `approved` and `verified-in-person` a green check, `rejected` a red alert, anything else the neutral shield; D-231's sentence matching is dropped rather than kept as a fallback; contract re-vendored at `37f3fe5` | contract / product | settled |
 
-**225 decisions — 221 settled, 4 provisional.**
+**226 decisions — 222 settled, 4 provisional.**
