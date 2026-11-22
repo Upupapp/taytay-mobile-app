@@ -497,6 +497,57 @@ void main() {
     },
   );
 
+  // The notice carries no outcome field, so the API's own sentences are an
+  // allow-list and nothing else gives one (D-231).
+  test('a verification notice says what was decided only in the words '
+      'the API writes', () async {
+    Map<String, Object?> row(String id, String type, String body) =>
+        <String, Object?>{
+          'id': id,
+          'title': 'Verification update',
+          'body': body,
+          'type': type,
+          'created_at': '2026-08-01T00:00:00Z',
+        };
+    final _Scripted transport = _Scripted(<Result<ApiHttpResponse>>[
+      _ok(<Object?>[
+        row('a', 'verification_decided', 'Your identity review was approved.'),
+        row(
+          'b',
+          'verification_decided',
+          'Your identity was verified in person at the office.',
+        ),
+        row('c', 'verification_decided', 'Your identity review was rejected.'),
+        // A word inside other wording is not read as an outcome.
+        row('d', 'verification_decided', 'Your review was not approved.'),
+        // The same sentence on another notice is not a verification outcome.
+        row('e', 'message_received', 'Your identity review was approved.'),
+      ]),
+    ]);
+    final Result<Paginated<ResidentNotification>> result =
+        await NotificationApiRepository(
+          apiClient: ApiClient(
+            config: _config(),
+            transport: transport,
+            accessTokenProvider: () async => 'firebase-id-token',
+          ),
+        ).listOwn(page: 1);
+    final List<ResidentNotification> items =
+        (result as Ok<Paginated<ResidentNotification>>).value.items;
+    expect(
+      items.map((ResidentNotification n) => n.verificationOutcome).toList(),
+      <VerificationNoticeOutcome?>[
+        VerificationNoticeOutcome.verified,
+        VerificationNoticeOutcome.verified,
+        VerificationNoticeOutcome.notAccepted,
+        null,
+        null,
+      ],
+    );
+    // The words are kept as sent: the row shows them.
+    expect(items.first.body, 'Your identity review was approved.');
+  });
+
   test(
     'the inbox loads the next cursor and does not repeat page one',
     () async {

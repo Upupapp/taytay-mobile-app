@@ -19,11 +19,17 @@ class NoticeRow {
     required this.tone,
     required this.tile,
     required this.icon,
+    this.body = '',
     this.onTap,
   });
 
   final String eyebrow;
   final String title;
+
+  /// The words the LGU wrote, under the title, in full (D-231). The title of
+  /// several notices is the same for every one ("Verification update"), so
+  /// the body is where a notice says what happened.
+  final String body;
   final String when;
   final bool unread;
   final Color tone;
@@ -147,8 +153,8 @@ class _NotificationCentreState extends State<NotificationCentre> {
 }
 
 /// A notification (Directory `.li`): the category's tile, the category label
-/// (10.5 / 800, upper case), the title, when it was sent, and a blue dot
-/// while unread. The dot is also said in words.
+/// (10.5 / 800, upper case), the title, the LGU's words, when it was sent,
+/// and a blue dot while unread. The dot is also said in words.
 class _Row extends StatelessWidget {
   const _Row({required this.row});
 
@@ -202,6 +208,15 @@ class _Row extends StatelessWidget {
                           : AppTypography.medium,
                     ),
                   ),
+                  if (row.body.trim().isNotEmpty) ...<Widget>[
+                    const SizedBox(height: Spacing.xxs),
+                    Text(
+                      row.body.trim(),
+                      style: AppTypography.listDetail.copyWith(
+                        color: BrandColors.text,
+                      ),
+                    ),
+                  ],
                   if (row.when.isNotEmpty) ...<Widget>[
                     const SizedBox(height: Spacing.xxs),
                     Text(

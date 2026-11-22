@@ -5,6 +5,7 @@ import 'package:taytay_resident/app/app_dependencies.dart';
 import 'package:taytay_resident/app/taytay_resident_app.dart';
 import 'package:taytay_resident/core/api/paginated.dart';
 import 'package:taytay_resident/core/config/app_config.dart';
+import 'package:taytay_resident/core/design/taytay_icons.dart';
 import 'package:taytay_resident/core/documents/document_capture.dart';
 import 'package:taytay_resident/core/push/push_service.dart';
 import 'package:taytay_resident/core/result/result.dart';
@@ -17,6 +18,7 @@ import 'package:taytay_resident/core/startup/launch_controller.dart';
 import 'package:taytay_resident/core/storage/secure_secret_store.dart';
 import 'package:taytay_resident/features/notifications/domain/notification_repository.dart';
 import 'package:taytay_resident/features/notifications/presentation/notification_inbox_controller.dart';
+import 'package:taytay_resident/shared/widgets/taytay_icon.dart';
 
 // ─── Fixtures ───────────────────────────────────────────────────────────────
 //
@@ -36,6 +38,7 @@ ResidentNotification notification({
   DateTime? readAt,
   NotificationCategory category = NotificationCategory.assistanceStatus,
   Map<String, String> target = const <String, String>{},
+  VerificationNoticeOutcome? verificationOutcome,
 }) => ResidentNotification(
   id: id,
   title: title,
@@ -44,7 +47,29 @@ ResidentNotification notification({
   readAt: readAt,
   category: categoryOf(category),
   target: target,
+  verificationOutcome: verificationOutcome,
 );
+
+/// A `verification_decided` row as the inbox receives it (D-231).
+ResidentNotification verificationNotice({
+  String id = 'n-v',
+  required String body,
+  VerificationNoticeOutcome? outcome,
+}) => notification(
+  id: id,
+  title: 'Verification update',
+  body: body,
+  category: NotificationCategory.verificationUpdate,
+  target: const <String, String>{
+    'type': 'verification_decided',
+    'target': 'verification',
+  },
+  verificationOutcome: outcome,
+);
+
+/// A [TaytayIcon] drawing [icon] anywhere on screen.
+Finder rowIcon(IconData icon) =>
+    find.byWidgetPredicate((Widget w) => w is TaytayIcon && w.icon == icon);
 
 NotificationPreferences preferences({
   List<ChannelPreference> channels = const <ChannelPreference>[],
@@ -488,6 +513,31 @@ void main() {
       expect(repository.markedRead.single, 'n-1');
     });
 
+    test(
+      'marking read keeps what a verification notice said (D-231)',
+      () async {
+        final repository = ScriptedNotificationRepository(
+          items: <ResidentNotification>[
+            verificationNotice(
+              body: 'Your identity review was approved.',
+              outcome: VerificationNoticeOutcome.verified,
+            ),
+          ],
+        );
+        final controller = controllerFor(repository);
+        addTearDown(controller.dispose);
+        await controller.refresh();
+
+        await controller.markRead('n-v');
+
+        expect(controller.items.single.isUnread, isFalse);
+        expect(
+          controller.items.single.verificationOutcome,
+          VerificationNoticeOutcome.verified,
+        );
+      },
+    );
+
     test('a refused mark puts the unread state back', () async {
       final repository = ScriptedNotificationRepository(
         items: <ResidentNotification>[notification()],
@@ -717,6 +767,58 @@ void main() {
       expect(find.text('Mark all read'), findsNothing);
     });
 
+    // An approved notice kept the pending hourglass (D-231).
+    testWidgets('a verification notice is drawn by what it says was decided', (
+      tester,
+    ) async {
+      await bootInbox(
+        tester,
+        items: <ResidentNotification>[
+          verificationNotice(
+            id: 'n-ok',
+            body: 'Your identity review was approved.',
+            outcome: VerificationNoticeOutcome.verified,
+          ),
+          verificationNotice(
+            id: 'n-no',
+            body: 'Your identity review was rejected.',
+            outcome: VerificationNoticeOutcome.notAccepted,
+          ),
+          verificationNotice(id: 'n-new', body: 'Some other wording.'),
+        ],
+      );
+
+      expect(rowIcon(TaytayIcons.hourglass), findsNothing);
+      expect(rowIcon(TaytayIcons.badgeCheck), findsOneWidget);
+      expect(rowIcon(TaytayIcons.triangleAlert), findsOneWidget);
+      // Words it does not know are a decision all the same, never pending.
+      expect(rowIcon(TaytayIcons.shield), findsOneWidget);
+      // The words say it too, so the icon is never the only signal: every
+      // verification notice has the same title.
+      expect(find.text('Your identity review was approved.'), findsOneWidget);
+      expect(find.text('Your identity review was rejected.'), findsOneWidget);
+      expect(find.text('Verification update'), findsNWidgets(3));
+    });
+
+    testWidgets('a notice keeps what it said, whatever the account is now', (
+      tester,
+    ) async {
+      // An approval the account has since lost (signed in unverified here)
+      // still reads as the approval it was.
+      await bootInbox(
+        tester,
+        level: AccessLevel.unverified,
+        items: <ResidentNotification>[
+          verificationNotice(
+            id: 'n-old',
+            body: 'Your identity review was approved.',
+            outcome: VerificationNoticeOutcome.verified,
+          ),
+        ],
+      );
+      expect(rowIcon(TaytayIcons.badgeCheck), findsOneWidget);
+    });
+
     testWidgets('the inbox survives a 200% text scale', (tester) async {
       await bootInbox(
         tester,
@@ -726,6 +828,10 @@ void main() {
             id: 'n-2',
             sentAt: fixedNow.subtract(const Duration(days: 40)),
             category: NotificationCategory.publicAdvisory,
+          ),
+          verificationNotice(
+            body: 'Your identity was verified in person at the office.',
+            outcome: VerificationNoticeOutcome.verified,
           ),
         ],
         textScaler: const TextScaler.linear(2),

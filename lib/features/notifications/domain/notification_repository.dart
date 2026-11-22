@@ -66,6 +66,25 @@ enum NotificationSwitch {
   final String preferenceType;
 }
 
+/// What a `verification_decided` notice says was decided (D-231).
+///
+/// ---
+///
+/// **The notice's own words, not the account's state today.** An old notice
+/// that said "rejected" still says so after a later approval, so its icon is
+/// never read from where the account stands now. The API sends the decision
+/// only as its sentence (`Notification` has no outcome field), so the data
+/// layer recognises the API's exact sentences and nothing else; any other
+/// wording is no outcome, drawn as a neutral identity notice, never as
+/// pending: a `verification_decided` notice is a decision by its type.
+enum VerificationNoticeOutcome {
+  /// Approved from the app, or verified in person at the office.
+  verified,
+
+  /// The review did not accept the ID.
+  notAccepted,
+}
+
 /// A message the LGU sent to this resident.
 @immutable
 class ResidentNotification {
@@ -77,6 +96,7 @@ class ResidentNotification {
     required this.readAt,
     this.category,
     this.target = const <String, String>{},
+    this.verificationOutcome,
   });
 
   final String id;
@@ -101,6 +121,10 @@ class ResidentNotification {
   /// the live session. That is the Master Command's rule — authorized detail is
   /// fetched after the tap, never read from the message.
   final Map<String, String> target;
+
+  /// For a `verification_decided` notice whose words the app recognises,
+  /// what it says was decided; null otherwise (D-231).
+  final VerificationNoticeOutcome? verificationOutcome;
 
   bool get isUnread => readAt == null;
 

@@ -313,5 +313,6 @@ class NotificationInboxController extends ChangeNotifier {
     readAt: readAt,
     category: item.category,
     target: item.target,
+    verificationOutcome: item.verificationOutcome,
   );
 }

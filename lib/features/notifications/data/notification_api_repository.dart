@@ -272,11 +272,12 @@ class NotificationApiRepository
         ? subjectId
         : null;
     final String? place = _placeTarget(derivedType);
+    final String body = entry['body'] is String ? entry['body'] as String : '';
 
     return ResidentNotification(
       id: id,
       title: title,
-      body: entry['body'] is String ? entry['body'] as String : '',
+      body: body,
       sentAt: DateTime.tryParse(
         entry['created_at'] is String ? entry['created_at'] as String : '',
       )?.toUtc(),
@@ -297,8 +298,25 @@ class NotificationApiRepository
         if (place == null) 'id': ?targetId,
         DeepLink.targetKey: ?(place ?? _deepLinkTarget(derivedType, targetId)),
       },
+      verificationOutcome: rawType == 'verification_decided'
+          ? _verificationOutcomes[body.trim()]
+          : null,
     );
   }
+
+  /// The sentences the API writes on a `verification_decided` notice, and
+  /// what each says was decided (backend `src/modules/verification/routes.ts`:
+  /// approve, reject, in person). An allow-list, like the status decoder
+  /// (D-35): the notice carries no outcome field, so only these exact words
+  /// give it one, and any other wording reads as no outcome, never as one
+  /// guessed from a word inside it (D-231).
+  static const Map<String, VerificationNoticeOutcome>
+  _verificationOutcomes = <String, VerificationNoticeOutcome>{
+    'Your identity review was approved.': VerificationNoticeOutcome.verified,
+    'Your identity was verified in person at the office.':
+        VerificationNoticeOutcome.verified,
+    'Your identity review was rejected.': VerificationNoticeOutcome.notAccepted,
+  };
 
   /// The `DeepLink` target of a notification type that opens a *place*
   /// rather than one record.

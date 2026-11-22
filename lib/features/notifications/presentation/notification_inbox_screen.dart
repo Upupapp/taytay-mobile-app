@@ -197,6 +197,7 @@ class _Inbox extends StatelessWidget {
           NoticeRow(
             eyebrow: _eyebrow(context, item),
             title: item.title,
+            body: item.body,
             when: switch (item.sentAt) {
               final DateTime sent => ManilaTime.formatDateTime(sent),
               null => '',
@@ -245,11 +246,22 @@ String _eyebrow(BuildContext context, ResidentNotification item) {
 
 /// The category's ink. Its icon and its label carry the same meaning in
 /// words, so colour is never the only signal.
+///
+/// A verification notice is drawn by what it says was decided, never as
+/// pending: `verification_decided` is only ever sent for a decision, and an
+/// hourglass on "approved" read as still waiting (D-231). Each notice keeps
+/// its own outcome, so an old "not accepted" stays that after a later
+/// approval; words the app does not recognise draw a neutral shield.
 Color _tone(ResidentNotification item) {
   return switch (item.category?.known) {
     NotificationCategory.publicAdvisory => BrandColors.redInk,
     NotificationCategory.accountSecurity => BrandColors.goldInk,
-    NotificationCategory.verificationUpdate => BrandColors.goldInk,
+    NotificationCategory.verificationUpdate =>
+      switch (item.verificationOutcome) {
+        VerificationNoticeOutcome.verified => BrandColors.green,
+        VerificationNoticeOutcome.notAccepted => BrandColors.redInk,
+        null => BrandColors.blue,
+      },
     _ => BrandColors.blue,
   };
 }
@@ -258,7 +270,12 @@ Color _tile(ResidentNotification item) {
   return switch (item.category?.known) {
     NotificationCategory.publicAdvisory => BrandColors.red50,
     NotificationCategory.accountSecurity => BrandColors.gold50,
-    NotificationCategory.verificationUpdate => BrandColors.gold50,
+    NotificationCategory.verificationUpdate =>
+      switch (item.verificationOutcome) {
+        VerificationNoticeOutcome.verified => BrandColors.green50,
+        VerificationNoticeOutcome.notAccepted => BrandColors.red50,
+        null => BrandColors.blue50,
+      },
     _ => BrandColors.blue50,
   };
 }
@@ -266,7 +283,13 @@ Color _tile(ResidentNotification item) {
 IconData _icon(ResidentNotification item) {
   return switch (item.category?.known) {
     NotificationCategory.publicAdvisory => TaytayIcons.siren,
-    NotificationCategory.verificationUpdate => TaytayIcons.hourglass,
+    // The verification page's own marks: verified, and "not accepted".
+    NotificationCategory.verificationUpdate =>
+      switch (item.verificationOutcome) {
+        VerificationNoticeOutcome.verified => TaytayIcons.badgeCheck,
+        VerificationNoticeOutcome.notAccepted => TaytayIcons.triangleAlert,
+        null => TaytayIcons.shield,
+      },
     NotificationCategory.assistanceStatus => TaytayIcons.handHelping,
     _ => TaytayIcons.messageCircle,
   };
