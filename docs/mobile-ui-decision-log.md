@@ -4649,6 +4649,63 @@ request and in Add documents, from the mock), `test/integration/backend_baseline
 
 ---
 
+## D-231 — A verification notice is drawn by what it says; Documents sent is a receipt; "Sectors and benefits" says whom it serves
+
+**Status: settled.** Category: product / accessibility / copy. Recorded 2026-11-22. Decided on
+researched best practice, as Ella's standing rule asks.
+
+**Context.** Recording the demo found three rough edges. The inbox drew every `verification_decided`
+notice with the pending hourglass in gold, so an approval still looked like a wait. The inbox row
+showed the title and never the body, and that title is "Verification update" for every decision, so
+the row could not say which. Add documents ended on "Documents sent" with one sentence and a button.
+My Account's "Sectors and benefits" row said "Senior citizen · PWD · solo parent" on her own account,
+which reads as her sectors.
+
+**Decision.**
+
+1. **A notice's icon says what that notice said, never where the account stands now.** An old
+   "rejected" stays a warning after a later approval, so the account's tier is not read. The API
+   sends the decision only as its sentence: `Notification` has no outcome field, and the backend
+   writes three bodies (`src/modules/verification/routes.ts`: approve, reject, in person). The data
+   layer matches those exact sentences, as an allow-list like the status decoder (D-35), into
+   `ResidentNotification.verificationOutcome`. Approved or verified in person draws the verification
+   page's `badgeCheck` in green. Rejected draws its `triangleAlert` in red. Any other wording draws a
+   neutral `shield` in blue. It is never the hourglass, because the type is only sent for a decision.
+   No word inside other wording is read as an outcome. Marking a notice read keeps its outcome. The
+   clean fix is an outcome field on the notice, which is a backend request; until then, changed
+   wording on the server degrades to the neutral shield, never to a wrong mark.
+2. **The inbox row shows the LGU's words under the title, in full.** The 2026-11 redesign
+   (`c3412c5`) dropped the body that `ResidentNotification` says is "rendered as sent". Without it,
+   the icon and colour would be the only signal of the outcome, against Article 6. An event
+   correction's new date and venue (D-191) also were not visible anywhere. The body is not clipped.
+3. **Documents sent is a receipt** (the `SuccessScreen` pattern, as Apply for Tulong's done step).
+   The receipt lists the reference number, the programme, and each document she sent with its file
+   ("Photo, 1.2 MB"). It adds "Sent on" with the API's `documents_sent_at` as a Manila date and time,
+   left out when the API sends none rather than read from the phone's clock (D-230 point 3). The
+   header says what happens next: "The MSWDO will review what you sent. Until then, your request
+   shows that it is waiting for the office". When the request still names documents, it says "The
+   office still needs: …" instead, so she is never told the office has everything when it has not.
+   The note says the request is where to look, and that it will say if anything more is needed. No
+   time is promised (D-37). "Back to the request" stays the one action.
+4. **"Sectors and benefits" reads "Who it can help: senior citizens, PWDs and solo parents".** The
+   plural nouns and the lead-in make it a general list. The page itself says which sectors are on her
+   record. The line is now an ARB string, and the design specimen says the same.
+
+**Strings.** `addDocsDoneMessage` (reworded), `addDocsDoneStillNeeded`, `addDocsDoneFile`,
+`addDocsDoneSentOn`, `addDocsDoneNote`, `accountSectorsSubtitle`. The Filipino text was written by
+Claude in D-217's terms, not by a native speaker; a native Filipino speaker from the MSWDO should
+still read it during UAT (marked in each string's description).
+
+**Tests.** `test/features/backend_contract_test.dart` (the three sentences, other wording, and the
+same sentence on another type), `test/features/notifications_test.dart` (each outcome's icon and
+never the hourglass, the body shown, the outcome kept after marking read, 200% text),
+`test/features/apply_for_tulong_test.dart` (the receipt after a send and back to a request that
+says it is waiting; a request still naming documents; no time without `documents_sent_at`; 360,
+375 and 430 dp at 200%; the Filipino strings), `test/features/sectors_test.dart` (the My Account
+line).
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4883,5 +4940,6 @@ request and in Add documents, from the mock), `test/integration/backend_baseline
 | D-228 | What a screen says about an account follows the server: the sign-up terms step shows the published Privacy Notice with its version and date (the app's summary only under "DRAFT · Not yet published by Taytay LGU", a failed read with Try again); the ID step offers Verify in person instead before any photo; Home's header shows the account (initials or a person glyph), never Sign in, and its card follows `verification_status` (not sent, pending, rejected, unknown); `verification_decided` opens `/verification` and a type alone opens nothing; `GET /me` is read again on a resumed cold start and on return to the foreground, and the live hint hears `verification`; a barangay is named from `GET /barangays`, never its id (My Account, Edit profile); Tulong's footer says "not applications" only while no page takes them | product / privacy / contract | settled |
 | D-229 | A returned request whose named documents she has all sent from the app reads "Sent — waiting for the office to review what you sent" until the office moves it (remembered in memory with `status_changed_at`, never stored); the office's remarks on a document are not sent by the API ("Never the office's remarks") and are not invented; My requests re-reads when shown again; an empty email-code Confirm opens the keyboard instead of an error | product / contract | settled |
 | D-230 | A returned document's `applicant_note` (backend ADR 0009) is shown under it, in the request and in Add documents, as "From the MSWDO:" and the officer's words exactly, never the office's remarks; "Sent — waiting for the office to review what you sent" and "Documents sent on" come from the server's `documents_sent_at`, so they survive a restart; D-229's in-memory record is removed, not kept as a fallback; contract re-vendored at `7fa7dfe` | product / contract / privacy | settled |
+| D-231 | A `verification_decided` notice is drawn by its own words (the API's exact sentences, an allow-list): approved or in person a green check, rejected a red alert, other wording a neutral shield, never the pending hourglass; the inbox row shows the body under the title; Documents sent is a receipt (reference, programme, each file, "Sent on" from `documents_sent_at`, what happens next or what is still needed, Back to the request); My Account's sectors line reads "Who it can help: senior citizens, PWDs and solo parents" | product / accessibility / copy | settled |
 
-**224 decisions — 220 settled, 4 provisional.**
+**225 decisions — 221 settled, 4 provisional.**
