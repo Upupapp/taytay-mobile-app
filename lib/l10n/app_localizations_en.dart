@@ -1523,6 +1523,12 @@ class AppStringsEn extends AppStrings {
   String get myRequestAddDocuments => 'Add documents';
 
   @override
+  String get myRequestApplicantNoteFrom => 'From the MSWDO:';
+
+  @override
+  String get myRequestDocumentsSentOn => 'Documents sent on';
+
+  @override
   String get verifiedLinkNote =>
       'One more step happens at the office: the MSWDO links your account to your record there, usually when it reviews your ID, or at the counter. Once it has, My requests shows your assistance requests and you can apply for Tulong in the app.';
 

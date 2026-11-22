@@ -1544,6 +1544,12 @@ class AppStringsFil extends AppStrings {
   String get myRequestAddDocuments => 'Magdagdag ng dokumento';
 
   @override
+  String get myRequestApplicantNoteFrom => 'Mula sa MSWDO:';
+
+  @override
+  String get myRequestDocumentsSentOn => 'Naipadala ang mga dokumento noong';
+
+  @override
   String get verifiedLinkNote =>
       'May isa pang hakbang sa tanggapan: iniuugnay ng MSWDO ang iyong account sa iyong rekord doon, kadalasan kapag sinuri ang iyong ID, o sa counter. Kapag naiugnay na, makikita sa Aking mga hiling ang iyong mga hiling na tulong at puwede ka nang mag-apply ng Tulong sa app.';
 

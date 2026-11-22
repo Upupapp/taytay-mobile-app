@@ -45,8 +45,9 @@ enum AssistanceStage {
   needsMore,
 
   /// Returned, and she has sent from this app every document the office
-  /// named: the office now has them to review (A10). Said only while the
-  /// request has not moved since she sent them.
+  /// named: the office now has them to review (A10). The server says when
+  /// she sent them (`documents_sent_at`, ADR 0009, D-230), and stops saying
+  /// it once the office moves the request.
   documentsSent,
   notApproved,
   cancelled,
@@ -103,7 +104,8 @@ enum MissingDocumentState {
 
 /// One document the office still needs for a returned request, in the
 /// office's words for the resident (`missing_documents`, D-226). Never the
-/// office's remarks on it: the API sends none.
+/// office's remarks on it: the API sends none. What the office wrote *for
+/// her* about it is [applicantNote], its own field (ADR 0009, D-230).
 @immutable
 class MissingDocument {
   const MissingDocument({
@@ -111,6 +113,7 @@ class MissingDocument {
     required this.name,
     required this.state,
     this.instruction,
+    this.applicantNote,
   });
 
   /// The multipart field its file is sent under.
@@ -120,6 +123,12 @@ class MissingDocument {
 
   /// What to send, as the office wrote it for residents. Null when empty.
   final String? instruction;
+
+  /// The note an officer wrote for her about this document when asking for
+  /// it again, for example why the copy could not be used
+  /// (`missing_documents[].applicant_note`, ADR 0009, D-230). Shown as the
+  /// MSWDO's words, never as the app's. Null when the office wrote none.
+  final String? applicantNote;
 
   @override
   String toString() => 'MissingDocument($code, ${state.name})';
@@ -148,7 +157,7 @@ class OwnAssistanceRequest {
     this.channel,
     this.sourceReference,
     this.missingDocuments = const <MissingDocument>[],
-    this.documentsSent = false,
+    this.documentsSentAt,
   });
 
   /// Opaque. Matches the `subject_id` of an `assistance_request_updated`
@@ -194,30 +203,11 @@ class OwnAssistanceRequest {
   /// Empty otherwise, and empty when the office named nothing.
   final List<MissingDocument> missingDocuments;
 
-  /// She sent, from this app, every document the office named while the
-  /// request stood returned, and it has not moved since (A10). The API says
-  /// only what is still missing, so an empty list alone cannot tell "sent"
-  /// from "the office named nothing"; the data layer sets this from its own
-  /// send, for as long as the app runs, and never stores it.
-  final bool documentsSent;
-
-  /// This request, marked as one whose documents she has sent.
-  OwnAssistanceRequest withDocumentsSent() => OwnAssistanceRequest(
-    id: id,
-    referenceNumber: referenceNumber,
-    programName: programName,
-    filedAt: filedAt,
-    status: status,
-    statusChangedAt: statusChangedAt,
-    approvedAmountCentavos: approvedAmountCentavos,
-    payoutScheduledFor: payoutScheduledFor,
-    payoutVenue: payoutVenue,
-    releasedAt: releasedAt,
-    channel: channel,
-    sourceReference: sourceReference,
-    missingDocuments: missingDocuments,
-    documentsSent: true,
-  );
+  /// While the request stands returned, when she last sent documents from
+  /// the app since the office returned it (`documents_sent_at`, ADR 0009,
+  /// D-230). The server's record, so it holds across a restart; null when she
+  /// sent none since, and whenever the request is not returned.
+  final DateTime? documentsSentAt;
 
   /// She can send documents from the app: the office has returned it and
   /// named what is missing. The server decides; this only offers the button.
@@ -225,12 +215,14 @@ class OwnAssistanceRequest {
       status.known == AssistanceRequestStatus.returned &&
       missingDocuments.isNotEmpty;
 
-  /// Where it stands in her terms. A returned request whose documents she
-  /// has all sent is waiting for the office, not for her (A10).
+  /// Where it stands in her terms. A returned request she has sent
+  /// documents for, with nothing named still missing, is waiting for the
+  /// office, not for her (A10, D-230). Returned with nothing named and
+  /// nothing sent still needs her: she is told to contact the office.
   AssistanceStage get stage =>
       status.known == AssistanceRequestStatus.returned &&
           missingDocuments.isEmpty &&
-          documentsSent
+          documentsSentAt != null
       ? AssistanceStage.documentsSent
       : AssistanceStage.of(status.known);
 

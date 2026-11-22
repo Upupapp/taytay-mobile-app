@@ -373,20 +373,25 @@ void main() {
   // more from you": the API keeps it `returned` until the office moves it,
   // and lists only what is still missing (A10).
   group('a returned request whose documents she sent waits for the office', () {
-    Map<String, Object?> returned(
-      String changedAt, {
+    // D-230: the server says when she sent them (`documents_sent_at`, ADR
+    // 0009), so it holds across a restart; the in-memory record of D-229 is
+    // gone.
+    Map<String, Object?> returned({
       List<Object?> missing = const <Object?>[],
+      String? sentAt,
     }) => <String, Object?>{
       ..._row('ar-r', status: 'returned'),
-      'status_changed_at': changedAt,
       'missing_documents': missing,
+      'documents_sent_at': sentAt,
     };
     const Map<String, Object?> blurred = <String, Object?>{
       'code': 'medical-abstract',
       'name': 'Medical abstract',
       'state': 'send-again',
       'instruction': 'Send a new copy of the Medical abstract.',
+      'applicant_note': 'Sample: the scan is too blurred to read the amount.',
     };
+    const String sentAt = '2026-11-21T06:30:00Z';
     final CapturedDocument file = CapturedDocument(
       bytes: Uint8List.fromList(<int>[1, 2, 3]),
       fileName: 'abstract.jpg',
@@ -394,22 +399,62 @@ void main() {
       source: DocumentSource.camera,
     );
 
+    test('the codec reads documents_sent_at and each applicant_note', () {
+      final OwnAssistanceRequest request = OwnAssistanceCodec.row(
+        returned(missing: <Object?>[blurred], sentAt: sentAt),
+      )!;
+      expect(request.documentsSentAt, DateTime.utc(2026, 11, 21, 6, 30));
+      expect(
+        request.missingDocuments.single.applicantNote,
+        'Sample: the scan is too blurred to read the amount.',
+      );
+      // Absent, blank or not a string: no note and no time, never a guess.
+      final OwnAssistanceRequest older = OwnAssistanceCodec.row(
+        <String, Object?>{
+          ..._row('ar-o', status: 'returned'),
+          'missing_documents': <Object?>[
+            <String, Object?>{
+              for (final MapEntry<String, Object?> e in blurred.entries)
+                if (e.key != 'applicant_note') e.key: e.value,
+            },
+            <String, Object?>{...blurred, 'code': 'b', 'applicant_note': '  '},
+            <String, Object?>{...blurred, 'code': 'c', 'applicant_note': 7},
+          ],
+        },
+      )!;
+      expect(older.documentsSentAt, isNull);
+      expect(older.missingDocuments, hasLength(3));
+      expect(
+        older.missingDocuments.map((MissingDocument d) => d.applicantNote),
+        everyElement(isNull),
+      );
+      expect(
+        OwnAssistanceCodec.row(<String, Object?>{
+          ...returned(),
+          'documents_sent_at': 'not a time',
+        })!.documentsSentAt,
+        isNull,
+      );
+      // The note is about a person: toString never carries it.
+      expect(
+        request.missingDocuments.single.toString(),
+        isNot(contains('blurred')),
+      );
+    });
+
     test('sent, it reads as waiting until the office moves it', () async {
-      String changedAt = '2026-11-12T02:00:00Z';
-      List<Object?> missing = <Object?>[blurred];
+      Map<String, Object?> row = returned(missing: <Object?>[blurred]);
       final _Transport transport = _Transport((ApiRequest request) {
         if (request.method == HttpMethod.post) {
-          missing = const <Object?>[];
+          row = returned(sentAt: sentAt);
           return Ok<ApiHttpResponse>(
             ApiHttpResponse(
               statusCode: 201,
-              body: jsonEncode(<String, Object?>{'data': returned(changedAt)}),
+              body: jsonEncode(<String, Object?>{'data': row}),
             ),
           );
         }
-        return Ok<ApiHttpResponse>(
-          _page(<Object?>[returned(changedAt, missing: missing)]),
-        );
+        return Ok<ApiHttpResponse>(_page(<Object?>[row]));
       });
       final OwnAssistanceApiRepository repository = _repository(transport);
 
@@ -425,36 +470,55 @@ void main() {
         idempotencyKey: 'key-1',
       )).valueOrNull!;
       expect(sent.stage, AssistanceStage.documentsSent);
+      expect(sent.documentsSentAt, DateTime.utc(2026, 11, 21, 6, 30));
 
-      // A later read of the same, unmoved request still says so.
-      final OwnAssistanceRequest read = (await repository.findOwn(
-        'ar-r',
-      )).valueOrNull!;
-      expect(read.stage, AssistanceStage.documentsSent);
-      expect(read.status.known, AssistanceRequestStatus.returned);
-
-      // The office returns it again: it is hers to answer once more.
-      changedAt = '2026-11-20T02:00:00Z';
+      // The office returns it again: the server drops the time, and it is
+      // hers to answer once more.
+      row = returned(missing: <Object?>[blurred]);
       final OwnAssistanceRequest again = (await repository.findOwn(
         'ar-r',
       )).valueOrNull!;
       expect(again.stage, AssistanceStage.needsMore);
     });
 
-    test('returned with nothing named, and nothing sent, still needs her', () {
-      final OwnAssistanceRequest? row = OwnAssistanceCodec.row(
-        returned('2026-11-12T02:00:00Z'),
+    test('after a restart, a fresh app still says it waits', () async {
+      // Nothing was sent from this run of the app: only the server knows.
+      final OwnAssistanceApiRepository fresh = _repository(
+        _Transport(
+          (ApiRequest request) =>
+              Ok<ApiHttpResponse>(_page(<Object?>[returned(sentAt: sentAt)])),
+        ),
       );
-      expect(row?.stage, AssistanceStage.needsMore);
-      expect(row?.withDocumentsSent().stage, AssistanceStage.documentsSent);
+      final OwnAssistanceRequest read = (await fresh.findOwn(
+        'ar-r',
+      )).valueOrNull!;
+      expect(read.status.known, AssistanceRequestStatus.returned);
+      expect(read.stage, AssistanceStage.documentsSent);
     });
 
-    testWidgets('the request says it was sent and waits for the office', (
-      tester,
-    ) async {
-      final OwnAssistanceRequest? row = OwnAssistanceCodec.row(
-        returned('2026-11-12T02:00:00Z'),
+    test('some sent and some still named: still hers to answer', () {
+      final OwnAssistanceRequest row = OwnAssistanceCodec.row(
+        returned(missing: <Object?>[blurred], sentAt: sentAt),
+      )!;
+      expect(row.stage, AssistanceStage.needsMore);
+      expect(row.takesDocuments, isTrue);
+    });
+
+    test('returned with nothing named, and nothing sent, still needs her', () {
+      expect(
+        OwnAssistanceCodec.row(returned())?.stage,
+        AssistanceStage.needsMore,
       );
+    });
+
+    Future<void> pumpDetail(
+      WidgetTester tester,
+      Map<String, Object?> raw,
+    ) async {
+      tester.view
+        ..devicePixelRatio = 1
+        ..physicalSize = const Size(400, 2400);
+      addTearDown(tester.view.reset);
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.light(),
@@ -462,16 +526,71 @@ void main() {
           supportedLocales: AppLocales.supported,
           home: MyRequestDetailCanvas(
             environment: AppEnvironment.dev,
-            request: row?.withDocumentsSent(),
+            request: OwnAssistanceCodec.row(raw),
           ),
         ),
       );
       await tester.pumpAndSettle();
+    }
+
+    testWidgets('the request says when it was sent and that it waits', (
+      tester,
+    ) async {
+      await pumpDetail(tester, returned(sentAt: sentAt));
       expect(
         find.textContaining('waiting for the office to review'),
         findsWidgets,
       );
       expect(find.textContaining('needs more from you'), findsNothing);
+      final Finder fact = find.byKey(const Key('my-request-documents-sent'));
+      expect(
+        find.descendant(of: fact, matching: find.text('Documents sent on')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: fact, matching: find.textContaining('2026')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('a returned request shows the note under its document', (
+      tester,
+    ) async {
+      await pumpDetail(tester, returned(missing: <Object?>[blurred]));
+      final Finder note = find.byKey(
+        const Key('my-request-applicant-note-medical-abstract'),
+      );
+      expect(
+        find.descendant(of: note, matching: find.text('From the MSWDO:')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: note,
+          matching: find.text(
+            'Sample: the scan is too blurred to read the amount.',
+          ),
+        ),
+        findsOneWidget,
+      );
+      // Nothing sent since the return: no date is said.
+      expect(find.byKey(const Key('my-request-documents-sent')), findsNothing);
+    });
+
+    testWidgets('a document with no note shows no note', (tester) async {
+      await pumpDetail(
+        tester,
+        returned(
+          missing: <Object?>[
+            <String, Object?>{...blurred, 'applicant_note': null},
+          ],
+        ),
+      );
+      expect(find.text('From the MSWDO:'), findsNothing);
+      expect(
+        find.text('Send a new copy of the Medical abstract.'),
+        findsOneWidget,
+      );
     });
   });
 

@@ -435,6 +435,8 @@
   "myRequestChannel": "Paano ito inihain",
   "myRequestMissingHeading": "Mga dokumentong kailangan ng tanggapan",
   "myRequestAddDocuments": "Magdagdag ng dokumento",
+  "myRequestApplicantNoteFrom": "Mula sa MSWDO:",
+  "myRequestDocumentsSentOn": "Naipadala ang mga dokumento noong",
   "verifiedLinkNote": "May isa pang hakbang sa tanggapan: iniuugnay ng MSWDO ang iyong account sa iyong rekord doon, kadalasan kapag sinuri ang iyong ID, o sa counter. Kapag naiugnay na, makikita sa Aking mga hiling ang iyong mga hiling na tulong at puwede ka nang mag-apply ng Tulong sa app.",
   "verifiedLinkedNote": "Naiugnay na ang iyong account sa iyong rekord sa MSWDO. Makikita sa Aking mga hiling ang iyong mga hiling na tulong, at puwede ka nang mag-apply ng Tulong sa app.",
   "verifiedApplyStep": "Mag-apply ng Tulong",

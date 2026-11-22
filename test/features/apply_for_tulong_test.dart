@@ -1168,8 +1168,32 @@ void main() {
         find.textContaining('Some requests are discussed only in person'),
         findsOneWidget,
       );
+      // What the officer wrote for her, said as the MSWDO's words (D-230).
+      const String note = 'Sample: the photo is too blurred to read the date.';
+      final Finder inRequest = find.byKey(
+        const Key('my-request-applicant-note-sample-medical-certificate'),
+      );
+      expect(
+        find.descendant(of: inRequest, matching: find.text('From the MSWDO:')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: inRequest, matching: find.text(note)),
+        findsOneWidget,
+      );
       await _tap(tester, find.byKey(const Key('my-request-add-documents')));
       expect(find.byKey(const Key('add-docs-limit')), findsOneWidget);
+      final Finder inSlot = find.byKey(
+        const Key('apply-applicant-note-sample-medical-certificate'),
+      );
+      expect(
+        find.descendant(of: inSlot, matching: find.text('From the MSWDO:')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: inSlot, matching: find.text(note)),
+        findsOneWidget,
+      );
 
       // Nothing chosen is said, and nothing is sent.
       await _tap(tester, find.byKey(const Key('add-docs-send')));

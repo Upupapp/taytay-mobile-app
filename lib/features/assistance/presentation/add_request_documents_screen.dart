@@ -274,6 +274,7 @@ class _AddRequestDocumentsScreenState extends State<AddRequestDocumentsScreen> {
                   MissingDocumentState.other => s.addDocsStateOther,
                 },
                 note: document.instruction,
+                applicantNote: document.applicantNote,
                 chosen: _files[document.code],
                 refused: _refused[document.code],
                 policy: _policy,

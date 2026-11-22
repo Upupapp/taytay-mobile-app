@@ -31,12 +31,15 @@ class MockOwnAssistanceRepository implements OwnAssistanceRepository {
         'payout_venue': null,
         'released_at': null,
         'channel': 'online',
+        'documents_sent_at': null,
         'missing_documents': <Object?>[
           <String, Object?>{
             'code': 'sample-medical-certificate',
             'name': 'Sample medical certificate',
             'state': 'send-again',
             'instruction': 'Sample: a clear photo of the whole page.',
+            'applicant_note':
+                'Sample: the photo is too blurred to read the date.',
           },
         ],
       },
@@ -164,10 +167,9 @@ class MockOwnAssistanceRepository implements OwnAssistanceRepository {
         for (final MissingDocument document in before.missingDocuments)
           if (!files.containsKey(document.code)) document,
       ],
-      // Everything named was sent: the sample waits for the office (A10).
-      documentsSent: before.missingDocuments.every(
-        (MissingDocument document) => files.containsKey(document.code),
-      ),
+      // As the API does: when she last sent documents since the return
+      // (ADR 0009, D-230).
+      documentsSentAt: DateTime.now().toUtc(),
     );
     _rows[index] = after;
     return Ok<OwnAssistanceRequest>(after);

@@ -39,6 +39,7 @@ abstract final class OwnAssistanceCodec {
       },
       sourceReference: _text(data['source_reference']),
       missingDocuments: _missing(data['missing_documents']),
+      documentsSentAt: _instant(data['documents_sent_at']),
     );
   }
 
@@ -62,6 +63,7 @@ abstract final class OwnAssistanceCodec {
             _ => MissingDocumentState.other,
           },
           instruction: _text(entry['instruction']),
+          applicantNote: _text(entry['applicant_note']),
         ),
       );
     }

@@ -127,6 +127,15 @@ its `channel` gained `imported`, which those rows now say where they said `offic
 backend `577c6c9` and `747f004` changed only the office's reports and programme categories. No
 response this app reads lost or renamed a field.
 
+It was re-vendored from backend `7fa7dfe` on 22 November 2026, for D-230 (backend ADR 0009). No
+operation was added or removed. `OwnAssistanceRequest` gained `documents_sent_at` (while the request
+stands `returned`, when she last sent documents from the app since the return; null otherwise), and
+each `missing_documents[]` entry gained `applicant_note` (the note an officer wrote for her about that
+document, or null; never the office's remarks). The office's requirement review accepts and returns
+`applicant_note` too (backend `a74c97d`). In between, backend `aee34cf` reworded the descriptions of
+five of the office's release and transition operations, and `9c35379` and `fa8e6fc` did not touch the
+spec. No response this app reads lost or renamed a field.
+
 `backend_routes.dart` names the citizen routes this app calls. Admin paths are not
 called. Decision D-184 is closed.
 
@@ -140,9 +149,9 @@ The vendored file is held to the commit it was copied from. The record lives in
 | --- | --- |
 | **Vendored file** | `docs/integration/taytay-node-openapi.json` |
 | **Copied from** | backend `openapi/openapi.json` |
-| **Backend commit** | `28f246f29b429cf0ab8f36b11c677a457f81e032` (`28f246f`) |
-| **sha256** | `54172c09db4a5fea8cf8a65ee1bddf98656055ce0b608420ccd6d4f56a818fcb` |
-| **Vendored on** | 21 November 2026 (D-227) |
+| **Backend commit** | `7fa7dfec89887a23aa21d0ce72f67852e54bb281` (`7fa7dfe`) |
+| **sha256** | `3b70cbd450520e8a6028fade0a1eee405390deb69a2865b8c52e6e454b668e57` |
+| **Vendored on** | 22 November 2026 (D-230) |
 
 To re-vendor: copy the backend's `openapi/openapi.json` at a commit, byte for byte, then change
 the commit and the sha256 here and in `backend_baseline.dart` in the same commit, and run the two

@@ -9,6 +9,7 @@ import '../../../core/l10n/app_locales.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/app_button.dart';
 import '../../../shared/widgets/app_sheet.dart';
+import '../../../shared/widgets/soft_note.dart';
 import '../../../shared/widgets/upload_slot.dart';
 
 /// Asks which way to add a file: camera, photo library or file, whichever
@@ -68,9 +69,28 @@ String chosenFileLine(AppStrings s, CapturedDocument file) =>
 String fileKind(AppStrings s, CapturedDocument file) =>
     file.isImage ? s.applyFilePhoto : s.applyFilePdf;
 
+/// The note an officer wrote for her about one document
+/// (`missing_documents[].applicant_note`, ADR 0009, D-230), under a heading
+/// that says whose words they are. The words are shown exactly; they are the
+/// MSWDO's, not the app's, and never the office's remarks.
+class ApplicantNote extends StatelessWidget {
+  const ApplicantNote({required this.note, super.key});
+
+  final String note;
+
+  @override
+  Widget build(BuildContext context) => SoftNote(
+    heading: AppStrings.of(context).myRequestApplicantNoteFrom,
+    message: note,
+    // Part of the page as it opens, not news arriving.
+    live: false,
+  );
+}
+
 /// One document the office asks for, and the file chosen for it, if any
 /// (D-226). Its name, what it needs ([need]), the office's own words under
-/// it ([note]), then the file or an empty slot, then any problem.
+/// it ([note]), what an officer wrote for her about it ([applicantNote],
+/// D-230), then the file or an empty slot, then any problem.
 class DocumentSlot extends StatelessWidget {
   const DocumentSlot({
     required this.code,
@@ -81,6 +101,7 @@ class DocumentSlot extends StatelessWidget {
     required this.onAdd,
     required this.onRemove,
     this.note,
+    this.applicantNote,
     this.refused,
     this.missing = false,
     this.flagged = false,
@@ -96,6 +117,10 @@ class DocumentSlot extends StatelessWidget {
 
   /// A condition or an instruction in the office's words. Null hides it.
   final String? note;
+
+  /// What an officer wrote for her about this document when asking for it
+  /// again (D-230). Null hides it.
+  final String? applicantNote;
   final CapturedDocument? chosen;
   final UploadPolicy policy;
   final VoidCallback onAdd;
@@ -115,6 +140,7 @@ class DocumentSlot extends StatelessWidget {
     final AppStrings s = AppStrings.of(context);
     final CapturedDocument? file = chosen;
     final String? note = this.note;
+    final String? applicantNote = this.applicantNote;
     final ({DocumentRejection reason, int bytes})? refusal = refused;
     final String? problem = refusal != null
         ? localisedDocumentRejection(
@@ -146,6 +172,13 @@ class DocumentSlot extends StatelessWidget {
                 color: BrandColors.muted,
                 height: 1.5,
               ),
+            ),
+          ],
+          if (applicantNote != null) ...<Widget>[
+            const SizedBox(height: Spacing.sm),
+            ApplicantNote(
+              key: Key('apply-applicant-note-$code'),
+              note: applicantNote,
             ),
           ],
           const SizedBox(height: Spacing.sm),

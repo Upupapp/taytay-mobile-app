@@ -2708,6 +2708,18 @@ abstract class AppStrings {
   /// **'Add documents'**
   String get myRequestAddDocuments;
 
+  /// A returned request's document, in the request and in Add documents: heading of the note an officer wrote for the resident about that document (missing_documents[].applicant_note, ADR 0009). The note below it is the office's own words, shown exactly; never the office's remarks. The Filipino text was written by Claude for D-230 in D-217's terms ("tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'From the MSWDO:'**
+  String get myRequestApplicantNoteFrom;
+
+  /// One returned request: label of the date she last sent documents from the app since the office returned it (documents_sent_at, ADR 0009). The Filipino text was written by Claude for D-230 in D-217's terms ("tanggapan", "MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents sent on'**
+  String get myRequestDocumentsSentOn;
+
   /// The Verified status page: the account link that makes My requests and Apply work (ADR 0004 decision 1, D-226). The Filipino text was written by Claude for D-226 in D-217's terms ("hiling", "tanggapan ng MSWDO"), not by a native speaker; a native Filipino speaker from the MSWDO should still read it during UAT.
   ///
   /// In en, this message translates to:

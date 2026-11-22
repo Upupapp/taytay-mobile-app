@@ -18,6 +18,7 @@ import '../../../shared/widgets/taytay_icon.dart';
 import '../../../shared/widgets/taytay_states.dart';
 import '../domain/own_assistance_request.dart';
 import 'assistance_copy.dart';
+import 'document_slot.dart';
 
 /// My requests: the resident's own assistance requests (D-223), the
 /// settings-list pattern.
@@ -482,6 +483,12 @@ class _Facts extends StatelessWidget {
             AssistanceCopy.date(request.statusChangedAt),
           ),
           (
+            const Key('my-request-documents-sent'),
+            TaytayIcons.send,
+            s.myRequestDocumentsSentOn,
+            AssistanceCopy.date(request.documentsSentAt),
+          ),
+          (
             const Key('my-request-channel'),
             TaytayIcons.send,
             s.myRequestChannel,
@@ -514,8 +521,8 @@ class _Facts extends StatelessWidget {
 }
 
 /// A returned request's documents still needed, in the office's words for
-/// residents, and Add documents (D-226). Never the office's remarks or why it
-/// returned the request: the API sends neither.
+/// residents, with the note an officer wrote for her about each (D-230), and
+/// Add documents (D-226). Never the office's remarks: the API sends none.
 class _Missing extends StatelessWidget {
   const _Missing({required this.request, this.onAddDocuments});
 
@@ -559,6 +566,14 @@ class _Missing extends StatelessWidget {
                         height: 1.5,
                       ),
                     ),
+                  if (document.applicantNote
+                      case final String note) ...<Widget>[
+                    const SizedBox(height: Spacing.xs),
+                    ApplicantNote(
+                      key: Key('my-request-applicant-note-${document.code}'),
+                      note: note,
+                    ),
+                  ],
                 ],
               ),
             ),

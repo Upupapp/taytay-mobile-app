@@ -5389,7 +5389,7 @@
       "post": {
         "operationId": "moveOfficeRequest",
         "summary": "Move a request through its lifecycle",
-        "description": "Needs request.view and the key the console’s TRANSITION_PERMISSIONS names for the status moved into — request.approve and release.release are never held together. Only along office_request_transitions; appended with who, when and why, and the database sets the status from the history. Already there answers as it stands. A move to approved says what was approved: approved_amount_centavos, or for goods approved_in_kind_description (422 otherwise). Cancelling or expiring is refused while the request has an open release — anything not voided and not handed over — and the message says to void the release first (409); the database refuses it too (DL-183). Filing is its own act (409); scheduled and released wait for payouts, which this API does not hold yet (409). Audited office_request.status_changed. An approval by the account that made the request's latest endorsement is allowed, and recorded: the database marks the history's approval self_approved (read from the history, never from a role), the request answers self_approved true, and one more audit row office_request.self_approved is written in the same transaction — warned (would_self_approve on the request before it is approved), never refused, as a self-release is (DL-91, ADR 0003). A move to approved, returned or rejected tells the residents whose person holds the request (assistance_request_updated, ADR 0003 C), unless their person is held under vawc-survivor or cicl. A social worker (assigned-cases) is answered only for the filed requests assigned to them; any other request answers as not found.",
+        "description": "Needs request.view and the key the console’s TRANSITION_PERMISSIONS names for the status moved into — request.approve and release.release are never held together. Only along office_request_transitions; appended with who, when and why, and the database sets the status from the history. Already there answers as it stands. A move to approved says what was approved: approved_amount_centavos, or for goods approved_in_kind_description (422 otherwise). Cancelling or expiring is refused while the request has an open release — anything not voided and not handed over — and the message says to void the release first (409); the database refuses it too (DL-183). Filing is its own act (409); scheduled and released wait for payouts, which this API does not hold yet (409). Audited office_request.status_changed. An approval by the account that made the request's latest endorsement is allowed, and recorded: the database marks the history's approval self_approved (read from the history, never from a role), the request answers self_approved true, and one more audit row office_request.self_approved is written in the same transaction — warned (would_self_approve on the request before it is approved), never refused, as a self-release is (DL-91, ADR 0003). A move to approved, returned, rejected, cancelled or expired tells the residents whose person holds the request what happened and what to do (assistance_request_updated, ADR 0008), unless their person is held under vawc-survivor or cicl. A social worker (assigned-cases) is answered only for the filed requests assigned to them; any other request answers as not found.",
         "security": [
           {
             "firebaseIdToken": []
@@ -8738,7 +8738,7 @@
       "post": {
         "operationId": "releaseOfficeRelease",
         "summary": "Record the hand-over",
-        "description": "Needs release.release. A scheduled release is recorded as handed over by the officer signed in, and the request behind it moves from scheduled to released in the same transaction. When that officer approved the request, the record says so (self_release) and the audit trail carries office_release.self_released; it is never refused (DL-91). The residents whose person holds the request are told (assistance_request_updated, ADR 0003 C), unless held under vawc-survivor or cicl; a replay tells nobody again.",
+        "description": "Needs release.release. A scheduled release is recorded as handed over by the officer signed in, and the request behind it moves from scheduled to released in the same transaction. When that officer approved the request, the record says so (self_release) and the audit trail carries office_release.self_released; it is never refused (DL-91). The residents whose person holds the request are told what happened and what to do (assistance_request_updated, ADR 0008), unless held under vawc-survivor or cicl; a replay tells nobody again.",
         "security": [
           {
             "firebaseIdToken": []
@@ -8928,7 +8928,7 @@
       "post": {
         "operationId": "deferOfficeRelease",
         "summary": "Record a deferral",
-        "description": "Needs release.release. The beneficiary came and the office could not release. The reason is from a fixed list, every entry the office’s own; a family that did not come is unclaimed, through the status move, with no reason guessed.",
+        "description": "Needs release.release. The beneficiary came and the office could not release. The reason is from a fixed list, every entry the office’s own; a family that did not come is unclaimed, through the status move, with no reason guessed. The resident is told the payout is postponed and that the office will give a new date — never the reason (assistance_request_updated, ADR 0008) — unless held under vawc-survivor or cicl.",
         "security": [
           {
             "firebaseIdToken": []
@@ -9023,7 +9023,7 @@
       "post": {
         "operationId": "moveOfficeRelease",
         "summary": "Move a release",
-        "description": "The key is the status moved into: voided needs release.void, every other move release.schedule. Handing over, a receipt and a deferral are their own acts and refused here (409). Moving back to scheduled keeps the release in its session and is refused to a release that was never in one; the resident is told (assistance_request_updated, ADR 0003 C). The reason is kept on the event and shown as the release’s remarks.",
+        "description": "The key is the status moved into: voided needs release.void, every other move release.schedule. Handing over, a receipt and a deferral are their own acts and refused here (409). Moving back to scheduled keeps the release in its session and is refused to a release that was never in one; the resident is told what happened (assistance_request_updated, ADR 0008). The reason is kept on the event and shown as the release’s remarks.",
         "security": [
           {
             "firebaseIdToken": []
@@ -9160,7 +9160,7 @@
       "post": {
         "operationId": "openOfficeReleaseBatch",
         "summary": "Open a payout session",
-        "description": "Needs release.schedule. A date (today or later), a place and the releases planned for it; the officer is whoever opens it. Each member is scheduled individually and keeps its own status, and the request behind each moves from approved to scheduled in the same transaction. Refused whole when any member cannot be scheduled: a session never quietly leaves somebody out. Each member's residents are told their payout is scheduled (assistance_request_updated, ADR 0003 C) — when and where is read in the app, never in the notice — unless held under vawc-survivor or cicl.",
+        "description": "Needs release.schedule. A date (today or later), a place and the releases planned for it; the officer is whoever opens it. Each member is scheduled individually and keeps its own status, and the request behind each moves from approved to scheduled in the same transaction. Refused whole when any member cannot be scheduled: a session never quietly leaves somebody out. Each member's residents are told their payout is scheduled, with the day and the venue (assistance_request_updated, ADR 0008); the push carries no words. Not for a person held under vawc-survivor or cicl.",
         "security": [
           {
             "firebaseIdToken": []
@@ -22260,6 +22260,7 @@
           "status",
           "submitted_at",
           "remarks",
+          "applicant_note",
           "applicability_decided_by",
           "applicability_decided_at",
           "applicability_reason",
@@ -22329,6 +22330,13 @@
               "null"
             ],
             "description": "The words of the act that set the status: required for waived, rejected and needs-replacement. Withheld (null) on a protected request from a reader without request.view-sensitive."
+          },
+          "applicant_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ADR 0009: what the office wrote for the applicant about this document on its latest review, which she reads in the app beside the document's name (missing_documents[].applicant_note). Never the remarks. Cleared by a new copy and by a review that writes none. Withheld (null) on a protected request from a reader without request.view-sensitive."
           },
           "applicability_decided_by": {
             "type": [
@@ -23701,6 +23709,15 @@
             ],
             "maxLength": 500,
             "description": "Required for waived, rejected and needs-replacement."
+          },
+          "applicant_note": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 500,
+            "description": "ADR 0009: optional, and only with rejected, expired or needs-replacement (422 otherwise). What the applicant will read about this document in the app; the remarks never reach her."
           }
         }
       },
@@ -28582,7 +28599,8 @@
           "released_at",
           "channel",
           "source_reference",
-          "missing_documents"
+          "missing_documents",
+          "documents_sent_at"
         ],
         "properties": {
           "id": {
@@ -28647,17 +28665,27 @@
           "source_reference": { "type": ["string", "null"], "description": "For a request imported from the office's old paper records, the control or voucher number printed on them (e.g. MSWDO-2024-0046): the number she holds in her hand. reference_number stays this system's own. Null for a request filed in this system." },
           "missing_documents": {
             "type": "array",
-            "description": "Empty unless the request stands returned: each document it requires, or a conditional one ruled to apply, that she has not sent (not-sent) or must send again (send-again). Never the office's remarks.",
+            "description": "Empty unless the request stands returned: each document it requires, or a conditional one ruled to apply, that she has not sent (not-sent) or must send again (send-again). Never the office's remarks; the note the office wrote for her, when it wrote one (ADR 0009).",
             "items": {
               "type": "object",
-              "required": ["code", "name", "state", "instruction"],
+              "required": ["code", "name", "state", "instruction", "applicant_note"],
               "properties": {
                 "code": { "type": "string", "description": "The field name to send its file under." },
                 "name": { "type": "string" },
                 "state": { "type": "string", "enum": ["not-sent", "send-again"] },
-                "instruction": { "type": "string" }
+                "instruction": { "type": "string" },
+                "applicant_note": {
+                  "type": ["string", "null"],
+                  "maxLength": 500,
+                  "description": "ADR 0009: what the office wrote for her about this document when it asked for it again, e.g. why the copy could not be used; null when it wrote nothing. Never the office's remarks."
+                }
               }
             }
+          },
+          "documents_sent_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "ADR 0009: while the request stands returned, when she last sent documents from the app since it was returned, so the app can say they wait for the office's review. Null when she has sent none since, and whenever the request is not returned."
           }
         },
         "description": "A resident's own assistance request, as the app shows it (ADR 0003, C). The minimum; nothing of the office's record."
