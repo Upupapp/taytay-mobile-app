@@ -283,8 +283,9 @@ is never copied into the app.
   on the base URL, mock data in a release build, or mock data outside dev, each
   produce a blocking startup screen
   instead of a silent fallback.
-* Non-production builds show an environment banner, so a staging build is never mistaken
-  for the real thing during LGU acceptance testing.
+* A non-production build says so: Settings shows a "Test build" note in dev and staging, and a
+  dev build also carries the corner ribbon. Staging has no ribbon, on the owner's decision
+  (D-233), because it is the build the LGU tests and is shown.
 
 ---
 

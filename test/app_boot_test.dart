@@ -426,5 +426,18 @@ void main() {
 
       expect(find.byType(Banner), findsNothing);
     });
+
+    testWidgets('is absent in a staging build (D-233)', (tester) async {
+      await _pumpApp(
+        tester,
+        config: _config(
+          environment: 'staging',
+          baseUrl: 'https://api.staging.example.test/api/v1',
+        ),
+      );
+      await _settle(tester);
+
+      expect(find.byType(Banner), findsNothing);
+    });
   });
 }

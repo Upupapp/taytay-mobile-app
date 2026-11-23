@@ -195,7 +195,7 @@ class _TaytayResidentAppState extends State<TaytayResidentApp> {
               ),
             ),
           );
-          return config.environment.allowsDiagnosticsUi
+          return config.environment.showsCornerRibbon
               ? _EnvironmentBanner(
                   label: config.environment.badgeLabel,
                   child: app,
@@ -242,11 +242,10 @@ class _AppLockGate extends StatelessWidget {
   }
 }
 
-/// Corner ribbon shown in non-production builds only.
+/// Corner ribbon shown in a developer's own (dev) build only.
 ///
-/// Its purpose is to stop a staging build being mistaken for the real thing
-/// during LGU acceptance testing — the moment when someone enters real personal
-/// data into the wrong environment.
+/// Staging carries no ribbon (D-233): Settings says it is a test build, and
+/// staging's API holds test data only.
 class _EnvironmentBanner extends StatelessWidget {
   const _EnvironmentBanner({required this.label, required this.child});
 

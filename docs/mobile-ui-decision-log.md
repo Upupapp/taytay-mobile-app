@@ -4751,6 +4751,27 @@ values. `test/features/notifications_test.dart` is unchanged and still green. `t
 
 ---
 
+## D-233 — The staging build carries no corner ribbon
+
+**Status: settled.** Category: product. Recorded 2026-11-23, on the owner's decision (Ella asked for
+the "STAGING" ribbon to be removed).
+
+**Context.** Every non-production build drew a diagonal "STAGING" ribbon over the top-right corner,
+so that a staging build could not be mistaken for the real app during LGU acceptance testing.
+Staging is now the build the owner tests in the emulator and shows to the LGU, and the ribbon sat
+over the corner of the header on every screen.
+
+**Decision.** `AppEnvironment.showsCornerRibbon` is true for `dev` only. Staging keeps the Settings
+note "Test build. This is a STAGING build, not the app published to residents.", and production
+shows neither. The guard the ribbon stood for still holds where it matters: staging's API holds
+test data only, and a staging build cannot be pointed at production, because the API target is a
+compile-time constant.
+
+**Revisit** if staging is ever handed to people who could mistake it for the published app.
+`test/core/config_test.dart` holds the rule.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -4987,5 +5008,6 @@ values. `test/features/notifications_test.dart` is unchanged and still green. `t
 | D-230 | A returned document's `applicant_note` (backend ADR 0009) is shown under it, in the request and in Add documents, as "From the MSWDO:" and the officer's words exactly, never the office's remarks; "Sent — waiting for the office to review what you sent" and "Documents sent on" come from the server's `documents_sent_at`, so they survive a restart; D-229's in-memory record is removed, not kept as a fallback; contract re-vendored at `7fa7dfe` | product / contract / privacy | settled |
 | D-231 | A `verification_decided` notice is drawn by its own words (the API's exact sentences, an allow-list): approved or in person a green check, rejected a red alert, other wording a neutral shield, never the pending hourglass; the inbox row shows the body under the title; Documents sent is a receipt (reference, programme, each file, "Sent on" from `documents_sent_at`, what happens next or what is still needed, Back to the request); My Account's sectors line reads "Who it can help: senior citizens, PWDs and solo parents" | product / accessibility / copy | settled |
 | D-232 | A `verification_decided` notice's icon comes from its `outcome` (backend `31038a5`, migration `0077`): `approved` and `verified-in-person` a green check, `rejected` a red alert, anything else the neutral shield; D-231's sentence matching is dropped rather than kept as a fallback; contract re-vendored at `37f3fe5` | contract / product | settled |
+| D-233 | No corner ribbon on the staging build, on the owner's decision: only a dev build carries it; Settings still says "Test build" in dev and staging | product | settled |
 
 **226 decisions — 222 settled, 4 provisional.**

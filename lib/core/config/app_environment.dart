@@ -24,6 +24,12 @@ enum AppEnvironment {
   /// must never appear on a resident's production device.
   bool get allowsDiagnosticsUi => !isProduction;
 
+  /// The corner ribbon is for a developer's own build only. Staging is what
+  /// the owner and the LGU test and demonstrate, and a ribbon over the
+  /// app's corner hid its header there; staging says it is a test build in
+  /// Settings instead (D-233).
+  bool get showsCornerRibbon => this == AppEnvironment.dev;
+
   static AppEnvironment? tryParse(String? value) {
     if (value == null || value.isEmpty) return null;
     for (final environment in AppEnvironment.values) {

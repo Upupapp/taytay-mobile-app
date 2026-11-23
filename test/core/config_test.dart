@@ -29,6 +29,12 @@ void main() {
       expect(AppEnvironment.dev.allowsDiagnosticsUi, isTrue);
       expect(AppEnvironment.prod.badgeLabel, isEmpty);
     });
+
+    test('only a developer build carries the corner ribbon (D-233)', () {
+      expect(AppEnvironment.dev.showsCornerRibbon, isTrue);
+      expect(AppEnvironment.staging.showsCornerRibbon, isFalse);
+      expect(AppEnvironment.prod.showsCornerRibbon, isFalse);
+    });
   });
 
   group('AppConfig', () {
