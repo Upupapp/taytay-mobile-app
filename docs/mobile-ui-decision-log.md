@@ -4789,8 +4789,14 @@ colour. `launcher_splash_test.dart` holds both.
 
 **Still open.** The Municipality's written permission to use the seal (see the console's DL-199) is
 not on file, and the source is 560 px, so the 1024 px App Store icon is slightly upscaled. A
-larger file from the Municipality replaces it with no other change. The splash screens keep the
-earlier mark.
+larger file from the Municipality replaces it with no other change.
+
+**The splash screens too.** Both splashes show the seal on a white disc, centred on the brand navy:
+the Android 12 icon holds a 624 px disc (inside the 160 dp mask) with the seal at its native 560 px,
+unscaled; the older splash holds a 768 px disc with the seal scaled to 688 px. The generator's
+rewrites of the styles, `Info.plist` and storyboard were reverted, so only the images changed.
+`launcher_splash_test.dart` now checks the white rim and the mask, in place of the navy disc's
+fringe and colour checks.
 
 ---
 

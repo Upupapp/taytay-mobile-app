@@ -96,24 +96,21 @@ void main() {
       expect(icon.getBytes(), opaque.getBytes());
     });
 
-    test(
-      'Android adaptive icon has foreground and background, and no '
-      'monochrome layer that would recolour the seal (D-234)',
-      () {
-        final xml = File(
-          'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
-        ).readAsStringSync();
-        expect(xml, contains('ic_launcher_background'));
-        expect(xml, contains('ic_launcher_foreground'));
-        expect(xml, isNot(contains('monochrome')));
-        expect(xml, contains('android:inset="0%"'));
+    test('Android adaptive icon has foreground and background, and no '
+        'monochrome layer that would recolour the seal (D-234)', () {
+      final xml = File(
+        'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
+      ).readAsStringSync();
+      expect(xml, contains('ic_launcher_background'));
+      expect(xml, contains('ic_launcher_foreground'));
+      expect(xml, isNot(contains('monochrome')));
+      expect(xml, contains('android:inset="0%"'));
 
-        final manifest = File(
-          'android/app/src/main/AndroidManifest.xml',
-        ).readAsStringSync();
-        expect(manifest, contains('android:icon="@mipmap/ic_launcher"'));
-      },
-    );
+      final manifest = File(
+        'android/app/src/main/AndroidManifest.xml',
+      ).readAsStringSync();
+      expect(manifest, contains('android:icon="@mipmap/ic_launcher"'));
+    });
 
     test('both splashes use #0B3D91, including Android 12', () {
       final background = img.decodePng(
@@ -148,7 +145,6 @@ void main() {
       expect(android12.width, 240);
       expect(android12.height, 240);
       expect(_maxOpaqueRadius(android12), lessThanOrEqualTo(80));
-      expect(_darkFringeCount(android12), 0);
 
       for (final path in <String>[
         'android/app/src/main/res/values/styles.xml',
@@ -188,7 +184,10 @@ void main() {
       expect(launch, contains('@drawable/background'));
     });
 
-    test('the Android 12 disc has no dark resize fringe', () {
+    // The splash is the seal on a white disc (D-234). The disc's rim must be
+    // white all the way round — a resize halo would show there first — and
+    // the disc must stay inside Android 12's 160 dp mask.
+    test('the Android 12 disc is a white rim inside the mask', () {
       final paths = <String>[
         'release/assets/android12-splash-icon-960.png',
         for (final density in [
@@ -204,8 +203,7 @@ void main() {
       ];
       for (final path in paths) {
         final image = img.decodePng(File(path).readAsBytesSync())!;
-        expect(_darkFringeCount(image), 0, reason: path);
-        expect(_exactBrandCount(image), greaterThan(0), reason: path);
+        expect(_rimIsWhite(image), isTrue, reason: path);
         expect(_maxOpaqueRadius(image), lessThanOrEqualTo(80), reason: path);
       }
     });
@@ -234,42 +232,31 @@ void main() {
   );
 }
 
-/// Pixels darkened by a resize that blended the blue disc with transparent
-/// black. The reported fringe is RGBA(7, 41, 98, 117). A filled disc is
-/// exact `#0B3D91` or fully transparent, so this stays at zero.
-int _darkFringeCount(img.Image image) {
-  var count = 0;
+/// Whether the backing disc's rim is white all the way round: every fully
+/// opaque pixel between 96% and 99% of the disc's radius is near white. A
+/// resize that dragged the seal or a dark fringe into the rim fails here.
+bool _rimIsWhite(img.Image image) {
+  final cx = (image.width - 1) / 2;
+  final cy = (image.height - 1) / 2;
+  final rim = _maxOpaqueRadius(image) * image.width / 240;
+  var checked = 0;
   for (var y = 0; y < image.height; y++) {
     for (var x = 0; x < image.width; x++) {
       final pixel = image.getPixel(x, y);
-      final red = pixel.r.toInt();
-      final green = pixel.g.toInt();
-      final blue = pixel.b.toInt();
-      final alpha = pixel.a.toInt();
-      if (alpha <= 16 || blue <= red) continue;
-      if (red >= 0x0B || green >= 0x3D || blue >= 0x91) continue;
-      final darkening = (0x0B - red) + (0x3D - green) + (0x91 - blue);
-      if (darkening > 24) count++;
-    }
-  }
-  return count;
-}
-
-/// Opaque pixels of the Android 12 disc, exact `#0B3D91`.
-int _exactBrandCount(img.Image image) {
-  var count = 0;
-  for (var y = 0; y < image.height; y++) {
-    for (var x = 0; x < image.width; x++) {
-      final pixel = image.getPixel(x, y);
-      if (pixel.r.toInt() == 0x0B &&
-          pixel.g.toInt() == 0x3D &&
-          pixel.b.toInt() == 0x91 &&
-          pixel.a.toInt() == 255) {
-        count++;
+      if (pixel.a.toInt() < 250) continue;
+      final dx = x - cx;
+      final dy = y - cy;
+      final radius = math.sqrt((dx * dx) + (dy * dy));
+      if (radius < rim * 0.96 || radius > rim * 0.99) continue;
+      checked++;
+      if (pixel.r.toInt() < 235 ||
+          pixel.g.toInt() < 235 ||
+          pixel.b.toInt() < 235) {
+        return false;
       }
     }
   }
-  return count;
+  return checked > 0;
 }
 
 /// Radius, in dp, of the furthest opaque pixel from the image centre.
