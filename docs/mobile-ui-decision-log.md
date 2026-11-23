@@ -4772,6 +4772,28 @@ compile-time constant.
 
 ---
 
+## D-234 — The app's icon is the municipal seal
+
+**Status: settled.** Category: brand. Recorded 2026-11-23, on the owner's decision (Ella asked for the
+launcher icon to be the seal of Taytay).
+
+**Decision.** The launcher icon on Android and iOS is the whole seal on white, made from
+`assets/brand/taytay_seal.png` (the registered file, `BrandAssets`) by scaling alone, with Lanczos
+resampling: no crop, no recolour, nothing redrawn, as `SealIntegrityRules` asks. The master icon
+holds it at 864 of 1024 px. The adaptive foreground holds it at 264 of 432 px, the 66 dp safe circle,
+so no launcher mask cuts its edge. The adaptive background is plain white.
+
+**No monochrome layer.** Android 13's themed icons tint a single-colour layer; a seal drawn in one
+tint is a recoloured seal. Without the layer, a phone with themed icons on shows the seal in full
+colour. `launcher_splash_test.dart` holds both.
+
+**Still open.** The Municipality's written permission to use the seal (see the console's DL-199) is
+not on file, and the source is 560 px, so the 1024 px App Store icon is slightly upscaled. A
+larger file from the Municipality replaces it with no other change. The splash screens keep the
+earlier mark.
+
+---
+
 ## Index
 
 | ID | Decision | Category | Status |
@@ -5009,5 +5031,6 @@ compile-time constant.
 | D-231 | A `verification_decided` notice is drawn by its own words (the API's exact sentences, an allow-list): approved or in person a green check, rejected a red alert, other wording a neutral shield, never the pending hourglass; the inbox row shows the body under the title; Documents sent is a receipt (reference, programme, each file, "Sent on" from `documents_sent_at`, what happens next or what is still needed, Back to the request); My Account's sectors line reads "Who it can help: senior citizens, PWDs and solo parents" | product / accessibility / copy | settled |
 | D-232 | A `verification_decided` notice's icon comes from its `outcome` (backend `31038a5`, migration `0077`): `approved` and `verified-in-person` a green check, `rejected` a red alert, anything else the neutral shield; D-231's sentence matching is dropped rather than kept as a fallback; contract re-vendored at `37f3fe5` | contract / product | settled |
 | D-233 | No corner ribbon on the staging build, on the owner's decision: only a dev build carries it; Settings still says "Test build" in dev and staging | product | settled |
+| D-234 | The launcher icon is the municipal seal, whole on white, scaled from the registered file only; no monochrome (themed) layer, which would recolour it | brand | settled |
 
 **226 decisions — 222 settled, 4 provisional.**

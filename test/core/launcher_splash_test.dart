@@ -97,14 +97,15 @@ void main() {
     });
 
     test(
-      'Android adaptive icon has foreground, background, and monochrome',
+      'Android adaptive icon has foreground and background, and no '
+      'monochrome layer that would recolour the seal (D-234)',
       () {
         final xml = File(
           'android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml',
         ).readAsStringSync();
         expect(xml, contains('ic_launcher_background'));
         expect(xml, contains('ic_launcher_foreground'));
-        expect(xml, contains('ic_launcher_monochrome'));
+        expect(xml, isNot(contains('monochrome')));
         expect(xml, contains('android:inset="0%"'));
 
         final manifest = File(

@@ -339,18 +339,20 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-# Store icon (release spec 10-01). `android: true` keeps `@mipmap/ic_launcher`.
-# The adaptive foreground is already inside the 66 dp safe zone, so the
-# generator's default 16% inset is off. `remove_alpha_ios` keeps the App
-# Store icon opaque. `min_sdk_android` is set because this project uses
-# Gradle Kotlin DSL, which the generator does not parse for minSdk.
+# Store icon (release spec 10-01): the municipal seal, whole, on white (D-234),
+# scaled from assets/brand/taytay_seal.png and nothing else done to it.
+# `android: true` keeps `@mipmap/ic_launcher`. The adaptive foreground is
+# already inside the 66 dp safe zone, so the generator's default 16% inset is
+# off. No monochrome layer: a themed icon would be a recoloured seal.
+# `remove_alpha_ios` keeps the App Store icon opaque. `min_sdk_android` is set
+# because this project uses Gradle Kotlin DSL, which the generator does not
+# parse for minSdk.
 flutter_launcher_icons:
   android: true
   ios: true
   image_path: release/assets/icon-master-1024.png
   adaptive_icon_background: release/assets/android-adaptive-background-432.png
   adaptive_icon_foreground: release/assets/android-adaptive-foreground-432.png
-  adaptive_icon_monochrome: release/assets/android-monochrome-432.png
   adaptive_icon_foreground_inset: 0
   remove_alpha_ios: true
   min_sdk_android: 24
